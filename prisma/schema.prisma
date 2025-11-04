@@ -404,6 +404,7 @@ model Update {
   title       String
   content     String   @db.Text
   isDraft     Boolean  @default(true)
+  backersOnly Boolean  @default(false) // true = only backers can see, false = public
 
   publishedAt DateTime?
   scheduledFor DateTime?
