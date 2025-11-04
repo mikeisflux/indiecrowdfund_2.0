@@ -13,6 +13,71 @@ export default async function ExplorePage({
 }) {
   const category = searchParams.category
 
+  // Get featured projects (staff picks)
+  const featuredProjects = await prisma.project.findMany({
+    where: {
+      status: "LIVE",
+      isFeatured: true,
+    },
+    include: {
+      creator: {
+        select: {
+          name: true,
+          username: true,
+          avatar: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 6,
+  })
+
+  // Get trending projects (most backers in last 7 days)
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+  const trendingProjects = await prisma.project.findMany({
+    where: {
+      status: "LIVE",
+      createdAt: { gte: sevenDaysAgo },
+    },
+    include: {
+      creator: {
+        select: {
+          name: true,
+          username: true,
+          avatar: true,
+        },
+      },
+    },
+    orderBy: {
+      backerCount: "desc",
+    },
+    take: 6,
+  })
+
+  // Get successfully funded projects
+  const successfulProjects = await prisma.project.findMany({
+    where: {
+      status: "FUNDED",
+    },
+    include: {
+      creator: {
+        select: {
+          name: true,
+          username: true,
+          avatar: true,
+        },
+      },
+    },
+    orderBy: {
+      fundedAt: "desc",
+    },
+    take: 6,
+  })
+
   const projects = await prisma.project.findMany({
     where: {
       status: "LIVE",
@@ -78,8 +143,319 @@ export default async function ExplorePage({
           </p>
         </div>
 
+        {/* Featured Projects - Staff Picks */}
+        {featuredProjects.length > 0 && !category && (
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-bold mb-2">Staff Picks</h2>
+                <p className="text-muted-foreground">
+                  Projects handpicked by our team
+                </p>
+              </div>
+              <Badge variant="default" className="px-4 py-2">Featured</Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredProjects.map((project) => {
+                const fundingPercentage = calculateFundingPercentage(
+                  project.currentAmount,
+                  project.fundingGoal
+                )
+                const daysRemaining = project.endDate
+                  ? calculateDaysRemaining(project.endDate)
+                  : 0
+
+                return (
+                  <Link key={project.id} href={`/project/${project.slug}`}>
+                    <Card className="hover:shadow-lg transition-shadow h-full border-2 border-primary">
+                      {project.imageUrl ? (
+                        <img
+                          src={project.imageUrl}
+                          alt={project.title}
+                          className="w-full h-48 object-cover rounded-t-lg"
+                        />
+                      ) : (
+                        <div className="w-full h-48 bg-muted rounded-t-lg flex items-center justify-center">
+                          <p className="text-muted-foreground">No image</p>
+                        </div>
+                      )}
+
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-2">
+                          <Badge variant="secondary">
+                            {project.category.replace(/_/g, " ")}
+                          </Badge>
+                          <Badge variant="default">Featured</Badge>
+                        </div>
+                        <CardTitle className="line-clamp-2">{project.title}</CardTitle>
+                        {project.tagline && (
+                          <CardDescription className="line-clamp-2">
+                            {project.tagline}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex items-center justify-between text-sm mb-2">
+                              <span className="font-bold text-primary">
+                                {formatCurrency(project.currentAmount, project.currency)}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {fundingPercentage}% funded
+                              </span>
+                            </div>
+                            <Progress value={fundingPercentage} className="h-2" />
+                          </div>
+
+                          <div className="flex items-center justify-between text-sm">
+                            <div>
+                              <p className="font-medium">{project.backerCount}</p>
+                              <p className="text-muted-foreground">backers</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium">{daysRemaining}</p>
+                              <p className="text-muted-foreground">days left</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-4 border-t">
+                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold">
+                              {project.creator.avatar ? (
+                                <img
+                                  src={project.creator.avatar}
+                                  alt=""
+                                  className="w-full h-full rounded-full"
+                                />
+                              ) : (
+                                project.creator.name?.[0] ||
+                                project.creator.username?.[0] ||
+                                "U"
+                              )}
+                            </div>
+                            <div className="text-sm">
+                              <p className="font-medium">
+                                {project.creator.name || project.creator.username}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Trending Projects */}
+        {trendingProjects.length > 0 && !category && (
+          <div className="mb-12">
+            <div className="mb-6">
+              <h2 className="text-3xl font-bold mb-2">Trending Now</h2>
+              <p className="text-muted-foreground">
+                Projects gaining momentum this week
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {trendingProjects.map((project) => {
+                const fundingPercentage = calculateFundingPercentage(
+                  project.currentAmount,
+                  project.fundingGoal
+                )
+                const daysRemaining = project.endDate
+                  ? calculateDaysRemaining(project.endDate)
+                  : 0
+
+                return (
+                  <Link key={project.id} href={`/project/${project.slug}`}>
+                    <Card className="hover:shadow-lg transition-shadow h-full">
+                      {project.imageUrl ? (
+                        <img
+                          src={project.imageUrl}
+                          alt={project.title}
+                          className="w-full h-48 object-cover rounded-t-lg"
+                        />
+                      ) : (
+                        <div className="w-full h-48 bg-muted rounded-t-lg flex items-center justify-center">
+                          <p className="text-muted-foreground">No image</p>
+                        </div>
+                      )}
+
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-2">
+                          <Badge variant="secondary">
+                            {project.category.replace(/_/g, " ")}
+                          </Badge>
+                        </div>
+                        <CardTitle className="line-clamp-2">{project.title}</CardTitle>
+                        {project.tagline && (
+                          <CardDescription className="line-clamp-2">
+                            {project.tagline}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex items-center justify-between text-sm mb-2">
+                              <span className="font-bold text-primary">
+                                {formatCurrency(project.currentAmount, project.currency)}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {fundingPercentage}% funded
+                              </span>
+                            </div>
+                            <Progress value={fundingPercentage} className="h-2" />
+                          </div>
+
+                          <div className="flex items-center justify-between text-sm">
+                            <div>
+                              <p className="font-medium">{project.backerCount}</p>
+                              <p className="text-muted-foreground">backers</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium">{daysRemaining}</p>
+                              <p className="text-muted-foreground">days left</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-4 border-t">
+                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold">
+                              {project.creator.avatar ? (
+                                <img
+                                  src={project.creator.avatar}
+                                  alt=""
+                                  className="w-full h-full rounded-full"
+                                />
+                              ) : (
+                                project.creator.name?.[0] ||
+                                project.creator.username?.[0] ||
+                                "U"
+                              )}
+                            </div>
+                            <div className="text-sm">
+                              <p className="font-medium">
+                                {project.creator.name || project.creator.username}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Successfully Funded */}
+        {successfulProjects.length > 0 && !category && (
+          <div className="mb-12">
+            <div className="mb-6">
+              <h2 className="text-3xl font-bold mb-2">Successfully Funded</h2>
+              <p className="text-muted-foreground">
+                Projects that reached their funding goals
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {successfulProjects.map((project) => {
+                const fundingPercentage = calculateFundingPercentage(
+                  project.currentAmount,
+                  project.fundingGoal
+                )
+
+                return (
+                  <Link key={project.id} href={`/project/${project.slug}`}>
+                    <Card className="hover:shadow-lg transition-shadow h-full">
+                      {project.imageUrl ? (
+                        <img
+                          src={project.imageUrl}
+                          alt={project.title}
+                          className="w-full h-48 object-cover rounded-t-lg"
+                        />
+                      ) : (
+                        <div className="w-full h-48 bg-muted rounded-t-lg flex items-center justify-center">
+                          <p className="text-muted-foreground">No image</p>
+                        </div>
+                      )}
+
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-2">
+                          <Badge variant="secondary">
+                            {project.category.replace(/_/g, " ")}
+                          </Badge>
+                          <Badge variant="default" className="bg-green-600">Funded</Badge>
+                        </div>
+                        <CardTitle className="line-clamp-2">{project.title}</CardTitle>
+                        {project.tagline && (
+                          <CardDescription className="line-clamp-2">
+                            {project.tagline}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex items-center justify-between text-sm mb-2">
+                              <span className="font-bold text-primary">
+                                {formatCurrency(project.currentAmount, project.currency)}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {fundingPercentage}% funded
+                              </span>
+                            </div>
+                            <Progress value={fundingPercentage} className="h-2" />
+                          </div>
+
+                          <div className="flex items-center justify-between text-sm">
+                            <div>
+                              <p className="font-medium">{project.backerCount}</p>
+                              <p className="text-muted-foreground">backers</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-green-600">✓ Funded</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-4 border-t">
+                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold">
+                              {project.creator.avatar ? (
+                                <img
+                                  src={project.creator.avatar}
+                                  alt=""
+                                  className="w-full h-full rounded-full"
+                                />
+                              ) : (
+                                project.creator.name?.[0] ||
+                                project.creator.username?.[0] ||
+                                "U"
+                              )}
+                            </div>
+                            <div className="text-sm">
+                              <p className="font-medium">
+                                {project.creator.name || project.creator.username}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Category Filters */}
         <div className="mb-8">
+          <h2 className="text-3xl font-bold mb-4">Browse by Category</h2>
           <div className="flex flex-wrap gap-2">
             <Link href="/explore">
               <Button variant={!category ? "default" : "outline"} size="sm">
