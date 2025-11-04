@@ -152,6 +152,7 @@ model User {
   surveyResponses   SurveyResponse[]
   watchlist         Watchlist[]
   comments          Comment[]
+  notifications     Notification[]
 
   @@index([email])
   @@index([username])
@@ -594,6 +595,29 @@ model Comment {
   @@index([projectId])
   @@index([userId])
   @@index([parentId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      String   // PLEDGE, COMMENT, UPDATE, MESSAGE, SURVEY, COLLABORATOR_ADDED, etc.
+  title     String
+  message   String   @db.Text
+
+  link      String?  // URL to relevant page
+
+  read      Boolean  @default(false)
+
+  metadata  Json?    // Additional data (projectId, pledgeId, etc.)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([read])
   @@index([createdAt])
 }
 
