@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { formatCurrency, formatDate, calculateDaysRemaining, calculateFundingPercentage } from "@/lib/utils"
 import Link from "next/link"
+import CommentSection from "@/components/project/CommentSection"
 
 export default async function ProjectPage({ params }: { params: { slug: string } }) {
   const project = await prisma.project.findUnique({
@@ -214,6 +215,11 @@ export default async function ProjectPage({ params }: { params: { slug: string }
                 </div>
               </div>
             )}
+
+            {/* Comments Section */}
+            <div>
+              <CommentSection projectId={project.id} />
+            </div>
           </div>
 
           {/* Sidebar - Rewards */}
