@@ -105,16 +105,80 @@ React Email templates with Resend:
 - Site settings (general, theme, SEO)
 - Admin-only access control
 
+### ✅ Analytics Dashboard (100% Complete)
+- Comprehensive analytics with Recharts visualizations
+- Funding progress chart (area chart with cumulative data)
+- Daily activity chart (bar chart for daily pledges)
+- Traffic sources pie chart
+- Device breakdown analytics
+- Top referrers tracking
+- Reward performance metrics
+- Geographic distribution of backers
+- Export to CSV/JSON
+
+### ✅ Backer Survey System (100% Complete)
+- Survey builder with 6 question types:
+  - Short text and long text
+  - Dropdown, radio buttons, checkboxes
+  - Full address collection
+- Drag-and-drop question ordering
+- Required field validation
+- Survey activation/deactivation
+- Response collection from backers
+- View individual responses
+- Export responses to CSV
+- Email integration for survey notifications
+
+### ✅ Messaging System (100% Complete)
+- Direct messaging between creators and backers
+- Threaded conversations
+- Unread message badges
+- Mark messages as read
+- Real-time message sending
+- User-friendly chat interface
+
+### ✅ Search & Discovery (100% Complete)
+- Full-text search across title, tagline, and story
+- Category filtering
+- Sort options (relevance, popular, funded, ending soon, newest)
+- Dedicated category pages for all 8 categories
+- Enhanced explore page with three sections:
+  - Staff Picks (featured projects)
+  - Trending Now (popular this week)
+  - Successfully Funded (reached goal)
+
+### ✅ User Profiles (100% Complete)
+- Public user profile pages
+- Statistics cards (projects created, total funded, projects backed)
+- Tabs for created and backed projects
+- Full project cards with funding progress
+
+### ✅ Email Admin Interface (100% Complete)
+- Template management for all email types
+- SMTP configuration (Resend, SendGrid, custom SMTP)
+- Test email sending
+- Email delivery logs with metrics
+- From/reply-to email settings
+- Notification preferences
+
+### ✅ Payout Management (100% Complete)
+- Request payouts from funded projects
+- Financial summary dashboard (total raised, paid out, pending, available)
+- Payout history with status tracking
+- Validation for sufficient funds
+- Bank account information collection
+- Admin approval workflow
+
+### ✅ Watchlist Feature (100% Complete)
+- Add/remove projects from watchlist
+- View all saved projects
+- Receive notifications for watched projects
+
 ### 🔨 In Progress / Planned
-- Analytics dashboards with Recharts
-- Messaging system between users
-- Backer survey system
-- Search functionality
-- User profile pages
-- More admin panel features
-- Email template management
-- Advanced analytics
 - Testing and optimization
+- Performance improvements
+- Additional admin features
+- Mobile app development
 
 ## 🛠 Tech Stack
 
@@ -367,6 +431,41 @@ The platform is designed for deployment on:
 
 ### File Upload
 - `POST /api/uploadthing` - Handle file uploads (UploadThing)
+
+### Survey Routes
+- `GET /api/projects/[id]/surveys` - Get all surveys for a project
+- `POST /api/projects/[id]/surveys` - Create a new survey
+- `GET /api/projects/[id]/surveys/[surveyId]` - Get survey details
+- `PATCH /api/projects/[id]/surveys/[surveyId]` - Update survey
+- `DELETE /api/projects/[id]/surveys/[surveyId]` - Delete survey
+- `GET /api/surveys/[surveyId]` - Get public survey details
+- `GET /api/surveys/[surveyId]/responses` - Get survey responses (creators only)
+- `POST /api/surveys/[surveyId]/responses` - Submit survey response (backers)
+- `GET /api/surveys/[surveyId]/export` - Export responses to CSV
+
+### Message Routes
+- `GET /api/messages` - Get all conversations or specific thread messages
+- `POST /api/messages` - Send a new message
+- `PATCH /api/messages` - Mark messages as read
+
+### Search Routes
+- `GET /api/search` - Search projects with filters (query, category, sortBy, status)
+
+### Watchlist Routes
+- `GET /api/watchlist` - Get user's watchlist
+- `POST /api/watchlist` - Add project to watchlist
+- `DELETE /api/watchlist?projectId=[id]` - Remove from watchlist
+
+### Analytics Routes
+- `GET /api/projects/[id]/analytics` - Get comprehensive project analytics
+- `GET /api/recommendations` - Get personalized project recommendations
+
+### Payout Routes
+- `GET /api/projects/[id]/payouts` - Get all payouts for a project
+- `POST /api/projects/[id]/payouts` - Request a new payout
+
+### User Routes
+- `GET /api/user/pledges` - Get user's pledges
 
 ## 🤝 Contributing
 
