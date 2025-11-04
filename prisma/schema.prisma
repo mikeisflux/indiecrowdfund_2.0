@@ -1,0 +1,587 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  CREATOR
+  BACKER
+  COLLABORATOR
+}
+
+enum ProjectStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  LIVE
+  SUCCESSFUL
+  FAILED
+  SUSPENDED
+  CANCELLED
+}
+
+enum PaymentProcessor {
+  STRIPE
+  CCBILL
+}
+
+enum PledgeStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum FulfillmentStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum CollaboratorPermission {
+  EDIT_PROJECT
+  MANAGE_COMMUNITY
+  COORDINATE_FULFILLMENT
+  CONFIGURE_PLEDGE_MANAGER
+  VIEW_ANALYTICS
+  MANAGE_UPDATES
+}
+
+enum ProjectCategory {
+  COMIC_BOOKS
+  GRAPHIC_NOVELS
+  MANGA
+  WEBCOMICS
+  INDIE_COMICS
+  ANTHOLOGY
+  ART_BOOK
+  ZINE
+}
+
+// Site Settings Model for Admin Panel
+model SiteSettings {
+  id                String   @id @default(cuid())
+  siteName          String   @default("Indiecrowdfund")
+  siteUrl           String   @default("http://localhost:3000")
+  logoUrl           String?
+  faviconUrl        String?
+  primaryColor      String   @default("#000000")
+  secondaryColor    String   @default("#ffffff")
+  accentColor       String   @default("#0070f3")
+  fontFamily        String   @default("Inter")
+  customCss         String?  @db.Text
+
+  // Email Settings
+  emailFrom         String   @default("noreply@indiecrowdfund.com")
+  emailReplyTo      String?
+  smtpHost          String?
+  smtpPort          Int?
+  smtpUser          String?
+  smtpPassword      String?
+
+  // Payment Settings
+  platformFeePercent Float   @default(5.0)
+  stripeFeePercent  Float    @default(2.9)
+  stripeFeeFixed    Float    @default(0.30)
+  ccbillFeePercent  Float    @default(12.0)
+
+  // SEO Settings
+  metaTitle         String?
+  metaDescription   String?  @db.Text
+  metaKeywords      String?
+  ogImageUrl        String?
+  twitterHandle     String?
+
+  // Feature Flags
+  maintenanceMode   Boolean  @default(false)
+  allowRegistration Boolean  @default(true)
+  requireEmailVerify Boolean @default(true)
+  enableCcbill      Boolean  @default(true)
+  enableStripe      Boolean  @default(true)
+
+  // Analytics
+  gaTrackingId      String?
+  metaPixelId       String?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerified     DateTime?
+  password          String
+  name              String?
+  username          String?   @unique
+  avatar            String?
+  bio               String?   @db.Text
+  role              UserRole  @default(BACKER)
+  location          String?
+  website           String?
+  twitter           String?
+  facebook          String?
+  instagram         String?
+
+  // Behavioral Tracking Preferences
+  allowTracking     Boolean   @default(true)
+  emailNotifications Boolean  @default(true)
+
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastLoginAt       DateTime?
+
+  // Relations
+  createdProjects   Project[]  @relation("CreatedProjects")
+  pledges           Pledge[]
+  behaviorLogs      BehaviorLog[]
+  sentMessages      Message[]  @relation("SentMessages")
+  receivedMessages  Message[]  @relation("ReceivedMessages")
+  collaborations    Collaborator[]
+  surveyResponses   SurveyResponse[]
+  watchlist         Watchlist[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model Project {
+  id                String         @id @default(cuid())
+
+  // Step 1: Basics
+  title             String
+  slug              String         @unique
+  tagline           String?
+  category          ProjectCategory
+  location          String?
+  imageUrl          String?
+  videoUrl          String?
+  fundingGoal       Float
+  currency          String         @default("USD")
+  duration          Int?           // in days
+  endDate           DateTime?
+
+  // Step 3: Story
+  story             String?        @db.Text
+  risks             String?        @db.Text
+  aiDisclosure      String?        @db.Text
+  faqs              Json?
+
+  // Step 5: Payment
+  contactEmail      String
+  projectType       String?        // individual or business
+  paymentProcessor  PaymentProcessor @default(STRIPE)
+  bankAccountId     String?
+  stripeAccountId   String?
+  ccbillAccountId   String?
+
+  // Step 6: Promotion
+  customUrl         String?
+  preLaunchPage     Boolean        @default(false)
+  referralTags      String?
+  gaTrackingId      String?
+  metaPixelId       String?
+
+  // Status
+  status            ProjectStatus  @default(DRAFT)
+  featured          Boolean        @default(false)
+  verified          Boolean        @default(false)
+
+  // Metrics
+  currentAmount     Float          @default(0)
+  backerCount       Int            @default(0)
+  viewCount         Int            @default(0)
+  videoPlayCount    Int            @default(0)
+
+  // Timestamps
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  launchedAt        DateTime?
+  completedAt       DateTime?
+
+  // Relations
+  creatorId         String
+  creator           User           @relation("CreatedProjects", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  rewards           Reward[]
+  addons            AddOn[]
+  pledges           Pledge[]
+  updates           Update[]
+  collaborators     Collaborator[]
+  surveys           Survey[]
+  analyticsEvents   AnalyticsEvent[]
+  watchlist         Watchlist[]
+
+  @@index([slug])
+  @@index([creatorId])
+  @@index([status])
+  @@index([category])
+}
+
+model Reward {
+  id                String    @id @default(cuid())
+  projectId         String
+  project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title             String
+  description       String    @db.Text
+  pledgeAmount      Float
+  imageUrl          String?
+  estimatedDelivery DateTime?
+  shippingType      String?   // NO_SHIPPING, DOMESTIC, INTERNATIONAL
+  shippingCost      Float?
+  quantityLimit     Int?
+  quantityAvailable Int?
+  position          Int       @default(0)
+
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  items             RewardItem[]
+  pledges           Pledge[]
+  addons            AddOn[]   @relation("RewardToAddOn")
+
+  @@index([projectId])
+}
+
+model RewardItem {
+  id          String   @id @default(cuid())
+  rewardId    String
+  reward      Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?  @db.Text
+  imageUrl    String?
+  quantity    Int      @default(1)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([rewardId])
+}
+
+model AddOn {
+  id                String    @id @default(cuid())
+  projectId         String
+  project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Optional: Link to parent reward if copied
+  parentRewardId    String?
+  parentReward      Reward?   @relation("RewardToAddOn", fields: [parentRewardId], references: [id])
+
+  title             String
+  description       String    @db.Text
+  price             Float
+  imageUrl          String?
+  shippingCost      Float?
+  quantityLimit     Int?
+  quantityAvailable Int?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  pledges           PledgeAddOn[]
+
+  @@index([projectId])
+}
+
+model Pledge {
+  id                String        @id @default(cuid())
+  projectId         String
+  project           Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  backerId          String
+  backer            User          @relation(fields: [backerId], references: [id], onDelete: Cascade)
+
+  rewardId          String?
+  reward            Reward?       @relation(fields: [rewardId], references: [id])
+
+  amount            Float
+  paymentProcessor  PaymentProcessor
+  paymentStatus     PledgeStatus  @default(PENDING)
+
+  // Payment details
+  stripePaymentId   String?
+  ccbillTransactionId String?
+
+  // Fulfillment
+  fulfillmentStatus FulfillmentStatus @default(PENDING)
+  shippingAddress   Json?
+  trackingNumber    String?
+
+  // Analytics
+  referrerUrl       String?
+  referralTag       String?
+  deviceType        String?       // Desktop, Android, iOS
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  addons            PledgeAddOn[]
+  surveyResponse    SurveyResponse?
+
+  @@index([projectId])
+  @@index([backerId])
+}
+
+model PledgeAddOn {
+  id        String   @id @default(cuid())
+  pledgeId  String
+  pledge    Pledge   @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+
+  addonId   String
+  addon     AddOn    @relation(fields: [addonId], references: [id], onDelete: Cascade)
+
+  quantity  Int      @default(1)
+  price     Float
+
+  createdAt DateTime @default(now())
+
+  @@index([pledgeId])
+  @@index([addonId])
+}
+
+model Survey {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?  @db.Text
+  questions   Json     // Array of question objects
+
+  sentAt      DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  responses   SurveyResponse[]
+
+  @@index([projectId])
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  pledgeId    String   @unique
+  pledge      Pledge   @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  responses   Json     // Answers to questions
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([surveyId])
+  @@index([userId])
+}
+
+model Update {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  content     String   @db.Text
+  isDraft     Boolean  @default(true)
+
+  publishedAt DateTime?
+  scheduledFor DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  receiverId  String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  subject     String?
+  content     String   @db.Text
+  isRead      Boolean  @default(false)
+
+  // Thread management
+  threadId    String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([threadId])
+}
+
+model Collaborator {
+  id          String                   @id @default(cuid())
+  projectId   String
+  project     Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  permissions CollaboratorPermission[]
+
+  invitedAt   DateTime                 @default(now())
+  acceptedAt  DateTime?
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model Payout {
+  id              String   @id @default(cuid())
+  projectId       String
+
+  amount          Float
+  feeAmount       Float
+  netAmount       Float
+
+  processor       PaymentProcessor
+  processorPayoutId String?
+
+  status          String   @default("pending") // pending, processing, completed, failed
+
+  scheduledFor    DateTime?
+  completedAt     DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model BehaviorLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  eventType   String   // VIEW, CLICK, SEARCH, WATCH, PLEDGE_ATTEMPT, WATCHLIST_ADD
+  entityType  String?  // PROJECT, CATEGORY, USER
+  entityId    String?
+
+  metadata    Json?    // Additional context
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  eventType   String   // PLEDGE, VIEW, VIDEO_PLAY, SHARE
+  amount      Float?
+
+  referrerUrl String?
+  referralTag String?
+  deviceType  String?
+
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model Watchlist {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// Admin Panel Models
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  userEmail   String?
+
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, etc.
+  entityType  String   // USER, PROJECT, SETTINGS, etc.
+  entityId    String?
+
+  changes     Json?    // Before/after data
+  ipAddress   String?
+  userAgent   String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+model StaticPage {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  content     String   @db.Text
+
+  metaTitle   String?
+  metaDescription String? @db.Text
+
+  isPublished Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  subject     String
+  htmlContent String   @db.Text
+  textContent String?  @db.Text
+
+  variables   Json?    // Available template variables
+
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
