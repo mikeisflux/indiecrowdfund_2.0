@@ -5,13 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { formatCurrency, calculateFundingPercentage, calculateDaysRemaining } from "@/lib/utils"
+import StatusBadge from "@/components/project/StatusBadge"
 
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: { category?: string }
+  searchParams: { category?: string; status?: string }
 }) {
   const category = searchParams.category
+  const status = searchParams.status as any
 
   // Get featured projects (staff picks)
   const featuredProjects = await prisma.project.findMany({
@@ -80,7 +82,7 @@ export default async function ExplorePage({
 
   const projects = await prisma.project.findMany({
     where: {
-      status: "LIVE",
+      ...(status ? { status } : { status: "LIVE" }),
       ...(category && { category: category as any }),
     },
     include: {
@@ -181,10 +183,13 @@ export default async function ExplorePage({
                       )}
 
                       <CardHeader>
-                        <div className="flex items-start justify-between mb-2">
-                          <Badge variant="secondary">
-                            {project.category.replace(/_/g, " ")}
-                          </Badge>
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                          <div className="flex gap-2">
+                            <Badge variant="secondary">
+                              {project.category.replace(/_/g, " ")}
+                            </Badge>
+                            <StatusBadge status={project.status} />
+                          </div>
                           <Badge variant="default">Featured</Badge>
                         </div>
                         <CardTitle className="line-clamp-2">{project.title}</CardTitle>
@@ -285,10 +290,13 @@ export default async function ExplorePage({
                       )}
 
                       <CardHeader>
-                        <div className="flex items-start justify-between mb-2">
-                          <Badge variant="secondary">
-                            {project.category.replace(/_/g, " ")}
-                          </Badge>
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                          <div className="flex gap-2 flex-wrap">
+                            <Badge variant="secondary">
+                              {project.category.replace(/_/g, " ")}
+                            </Badge>
+                            <StatusBadge status={project.status} />
+                          </div>
                         </div>
                         <CardTitle className="line-clamp-2">{project.title}</CardTitle>
                         {project.tagline && (
@@ -385,11 +393,13 @@ export default async function ExplorePage({
                       )}
 
                       <CardHeader>
-                        <div className="flex items-start justify-between mb-2">
-                          <Badge variant="secondary">
-                            {project.category.replace(/_/g, " ")}
-                          </Badge>
-                          <Badge variant="default" className="bg-green-600">Funded</Badge>
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                          <div className="flex gap-2 flex-wrap">
+                            <Badge variant="secondary">
+                              {project.category.replace(/_/g, " ")}
+                            </Badge>
+                            <StatusBadge status={project.status} />
+                          </div>
                         </div>
                         <CardTitle className="line-clamp-2">{project.title}</CardTitle>
                         {project.tagline && (
@@ -453,17 +463,39 @@ export default async function ExplorePage({
           </div>
         )}
 
+        {/* Status Filters */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">Filter by Status</h2>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/explore">
+              <Button variant={!status ? "default" : "outline"} size="sm">
+                Live Projects
+              </Button>
+            </Link>
+            <Link href="/explore?status=SUCCESSFUL">
+              <Button variant={status === "SUCCESSFUL" ? "default" : "outline"} size="sm">
+                Successfully Funded
+              </Button>
+            </Link>
+            <Link href="/explore?status=APPROVED">
+              <Button variant={status === "APPROVED" ? "default" : "outline"} size="sm">
+                Approved (Coming Soon)
+              </Button>
+            </Link>
+          </div>
+        </div>
+
         {/* Category Filters */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-4">Browse by Category</h2>
           <div className="flex flex-wrap gap-2">
-            <Link href="/explore">
+            <Link href={`/explore${status ? `?status=${status}` : ""}`}>
               <Button variant={!category ? "default" : "outline"} size="sm">
                 All Projects
               </Button>
             </Link>
             {categories.map((cat) => (
-              <Link key={cat.value} href={`/explore?category=${cat.value}`}>
+              <Link key={cat.value} href={`/explore?category=${cat.value}${status ? `&status=${status}` : ""}`}>
                 <Button
                   variant={category === cat.value ? "default" : "outline"}
                   size="sm"
@@ -511,10 +543,13 @@ export default async function ExplorePage({
                     )}
 
                     <CardHeader>
-                      <div className="flex items-start justify-between mb-2">
-                        <Badge variant="secondary">
-                          {project.category.replace(/_/g, " ")}
-                        </Badge>
+                      <div className="flex items-start justify-between mb-2 gap-2">
+                        <div className="flex gap-2 flex-wrap">
+                          <Badge variant="secondary">
+                            {project.category.replace(/_/g, " ")}
+                          </Badge>
+                          <StatusBadge status={project.status} />
+                        </div>
                       </div>
                       <CardTitle className="line-clamp-2">{project.title}</CardTitle>
                       {project.tagline && (

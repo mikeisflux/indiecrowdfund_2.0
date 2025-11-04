@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, calculateFundingPercentage } from "@/lib/utils"
+import StatusBadge from "@/components/project/StatusBadge"
+import SubmitForReviewButton from "@/components/project/SubmitForReviewButton"
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -69,9 +71,7 @@ export default async function DashboardPage() {
                         {project.category.replace(/_/g, " ")}
                       </CardDescription>
                     </div>
-                    <Badge variant={project.status === "LIVE" ? "default" : "secondary"}>
-                      {project.status}
-                    </Badge>
+                    <StatusBadge status={project.status} />
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -112,15 +112,29 @@ export default async function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
                       {project.status === "DRAFT" ? (
-                        <Link href={`/start-project/${project.id}`} className="flex-1">
-                          <Button variant="outline" className="w-full">
-                            Continue Editing
-                          </Button>
-                        </Link>
-                      ) : (
                         <>
+                          <Link href={`/start-project/${project.id}`}>
+                            <Button variant="outline" className="w-full">
+                              Continue Editing
+                            </Button>
+                          </Link>
+                          <SubmitForReviewButton
+                            projectId={project.id}
+                            projectTitle={project.title}
+                          />
+                        </>
+                      ) : project.status === "PENDING_APPROVAL" ? (
+                        <div className="text-center text-sm text-muted-foreground py-2">
+                          Your project is under review. We'll notify you once it's approved!
+                        </div>
+                      ) : project.status === "APPROVED" ? (
+                        <div className="text-center text-sm text-muted-foreground py-2">
+                          Your project is approved and will launch soon!
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
                           <Link href={`/project/${project.slug}`} className="flex-1">
                             <Button variant="outline" className="w-full">
                               View Project
@@ -129,7 +143,7 @@ export default async function DashboardPage() {
                           <Link href={`/dashboard/project/${project.id}`} className="flex-1">
                             <Button className="w-full">Dashboard</Button>
                           </Link>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
