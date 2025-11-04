@@ -17,7 +17,7 @@ export default async function ExplorePage({
   const featuredProjects = await prisma.project.findMany({
     where: {
       status: "LIVE",
-      isFeatured: true,
+      featured: true,
     },
     include: {
       creator: {

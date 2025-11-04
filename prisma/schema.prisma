@@ -151,6 +151,7 @@ model User {
   collaborations    Collaborator[]
   surveyResponses   SurveyResponse[]
   watchlist         Watchlist[]
+  comments          Comment[]
 
   @@index([email])
   @@index([username])
@@ -222,6 +223,7 @@ model Project {
   surveys           Survey[]
   analyticsEvents   AnalyticsEvent[]
   watchlist         Watchlist[]
+  comments          Comment[]
 
   @@index([slug])
   @@index([creatorId])
@@ -568,6 +570,31 @@ model StaticPage {
   updatedAt   DateTime @updatedAt
 
   @@index([slug])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  parentId  String?  // For nested replies
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+
+  isDeleted Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([createdAt])
 }
 
 model EmailTemplate {
