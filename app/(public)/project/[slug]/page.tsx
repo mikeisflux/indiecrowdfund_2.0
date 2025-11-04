@@ -128,9 +128,11 @@ export default async function ProjectPage({ params }: { params: { slug: string }
                 </div>
 
                 <div className="flex gap-4">
-                  <Button size="lg" className="flex-1">
-                    Back This Project
-                  </Button>
+                  <Link href={`/project/${project.slug}/checkout${project.rewards[0] ? `?rewardId=${project.rewards[0].id}` : ''}`} className="flex-1">
+                    <Button size="lg" className="w-full">
+                      Back This Project
+                    </Button>
+                  </Link>
                   <Button size="lg" variant="outline">
                     ♥
                   </Button>
@@ -251,7 +253,9 @@ export default async function ProjectPage({ params }: { params: { slug: string }
                         Limited: {reward.quantityAvailable || 0} / {reward.quantityLimit} available
                       </p>
                     )}
-                    <Button className="w-full">Select This Reward</Button>
+                    <Link href={`/project/${project.slug}/checkout?rewardId=${reward.id}`}>
+                      <Button className="w-full">Select This Reward</Button>
+                    </Link>
                   </CardContent>
                 </Card>
               ))
