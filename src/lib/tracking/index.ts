@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { BehaviorEventType } from "@prisma/client";
 
 interface ProjectViewResult {
   date: Date;
@@ -20,25 +21,8 @@ interface BehaviorGroupResult {
   _count: number;
 }
 
-// Must match BehaviorEventType enum in Prisma schema
-export type EventType =
-  | "PAGE_VIEW"
-  | "PAGE_EXIT"
-  | "PROJECT_VIEW"
-  | "PROJECT_CLICK"
-  | "REWARD_CLICK"
-  | "VIDEO_PLAY"
-  | "VIDEO_COMPLETE"
-  | "SEARCH"
-  | "FILTER_APPLY"
-  | "PROJECT_SAVE"
-  | "PROJECT_SHARE"
-  | "COMMENT_POST"
-  | "PLEDGE_START"
-  | "PLEDGE_COMPLETE"
-  | "SCROLL_DEPTH"
-  | "HOVER"
-  | "CREATOR_VIEW";
+// Re-export Prisma's enum for external use
+export type EventType = BehaviorEventType;
 
 interface TrackEventParams {
   eventType: EventType;
