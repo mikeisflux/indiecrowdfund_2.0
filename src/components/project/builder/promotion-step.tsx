@@ -209,31 +209,35 @@ export function PromotionStep() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="ga-id">Tracking ID</Label>
-                <Input
-                  id="ga-id"
-                  placeholder="G-XXXXXXXXXX"
-                  value={promotion.googleAnalyticsId || ""}
-                  onChange={(e) =>
-                    updatePromotion({ googleAnalyticsId: e.target.value })
-                  }
-                />
+            <form onSubmit={(e) => e.preventDefault()}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="ga-id">Tracking ID</Label>
+                  <Input
+                    id="ga-id"
+                    placeholder="G-XXXXXXXXXX"
+                    autoComplete="off"
+                    value={promotion.googleAnalyticsId || ""}
+                    onChange={(e) =>
+                      updatePromotion({ googleAnalyticsId: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ga-secret">API Secret (optional)</Label>
+                  <Input
+                    id="ga-secret"
+                    type="password"
+                    placeholder="Your API secret"
+                    autoComplete="off"
+                    value={promotion.googleAnalyticsSecret || ""}
+                    onChange={(e) =>
+                      updatePromotion({ googleAnalyticsSecret: e.target.value })
+                    }
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="ga-secret">API Secret (optional)</Label>
-                <Input
-                  id="ga-secret"
-                  type="password"
-                  placeholder="Your API secret"
-                  value={promotion.googleAnalyticsSecret || ""}
-                  onChange={(e) =>
-                    updatePromotion({ googleAnalyticsSecret: e.target.value })
-                  }
-                />
-              </div>
-            </div>
+            </form>
           </CardContent>
         </Card>
 
@@ -246,33 +250,37 @@ export function PromotionStep() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="meta-pixel">Pixel ID</Label>
-                <Input
-                  id="meta-pixel"
-                  placeholder="1234567890123456"
-                  value={promotion.metaPixelId || ""}
-                  onChange={(e) =>
-                    updatePromotion({ metaPixelId: e.target.value })
-                  }
-                />
+            <form onSubmit={(e) => e.preventDefault()}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="meta-pixel">Pixel ID</Label>
+                  <Input
+                    id="meta-pixel"
+                    placeholder="1234567890123456"
+                    autoComplete="off"
+                    value={promotion.metaPixelId || ""}
+                    onChange={(e) =>
+                      updatePromotion({ metaPixelId: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="meta-token">
+                    Conversions API Token (optional)
+                  </Label>
+                  <Input
+                    id="meta-token"
+                    type="password"
+                    placeholder="Your access token"
+                    autoComplete="off"
+                    value={promotion.metaConversionsToken || ""}
+                    onChange={(e) =>
+                      updatePromotion({ metaConversionsToken: e.target.value })
+                    }
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="meta-token">
-                  Conversions API Token (optional)
-                </Label>
-                <Input
-                  id="meta-token"
-                  type="password"
-                  placeholder="Your access token"
-                  value={promotion.metaConversionsToken || ""}
-                  onChange={(e) =>
-                    updatePromotion({ metaConversionsToken: e.target.value })
-                  }
-                />
-              </div>
-            </div>
+            </form>
           </CardContent>
         </Card>
       </div>
