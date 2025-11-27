@@ -40,14 +40,14 @@ export async function trackEvent({
   try {
     await db.userBehavior.create({
       data: {
-        eventType,
+        eventType: eventType as any, // Map to BehaviorEventType enum
         userId,
         sessionId,
         projectId,
         rewardId,
         metadata: metadata || {},
         referrer,
-        page,
+        path: page || "/",
       },
     });
   } catch (error) {

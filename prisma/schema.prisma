@@ -785,3 +785,40 @@ model SurveyResponse {
 
   @@index([surveyId])
 }
+
+// ============================================
+// PROJECT VIEWS & REFERRAL TRACKING
+// ============================================
+
+model ProjectView {
+  id          String   @id @default(cuid())
+  projectId   String
+  date        DateTime @db.Date
+  views       Int      @default(0)
+  uniqueViews Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, date])
+  @@index([projectId, date])
+}
+
+model ReferralTracker {
+  id           String   @id @default(cuid())
+  projectId    String
+  referrer     String
+  referrerType String
+  tag          String?
+  date         DateTime @db.Date
+  visits       Int      @default(0)
+  pledges      Int      @default(0)
+  pledgeAmount Float    @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([projectId, referrer, date])
+  @@index([projectId, date])
+  @@index([projectId, referrerType])
+}
