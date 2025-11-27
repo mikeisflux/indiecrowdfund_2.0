@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -137,6 +137,34 @@ const SORT_OPTIONS = [
 ];
 
 export default function DiscoverPage() {
+  return (
+    <Suspense fallback={<DiscoverPageSkeleton />}>
+      <DiscoverContent />
+    </Suspense>
+  );
+}
+
+function DiscoverPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+        <div className="container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-8">
+            <span className="text-xl font-bold text-primary">IndieCrowdfund</span>
+          </div>
+        </div>
+      </header>
+      <section className="border-b bg-muted/30 py-12">
+        <div className="container">
+          <h1 className="mb-2 text-3xl font-bold">Discover Projects</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DiscoverContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 

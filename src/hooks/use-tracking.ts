@@ -2,9 +2,23 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { BehaviorEventType } from "@prisma/client";
 
-type EventType = BehaviorEventType;
+// Match Prisma BehaviorEventType enum
+type EventType =
+  | "PAGE_VIEW"
+  | "PAGE_EXIT"
+  | "PROJECT_VIEW"
+  | "PROJECT_CLICK"
+  | "REWARD_CLICK"
+  | "PLEDGE_START"
+  | "PLEDGE_COMPLETE"
+  | "PLEDGE_ABANDON"
+  | "PROJECT_SHARE"
+  | "PROJECT_SAVE"
+  | "SEARCH"
+  | "FILTER_APPLY"
+  | "VIDEO_PLAY"
+  | "SCROLL_DEPTH";
 
 interface TrackingOptions {
   projectId?: string;
