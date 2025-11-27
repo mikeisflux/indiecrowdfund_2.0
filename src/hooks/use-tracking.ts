@@ -3,18 +3,25 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 
+// Must match BehaviorEventType enum in Prisma schema
 type EventType =
   | "PAGE_VIEW"
+  | "PAGE_EXIT"
   | "PROJECT_VIEW"
-  | "REWARD_VIEW"
+  | "PROJECT_CLICK"
+  | "REWARD_CLICK"
+  | "VIDEO_PLAY"
+  | "VIDEO_COMPLETE"
+  | "SEARCH"
+  | "FILTER_APPLY"
+  | "PROJECT_SAVE"
+  | "PROJECT_SHARE"
+  | "COMMENT_POST"
   | "PLEDGE_START"
   | "PLEDGE_COMPLETE"
-  | "SHARE"
-  | "SAVE"
-  | "SEARCH"
-  | "CATEGORY_BROWSE"
-  | "VIDEO_PLAY"
-  | "SCROLL_DEPTH";
+  | "SCROLL_DEPTH"
+  | "HOVER"
+  | "CREATOR_VIEW";
 
 interface TrackingOptions {
   projectId?: string;
@@ -82,9 +89,9 @@ export function useTracking() {
     [track]
   );
 
-  const trackRewardView = useCallback(
+  const trackRewardClick = useCallback(
     (projectId: string, rewardId: string) => {
-      track("REWARD_VIEW", { projectId, rewardId });
+      track("REWARD_CLICK", { projectId, rewardId });
     },
     [track]
   );
@@ -109,7 +116,7 @@ export function useTracking() {
 
   const trackShare = useCallback(
     (projectId: string, platform: string) => {
-      track("SHARE", {
+      track("PROJECT_SHARE", {
         projectId,
         metadata: { platform },
       });
@@ -119,7 +126,7 @@ export function useTracking() {
 
   const trackSave = useCallback(
     (projectId: string, saved: boolean) => {
-      track("SAVE", {
+      track("PROJECT_SAVE", {
         projectId,
         metadata: { saved },
       });
@@ -138,7 +145,7 @@ export function useTracking() {
 
   const trackCategoryBrowse = useCallback(
     (category: string) => {
-      track("CATEGORY_BROWSE", {
+      track("FILTER_APPLY", {
         metadata: { category },
       });
     },
@@ -169,7 +176,7 @@ export function useTracking() {
     track,
     trackPageView,
     trackProjectView,
-    trackRewardView,
+    trackRewardClick,
     trackPledgeStart,
     trackPledgeComplete,
     trackShare,
