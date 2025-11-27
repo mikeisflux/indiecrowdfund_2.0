@@ -1,5 +1,9 @@
 "use client";
 
+/*
+ * #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE#
+ */
+
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -37,6 +41,7 @@ import {
   Sparkles,
   ArrowUpDown,
   X,
+  Menu,
 } from "lucide-react";
 import { PROJECT_CATEGORIES } from "@/types";
 
@@ -271,14 +276,53 @@ function DiscoverContent() {
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/login">
+            <Link href="/login" className="hidden sm:block">
               <Button variant="ghost" size="sm">
                 Log in
               </Button>
             </Link>
-            <Link href="/register">
+            <Link href="/register" className="hidden sm:block">
               <Button size="sm">Sign up</Button>
             </Link>
+            {/* Mobile Menu */}
+            <Sheet>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px]">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col gap-4 mt-6">
+                  <Link href="/discover" className="text-sm font-medium hover:text-primary py-2">
+                    Discover
+                  </Link>
+                  <Link href="/projects/new" className="text-sm font-medium hover:text-primary py-2">
+                    Start a Project
+                  </Link>
+                  <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2">
+                    Retailers
+                  </Link>
+                  <Link href="/about-us" className="text-sm font-medium hover:text-primary py-2">
+                    About Us
+                  </Link>
+                  <Link href="/faq" className="text-sm font-medium hover:text-primary py-2">
+                    FAQ
+                  </Link>
+                  <div className="border-t pt-4 mt-2 flex flex-col gap-2">
+                    <Link href="/login">
+                      <Button variant="outline" className="w-full">Log in</Button>
+                    </Link>
+                    <Link href="/register">
+                      <Button className="w-full">Sign up</Button>
+                    </Link>
+                  </div>
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </header>
