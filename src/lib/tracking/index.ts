@@ -256,7 +256,7 @@ export async function getProjectAnalytics(
       by: ["eventType"],
       where: {
         projectId,
-        createdAt: { gte: startDate },
+        timestamp: { gte: startDate },
       },
       _count: true,
     }),
