@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import {
   ProjectBasicsData,
   RewardData,
+  RewardItemData,
   ProjectStoryData,
   ProjectPeopleData,
   ProjectPaymentData,
@@ -18,6 +19,7 @@ interface ProjectBuilderState {
 
   // Form data
   basics: Partial<ProjectBasicsData>;
+  items: RewardItemData[];
   rewards: RewardData[];
   story: Partial<ProjectStoryData>;
   people: Partial<ProjectPeopleData>;
@@ -30,6 +32,11 @@ interface ProjectBuilderState {
   updatePeople: (data: Partial<ProjectPeopleData>) => void;
   updatePayment: (data: Partial<ProjectPaymentData>) => void;
   updatePromotion: (data: Partial<ProjectPromotionData>) => void;
+
+  // Item management
+  addItem: (item: RewardItemData) => void;
+  updateItem: (id: string, item: RewardItemData) => void;
+  removeItem: (id: string) => void;
 
   // Reward management
   addReward: (reward: RewardData) => void;
@@ -52,6 +59,7 @@ const initialState = {
     durationDays: 30,
     goalAmount: 10000,
   },
+  items: [] as RewardItemData[],
   rewards: [],
   story: {
     usesAI: false,
@@ -101,6 +109,26 @@ export const useProjectStore = create<ProjectBuilderState>()(
 
       updatePromotion: (data) =>
         set((state) => ({ promotion: { ...state.promotion, ...data } })),
+
+      addItem: (item) =>
+        set((state) => ({
+          items: [...state.items, { ...item, id: item.id || crypto.randomUUID() }],
+        })),
+
+      updateItem: (id, item) =>
+        set((state) => ({
+          items: state.items.map((i) => (i.id === id ? { ...item, id } : i)),
+        })),
+
+      removeItem: (id) =>
+        set((state) => ({
+          items: state.items.filter((i) => i.id !== id),
+          // Also remove from any rewards that include this item
+          rewards: state.rewards.map((r) => ({
+            ...r,
+            items: r.items.filter((i) => i.id !== id),
+          })),
+        })),
 
       addReward: (reward) =>
         set((state) => ({ rewards: [...state.rewards, reward] })),
