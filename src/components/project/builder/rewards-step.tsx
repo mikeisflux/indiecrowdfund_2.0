@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
-import { RewardData, RewardItemData, RewardType, ShippingType, Visibility } from "@/types";
+import { RewardData, RewardItemData, RewardType, ShippingType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,9 +32,7 @@ import {
 } from "@/components/ui/collapsible";
 import {
   Plus,
-  Trash2,
   Gift,
-  Package,
   Box,
   Image as ImageIcon,
   Upload,
@@ -44,7 +42,6 @@ import {
   Copy,
   Download,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -106,7 +103,6 @@ export function RewardsStep() {
     addReward,
     updateReward,
     removeReward,
-    copyRewardToAddon,
   } = useProjectStore();
 
   const [activeTab, setActiveTab] = useState<"items" | "tiers" | "addons">("items");

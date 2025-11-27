@@ -10,13 +10,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -49,14 +42,11 @@ import {
   Eye,
   Heart,
   Share2,
-  MessageCircle,
   RefreshCw,
   Wand2,
-  Image as ImageIcon,
   FileText,
   Megaphone,
   TrendingUp,
-  Users,
   Zap,
 } from "lucide-react";
 import { format } from "date-fns";

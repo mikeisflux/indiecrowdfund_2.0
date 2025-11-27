@@ -52,7 +52,6 @@ import {
   TestTube,
   Share2,
   Facebook,
-  Instagram,
   Youtube,
   Twitter,
 } from "lucide-react";

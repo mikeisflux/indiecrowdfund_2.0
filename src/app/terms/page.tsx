@@ -1,4 +1,5 @@
 /* #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE# */
+/* eslint-disable react/no-unescaped-entities */
 
 "use client";
 
