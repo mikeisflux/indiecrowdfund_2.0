@@ -81,8 +81,34 @@ export async function GET(req: NextRequest) {
       db.retailerPledge.count({ where }),
     ]);
 
+    interface RetailerOrder {
+      id: string;
+      invoiceNumber: string | null;
+      project: {
+        id: string;
+        title: string;
+        imageUrl: string | null;
+        category: string | null;
+        creator: { name: string | null } | null;
+      };
+      quantity: number;
+      unitPrice: number;
+      discountPercent: number;
+      totalAmount: number;
+      originalAmount: number;
+      shippingCost: number;
+      status: string;
+      fulfillmentStatus: string;
+      trackingNumber: string | null;
+      purchaseOrderNumber: string | null;
+      createdAt: Date;
+      paidAt: Date | null;
+      shippedAt: Date | null;
+      deliveredAt: Date | null;
+    }
+
     return NextResponse.json({
-      orders: orders.map((order) => ({
+      orders: orders.map((order: RetailerOrder) => ({
         id: order.id,
         invoiceNumber: order.invoiceNumber,
         projectId: order.project.id,
@@ -197,7 +223,7 @@ export async function POST(req: NextRequest) {
     }> = [];
 
     for (const item of items) {
-      const reward = project.rewards.find((r) => r.id === item.rewardId);
+      const reward = project.rewards.find((r: { id: string }) => r.id === item.rewardId);
       if (!reward) {
         return NextResponse.json(
           { error: `Reward not found: ${item.rewardId}` },
@@ -299,7 +325,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "Order placed successfully",
-      orders: createdOrders.map((order) => ({
+      orders: createdOrders.map((order: { id: string; invoiceNumber: string | null; totalAmount: number; status: string }) => ({
         id: order.id,
         invoiceNumber: order.invoiceNumber,
         totalAmount: order.totalAmount,

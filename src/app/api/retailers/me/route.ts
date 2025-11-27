@@ -138,7 +138,7 @@ export async function GET() {
     });
 
     // Calculate days left for featured projects
-    const projectsWithDaysLeft = featuredProjects.map((project) => {
+    const projectsWithDaysLeft = featuredProjects.map((project: { endDate: Date | null; goalAmount: number; currentAmount: number; id: string; title: string; imageUrl: string | null; retailerDiscount: number | null }) => {
       const endDate = project.endDate ? new Date(project.endDate) : null;
       const daysLeft = endDate
         ? Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -163,7 +163,7 @@ export async function GET() {
         totalSavings: calculatedSavings,
         activeProjects,
       },
-      recentOrders: recentOrders.map((order) => ({
+      recentOrders: recentOrders.map((order: { id: string; project: { title: string; imageUrl: string | null }; quantity: number; totalAmount: number; originalAmount: number; status: string; fulfillmentStatus: string; createdAt: Date }) => ({
         id: order.id,
         projectTitle: order.project.title,
         projectImage: order.project.imageUrl,

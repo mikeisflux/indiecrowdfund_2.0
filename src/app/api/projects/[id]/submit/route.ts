@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession, authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { moderateContent, analyzeFraud } from "@/lib/ai/anthropic";
 
 // POST - Submit project for review
 export async function POST(
@@ -8,7 +9,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -77,7 +78,7 @@ export async function POST(
 
     // Check rewards have required fields
     const invalidRewards = project.rewards.filter(
-      (r) => !r.title || !r.description || r.amount <= 0
+      (r: { title: string | null; description: string | null; amount: number }) => !r.title || !r.description || r.amount <= 0
     );
     if (invalidRewards.length > 0) {
       validationErrors.push("All reward tiers must have a title, description, and price");
@@ -98,46 +99,117 @@ export async function POST(
       );
     }
 
-    // AI-powered flag detection (basic implementation)
+    // AI-powered flag detection
     const flagsRaised: string[] = [];
     let aiConfidenceScore = 100;
 
-    // Check for suspicious patterns
-    const descriptionLower = project.description.toLowerCase();
-    const titleLower = project.title.toLowerCase();
-
-    // Flag: First-time creator
+    // Get creator project count for context
     const creatorProjectCount = await db.project.count({
       where: {
         creatorId: project.creatorId,
         status: { in: ["LIVE", "FUNDED", "APPROVED"] },
       },
     });
+
+    // Run AI moderation and fraud detection in parallel
+    let aiModerationResult = null;
+    let aiFraudResult = null;
+
+    try {
+      const projectContent = {
+        title: project.title,
+        description: project.description,
+        risks: project.risks,
+        rewards: project.rewards.map((r: { title: string | null; description: string | null; amount: number }) => ({
+          title: r.title || "",
+          description: r.description || "",
+          amount: r.amount,
+        })),
+        goalAmount: project.goalAmount,
+        creatorName: project.creator.name || "Unknown",
+        creatorEmail: project.creator.email || undefined,
+        creatorProjectCount,
+      };
+
+      // Only run AI if API keys are configured
+      if (process.env.ANTHROPIC_API_KEY) {
+        [aiModerationResult, aiFraudResult] = await Promise.all([
+          moderateContent(projectContent),
+          analyzeFraud(projectContent),
+        ]);
+
+        // Apply AI moderation flags
+        if (aiModerationResult) {
+          if (!aiModerationResult.isApproved) {
+            flagsRaised.push("ai_moderation_failed");
+          }
+          if (aiModerationResult.riskLevel === "high" || aiModerationResult.riskLevel === "critical") {
+            flagsRaised.push(`ai_risk_${aiModerationResult.riskLevel}`);
+          }
+          aiModerationResult.flags.forEach((flag) => {
+            if (!flagsRaised.includes(flag)) {
+              flagsRaised.push(flag);
+            }
+          });
+        }
+
+        // Apply AI fraud detection flags
+        if (aiFraudResult) {
+          if (aiFraudResult.fraudScore > 70) {
+            flagsRaised.push("ai_high_fraud_risk");
+            aiConfidenceScore = Math.max(0, 100 - aiFraudResult.fraudScore);
+          } else if (aiFraudResult.fraudScore > 50) {
+            flagsRaised.push("ai_medium_fraud_risk");
+            aiConfidenceScore = Math.max(20, 100 - aiFraudResult.fraudScore);
+          }
+          aiFraudResult.riskFactors.forEach((rf) => {
+            if (rf.severity === "high" && !flagsRaised.includes(rf.factor)) {
+              flagsRaised.push(rf.factor);
+            }
+          });
+        }
+      }
+    } catch (aiError) {
+      console.error("AI analysis failed, falling back to rule-based checks:", aiError);
+      flagsRaised.push("ai_analysis_failed");
+    }
+
+    // Fallback rule-based checks (always run as backup)
+    const descriptionLower = project.description.toLowerCase();
+    const titleLower = project.title.toLowerCase();
+
+    // Flag: First-time creator
     if (creatorProjectCount === 0) {
-      flagsRaised.push("first_project");
-      aiConfidenceScore -= 5;
+      if (!flagsRaised.includes("first_project")) {
+        flagsRaised.push("first_project");
+        aiConfidenceScore = Math.max(0, aiConfidenceScore - 5);
+      }
     }
 
     // Flag: Unverified creator
     if (!project.creator.email) {
-      flagsRaised.push("unverified_creator");
-      aiConfidenceScore -= 15;
+      if (!flagsRaised.includes("unverified_creator")) {
+        flagsRaised.push("unverified_creator");
+        aiConfidenceScore = Math.max(0, aiConfidenceScore - 15);
+      }
     }
 
     // Flag: No video
     if (!project.videoUrl) {
-      flagsRaised.push("no_video");
-      aiConfidenceScore -= 5;
+      if (!flagsRaised.includes("no_video")) {
+        flagsRaised.push("no_video");
+        aiConfidenceScore = Math.max(0, aiConfidenceScore - 5);
+      }
     }
 
     // Flag: High funding goal
-    if (project.goalAmount > 100000) {
+    if (project.goalAmount > 100000 && !flagsRaised.includes("high_goal")) {
       flagsRaised.push("high_goal");
-      aiConfidenceScore -= 5;
+      aiConfidenceScore = Math.max(0, aiConfidenceScore - 5);
     }
-    if (project.goalAmount > 500000) {
+    if (project.goalAmount > 500000 && !flagsRaised.includes("unrealistic_goal")) {
       flagsRaised.push("unrealistic_goal");
-      aiConfidenceScore -= 15;
+      aiConfidenceScore = Math.max(0, aiConfidenceScore - 15);
     }
 
     // Flag: Suspicious claims
@@ -158,21 +230,21 @@ export async function POST(
         titleLower.includes(term) ||
         project.risks.toLowerCase().includes(term)
     );
-    if (hasSuspiciousClaims) {
+    if (hasSuspiciousClaims && !flagsRaised.includes("suspicious_claims")) {
       flagsRaised.push("suspicious_claims");
-      aiConfidenceScore -= 25;
+      aiConfidenceScore = Math.max(0, aiConfidenceScore - 25);
     }
 
     // Flag: Very short campaign
-    if (project.durationDays && project.durationDays < 10) {
+    if (project.durationDays && project.durationDays < 10 && !flagsRaised.includes("short_campaign")) {
       flagsRaised.push("short_campaign");
-      aiConfidenceScore -= 10;
+      aiConfidenceScore = Math.max(0, aiConfidenceScore - 10);
     }
 
     // Flag: No risks mentioned
-    if (project.risks.toLowerCase().includes("no risk") || project.risks.length < 100) {
+    if ((project.risks.toLowerCase().includes("no risk") || project.risks.length < 100) && !flagsRaised.includes("inadequate_risks")) {
       flagsRaised.push("inadequate_risks");
-      aiConfidenceScore -= 10;
+      aiConfidenceScore = Math.max(0, aiConfidenceScore - 10);
     }
 
     // Ensure score is between 0 and 100

@@ -21,11 +21,11 @@ export function LoginForm() {
     try {
       const result = await login(formData);
       if (result?.error) {
-        if (result.error._form) {
+        if ("_form" in result.error && result.error._form) {
           setError(result.error._form[0]);
-        } else if (result.error.email) {
+        } else if ("email" in result.error && result.error.email) {
           setError(result.error.email[0]);
-        } else if (result.error.password) {
+        } else if ("password" in result.error && result.error.password) {
           setError(result.error.password[0]);
         }
       }

@@ -117,7 +117,7 @@ export async function GET(
       : 0;
 
     // Calculate retailer prices for rewards
-    const rewardsWithPrices = project.rewards.map((reward) => ({
+    const rewardsWithPrices = project.rewards.map((reward: { amount: number; itemsIncluded?: string[] } & Record<string, unknown>) => ({
       ...reward,
       retailerPrice: reward.amount * (1 - project.retailerDiscount / 100),
       itemsIncluded: reward.itemsIncluded || [],

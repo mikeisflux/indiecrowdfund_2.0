@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       projects: recommendations.map((r) => ({
-        ...r.project,
+        ...(r.project as Record<string, unknown>),
         score: r.score,
         reasons: r.reasons,
       })),

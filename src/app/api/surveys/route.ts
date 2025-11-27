@@ -19,7 +19,7 @@ const createSurveySchema = z.object({
 const submitResponseSchema = z.object({
   surveyId: z.string(),
   pledgeId: z.string(),
-  responses: z.record(z.any()),
+  responses: z.record(z.string(), z.unknown()),
 });
 
 export async function POST(req: NextRequest) {
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Survey error:", error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
+      return NextResponse.json({ error: error.issues }, { status: 400 });
     }
     return NextResponse.json(
       { error: "Survey operation failed" },

@@ -120,14 +120,21 @@ export async function GET(req: NextRequest) {
     ]);
 
     // Calculate additional fields
-    const projectsWithCalculations = projects.map((project) => {
+    interface ProjectResult {
+      endDate: Date | null;
+      retailerDiscount: number;
+      rewards: Array<{ amount: number } & Record<string, unknown>>;
+      [key: string]: unknown;
+    }
+
+    const projectsWithCalculations = projects.map((project: ProjectResult) => {
       const endDate = project.endDate ? new Date(project.endDate) : null;
       const daysLeft = endDate
         ? Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
         : 0;
 
       // Calculate retailer prices for rewards
-      const rewardsWithPrices = project.rewards.map((reward) => ({
+      const rewardsWithPrices = project.rewards.map((reward: { amount: number } & Record<string, unknown>) => ({
         ...reward,
         retailerPrice: reward.amount * (1 - project.retailerDiscount / 100),
       }));

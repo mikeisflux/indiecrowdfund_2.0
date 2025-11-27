@@ -422,29 +422,29 @@ export default function PageBuilderPage() {
                       </div>
 
                       {/* Render component preview */}
-                      {child.type === "heading" && (
+                      {child.type === "heading" && "content" in child && (
                         <h1
                           className={`text-3xl font-bold ${
-                            child.settings.align === "center" ? "text-center" : ""
+                            "align" in child.settings && child.settings.align === "center" ? "text-center" : ""
                           }`}
                         >
                           {child.content}
                         </h1>
                       )}
-                      {child.type === "text" && (
+                      {child.type === "text" && "content" in child && (
                         <p
                           className={`text-lg ${
-                            child.settings.align === "center" ? "text-center" : ""
+                            "align" in child.settings && child.settings.align === "center" ? "text-center" : ""
                           }`}
-                          style={{ color: child.settings.color }}
+                          style={{ color: "color" in child.settings ? child.settings.color : undefined }}
                         >
                           {child.content}
                         </p>
                       )}
-                      {child.type === "button" && (
+                      {child.type === "button" && "content" in child && (
                         <div
                           className={`${
-                            child.settings.align === "center" ? "text-center" : ""
+                            "align" in child.settings && child.settings.align === "center" ? "text-center" : ""
                           }`}
                         >
                           <Button>{child.content}</Button>
@@ -464,9 +464,9 @@ export default function PageBuilderPage() {
                           ))}
                         </div>
                       )}
-                      {child.type === "stats-counter" && (
+                      {child.type === "stats-counter" && "stats" in child.settings && (
                         <div className="grid grid-cols-3 gap-8 text-center">
-                          {child.settings.stats.map((stat: { value: string; label: string }, i: number) => (
+                          {(child.settings.stats as Array<{ value: string; label: string }>).map((stat, i: number) => (
                             <div key={i}>
                               <p className="text-4xl font-bold text-emerald-600">
                                 {stat.value}

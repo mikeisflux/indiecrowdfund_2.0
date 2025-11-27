@@ -421,7 +421,7 @@ export default function ProjectPage() {
                         <div key={index} className="flex items-center gap-2 text-sm">
                           <CheckCircle className="h-3 w-3 text-green-500" />
                           {item.title}
-                          {item.description && (
+                          {"description" in item && item.description && (
                             <span className="text-muted-foreground">
                               ({item.description})
                             </span>

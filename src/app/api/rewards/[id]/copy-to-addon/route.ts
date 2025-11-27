@@ -62,7 +62,7 @@ export async function POST(
         visibility: reward.visibility,
         copiedFromId: reward.id,
         items: {
-          create: reward.items.map((item) => ({
+          create: reward.items.map((item: { title: string; description: string | null; imageUrl: string | null }) => ({
             title: item.title,
             description: item.description,
             imageUrl: item.imageUrl,

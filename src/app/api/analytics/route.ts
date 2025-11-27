@@ -79,29 +79,29 @@ export async function GET(req: NextRequest) {
     ]);
 
     // Get reward titles for breakdown
-    const rewardIds = rewardBreakdown.map((r) => r.rewardId);
+    const rewardIds = rewardBreakdown.map((r: { rewardId: string | null }) => r.rewardId).filter((id: string | null): id is string => id !== null);
     const rewards = await db.reward.findMany({
       where: { id: { in: rewardIds } },
       select: { id: true, title: true, amount: true },
     });
 
-    const rewardMap = new Map(rewards.map((r) => [r.id, r]));
+    const rewardMap = new Map<string, { id: string; title: string; amount: number }>(rewards.map((r: { id: string; title: string; amount: number }) => [r.id, r]));
 
     return NextResponse.json({
       ...analytics,
-      dailyPledges: dailyPledges.map((d) => ({
+      dailyPledges: dailyPledges.map((d: { createdAt: Date; _sum: { amount: number | null }; _count: number }) => ({
         date: d.createdAt,
         amount: d._sum.amount || 0,
         count: d._count,
       })),
-      rewardBreakdown: rewardBreakdown.map((r) => ({
+      rewardBreakdown: rewardBreakdown.map((r: { rewardId: string | null; _sum: { amount: number | null }; _count: number }) => ({
         rewardId: r.rewardId,
-        title: rewardMap.get(r.rewardId)?.title || "Unknown",
-        tierAmount: rewardMap.get(r.rewardId)?.amount || 0,
+        title: r.rewardId ? rewardMap.get(r.rewardId)?.title || "Unknown" : "No Reward",
+        tierAmount: r.rewardId ? rewardMap.get(r.rewardId)?.amount || 0 : 0,
         totalPledged: r._sum.amount || 0,
         backerCount: r._count,
       })),
-      hourlyActivity: hourlyActivity.map((h) => ({
+      hourlyActivity: hourlyActivity.map((h: { eventType: string; _count: number }) => ({
         eventType: h.eventType,
         count: h._count,
       })),
