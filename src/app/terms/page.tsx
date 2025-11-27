@@ -73,7 +73,7 @@ export default function TermsPage() {
           Back to Home
         </Link>
 
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-2">
             Legal & Policies
           </h1>
@@ -81,112 +81,67 @@ export default function TermsPage() {
             Important information about using IndieCrowdfund
           </p>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            {/* Desktop Tabs - Scrollable for many tabs */}
-            <div className="hidden md:block overflow-x-auto mb-8">
-              <TabsList className="inline-flex w-auto min-w-full">
-                <TabsTrigger value="terms" className="flex items-center gap-2 whitespace-nowrap">
-                  <ScrollText className="h-4 w-4" />
-                  Terms
-                </TabsTrigger>
-                <TabsTrigger value="privacy" className="flex items-center gap-2 whitespace-nowrap">
-                  <Shield className="h-4 w-4" />
-                  Privacy
-                </TabsTrigger>
-                <TabsTrigger value="refunds" className="flex items-center gap-2 whitespace-nowrap">
-                  <RotateCcw className="h-4 w-4" />
-                  Refunds
-                </TabsTrigger>
-                <TabsTrigger value="creator" className="flex items-center gap-2 whitespace-nowrap">
-                  <UserCheck className="h-4 w-4" />
-                  Creator
-                </TabsTrigger>
-                <TabsTrigger value="backer" className="flex items-center gap-2 whitespace-nowrap">
-                  <AlertTriangle className="h-4 w-4" />
-                  Backer Risks
-                </TabsTrigger>
-                <TabsTrigger value="shipping" className="flex items-center gap-2 whitespace-nowrap">
-                  <Package className="h-4 w-4" />
-                  Shipping
-                </TabsTrigger>
-                <TabsTrigger value="chargebacks" className="flex items-center gap-2 whitespace-nowrap">
-                  <CreditCard className="h-4 w-4" />
-                  Chargebacks
-                </TabsTrigger>
-                <TabsTrigger value="fraud" className="flex items-center gap-2 whitespace-nowrap">
-                  <ShieldAlert className="h-4 w-4" />
-                  Fraud
-                </TabsTrigger>
-                <TabsTrigger value="cookies" className="flex items-center gap-2 whitespace-nowrap">
-                  <Cookie className="h-4 w-4" />
-                  Cookies
-                </TabsTrigger>
-                <TabsTrigger value="guidelines" className="flex items-center gap-2 whitespace-nowrap">
-                  <FileText className="h-4 w-4" />
-                  Community
-                </TabsTrigger>
-                <TabsTrigger value="dmca" className="flex items-center gap-2 whitespace-nowrap">
-                  <Copyright className="h-4 w-4" />
-                  DMCA
-                </TabsTrigger>
-                <TabsTrigger value="ai-policy" className="flex items-center gap-2 whitespace-nowrap">
-                  <Brain className="h-4 w-4" />
-                  AI Policy
-                </TabsTrigger>
-              </TabsList>
-            </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" orientation="vertical">
+            {/* Desktop Layout - Vertical Tabs on Left */}
+            <div className="hidden md:flex gap-8">
+              {/* Left Sidebar Navigation */}
+              <div className="w-64 flex-shrink-0">
+                <div className="sticky top-24">
+                  <TabsList className="flex flex-col h-auto w-full bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 space-y-1">
+                    <TabsTrigger value="terms" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <ScrollText className="h-4 w-4" />
+                      <span>Terms of Service</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="privacy" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <Shield className="h-4 w-4" />
+                      <span>Privacy Policy</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="refunds" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <RotateCcw className="h-4 w-4" />
+                      <span>Refund Policy</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="creator" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <UserCheck className="h-4 w-4" />
+                      <span>Creator Agreement</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="backer" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>Backer Risks</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="shipping" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <Package className="h-4 w-4" />
+                      <span>Shipping & Rewards</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="chargebacks" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <CreditCard className="h-4 w-4" />
+                      <span>Chargebacks</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="fraud" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <ShieldAlert className="h-4 w-4" />
+                      <span>Fraud Policy</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="cookies" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <Cookie className="h-4 w-4" />
+                      <span>Cookie Policy</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="guidelines" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <FileText className="h-4 w-4" />
+                      <span>Community Guidelines</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="dmca" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <Copyright className="h-4 w-4" />
+                      <span>DMCA Policy</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="ai-policy" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                      <Brain className="h-4 w-4" />
+                      <span>AI Policy</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              </div>
 
-            {/* Mobile Tabs */}
-            <TabsList className="md:hidden grid w-full grid-cols-3 gap-2 mb-8 h-auto">
-              <TabsTrigger value="terms" className="flex items-center gap-2 py-3">
-                <ScrollText className="h-4 w-4" />
-                <span className="text-xs">Terms</span>
-              </TabsTrigger>
-              <TabsTrigger value="privacy" className="flex items-center gap-2 py-3">
-                <Shield className="h-4 w-4" />
-                <span className="text-xs">Privacy</span>
-              </TabsTrigger>
-              <TabsTrigger value="refunds" className="flex items-center gap-2 py-3">
-                <RotateCcw className="h-4 w-4" />
-                <span className="text-xs">Refunds</span>
-              </TabsTrigger>
-              <TabsTrigger value="creator" className="flex items-center gap-2 py-3">
-                <UserCheck className="h-4 w-4" />
-                <span className="text-xs">Creator</span>
-              </TabsTrigger>
-              <TabsTrigger value="backer" className="flex items-center gap-2 py-3">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-xs">Risks</span>
-              </TabsTrigger>
-              <TabsTrigger value="shipping" className="flex items-center gap-2 py-3">
-                <Package className="h-4 w-4" />
-                <span className="text-xs">Shipping</span>
-              </TabsTrigger>
-              <TabsTrigger value="chargebacks" className="flex items-center gap-2 py-3">
-                <CreditCard className="h-4 w-4" />
-                <span className="text-xs">Chargebacks</span>
-              </TabsTrigger>
-              <TabsTrigger value="fraud" className="flex items-center gap-2 py-3">
-                <ShieldAlert className="h-4 w-4" />
-                <span className="text-xs">Fraud</span>
-              </TabsTrigger>
-              <TabsTrigger value="cookies" className="flex items-center gap-2 py-3">
-                <Cookie className="h-4 w-4" />
-                <span className="text-xs">Cookies</span>
-              </TabsTrigger>
-              <TabsTrigger value="guidelines" className="flex items-center gap-2 py-3">
-                <FileText className="h-4 w-4" />
-                <span className="text-xs">Community</span>
-              </TabsTrigger>
-              <TabsTrigger value="dmca" className="flex items-center gap-2 py-3">
-                <Copyright className="h-4 w-4" />
-                <span className="text-xs">DMCA</span>
-              </TabsTrigger>
-              <TabsTrigger value="ai-policy" className="flex items-center gap-2 py-3">
-                <Brain className="h-4 w-4" />
-                <span className="text-xs">AI</span>
-              </TabsTrigger>
-            </TabsList>
+              {/* Right Content Area */}
+              <div className="flex-1 min-w-0">
 
             {/* Terms of Service */}
             <TabsContent value="terms">
@@ -1370,6 +1325,191 @@ export default function TermsPage() {
                 </div>
               </div>
             </TabsContent>
+              </div>
+            </div>
+
+            {/* Mobile Layout - Dropdown or Grid */}
+            <div className="md:hidden">
+              {/* Mobile Tab Selector */}
+              <div className="mb-6">
+                <select
+                  value={activeTab}
+                  onChange={(e) => setActiveTab(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-medium dark:border-zinc-700 dark:bg-zinc-800"
+                >
+                  <option value="terms">Terms of Service</option>
+                  <option value="privacy">Privacy Policy</option>
+                  <option value="refunds">Refund Policy</option>
+                  <option value="creator">Creator Agreement</option>
+                  <option value="backer">Backer Risks</option>
+                  <option value="shipping">Shipping & Rewards</option>
+                  <option value="chargebacks">Chargebacks</option>
+                  <option value="fraud">Fraud Policy</option>
+                  <option value="cookies">Cookie Policy</option>
+                  <option value="guidelines">Community Guidelines</option>
+                  <option value="dmca">DMCA Policy</option>
+                  <option value="ai-policy">AI Policy</option>
+                </select>
+              </div>
+
+              {/* Mobile Content */}
+              <TabsContent value="terms">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">IndieCrowdfund — Terms of Service</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full terms on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="privacy">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">Privacy Policy</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full policy on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="refunds">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">Refund Policy</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full policy on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="creator">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">Creator Agreement</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full agreement on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="backer">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">Backer Risk Disclosure</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full disclosure on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="shipping">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">Shipping & Rewards</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full policy on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="chargebacks">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">Chargeback Policy</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full policy on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="fraud">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">Fraud Policy</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full policy on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="cookies">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">Cookie Policy</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full policy on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="guidelines">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">Community Guidelines</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full guidelines on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="dmca">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">DMCA Policy</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full policy on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="ai-policy">
+                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                  <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4">
+                    <h2 className="text-xl font-bold mb-2">AI Policy</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      <strong>Last Updated:</strong> November 27, 2025
+                    </p>
+                    <p className="text-sm">
+                      View full policy on desktop for complete details.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+            </div>
           </Tabs>
         </div>
       </main>

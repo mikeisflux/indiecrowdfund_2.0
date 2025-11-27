@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { login, loginWithGoogle } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,13 +14,15 @@ import { Loader2 } from "lucide-react";
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || undefined;
 
   async function handleSubmit(formData: FormData) {
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await login(formData);
+      const result = await login(formData, callbackUrl);
       if (result?.error) {
         if ("_form" in result.error && result.error._form) {
           setError(result.error._form[0]);
@@ -39,7 +42,7 @@ export function LoginForm() {
   async function handleGoogleSignIn() {
     setIsLoading(true);
     try {
-      await loginWithGoogle();
+      await loginWithGoogle(callbackUrl);
     } catch {
       setError("Failed to sign in with Google");
       setIsLoading(false);

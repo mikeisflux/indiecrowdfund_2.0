@@ -64,7 +64,7 @@ export async function register(formData: FormData) {
   }
 }
 
-export async function login(formData: FormData) {
+export async function login(formData: FormData, callbackUrl?: string) {
   const validatedFields = loginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -75,12 +75,13 @@ export async function login(formData: FormData) {
   }
 
   const { email, password } = validatedFields.data;
+  const redirectTo = callbackUrl || "/dashboard";
 
   try {
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/dashboard",
+      redirectTo,
     });
 
     return { success: true };
@@ -92,8 +93,9 @@ export async function login(formData: FormData) {
   }
 }
 
-export async function loginWithGoogle() {
-  await signIn("google", { redirectTo: "/dashboard" });
+export async function loginWithGoogle(callbackUrl?: string) {
+  const redirectTo = callbackUrl || "/dashboard";
+  await signIn("google", { redirectTo });
 }
 
 export async function logout() {

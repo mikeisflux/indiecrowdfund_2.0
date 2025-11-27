@@ -24,6 +24,7 @@ model User {
   vanityUrl         String?   @unique
   websites          String[]
   showNameOnly      Boolean   @default(false)
+  role              UserRole  @default(USER)
 
   // Auth
   accounts          Account[]
@@ -47,6 +48,12 @@ model User {
 
   @@index([email])
   @@index([vanityUrl])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
 }
 
 model Account {
