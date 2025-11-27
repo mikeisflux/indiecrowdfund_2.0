@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 export type EventType =
   | "PAGE_VIEW"
@@ -45,7 +46,7 @@ export async function trackEvent({
         sessionId,
         projectId,
         rewardId,
-        metadata: metadata || {},
+        metadata: (metadata || {}) as Prisma.InputJsonValue,
         referrer,
         path: page || "/",
       },

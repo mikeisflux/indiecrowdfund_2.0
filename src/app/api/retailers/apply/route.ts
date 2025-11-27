@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hash } from "bcryptjs";
+import { Prisma } from "@prisma/client";
 
 // POST - Submit retailer application
 export async function POST(req: NextRequest) {
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
         numberOfLocations: numberOfLocations ? parseInt(numberOfLocations) : 1,
         annualRevenue,
         websiteUrl,
-        socialMedia: preferredContact ? { preferredContact } : undefined,
+        socialMedia: preferredContact ? { preferredContact } as Prisma.InputJsonValue : undefined,
         status: "PENDING",
         passwordHash,
       },
