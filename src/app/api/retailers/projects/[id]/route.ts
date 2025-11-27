@@ -68,7 +68,7 @@ export async function GET(
             description: true,
             amount: true,
             estimatedDelivery: true,
-            limitedQuantity: true,
+            quantityAvailable: true,
             quantityClaimed: true,
           },
           orderBy: { amount: "asc" },
