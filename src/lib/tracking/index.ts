@@ -20,18 +20,25 @@ interface BehaviorGroupResult {
   _count: number;
 }
 
+// Must match BehaviorEventType enum in Prisma schema
 export type EventType =
   | "PAGE_VIEW"
+  | "PAGE_EXIT"
   | "PROJECT_VIEW"
-  | "REWARD_VIEW"
+  | "PROJECT_CLICK"
+  | "REWARD_CLICK"
+  | "VIDEO_PLAY"
+  | "VIDEO_COMPLETE"
+  | "SEARCH"
+  | "FILTER_APPLY"
+  | "PROJECT_SAVE"
+  | "PROJECT_SHARE"
+  | "COMMENT_POST"
   | "PLEDGE_START"
   | "PLEDGE_COMPLETE"
-  | "SHARE"
-  | "SAVE"
-  | "SEARCH"
-  | "CATEGORY_BROWSE"
-  | "VIDEO_PLAY"
-  | "SCROLL_DEPTH";
+  | "SCROLL_DEPTH"
+  | "HOVER"
+  | "CREATOR_VIEW";
 
 interface TrackEventParams {
   eventType: EventType;
