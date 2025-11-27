@@ -250,6 +250,24 @@ function DiscoverContent() {
               >
                 Start a Project
               </Link>
+              <Link
+                href="/retailers"
+                className="text-sm font-medium hover:text-primary"
+              >
+                Retailers
+              </Link>
+              <Link
+                href="/about-us"
+                className="text-sm font-medium hover:text-primary"
+              >
+                About Us
+              </Link>
+              <Link
+                href="/faq"
+                className="text-sm font-medium hover:text-primary"
+              >
+                FAQ
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
