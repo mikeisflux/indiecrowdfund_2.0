@@ -56,7 +56,7 @@ export async function trackEvent({
         sessionId,
         projectId,
         rewardId,
-        metadata: metadata || {},
+        metadata: (metadata || {}) as object,
         referrer,
         path: page || "/",
       },
