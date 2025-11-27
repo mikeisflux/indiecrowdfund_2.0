@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 const createSurveySchema = z.object({
   projectId: z.string(),
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
         data: {
           surveyId: data.surveyId,
           pledgeId: data.pledgeId,
-          responses: data.responses,
+          responses: data.responses as Prisma.InputJsonValue,
         },
       });
 
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
         where: { id: data.pledgeId },
         data: {
           surveyCompleted: true,
-          surveyResponses: data.responses,
+          surveyResponses: data.responses as Prisma.InputJsonValue,
         },
       });
 
@@ -101,12 +102,12 @@ export async function POST(req: NextRequest) {
           projectId: data.projectId,
           title: data.title,
           description: data.description,
-          questions: data.questions,
+          questions: data.questions as Prisma.InputJsonValue,
         },
         update: {
           title: data.title,
           description: data.description,
-          questions: data.questions,
+          questions: data.questions as Prisma.InputJsonValue,
         },
       });
 
