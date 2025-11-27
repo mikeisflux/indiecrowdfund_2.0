@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ScrollText, Shield, Cookie, FileText, Menu, ArrowLeft, RotateCcw, UserCheck, AlertTriangle, Package } from "lucide-react";
+import { ScrollText, Shield, Cookie, FileText, Menu, ArrowLeft, RotateCcw, UserCheck, AlertTriangle, Package, CreditCard, ShieldAlert } from "lucide-react";
 
 export default function TermsPage() {
   const [activeTab, setActiveTab] = useState("terms");
@@ -108,6 +108,14 @@ export default function TermsPage() {
                   <Package className="h-4 w-4" />
                   Shipping
                 </TabsTrigger>
+                <TabsTrigger value="chargebacks" className="flex items-center gap-2 whitespace-nowrap">
+                  <CreditCard className="h-4 w-4" />
+                  Chargebacks
+                </TabsTrigger>
+                <TabsTrigger value="fraud" className="flex items-center gap-2 whitespace-nowrap">
+                  <ShieldAlert className="h-4 w-4" />
+                  Fraud
+                </TabsTrigger>
                 <TabsTrigger value="cookies" className="flex items-center gap-2 whitespace-nowrap">
                   <Cookie className="h-4 w-4" />
                   Cookies
@@ -144,6 +152,14 @@ export default function TermsPage() {
               <TabsTrigger value="shipping" className="flex items-center gap-2 py-3">
                 <Package className="h-4 w-4" />
                 <span className="text-xs">Shipping</span>
+              </TabsTrigger>
+              <TabsTrigger value="chargebacks" className="flex items-center gap-2 py-3">
+                <CreditCard className="h-4 w-4" />
+                <span className="text-xs">Chargebacks</span>
+              </TabsTrigger>
+              <TabsTrigger value="fraud" className="flex items-center gap-2 py-3">
+                <ShieldAlert className="h-4 w-4" />
+                <span className="text-xs">Fraud</span>
               </TabsTrigger>
               <TabsTrigger value="cookies" className="flex items-center gap-2 py-3">
                 <Cookie className="h-4 w-4" />
@@ -855,6 +871,109 @@ export default function TermsPage() {
                       Contact us at{" "}
                       <a href="mailto:support@indiecrowdfund.com" className="text-emerald-600 hover:underline">
                         support@indiecrowdfund.com
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Chargeback Handling Policy */}
+            <TabsContent value="chargebacks">
+              <div className="prose prose-zinc dark:prose-invert max-w-none">
+                <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
+                  <h2 className="text-2xl font-bold mb-2">Chargeback Handling Policy</h2>
+                  <p className="text-sm text-zinc-500 mb-8">
+                    <strong>Last Updated:</strong> November 27, 2025
+                  </p>
+
+                  <h3 className="text-xl font-semibold mt-8 mb-4">1. What Is a Chargeback?</h3>
+                  <p className="mb-6">
+                    A chargeback occurs when a backer disputes a pledge with their bank or card issuer.
+                  </p>
+
+                  <h3 className="text-xl font-semibold mt-8 mb-4">2. Consequences of Chargebacks</h3>
+                  <p className="mb-4">When a backer files a chargeback:</p>
+                  <ul className="list-disc pl-6 mb-6 space-y-2">
+                    <li>Funds are withdrawn from the creator</li>
+                    <li>The creator must dispute the chargeback</li>
+                    <li>Excessive chargebacks may freeze a project</li>
+                    <li>Backers who abuse chargebacks may have accounts restricted</li>
+                  </ul>
+
+                  <h3 className="text-xl font-semibold mt-8 mb-4">3. When Chargebacks Are Appropriate</h3>
+                  <p className="mb-4">Chargebacks should only be filed if:</p>
+                  <ul className="list-disc pl-6 mb-6 space-y-2">
+                    <li>Fraud is suspected</li>
+                    <li>Unauthorized transactions occurred</li>
+                    <li>The creator engaged in clear misconduct</li>
+                  </ul>
+
+                  <h3 className="text-xl font-semibold mt-8 mb-4">4. IndieCrowdfund's Role</h3>
+                  <p className="mb-4">IndieCrowdfund:</p>
+                  <ul className="list-disc pl-6 mb-4 space-y-2">
+                    <li>Cannot reverse bank chargebacks</li>
+                    <li>Provides documentation to payment processors</li>
+                    <li>May suspend campaigns with excessive disputes</li>
+                  </ul>
+                  <p className="mb-6 font-medium">
+                    Creators should respond promptly to dispute notifications.
+                  </p>
+
+                  <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
+                    <p className="font-semibold mb-2">Questions about chargebacks?</p>
+                    <p>
+                      Contact us at{" "}
+                      <a href="mailto:support@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+                        support@indiecrowdfund.com
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Fraud & Misuse Enforcement Policy */}
+            <TabsContent value="fraud">
+              <div className="prose prose-zinc dark:prose-invert max-w-none">
+                <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
+                  <h2 className="text-2xl font-bold mb-2">Fraud & Misuse Enforcement Policy</h2>
+                  <p className="text-sm text-zinc-500 mb-8">
+                    <strong>Last Updated:</strong> November 27, 2025
+                  </p>
+
+                  <p className="mb-4">IndieCrowdfund may take action against:</p>
+                  <ul className="list-disc pl-6 mb-6 space-y-2">
+                    <li>Fraudulent projects</li>
+                    <li>Misuse of funds</li>
+                    <li>Identity theft</li>
+                    <li>Fake accounts</li>
+                    <li>Harassment or threats</li>
+                    <li>Use of the platform for illegal activities</li>
+                    <li>Abuse of refunds or chargebacks</li>
+                  </ul>
+
+                  <p className="mb-4">Possible actions include:</p>
+                  <ul className="list-disc pl-6 mb-6 space-y-2">
+                    <li>Suspension of accounts</li>
+                    <li>Removal of campaigns</li>
+                    <li>Freezing payouts</li>
+                    <li>Banning payment methods</li>
+                    <li>Reporting to law enforcement</li>
+                  </ul>
+
+                  <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 mb-6">
+                    <p className="text-emerald-800 dark:text-emerald-200 font-medium">
+                      We take integrity seriously to protect backers and creators.
+                    </p>
+                  </div>
+
+                  <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
+                    <p className="font-semibold mb-2">Report suspicious activity:</p>
+                    <p>
+                      Contact us at{" "}
+                      <a href="mailto:trust@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+                        trust@indiecrowdfund.com
                       </a>
                     </p>
                   </div>
