@@ -1,8 +1,16 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization to avoid build-time errors
+let openaiClient: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiClient;
+}
 
 // Available project categories for auto-tagging
 const PROJECT_CATEGORIES = [
@@ -75,7 +83,7 @@ Respond in JSON format:
 }`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -137,7 +145,7 @@ Respond in JSON format:
 }`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -186,7 +194,7 @@ Description: ${project.description.substring(0, 500)}
 Write a brief, personalized 1-sentence explanation of why this project might interest them. Be specific and genuine.`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -234,7 +242,7 @@ Respond in JSON format:
 }`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
