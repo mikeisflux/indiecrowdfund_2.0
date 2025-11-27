@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
         numberOfLocations: numberOfLocations ? parseInt(numberOfLocations) : 1,
         annualRevenue,
         websiteUrl,
-        socialMedia: preferredContact ? { preferredContact } : null,
+        socialMedia: preferredContact ? { preferredContact } : undefined,
         status: "PENDING",
         passwordHash,
       },
