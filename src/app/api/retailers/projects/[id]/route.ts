@@ -46,10 +46,9 @@ export async function GET(
       select: {
         id: true,
         title: true,
-        shortDescription: true,
+        subtitle: true,
         description: true,
         imageUrl: true,
-        images: true,
         videoUrl: true,
         category: true,
         goalAmount: true,
