@@ -422,13 +422,13 @@ export class RecommendationEngine {
       where: { userId },
       create: {
         userId,
-        categoryScores,
+        categoryScores: categoryScores as object,
         avgPledge,
         engagementScore: Math.min(pledges.length * 10, 100),
         backedCreators: Array.from(new Set(pledges.map((p: { project: { creatorId: string } }) => p.project.creatorId))),
       },
       update: {
-        categoryScores,
+        categoryScores: categoryScores as object,
         avgPledge,
         engagementScore: Math.min(pledges.length * 10, 100),
         backedCreators: Array.from(new Set(pledges.map((p: { project: { creatorId: string } }) => p.project.creatorId))),
