@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         data: {
           surveyId: data.surveyId,
           pledgeId: data.pledgeId,
-          responses: data.responses,
+          responses: data.responses as object,
         },
       });
 
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
         where: { id: data.pledgeId },
         data: {
           surveyCompleted: true,
-          surveyResponses: data.responses,
+          surveyResponses: data.responses as object,
         },
       });
 
@@ -101,12 +101,12 @@ export async function POST(req: NextRequest) {
           projectId: data.projectId,
           title: data.title,
           description: data.description,
-          questions: data.questions,
+          questions: data.questions as object[],
         },
         update: {
           title: data.title,
           description: data.description,
-          questions: data.questions,
+          questions: data.questions as object[],
         },
       });
 
