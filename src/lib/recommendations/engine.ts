@@ -274,9 +274,9 @@ export class RecommendationEngine {
       distinct: ["projectId"],
     });
 
-    const backedCreatorIds = [
-      ...new Set(backedProjects.map((p) => p.project.creatorId)),
-    ];
+    const backedCreatorIds = Array.from(
+      new Set(backedProjects.map((p) => p.project.creatorId))
+    );
 
     if (backedCreatorIds.length === 0) return [];
 
@@ -348,7 +348,7 @@ export class RecommendationEngine {
     const maxPerCategory = 3;
 
     return projects.filter((project) => {
-      const category = project.project.category;
+      const category = (project.project as { category?: string })?.category;
       const count = categoryCounts.get(category) || 0;
 
       if (count >= maxPerCategory) {
@@ -404,13 +404,13 @@ export class RecommendationEngine {
         categoryScores,
         avgPledge,
         engagementScore: Math.min(pledges.length * 10, 100),
-        backedCreators: [...new Set(pledges.map((p) => p.project.creatorId))],
+        backedCreators: Array.from(new Set(pledges.map((p) => p.project.creatorId))),
       },
       update: {
         categoryScores,
         avgPledge,
         engagementScore: Math.min(pledges.length * 10, 100),
-        backedCreators: [...new Set(pledges.map((p) => p.project.creatorId))],
+        backedCreators: Array.from(new Set(pledges.map((p) => p.project.creatorId))),
         lastUpdated: new Date(),
       },
     });
