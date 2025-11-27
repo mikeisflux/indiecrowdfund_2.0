@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           title: true,
-          shortDescription: true,
+          subtitle: true,
           imageUrl: true,
           category: true,
           goalAmount: true,
