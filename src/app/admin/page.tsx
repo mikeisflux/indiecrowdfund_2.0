@@ -1,0 +1,441 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DollarSign,
+  Users,
+  FolderKanban,
+  TrendingUp,
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  Eye,
+  CreditCard,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Activity,
+  MoreHorizontal,
+  ExternalLink,
+  Sparkles,
+  Brain,
+  Zap,
+  Target,
+} from "lucide-react";
+
+// Mock data
+const stats = [
+  {
+    title: "Total Revenue",
+    value: "$2,847,392",
+    change: "+12.5%",
+    trend: "up",
+    icon: DollarSign,
+    color: "emerald",
+  },
+  {
+    title: "Active Users",
+    value: "24,521",
+    change: "+8.2%",
+    trend: "up",
+    icon: Users,
+    color: "blue",
+  },
+  {
+    title: "Live Projects",
+    value: "156",
+    change: "+23",
+    trend: "up",
+    icon: FolderKanban,
+    color: "violet",
+  },
+  {
+    title: "Conversion Rate",
+    value: "3.24%",
+    change: "-0.4%",
+    trend: "down",
+    icon: Target,
+    color: "amber",
+  },
+];
+
+const recentProjects = [
+  {
+    id: "1",
+    title: "Solar-Powered Backpack",
+    creator: "Green Tech Labs",
+    status: "pending_review",
+    raised: 42500,
+    goal: 50000,
+    category: "Technology",
+    submitted: "2 hours ago",
+  },
+  {
+    id: "2",
+    title: "Artisan Coffee Collection",
+    creator: "Bean Masters Co.",
+    status: "approved",
+    raised: 18720,
+    goal: 15000,
+    category: "Food",
+    submitted: "5 hours ago",
+  },
+  {
+    id: "3",
+    title: "Indie Game: Lost Horizons",
+    creator: "Pixel Dreams",
+    status: "pending_review",
+    raised: 0,
+    goal: 100000,
+    category: "Games",
+    submitted: "1 day ago",
+  },
+  {
+    id: "4",
+    title: "Sustainable Fashion Line",
+    creator: "EcoWear Studio",
+    status: "flagged",
+    raised: 8400,
+    goal: 25000,
+    category: "Fashion",
+    submitted: "2 days ago",
+  },
+];
+
+const recentActivity = [
+  {
+    type: "project_funded",
+    title: "Art of Mindful Living reached its goal!",
+    time: "10 minutes ago",
+    icon: CheckCircle2,
+    color: "text-emerald-500",
+  },
+  {
+    type: "new_user",
+    title: "15 new users signed up in the last hour",
+    time: "1 hour ago",
+    icon: Users,
+    color: "text-blue-500",
+  },
+  {
+    type: "payment_failed",
+    title: "3 payment failures detected",
+    time: "2 hours ago",
+    icon: AlertTriangle,
+    color: "text-amber-500",
+  },
+  {
+    type: "project_submitted",
+    title: "New project submitted for review",
+    time: "3 hours ago",
+    icon: FolderKanban,
+    color: "text-violet-500",
+  },
+  {
+    type: "payout_complete",
+    title: "Payout of $15,420 completed",
+    time: "5 hours ago",
+    icon: CreditCard,
+    color: "text-emerald-500",
+  },
+];
+
+const aiInsights = [
+  {
+    title: "Unusual Traffic Pattern",
+    description: "We detected a 340% spike in traffic from Reddit. Consider engaging with the community.",
+    priority: "medium",
+    action: "View Details",
+  },
+  {
+    title: "High Churn Risk Users",
+    description: "AI identified 23 users with high churn probability. Personalized outreach recommended.",
+    priority: "high",
+    action: "View Users",
+  },
+  {
+    title: "Category Trend",
+    description: "Technology projects are converting 2.3x better than average this week.",
+    priority: "low",
+    action: "See Trends",
+  },
+];
+
+export default function AdminDashboard() {
+  const [timeRange, setTimeRange] = useState("7d");
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "pending_review":
+        return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">Pending Review</Badge>;
+      case "approved":
+        return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Approved</Badge>;
+      case "flagged":
+        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Flagged</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Dashboard</h1>
+          <p className="text-zinc-500">Welcome back! Here's what's happening with your platform.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="24h">Last 24 hours</SelectItem>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Zap className="mr-2 h-4 w-4" />
+            Quick Actions
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <Card key={stat.title} className="relative overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-zinc-500">{stat.title}</p>
+                  <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">
+                    {stat.value}
+                  </p>
+                </div>
+                <div className={`rounded-lg p-2.5 bg-${stat.color}-100 dark:bg-${stat.color}-900/30`}>
+                  <stat.icon className={`h-5 w-5 text-${stat.color}-600`} />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2">
+                {stat.trend === "up" ? (
+                  <span className="flex items-center text-sm font-medium text-emerald-600">
+                    <ArrowUpRight className="h-4 w-4" />
+                    {stat.change}
+                  </span>
+                ) : (
+                  <span className="flex items-center text-sm font-medium text-red-600">
+                    <ArrowDownRight className="h-4 w-4" />
+                    {stat.change}
+                  </span>
+                )}
+                <span className="text-sm text-zinc-500">vs last period</span>
+              </div>
+            </CardContent>
+            <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-${stat.color}-500 to-${stat.color}-400`} />
+          </Card>
+        ))}
+      </div>
+
+      {/* AI Insights Banner */}
+      <Card className="border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/50 dark:to-purple-950/50 dark:border-violet-800">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600">
+              <Brain className="h-4 w-4 text-white" />
+            </div>
+            <CardTitle className="text-lg">AI Insights</CardTitle>
+            <Badge className="bg-violet-600 hover:bg-violet-700">
+              <Sparkles className="mr-1 h-3 w-3" />
+              3 New
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            {aiInsights.map((insight, i) => (
+              <div
+                key={i}
+                className="rounded-lg border border-violet-200 bg-white/80 p-4 dark:border-violet-800 dark:bg-zinc-900/50"
+              >
+                <div className="mb-2 flex items-start justify-between">
+                  <h4 className="font-medium text-zinc-900 dark:text-white">{insight.title}</h4>
+                  <Badge
+                    variant="outline"
+                    className={
+                      insight.priority === "high"
+                        ? "border-red-200 text-red-700"
+                        : insight.priority === "medium"
+                        ? "border-amber-200 text-amber-700"
+                        : "border-emerald-200 text-emerald-700"
+                    }
+                  >
+                    {insight.priority}
+                  </Badge>
+                </div>
+                <p className="mb-3 text-sm text-zinc-500">{insight.description}</p>
+                <Button variant="outline" size="sm" className="w-full">
+                  {insight.action}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Projects needing attention */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Projects Requiring Action</CardTitle>
+            <Link href="/admin/projects">
+              <Button variant="ghost" size="sm">
+                View All
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentProjects.map((project) => (
+                <div
+                  key={project.id}
+                  className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                >
+                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-zinc-900 truncate dark:text-white">
+                        {project.title}
+                      </h4>
+                      {getStatusBadge(project.status)}
+                    </div>
+                    <div className="mt-1 flex items-center gap-3 text-sm text-zinc-500">
+                      <span>by {project.creator}</span>
+                      <span>•</span>
+                      <span>{project.category}</span>
+                      <span>•</span>
+                      <span>{project.submitted}</span>
+                    </div>
+                    {project.raised > 0 && (
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-zinc-500">
+                            ${project.raised.toLocaleString()} / ${project.goal.toLocaleString()}
+                          </span>
+                          <span className="font-medium">
+                            {Math.round((project.raised / project.goal) * 100)}%
+                          </span>
+                        </div>
+                        <Progress value={(project.raised / project.goal) * 100} className="h-1.5" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm">Review</Button>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Activity feed */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentActivity.map((activity, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className={`mt-0.5 ${activity.color}`}>
+                    <activity.icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300">{activity.title}</p>
+                    <p className="text-xs text-zinc-500">{activity.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button variant="ghost" className="mt-4 w-full">
+              View All Activity
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick stats row */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white/80">Pending Payouts</p>
+                <p className="mt-1 text-2xl font-bold">$127,840</p>
+              </div>
+              <Button size="sm" variant="secondary">Process</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white/80">Pending Reviews</p>
+                <p className="mt-1 text-2xl font-bold">12 Projects</p>
+              </div>
+              <Button size="sm" variant="secondary">Review</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-red-500 to-rose-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white/80">Open Reports</p>
+                <p className="mt-1 text-2xl font-bold">5 Reports</p>
+              </div>
+              <Button size="sm" variant="secondary">View</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white/80">System Health</p>
+                <p className="mt-1 text-2xl font-bold">99.9%</p>
+              </div>
+              <Button size="sm" variant="secondary">Status</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
