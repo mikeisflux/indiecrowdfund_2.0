@@ -295,17 +295,18 @@ function DiscoverContent() {
 
             {/* Category Select */}
             <Select
-              value={category}
+              value={category || "all"}
               onValueChange={(value) => {
-                setCategory(value);
-                updateFilters({ category: value || null });
+                const newValue = value === "all" ? "" : value;
+                setCategory(newValue);
+                updateFilters({ category: newValue || null });
               }}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {PROJECT_CATEGORIES.map((cat) => (
                   <SelectItem key={cat.value} value={cat.value}>
                     {cat.label}
