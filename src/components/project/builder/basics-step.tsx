@@ -5,6 +5,7 @@ import { PROJECT_CATEGORIES } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageUpload } from "@/components/ui/image-upload";
 import {
   Select,
   SelectContent,
@@ -84,16 +85,13 @@ export function BasicsStep() {
       {/* Project Image */}
       <div className="space-y-2">
         <Label>Project Image</Label>
-        <div className="flex items-center justify-center rounded-lg border-2 border-dashed p-8">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              Drag and drop an image, or click to browse
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Recommended: 1920 x 1080 px
-            </p>
-          </div>
-        </div>
+        <ImageUpload
+          value={basics.imageUrl}
+          onChange={(url) => updateBasics({ imageUrl: url })}
+          aspectRatio="aspect-video"
+          recommendedSize="1024 x 576 px (16:9 ratio)"
+          maxSizeMB={10}
+        />
       </div>
 
       {/* Video URL */}

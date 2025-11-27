@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Link, ExternalLink } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 export function PeopleStep() {
   const { people, updatePeople } = useProjectStore();
@@ -108,7 +109,7 @@ export function PeopleStep() {
           {/* Profile Preview Card */}
           <div className="flex flex-col items-center text-center">
             <Avatar className="h-20 w-20 mb-4">
-              <AvatarImage src="" />
+              <AvatarImage src={people.creatorImageUrl || ""} />
               <AvatarFallback className="text-xl bg-muted">
                 {people.creatorName ? getInitials(people.creatorName) : "?"}
               </AvatarFallback>
@@ -241,14 +242,16 @@ export function PeopleStep() {
 
           <div className="space-y-6 py-4">
             {/* Avatar Upload */}
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src="" />
-                <AvatarFallback className="text-lg">
-                  {people.creatorName ? getInitials(people.creatorName) : "?"}
-                </AvatarFallback>
-              </Avatar>
-              <Button variant="outline">Upload Photo</Button>
+            <div className="space-y-2">
+              <Label>Profile Photo</Label>
+              <ImageUpload
+                value={people.creatorImageUrl}
+                onChange={(url) => updatePeople({ creatorImageUrl: url })}
+                aspectRatio="aspect-square"
+                recommendedSize="400 x 400 px"
+                maxSizeMB={5}
+                className="w-32 h-32"
+              />
             </div>
 
             {/* Name and Location */}

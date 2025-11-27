@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useProjectStore } from "@/lib/stores/project-store";
-import { RewardData, RewardItemData, RewardType, ShippingType } from "@/types";
+import { RewardData, RewardItemData, RewardType, ShippingType, SHIPPING_COUNTRIES } from "@/types";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +38,6 @@ import {
   Gift,
   Box,
   Image as ImageIcon,
-  Upload,
   ChevronDown,
   Info,
   AlertCircle,
@@ -44,6 +45,7 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { cn } from "@/lib/utils";
 
 const defaultItem: RewardItemData = {
@@ -228,8 +230,13 @@ export function RewardsStep() {
       return;
     }
 
-    // Get selected items from the items array
-    const selectedItems = items.filter((i) => selectedItemIds.includes(i.id || ""));
+    // Get selected items from the items array (ensure IDs match)
+    const selectedItems = items.filter((i) => i.id && selectedItemIds.includes(i.id));
+
+    if (selectedItems.length === 0) {
+      toast.error("Selected items could not be found. Please try selecting again.");
+      return;
+    }
 
     // Build estimated delivery date
     let estimatedDelivery: Date | undefined;
@@ -276,7 +283,8 @@ export function RewardsStep() {
     toast.success("Reward duplicated");
   };
 
-  const toggleItemSelection = (itemId: string) => {
+  const toggleItemSelection = (itemId: string | undefined) => {
+    if (!itemId) return; // Don't toggle items without IDs
     setSelectedItemIds((prev) =>
       prev.includes(itemId)
         ? prev.filter((id) => id !== itemId)
@@ -325,7 +333,7 @@ export function RewardsStep() {
       <div className="space-y-6">
         {/* Header with Cancel/Save */}
         <div className="flex items-center justify-between border-b pb-4">
-          <Button variant="ghost" onClick={handleCancelRewardForm}>
+          <Button variant="outline" onClick={handleCancelRewardForm}>
             Cancel
           </Button>
           <Button onClick={handleSaveReward}>
@@ -391,18 +399,13 @@ export function RewardsStep() {
                   Show your backers what they&apos;ll receive for their support. Images should be honest, and should avoid banners, badges, and overlaid text.
                 </p>
 
-                <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                  <Button variant="outline" className="mb-4">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload an image
-                  </Button>
-                  <p className="text-sm text-muted-foreground">
-                    Drop an image here, or select a file.
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Image specifications: JPG, PNG, GIF, or WEBP, 3:2 ratio, 348 x 232 pixels, 50 MB maximum
-                  </p>
-                </div>
+                <ImageUpload
+                  value={currentReward.imageUrl}
+                  onChange={(url) => setCurrentReward({ ...currentReward, imageUrl: url })}
+                  aspectRatio="aspect-[3/2]"
+                  recommendedSize="348 x 232 px (3:2 ratio)"
+                  maxSizeMB={10}
+                />
               </CardContent>
             </Card>
 
@@ -595,7 +598,7 @@ export function RewardsStep() {
                             ? "border-primary bg-primary/5"
                             : "hover:bg-muted/50"
                         )}
-                        onClick={() => toggleItemSelection(item.id || "")}
+                        onClick={() => toggleItemSelection(item.id)}
                       >
                         <div className="flex items-center gap-3">
                           <div
@@ -696,6 +699,53 @@ export function RewardsStep() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+
+                {currentReward.shippingType === "SELECTED_COUNTRIES" && (
+                  <div className="space-y-2">
+                    <Label>Select Countries</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Choose which countries you can ship to
+                    </p>
+                    <ScrollArea className="h-[200px] rounded-md border p-4">
+                      <div className="space-y-2">
+                        {SHIPPING_COUNTRIES.map((country) => (
+                          <div key={country.code} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`country-${country.code}`}
+                              checked={currentReward.shippingCountries.includes(country.code)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setCurrentReward({
+                                    ...currentReward,
+                                    shippingCountries: [...currentReward.shippingCountries, country.code],
+                                  });
+                                } else {
+                                  setCurrentReward({
+                                    ...currentReward,
+                                    shippingCountries: currentReward.shippingCountries.filter(
+                                      (c) => c !== country.code
+                                    ),
+                                  });
+                                }
+                              }}
+                            />
+                            <Label
+                              htmlFor={`country-${country.code}`}
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {country.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    {currentReward.shippingCountries.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {currentReward.shippingCountries.length} countries selected
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {currentReward.shippingType !== "NO_SHIPPING" && (
                   <div className="space-y-2">
@@ -1235,14 +1285,13 @@ export function RewardsStep() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="item-image">Image URL</Label>
-              <Input
-                id="item-image"
-                placeholder="https://..."
-                value={currentItem.imageUrl || ""}
-                onChange={(e) =>
-                  setCurrentItem({ ...currentItem, imageUrl: e.target.value })
-                }
+              <Label>Item Image</Label>
+              <ImageUpload
+                value={currentItem.imageUrl}
+                onChange={(url) => setCurrentItem({ ...currentItem, imageUrl: url })}
+                aspectRatio="aspect-square"
+                recommendedSize="400 x 400 px"
+                maxSizeMB={5}
               />
             </div>
           </div>
