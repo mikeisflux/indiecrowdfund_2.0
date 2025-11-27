@@ -95,13 +95,15 @@ export async function createStripePayment({
       userId,
       projectId,
       rewardId,
-      addonIds,
       amount,
       rewardAmount: amount, // Simplified - would calculate separately in production
       paymentProcessor: "STRIPE",
       status: "PENDING",
     },
   });
+
+  // Create addon records if any (TODO: implement PledgeAddon creation)
+  void addonIds;
 
   // Calculate platform fee (5%)
   const platformFee = Math.round(amount * 0.05 * 100); // In cents

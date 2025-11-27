@@ -46,13 +46,15 @@ export async function createCCBillPaymentUrl({
       userId,
       projectId,
       rewardId,
-      addonIds,
       amount,
       rewardAmount: amount,
       paymentProcessor: "CCBILL",
       status: "PENDING",
     },
   });
+
+  // Create addon records if any (TODO: implement PledgeAddon creation)
+  void addonIds;
 
   // Build CCBill payment URL
   const params = new URLSearchParams({
