@@ -50,6 +50,11 @@ import {
   Sparkles,
   ShieldCheck,
   TestTube,
+  Share2,
+  Facebook,
+  Instagram,
+  Youtube,
+  Twitter,
 } from "lucide-react";
 
 // Mock data
@@ -134,6 +139,73 @@ export default function SettingsPage() {
     moderationThreshold: "0.7",
   });
 
+  const [socialSettings, setSocialSettings] = useState({
+    // Facebook/Instagram (Meta)
+    facebookEnabled: false,
+    facebookAppId: "",
+    facebookAppSecret: "",
+    facebookPageAccessToken: "",
+    instagramEnabled: false,
+    // YouTube
+    youtubeEnabled: false,
+    youtubeClientId: "",
+    youtubeClientSecret: "",
+    youtubeApiKey: "",
+    // Twitter/X
+    twitterEnabled: false,
+    twitterApiKey: "",
+    twitterApiSecret: "",
+    twitterBearerToken: "",
+    twitterAccessToken: "",
+    twitterAccessSecret: "",
+    // Content Generation
+    dalleEnabled: false,
+    dalleApiKey: "",
+    stabilityEnabled: false,
+    stabilityApiKey: "",
+    // General Settings
+    autoPostEnabled: false,
+    defaultHashtags: "#crowdfunding #indiecrowdfund",
+    postApprovalRequired: true,
+  });
+
+  const [socialTestResults, setSocialTestResults] = useState<{
+    facebook: "idle" | "testing" | "success" | "error";
+    youtube: "idle" | "testing" | "success" | "error";
+    twitter: "idle" | "testing" | "success" | "error";
+  }>({
+    facebook: "idle",
+    youtube: "idle",
+    twitter: "idle",
+  });
+
+  const testFacebook = async () => {
+    setSocialTestResults((prev) => ({ ...prev, facebook: "testing" }));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setSocialTestResults((prev) => ({
+      ...prev,
+      facebook: socialSettings.facebookAppId && socialSettings.facebookAppSecret ? "success" : "error",
+    }));
+  };
+
+  const testYoutube = async () => {
+    setSocialTestResults((prev) => ({ ...prev, youtube: "testing" }));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setSocialTestResults((prev) => ({
+      ...prev,
+      youtube: socialSettings.youtubeClientId && socialSettings.youtubeClientSecret ? "success" : "error",
+    }));
+  };
+
+  const testTwitter = async () => {
+    setSocialTestResults((prev) => ({ ...prev, twitter: "testing" }));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setSocialTestResults((prev) => ({
+      ...prev,
+      twitter: socialSettings.twitterApiKey && socialSettings.twitterApiSecret ? "success" : "error",
+    }));
+  };
+
   const [aiTestResults, setAiTestResults] = useState<{
     openai: "idle" | "testing" | "success" | "error";
     anthropic: "idle" | "testing" | "success" | "error";
@@ -193,7 +265,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 lg:w-auto lg:inline-grid">
           <TabsTrigger value="general">
             <Settings className="mr-2 h-4 w-4" />
             General
@@ -205,6 +277,10 @@ export default function SettingsPage() {
           <TabsTrigger value="email">
             <Mail className="mr-2 h-4 w-4" />
             Email
+          </TabsTrigger>
+          <TabsTrigger value="social">
+            <Share2 className="mr-2 h-4 w-4" />
+            Social
           </TabsTrigger>
           <TabsTrigger value="ai">
             <Bot className="mr-2 h-4 w-4" />
@@ -647,6 +723,479 @@ export default function SettingsPage() {
                   }
                 />
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Social Media Settings */}
+        <TabsContent value="social" className="mt-6 space-y-6">
+          {/* Social Media Status Overview */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className={socialSettings.facebookEnabled && socialSettings.facebookAppId ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20" : ""}>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className={`rounded-full p-3 ${socialSettings.facebookEnabled && socialSettings.facebookAppId ? "bg-blue-100" : "bg-zinc-100"}`}>
+                    <Facebook className={`h-6 w-6 ${socialSettings.facebookEnabled && socialSettings.facebookAppId ? "text-blue-600" : "text-zinc-400"}`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold">Facebook / Instagram</p>
+                    <p className="text-sm text-zinc-500">Meta Graph API</p>
+                  </div>
+                  <Badge variant={socialSettings.facebookEnabled && socialSettings.facebookAppId ? "default" : "secondary"}>
+                    {socialSettings.facebookEnabled && socialSettings.facebookAppId ? "Connected" : "Not Configured"}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className={socialSettings.youtubeEnabled && socialSettings.youtubeClientId ? "border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20" : ""}>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className={`rounded-full p-3 ${socialSettings.youtubeEnabled && socialSettings.youtubeClientId ? "bg-red-100" : "bg-zinc-100"}`}>
+                    <Youtube className={`h-6 w-6 ${socialSettings.youtubeEnabled && socialSettings.youtubeClientId ? "text-red-600" : "text-zinc-400"}`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold">YouTube</p>
+                    <p className="text-sm text-zinc-500">Community Posts</p>
+                  </div>
+                  <Badge variant={socialSettings.youtubeEnabled && socialSettings.youtubeClientId ? "default" : "secondary"}>
+                    {socialSettings.youtubeEnabled && socialSettings.youtubeClientId ? "Connected" : "Not Configured"}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className={socialSettings.twitterEnabled && socialSettings.twitterApiKey ? "border-sky-200 bg-sky-50/50 dark:border-sky-800 dark:bg-sky-950/20" : ""}>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className={`rounded-full p-3 ${socialSettings.twitterEnabled && socialSettings.twitterApiKey ? "bg-sky-100" : "bg-zinc-100"}`}>
+                    <Twitter className={`h-6 w-6 ${socialSettings.twitterEnabled && socialSettings.twitterApiKey ? "text-sky-500" : "text-zinc-400"}`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold">Twitter / X</p>
+                    <p className="text-sm text-zinc-500">Posts & Threads</p>
+                  </div>
+                  <Badge variant={socialSettings.twitterEnabled && socialSettings.twitterApiKey ? "default" : "secondary"}>
+                    {socialSettings.twitterEnabled && socialSettings.twitterApiKey ? "Connected" : "Not Configured"}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Facebook/Instagram (Meta) Configuration */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Facebook className="h-5 w-5 text-blue-600" />
+                    Facebook / Instagram (Meta)
+                  </CardTitle>
+                  <CardDescription>Connect Meta Graph API for Facebook and Instagram posting</CardDescription>
+                </div>
+                <Badge variant={socialSettings.facebookEnabled ? "default" : "secondary"}>
+                  {socialSettings.facebookEnabled ? "Enabled" : "Disabled"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label>Enable Facebook/Instagram</Label>
+                  <p className="text-sm text-zinc-500">Allow creators to connect their Facebook Pages and Instagram accounts</p>
+                </div>
+                <Switch
+                  checked={socialSettings.facebookEnabled}
+                  onCheckedChange={(checked) =>
+                    setSocialSettings({ ...socialSettings, facebookEnabled: checked, instagramEnabled: checked })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>App ID</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Your Facebook App ID"
+                      value={socialSettings.facebookAppId}
+                      onChange={(e) => setSocialSettings({ ...socialSettings, facebookAppId: e.target.value })}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={testFacebook}
+                      disabled={socialTestResults.facebook === "testing"}
+                    >
+                      {socialTestResults.facebook === "testing" ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : socialTestResults.facebook === "success" ? (
+                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      ) : socialTestResults.facebook === "error" ? (
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <TestTube className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>App Secret</Label>
+                  <Input
+                    type="password"
+                    placeholder="Your Facebook App Secret"
+                    value={socialSettings.facebookAppSecret}
+                    onChange={(e) => setSocialSettings({ ...socialSettings, facebookAppSecret: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>System User Access Token (optional)</Label>
+                <Input
+                  type="password"
+                  placeholder="For server-to-server API calls"
+                  value={socialSettings.facebookPageAccessToken}
+                  onChange={(e) => setSocialSettings({ ...socialSettings, facebookPageAccessToken: e.target.value })}
+                />
+                <p className="text-xs text-zinc-500">
+                  Create an app at <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">developers.facebook.com</a>. Required scopes: pages_manage_posts, instagram_basic, instagram_content_publish
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* YouTube Configuration */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Youtube className="h-5 w-5 text-red-600" />
+                    YouTube
+                  </CardTitle>
+                  <CardDescription>Connect YouTube Data API for community posts</CardDescription>
+                </div>
+                <Badge variant={socialSettings.youtubeEnabled ? "default" : "secondary"}>
+                  {socialSettings.youtubeEnabled ? "Enabled" : "Disabled"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label>Enable YouTube</Label>
+                  <p className="text-sm text-zinc-500">Allow creators to post community updates to their YouTube channel</p>
+                </div>
+                <Switch
+                  checked={socialSettings.youtubeEnabled}
+                  onCheckedChange={(checked) =>
+                    setSocialSettings({ ...socialSettings, youtubeEnabled: checked })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>OAuth Client ID</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Your Google OAuth Client ID"
+                      value={socialSettings.youtubeClientId}
+                      onChange={(e) => setSocialSettings({ ...socialSettings, youtubeClientId: e.target.value })}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={testYoutube}
+                      disabled={socialTestResults.youtube === "testing"}
+                    >
+                      {socialTestResults.youtube === "testing" ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : socialTestResults.youtube === "success" ? (
+                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      ) : socialTestResults.youtube === "error" ? (
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <TestTube className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>OAuth Client Secret</Label>
+                  <Input
+                    type="password"
+                    placeholder="Your Google OAuth Client Secret"
+                    value={socialSettings.youtubeClientSecret}
+                    onChange={(e) => setSocialSettings({ ...socialSettings, youtubeClientSecret: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>API Key (optional)</Label>
+                <Input
+                  type="password"
+                  placeholder="For public data access"
+                  value={socialSettings.youtubeApiKey}
+                  onChange={(e) => setSocialSettings({ ...socialSettings, youtubeApiKey: e.target.value })}
+                />
+                <p className="text-xs text-zinc-500">
+                  Create credentials at <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-red-600 hover:underline">Google Cloud Console</a>. Enable YouTube Data API v3.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Twitter/X Configuration */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Twitter className="h-5 w-5 text-sky-500" />
+                    Twitter / X
+                  </CardTitle>
+                  <CardDescription>Connect Twitter API v2 for posting and threads</CardDescription>
+                </div>
+                <Badge variant={socialSettings.twitterEnabled ? "default" : "secondary"}>
+                  {socialSettings.twitterEnabled ? "Enabled" : "Disabled"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label>Enable Twitter/X</Label>
+                  <p className="text-sm text-zinc-500">Allow creators to post tweets and threads about their campaigns</p>
+                </div>
+                <Switch
+                  checked={socialSettings.twitterEnabled}
+                  onCheckedChange={(checked) =>
+                    setSocialSettings({ ...socialSettings, twitterEnabled: checked })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>API Key (Consumer Key)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Your Twitter API Key"
+                      value={socialSettings.twitterApiKey}
+                      onChange={(e) => setSocialSettings({ ...socialSettings, twitterApiKey: e.target.value })}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={testTwitter}
+                      disabled={socialTestResults.twitter === "testing"}
+                    >
+                      {socialTestResults.twitter === "testing" ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : socialTestResults.twitter === "success" ? (
+                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      ) : socialTestResults.twitter === "error" ? (
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <TestTube className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>API Secret (Consumer Secret)</Label>
+                  <Input
+                    type="password"
+                    placeholder="Your Twitter API Secret"
+                    value={socialSettings.twitterApiSecret}
+                    onChange={(e) => setSocialSettings({ ...socialSettings, twitterApiSecret: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Bearer Token</Label>
+                <Input
+                  type="password"
+                  placeholder="For app-only authentication"
+                  value={socialSettings.twitterBearerToken}
+                  onChange={(e) => setSocialSettings({ ...socialSettings, twitterBearerToken: e.target.value })}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Access Token (optional)</Label>
+                  <Input
+                    type="password"
+                    placeholder="For user-context requests"
+                    value={socialSettings.twitterAccessToken}
+                    onChange={(e) => setSocialSettings({ ...socialSettings, twitterAccessToken: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Access Token Secret (optional)</Label>
+                  <Input
+                    type="password"
+                    placeholder="Paired with access token"
+                    value={socialSettings.twitterAccessSecret}
+                    onChange={(e) => setSocialSettings({ ...socialSettings, twitterAccessSecret: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-500">
+                Create an app at <a href="https://developer.twitter.com" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">developer.twitter.com</a>. Requires at least Basic tier for posting.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Image Generation Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                AI Image Generation
+              </CardTitle>
+              <CardDescription>Enable AI-powered image creation for social media posts</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>DALL-E (OpenAI)</Label>
+                      <p className="text-sm text-zinc-500">Generate images with DALL-E 3</p>
+                    </div>
+                    <Switch
+                      checked={socialSettings.dalleEnabled}
+                      onCheckedChange={(checked) =>
+                        setSocialSettings({ ...socialSettings, dalleEnabled: checked })
+                      }
+                    />
+                  </div>
+                  {socialSettings.dalleEnabled && (
+                    <div className="space-y-2">
+                      <Label className="text-xs">API Key (uses OpenAI key from AI settings if empty)</Label>
+                      <Input
+                        type="password"
+                        placeholder="Optional separate key"
+                        value={socialSettings.dalleApiKey}
+                        onChange={(e) => setSocialSettings({ ...socialSettings, dalleApiKey: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="rounded-lg border p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Stability AI</Label>
+                      <p className="text-sm text-zinc-500">Generate images with Stable Diffusion</p>
+                    </div>
+                    <Switch
+                      checked={socialSettings.stabilityEnabled}
+                      onCheckedChange={(checked) =>
+                        setSocialSettings({ ...socialSettings, stabilityEnabled: checked })
+                      }
+                    />
+                  </div>
+                  {socialSettings.stabilityEnabled && (
+                    <div className="space-y-2">
+                      <Label className="text-xs">API Key</Label>
+                      <Input
+                        type="password"
+                        placeholder="Your Stability AI API key"
+                        value={socialSettings.stabilityApiKey}
+                        onChange={(e) => setSocialSettings({ ...socialSettings, stabilityApiKey: e.target.value })}
+                      />
+                      <p className="text-xs text-zinc-500">
+                        Get your key from <a href="https://platform.stability.ai" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">platform.stability.ai</a>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* General Social Posting Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>General Social Settings</CardTitle>
+              <CardDescription>Configure default behavior for social media features</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label>Auto-Post on Project Launch</Label>
+                  <p className="text-sm text-zinc-500">Automatically post to connected accounts when a project goes live</p>
+                </div>
+                <Switch
+                  checked={socialSettings.autoPostEnabled}
+                  onCheckedChange={(checked) =>
+                    setSocialSettings({ ...socialSettings, autoPostEnabled: checked })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label>Require Post Approval</Label>
+                  <p className="text-sm text-zinc-500">AI-generated content must be reviewed before posting</p>
+                </div>
+                <Switch
+                  checked={socialSettings.postApprovalRequired}
+                  onCheckedChange={(checked) =>
+                    setSocialSettings({ ...socialSettings, postApprovalRequired: checked })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Default Hashtags</Label>
+                <Textarea
+                  placeholder="#crowdfunding #indiecrowdfund #supportcreators"
+                  value={socialSettings.defaultHashtags}
+                  onChange={(e) => setSocialSettings({ ...socialSettings, defaultHashtags: e.target.value })}
+                  rows={2}
+                />
+                <p className="text-xs text-zinc-500">
+                  These hashtags will be suggested for all social posts. Creators can modify them per post.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Environment Variables Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Environment Variables</CardTitle>
+              <CardDescription>
+                For production deployments, set these environment variables on your server
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg bg-zinc-900 p-4 font-mono text-sm text-zinc-100">
+                <div className="space-y-1">
+                  <p className="text-zinc-500"># Facebook/Instagram</p>
+                  <p><span className="text-blue-400">FACEBOOK_APP_ID</span>=<span className="text-zinc-400">your-app-id</span></p>
+                  <p><span className="text-blue-400">FACEBOOK_APP_SECRET</span>=<span className="text-zinc-400">your-app-secret</span></p>
+                  <p className="text-zinc-500 mt-2"># YouTube</p>
+                  <p><span className="text-red-400">YOUTUBE_CLIENT_ID</span>=<span className="text-zinc-400">your-client-id</span></p>
+                  <p><span className="text-red-400">YOUTUBE_CLIENT_SECRET</span>=<span className="text-zinc-400">your-client-secret</span></p>
+                  <p className="text-zinc-500 mt-2"># Twitter/X</p>
+                  <p><span className="text-sky-400">TWITTER_API_KEY</span>=<span className="text-zinc-400">your-api-key</span></p>
+                  <p><span className="text-sky-400">TWITTER_API_SECRET</span>=<span className="text-zinc-400">your-api-secret</span></p>
+                  <p><span className="text-sky-400">TWITTER_BEARER_TOKEN</span>=<span className="text-zinc-400">your-bearer-token</span></p>
+                  <p className="text-zinc-500 mt-2"># Image Generation</p>
+                  <p><span className="text-purple-400">STABILITY_API_KEY</span>=<span className="text-zinc-400">your-stability-key</span></p>
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-zinc-500">
+                API keys entered in this admin panel are stored in the database and will override environment variables.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
