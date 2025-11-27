@@ -1,5 +1,24 @@
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+
+interface ProjectViewResult {
+  date: Date;
+  views: number;
+  uniqueViews: number;
+}
+
+interface ReferrerGroupResult {
+  referrerType: string;
+  _sum: {
+    visits: number | null;
+    pledges: number | null;
+    pledgeAmount: number | null;
+  };
+}
+
+interface BehaviorGroupResult {
+  eventType: string;
+  _count: number;
+}
 
 export type EventType =
   | "PAGE_VIEW"
@@ -46,7 +65,7 @@ export async function trackEvent({
         sessionId,
         projectId,
         rewardId,
-        metadata: (metadata || {}) as Prisma.InputJsonValue,
+        metadata: metadata || {},
         referrer,
         path: page || "/",
       },
@@ -253,18 +272,18 @@ export async function getProjectAnalytics(
   ]);
 
   return {
-    views: views.map((v) => ({
+    views: views.map((v: ProjectViewResult) => ({
       date: v.date,
       views: v.views,
       uniqueViews: v.uniqueViews,
     })),
-    referrers: referrers.map((r) => ({
+    referrers: referrers.map((r: ReferrerGroupResult) => ({
       source: r.referrerType,
       visits: r._sum.visits || 0,
       pledges: r._sum.pledges || 0,
       amount: r._sum.pledgeAmount || 0,
     })),
-    events: behaviors.reduce((acc, b) => {
+    events: behaviors.reduce((acc: Record<string, number>, b: BehaviorGroupResult) => {
       acc[b.eventType] = b._count;
       return acc;
     }, {} as Record<string, number>),

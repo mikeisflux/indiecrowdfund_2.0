@@ -1,5 +1,26 @@
 import { db } from "@/lib/db";
 
+interface ProjectWithCount {
+  id: string;
+  category: string;
+  currentAmount: number;
+  goalAmount: number;
+  endDate: Date | null;
+  launchedAt: Date | null;
+  creator: { id: string; name: string | null };
+  _count: { pledges: number };
+}
+
+interface ProjectWithCreator {
+  id: string;
+  creator: { id: string; name: string | null };
+}
+
+interface PledgeGroupResult {
+  projectId: string;
+  _count: { projectId: number };
+}
+
 interface RecommendationContext {
   userId?: string;
   sessionId?: string;
@@ -85,7 +106,7 @@ export class RecommendationEngine {
         select: { projectId: true },
       });
 
-      const backedProjectIds = userPledges.map((p) => p.projectId);
+      const backedProjectIds = userPledges.map((p: { projectId: string }) => p.projectId);
 
       if (backedProjectIds.length === 0) return [];
 
@@ -101,7 +122,7 @@ export class RecommendationEngine {
         take: 100,
       });
 
-      const similarUserIds = similarUserPledges.map((p) => p.userId);
+      const similarUserIds = similarUserPledges.map((p: { userId: string }) => p.userId);
 
       if (similarUserIds.length === 0) return [];
 
@@ -124,7 +145,7 @@ export class RecommendationEngine {
         take: 50,
       });
 
-      return recommendedProjects.map((project) => ({
+      return recommendedProjects.map((project: ProjectWithCount) => ({
         projectId: project.id,
         score: Math.min(project._count.pledges * 2, 100),
         reasons: ["Backed by users with similar taste"],
@@ -161,9 +182,9 @@ export class RecommendationEngine {
       take: 100,
     });
 
-    return projects.map((project) => {
+    return projects.map((project: ProjectWithCount) => {
       let score = 0;
-      const reasons = [];
+      const reasons: string[] = [];
 
       // Category match
       const categoryScore = categoryScores[project.category] || 0;
@@ -234,7 +255,7 @@ export class RecommendationEngine {
       take: 50,
     });
 
-    const projectIds = recentPledges.map((p) => p.projectId);
+    const projectIds = recentPledges.map((p: PledgeGroupResult) => p.projectId);
 
     const projects = await db.project.findMany({
       where: {
@@ -247,9 +268,9 @@ export class RecommendationEngine {
       },
     });
 
-    return projects.map((project) => {
+    return projects.map((project: ProjectWithCount) => {
       const recentCount = recentPledges.find(
-        (p) => p.projectId === project.id
+        (p: PledgeGroupResult) => p.projectId === project.id
       )?._count.projectId || 0;
 
       return {
@@ -275,7 +296,7 @@ export class RecommendationEngine {
     });
 
     const backedCreatorIds = Array.from(
-      new Set(backedProjects.map((p) => p.project.creatorId))
+      new Set(backedProjects.map((p: { project: { creatorId: string } }) => p.project.creatorId))
     );
 
     if (backedCreatorIds.length === 0) return [];
@@ -293,7 +314,7 @@ export class RecommendationEngine {
       take: 20,
     });
 
-    return projects.map((project) => ({
+    return projects.map((project: ProjectWithCreator) => ({
       projectId: project.id,
       score: 100,
       reasons: [
@@ -348,7 +369,7 @@ export class RecommendationEngine {
     const maxPerCategory = 3;
 
     return projects.filter((project) => {
-      const category = (project.project as { category?: string })?.category;
+      const category = (project.project as { category?: string })?.category || "unknown";
       const count = categoryCounts.get(category) || 0;
 
       if (count >= maxPerCategory) {
@@ -392,9 +413,9 @@ export class RecommendationEngine {
       categoryScores[category] = backs / maxBacks;
     }
 
-    const pledgeAmounts = pledges.map((p) => p.amount);
+    const pledgeAmounts = pledges.map((p: { amount: number }) => p.amount);
     const avgPledge = pledgeAmounts.length
-      ? pledgeAmounts.reduce((a, b) => a + b, 0) / pledgeAmounts.length
+      ? pledgeAmounts.reduce((a: number, b: number) => a + b, 0) / pledgeAmounts.length
       : null;
 
     return db.userPreference.upsert({
@@ -404,13 +425,13 @@ export class RecommendationEngine {
         categoryScores,
         avgPledge,
         engagementScore: Math.min(pledges.length * 10, 100),
-        backedCreators: Array.from(new Set(pledges.map((p) => p.project.creatorId))),
+        backedCreators: Array.from(new Set(pledges.map((p: { project: { creatorId: string } }) => p.project.creatorId))),
       },
       update: {
         categoryScores,
         avgPledge,
         engagementScore: Math.min(pledges.length * 10, 100),
-        backedCreators: Array.from(new Set(pledges.map((p) => p.project.creatorId))),
+        backedCreators: Array.from(new Set(pledges.map((p: { project: { creatorId: string } }) => p.project.creatorId))),
         lastUpdated: new Date(),
       },
     });
