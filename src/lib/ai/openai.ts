@@ -34,7 +34,7 @@ interface AutoTagResult {
 
 interface MarketingCopyResult {
   tagline: string;
-  shortDescription: string;
+  subtitle: string;
   emailSubject: string;
   socialPosts: {
     twitter: string;
@@ -126,7 +126,7 @@ Generate marketing copy that is:
 Respond in JSON format:
 {
   "tagline": "A catchy 5-10 word tagline",
-  "shortDescription": "A compelling 2-3 sentence pitch (max 280 chars)",
+  "subtitle": "A compelling 2-3 sentence pitch (max 280 chars)",
   "emailSubject": "An email subject line that drives opens",
   "socialPosts": {
     "twitter": "280 char tweet with relevant hashtags",
@@ -155,7 +155,7 @@ Respond in JSON format:
 
     return {
       tagline: result.tagline || "",
-      shortDescription: result.shortDescription || "",
+      subtitle: result.subtitle || "",
       emailSubject: result.emailSubject || "",
       socialPosts: {
         twitter: result.socialPosts?.twitter || "",

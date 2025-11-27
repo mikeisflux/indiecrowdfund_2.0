@@ -38,7 +38,7 @@ import {
 interface Project {
   id: string;
   title: string;
-  shortDescription: string;
+  subtitle: string;
   imageUrl: string;
   category: string;
   goalAmount: number;
@@ -122,7 +122,7 @@ export default function RetailerProjectsPage() {
         {
           id: "1",
           title: "Cosmic Warriors Vol. 3: The Final Battle",
-          shortDescription: "An epic conclusion to the beloved sci-fi comic series featuring stunning artwork and an unforgettable story.",
+          subtitle: "An epic conclusion to the beloved sci-fi comic series featuring stunning artwork and an unforgettable story.",
           imageUrl: "/api/placeholder/400/300",
           category: "Comics",
           goalAmount: 15000,
@@ -141,7 +141,7 @@ export default function RetailerProjectsPage() {
         {
           id: "2",
           title: "Indie Horror Anthology 2024",
-          shortDescription: "A collection of chilling tales from 12 independent horror artists and writers.",
+          subtitle: "A collection of chilling tales from 12 independent horror artists and writers.",
           imageUrl: "/api/placeholder/400/300",
           category: "Graphic Novels",
           goalAmount: 8000,
@@ -160,7 +160,7 @@ export default function RetailerProjectsPage() {
         {
           id: "3",
           title: "Robot Revolution #1",
-          shortDescription: "A new cyberpunk comic series set in a world where AI has become sentient.",
+          subtitle: "A new cyberpunk comic series set in a world where AI has become sentient.",
           imageUrl: "/api/placeholder/400/300",
           category: "Comics",
           goalAmount: 10000,
@@ -179,7 +179,7 @@ export default function RetailerProjectsPage() {
         {
           id: "4",
           title: "Mystic Realms Artbook",
-          shortDescription: "200+ pages of fantasy artwork from acclaimed illustrator Maya Chen.",
+          subtitle: "200+ pages of fantasy artwork from acclaimed illustrator Maya Chen.",
           imageUrl: "/api/placeholder/400/300",
           category: "Art Books",
           goalAmount: 25000,
@@ -198,7 +198,7 @@ export default function RetailerProjectsPage() {
         {
           id: "5",
           title: "Steampunk Adventures Collection",
-          shortDescription: "Three complete graphic novels in one stunning box set.",
+          subtitle: "Three complete graphic novels in one stunning box set.",
           imageUrl: "/api/placeholder/400/300",
           category: "Graphic Novels",
           goalAmount: 20000,
@@ -217,7 +217,7 @@ export default function RetailerProjectsPage() {
         {
           id: "6",
           title: "Urban Legends: City of Shadows",
-          shortDescription: "A noir-style graphic novel exploring the dark underbelly of a fictional metropolis.",
+          subtitle: "A noir-style graphic novel exploring the dark underbelly of a fictional metropolis.",
           imageUrl: "/api/placeholder/400/300",
           category: "Graphic Novels",
           goalAmount: 12000,
@@ -450,7 +450,7 @@ export default function RetailerProjectsPage() {
                       {project.title}
                     </h3>
                     <p className="text-sm text-zinc-500 mb-4 line-clamp-2">
-                      {project.shortDescription}
+                      {project.subtitle}
                     </p>
 
                     {/* Pricing */}
@@ -538,7 +538,7 @@ export default function RetailerProjectsPage() {
                             {project.title}
                           </h3>
                           <p className="text-zinc-500 mb-4 line-clamp-2">
-                            {project.shortDescription}
+                            {project.subtitle}
                           </p>
 
                           <div className="flex items-center gap-6 text-sm">

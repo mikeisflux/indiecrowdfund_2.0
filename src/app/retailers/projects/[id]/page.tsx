@@ -30,18 +30,16 @@ interface Reward {
   amount: number;
   retailerPrice: number;
   estimatedDelivery: string;
-  itemsIncluded: string[];
-  limitedQuantity: number | null;
+  quantityAvailable: number | null;
   quantityClaimed: number;
 }
 
 interface Project {
   id: string;
   title: string;
-  shortDescription: string;
+  subtitle: string;
   description: string;
   imageUrl: string;
-  images: string[];
   category: string;
   goalAmount: number;
   currentAmount: number;
@@ -99,7 +97,7 @@ export default function RetailerProjectDetailPage() {
       setProject({
         id: projectId,
         title: "Cosmic Warriors Vol. 3: The Final Battle",
-        shortDescription:
+        subtitle:
           "An epic conclusion to the beloved sci-fi comic series featuring stunning artwork and an unforgettable story.",
         description: `
           Join Commander Nova and her crew for the final chapter of the Cosmic Warriors saga.
@@ -113,11 +111,6 @@ export default function RetailerProjectDetailPage() {
           The Cosmic Warriors series has sold over 50,000 copies and this final volume promises to be the most action-packed yet.
         `,
         imageUrl: "/api/placeholder/600/400",
-        images: [
-          "/api/placeholder/600/400",
-          "/api/placeholder/600/400",
-          "/api/placeholder/600/400",
-        ],
         category: "Comics",
         goalAmount: 15000,
         currentAmount: 12750,
@@ -136,8 +129,7 @@ export default function RetailerProjectDetailPage() {
             amount: 25,
             retailerPrice: 12.5,
             estimatedDelivery: "June 2024",
-            itemsIncluded: ["Softcover Graphic Novel", "Digital Download Code"],
-            limitedQuantity: null,
+            quantityAvailable: null,
             quantityClaimed: 245,
           },
           {
@@ -148,13 +140,7 @@ export default function RetailerProjectDetailPage() {
             amount: 45,
             retailerPrice: 22.5,
             estimatedDelivery: "June 2024",
-            itemsIncluded: [
-              "Hardcover Graphic Novel",
-              "Signed Bookplate",
-              "Exclusive Dust Jacket",
-              "Art Print",
-            ],
-            limitedQuantity: 500,
+            quantityAvailable: 500,
             quantityClaimed: 312,
           },
           {
@@ -165,14 +151,7 @@ export default function RetailerProjectDetailPage() {
             amount: 99,
             retailerPrice: 49.5,
             estimatedDelivery: "July 2024",
-            itemsIncluded: [
-              "All 3 Volumes (Hardcover)",
-              "Collector's Box",
-              "Art Print Set",
-              "Enamel Pin",
-              "Poster",
-            ],
-            limitedQuantity: 200,
+            quantityAvailable: 200,
             quantityClaimed: 89,
           },
         ],
@@ -334,7 +313,7 @@ export default function RetailerProjectDetailPage() {
                   <span className="text-sm text-zinc-500">by {project.creator.name}</span>
                 </div>
                 <h1 className="text-3xl font-bold mb-3">{project.title}</h1>
-                <p className="text-zinc-600 text-lg">{project.shortDescription}</p>
+                <p className="text-zinc-600 text-lg">{project.subtitle}</p>
               </div>
             </div>
 
@@ -385,8 +364,8 @@ export default function RetailerProjectDetailPage() {
               <div className="space-y-4">
                 {project.rewards.map((reward) => {
                   const quantity = getQuantity(reward.id);
-                  const remaining = reward.limitedQuantity
-                    ? reward.limitedQuantity - reward.quantityClaimed
+                  const remaining = reward.quantityAvailable
+                    ? reward.quantityAvailable - reward.quantityClaimed
                     : null;
 
                   return (
@@ -409,14 +388,6 @@ export default function RetailerProjectDetailPage() {
                             )}
                           </div>
                           <p className="text-zinc-600 mb-3">{reward.description}</p>
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {reward.itemsIncluded.map((item, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
-                                <Package className="h-3 w-3 mr-1" />
-                                {item}
-                              </Badge>
-                            ))}
-                          </div>
                           <p className="text-sm text-zinc-500">
                             <Calendar className="h-4 w-4 inline mr-1" />
                             Est. delivery: {reward.estimatedDelivery}
