@@ -67,6 +67,9 @@ const initialState = {
     paymentProcessor: "STRIPE" as const,
     hasAdultContent: false,
     hasRiskyContent: false,
+    allowRetailerPledges: false,
+    retailerDiscount: 50,
+    retailerMinQuantity: 5,
   },
   promotion: {
     prelaunchActive: false,

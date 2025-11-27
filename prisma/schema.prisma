@@ -142,6 +142,12 @@ model Project {
   metaPixelId           String?
   metaConversionsToken  String?
 
+  // Retailer Settings
+  allowRetailerPledges  Boolean       @default(false)
+  retailerDiscount      Float         @default(50)
+  retailerMinQuantity   Int           @default(1)
+  retailerMaxQuantity   Int?
+
   // Status
   status                ProjectStatus @default(DRAFT)
   currentAmount         Float         @default(0)
@@ -163,6 +169,7 @@ model Project {
   projectSimilarities   ProjectSimilarity[] @relation("ProjectSimilarities")
   similarProjects       ProjectSimilarity[] @relation("SimilarProjects")
   followers             ProjectFollower[]
+  retailerPledges       RetailerPledge[]
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
@@ -893,4 +900,143 @@ enum TagSource {
   MANUAL
   AI_GENERATED
   USER_SUGGESTED
+}
+
+// ============================================
+// RETAILER / LCS SYSTEM
+// ============================================
+
+model Retailer {
+  id                    String          @id @default(cuid())
+  userId                String?         @unique
+
+  // Business Information
+  businessName          String
+  businessType          RetailerType
+  contactName           String
+  email                 String          @unique
+  phone                 String
+
+  // Address
+  address               String
+  city                  String
+  state                 String
+  zipCode               String
+  country               String          @default("US")
+
+  // Tax Information
+  taxId                 String
+  taxIdType             TaxIdType       @default(EIN)
+  resaleCertificate     String?
+
+  // Business Details
+  yearsInBusiness       Int?
+  numberOfLocations     Int             @default(1)
+  annualRevenue         String?
+  websiteUrl            String?
+  socialMedia           Json?
+
+  // Verification
+  status                RetailerStatus  @default(PENDING)
+  verificationNotes     String?         @db.Text
+  verifiedAt            DateTime?
+  verifiedBy            String?
+
+  // Access
+  accessCode            String?         @unique
+  passwordHash          String?
+  lastLoginAt           DateTime?
+
+  // Relations
+  pledges               RetailerPledge[]
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([accessCode])
+}
+
+model RetailerPledge {
+  id                    String              @id @default(cuid())
+  retailerId            String
+  projectId             String
+  rewardId              String
+
+  // Order Details
+  quantity              Int
+  unitPrice             Float
+  discountPercent       Float
+  totalAmount           Float
+  originalAmount        Float
+
+  // Payment
+  status                RetailerPledgeStatus @default(PENDING)
+  paymentMethod         String?
+  paymentReference      String?
+  invoiceNumber         String?             @unique
+
+  // Shipping
+  shippingAddress       Json?
+  shippingMethod        String?
+  shippingCost          Float               @default(0)
+  trackingNumber        String?
+
+  // Fulfillment
+  fulfillmentStatus     FulfillmentStatus   @default(NOT_STARTED)
+  fulfillmentNotes      String?             @db.Text
+
+  // PO Information
+  purchaseOrderNumber   String?
+
+  // Relations
+  retailer              Retailer            @relation(fields: [retailerId], references: [id])
+  project               Project             @relation(fields: [projectId], references: [id])
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  paidAt                DateTime?
+  shippedAt             DateTime?
+  deliveredAt           DateTime?
+
+  @@index([retailerId])
+  @@index([projectId])
+  @@index([status])
+}
+
+enum RetailerType {
+  COMIC_SHOP
+  BOOKSTORE
+  GAME_STORE
+  HOBBY_SHOP
+  ONLINE_RETAILER
+  DISTRIBUTOR
+  OTHER
+}
+
+enum TaxIdType {
+  EIN
+  SSN
+  VAT
+  OTHER
+}
+
+enum RetailerStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum RetailerPledgeStatus {
+  PENDING
+  INVOICED
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
 }

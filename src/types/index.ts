@@ -131,6 +131,11 @@ export interface ProjectPaymentData {
   stripeAccountId?: string;
   ccbillAccountNumber?: string;
   ccbillSubaccount?: string;
+  // Retailer settings
+  allowRetailerPledges: boolean;
+  retailerDiscount: number;
+  retailerMinQuantity: number;
+  retailerMaxQuantity?: number;
 }
 
 export interface ProjectPromotionData {
