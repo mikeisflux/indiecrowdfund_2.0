@@ -140,7 +140,8 @@ export class RecommendationEngine {
    * Content-based filtering: Match project attributes to preferences
    */
   async contentBasedFiltering(preferences: unknown): Promise<ScoredProject[]> {
-    const categoryScores = (preferences?.categoryScores as Record<string, number>) || {};
+    const prefs = preferences as { categoryScores?: Record<string, number> } | null;
+    const categoryScores = prefs?.categoryScores || {};
     const categories = Object.keys(categoryScores);
 
     if (categories.length === 0) {
