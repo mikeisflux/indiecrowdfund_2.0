@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import {
   ArrowRight,
   Play,
-  TrendingUp,
   Users,
   Clock,
   Search,

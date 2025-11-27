@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     const retailer = await db.retailer.create({
       data: {
         businessName,
-        businessType: businessType as any,
+        businessType,
         contactName,
         email,
         phone,
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
         zipCode,
         country: country || "US",
         taxId,
-        taxIdType: taxIdType as any,
+        taxIdType,
         resaleCertificate,
         yearsInBusiness: yearsInBusiness ? parseInt(yearsInBusiness) : null,
         numberOfLocations: numberOfLocations ? parseInt(numberOfLocations) : 1,

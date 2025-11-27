@@ -1,23 +1,18 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Store,
   Percent,
   Package,
   TrendingUp,
-  Shield,
   Clock,
   CheckCircle,
   Star,
   Users,
   Truck,
   FileText,
-  DollarSign,
   ArrowRight,
   Sparkles,
   Award,
@@ -279,7 +274,7 @@ export default function RetailersPage() {
             <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-8 text-white">
               <h3 className="text-2xl font-bold">Retailer Requirements</h3>
               <p className="mt-2 text-emerald-100">
-                To qualify for our retailer program, you'll need:
+                To qualify for our retailer program, you&apos;ll need:
               </p>
               <ul className="mt-6 space-y-3">
                 {requirements.map((req) => (
@@ -318,7 +313,7 @@ export default function RetailersPage() {
                       <Star key={i} className="h-4 w-4 fill-current" />
                     ))}
                   </div>
-                  <p className="mt-4 text-zinc-600 dark:text-zinc-400">"{testimonial.quote}"</p>
+                  <p className="mt-4 text-zinc-600 dark:text-zinc-400">&quot;{testimonial.quote}&quot;</p>
                   <div className="mt-6 flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 font-semibold text-emerald-700">
                       {testimonial.avatar}
@@ -344,7 +339,7 @@ export default function RetailersPage() {
                 <h2 className="text-3xl font-bold text-white">Dedicated Retailer Support</h2>
                 <p className="mt-4 text-zinc-400">
                   Our retailer success team is here to help you every step of the way.
-                  From onboarding to ongoing support, we're committed to your success.
+                  From onboarding to ongoing support, we&apos;re committed to your success.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-4">
                   <div className="flex items-center gap-2 text-zinc-300">

@@ -17,7 +17,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -25,7 +24,6 @@ import {
 import {
   Flag,
   Shield,
-  AlertTriangle,
   CheckCircle,
   XCircle,
   Clock,
@@ -35,14 +33,11 @@ import {
   Users,
   FolderKanban,
   Search,
-  Filter,
-  MoreHorizontal,
   Ban,
   ThumbsUp,
   ThumbsDown,
   ExternalLink,
   History,
-  Trash2,
 } from "lucide-react";
 
 // Mock reports data

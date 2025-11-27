@@ -151,7 +151,7 @@ export function RewardsStep() {
 
   return (
     <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "tiers" | "addons")}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="tiers" className="flex items-center gap-2">
             <Gift className="h-4 w-4" />

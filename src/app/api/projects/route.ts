@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "12");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     if (category) {
       where.category = category;

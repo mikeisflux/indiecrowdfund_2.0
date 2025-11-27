@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -23,16 +21,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Layout,
   Type,
   Image,
   Video,
   Grid3x3,
   Columns,
   Square,
-  CircleDot,
-  MousePointer,
-  Move,
   Trash2,
   Copy,
   Settings,
@@ -50,14 +44,13 @@ import {
   TrendingUp,
   Users,
   DollarSign,
-  ArrowRight,
   Code,
-  Palette,
   Box,
   GripVertical,
   Monitor,
   Smartphone,
   Tablet,
+  MousePointer,
 } from "lucide-react";
 
 // Component types
@@ -179,7 +172,7 @@ const pages = [
 
 export default function PageBuilderPage() {
   const [selectedPage, setSelectedPage] = useState("home");
-  const [pageStructure, setPageStructure] = useState(initialPageStructure);
+  const [pageStructure] = useState(initialPageStructure);
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -473,7 +466,7 @@ export default function PageBuilderPage() {
                       )}
                       {child.type === "stats-counter" && (
                         <div className="grid grid-cols-3 gap-8 text-center">
-                          {child.settings.stats.map((stat: any, i: number) => (
+                          {child.settings.stats.map((stat: { value: string; label: string }, i: number) => (
                             <div key={i}>
                               <p className="text-4xl font-bold text-emerald-600">
                                 {stat.value}

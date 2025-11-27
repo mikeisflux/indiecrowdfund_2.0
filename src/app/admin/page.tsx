@@ -6,8 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -19,16 +17,11 @@ import {
   DollarSign,
   Users,
   FolderKanban,
-  TrendingUp,
-  TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
-  Eye,
   CreditCard,
   AlertTriangle,
   CheckCircle2,
-  Clock,
-  Activity,
   MoreHorizontal,
   ExternalLink,
   Sparkles,
@@ -197,7 +190,7 @@ export default function AdminDashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Dashboard</h1>
-          <p className="text-zinc-500">Welcome back! Here's what's happening with your platform.</p>
+          <p className="text-zinc-500">Welcome back! Here&apos;s what&apos;s happening with your platform.</p>
         </div>
         <div className="flex items-center gap-3">
           <Select value={timeRange} onValueChange={setTimeRange}>

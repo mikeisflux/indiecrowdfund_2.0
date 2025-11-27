@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const where: Record<string, unknown> = {
       retailerId: retailerData.retailerId,
     };
 
@@ -188,7 +188,13 @@ export async function POST(req: NextRequest) {
     let totalQuantity = 0;
     let totalOriginalAmount = 0;
     let totalWholesaleAmount = 0;
-    const orderItems: any[] = [];
+    const orderItems: Array<{
+      rewardId: string;
+      rewardTitle: string;
+      quantity: number;
+      originalPrice: number;
+      wholesalePrice: number;
+    }> = [];
 
     for (const item of items) {
       const reward = project.rewards.find((r) => r.id === item.rewardId);

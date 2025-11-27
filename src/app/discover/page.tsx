@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -150,7 +150,7 @@ export default function DiscoverPage() {
   const [showFunded, setShowFunded] = useState(
     searchParams.get("funded") !== "false"
   );
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
   // Filter projects based on current filters
   const filteredProjects = mockProjects.filter((project) => {

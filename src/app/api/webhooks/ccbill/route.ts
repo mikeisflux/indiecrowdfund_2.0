@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     // Map to webhook payload type
     const webhookPayload = {
-      eventType: payload.eventType as any,
+      eventType: payload.eventType,
       subscriptionId: payload.subscriptionId,
       clientAccnum: payload.clientAccnum,
       clientSubacc: payload.clientSubacc,

@@ -4,37 +4,22 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Store,
   ArrowLeft,
   Calendar,
-  Users,
-  TrendingUp,
   ShoppingCart,
-  Clock,
   Percent,
   Package,
-  Truck,
-  CreditCard,
   CheckCircle,
   Plus,
   Minus,
   AlertCircle,
-  FileText,
   Shield,
-  Info,
 } from "lucide-react";
 
 interface Reward {
@@ -89,10 +74,10 @@ export default function RetailerProjectDetailPage() {
   const [purchaseOrderNumber, setPurchaseOrderNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showOrderSummary, setShowOrderSummary] = useState(false);
 
   useEffect(() => {
     fetchProject();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const fetchProject = async () => {
@@ -108,7 +93,7 @@ export default function RetailerProjectDetailPage() {
       }
       const data = await response.json();
       setProject(data.project);
-    } catch (error) {
+    } catch {
       // Mock data for demonstration
       setProject({
         id: projectId,
@@ -291,7 +276,7 @@ export default function RetailerProjectDetailPage() {
       } else {
         alert("Failed to place order. Please try again.");
       }
-    } catch (error) {
+    } catch {
       alert("An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);

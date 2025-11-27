@@ -19,7 +19,7 @@ type EventType =
 interface TrackingOptions {
   projectId?: string;
   rewardId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 const SESSION_KEY = "indiecrowdfund_session_id";

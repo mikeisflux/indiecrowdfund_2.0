@@ -1,16 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +36,6 @@ import {
   Star,
   Trash2,
   Archive,
-  Tag,
   Search,
   Plus,
   MoreVertical,
@@ -49,20 +46,12 @@ import {
   Image,
   List,
   RefreshCw,
-  ChevronDown,
-  Clock,
-  Users,
   Mail,
   Settings,
   Filter,
   ArrowLeft,
   Reply,
   Forward,
-  Printer,
-  ExternalLink,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

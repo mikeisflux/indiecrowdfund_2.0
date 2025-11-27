@@ -12,7 +12,7 @@ interface ScoredProject {
   projectId: string;
   score: number;
   reasons: string[];
-  project: any;
+  project: unknown;
 }
 
 export class RecommendationEngine {
@@ -73,7 +73,7 @@ export class RecommendationEngine {
    * Collaborative filtering: "Users like you also backed..."
    */
   async collaborativeFiltering(
-    preferences: any,
+    preferences: unknown,
     userId?: string
   ): Promise<ScoredProject[]> {
     if (!userId) return [];
@@ -139,7 +139,7 @@ export class RecommendationEngine {
   /**
    * Content-based filtering: Match project attributes to preferences
    */
-  async contentBasedFiltering(preferences: any): Promise<ScoredProject[]> {
+  async contentBasedFiltering(preferences: unknown): Promise<ScoredProject[]> {
     const categoryScores = (preferences?.categoryScores as Record<string, number>) || {};
     const categories = Object.keys(categoryScores);
 
@@ -311,7 +311,7 @@ export class RecommendationEngine {
   ): ScoredProject[] {
     const projectScores = new Map<
       string,
-      { totalScore: number; reasons: Set<string>; project: any }
+      { totalScore: number; reasons: Set<string>; project: unknown }
     >();
 
     for (const [, { scores, weight }] of Object.entries(algorithms)) {

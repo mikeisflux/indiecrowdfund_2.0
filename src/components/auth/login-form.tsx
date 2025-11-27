@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login, loginWithGoogle } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,6 @@ import { Loader2 } from "lucide-react";
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   async function handleSubmit(formData: FormData) {
     setIsLoading(true);
@@ -31,7 +29,7 @@ export function LoginForm() {
           setError(result.error.password[0]);
         }
       }
-    } catch (err) {
+    } catch {
       // Redirect happens in the action, this catches any other errors
     } finally {
       setIsLoading(false);
@@ -42,7 +40,7 @@ export function LoginForm() {
     setIsLoading(true);
     try {
       await loginWithGoogle();
-    } catch (err) {
+    } catch {
       setError("Failed to sign in with Google");
       setIsLoading(false);
     }

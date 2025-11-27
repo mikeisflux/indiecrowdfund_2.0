@@ -152,7 +152,8 @@ export default function PledgePage() {
       const current = prev[addonId] || 0;
       const newQty = Math.max(0, current + delta);
       if (newQty === 0) {
-        const { [addonId]: _, ...rest } = prev;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [addonId]: _removed, ...rest } = prev;
         return rest;
       }
       return { ...prev, [addonId]: newQty };
@@ -558,14 +559,14 @@ export default function PledgePage() {
                       {project.paymentProcessor === "STRIPE" ? (
                         <div className="rounded-lg border bg-muted/50 p-4">
                           <p className="text-sm text-muted-foreground">
-                            You'll be redirected to Stripe to complete your payment
+                            You&apos;ll be redirected to Stripe to complete your payment
                             securely. We accept all major credit and debit cards.
                           </p>
                         </div>
                       ) : (
                         <div className="rounded-lg border bg-muted/50 p-4">
                           <p className="text-sm text-muted-foreground">
-                            You'll be redirected to our secure payment processor to
+                            You&apos;ll be redirected to our secure payment processor to
                             complete your payment.
                           </p>
                         </div>
@@ -583,7 +584,7 @@ export default function PledgePage() {
                         </p>
                         <p className="mt-1 text-amber-700 dark:text-amber-300">
                           Your card will be charged immediately. If the project
-                          doesn't reach its funding goal, you'll receive a full
+                          doesn&apos;t reach its funding goal, you&apos;ll receive a full
                           refund. Estimated delivery dates are not guaranteed.
                         </p>
                       </div>
@@ -604,7 +605,7 @@ export default function PledgePage() {
                       <Link href="/terms" className="underline hover:text-primary">
                         Terms of Service
                       </Link>{" "}
-                      and understand that I'm supporting a crowdfunding campaign,
+                      and understand that I&apos;m supporting a crowdfunding campaign,
                       not purchasing a finished product.
                     </Label>
                   </div>
@@ -701,7 +702,7 @@ export default function PledgePage() {
             </div>
             <h2 className="mb-2 text-2xl font-bold">Thank you for your pledge!</h2>
             <p className="mb-8 text-muted-foreground">
-              Your support means the world to {project.creator.name}. You'll
+              Your support means the world to {project.creator.name}. You&apos;ll
               receive an email confirmation shortly.
             </p>
             <div className="space-y-3">

@@ -21,13 +21,10 @@ import {
   Settings,
   LogOut,
   ChevronRight,
-  BarChart3,
   FileText,
   Star,
   Calendar,
   ArrowUpRight,
-  Filter,
-  Download,
 } from "lucide-react";
 
 interface RetailerData {
@@ -81,7 +78,7 @@ export default function RetailerDashboardPage() {
         setRetailerData(data.retailer);
         setRecentOrders(data.recentOrders || []);
         setFeaturedProjects(data.featuredProjects || []);
-      } catch (error) {
+      } catch {
         router.push("/retailers/login");
       } finally {
         setIsLoading(false);

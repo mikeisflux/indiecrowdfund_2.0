@@ -17,11 +17,8 @@ import {
   DollarSign,
   Users,
   FolderKanban,
-  TrendingUp,
-  TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
-  Eye,
   CreditCard,
   Activity,
   Globe,
@@ -30,16 +27,10 @@ import {
   Tablet,
   Download,
   Calendar,
-  Clock,
-  MousePointer,
   Target,
-  Percent,
   ShoppingCart,
   RefreshCw,
   BarChart3,
-  LineChart,
-  PieChart,
-  Map,
 } from "lucide-react";
 
 // Mock data for charts

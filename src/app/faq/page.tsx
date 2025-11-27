@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Accordion,
@@ -22,14 +22,11 @@ import {
   Gift,
   Store,
   BarChart3,
-  Mail,
-  Clock,
   Globe,
   Sparkles,
   FileText,
   MessageSquare,
   ChevronRight,
-  ArrowRight,
 } from "lucide-react";
 
 const faqCategories = [

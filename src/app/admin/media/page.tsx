@@ -27,8 +27,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Image,
-  Video,
-  FileType,
   Upload,
   Download,
   Trash2,
@@ -36,7 +34,6 @@ import {
   Filter,
   Grid3x3,
   List,
-  MoreHorizontal,
   RefreshCw,
   Zap,
   Clock,
@@ -45,13 +42,9 @@ import {
   AlertCircle,
   XCircle,
   Settings,
-  Play,
-  Pause,
   FolderOpen,
-  ImagePlus,
   Wand2,
   FileImage,
-  Info,
   Copy,
   ExternalLink,
 } from "lucide-react";

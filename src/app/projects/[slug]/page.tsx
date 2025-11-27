@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   Heart,
   Share2,
-  Clock,
   Users,
   MapPin,
   Calendar,

@@ -33,7 +33,6 @@ import {
   Shield,
   Key,
   Database,
-  Server,
   Webhook,
   Plus,
   Copy,

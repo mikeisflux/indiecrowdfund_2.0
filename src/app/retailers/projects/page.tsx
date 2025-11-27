@@ -24,16 +24,13 @@ import {
   Grid3X3,
   List,
   Calendar,
-  DollarSign,
   Users,
   TrendingUp,
   ChevronLeft,
   ChevronRight,
   ShoppingCart,
   Clock,
-  Star,
   Percent,
-  Package,
   ArrowUpDown,
 } from "lucide-react";
 
@@ -92,6 +89,7 @@ export default function RetailerProjectsPage() {
 
   useEffect(() => {
     fetchProjects();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, sortBy, currentPage, searchQuery]);
 
   const fetchProjects = async () => {
@@ -117,7 +115,7 @@ export default function RetailerProjectsPage() {
       const data = await response.json();
       setProjects(data.projects);
       setTotalPages(data.pagination?.totalPages || 1);
-    } catch (error) {
+    } catch {
       // Mock data for demonstration
       setProjects([
         {

@@ -59,7 +59,7 @@ export async function register(formData: FormData) {
     });
 
     return { success: true };
-  } catch (error) {
+  } catch {
     return { error: { _form: ["Something went wrong. Please try again."] } };
   }
 }
@@ -84,8 +84,8 @@ export async function login(formData: FormData) {
     });
 
     return { success: true };
-  } catch (error: any) {
-    if (error?.type === "CredentialsSignin") {
+  } catch (error: unknown) {
+    if (error && typeof error === "object" && "type" in error && error.type === "CredentialsSignin") {
       return { error: { _form: ["Invalid email or password"] } };
     }
     throw error;

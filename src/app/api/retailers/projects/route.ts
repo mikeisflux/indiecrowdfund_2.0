@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
+    const where: Record<string, unknown> = {
       status: "LIVE",
       allowRetailerPledges: true,
     };
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Build orderBy clause
-    let orderBy: any;
+    let orderBy: Record<string, string>;
     switch (sort) {
       case "ending_soon":
         orderBy = { endDate: "asc" };

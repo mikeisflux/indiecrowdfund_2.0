@@ -18,14 +18,11 @@ import {
 import {
   DollarSign,
   Users,
-  TrendingUp,
   Clock,
   Eye,
   Share2,
   ArrowUpRight,
-  ArrowDownRight,
   MoreHorizontal,
-  Plus,
   Settings,
   Bell,
   BarChart3,
@@ -416,7 +413,7 @@ export default function CreatorDashboard() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Today's Pledges
+                    Today&apos;s Pledges
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -539,7 +536,7 @@ export default function CreatorDashboard() {
                 <Truck className="mb-4 h-12 w-12 text-muted-foreground" />
                 <h3 className="mb-2 font-semibold">Fulfillment available after funding</h3>
                 <p className="mb-4 text-center text-sm text-muted-foreground">
-                  Once your campaign ends successfully, you'll be able to manage<br />
+                  Once your campaign ends successfully, you&apos;ll be able to manage<br />
                   backer surveys and reward fulfillment here
                 </p>
               </CardContent>

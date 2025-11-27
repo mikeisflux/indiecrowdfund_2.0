@@ -26,7 +26,7 @@ export function RegisterForm() {
           setError(firstError as string);
         }
       }
-    } catch (err) {
+    } catch {
       // Redirect happens in the action
     } finally {
       setIsLoading(false);
@@ -37,7 +37,7 @@ export function RegisterForm() {
     setIsLoading(true);
     try {
       await loginWithGoogle();
-    } catch (err) {
+    } catch {
       setError("Failed to sign in with Google");
       setIsLoading(false);
     }

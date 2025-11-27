@@ -25,28 +25,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Brain,
   Target,
-  Zap,
   Mail,
   Users,
   Tag,
   Sparkles,
   TrendingUp,
-  Clock,
   Settings,
   Play,
-  Pause,
   RefreshCw,
   AlertCircle,
   CheckCircle,
   Send,
   Eye,
   BarChart3,
-  PieChart,
   Activity,
   Filter,
   Layers,
@@ -57,7 +52,6 @@ import {
   ShoppingCart,
   MousePointer,
   Timer,
-  Gauge,
 } from "lucide-react";
 
 // Mock data
@@ -978,7 +972,7 @@ export default function AIMarketingPage() {
                   />
                 </div>
               </div>
-              <p className="text-sm text-zinc-500">No emails will be sent during quiet hours (in user's local timezone)</p>
+              <p className="text-sm text-zinc-500">No emails will be sent during quiet hours (in user&apos;s local timezone)</p>
             </CardContent>
           </Card>
         </TabsContent>

@@ -18,7 +18,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Truck,
-  MapPin,
 } from "lucide-react";
 
 // Mock data

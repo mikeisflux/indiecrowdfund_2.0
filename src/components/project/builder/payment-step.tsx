@@ -56,7 +56,7 @@ export function PaymentStep() {
         <Select
           value={payment.projectType || "INDIVIDUAL"}
           onValueChange={(value) =>
-            updatePayment({ projectType: value as any })
+            updatePayment({ projectType: value as "INDIVIDUAL" | "BUSINESS" | "NONPROFIT" })
           }
         >
           <SelectTrigger>
@@ -142,7 +142,7 @@ export function PaymentStep() {
         <RadioGroup
           value={mustUseCCBill ? "CCBILL" : payment.paymentProcessor || "STRIPE"}
           onValueChange={(value) =>
-            updatePayment({ paymentProcessor: value as any })
+            updatePayment({ paymentProcessor: value as "STRIPE" | "CCBILL" })
           }
           disabled={mustUseCCBill}
         >

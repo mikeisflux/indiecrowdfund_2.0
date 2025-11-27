@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
@@ -25,7 +25,7 @@ async function getRetailerFromToken() {
 }
 
 // GET - Get current retailer data
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const tokenData = await getRetailerFromToken();
 

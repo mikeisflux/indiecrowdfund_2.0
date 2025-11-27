@@ -19,7 +19,7 @@ interface TrackEventParams {
   sessionId: string;
   projectId?: string;
   rewardId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   referrer?: string;
   page?: string;
 }
@@ -40,7 +40,7 @@ export async function trackEvent({
   try {
     await db.userBehavior.create({
       data: {
-        eventType: eventType as any, // Map to BehaviorEventType enum
+        eventType,
         userId,
         sessionId,
         projectId,

@@ -24,19 +24,13 @@ import {
   Sun,
   Moon,
   Monitor,
-  Paintbrush,
-  Droplets,
-  Square,
-  CircleDot,
   Eye,
   RefreshCw,
   Save,
-  Upload,
   Download,
   Undo2,
   Check,
   Copy,
-  Sparkles,
 } from "lucide-react";
 
 // Preset themes
@@ -187,7 +181,7 @@ export default function ThemesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Themes & Styling</h1>
-          <p className="text-zinc-500">Customize your platform's visual appearance</p>
+          <p className="text-zinc-500">Customize your platform&apos;s visual appearance</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline">
@@ -796,7 +790,7 @@ export default function ThemesPage() {
                   <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>
                       <Label>Reduced Motion</Label>
-                      <p className="text-sm text-zinc-500">Respect user's reduced motion preference</p>
+                      <p className="text-sm text-zinc-500">Respect user&apos;s reduced motion preference</p>
                     </div>
                     <Switch
                       checked={appearance.reducedMotion}
