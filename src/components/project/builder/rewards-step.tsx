@@ -306,6 +306,22 @@ export function RewardsStep() {
     toast.success("Reward imported successfully");
   };
 
+  // Import a tier from current project as an add-on
+  const handleImportFromCurrentProject = (tierIndex: number) => {
+    const tier = tiers[tierIndex];
+    if (!tier) return;
+
+    addReward({
+      ...tier,
+      id: undefined,
+      type: "ADDON",
+      title: `${tier.title} (Add-on)`,
+    });
+
+    setIsImportDialogOpen(false);
+    toast.success("Reward copied as add-on successfully");
+  };
+
   // If reward form is open, show full-page form instead
   if (isRewardFormOpen) {
     return (
@@ -1052,8 +1068,8 @@ export function RewardsStep() {
           <div className="flex items-start justify-between mb-6">
             <div className="max-w-2xl">
               <p className="text-muted-foreground">
-                Add-ons are optional extras that backers can add to their pledge. They can select
-                multiple add-ons in addition to their reward tier.
+                Add-ons are optional rewards backers can add to their pledges—accessories, game expansion packs,
+                movie posters, copies of an earlier publication—that complement their chosen reward tier.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -1153,16 +1169,32 @@ export function RewardsStep() {
               })}
             </div>
           ) : (
-            <div className="border rounded-lg p-12 text-center">
-              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-medium mb-2">No add-ons yet</h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                Create add-ons to let backers customize their pledge with optional extras.
-              </p>
-              <Button onClick={() => openCreateRewardForm("ADDON")}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create your first add-on
-              </Button>
+            <div className="space-y-3">
+              {/* Example prompt cards */}
+              <button
+                onClick={() => openCreateRewardForm("ADDON")}
+                className="w-full p-4 border border-dashed rounded-lg hover:bg-muted/50 text-left transition-colors group"
+              >
+                <span className="text-primary group-hover:underline">
+                  + Example: a copy of what you&apos;re making
+                </span>
+              </button>
+              <button
+                onClick={() => openCreateRewardForm("ADDON")}
+                className="w-full p-4 border border-dashed rounded-lg hover:bg-muted/50 text-left transition-colors group"
+              >
+                <span className="text-primary group-hover:underline">
+                  + Example: a behind-the-scenes peek in writing, photos, or video
+                </span>
+              </button>
+              <button
+                onClick={() => openCreateRewardForm("ADDON")}
+                className="w-full p-4 border border-dashed rounded-lg hover:bg-muted/50 text-left transition-colors group"
+              >
+                <span className="text-primary group-hover:underline">
+                  + Example: an exclusive experience or object
+                </span>
+              </button>
             </div>
           )}
         </TabsContent>
@@ -1231,62 +1263,104 @@ export function RewardsStep() {
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Copy reward from other project</DialogTitle>
+            <DialogTitle>
+              {activeTab === "addons" ? "Copy add-on from project" : "Copy reward from other project"}
+            </DialogTitle>
             <DialogDescription>
-              Select a reward from another project of yours to copy into this project.
-              Copying rewards will also copy included items.
+              {activeTab === "addons"
+                ? "Copy a reward tier from this project as an add-on, or import from another project."
+                : "Select a reward from another project of yours to copy into this project. Copying rewards will also copy included items."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4 max-h-[400px] overflow-y-auto">
-            {mockPreviousProjects.length > 0 ? (
-              <div className="space-y-2">
-                {mockPreviousProjects.map((project) => (
-                  <Collapsible
-                    key={project.id}
-                    open={expandedProject === project.id}
-                    onOpenChange={(open) => setExpandedProject(open ? project.id : null)}
-                  >
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border rounded-lg hover:bg-muted/50">
-                      <span className="font-medium">{project.title}</span>
-                      <ChevronDown
-                        className={cn(
-                          "h-4 w-4 transition-transform",
-                          expandedProject === project.id && "rotate-180"
-                        )}
-                      />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2 ml-4 space-y-2">
-                      {project.rewards.map((reward, idx) => (
+            <div className="space-y-2">
+              {/* Current Project - only show when on add-ons tab */}
+              {activeTab === "addons" && (
+                <Collapsible
+                  open={expandedProject === "current"}
+                  onOpenChange={(open) => setExpandedProject(open ? "current" : null)}
+                >
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border rounded-lg hover:bg-muted/50">
+                    <span className="font-medium">Current Project</span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        expandedProject === "current" && "rotate-180"
+                      )}
+                    />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 ml-4 space-y-2">
+                    {tiers.length > 0 ? (
+                      tiers.map((tier, idx) => (
                         <div
                           key={idx}
                           className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleImportReward(project.id, idx)}
+                          onClick={() => handleImportFromCurrentProject(idx)}
                         >
                           <div>
-                            <p className="font-medium">{reward.title}</p>
-                            <p className="text-sm text-muted-foreground">${reward.amount}</p>
+                            <p className="font-medium">{tier.title}</p>
+                            <p className="text-sm text-muted-foreground">${tier.amount}</p>
                           </div>
                           <Copy className="h-4 w-4 text-muted-foreground" />
                         </div>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No previous projects found.</p>
-                <p className="text-sm">Create rewards in other projects first to import them here.</p>
-              </div>
-            )}
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground p-3">
+                        No reward tiers to copy. Create reward tiers first.
+                      </p>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
+              {/* Previous Projects */}
+              {mockPreviousProjects.map((project) => (
+                <Collapsible
+                  key={project.id}
+                  open={expandedProject === project.id}
+                  onOpenChange={(open) => setExpandedProject(open ? project.id : null)}
+                >
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border rounded-lg hover:bg-muted/50">
+                    <span className="font-medium">{project.title}</span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        expandedProject === project.id && "rotate-180"
+                      )}
+                    />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 ml-4 space-y-2">
+                    {project.rewards.map((reward, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleImportReward(project.id, idx)}
+                      >
+                        <div>
+                          <p className="font-medium">{reward.title}</p>
+                          <p className="text-sm text-muted-foreground">${reward.amount}</p>
+                        </div>
+                        <Copy className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
+
+              {mockPreviousProjects.length === 0 && activeTab !== "addons" && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No previous projects found.</p>
+                  <p className="text-sm">Create rewards in other projects first to import them here.</p>
+                </div>
+              )}
+            </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
               Cancel
             </Button>
-            <Button disabled>Copy reward</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
