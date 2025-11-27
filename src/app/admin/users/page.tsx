@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -50,6 +51,13 @@ import {
   DollarSign,
   AlertTriangle,
   ArrowUpRight,
+  Store,
+  Building,
+  Phone,
+  MapPin,
+  FileText,
+  Globe,
+  Bell,
 } from "lucide-react";
 
 // Mock users data
@@ -135,12 +143,192 @@ const userStats = {
   suspended: 234,
 };
 
+// Mock retailer applications data
+const mockRetailers = [
+  {
+    id: "r1",
+    businessName: "Galaxy Comics & Games",
+    businessType: "COMIC_SHOP",
+    contactName: "Robert Martinez",
+    email: "robert@galaxycomics.com",
+    phone: "(555) 123-4567",
+    address: "123 Main Street",
+    city: "Portland",
+    state: "OR",
+    zipCode: "97201",
+    country: "US",
+    taxId: "XX-XXXXXXX",
+    taxIdType: "EIN",
+    yearsInBusiness: 12,
+    numberOfLocations: 2,
+    annualRevenue: "$500K - $1M",
+    websiteUrl: "https://galaxycomics.com",
+    status: "PENDING",
+    createdAt: "2024-01-15T10:30:00Z",
+    ordersCount: 0,
+  },
+  {
+    id: "r2",
+    businessName: "Page Turner Books",
+    businessType: "BOOKSTORE",
+    contactName: "Amanda Lee",
+    email: "amanda@pageturnerbooks.com",
+    phone: "(555) 987-6543",
+    address: "456 Oak Avenue",
+    city: "Seattle",
+    state: "WA",
+    zipCode: "98101",
+    country: "US",
+    taxId: "XX-XXXXXXX",
+    taxIdType: "EIN",
+    yearsInBusiness: 8,
+    numberOfLocations: 1,
+    annualRevenue: "$250K - $500K",
+    websiteUrl: "https://pageturnerbooks.com",
+    status: "PENDING",
+    createdAt: "2024-01-14T14:22:00Z",
+    ordersCount: 0,
+  },
+  {
+    id: "r3",
+    businessName: "Quest Games Shop",
+    businessType: "GAME_STORE",
+    contactName: "Michael Chen",
+    email: "mike@questgames.com",
+    phone: "(555) 456-7890",
+    address: "789 Gaming Lane",
+    city: "Austin",
+    state: "TX",
+    zipCode: "78701",
+    country: "US",
+    taxId: "XX-XXXXXXX",
+    taxIdType: "EIN",
+    yearsInBusiness: 5,
+    numberOfLocations: 1,
+    annualRevenue: "$100K - $250K",
+    websiteUrl: "https://questgames.com",
+    status: "UNDER_REVIEW",
+    createdAt: "2024-01-12T09:15:00Z",
+    ordersCount: 0,
+  },
+  {
+    id: "r4",
+    businessName: "Hero Central",
+    businessType: "COMIC_SHOP",
+    contactName: "Sarah Johnson",
+    email: "sarah@herocentral.com",
+    phone: "(555) 321-9876",
+    address: "321 Hero Blvd",
+    city: "Denver",
+    state: "CO",
+    zipCode: "80201",
+    country: "US",
+    taxId: "XX-XXXXXXX",
+    taxIdType: "EIN",
+    yearsInBusiness: 15,
+    numberOfLocations: 3,
+    annualRevenue: "$1M+",
+    websiteUrl: "https://herocentral.com",
+    status: "APPROVED",
+    createdAt: "2024-01-08T11:45:00Z",
+    ordersCount: 23,
+    verifiedAt: "2024-01-10T14:30:00Z",
+  },
+  {
+    id: "r5",
+    businessName: "Indie Reads",
+    businessType: "BOOKSTORE",
+    contactName: "David Wilson",
+    email: "david@indiereads.com",
+    phone: "(555) 789-0123",
+    address: "555 Book Street",
+    city: "San Francisco",
+    state: "CA",
+    zipCode: "94102",
+    country: "US",
+    taxId: "XX-XXXXXXX",
+    taxIdType: "EIN",
+    yearsInBusiness: 3,
+    numberOfLocations: 1,
+    annualRevenue: "$100K - $250K",
+    websiteUrl: "",
+    status: "REJECTED",
+    createdAt: "2024-01-05T16:20:00Z",
+    ordersCount: 0,
+    verificationNotes: "Could not verify business registration",
+  },
+];
+
+const retailerStats = {
+  pending: 2,
+  underReview: 1,
+  approved: 1,
+  rejected: 1,
+  total: 5,
+};
+
 export default function UsersPage() {
+  const [activeTab, setActiveTab] = useState("users");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [retailerStatusFilter, setRetailerStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<typeof mockUsers[0] | null>(null);
+  const [selectedRetailer, setSelectedRetailer] = useState<typeof mockRetailers[0] | null>(null);
   const [showUserDialog, setShowUserDialog] = useState(false);
+  const [showRetailerDialog, setShowRetailerDialog] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | "request_info" | null>(null);
+  const [approvalNotes, setApprovalNotes] = useState("");
+
+  const pendingRetailerCount = retailerStats.pending + retailerStats.underReview;
+
+  const getBusinessTypeBadge = (type: string) => {
+    const types: Record<string, { label: string; color: string }> = {
+      COMIC_SHOP: { label: "Comic Shop", color: "bg-blue-100 text-blue-700" },
+      BOOKSTORE: { label: "Bookstore", color: "bg-amber-100 text-amber-700" },
+      GAME_STORE: { label: "Game Store", color: "bg-purple-100 text-purple-700" },
+      HOBBY_SHOP: { label: "Hobby Shop", color: "bg-pink-100 text-pink-700" },
+      ONLINE_RETAILER: { label: "Online", color: "bg-cyan-100 text-cyan-700" },
+      DISTRIBUTOR: { label: "Distributor", color: "bg-indigo-100 text-indigo-700" },
+      OTHER: { label: "Other", color: "bg-zinc-100 text-zinc-700" },
+    };
+    const config = types[type] || types.OTHER;
+    return <Badge className={config.color}>{config.label}</Badge>;
+  };
+
+  const getRetailerStatusBadge = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return <Badge className="bg-amber-100 text-amber-700"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
+      case "UNDER_REVIEW":
+        return <Badge className="bg-blue-100 text-blue-700"><Eye className="h-3 w-3 mr-1" /> Under Review</Badge>;
+      case "APPROVED":
+        return <Badge className="bg-emerald-100 text-emerald-700"><CheckCircle className="h-3 w-3 mr-1" /> Approved</Badge>;
+      case "REJECTED":
+        return <Badge className="bg-red-100 text-red-700"><XCircle className="h-3 w-3 mr-1" /> Rejected</Badge>;
+      case "SUSPENDED":
+        return <Badge className="bg-zinc-100 text-zinc-700"><Ban className="h-3 w-3 mr-1" /> Suspended</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const handleRetailerAction = (retailer: typeof mockRetailers[0], action: "approve" | "reject" | "request_info") => {
+    setSelectedRetailer(retailer);
+    setApprovalAction(action);
+    setApprovalNotes("");
+    setShowApprovalDialog(true);
+  };
+
+  const submitApprovalAction = () => {
+    // In production, this would call the API
+    console.log("Submitting action:", approvalAction, "for retailer:", selectedRetailer?.id, "with notes:", approvalNotes);
+    setShowApprovalDialog(false);
+    setSelectedRetailer(null);
+    setApprovalAction(null);
+    setApprovalNotes("");
+  };
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -172,7 +360,7 @@ export default function UsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">User Management</h1>
-          <p className="text-zinc-500">Manage platform users and permissions</p>
+          <p className="text-zinc-500">Manage platform users and retailer applications</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline">
@@ -186,6 +374,29 @@ export default function UsersPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="users" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Users
+          </TabsTrigger>
+          <TabsTrigger value="retailers" className="flex items-center gap-2 relative">
+            <Store className="h-4 w-4" />
+            Retailer Applications
+            {pendingRetailerCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500 text-white text-xs items-center justify-center font-bold">
+                  {pendingRetailerCount}
+                </span>
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Users Tab */}
+        <TabsContent value="users" className="space-y-6 mt-6">
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-6">
         <Card>
@@ -374,6 +585,171 @@ export default function UsersPage() {
           </Button>
         </div>
       </div>
+        </TabsContent>
+
+        {/* Retailers Tab */}
+        <TabsContent value="retailers" className="space-y-6 mt-6">
+          {/* Pending Alert */}
+          {pendingRetailerCount > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                <Bell className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-amber-800">New Retailer Applications</h3>
+                <p className="text-sm text-amber-700">
+                  You have {pendingRetailerCount} retailer application{pendingRetailerCount !== 1 ? "s" : ""} awaiting review.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Retailer Stats */}
+          <div className="grid gap-4 md:grid-cols-5">
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-2xl font-bold">{retailerStats.total}</p>
+                <p className="text-xs text-zinc-500">Total Retailers</p>
+              </CardContent>
+            </Card>
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="p-4">
+                <p className="text-2xl font-bold text-amber-600">{retailerStats.pending}</p>
+                <p className="text-xs text-zinc-500">Pending</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-2xl font-bold text-blue-600">{retailerStats.underReview}</p>
+                <p className="text-xs text-zinc-500">Under Review</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-2xl font-bold text-emerald-600">{retailerStats.approved}</p>
+                <p className="text-xs text-zinc-500">Approved</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-2xl font-bold text-red-600">{retailerStats.rejected}</p>
+                <p className="text-xs text-zinc-500">Rejected</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Retailer Filters */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Input
+                placeholder="Search retailers by name or email..."
+                className="pl-9"
+              />
+            </div>
+            <Select value={retailerStatusFilter} onValueChange={setRetailerStatusFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="UNDER_REVIEW">Under Review</SelectItem>
+                <SelectItem value="APPROVED">Approved</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Retailers Table */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-zinc-50 dark:bg-zinc-800">
+                      <th className="p-4 text-left text-sm font-medium">Business</th>
+                      <th className="p-4 text-left text-sm font-medium">Type</th>
+                      <th className="p-4 text-left text-sm font-medium">Contact</th>
+                      <th className="p-4 text-left text-sm font-medium">Location</th>
+                      <th className="p-4 text-left text-sm font-medium">Status</th>
+                      <th className="p-4 text-left text-sm font-medium">Applied</th>
+                      <th className="p-4 text-left text-sm font-medium w-32">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mockRetailers
+                      .filter(r => retailerStatusFilter === "all" || r.status === retailerStatusFilter)
+                      .map((retailer) => (
+                      <tr key={retailer.id} className="border-b hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                              <Store className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{retailer.businessName}</p>
+                              <p className="text-sm text-zinc-500">{retailer.yearsInBusiness} years in business</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">{getBusinessTypeBadge(retailer.businessType)}</td>
+                        <td className="p-4">
+                          <div>
+                            <p className="font-medium">{retailer.contactName}</p>
+                            <p className="text-sm text-zinc-500">{retailer.email}</p>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <p className="text-sm">{retailer.city}, {retailer.state}</p>
+                        </td>
+                        <td className="p-4">{getRetailerStatusBadge(retailer.status)}</td>
+                        <td className="p-4 text-sm text-zinc-500">
+                          {new Date(retailer.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedRetailer(retailer);
+                                setShowRetailerDialog(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {(retailer.status === "PENDING" || retailer.status === "UNDER_REVIEW") && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-emerald-600"
+                                  onClick={() => handleRetailerAction(retailer, "approve")}
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-600"
+                                  onClick={() => handleRetailerAction(retailer, "reject")}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* User Details Dialog */}
       <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
@@ -452,6 +828,239 @@ export default function UsersPage() {
               Close
             </Button>
             <Button>Edit User</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Retailer Details Dialog */}
+      <Dialog open={showRetailerDialog} onOpenChange={setShowRetailerDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Retailer Application Details</DialogTitle>
+            <DialogDescription>Review the retailer application information</DialogDescription>
+          </DialogHeader>
+          {selectedRetailer && (
+            <div className="py-4 space-y-6">
+              <div className="flex items-start gap-6">
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-emerald-100">
+                  <Store className="h-8 w-8 text-emerald-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xl font-semibold">{selectedRetailer.businessName}</h3>
+                    {getBusinessTypeBadge(selectedRetailer.businessType)}
+                    {getRetailerStatusBadge(selectedRetailer.status)}
+                  </div>
+                  <p className="text-zinc-500 mt-1">
+                    Applied on {new Date(selectedRetailer.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Building className="h-4 w-4" />
+                      Business Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Years in Business</span>
+                      <span className="font-medium">{selectedRetailer.yearsInBusiness}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Locations</span>
+                      <span className="font-medium">{selectedRetailer.numberOfLocations}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Annual Revenue</span>
+                      <span className="font-medium">{selectedRetailer.annualRevenue}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Tax ID Type</span>
+                      <span className="font-medium">{selectedRetailer.taxIdType}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Tax ID</span>
+                      <span className="font-medium">{selectedRetailer.taxId}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Contact Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Contact Name</span>
+                      <span className="font-medium">{selectedRetailer.contactName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Email</span>
+                      <span className="font-medium">{selectedRetailer.email}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Phone</span>
+                      <span className="font-medium">{selectedRetailer.phone}</span>
+                    </div>
+                    {selectedRetailer.websiteUrl && (
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Website</span>
+                        <a href={selectedRetailer.websiteUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
+                          {selectedRetailer.websiteUrl}
+                        </a>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="md:col-span-2">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Address
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm">
+                      {selectedRetailer.address}<br />
+                      {selectedRetailer.city}, {selectedRetailer.state} {selectedRetailer.zipCode}<br />
+                      {selectedRetailer.country}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {(selectedRetailer.status === "PENDING" || selectedRetailer.status === "UNDER_REVIEW") && (
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => {
+                      setShowRetailerDialog(false);
+                      handleRetailerAction(selectedRetailer, "approve");
+                    }}
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowRetailerDialog(false);
+                      handleRetailerAction(selectedRetailer, "request_info");
+                    }}
+                  >
+                    <Mail className="mr-2 h-4 w-4" />
+                    Request Info
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={() => {
+                      setShowRetailerDialog(false);
+                      handleRetailerAction(selectedRetailer, "reject");
+                    }}
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Reject
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRetailerDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approval Action Dialog */}
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {approvalAction === "approve" && "Approve Retailer"}
+              {approvalAction === "reject" && "Reject Retailer"}
+              {approvalAction === "request_info" && "Request Additional Information"}
+            </DialogTitle>
+            <DialogDescription>
+              {approvalAction === "approve" && "Approve this retailer application and grant wholesale access."}
+              {approvalAction === "reject" && "Reject this retailer application. Please provide a reason."}
+              {approvalAction === "request_info" && "Request additional information from the applicant."}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRetailer && (
+            <div className="py-4">
+              <div className="flex items-center gap-3 mb-4 p-3 bg-zinc-50 rounded-lg">
+                <Store className="h-5 w-5 text-emerald-600" />
+                <div>
+                  <p className="font-medium">{selectedRetailer.businessName}</p>
+                  <p className="text-sm text-zinc-500">{selectedRetailer.contactName}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="notes">
+                    {approvalAction === "approve" && "Notes (Optional)"}
+                    {approvalAction === "reject" && "Rejection Reason (Required)"}
+                    {approvalAction === "request_info" && "Information Requested (Required)"}
+                  </Label>
+                  <Textarea
+                    id="notes"
+                    value={approvalNotes}
+                    onChange={(e) => setApprovalNotes(e.target.value)}
+                    placeholder={
+                      approvalAction === "approve"
+                        ? "Add any internal notes..."
+                        : approvalAction === "reject"
+                        ? "Please explain why this application is being rejected..."
+                        : "What additional information do you need?"
+                    }
+                    rows={4}
+                  />
+                </div>
+
+                {approvalAction === "approve" && (
+                  <div className="p-3 bg-emerald-50 rounded-lg text-sm text-emerald-800">
+                    <CheckCircle className="h-4 w-4 inline mr-2" />
+                    An access code will be generated and sent to the retailer&apos;s email.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={submitApprovalAction}
+              className={
+                approvalAction === "approve"
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : approvalAction === "reject"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : ""
+              }
+              disabled={
+                (approvalAction === "reject" || approvalAction === "request_info") &&
+                !approvalNotes.trim()
+              }
+            >
+              {approvalAction === "approve" && "Approve Retailer"}
+              {approvalAction === "reject" && "Reject Application"}
+              {approvalAction === "request_info" && "Send Request"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
