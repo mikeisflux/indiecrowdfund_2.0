@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
 import {
   Select,
   SelectContent,
@@ -74,12 +75,14 @@ export function BasicsStep() {
       {/* Location */}
       <div className="space-y-2">
         <Label htmlFor="location">Location</Label>
-        <Input
-          id="location"
-          placeholder="City, Country"
+        <LocationAutocomplete
           value={basics.location || ""}
-          onChange={(e) => updateBasics({ location: e.target.value })}
+          onChange={(value) => updateBasics({ location: value })}
+          placeholder="Start typing a city name..."
         />
+        <p className="text-xs text-muted-foreground">
+          Where are you based? This helps backers know where your project is coming from.
+        </p>
       </div>
 
       {/* Project Image */}

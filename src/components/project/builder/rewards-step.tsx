@@ -60,7 +60,7 @@ const defaultReward: RewardData = {
   description: "",
   amount: 1,
   shippingType: "NO_SHIPPING",
-  shippingCountries: [],
+  shippingCountries: ["US"], // Default to United States
   shippingCost: 0,
   visibility: "PUBLIC",
   items: [],

@@ -83,6 +83,7 @@ export default function SettingsPage() {
     currency: "USD",
     platformFee: "5",
     maintenanceMode: false,
+    googlePlacesApiKey: "",
   });
 
   const [paymentSettings, setPaymentSettings] = useState({
@@ -434,6 +435,40 @@ export default function SettingsPage() {
                     </Button>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Google Maps & Location Services</CardTitle>
+              <CardDescription>Configure Google Places API for location autocomplete</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="googlePlacesApiKey">Google Places API Key</Label>
+                <Input
+                  id="googlePlacesApiKey"
+                  type="password"
+                  placeholder="AIza..."
+                  value={generalSettings.googlePlacesApiKey}
+                  onChange={(e) => setGeneralSettings({ ...generalSettings, googlePlacesApiKey: e.target.value })}
+                />
+                <p className="text-xs text-zinc-500">
+                  Used for location autocomplete in project creation. Get your API key from{" "}
+                  <a
+                    href="https://console.cloud.google.com/apis/credentials"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Google Cloud Console
+                  </a>
+                  . Enable the Places API and Maps JavaScript API.
+                </p>
+              </div>
+              <div className="rounded-lg bg-zinc-900 p-4 font-mono text-sm text-zinc-100">
+                <p><span className="text-blue-400">GOOGLE_PLACES_API_KEY</span>=<span className="text-zinc-400">your-api-key</span></p>
               </div>
             </CardContent>
           </Card>
