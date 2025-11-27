@@ -43,7 +43,7 @@ import {
   Bold,
   Italic,
   Link2,
-  Image,
+  Image as ImageIcon,
   List,
   RefreshCw,
   Mail,
@@ -612,7 +612,7 @@ function ComposeEmail({ onClose }: { onClose: () => void }) {
         </Button>
         <Separator orientation="vertical" className="h-6" />
         <Button variant="ghost" size="sm">
-          <Image className="h-4 w-4" />
+          <ImageIcon className="h-4 w-4" />
         </Button>
         <Button variant="ghost" size="sm">
           <Paperclip className="h-4 w-4" />

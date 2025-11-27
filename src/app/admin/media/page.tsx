@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Image,
+  Image as ImageIcon,
   Upload,
   Download,
   Trash2,
@@ -158,7 +158,7 @@ export default function MediaPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
-                <Image className="h-5 w-5 text-blue-600" />
+                <ImageIcon className="h-5 w-5 text-blue-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{optimizationStats.totalFiles}</p>
@@ -362,7 +362,7 @@ export default function MediaPage() {
                   </div>
 
                   <div className="aspect-square rounded bg-zinc-100 mb-2 flex items-center justify-center dark:bg-zinc-800">
-                    <Image className="h-8 w-8 text-zinc-300" />
+                    <ImageIcon className="h-8 w-8 text-zinc-300" />
                   </div>
 
                   <p className="text-xs font-medium truncate" title={file.name}>
@@ -419,7 +419,7 @@ export default function MediaPage() {
                       <td className="p-3">
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 rounded bg-zinc-100 flex items-center justify-center dark:bg-zinc-700">
-                            <Image className="h-4 w-4 text-zinc-400" />
+                            <ImageIcon className="h-4 w-4 text-zinc-400" />
                           </div>
                           <span className="text-sm font-medium">{file.name}</span>
                         </div>
@@ -529,7 +529,7 @@ export default function MediaPage() {
                   <div key={file.id} className="flex items-center justify-between rounded-lg border p-3">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded bg-zinc-100 flex items-center justify-center dark:bg-zinc-800">
-                        <Image className="h-5 w-5 text-zinc-400" />
+                        <ImageIcon className="h-5 w-5 text-zinc-400" />
                       </div>
                       <div>
                         <p className="font-medium">{file.name}</p>

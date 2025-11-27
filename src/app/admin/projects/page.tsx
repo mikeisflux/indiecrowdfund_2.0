@@ -46,7 +46,7 @@ import {
   User,
   Calendar,
   DollarSign,
-  Image,
+  Image as ImageIcon,
   Video,
   Flag,
   RefreshCw,
@@ -538,7 +538,7 @@ export default function ProjectsPage() {
                           </div>
                           <div className="flex items-center gap-2 text-sm">
                             <Badge variant="outline">
-                              <Image className="mr-1 h-3 w-3" /> {selectedProject.imageCount} Images
+                              <ImageIcon className="mr-1 h-3 w-3" /> {selectedProject.imageCount} Images
                             </Badge>
                           </div>
                         </div>
