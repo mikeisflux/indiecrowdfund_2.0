@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { RewardData, RewardItemData, RewardType, ShippingType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -614,7 +615,7 @@ export function RewardsStep() {
                           <span className="font-medium">{item.title}</span>
                         </div>
                         {item.imageUrl && (
-                          <img src={item.imageUrl} alt={item.title} className="w-10 h-10 object-cover rounded" />
+                          <Image src={item.imageUrl} alt={item.title} width={40} height={40} className="w-10 h-10 object-cover rounded" />
                         )}
                       </div>
                     ))}
@@ -872,9 +873,11 @@ export function RewardsStep() {
                       {/* Image */}
                       <div className="col-span-3">
                         {item.imageUrl ? (
-                          <img
+                          <Image
                             src={item.imageUrl}
                             alt={item.title}
+                            width={64}
+                            height={64}
                             className="w-16 h-16 object-cover rounded"
                           />
                         ) : (
