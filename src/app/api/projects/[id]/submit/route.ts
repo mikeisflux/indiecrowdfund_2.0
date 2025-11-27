@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession, authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // POST - Submit project for review
@@ -180,7 +179,7 @@ export async function POST(
     aiConfidenceScore = Math.max(0, Math.min(100, aiConfidenceScore));
 
     // Update project status and create review record
-    const [updatedProject, reviewRecord] = await db.$transaction([
+    const [updatedProject] = await db.$transaction([
       db.project.update({
         where: { id: projectId },
         data: { status: "SUBMITTED" },

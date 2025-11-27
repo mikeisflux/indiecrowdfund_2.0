@@ -5,7 +5,7 @@ import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const nextAuth = NextAuth({
   adapter: PrismaAdapter(db),
   session: {
     strategy: "jwt",
@@ -71,3 +71,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 });
+
+export const { handlers, signIn, signOut, auth } = nextAuth;
+
+// For backward compatibility with API routes using getServerSession pattern
+export const authOptions = {};
+export const getServerSession = async () => {
+  return await auth();
+};
