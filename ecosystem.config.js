@@ -4,7 +4,7 @@ module.exports = {
       name: 'indiecrowdfund',
       script: 'npm',
       args: 'start',
-      cwd: '/indiecrowdfund_2.0',
+      cwd: '/root/indiecrowdfund_2.0',
       instances: 1,
       autorestart: true,
       watch: false,
