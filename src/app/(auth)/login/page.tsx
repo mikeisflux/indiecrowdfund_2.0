@@ -1,10 +1,20 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
+import { Loader2 } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Sign In | IndieCrowdfund",
   description: "Sign in to your IndieCrowdfund account",
 };
+
+function LoginFormFallback() {
+  return (
+    <div className="flex items-center justify-center py-8">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 export default function LoginPage() {
   return (
@@ -18,7 +28,9 @@ export default function LoginPage() {
             Sign in to your account to continue
           </p>
         </div>
-        <LoginForm />
+        <Suspense fallback={<LoginFormFallback />}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );
