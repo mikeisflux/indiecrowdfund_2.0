@@ -1,0 +1,787 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerified     DateTime?
+  name              String?
+  image             String?
+  password          String?
+  bio               String?   @db.Text
+  location          String?
+  timezone          String?
+  vanityUrl         String?   @unique
+  websites          String[]
+  showNameOnly      Boolean   @default(false)
+
+  // Auth
+  accounts          Account[]
+  sessions          Session[]
+
+  // Relations
+  createdProjects   Project[] @relation("ProjectCreator")
+  collaborations    ProjectCollaborator[]
+  pledges           Pledge[]
+  sentMessages      Message[] @relation("MessageSender")
+  receivedMessages  Message[] @relation("MessageRecipient")
+  comments          Comment[]
+  behaviors         UserBehavior[]
+  preferences       UserPreference?
+  emailLogs         EmailLog[]
+  stripeConfig      StripeConfig?
+  ccbillConfig      CCBillConfig?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([email])
+  @@index([vanityUrl])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// PROJECT MANAGEMENT
+// ============================================
+
+model Project {
+  id                    String        @id @default(cuid())
+  creatorId             String
+
+  // Basics
+  title                 String
+  subtitle              String?
+  slug                  String        @unique
+  category              String
+  location              String?
+  imageUrl              String?
+  videoUrl              String?
+  goalAmount            Float
+  currency              String        @default("USD")
+
+  // Duration
+  durationType          DurationType
+  durationDays          Int?
+  endDate               DateTime?
+  launchDate            DateTime?
+
+  // Story
+  description           String        @db.Text
+  risks                 String        @db.Text
+  usesAI                Boolean       @default(false)
+  faqs                  Json?
+
+  // Payment
+  contactEmail          String
+  projectType           ProjectType
+  paymentProcessor      PaymentProcessor @default(STRIPE)
+  hasAdultContent       Boolean       @default(false)
+  hasRiskyContent       Boolean       @default(false)
+  bankAccountId         String?
+
+  // Stripe
+  stripeAccountId       String?
+
+  // CCBill
+  ccbillAccountNumber   String?
+  ccbillSubaccount      String?
+
+  // Promotion
+  prelaunchActive       Boolean       @default(false)
+  prelaunchDescription  String?       @db.Text
+  customReferralTags    String[]
+  googleAnalyticsId     String?
+  googleAnalyticsSecret String?
+  metaPixelId           String?
+  metaConversionsToken  String?
+
+  // Status
+  status                ProjectStatus @default(DRAFT)
+  currentAmount         Float         @default(0)
+  backerCount           Int           @default(0)
+  followerCount         Int           @default(0)
+
+  // Relations
+  creator               User          @relation("ProjectCreator", fields: [creatorId], references: [id])
+  rewards               Reward[]
+  pledges               Pledge[]
+  updates               Update[]
+  collaborators         ProjectCollaborator[]
+  messages              Message[]
+  analytics             AnalyticsEvent[]
+  comments              Comment[]
+  payouts               Payout[]
+  behaviors             UserBehavior[]
+  emailLogs             EmailLog[]
+  projectSimilarities   ProjectSimilarity[] @relation("ProjectSimilarities")
+  similarProjects       ProjectSimilarity[] @relation("SimilarProjects")
+  followers             ProjectFollower[]
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  launchedAt            DateTime?
+  fundedAt              DateTime?
+
+  @@index([creatorId])
+  @@index([status])
+  @@index([category])
+  @@index([slug])
+}
+
+model ProjectFollower {
+  id          String   @id @default(cuid())
+  projectId   String
+  userId      String?
+  email       String?
+  isPrelaunch Boolean  @default(false)
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@unique([projectId, email])
+  @@index([projectId])
+}
+
+enum DurationType {
+  FIXED_DAYS
+  END_DATE
+}
+
+enum ProjectType {
+  INDIVIDUAL
+  BUSINESS
+  NONPROFIT
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  LIVE
+  FUNDED
+  FAILED
+  CANCELLED
+}
+
+enum PaymentProcessor {
+  STRIPE
+  CCBILL
+}
+
+// ============================================
+// REWARDS & ADD-ONS
+// ============================================
+
+model Reward {
+  id                String       @id @default(cuid())
+  projectId         String
+  type              RewardType   @default(TIER)
+
+  title             String
+  description       String       @db.Text
+  amount            Float
+  imageUrl          String?
+
+  // Delivery
+  estimatedDelivery DateTime?
+  shippingType      ShippingType
+  shippingCountries String[]
+  shippingCost      Float        @default(0)
+
+  // Availability
+  quantityAvailable Int?
+  quantityClaimed   Int          @default(0)
+  visibility        Visibility   @default(PUBLIC)
+  availableFrom     DateTime?
+  availableUntil    DateTime?
+
+  // Tracking if copied
+  copiedFromId      String?
+
+  // Relations
+  project           Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pledges           Pledge[]
+  items             RewardItem[]
+  copiedFrom        Reward?      @relation("RewardCopies", fields: [copiedFromId], references: [id])
+  copies            Reward[]     @relation("RewardCopies")
+  selectedAddons    PledgeAddon[]
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([projectId, type])
+}
+
+enum RewardType {
+  TIER
+  ADDON
+}
+
+enum ShippingType {
+  WORLDWIDE
+  SELECTED_COUNTRIES
+  NO_SHIPPING
+}
+
+enum Visibility {
+  PUBLIC
+  SECRET
+}
+
+model RewardItem {
+  id          String  @id @default(cuid())
+  rewardId    String
+  title       String
+  description String? @db.Text
+  imageUrl    String?
+
+  reward      Reward  @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@index([rewardId])
+}
+
+// ============================================
+// PLEDGES & PAYMENTS
+// ============================================
+
+model Pledge {
+  id                    String       @id @default(cuid())
+  userId                String
+  projectId             String
+  rewardId              String
+
+  // Amounts
+  amount                Float
+  rewardAmount          Float
+  addonsAmount          Float        @default(0)
+  shippingAmount        Float        @default(0)
+
+  // Payment
+  status                PledgeStatus
+  paymentProcessor      PaymentProcessor
+
+  // Stripe fields
+  stripePaymentIntentId String?      @unique
+  stripeChargeId        String?
+
+  // CCBill fields
+  ccbillTransactionId   String?      @unique
+  ccbillSubscriptionId  String?      @unique
+
+  // Survey
+  surveyCompleted       Boolean      @default(false)
+  shippingAddress       Json?
+  surveyResponses       Json?
+
+  // Fulfillment
+  fulfillmentStatus     FulfillmentStatus @default(NOT_STARTED)
+
+  // Relations
+  user                  User         @relation(fields: [userId], references: [id])
+  project               Project      @relation(fields: [projectId], references: [id])
+  reward                Reward       @relation(fields: [rewardId], references: [id])
+  addons                PledgeAddon[]
+
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@index([projectId, status])
+  @@index([userId])
+  @@index([rewardId])
+}
+
+model PledgeAddon {
+  id        String @id @default(cuid())
+  pledgeId  String
+  addonId   String
+  quantity  Int    @default(1)
+  amount    Float
+
+  pledge    Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  addon     Reward @relation(fields: [addonId], references: [id])
+
+  @@unique([pledgeId, addonId])
+  @@index([pledgeId])
+}
+
+enum PledgeStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+  CHARGEBACK
+}
+
+enum FulfillmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SHIPPED
+  DELIVERED
+}
+
+// ============================================
+// PAYOUTS
+// ============================================
+
+model Payout {
+  id                String       @id @default(cuid())
+  projectId         String
+  amount            Float
+  grossAmount       Float
+  processorFees     Float
+  platformFees      Float
+  type              PayoutType
+  status            PayoutStatus
+  payoutId          String?      @unique
+  bankAccountLast4  String?
+
+  project           Project      @relation(fields: [projectId], references: [id])
+
+  sentAt            DateTime?
+  createdAt         DateTime     @default(now())
+
+  @@index([projectId])
+}
+
+enum PayoutType {
+  CAMPAIGN
+  LATE_PLEDGE
+  PLEDGE_MANAGER
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ============================================
+// COLLABORATORS
+// ============================================
+
+model ProjectCollaborator {
+  id                        String             @id @default(cuid())
+  projectId                 String
+  userId                    String
+  email                     String?
+  title                     String?
+
+  // Permissions
+  canEditProject            Boolean            @default(false)
+  canManageCommunity        Boolean            @default(false)
+  canCoordinateFulfillment  Boolean            @default(false)
+  canConfigurePledgeManager Boolean            @default(false)
+
+  status                    CollaboratorStatus @default(PENDING)
+
+  project                   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user                      User               @relation(fields: [userId], references: [id])
+
+  invitedAt                 DateTime           @default(now())
+  acceptedAt                DateTime?
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+enum CollaboratorStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+// ============================================
+// UPDATES
+// ============================================
+
+model Update {
+  id          String           @id @default(cuid())
+  projectId   String
+  title       String
+  content     String           @db.Text
+  visibility  UpdateVisibility @default(PUBLIC)
+  status      UpdateStatus     @default(DRAFT)
+
+  likes       Int              @default(0)
+  commentsCount Int            @default(0)
+
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+
+  publishedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([projectId, status])
+}
+
+enum UpdateVisibility {
+  PUBLIC
+  BACKERS_ONLY
+}
+
+enum UpdateStatus {
+  DRAFT
+  PUBLISHED
+}
+
+// ============================================
+// COMMENTS
+// ============================================
+
+model Comment {
+  id          String   @id @default(cuid())
+  projectId   String?
+  updateId    String?
+  userId      String
+  content     String   @db.Text
+
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  update      Update?  @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([updateId])
+  @@index([userId])
+}
+
+// ============================================
+// MESSAGES
+// ============================================
+
+model Message {
+  id              String   @id @default(cuid())
+  projectId       String
+  senderId        String
+  recipientId     String
+  subject         String?
+  content         String   @db.Text
+  read            Boolean  @default(false)
+  isSpam          Boolean  @default(false)
+
+  project         Project  @relation(fields: [projectId], references: [id])
+  sender          User     @relation("MessageSender", fields: [senderId], references: [id])
+  recipient       User     @relation("MessageRecipient", fields: [recipientId], references: [id])
+
+  createdAt       DateTime @default(now())
+  readAt          DateTime?
+
+  @@index([projectId, recipientId])
+  @@index([senderId])
+  @@index([recipientId])
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+model AnalyticsEvent {
+  id          String    @id @default(cuid())
+  projectId   String
+  eventType   EventType
+
+  // Attribution
+  referrer    String?
+  channel     String?
+  customTag   String?
+
+  // Data
+  amount      Float?
+  userId      String?
+  metadata    Json?
+
+  project     Project   @relation(fields: [projectId], references: [id])
+
+  timestamp   DateTime  @default(now())
+
+  @@index([projectId, eventType, timestamp])
+  @@index([projectId, referrer])
+}
+
+enum EventType {
+  PAGE_VIEW
+  PROJECT_FOLLOW
+  VIDEO_PLAY
+  VIDEO_COMPLETE
+  PLEDGE_STARTED
+  PLEDGE_COMPLETED
+  PLEDGE_FAILED
+  REWARD_SELECTED
+  ADDON_SELECTED
+  SHARE
+}
+
+// ============================================
+// PAYMENT PROCESSOR CONFIGURATION
+// ============================================
+
+model StripeConfig {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  stripeAccountId String   @unique
+  isOnboarded     Boolean  @default(false)
+  isActive        Boolean  @default(true)
+
+  user            User     @relation(fields: [userId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CCBillConfig {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  accountNumber     String
+  subaccountNumber  String
+  formName          String
+  apiUsername       String?
+  apiPassword       String? @db.Text
+
+  isLive            Boolean @default(false)
+
+  user              User    @relation(fields: [userId], references: [id])
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ============================================
+// RECOMMENDATION ENGINE & BEHAVIORAL TRACKING
+// ============================================
+
+model UserBehavior {
+  id          String            @id @default(cuid())
+  userId      String?
+  sessionId   String
+  eventType   BehaviorEventType
+
+  // Event data
+  projectId   String?
+  categoryId  String?
+  rewardId    String?
+  searchQuery String?
+
+  // Context
+  path        String
+  referrer    String?
+  userAgent   String?
+  ipAddress   String?
+  country     String?
+
+  // Engagement metrics
+  timeSpent   Int?
+  scrollDepth Float?
+
+  metadata    Json?
+
+  timestamp   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+  project     Project? @relation(fields: [projectId], references: [id])
+
+  @@index([userId, eventType, timestamp])
+  @@index([sessionId, timestamp])
+  @@index([projectId, eventType])
+  @@index([categoryId, timestamp])
+}
+
+enum BehaviorEventType {
+  PAGE_VIEW
+  PAGE_EXIT
+  PROJECT_VIEW
+  PROJECT_CLICK
+  REWARD_CLICK
+  VIDEO_PLAY
+  VIDEO_COMPLETE
+  SEARCH
+  FILTER_APPLY
+  PROJECT_SAVE
+  PROJECT_SHARE
+  COMMENT_POST
+  PLEDGE_START
+  PLEDGE_COMPLETE
+  SCROLL_DEPTH
+  HOVER
+  CREATOR_VIEW
+}
+
+model UserPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+
+  // Category preferences (weighted scores 0-1)
+  categoryScores  Json
+
+  // Preferred pledge ranges
+  minPledge       Float?
+  maxPledge       Float?
+  avgPledge       Float?
+
+  // Creator preferences
+  followedCreators String[]
+  backedCreators   String[]
+
+  // Content preferences
+  prefersVideo     Boolean  @default(true)
+  prefersLongForm  Boolean  @default(true)
+
+  // Geographic preferences
+  prefersLocal     Boolean  @default(false)
+  preferredCountries String[]
+
+  // Engagement level (0-100)
+  engagementScore  Int      @default(50)
+
+  // Email preferences
+  emailPreferences Json?
+
+  // Last calculated
+  lastUpdated      DateTime @updatedAt
+
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model ProjectSimilarity {
+  id               String   @id @default(cuid())
+  projectId        String
+  similarProjectId String
+  similarityScore  Float
+  reason           String
+
+  project          Project  @relation("ProjectSimilarities", fields: [projectId], references: [id])
+  similarProject   Project  @relation("SimilarProjects", fields: [similarProjectId], references: [id])
+
+  createdAt        DateTime @default(now())
+
+  @@unique([projectId, similarProjectId])
+  @@index([projectId, similarityScore])
+}
+
+model EmailLog {
+  id          String    @id @default(cuid())
+  userId      String
+  projectId   String?
+  type        EmailType
+  subject     String?
+
+  sentAt      DateTime  @default(now())
+  openedAt    DateTime?
+  clickedAt   DateTime?
+
+  user        User      @relation(fields: [userId], references: [id])
+  project     Project?  @relation(fields: [projectId], references: [id])
+
+  @@index([userId, type, sentAt])
+  @@index([projectId, type])
+}
+
+enum EmailType {
+  WEEKLY_DISCOVERY
+  CREATOR_LAUNCH
+  CATEGORY_ALERT
+  ENDING_SOON
+  PROJECT_FUNDED
+  FUNDING_MILESTONE
+  UPDATE_NOTIFICATION
+  SURVEY_REMINDER
+  PLEDGE_CONFIRMATION
+  WELCOME
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+// ============================================
+// SURVEYS
+// ============================================
+
+model Survey {
+  id          String         @id @default(cuid())
+  projectId   String         @unique
+  title       String?
+  description String?        @db.Text
+  questions   Json
+  isActive    Boolean        @default(false)
+  lockedAt    DateTime?
+
+  responses   SurveyResponse[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([projectId])
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String
+  pledgeId    String   @unique
+  responses   Json
+
+  survey      Survey   @relation(fields: [surveyId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([surveyId])
+}
