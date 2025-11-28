@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { verifyAndParseSendGridWebhook } from "@/lib/email/sendgrid-verify";
 
 export const dynamic = "force-dynamic";
 
@@ -49,14 +50,28 @@ function mapEventToStatus(event: SendGridEventType): string | null {
 // POST - Handle SendGrid Event Webhook
 export async function POST(request: NextRequest) {
   try {
-    const events: SendGridEvent[] = await request.json();
+    // Get raw body for signature verification
+    const rawBody = await request.text();
+
+    // Verify SendGrid signature
+    const verification = await verifyAndParseSendGridWebhook(request.headers, rawBody);
+    if (!verification.valid) {
+      console.error("SendGrid signature verification failed:", verification.error);
+      return NextResponse.json(
+        { error: "Invalid signature", details: verification.error },
+        { status: 401 }
+      );
+    }
+
+    // Parse the JSON body
+    const events: SendGridEvent[] = JSON.parse(rawBody);
 
     if (!Array.isArray(events)) {
       console.error("Invalid event webhook payload - expected array");
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    console.log(`Processing ${events.length} SendGrid events`);
+    console.log(`Processing ${events.length} SendGrid events (signature verified)`);
 
     const results = await Promise.allSettled(
       events.map(async (event) => {
