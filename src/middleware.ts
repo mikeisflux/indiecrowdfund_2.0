@@ -4,11 +4,23 @@ import type { NextRequest } from "next/server";
 // Using next-auth/jwt for Edge-compatible token verification
 import { getToken } from "next-auth/jwt";
 
+// Routes that require authentication (but not admin role)
+const protectedRoutes = ["/dashboard", "/projects/new"];
+
+// Routes that require SUPER_ADMIN role
+const adminRoutes = ["/admin", "/api/admin"];
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Only process admin routes
-  if (!pathname.startsWith("/admin") && !pathname.startsWith("/api/admin")) {
+  // Check if this is a protected route
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
+
+  // Skip middleware for non-protected routes
+  if (!isProtectedRoute && !isAdminRoute) {
     return NextResponse.next();
   }
 
@@ -18,30 +30,28 @@ export async function middleware(req: NextRequest) {
     secret: process.env.AUTH_SECRET,
   });
 
-  // Check if user is authenticated
+  // Check if user is authenticated (for all protected routes)
   if (!token) {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
-    loginUrl.searchParams.set("error", "You must be logged in to access this page");
     return NextResponse.redirect(loginUrl);
   }
 
-  // Check if user has SUPER_ADMIN role
-  if (token.role !== "SUPER_ADMIN") {
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
-        { error: "Forbidden - Super admin access required" },
-        { status: 403 }
-      );
+  // For admin routes, also check for SUPER_ADMIN role
+  if (isAdminRoute) {
+    if (token.role !== "SUPER_ADMIN") {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json(
+          { error: "Forbidden - Super admin access required" },
+          { status: 403 }
+        );
+      }
+      const accessDeniedUrl = new URL("/access-denied", req.url);
+      return NextResponse.redirect(accessDeniedUrl);
     }
-    const accessDeniedUrl = new URL("/access-denied", req.url);
-    return NextResponse.redirect(accessDeniedUrl);
   }
 
   return NextResponse.next();
@@ -53,5 +63,9 @@ export const config = {
     "/admin/:path*",
     // Match API admin routes
     "/api/admin/:path*",
+    // Match dashboard routes
+    "/dashboard/:path*",
+    // Match project creation
+    "/projects/new",
   ],
 };

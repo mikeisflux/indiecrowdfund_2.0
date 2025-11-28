@@ -89,8 +89,11 @@ const nextAuth = NextAuth({
     : {}),
   // Trust the proxy (nginx) for host/protocol headers
   trustHost: true,
+  // Enable debug logging in development
+  debug: process.env.NODE_ENV === "development",
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: "/login",
@@ -98,6 +101,10 @@ const nextAuth = NextAuth({
   },
   providers,
   callbacks: {
+    async signIn({ user }) {
+      // Allow sign in if user exists
+      return !!user;
+    },
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { login, loginWithGoogle } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,15 +18,44 @@ export function LoginForm() {
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { update: updateSession } = useSession();
   const callbackUrl = searchParams.get("callbackUrl") || undefined;
 
-  // Check if Google OAuth is configured
+  // Check if Google OAuth is configured and handle URL error params
   useEffect(() => {
+    // Check for error in URL params (from NextAuth redirects)
+    const urlError = searchParams.get("error");
+    if (urlError) {
+      switch (urlError) {
+        case "CredentialsSignin":
+          setError("Invalid email or password");
+          break;
+        case "OAuthSignin":
+        case "OAuthCallback":
+          setError("Error with OAuth provider. Please try again.");
+          break;
+        case "OAuthAccountNotLinked":
+          setError("This email is already registered with a different sign-in method.");
+          break;
+        case "SessionRequired":
+          setError("Please sign in to access this page.");
+          break;
+        default:
+          setError(urlError || "An error occurred during sign in.");
+      }
+    }
+
+    // Check for custom error message from middleware
+    const customError = searchParams.get("error");
+    if (!urlError && customError) {
+      setError(customError);
+    }
+
     fetch("/api/auth/config")
       .then((res) => res.json())
       .then((data) => setGoogleEnabled(data.providers?.google ?? false))
       .catch(() => setGoogleEnabled(false));
-  }, []);
+  }, [searchParams]);
 
   async function handleSubmit(formData: FormData) {
     setIsLoading(true);
@@ -43,6 +73,8 @@ export function LoginForm() {
         }
         setIsLoading(false);
       } else if (result?.success) {
+        // Update the session to reflect the new authentication state
+        await updateSession();
         // Client-side redirect after successful login
         router.push(result.redirectTo || "/dashboard");
         router.refresh();

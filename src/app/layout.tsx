@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { auth } from "@/lib/auth";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -22,17 +23,19 @@ export const metadata: Metadata = {
   keywords: ["crowdfunding", "creative projects", "funding", "backing", "campaigns"],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <AuthProvider>
+        <AuthProvider session={session}>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
