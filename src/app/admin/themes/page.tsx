@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +104,9 @@ const fontOptions = [
 
 export default function ThemesPage() {
   const [activeTab, setActiveTab] = useState("colors");
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<string | null>("kickstarter");
 
   // Theme settings
@@ -153,6 +155,33 @@ export default function ThemesPage() {
     highContrast: false,
   });
 
+  // Load theme settings from API
+  const loadSettings = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/admin/settings");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.settings?.theme) {
+          const theme = data.settings.theme;
+          if (theme.colors) setColors(prev => ({ ...prev, ...theme.colors }));
+          if (theme.typography) setTypography(prev => ({ ...prev, ...theme.typography }));
+          if (theme.spacing) setSpacing(prev => ({ ...prev, ...theme.spacing }));
+          if (theme.appearance) setAppearance(prev => ({ ...prev, ...theme.appearance }));
+          if (theme.selectedPreset) setSelectedPreset(theme.selectedPreset);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load theme settings:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
   const applyPreset = (preset: typeof presetThemes[0]) => {
     setSelectedPreset(preset.id);
     setColors({
@@ -167,13 +196,49 @@ export default function ThemesPage() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          section: "theme",
+          data: {
+            colors,
+            typography,
+            spacing,
+            appearance,
+            selectedPreset,
+          },
+        }),
+      });
+
+      if (response.ok) {
+        setSaveMessage("Theme settings saved successfully");
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        throw new Error("Failed to save settings");
+      }
+    } catch (error) {
+      console.error("Error saving theme settings:", error);
+      setSaveMessage("Failed to save settings");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const copyToClipboard = (value: string) => {
     navigator.clipboard.writeText(value);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -184,7 +249,12 @@ export default function ThemesPage() {
           <p className="text-zinc-500">Customize your platform&apos;s visual appearance</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline">
+          {saveMessage && (
+            <span className={`text-sm ${saveMessage.includes("Failed") ? "text-red-600" : "text-emerald-600"}`}>
+              {saveMessage}
+            </span>
+          )}
+          <Button variant="outline" onClick={loadSettings}>
             <Undo2 className="mr-2 h-4 w-4" />
             Reset
           </Button>
