@@ -4,6 +4,8 @@ import { signIn, signOut } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -50,18 +52,26 @@ export async function register(formData: FormData) {
         password: hashedPassword,
       },
     });
-
-    // Auto sign in after registration
-    await signIn("credentials", {
-      email,
-      password,
-      redirectTo: "/dashboard",
-    });
-
-    return { success: true };
   } catch {
     return { error: { _form: ["Something went wrong. Please try again."] } };
   }
+
+  // Auto sign in after registration
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return { error: { _form: ["Account created but login failed. Please try logging in."] } };
+    }
+    throw error;
+  }
+
+  // Redirect after successful login
+  redirect("/dashboard");
 }
 
 export async function login(formData: FormData, callbackUrl?: string) {
@@ -81,16 +91,22 @@ export async function login(formData: FormData, callbackUrl?: string) {
     await signIn("credentials", {
       email,
       password,
-      redirectTo,
+      redirect: false,
     });
-
-    return { success: true };
-  } catch (error: unknown) {
-    if (error && typeof error === "object" && "type" in error && error.type === "CredentialsSignin") {
-      return { error: { _form: ["Invalid email or password"] } };
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return { error: { _form: ["Invalid email or password"] } };
+        default:
+          return { error: { _form: ["Something went wrong. Please try again."] } };
+      }
     }
     throw error;
   }
+
+  // Redirect after successful login
+  redirect(redirectTo);
 }
 
 export async function loginWithGoogle(callbackUrl?: string) {
