@@ -87,6 +87,8 @@ const nextAuth = NextAuth({
   ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
     ? { adapter: PrismaAdapter(db) }
     : {}),
+  // Trust the proxy (nginx) for host/protocol headers
+  trustHost: true,
   session: {
     strategy: "jwt",
   },
