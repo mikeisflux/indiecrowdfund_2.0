@@ -259,18 +259,24 @@ export default function EmailPage() {
     }
   };
 
-  const handleMarkAsRead = async (email: Email) => {
-    if (!selectedMailbox || email.isRead) return;
+  const handleSelectEmail = async (email: Email) => {
+    if (!selectedMailbox) return;
 
+    // Fetch full email details including body
     try {
-      await fetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isRead: true }),
-      });
-      setEmails(emails.map(e => e.id === email.id ? { ...e, isRead: true } : e));
+      const response = await fetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedEmail(data.email);
+        // Update read status in list
+        setEmails(emails.map(e => e.id === email.id ? { ...e, isRead: true } : e));
+      } else {
+        // Fallback to list data if fetch fails
+        setSelectedEmail(email);
+      }
     } catch (error) {
-      console.error("Error marking as read:", error);
+      console.error("Error fetching email:", error);
+      setSelectedEmail(email);
     }
   };
 
@@ -517,10 +523,7 @@ export default function EmailPage() {
                         className={`flex items-start gap-3 p-3 cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800 ${
                           !email.isRead ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
                         } ${selectedEmail?.id === email.id ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}
-                        onClick={() => {
-                          setSelectedEmail(email);
-                          handleMarkAsRead(email);
-                        }}
+                        onClick={() => handleSelectEmail(email)}
                       >
                         <button
                           className="flex-shrink-0 mt-1"

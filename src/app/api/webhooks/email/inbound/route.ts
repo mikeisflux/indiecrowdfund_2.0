@@ -89,9 +89,30 @@ export async function POST(request: NextRequest) {
       // Parse multipart form data (SendGrid default)
       const formData = await request.formData();
 
+      // Debug: Log all form fields received from SendGrid
+      const formFields: Record<string, string> = {};
+      formData.forEach((value, key) => {
+        if (typeof value === "string") {
+          formFields[key] = value.substring(0, 200); // Truncate for logging
+        } else {
+          formFields[key] = `[File: ${value.name}]`;
+        }
+      });
+      console.log("SendGrid Inbound Parse fields received:", JSON.stringify(formFields, null, 2));
+
       const toRaw = formData.get("to") as string || "";
       const fromRaw = formData.get("from") as string || "";
       const envelopeRaw = formData.get("envelope") as string;
+
+      // Get email body - try multiple field names
+      const textBody = (formData.get("text") as string) ||
+                       (formData.get("body-plain") as string) ||
+                       (formData.get("stripped-text") as string) || "";
+      const htmlBody = (formData.get("html") as string) ||
+                       (formData.get("body-html") as string) ||
+                       (formData.get("stripped-html") as string) || "";
+
+      console.log("Email body - text length:", textBody?.length || 0, "html length:", htmlBody?.length || 0);
 
       let envelope: EmailEnvelope | undefined;
       try {
@@ -106,8 +127,8 @@ export async function POST(request: NextRequest) {
         to: toRaw,
         from: fromRaw,
         subject: (formData.get("subject") as string) || "(No Subject)",
-        text: (formData.get("text") as string) || undefined,
-        html: (formData.get("html") as string) || undefined,
+        text: textBody || undefined,
+        html: htmlBody || undefined,
         cc: (formData.get("cc") as string) || undefined,
         attachments: parseInt((formData.get("attachments") as string) || "0", 10),
         envelope,
