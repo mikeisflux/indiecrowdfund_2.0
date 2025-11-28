@@ -1138,6 +1138,37 @@ model PlatformSettings {
   aiAutoTagging         Boolean  @default(false)
   aiContentGeneration   Boolean  @default(false)
 
+  // AI Marketing Settings
+  aiAutoTagConfidence   Int      @default(75)
+  aiMaxTags             Int      @default(5)
+  aiEmailPersonalization Boolean @default(false)
+  aiBehaviorTracking    Boolean  @default(false)
+  aiPredictiveAnalytics Boolean  @default(false)
+  aiSmartSegmentation   Boolean  @default(false)
+  aiAutoOptimization    Boolean  @default(false)
+  aiSendTimeOptimization Boolean @default(false)
+  aiContentOptimization Boolean  @default(false)
+  aiAbTesting           Boolean  @default(false)
+  aiEmailFrequencyCap   Int      @default(3)
+  aiDailyEmailLimit     Int      @default(1000)
+  aiQuietHoursStart     String   @default("22:00")
+  aiQuietHoursEnd       String   @default("08:00")
+
+  // Behavior Tracking Settings
+  aiTrackPageViews      Boolean  @default(true)
+  aiTrackScrollDepth    Boolean  @default(false)
+  aiTrackTimeOnPage     Boolean  @default(true)
+  aiTrackClicks         Boolean  @default(true)
+  aiTrackHovers         Boolean  @default(false)
+  aiTrackFormInteractions Boolean @default(false)
+  aiTrackVideoEngagement Boolean @default(false)
+  aiTrackRewardComparisons Boolean @default(false)
+  aiTrackAbandonedCarts Boolean  @default(true)
+  aiSessionRecording    Boolean  @default(false)
+  aiHeatmaps            Boolean  @default(false)
+  aiFunnelAnalysis      Boolean  @default(true)
+  aiRetentionDays       Int      @default(90)
+
   // Security Settings
   twoFactorRequired     Boolean  @default(false)
   sessionTimeout        Int      @default(7)

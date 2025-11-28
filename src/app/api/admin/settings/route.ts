@@ -129,6 +129,17 @@ export async function PATCH(req: NextRequest) {
         "aiProvider", "openaiApiKey", "anthropicApiKey",
         "aiAutoModeration", "aiAutoTagging", "aiContentGeneration"
       ],
+      aiMarketing: [
+        "aiAutoTagging", "aiAutoTagConfidence", "aiMaxTags",
+        "aiEmailPersonalization", "aiBehaviorTracking", "aiPredictiveAnalytics",
+        "aiSmartSegmentation", "aiAutoOptimization", "aiSendTimeOptimization",
+        "aiContentOptimization", "aiAbTesting", "aiEmailFrequencyCap",
+        "aiDailyEmailLimit", "aiQuietHoursStart", "aiQuietHoursEnd",
+        "aiTrackPageViews", "aiTrackScrollDepth", "aiTrackTimeOnPage",
+        "aiTrackClicks", "aiTrackHovers", "aiTrackFormInteractions",
+        "aiTrackVideoEngagement", "aiTrackRewardComparisons", "aiTrackAbandonedCarts",
+        "aiSessionRecording", "aiHeatmaps", "aiFunnelAnalysis", "aiRetentionDays"
+      ],
       security: [
         "twoFactorRequired", "sessionTimeout", "maxLoginAttempts",
         "passwordMinLength", "requireSpecialChars",

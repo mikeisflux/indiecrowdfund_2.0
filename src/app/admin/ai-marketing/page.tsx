@@ -54,35 +54,44 @@ import {
   Timer,
 } from "lucide-react";
 
-// Mock data
-const projectTags = [
-  { id: "1", name: "Solar-Powered Backpack", tags: ["technology", "sustainable", "outdoor", "gadgets", "eco-friendly", "travel", "solar", "portable", "green-tech", "innovation", "camping", "hiking"] },
-  { id: "2", name: "Indie Game: Lost Horizons", tags: ["gaming", "indie", "adventure", "rpg", "pixel-art", "story-driven", "exploration", "fantasy", "single-player", "retro", "atmospheric"] },
-  { id: "3", name: "Documentary: Ocean Guardians", tags: ["film", "documentary", "environment", "ocean", "conservation", "nature", "wildlife", "climate", "awareness", "education", "marine-life"] },
-];
+// Types for dynamic data
+interface ProjectTag {
+  id: string;
+  name: string;
+  tags: string[];
+}
 
-const emailCampaigns = [
-  { id: "1", name: "Tech Enthusiasts - Week 47", status: "sent", recipients: 12456, opens: 4523, clicks: 1234, conversions: 89, sentAt: "2024-03-18" },
-  { id: "2", name: "Gaming Community Update", status: "scheduled", recipients: 8934, opens: 0, clicks: 0, conversions: 0, scheduledFor: "2024-03-20 10:00" },
-  { id: "3", name: "Eco-Conscious Backers", status: "draft", recipients: 15678, opens: 0, clicks: 0, conversions: 0, sentAt: null },
-];
+interface EmailCampaign {
+  id: string;
+  name: string;
+  status: string;
+  recipients: number;
+  opens: number;
+  clicks: number;
+  conversions: number;
+  sentAt: string | null;
+  scheduledFor?: string | null;
+}
 
-const behaviorEvents = [
-  { event: "page_view", count: 45678, trend: "+12.3%" },
-  { event: "project_view", count: 23456, trend: "+8.7%" },
-  { event: "reward_view", count: 12345, trend: "+15.2%" },
-  { event: "add_to_cart", count: 5678, trend: "+22.1%" },
-  { event: "pledge_started", count: 3456, trend: "+18.4%" },
-  { event: "pledge_completed", count: 2345, trend: "+14.6%" },
-];
+interface BehaviorEvent {
+  event: string;
+  count: number;
+  trend: string;
+}
 
-const userSegments = [
-  { name: "High-Value Backers", count: 4567, avgSpend: 234.50, criteria: "Pledged >$100 in last 90 days" },
-  { name: "Repeat Backers", count: 8934, avgSpend: 89.20, criteria: "2+ pledges in last 6 months" },
-  { name: "Tech Enthusiasts", count: 12456, avgSpend: 156.80, criteria: "Backed tech/gaming projects" },
-  { name: "Early Adopters", count: 3456, avgSpend: 178.90, criteria: "Backed within first 24 hours" },
-  { name: "At-Risk Churners", count: 2345, avgSpend: 45.60, criteria: "No activity in 60 days" },
-];
+interface UserSegment {
+  name: string;
+  count: number;
+  avgSpend: string | number;
+  criteria: string;
+}
+
+interface AIStats {
+  aiPredictions: { accuracy: string; label: string };
+  projectsTagged: { count: string; totalTags: string; label: string };
+  emailsSent: { count: string; openRate: string; label: string };
+  conversionLift: { percent: string; label: string };
+}
 
 export default function AIMarketingPage() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -92,21 +101,28 @@ export default function AIMarketingPage() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [showCampaignDialog, setShowCampaignDialog] = useState(false);
 
+  // Dynamic data from API
+  const [stats, setStats] = useState<AIStats | null>(null);
+  const [projectTags, setProjectTags] = useState<ProjectTag[]>([]);
+  const [emailCampaigns, setEmailCampaigns] = useState<EmailCampaign[]>([]);
+  const [behaviorEvents, setBehaviorEvents] = useState<BehaviorEvent[]>([]);
+  const [userSegments, setUserSegments] = useState<UserSegment[]>([]);
+
   // AI Settings
   const [aiSettings, setAiSettings] = useState({
     autoTagging: true,
     autoTagConfidence: 75,
-    maxTags: 12,
-    emailPersonalization: true,
-    behaviorTracking: true,
-    predictiveAnalytics: true,
-    smartSegmentation: true,
-    autoOptimization: true,
-    sendTimeOptimization: true,
-    contentOptimization: true,
-    abTesting: true,
+    maxTags: 5,
+    emailPersonalization: false,
+    behaviorTracking: false,
+    predictiveAnalytics: false,
+    smartSegmentation: false,
+    autoOptimization: false,
+    sendTimeOptimization: false,
+    contentOptimization: false,
+    abTesting: false,
     emailFrequencyCap: 3,
-    dailyEmailLimit: 10000,
+    dailyEmailLimit: 1000,
     quietHoursStart: "22:00",
     quietHoursEnd: "08:00",
   });
@@ -114,43 +130,91 @@ export default function AIMarketingPage() {
   // Behavior tracking settings
   const [trackingSettings, setTrackingSettings] = useState({
     trackPageViews: true,
-    trackScrollDepth: true,
+    trackScrollDepth: false,
     trackTimeOnPage: true,
     trackClicks: true,
     trackHovers: false,
-    trackFormInteractions: true,
-    trackVideoEngagement: true,
-    trackRewardComparisons: true,
+    trackFormInteractions: false,
+    trackVideoEngagement: false,
+    trackRewardComparisons: false,
     trackAbandonedCarts: true,
     sessionRecording: false,
-    heatmaps: true,
+    heatmaps: false,
     funnelAnalysis: true,
     retentionPeriod: 90,
   });
 
-  // Load AI settings from API
-  const loadSettings = useCallback(async () => {
+  // Load AI settings and stats from API
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/admin/settings");
-      if (response.ok) {
-        const data = await response.json();
-        if (data.settings?.aiMarketing) {
-          const settings = data.settings.aiMarketing;
-          if (settings.aiSettings) setAiSettings(prev => ({ ...prev, ...settings.aiSettings }));
-          if (settings.trackingSettings) setTrackingSettings(prev => ({ ...prev, ...settings.trackingSettings }));
+      // Load both settings and stats in parallel
+      const [settingsRes, statsRes] = await Promise.all([
+        fetch("/api/admin/settings"),
+        fetch("/api/admin/ai-marketing/stats")
+      ]);
+
+      // Load settings
+      if (settingsRes.ok) {
+        const data = await settingsRes.json();
+        const s = data.settings;
+        if (s) {
+          setAiSettings(prev => ({
+            ...prev,
+            autoTagging: s.aiAutoTagging ?? prev.autoTagging,
+            autoTagConfidence: s.aiAutoTagConfidence ?? prev.autoTagConfidence,
+            maxTags: s.aiMaxTags ?? prev.maxTags,
+            emailPersonalization: s.aiEmailPersonalization ?? prev.emailPersonalization,
+            behaviorTracking: s.aiBehaviorTracking ?? prev.behaviorTracking,
+            predictiveAnalytics: s.aiPredictiveAnalytics ?? prev.predictiveAnalytics,
+            smartSegmentation: s.aiSmartSegmentation ?? prev.smartSegmentation,
+            autoOptimization: s.aiAutoOptimization ?? prev.autoOptimization,
+            sendTimeOptimization: s.aiSendTimeOptimization ?? prev.sendTimeOptimization,
+            contentOptimization: s.aiContentOptimization ?? prev.contentOptimization,
+            abTesting: s.aiAbTesting ?? prev.abTesting,
+            emailFrequencyCap: s.aiEmailFrequencyCap ?? prev.emailFrequencyCap,
+            dailyEmailLimit: s.aiDailyEmailLimit ?? prev.dailyEmailLimit,
+            quietHoursStart: s.aiQuietHoursStart ?? prev.quietHoursStart,
+            quietHoursEnd: s.aiQuietHoursEnd ?? prev.quietHoursEnd,
+          }));
+          setTrackingSettings(prev => ({
+            ...prev,
+            trackPageViews: s.aiTrackPageViews ?? prev.trackPageViews,
+            trackScrollDepth: s.aiTrackScrollDepth ?? prev.trackScrollDepth,
+            trackTimeOnPage: s.aiTrackTimeOnPage ?? prev.trackTimeOnPage,
+            trackClicks: s.aiTrackClicks ?? prev.trackClicks,
+            trackHovers: s.aiTrackHovers ?? prev.trackHovers,
+            trackFormInteractions: s.aiTrackFormInteractions ?? prev.trackFormInteractions,
+            trackVideoEngagement: s.aiTrackVideoEngagement ?? prev.trackVideoEngagement,
+            trackRewardComparisons: s.aiTrackRewardComparisons ?? prev.trackRewardComparisons,
+            trackAbandonedCarts: s.aiTrackAbandonedCarts ?? prev.trackAbandonedCarts,
+            sessionRecording: s.aiSessionRecording ?? prev.sessionRecording,
+            heatmaps: s.aiHeatmaps ?? prev.heatmaps,
+            funnelAnalysis: s.aiFunnelAnalysis ?? prev.funnelAnalysis,
+            retentionPeriod: s.aiRetentionDays ?? prev.retentionPeriod,
+          }));
         }
       }
+
+      // Load stats
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData.stats);
+        setProjectTags(statsData.projectTags || []);
+        setEmailCampaigns(statsData.emailCampaigns || []);
+        setBehaviorEvents(statsData.behaviorEvents || []);
+        setUserSegments(statsData.userSegments || []);
+      }
     } catch (error) {
-      console.error("Failed to load AI settings:", error);
+      console.error("Failed to load AI data:", error);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+    loadData();
+  }, [loadData]);
 
   const saveSettings = async () => {
     setIsSaving(true);
@@ -163,8 +227,34 @@ export default function AIMarketingPage() {
         body: JSON.stringify({
           section: "aiMarketing",
           data: {
-            aiSettings,
-            trackingSettings,
+            aiAutoTagging: aiSettings.autoTagging,
+            aiAutoTagConfidence: aiSettings.autoTagConfidence,
+            aiMaxTags: aiSettings.maxTags,
+            aiEmailPersonalization: aiSettings.emailPersonalization,
+            aiBehaviorTracking: aiSettings.behaviorTracking,
+            aiPredictiveAnalytics: aiSettings.predictiveAnalytics,
+            aiSmartSegmentation: aiSettings.smartSegmentation,
+            aiAutoOptimization: aiSettings.autoOptimization,
+            aiSendTimeOptimization: aiSettings.sendTimeOptimization,
+            aiContentOptimization: aiSettings.contentOptimization,
+            aiAbTesting: aiSettings.abTesting,
+            aiEmailFrequencyCap: aiSettings.emailFrequencyCap,
+            aiDailyEmailLimit: aiSettings.dailyEmailLimit,
+            aiQuietHoursStart: aiSettings.quietHoursStart,
+            aiQuietHoursEnd: aiSettings.quietHoursEnd,
+            aiTrackPageViews: trackingSettings.trackPageViews,
+            aiTrackScrollDepth: trackingSettings.trackScrollDepth,
+            aiTrackTimeOnPage: trackingSettings.trackTimeOnPage,
+            aiTrackClicks: trackingSettings.trackClicks,
+            aiTrackHovers: trackingSettings.trackHovers,
+            aiTrackFormInteractions: trackingSettings.trackFormInteractions,
+            aiTrackVideoEngagement: trackingSettings.trackVideoEngagement,
+            aiTrackRewardComparisons: trackingSettings.trackRewardComparisons,
+            aiTrackAbandonedCarts: trackingSettings.trackAbandonedCarts,
+            aiSessionRecording: trackingSettings.sessionRecording,
+            aiHeatmaps: trackingSettings.heatmaps,
+            aiFunnelAnalysis: trackingSettings.funnelAnalysis,
+            aiRetentionDays: trackingSettings.retentionPeriod,
           },
         }),
       });
@@ -173,7 +263,8 @@ export default function AIMarketingPage() {
         setSaveMessage("AI settings saved successfully");
         setTimeout(() => setSaveMessage(null), 3000);
       } else {
-        throw new Error("Failed to save settings");
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save settings");
       }
     } catch (error) {
       console.error("Error saving AI settings:", error);
@@ -185,8 +276,14 @@ export default function AIMarketingPage() {
 
   const runAutoTagging = async () => {
     setIsProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsProcessing(false);
+    try {
+      // This would call the AI auto-tagging endpoint
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Reload stats after tagging
+      await loadData();
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (isLoading) {
@@ -245,8 +342,8 @@ export default function AIMarketingPage() {
               </div>
               <div>
                 <p className="text-sm text-zinc-500">AI Predictions</p>
-                <p className="text-2xl font-bold">94.2%</p>
-                <p className="text-xs text-emerald-600">Accuracy rate</p>
+                <p className="text-2xl font-bold">{stats?.aiPredictions?.accuracy || "0"}%</p>
+                <p className="text-xs text-emerald-600">{stats?.aiPredictions?.label || "Accuracy rate"}</p>
               </div>
             </div>
           </CardContent>
@@ -260,8 +357,8 @@ export default function AIMarketingPage() {
               </div>
               <div>
                 <p className="text-sm text-zinc-500">Projects Tagged</p>
-                <p className="text-2xl font-bold">1,234</p>
-                <p className="text-xs text-zinc-500">14,808 total tags</p>
+                <p className="text-2xl font-bold">{stats?.projectsTagged?.count || "0"}</p>
+                <p className="text-xs text-zinc-500">{stats?.projectsTagged?.totalTags || "0"} {stats?.projectsTagged?.label || "total tags"}</p>
               </div>
             </div>
           </CardContent>
@@ -275,8 +372,8 @@ export default function AIMarketingPage() {
               </div>
               <div>
                 <p className="text-sm text-zinc-500">Emails Sent</p>
-                <p className="text-2xl font-bold">156.8K</p>
-                <p className="text-xs text-emerald-600">+23% open rate</p>
+                <p className="text-2xl font-bold">{stats?.emailsSent?.count || "0"}</p>
+                <p className="text-xs text-emerald-600">{stats?.emailsSent?.openRate || "0%"} {stats?.emailsSent?.label || "open rate"}</p>
               </div>
             </div>
           </CardContent>
@@ -290,8 +387,8 @@ export default function AIMarketingPage() {
               </div>
               <div>
                 <p className="text-sm text-zinc-500">Conversion Lift</p>
-                <p className="text-2xl font-bold">+34%</p>
-                <p className="text-xs text-emerald-600">vs non-personalized</p>
+                <p className="text-2xl font-bold">{stats?.conversionLift?.percent || "0"}%</p>
+                <p className="text-xs text-emerald-600">{stats?.conversionLift?.label || "vs non-personalized"}</p>
               </div>
             </div>
           </CardContent>
