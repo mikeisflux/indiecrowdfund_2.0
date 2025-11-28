@@ -108,8 +108,8 @@ export async function POST(req: NextRequest) {
     const url = `/uploads/${folder}/${subDir}/${filename}`;
 
     // Get image dimensions if applicable
-    let width = null;
-    let height = null;
+    const width = null;
+    const height = null;
     // Note: For production, you'd use a library like sharp to get dimensions
 
     // Create database record
