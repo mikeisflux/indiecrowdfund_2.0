@@ -118,6 +118,9 @@ model Project {
   subtitle              String?
   slug                  String        @unique
   category              String
+  subcategory           String?
+  secondaryCategory     String?
+  secondarySubcategory  String?
   location              String?
   imageUrl              String?
   videoUrl              String?

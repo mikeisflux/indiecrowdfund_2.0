@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { PROJECT_CATEGORIES } from "@/types";
 import { Input } from "@/components/ui/input";
@@ -15,10 +16,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Calendar } from "lucide-react";
+import { Calendar, Lightbulb } from "lucide-react";
 
 export function BasicsStep() {
   const { basics, updateBasics } = useProjectStore();
+
+  // Get subcategories for the selected primary category
+  const primarySubcategories = useMemo(() => {
+    if (!basics.category) return [];
+    const category = PROJECT_CATEGORIES.find((c) => c.value === basics.category);
+    return category?.subcategories || [];
+  }, [basics.category]);
+
+  // Get subcategories for the selected secondary category
+  const secondarySubcategories = useMemo(() => {
+    if (!basics.secondaryCategory) return [];
+    const category = PROJECT_CATEGORIES.find((c) => c.value === basics.secondaryCategory);
+    return category?.subcategories || [];
+  }, [basics.secondaryCategory]);
+
+  // Handle primary category change - reset subcategory when category changes
+  const handlePrimaryCategoryChange = (value: string) => {
+    updateBasics({ category: value, subcategory: undefined });
+  };
+
+  // Handle secondary category change - reset secondary subcategory when category changes
+  const handleSecondaryCategoryChange = (value: string) => {
+    updateBasics({ secondaryCategory: value, secondarySubcategory: undefined });
+  };
 
   return (
     <div className="space-y-6">
@@ -50,26 +75,119 @@ export function BasicsStep() {
         />
       </div>
 
-      {/* Category */}
-      <div className="space-y-2">
-        <Label>
-          Category <span className="text-destructive">*</span>
-        </Label>
-        <Select
-          value={basics.category || ""}
-          onValueChange={(value) => updateBasics({ category: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a category" />
-          </SelectTrigger>
-          <SelectContent>
-            {PROJECT_CATEGORIES.map((category) => (
-              <SelectItem key={category.value} value={category.value}>
-                {category.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Tip Banner */}
+      <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+        <Lightbulb className="h-4 w-4 flex-shrink-0" />
+        <span>
+          Give backers the best first impression of your project with great titles.{" "}
+          <a href="#" className="font-medium underline hover:no-underline">
+            Learn more...
+          </a>
+        </span>
+      </div>
+
+      {/* Project Category Section */}
+      <div className="space-y-4 rounded-lg border bg-card p-6">
+        <div>
+          <h3 className="text-lg font-semibold">Project category</h3>
+          <p className="text-sm text-muted-foreground">
+            Choose a primary category and subcategory to help backers find your project.
+          </p>
+        </div>
+
+        {/* Primary Category Row */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Primary category</Label>
+            <Select
+              value={basics.category || ""}
+              onValueChange={handlePrimaryCategoryChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROJECT_CATEGORIES.map((category) => (
+                  <SelectItem key={category.value} value={category.value}>
+                    {category.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Primary subcategory</Label>
+            <Select
+              value={basics.subcategory || ""}
+              onValueChange={(value) => updateBasics({ subcategory: value })}
+              disabled={!basics.category}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={basics.category ? "Select a subcategory" : "Select a category first"} />
+              </SelectTrigger>
+              <SelectContent>
+                {primarySubcategories.map((sub) => (
+                  <SelectItem key={sub.value} value={sub.value}>
+                    {sub.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Secondary Category Row */}
+        <div className="space-y-2 pt-2">
+          <p className="text-sm text-muted-foreground">
+            Your second subcategory will help us provide more relevant guidance for your project.
+            It won&apos;t display on your project page or affect how it appears in search results.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            You can change these anytime before and during your campaign.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <Select
+              value={basics.secondaryCategory || ""}
+              onValueChange={handleSecondaryCategoryChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROJECT_CATEGORIES.map((category) => (
+                  <SelectItem key={category.value} value={category.value}>
+                    {category.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Subcategory</Label>
+            <Select
+              value={basics.secondarySubcategory || ""}
+              onValueChange={(value) => updateBasics({ secondarySubcategory: value })}
+              disabled={!basics.secondaryCategory}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={basics.secondaryCategory ? "Select a subcategory" : "Select a category first"} />
+              </SelectTrigger>
+              <SelectContent>
+                {secondarySubcategories.map((sub) => (
+                  <SelectItem key={sub.value} value={sub.value}>
+                    {sub.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       {/* Location */}
