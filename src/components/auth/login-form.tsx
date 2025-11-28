@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { login, loginWithGoogle } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const callbackUrl = searchParams.get("callbackUrl") || undefined;
 
   // Check if Google OAuth is configured
@@ -40,10 +41,14 @@ export function LoginForm() {
         } else if ("password" in result.error && result.error.password) {
           setError(result.error.password[0]);
         }
+        setIsLoading(false);
+      } else if (result?.success) {
+        // Client-side redirect after successful login
+        router.push(result.redirectTo || "/dashboard");
+        router.refresh();
       }
     } catch {
-      // Redirect happens in the action, this catches any other errors
-    } finally {
+      setError("Something went wrong. Please try again.");
       setIsLoading(false);
     }
   }
