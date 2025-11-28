@@ -59,6 +59,13 @@ export async function GET(
       return NextResponse.json({ error: "Email not found" }, { status: 404 });
     }
 
+    // Debug logging
+    console.log(`Fetching email ${emailId}:`, {
+      subject: email.subject,
+      bodyHtmlLength: email.bodyHtml?.length || 0,
+      bodyTextLength: email.bodyText?.length || 0,
+    });
+
     // Mark as read when viewing
     if (!email.isRead) {
       await db.adminEmail.update({

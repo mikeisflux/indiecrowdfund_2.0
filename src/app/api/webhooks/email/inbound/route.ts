@@ -171,6 +171,12 @@ export async function POST(request: NextRequest) {
       .toLowerCase();
     const threadId = `thread_${Buffer.from(subjectForThread).toString("base64").slice(0, 32)}`;
 
+    // Prepare body content - ensure we have content
+    const finalBodyHtml = emailData.html || (emailData.text ? emailData.text.replace(/\n/g, "<br>") : "");
+    const finalBodyText = emailData.text || null;
+
+    console.log("Saving email with body - html length:", finalBodyHtml.length, "text length:", finalBodyText?.length || 0);
+
     // Store the email
     const email = await db.adminEmail.create({
       data: {
@@ -182,8 +188,8 @@ export async function POST(request: NextRequest) {
         ccEmails: emailData.cc ? emailData.cc.split(",").map((e: string) => e.trim()) : [],
         bccEmails: [],
         subject: emailData.subject,
-        bodyHtml: emailData.html || emailData.text?.replace(/\n/g, "<br>") || "",
-        bodyText: emailData.text || null,
+        bodyHtml: finalBodyHtml,
+        bodyText: finalBodyText,
         folder: "INBOX",
         status: "DELIVERED",
         isRead: false,
@@ -195,6 +201,7 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(`Inbound email received and stored: ${email.id} -> ${mailbox.name} (${mailbox.email})`);
+    console.log(`Stored email body - html: ${email.bodyHtml?.length || 0} chars, text: ${email.bodyText?.length || 0} chars`);
 
     return NextResponse.json({
       success: true,

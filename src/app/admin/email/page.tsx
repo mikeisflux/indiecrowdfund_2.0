@@ -50,6 +50,9 @@ import {
   RefreshCw,
   X,
   AlertCircle,
+  Reply,
+  Forward,
+  ReplyAll,
 } from "lucide-react";
 
 interface Mailbox {
@@ -122,6 +125,13 @@ export default function EmailPage() {
   const [isComposing, setIsComposing] = useState(false);
   const [isEditingMailbox, setIsEditingMailbox] = useState(false);
   const [editingMailbox, setEditingMailbox] = useState<Mailbox | null>(null);
+  const [composeMode, setComposeMode] = useState<"new" | "reply" | "replyAll" | "forward">("new");
+  const [composePrefill, setComposePrefill] = useState<{
+    to?: string;
+    subject?: string;
+    body?: string;
+    inReplyTo?: string;
+  } | null>(null);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -267,10 +277,15 @@ export default function EmailPage() {
       const response = await fetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`);
       if (response.ok) {
         const data = await response.json();
+        console.log("Fetched email data:", data.email);
+        console.log("bodyHtml length:", data.email?.bodyHtml?.length || 0);
+        console.log("bodyText length:", data.email?.bodyText?.length || 0);
         setSelectedEmail(data.email);
         // Update read status in list
         setEmails(emails.map(e => e.id === email.id ? { ...e, isRead: true } : e));
       } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Error fetching email - status:", response.status, errorData);
         // Fallback to list data if fetch fails
         setSelectedEmail(email);
       }
@@ -278,6 +293,64 @@ export default function EmailPage() {
       console.error("Error fetching email:", error);
       setSelectedEmail(email);
     }
+  };
+
+  const handleReply = (email: Email, replyAll: boolean = false) => {
+    const replySubject = email.subject.toLowerCase().startsWith("re:")
+      ? email.subject
+      : `Re: ${email.subject}`;
+
+    const quotedBody = `\n\n---\nOn ${new Date(email.sentAt || email.createdAt).toLocaleString()}, ${email.fromName || email.fromEmail} wrote:\n\n${email.bodyText || ""}`;
+
+    setComposeMode(replyAll ? "replyAll" : "reply");
+    setComposePrefill({
+      to: email.fromEmail,
+      subject: replySubject,
+      body: quotedBody,
+      inReplyTo: email.id,
+    });
+    setIsComposing(true);
+  };
+
+  const handleForward = (email: Email) => {
+    const fwdSubject = email.subject.toLowerCase().startsWith("fwd:")
+      ? email.subject
+      : `Fwd: ${email.subject}`;
+
+    const forwardBody = `\n\n---\nForwarded message:\nFrom: ${email.fromName || email.fromEmail}\nDate: ${new Date(email.sentAt || email.createdAt).toLocaleString()}\nSubject: ${email.subject}\n\n${email.bodyText || ""}`;
+
+    setComposeMode("forward");
+    setComposePrefill({
+      to: "",
+      subject: fwdSubject,
+      body: forwardBody,
+    });
+    setIsComposing(true);
+  };
+
+  const handleDeleteSelectedEmail = async () => {
+    if (!selectedMailbox || !selectedEmail) return;
+
+    if (!confirm("Are you sure you want to delete this email?")) return;
+
+    try {
+      const response = await fetch(
+        `/api/admin/mailboxes/${selectedMailbox.id}/emails/${selectedEmail.id}`,
+        { method: "DELETE" }
+      );
+      if (response.ok) {
+        setEmails(emails.filter(e => e.id !== selectedEmail.id));
+        setSelectedEmail(null);
+      }
+    } catch (error) {
+      console.error("Error deleting email:", error);
+    }
+  };
+
+  const handleNewCompose = () => {
+    setComposeMode("new");
+    setComposePrefill(null);
+    setIsComposing(true);
   };
 
   if (isLoading) {
@@ -308,7 +381,7 @@ export default function EmailPage() {
           </Button>
           <Button
             className="bg-emerald-600 hover:bg-emerald-700"
-            onClick={() => setIsComposing(true)}
+            onClick={handleNewCompose}
             disabled={!isConfigured || mailboxes.length === 0}
           >
             <Send className="mr-2 h-4 w-4" />
@@ -601,6 +674,47 @@ export default function EmailPage() {
                   <p><span className="font-medium">To:</span> {selectedEmail.toEmail}</p>
                   <p><span className="font-medium">Date:</span> {new Date(selectedEmail.sentAt || selectedEmail.createdAt).toLocaleString()}</p>
                 </div>
+                {/* Action Buttons */}
+                <div className="flex items-center gap-1 mt-3 pt-3 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleReply(selectedEmail)}
+                    disabled={!isConfigured}
+                  >
+                    <Reply className="h-3 w-3 mr-1" />
+                    Reply
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleReply(selectedEmail, true)}
+                    disabled={!isConfigured}
+                  >
+                    <ReplyAll className="h-3 w-3 mr-1" />
+                    Reply All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleForward(selectedEmail)}
+                    disabled={!isConfigured}
+                  >
+                    <Forward className="h-3 w-3 mr-1" />
+                    Forward
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={handleDeleteSelectedEmail}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-auto">
                 {selectedEmail.bodyHtml ? (
@@ -608,8 +722,17 @@ export default function EmailPage() {
                     className="prose prose-sm dark:prose-invert max-w-none"
                     dangerouslySetInnerHTML={{ __html: selectedEmail.bodyHtml }}
                   />
-                ) : (
+                ) : selectedEmail.bodyText ? (
                   <p className="text-sm whitespace-pre-wrap">{selectedEmail.bodyText}</p>
+                ) : (
+                  <div className="text-center py-8">
+                    <AlertCircle className="h-8 w-8 text-zinc-300 mx-auto mb-2" />
+                    <p className="text-sm text-zinc-500">No email content available</p>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      bodyHtml: {selectedEmail.bodyHtml?.length || 0} chars,
+                      bodyText: {selectedEmail.bodyText?.length || 0} chars
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -620,10 +743,18 @@ export default function EmailPage() {
       {/* Compose Email Dialog */}
       <ComposeEmailDialog
         open={isComposing}
-        onOpenChange={setIsComposing}
+        onOpenChange={(open) => {
+          setIsComposing(open);
+          if (!open) {
+            setComposeMode("new");
+            setComposePrefill(null);
+          }
+        }}
         mailboxes={mailboxes}
         selectedMailbox={selectedMailbox}
         settings={settings}
+        mode={composeMode}
+        prefill={composePrefill}
         onSent={() => {
           fetchEmails();
           fetchMailboxes();
@@ -650,6 +781,8 @@ function ComposeEmailDialog({
   mailboxes,
   selectedMailbox,
   settings,
+  mode = "new",
+  prefill,
   onSent,
 }: {
   open: boolean;
@@ -657,6 +790,8 @@ function ComposeEmailDialog({
   mailboxes: Mailbox[];
   selectedMailbox: Mailbox | null;
   settings: EmailSettings | null;
+  mode?: "new" | "reply" | "replyAll" | "forward";
+  prefill?: { to?: string; subject?: string; body?: string; inReplyTo?: string } | null;
   onSent: () => void;
 }) {
   const [fromMailboxId, setFromMailboxId] = useState(selectedMailbox?.id || "");
@@ -675,6 +810,22 @@ function ComposeEmailDialog({
       setFromMailboxId(selectedMailbox.id);
     }
   }, [selectedMailbox]);
+
+  // Handle prefill data for reply/forward
+  useEffect(() => {
+    if (open && prefill) {
+      setTo(prefill.to || "");
+      setSubject(prefill.subject || "");
+      setBody(prefill.body || "");
+    } else if (!open) {
+      // Reset form when closing
+      setTo("");
+      setSubject("");
+      setBody("");
+      setError(null);
+      setSuccess(false);
+    }
+  }, [open, prefill]);
 
   const handleSend = async () => {
     if (!fromMailboxId || !to || !subject || !body) {
@@ -738,7 +889,9 @@ function ComposeEmailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Compose Email</DialogTitle>
+          <DialogTitle>
+            {mode === "reply" ? "Reply" : mode === "replyAll" ? "Reply All" : mode === "forward" ? "Forward" : "Compose Email"}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           {error && (
