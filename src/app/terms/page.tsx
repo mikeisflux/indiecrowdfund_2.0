@@ -156,9 +156,6 @@ export default function TermsPage() {
               <div className="prose prose-zinc dark:prose-invert max-w-none">
                 <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
                   <h2 className="text-2xl font-bold mb-2">IndieCrowdfund — Terms of Service</h2>
-                  <p className="text-sm text-zinc-500 mb-6 italic">
-                    (Original Draft — Not Legal Advice. You should have an attorney review.)
-                  </p>
                   <p className="text-sm text-zinc-500 mb-8">
                     <strong>Last Updated:</strong> November 27, 2025
                   </p>
@@ -1108,9 +1105,6 @@ export default function TermsPage() {
               <div className="prose prose-zinc dark:prose-invert max-w-none">
                 <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
                   <h2 className="text-2xl font-bold mb-2">Consent for AI Tracking & Insights Policy</h2>
-                  <p className="text-sm text-zinc-500 mb-6 italic">
-                    (Original Draft — Not Legal Advice)
-                  </p>
                   <p className="text-sm text-zinc-500 mb-8">
                     <strong>Last Updated:</strong> November 27, 2025
                   </p>
