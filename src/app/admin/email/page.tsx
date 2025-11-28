@@ -323,6 +323,19 @@ export default function EmailPage() {
         </Alert>
       )}
 
+      {/* Inbound Email Setup Info */}
+      {isConfigured && mailboxes.length > 0 && (
+        <Alert className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20">
+          <Mail className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-700 dark:text-blue-400">
+            <strong>Inbound Email Webhook:</strong> To receive emails, configure SendGrid Inbound Parse to POST to{" "}
+            <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded text-xs">
+              {typeof window !== "undefined" ? window.location.origin : "https://yourdomain.com"}/api/webhooks/email/inbound
+            </code>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Main Content */}
       <div className="flex-1 flex gap-4 min-h-0">
         {/* Sidebar - Mailboxes */}
