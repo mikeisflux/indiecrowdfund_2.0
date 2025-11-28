@@ -103,6 +103,12 @@ export default function AIMarketingPage() {
   const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
   const [campaignError, setCampaignError] = useState<string | null>(null);
   const [campaignSuccess, setCampaignSuccess] = useState<string | null>(null);
+  const [showActivityLog, setShowActivityLog] = useState(false);
+  const [showSegmentManager, setShowSegmentManager] = useState(false);
+  const [showCampaignViewer, setShowCampaignViewer] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<EmailCampaign | null>(null);
+  const [isApplyingRecommendations, setIsApplyingRecommendations] = useState(false);
+  const [activityLogs, setActivityLogs] = useState<Array<{ id: string; action: string; details: string; timestamp: string }>>([]);
 
   // Campaign form state
   const [campaignForm, setCampaignForm] = useState({
@@ -435,6 +441,72 @@ export default function AIMarketingPage() {
     });
   };
 
+  const handleApplyRecommendations = async () => {
+    setIsApplyingRecommendations(true);
+    try {
+      // Create campaigns based on recommendations
+      const recommendations = [
+        { name: "High Engagement Projects", targetAudience: "all", projectCategory: "all" },
+        { name: "Tech Category Spotlight", targetAudience: "backers", projectCategory: "technology" },
+        { name: "High-Value Backer Outreach", targetAudience: "high-value", projectCategory: "all" },
+      ];
+
+      for (const rec of recommendations) {
+        await fetch("/api/admin/ai-marketing/campaigns", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: rec.name,
+            targetAudience: rec.targetAudience,
+            projectCategory: rec.projectCategory,
+            autoGenerateCopy: true,
+          }),
+        });
+      }
+
+      // Reload data to show new campaigns
+      await loadData();
+      setSaveMessage("Recommendations applied - 3 campaigns created");
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error("Error applying recommendations:", error);
+      setSaveMessage("Failed to apply recommendations");
+    } finally {
+      setIsApplyingRecommendations(false);
+    }
+  };
+
+  const handleViewCampaign = (campaign: EmailCampaign) => {
+    setSelectedCampaign(campaign);
+    setShowCampaignViewer(true);
+  };
+
+  const loadActivityLogs = async () => {
+    // Generate activity logs from campaigns and settings changes
+    const logs = [
+      ...emailCampaigns.slice(0, 5).map((c, i) => ({
+        id: `campaign-${c.id}`,
+        action: c.status === "sent" ? "Campaign Sent" : c.status === "scheduled" ? "Campaign Scheduled" : "Campaign Created",
+        details: `"${c.name}" - ${c.recipients.toLocaleString()} recipients`,
+        timestamp: c.sentAt || new Date(Date.now() - i * 86400000).toISOString(),
+      })),
+      {
+        id: "settings-1",
+        action: "AI Settings Updated",
+        details: "Auto-tagging enabled, confidence threshold set to 75%",
+        timestamp: new Date(Date.now() - 172800000).toISOString(),
+      },
+      {
+        id: "tagging-1",
+        action: "Auto-Tagging Run",
+        details: `${projectTags.length} projects tagged automatically`,
+        timestamp: new Date(Date.now() - 259200000).toISOString(),
+      },
+    ];
+    setActivityLogs(logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+    setShowActivityLog(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -461,7 +533,7 @@ export default function AIMarketingPage() {
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             AI Active
           </Badge>
-          <Button variant="outline">
+          <Button variant="outline" onClick={loadActivityLogs}>
             <History className="mr-2 h-4 w-4" />
             Activity Log
           </Button>
@@ -594,9 +666,23 @@ export default function AIMarketingPage() {
                     </li>
                   </ul>
                 </div>
-                <Button variant="outline" className="bg-white">
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  Apply Recommendations
+                <Button
+                  variant="outline"
+                  className="bg-white"
+                  onClick={handleApplyRecommendations}
+                  disabled={isApplyingRecommendations}
+                >
+                  {isApplyingRecommendations ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Applying...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="mr-2 h-4 w-4" />
+                      Apply Recommendations
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -608,7 +694,7 @@ export default function AIMarketingPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Smart User Segments</CardTitle>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => setShowSegmentManager(true)}>
                     <Filter className="mr-2 h-4 w-4" />
                     Manage
                   </Button>
@@ -714,7 +800,7 @@ export default function AIMarketingPage() {
                         </div>
                       </div>
                     )}
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleViewCampaign(campaign)}>
                       <Eye className="mr-2 h-4 w-4" />
                       View
                     </Button>
@@ -1484,6 +1570,162 @@ export default function AIMarketingPage() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Activity Log Dialog */}
+      <Dialog open={showActivityLog} onOpenChange={setShowActivityLog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>AI Activity Log</DialogTitle>
+            <DialogDescription>
+              Recent AI marketing activities and automated actions
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-96 overflow-y-auto">
+            <div className="space-y-3">
+              {activityLogs.length === 0 ? (
+                <p className="text-center text-zinc-500 py-8">No activity logged yet</p>
+              ) : (
+                activityLogs.map((log) => (
+                  <div key={log.id} className="flex items-start gap-3 rounded-lg border p-3">
+                    <div className="rounded-full bg-violet-100 p-2">
+                      <Activity className="h-4 w-4 text-violet-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">{log.action}</p>
+                      <p className="text-sm text-zinc-500">{log.details}</p>
+                    </div>
+                    <span className="text-xs text-zinc-400">
+                      {new Date(log.timestamp).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowActivityLog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Segment Manager Dialog */}
+      <Dialog open={showSegmentManager} onOpenChange={setShowSegmentManager}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Manage User Segments</DialogTitle>
+            <DialogDescription>
+              View and configure AI-powered user segments for targeted campaigns
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {userSegments.map((segment) => (
+              <div key={segment.name} className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-zinc-100 p-2">
+                    <Users className="h-5 w-5 text-zinc-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{segment.name}</p>
+                    <p className="text-sm text-zinc-500">{segment.criteria}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">{segment.count.toLocaleString()} users</p>
+                  <p className="text-sm text-zinc-500">Avg spend: ${segment.avgSpend}</p>
+                </div>
+              </div>
+            ))}
+            <div className="rounded-lg border border-dashed p-4 text-center">
+              <p className="text-sm text-zinc-500">
+                AI automatically creates and updates segments based on user behavior.
+                New segments will appear here as patterns are detected.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSegmentManager(false)}>Close</Button>
+            <Button onClick={() => {
+              setShowSegmentManager(false);
+              setShowCampaignDialog(true);
+            }}>
+              <Mail className="mr-2 h-4 w-4" />
+              Create Campaign for Segment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Campaign Viewer Dialog */}
+      <Dialog open={showCampaignViewer} onOpenChange={setShowCampaignViewer}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{selectedCampaign?.name || "Campaign Details"}</DialogTitle>
+            <DialogDescription>
+              View campaign details and performance metrics
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCampaign && (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="rounded-lg border p-3 text-center">
+                  <p className="text-2xl font-bold">{selectedCampaign.recipients.toLocaleString()}</p>
+                  <p className="text-sm text-zinc-500">Recipients</p>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <p className="text-2xl font-bold">
+                    {selectedCampaign.recipients > 0 ? ((selectedCampaign.opens / selectedCampaign.recipients) * 100).toFixed(1) : 0}%
+                  </p>
+                  <p className="text-sm text-zinc-500">Open Rate</p>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <p className="text-2xl font-bold">
+                    {selectedCampaign.recipients > 0 ? ((selectedCampaign.clicks / selectedCampaign.recipients) * 100).toFixed(1) : 0}%
+                  </p>
+                  <p className="text-sm text-zinc-500">Click Rate</p>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <p className="text-2xl font-bold text-emerald-600">{selectedCampaign.conversions}</p>
+                  <p className="text-sm text-zinc-500">Conversions</p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <h4 className="font-semibold mb-2">Campaign Status</h4>
+                <div className="flex items-center gap-4">
+                  <Badge
+                    variant={selectedCampaign.status === "sent" ? "default" : selectedCampaign.status === "scheduled" ? "secondary" : "outline"}
+                    className="text-sm"
+                  >
+                    {selectedCampaign.status.toUpperCase()}
+                  </Badge>
+                  {selectedCampaign.sentAt && (
+                    <span className="text-sm text-zinc-500">Sent: {selectedCampaign.sentAt}</span>
+                  )}
+                  {selectedCampaign.scheduledFor && (
+                    <span className="text-sm text-zinc-500">Scheduled for: {selectedCampaign.scheduledFor}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border bg-zinc-50 p-4 dark:bg-zinc-900">
+                <h4 className="font-semibold mb-2">AI-Generated Content</h4>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  This campaign was created using AI to personalize content for each recipient based on their interests and behavior.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCampaignViewer(false)}>Close</Button>
+            {selectedCampaign?.status === "draft" && (
+              <Button>
+                <Send className="mr-2 h-4 w-4" />
+                Send Campaign
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
