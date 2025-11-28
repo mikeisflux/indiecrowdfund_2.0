@@ -722,6 +722,11 @@ export default function TermsPage() {
                   </ul>
                   <p className="mb-6 font-medium">Creators must not use IndieCrowdfund to violate any law.</p>
 
+                  <h3 className="text-xl font-semibold mt-8 mb-4">7. Previous History</h3>
+                  <p className="mb-6">
+                    Your previous history on other crowdfunding sites may be taken into account. We reserve the right to refuse service to anyone, at any time, for any reason.
+                  </p>
+
                   <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
                     <p className="font-semibold mb-2">Questions about creator responsibilities?</p>
                     <p>
@@ -779,11 +784,6 @@ export default function TermsPage() {
                   <h3 className="text-xl font-semibold mt-8 mb-4">E. Project failure is possible</h3>
                   <p className="mb-6">
                     Some projects may not be completed despite good-faith efforts.
-                  </p>
-
-                  <h3 className="text-xl font-semibold mt-8 mb-4">F. Previous History</h3>
-                  <p className="mb-6">
-                    Your previous history on other crowdfunding sites may be taken into account. We reserve the right to refuse service to anyone, at any time, for any reason.
                   </p>
 
                   <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-6 mt-8">
