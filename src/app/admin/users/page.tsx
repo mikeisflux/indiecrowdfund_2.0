@@ -83,129 +83,39 @@ interface Pagination {
   totalPages: number;
 }
 
-// Mock retailer applications data
-const mockRetailers = [
-  {
-    id: "r1",
-    businessName: "Galaxy Comics & Games",
-    businessType: "COMIC_SHOP",
-    contactName: "Robert Martinez",
-    email: "robert@galaxycomics.com",
-    phone: "(555) 123-4567",
-    address: "123 Main Street",
-    city: "Portland",
-    state: "OR",
-    zipCode: "97201",
-    country: "US",
-    taxId: "XX-XXXXXXX",
-    taxIdType: "EIN",
-    yearsInBusiness: 12,
-    numberOfLocations: 2,
-    annualRevenue: "$500K - $1M",
-    websiteUrl: "https://galaxycomics.com",
-    status: "PENDING",
-    createdAt: "2024-01-15T10:30:00Z",
-    ordersCount: 0,
-  },
-  {
-    id: "r2",
-    businessName: "Page Turner Books",
-    businessType: "BOOKSTORE",
-    contactName: "Amanda Lee",
-    email: "amanda@pageturnerbooks.com",
-    phone: "(555) 987-6543",
-    address: "456 Oak Avenue",
-    city: "Seattle",
-    state: "WA",
-    zipCode: "98101",
-    country: "US",
-    taxId: "XX-XXXXXXX",
-    taxIdType: "EIN",
-    yearsInBusiness: 8,
-    numberOfLocations: 1,
-    annualRevenue: "$250K - $500K",
-    websiteUrl: "https://pageturnerbooks.com",
-    status: "PENDING",
-    createdAt: "2024-01-14T14:22:00Z",
-    ordersCount: 0,
-  },
-  {
-    id: "r3",
-    businessName: "Quest Games Shop",
-    businessType: "GAME_STORE",
-    contactName: "Michael Chen",
-    email: "mike@questgames.com",
-    phone: "(555) 456-7890",
-    address: "789 Gaming Lane",
-    city: "Austin",
-    state: "TX",
-    zipCode: "78701",
-    country: "US",
-    taxId: "XX-XXXXXXX",
-    taxIdType: "EIN",
-    yearsInBusiness: 5,
-    numberOfLocations: 1,
-    annualRevenue: "$100K - $250K",
-    websiteUrl: "https://questgames.com",
-    status: "UNDER_REVIEW",
-    createdAt: "2024-01-12T09:15:00Z",
-    ordersCount: 0,
-  },
-  {
-    id: "r4",
-    businessName: "Hero Central",
-    businessType: "COMIC_SHOP",
-    contactName: "Sarah Johnson",
-    email: "sarah@herocentral.com",
-    phone: "(555) 321-9876",
-    address: "321 Hero Blvd",
-    city: "Denver",
-    state: "CO",
-    zipCode: "80201",
-    country: "US",
-    taxId: "XX-XXXXXXX",
-    taxIdType: "EIN",
-    yearsInBusiness: 15,
-    numberOfLocations: 3,
-    annualRevenue: "$1M+",
-    websiteUrl: "https://herocentral.com",
-    status: "APPROVED",
-    createdAt: "2024-01-08T11:45:00Z",
-    ordersCount: 23,
-    verifiedAt: "2024-01-10T14:30:00Z",
-  },
-  {
-    id: "r5",
-    businessName: "Indie Reads",
-    businessType: "BOOKSTORE",
-    contactName: "David Wilson",
-    email: "david@indiereads.com",
-    phone: "(555) 789-0123",
-    address: "555 Book Street",
-    city: "San Francisco",
-    state: "CA",
-    zipCode: "94102",
-    country: "US",
-    taxId: "XX-XXXXXXX",
-    taxIdType: "EIN",
-    yearsInBusiness: 3,
-    numberOfLocations: 1,
-    annualRevenue: "$100K - $250K",
-    websiteUrl: "",
-    status: "REJECTED",
-    createdAt: "2024-01-05T16:20:00Z",
-    ordersCount: 0,
-    verificationNotes: "Could not verify business registration",
-  },
-];
+// Retailer interface
+interface Retailer {
+  id: string;
+  businessName: string;
+  businessType: string;
+  contactName: string;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  country: string;
+  taxId: string | null;
+  taxIdType: string | null;
+  yearsInBusiness: number | null;
+  numberOfLocations: number | null;
+  annualRevenue: string | null;
+  websiteUrl: string | null;
+  status: string;
+  createdAt: string;
+  ordersCount?: number;
+  verifiedAt?: string | null;
+  verificationNotes?: string | null;
+}
 
-const retailerStats = {
-  pending: 2,
-  underReview: 1,
-  approved: 1,
-  rejected: 1,
-  total: 5,
-};
+interface RetailerStats {
+  pending: number;
+  underReview: number;
+  approved: number;
+  rejected: number;
+  total: number;
+}
 
 export default function UsersPage() {
   const [activeTab, setActiveTab] = useState("users");
@@ -214,7 +124,7 @@ export default function UsersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [retailerStatusFilter, setRetailerStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedRetailer, setSelectedRetailer] = useState<typeof mockRetailers[0] | null>(null);
+  const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [showRetailerDialog, setShowRetailerDialog] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -227,6 +137,11 @@ export default function UsersPage() {
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Retailer state
+  const [retailers, setRetailers] = useState<Retailer[]>([]);
+  const [retailerStats, setRetailerStats] = useState<RetailerStats>({ pending: 0, underReview: 0, approved: 0, rejected: 0, total: 0 });
+  const [isLoadingRetailers, setIsLoadingRetailers] = useState(false);
 
   // Fetch users from API
   const fetchUsers = useCallback(async () => {
@@ -261,6 +176,33 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  // Fetch retailers from API
+  const fetchRetailers = useCallback(async () => {
+    setIsLoadingRetailers(true);
+    try {
+      const params = new URLSearchParams({
+        status: retailerStatusFilter === "all" ? "all" : retailerStatusFilter.toUpperCase(),
+      });
+
+      const response = await fetch(`/api/admin/retailers?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setRetailers(data.retailers || []);
+        setRetailerStats(data.stats || { pending: 0, underReview: 0, approved: 0, rejected: 0, total: 0 });
+      }
+    } catch (error) {
+      console.error("Error fetching retailers:", error);
+    } finally {
+      setIsLoadingRetailers(false);
+    }
+  }, [retailerStatusFilter]);
+
+  useEffect(() => {
+    if (activeTab === "retailers") {
+      fetchRetailers();
+    }
+  }, [activeTab, fetchRetailers]);
 
   // Debounce search
   useEffect(() => {
@@ -303,16 +245,40 @@ export default function UsersPage() {
     }
   };
 
-  const handleRetailerAction = (retailer: typeof mockRetailers[0], action: "approve" | "reject" | "request_info") => {
+  const handleRetailerAction = (retailer: Retailer, action: "approve" | "reject" | "request_info") => {
     setSelectedRetailer(retailer);
     setApprovalAction(action);
     setApprovalNotes("");
     setShowApprovalDialog(true);
   };
 
-  const submitApprovalAction = () => {
-    // In production, this would call the API
-    console.log("Submitting action:", approvalAction, "for retailer:", selectedRetailer?.id, "with notes:", approvalNotes);
+  const submitApprovalAction = async () => {
+    if (!selectedRetailer || !approvalAction) return;
+
+    try {
+      const statusMap = {
+        approve: "APPROVED",
+        reject: "REJECTED",
+        request_info: "UNDER_REVIEW",
+      };
+
+      const response = await fetch("/api/admin/retailers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedRetailer.id,
+          status: statusMap[approvalAction],
+          verificationNotes: approvalNotes || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        fetchRetailers();
+      }
+    } catch (error) {
+      console.error("Error updating retailer:", error);
+    }
+
     setShowApprovalDialog(false);
     setSelectedRetailer(null);
     setApprovalAction(null);
@@ -651,9 +617,22 @@ export default function UsersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockRetailers
-                      .filter(r => retailerStatusFilter === "all" || r.status === retailerStatusFilter)
-                      .map((retailer) => (
+                    {isLoadingRetailers ? (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-zinc-500">
+                          <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+                          Loading retailers...
+                        </td>
+                      </tr>
+                    ) : retailers.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-zinc-500">
+                          <Store className="h-8 w-8 mx-auto mb-2 text-zinc-300" />
+                          No retailer applications found
+                        </td>
+                      </tr>
+                    ) : (
+                      retailers.map((retailer) => (
                       <tr key={retailer.id} className="border-b hover:bg-zinc-50 dark:hover:bg-zinc-800">
                         <td className="p-4">
                           <div className="flex items-center gap-3">
@@ -662,7 +641,7 @@ export default function UsersPage() {
                             </div>
                             <div>
                               <p className="font-medium">{retailer.businessName}</p>
-                              <p className="text-sm text-zinc-500">{retailer.yearsInBusiness} years in business</p>
+                              <p className="text-sm text-zinc-500">{retailer.yearsInBusiness ? `${retailer.yearsInBusiness} years in business` : "New business"}</p>
                             </div>
                           </div>
                         </td>
@@ -715,7 +694,8 @@ export default function UsersPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                    )}
                   </tbody>
                 </table>
               </div>
