@@ -58,11 +58,13 @@ import {
 } from "lucide-react";
 
 // Types
+type ComponentSettingValue = string | number | boolean | null | undefined | Array<{ value: string; label: string }>;
+
 interface PageComponent {
   id: string;
   type: string;
   content?: string;
-  settings: Record<string, unknown>;
+  settings: Record<string, ComponentSettingValue>;
   children?: PageComponent[];
 }
 
