@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/components/providers/auth-provider";
 
 // Match Prisma BehaviorEventType enum
 type EventType =

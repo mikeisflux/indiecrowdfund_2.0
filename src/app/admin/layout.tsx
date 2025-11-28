@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "@/components/providers/auth-provider";
+import { logout } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -130,7 +131,7 @@ export default function AdminLayout({
     : session.user.email?.slice(0, 2).toUpperCase() || "AD";
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    await logout();
   };
 
   return (

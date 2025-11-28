@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Using next-auth/jwt for Edge-compatible token verification
-import { getToken } from "next-auth/jwt";
+const SESSION_COOKIE_NAME = "session_token";
 
 // Routes that require authentication (but not admin role)
 const protectedRoutes = ["/dashboard", "/projects/new"];
 
-// Routes that require SUPER_ADMIN role
+// Routes that require SUPER_ADMIN role (validated in actual routes)
 const adminRoutes = ["/admin", "/api/admin"];
 
-export async function middleware(req: NextRequest) {
+export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Check if this is a protected route
@@ -24,34 +23,18 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Get session token
-  const token = await getToken({
-    req,
-    secret: process.env.AUTH_SECRET,
-  });
+  // Check for session cookie
+  const sessionToken = req.cookies.get(SESSION_COOKIE_NAME)?.value;
 
-  // Check if user is authenticated (for all protected routes)
-  if (!token) {
+  // Check if user has a session token (full validation happens in routes)
+  if (!sessionToken) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
+    loginUrl.searchParams.set("error", "SessionRequired");
     return NextResponse.redirect(loginUrl);
-  }
-
-  // For admin routes, also check for SUPER_ADMIN role
-  if (isAdminRoute) {
-    if (token.role !== "SUPER_ADMIN") {
-      if (pathname.startsWith("/api/")) {
-        return NextResponse.json(
-          { error: "Forbidden - Super admin access required" },
-          { status: 403 }
-        );
-      }
-      const accessDeniedUrl = new URL("/access-denied", req.url);
-      return NextResponse.redirect(accessDeniedUrl);
-    }
   }
 
   return NextResponse.next();

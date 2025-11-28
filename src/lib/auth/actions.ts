@@ -1,12 +1,10 @@
 "use server";
 
-import { signIn, signOut } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { redirect } from "next/navigation";
-import { isRedirectError } from "next/dist/client/components/redirect";
-import { AuthError } from "next-auth";
+import { createSession, deleteSession } from "./session";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -45,8 +43,9 @@ export async function register(formData: FormData) {
   const hashedPassword = await bcrypt.hash(password, 12);
 
   // Create user
+  let user;
   try {
-    await db.user.create({
+    user = await db.user.create({
       data: {
         name,
         email,
@@ -57,26 +56,10 @@ export async function register(formData: FormData) {
     return { error: { _form: ["Something went wrong. Please try again."] } };
   }
 
-  // Auto sign in after registration
-  try {
-    await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-  } catch (error) {
-    // Let redirect errors pass through
-    if (isRedirectError(error)) {
-      throw error;
-    }
-    if (error instanceof AuthError) {
-      return { error: { _form: ["Account created but login failed. Please try logging in."] } };
-    }
-    console.error("Registration sign-in error:", error);
-    return { error: { _form: ["Account created but login failed. Please try logging in."] } };
-  }
+  // Create session
+  await createSession(user.id);
 
-  // Redirect after successful login
+  // Redirect after successful registration
   redirect("/dashboard");
 }
 
@@ -93,38 +76,32 @@ export async function login(formData: FormData, callbackUrl?: string) {
   const { email, password } = validatedFields.data;
   const redirectTo = callbackUrl || "/dashboard";
 
-  try {
-    // Let NextAuth handle the redirect server-side
-    await signIn("credentials", {
-      email,
-      password,
-      redirectTo,
-    });
-  } catch (error) {
-    // Let redirect errors pass through (this is the success case)
-    if (isRedirectError(error)) {
-      throw error;
-    }
-    if (error instanceof AuthError) {
-      switch (error.type) {
-        case "CredentialsSignin":
-          return { error: { _form: ["Invalid email or password"] } };
-        default:
-          return { error: { _form: ["Something went wrong. Please try again."] } };
-      }
-    }
-    console.error("Unexpected login error:", error);
-    return { error: { _form: ["Something went wrong. Please try again."] } };
-  }
-}
+  // Find user
+  const user = await db.user.findUnique({
+    where: { email },
+  });
 
-export async function loginWithGoogle(callbackUrl?: string) {
-  const redirectTo = callbackUrl || "/dashboard";
-  await signIn("google", { redirectTo });
+  if (!user || !user.password) {
+    return { error: { _form: ["Invalid email or password"] } };
+  }
+
+  // Verify password
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+
+  if (!isPasswordValid) {
+    return { error: { _form: ["Invalid email or password"] } };
+  }
+
+  // Create session
+  await createSession(user.id);
+
+  // Redirect after successful login
+  redirect(redirectTo);
 }
 
 export async function logout() {
-  await signOut({ redirectTo: "/" });
+  await deleteSession();
+  redirect("/");
 }
 
 // Password reset schemas
