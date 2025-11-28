@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect";
 import { AuthError } from "next-auth";
 
 const registerSchema = z.object({
@@ -64,10 +65,15 @@ export async function register(formData: FormData) {
       redirect: false,
     });
   } catch (error) {
+    // Let redirect errors pass through
+    if (isRedirectError(error)) {
+      throw error;
+    }
     if (error instanceof AuthError) {
       return { error: { _form: ["Account created but login failed. Please try logging in."] } };
     }
-    throw error;
+    console.error("Registration sign-in error:", error);
+    return { error: { _form: ["Account created but login failed. Please try logging in."] } };
   }
 
   // Redirect after successful login
@@ -94,6 +100,10 @@ export async function login(formData: FormData, callbackUrl?: string) {
       redirect: false,
     });
   } catch (error) {
+    // Let redirect errors pass through (Next.js internal redirects)
+    if (isRedirectError(error)) {
+      throw error;
+    }
     if (error instanceof AuthError) {
       switch (error.type) {
         case "CredentialsSignin":
@@ -102,7 +112,9 @@ export async function login(formData: FormData, callbackUrl?: string) {
           return { error: { _form: ["Something went wrong. Please try again."] } };
       }
     }
-    throw error;
+    // Log unexpected errors
+    console.error("Unexpected login error:", error);
+    return { error: { _form: ["Something went wrong. Please try again."] } };
   }
 
   // Return success with redirect URL for client-side navigation

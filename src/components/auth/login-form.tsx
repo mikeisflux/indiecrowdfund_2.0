@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { login, loginWithGoogle } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +16,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const { update: updateSession } = useSession();
-  const callbackUrl = searchParams.get("callbackUrl") || undefined;
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
   // Check if Google OAuth is configured and handle URL error params
   useEffect(() => {
@@ -45,12 +42,6 @@ export function LoginForm() {
       }
     }
 
-    // Check for custom error message from middleware
-    const customError = searchParams.get("error");
-    if (!urlError && customError) {
-      setError(customError);
-    }
-
     fetch("/api/auth/config")
       .then((res) => res.json())
       .then((data) => setGoogleEnabled(data.providers?.google ?? false))
@@ -73,13 +64,11 @@ export function LoginForm() {
         }
         setIsLoading(false);
       } else if (result?.success) {
-        // Update the session to reflect the new authentication state
-        await updateSession();
-        // Client-side redirect after successful login
-        router.push(result.redirectTo || "/dashboard");
-        router.refresh();
+        // Use hard redirect for reliable session hydration
+        window.location.href = result.redirectTo || "/dashboard";
       }
-    } catch {
+    } catch (err) {
+      console.error("Login error:", err);
       setError("Something went wrong. Please try again.");
       setIsLoading(false);
     }
