@@ -534,7 +534,7 @@ export default function EmailPage() {
         )}
 
         {/* Email List */}
-        <div className="flex-1 min-w-0">
+        <div className="w-80 flex-shrink-0">
           <Card className="h-full flex flex-col">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between gap-4">
@@ -648,7 +648,7 @@ export default function EmailPage() {
 
         {/* Email Detail */}
         {selectedEmail && (
-          <div className="w-96 flex-shrink-0">
+          <div className="flex-1 min-w-0">
             <Card className="h-full flex flex-col">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
