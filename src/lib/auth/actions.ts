@@ -74,7 +74,6 @@ export async function login(formData: FormData, callbackUrl?: string) {
   }
 
   const { email, password } = validatedFields.data;
-  const redirectTo = callbackUrl || "/dashboard";
 
   // Find user
   const user = await db.user.findUnique({
@@ -94,6 +93,14 @@ export async function login(formData: FormData, callbackUrl?: string) {
 
   // Create session
   await createSession(user.id);
+
+  // Determine redirect destination based on role
+  let redirectTo = callbackUrl || "/dashboard";
+
+  // SUPER_ADMIN goes to admin panel by default
+  if (user.role === "SUPER_ADMIN" && !callbackUrl) {
+    redirectTo = "/admin";
+  }
 
   // Redirect after successful login
   redirect(redirectTo);
