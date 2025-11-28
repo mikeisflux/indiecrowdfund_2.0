@@ -110,6 +110,80 @@ export default function MediaPage() {
     retentionDays: 30,
   });
 
+  // Upload state
+  const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [uploadFolder, setUploadFolder] = useState("uploads");
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      setUploadingFiles(Array.from(files));
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files) {
+      setUploadingFiles(Array.from(files));
+    }
+  };
+
+  const uploadFiles = async () => {
+    if (uploadingFiles.length === 0) return;
+
+    for (const file of uploadingFiles) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", uploadFolder);
+
+      try {
+        setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
+
+        const response = await fetch("/api/admin/media/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok) {
+          setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }));
+        } else {
+          const error = await response.json();
+          console.error(`Failed to upload ${file.name}:`, error);
+          setUploadProgress((prev) => ({ ...prev, [file.name]: -1 }));
+        }
+      } catch (error) {
+        console.error(`Error uploading ${file.name}:`, error);
+        setUploadProgress((prev) => ({ ...prev, [file.name]: -1 }));
+      }
+    }
+
+    // Refresh media list after upload
+    setTimeout(() => {
+      setUploadingFiles([]);
+      setUploadProgress({});
+      setShowUploadDialog(false);
+      fetchMedia();
+    }, 1000);
+  };
+
+  const removeUploadFile = (index: number) => {
+    setUploadingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const fetchMedia = useCallback(async (page = 1) => {
     try {
       setLoading(true);
@@ -765,24 +839,120 @@ export default function MediaPage() {
 
       {/* Upload Dialog */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Upload Media</DialogTitle>
-            <DialogDescription>Upload images, videos, or documents</DialogDescription>
+            <DialogDescription>Upload images, videos, or documents (max 50MB each)</DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <div className="rounded-lg border-2 border-dashed border-zinc-300 p-12 text-center">
-              <Upload className="h-12 w-12 mx-auto text-zinc-400 mb-4" />
-              <p className="text-lg font-medium mb-1">Drop files here</p>
-              <p className="text-sm text-zinc-500 mb-4">or click to browse</p>
-              <Button variant="outline">Browse Files</Button>
+          <div className="py-4 space-y-4">
+            {/* Folder selection */}
+            <div className="space-y-2">
+              <Label>Upload to folder</Label>
+              <Select value={uploadFolder} onValueChange={setUploadFolder}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="uploads">General Uploads</SelectItem>
+                  <SelectItem value="projects">Project Media</SelectItem>
+                  <SelectItem value="profiles">Profile Images</SelectItem>
+                  <SelectItem value="branding">Branding Assets</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Drop zone */}
+            <div
+              className={`rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+                isDragging
+                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
+                  : "border-zinc-300 dark:border-zinc-700"
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <Upload className={`h-10 w-10 mx-auto mb-3 ${isDragging ? "text-emerald-500" : "text-zinc-400"}`} />
+              <p className="text-sm font-medium mb-1">Drop files here</p>
+              <p className="text-xs text-zinc-500 mb-3">or click to browse</p>
+              <label>
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  accept="image/*,video/*,.pdf,.doc,.docx"
+                />
+                <Button variant="outline" size="sm" asChild>
+                  <span className="cursor-pointer">Browse Files</span>
+                </Button>
+              </label>
+            </div>
+
+            {/* Selected files */}
+            {uploadingFiles.length > 0 && (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                <Label>Selected files ({uploadingFiles.length})</Label>
+                {uploadingFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 rounded bg-zinc-50 dark:bg-zinc-800"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {getFileIcon(file.type)}
+                      <span className="text-sm truncate">{file.name}</span>
+                      <span className="text-xs text-zinc-500">({formatFileSize(file.size)})</span>
+                    </div>
+                    {uploadProgress[file.name] !== undefined ? (
+                      uploadProgress[file.name] === 100 ? (
+                        <Badge variant="default" className="bg-emerald-500">Done</Badge>
+                      ) : uploadProgress[file.name] === -1 ? (
+                        <Badge variant="destructive">Failed</Badge>
+                      ) : (
+                        <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                      )
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeUploadFile(index)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUploadDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowUploadDialog(false);
+                setUploadingFiles([]);
+                setUploadProgress({});
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={() => setShowUploadDialog(false)}>Upload</Button>
+            <Button
+              onClick={uploadFiles}
+              disabled={uploadingFiles.length === 0 || Object.keys(uploadProgress).length > 0}
+            >
+              {Object.keys(uploadProgress).length > 0 ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload {uploadingFiles.length > 0 ? `(${uploadingFiles.length})` : ""}
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

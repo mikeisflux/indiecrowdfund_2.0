@@ -1077,6 +1077,8 @@ model PlatformSettings {
   currency              String   @default("USD")
   platformFee           Float    @default(5)
   maintenanceMode       Boolean  @default(false)
+  logoUrl               String?
+  faviconUrl            String?
 
   // API Keys (encrypted in production)
   googlePlacesApiKey    String?
@@ -1114,11 +1116,15 @@ model PlatformSettings {
   // Social OAuth Settings
   facebookAppId         String?
   facebookAppSecret     String?
+  facebookPageAccessToken String?
   youtubeClientId       String?
   youtubeClientSecret   String?
   youtubeApiKey         String?
   twitterApiKey         String?
   twitterApiSecret      String?
+  twitterBearerToken    String?
+  twitterAccessToken    String?
+  twitterAccessSecret   String?
 
   // Image Generation API Keys
   dalleApiKey           String?

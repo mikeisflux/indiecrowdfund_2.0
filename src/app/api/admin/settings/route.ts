@@ -58,10 +58,14 @@ export async function GET() {
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
       googlePlacesApiKey: settings.googlePlacesApiKey ? "••••••••" : null,
       facebookAppSecret: settings.facebookAppSecret ? "••••••••" : null,
+      facebookPageAccessToken: settings.facebookPageAccessToken ? "••••••••" : null,
       youtubeClientSecret: settings.youtubeClientSecret ? "••••••••" : null,
       youtubeApiKey: settings.youtubeApiKey ? "••••••••" : null,
       twitterApiKey: settings.twitterApiKey ? "••••••••" : null,
       twitterApiSecret: settings.twitterApiSecret ? "••••••••" : null,
+      twitterBearerToken: settings.twitterBearerToken ? "••••••••" : null,
+      twitterAccessToken: settings.twitterAccessToken ? "••••••••" : null,
+      twitterAccessSecret: settings.twitterAccessSecret ? "••••••••" : null,
       dalleApiKey: settings.dalleApiKey ? "••••••••" : null,
       stabilityApiKey: settings.stabilityApiKey ? "••••••••" : null,
     };
@@ -103,7 +107,8 @@ export async function PATCH(req: NextRequest) {
     const allowedFields: Record<string, string[]> = {
       general: [
         "siteName", "siteDescription", "supportEmail", "timezone",
-        "currency", "platformFee", "maintenanceMode", "googlePlacesApiKey"
+        "currency", "platformFee", "maintenanceMode", "googlePlacesApiKey",
+        "logoUrl", "faviconUrl"
       ],
       payments: [
         "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret",
@@ -115,8 +120,10 @@ export async function PATCH(req: NextRequest) {
       ],
       social: [
         "twitterHandle", "facebookUrl", "instagramHandle", "youtubeUrl", "discordUrl",
-        "facebookAppId", "facebookAppSecret", "youtubeClientId", "youtubeClientSecret",
-        "youtubeApiKey", "twitterApiKey", "twitterApiSecret", "dalleApiKey", "stabilityApiKey"
+        "facebookAppId", "facebookAppSecret", "facebookPageAccessToken",
+        "youtubeClientId", "youtubeClientSecret", "youtubeApiKey",
+        "twitterApiKey", "twitterApiSecret", "twitterBearerToken", "twitterAccessToken", "twitterAccessSecret",
+        "dalleApiKey", "stabilityApiKey"
       ],
       ai: [
         "aiProvider", "openaiApiKey", "anthropicApiKey",
@@ -183,10 +190,14 @@ export async function PATCH(req: NextRequest) {
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
       googlePlacesApiKey: settings.googlePlacesApiKey ? "••••••••" : null,
       facebookAppSecret: settings.facebookAppSecret ? "••••••••" : null,
+      facebookPageAccessToken: settings.facebookPageAccessToken ? "••••••••" : null,
       youtubeClientSecret: settings.youtubeClientSecret ? "••••••••" : null,
       youtubeApiKey: settings.youtubeApiKey ? "••••••••" : null,
       twitterApiKey: settings.twitterApiKey ? "••••••••" : null,
       twitterApiSecret: settings.twitterApiSecret ? "••••••••" : null,
+      twitterBearerToken: settings.twitterBearerToken ? "••••••••" : null,
+      twitterAccessToken: settings.twitterAccessToken ? "••••••••" : null,
+      twitterAccessSecret: settings.twitterAccessSecret ? "••••••••" : null,
       dalleApiKey: settings.dalleApiKey ? "••••••••" : null,
       stabilityApiKey: settings.stabilityApiKey ? "••••••••" : null,
     };

@@ -96,11 +96,28 @@ interface PlatformSettings {
   sendgridApiKey: string | null;
   mailgunApiKey: string | null;
   mailgunDomain: string | null;
+  // Social profile URLs
   twitterHandle: string | null;
   facebookUrl: string | null;
   instagramHandle: string | null;
   youtubeUrl: string | null;
   discordUrl: string | null;
+  // Social OAuth API Keys
+  facebookAppId: string | null;
+  facebookAppSecret: string | null;
+  facebookPageAccessToken: string | null;
+  youtubeClientId: string | null;
+  youtubeClientSecret: string | null;
+  youtubeApiKey: string | null;
+  twitterApiKey: string | null;
+  twitterApiSecret: string | null;
+  twitterBearerToken: string | null;
+  twitterAccessToken: string | null;
+  twitterAccessSecret: string | null;
+  // Image generation API keys
+  dalleApiKey: string | null;
+  stabilityApiKey: string | null;
+  // AI settings
   aiProvider: string;
   openaiApiKey: string | null;
   anthropicApiKey: string | null;
@@ -151,9 +168,11 @@ export default function SettingsPage() {
     stripeSecretKey: "",
     stripeWebhookSecret: "",
     ccbillEnabled: false,
+    ccbillClientAccountNo: "",
     ccbillSubAccount: "",
     ccbillFlexId: "",
     ccbillSalt: "",
+    // Local UI settings (not in DB yet)
     autoPayouts: true,
     payoutThreshold: "100",
     payoutSchedule: "weekly",
@@ -161,9 +180,18 @@ export default function SettingsPage() {
 
   const [emailSettings, setEmailSettings] = useState({
     provider: "smtp",
-    sendgridApiKey: "",
+    // SMTP settings
+    smtpHost: "",
+    smtpPort: "587",
+    smtpUser: "",
+    smtpPassword: "",
     fromEmail: "",
     fromName: "",
+    // Third-party providers
+    sendgridApiKey: "",
+    mailgunApiKey: "",
+    mailgunDomain: "",
+    // Local UI settings (not in DB)
     replyToEmail: "",
     emailVerificationRequired: true,
     welcomeEmailEnabled: true,
@@ -265,6 +293,7 @@ export default function SettingsPage() {
         stripeSecretKey: settings.stripeSecretKey || "",
         stripeWebhookSecret: settings.stripeWebhookSecret || "",
         ccbillEnabled: settings.ccbillEnabled || false,
+        ccbillClientAccountNo: settings.ccbillClientAccountNo || "",
         ccbillSubAccount: settings.ccbillSubaccount || "",
         ccbillFlexId: settings.ccbillFormName || "",
         ccbillSalt: settings.ccbillSalt || "",
@@ -273,9 +302,15 @@ export default function SettingsPage() {
       setEmailSettings((prev) => ({
         ...prev,
         provider: settings.emailProvider || "smtp",
-        sendgridApiKey: settings.sendgridApiKey || "",
+        smtpHost: settings.smtpHost || "",
+        smtpPort: String(settings.smtpPort || 587),
+        smtpUser: settings.smtpUser || "",
+        smtpPassword: settings.smtpPassword || "",
         fromEmail: settings.smtpFromEmail || "",
         fromName: settings.smtpFromName || "",
+        sendgridApiKey: settings.sendgridApiKey || "",
+        mailgunApiKey: settings.mailgunApiKey || "",
+        mailgunDomain: settings.mailgunDomain || "",
       }));
 
       setSecuritySettings((prev) => ({
@@ -299,15 +334,35 @@ export default function SettingsPage() {
         marketingCopy: settings.aiContentGeneration || false,
       }));
 
+      // Set enabled flags based on whether API keys exist
+      // Note: API returns masked values like "••••••••" for existing secrets
+      const hasFacebookKeys = !!settings.facebookAppId && settings.facebookAppId !== "";
+      const hasYoutubeKeys = !!settings.youtubeClientId && settings.youtubeClientId !== "";
+      const hasTwitterKeys = !!settings.twitterApiKey && settings.twitterApiKey !== "";
+      const hasDalleKey = !!settings.dalleApiKey && settings.dalleApiKey !== "";
+      const hasStabilityKey = !!settings.stabilityApiKey && settings.stabilityApiKey !== "";
+
       setSocialSettings((prev) => ({
         ...prev,
+        // Set enabled flags based on existing keys
+        facebookEnabled: hasFacebookKeys,
+        instagramEnabled: hasFacebookKeys, // Instagram uses same Facebook OAuth
+        youtubeEnabled: hasYoutubeKeys,
+        twitterEnabled: hasTwitterKeys,
+        dalleEnabled: hasDalleKey,
+        stabilityEnabled: hasStabilityKey,
+        // API keys (may be masked with "••••••••")
         facebookAppId: settings.facebookAppId || "",
         facebookAppSecret: settings.facebookAppSecret || "",
+        facebookPageAccessToken: settings.facebookPageAccessToken || "",
         youtubeClientId: settings.youtubeClientId || "",
         youtubeClientSecret: settings.youtubeClientSecret || "",
         youtubeApiKey: settings.youtubeApiKey || "",
         twitterApiKey: settings.twitterApiKey || "",
         twitterApiSecret: settings.twitterApiSecret || "",
+        twitterBearerToken: settings.twitterBearerToken || "",
+        twitterAccessToken: settings.twitterAccessToken || "",
+        twitterAccessSecret: settings.twitterAccessSecret || "",
         dalleApiKey: settings.dalleApiKey || "",
         stabilityApiKey: settings.stabilityApiKey || "",
       }));
@@ -420,6 +475,7 @@ export default function SettingsPage() {
             stripeSecretKey: paymentSettings.stripeSecretKey,
             stripeWebhookSecret: paymentSettings.stripeWebhookSecret,
             ccbillEnabled: paymentSettings.ccbillEnabled,
+            ccbillClientAccountNo: paymentSettings.ccbillClientAccountNo,
             ccbillSubaccount: paymentSettings.ccbillSubAccount,
             ccbillFormName: paymentSettings.ccbillFlexId,
             ccbillSalt: paymentSettings.ccbillSalt,
@@ -429,9 +485,15 @@ export default function SettingsPage() {
           section = "email";
           data = {
             emailProvider: emailSettings.provider,
-            sendgridApiKey: emailSettings.sendgridApiKey,
+            smtpHost: emailSettings.smtpHost,
+            smtpPort: parseInt(emailSettings.smtpPort) || 587,
+            smtpUser: emailSettings.smtpUser,
+            smtpPassword: emailSettings.smtpPassword,
             smtpFromEmail: emailSettings.fromEmail,
             smtpFromName: emailSettings.fromName,
+            sendgridApiKey: emailSettings.sendgridApiKey,
+            mailgunApiKey: emailSettings.mailgunApiKey,
+            mailgunDomain: emailSettings.mailgunDomain,
           };
           break;
         case "social":
@@ -439,11 +501,15 @@ export default function SettingsPage() {
           data = {
             facebookAppId: socialSettings.facebookAppId,
             facebookAppSecret: socialSettings.facebookAppSecret,
+            facebookPageAccessToken: socialSettings.facebookPageAccessToken,
             youtubeClientId: socialSettings.youtubeClientId,
             youtubeClientSecret: socialSettings.youtubeClientSecret,
             youtubeApiKey: socialSettings.youtubeApiKey,
             twitterApiKey: socialSettings.twitterApiKey,
             twitterApiSecret: socialSettings.twitterApiSecret,
+            twitterBearerToken: socialSettings.twitterBearerToken,
+            twitterAccessToken: socialSettings.twitterAccessToken,
+            twitterAccessSecret: socialSettings.twitterAccessSecret,
             dalleApiKey: socialSettings.dalleApiKey,
             stabilityApiKey: socialSettings.stabilityApiKey,
           };
