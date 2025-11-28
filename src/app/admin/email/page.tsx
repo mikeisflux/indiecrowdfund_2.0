@@ -56,7 +56,12 @@ export default function EmailPage() {
           smtpFromEmail: data.settings.smtpFromEmail || "",
           smtpFromName: data.settings.smtpFromName || "",
         });
-        setIsConfigured(!!data.settings.sendgridApiKey && data.settings.sendgridApiKey !== "••••••••");
+        // API keys are masked to "••••••••" when configured, so check for that
+        const hasApiKey = data.settings.sendgridApiKey === "••••••••" ||
+          (data.settings.sendgridApiKey && data.settings.sendgridApiKey.length > 10);
+        const hasSmtpConfig = data.settings.emailProvider === "smtp" &&
+          data.settings.smtpHost && data.settings.smtpUser;
+        setIsConfigured(hasApiKey || hasSmtpConfig);
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
