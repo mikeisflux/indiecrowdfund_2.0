@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
@@ -42,30 +42,56 @@ import {
   Lock,
   Loader2,
 } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
-const navigation = [
+// Types for sidebar stats
+interface SidebarStats {
+  users: string;
+  projects: string;
+  moderation: number;
+  payouts: number;
+  notifications: number;
+  media: string;
+}
+
+// Navigation item type
+interface NavItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  badgeKey?: keyof SidebarStats;
+  staticBadge?: string;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+// Base navigation structure - badges will be filled dynamically from stats state
+const navigation: NavSection[] = [
   {
     title: "Overview",
     items: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-      { name: "AI Marketing", href: "/admin/ai-marketing", icon: Zap, badge: "AI" },
+      { name: "AI Marketing", href: "/admin/ai-marketing", icon: Zap, staticBadge: "AI" },
     ],
   },
   {
     title: "Management",
     items: [
-      { name: "Users", href: "/admin/users", icon: Users, badge: "2.4k" },
-      { name: "Projects", href: "/admin/projects", icon: FolderKanban, badge: "156" },
-      { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
-      { name: "Moderation", href: "/admin/moderation", icon: Shield, badge: "23" },
+      { name: "Users", href: "/admin/users", icon: Users, badgeKey: "users" },
+      { name: "Projects", href: "/admin/projects", icon: FolderKanban, badgeKey: "projects" },
+      { name: "Payouts", href: "/admin/payouts", icon: DollarSign, badgeKey: "payouts" },
+      { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "moderation" },
     ],
   },
   {
     title: "Communication",
     items: [
       { name: "Email Center", href: "/admin/email", icon: Mail },
-      { name: "Notifications", href: "/admin/notifications", icon: Bell },
+      { name: "Notifications", href: "/admin/notifications", icon: Bell, badgeKey: "notifications" },
     ],
   },
   {
@@ -73,7 +99,7 @@ const navigation = [
     items: [
       { name: "Page Builder", href: "/admin/page-builder", icon: FileEdit },
       { name: "Themes & Styles", href: "/admin/themes", icon: Palette },
-      { name: "Media Library", href: "/admin/media", icon: Image },
+      { name: "Media Library", href: "/admin/media", icon: Image, badgeKey: "media" },
     ],
   },
   {
@@ -94,6 +120,30 @@ export default function AdminLayout({
   const router = useRouter();
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [stats, setStats] = useState<SidebarStats | null>(null);
+
+  // Fetch sidebar stats
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/sidebar-stats");
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch sidebar stats:", error);
+    }
+  }, []);
+
+  // Fetch stats on mount and periodically refresh
+  useEffect(() => {
+    if (session?.user?.role === "SUPER_ADMIN") {
+      fetchStats();
+      // Refresh stats every 30 seconds
+      const interval = setInterval(fetchStats, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [session, fetchStats]);
 
   // Client-side role check (backup for middleware)
   useEffect(() => {
@@ -183,6 +233,12 @@ export default function AdminLayout({
                 <div className="space-y-1">
                   {section.items.map((item) => {
                     const isActive = pathname === item.href;
+                    // Get badge value - either static or from stats
+                    const badgeValue = item.staticBadge ||
+                      (item.badgeKey && stats ? stats[item.badgeKey] : null);
+                    // Only show badge if there's a value and it's not 0
+                    const showBadge = badgeValue !== null && badgeValue !== undefined && badgeValue !== 0 && badgeValue !== "0";
+
                     return (
                       <Link
                         key={item.name}
@@ -196,12 +252,12 @@ export default function AdminLayout({
                       >
                         <item.icon className={cn("h-5 w-5", isActive && "text-emerald-600")} />
                         <span className="flex-1">{item.name}</span>
-                        {item.badge && (
+                        {showBadge && (
                           <Badge
                             variant={isActive ? "default" : "secondary"}
                             className="text-xs"
                           >
-                            {item.badge}
+                            {badgeValue}
                           </Badge>
                         )}
                       </Link>
