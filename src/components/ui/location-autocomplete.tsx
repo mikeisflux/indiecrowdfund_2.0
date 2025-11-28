@@ -1,10 +1,12 @@
-/// <reference types="google.maps" />
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { MapPin, Loader2 } from "lucide-react";
+
+// Google Maps types
+type AutocompleteService = google.maps.places.AutocompleteService;
 
 interface LocationAutocompleteProps {
   value?: string;
@@ -37,7 +39,7 @@ export function LocationAutocomplete({
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
+  const autocompleteServiceRef = useRef<AutocompleteService | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load Google Maps script
