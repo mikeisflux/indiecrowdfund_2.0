@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Bell,
   Check,
@@ -20,8 +20,6 @@ import {
   UserPlus,
   FolderPlus,
   RefreshCw,
-  Filter,
-  Archive,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 

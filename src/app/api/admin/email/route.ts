@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
         sent: statusCounts[3],
         cancelled: statusCounts[4]
       },
-      emailLogsByType: emailLogStats.map(e => ({
+      emailLogsByType: emailLogStats.map((e: { type: string; _count: number }) => ({
         type: e.type,
         count: e._count
       }))

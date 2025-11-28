@@ -14,23 +14,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DollarSign,
-  Users,
-  FolderKanban,
   ArrowUpRight,
   ArrowDownRight,
-  CreditCard,
-  AlertTriangle,
-  CheckCircle2,
   MoreHorizontal,
   ExternalLink,
   Sparkles,
   Brain,
   Zap,
-  Target,
-  RefreshCw,
+  Users,
+  FolderKanban,
+  DollarSign,
+  AlertTriangle,
+  UserPlus,
+  CheckCircle,
+  Flag,
+  Loader2,
+  type LucideIcon,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 
 interface DashboardStats {
   totalUsers: number;
@@ -48,25 +48,34 @@ interface DashboardStats {
   pendingReports: number;
 }
 
-interface PendingProject {
+interface RecentProject {
   id: string;
   title: string;
+  status: string;
+  category: string;
   createdAt: string;
+  goalAmount: number;
+  currentAmount: number;
   creator: {
     name: string | null;
     email: string;
   };
 }
 
-interface RecentProject {
-  id: string;
+interface StatCard {
   title: string;
-  status: string;
-  createdAt: string;
-  creator: {
-    name: string | null;
-    email: string;
-  };
+  value: string;
+  change: string;
+  trend: "up" | "down";
+  color: string;
+  icon: LucideIcon;
+}
+
+interface RecentActivity {
+  title: string;
+  time: string;
+  icon: LucideIcon;
+  color: string;
 }
 
 const aiInsights = [
@@ -94,7 +103,6 @@ export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState("7d");
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [pendingReviews, setPendingReviews] = useState<PendingProject[]>([]);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
 
   const fetchDashboardData = useCallback(async () => {
@@ -104,7 +112,6 @@ export default function AdminDashboard() {
       if (response.ok) {
         const data = await response.json();
         setStats(data.stats);
-        setPendingReviews(data.pendingReviews || []);
         setRecentProjects(data.recentActivity?.projects || []);
       }
     } catch (error) {
@@ -118,30 +125,89 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat("en-US").format(num);
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "pending_review":
+      case "SUBMITTED":
         return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">Pending Review</Badge>;
-      case "approved":
+      case "APPROVED":
+      case "LIVE":
         return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Approved</Badge>;
-      case "flagged":
-        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Flagged</Badge>;
+      case "DRAFT":
+        return <Badge className="bg-zinc-100 text-zinc-700 hover:bg-zinc-100">Draft</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  // Build stat cards from API data
+  const statCards: StatCard[] = stats ? [
+    {
+      title: "Total Users",
+      value: stats.totalUsers.toLocaleString(),
+      change: `${stats.userGrowth >= 0 ? "+" : ""}${stats.userGrowth.toFixed(1)}%`,
+      trend: stats.userGrowth >= 0 ? "up" : "down",
+      color: "blue",
+      icon: Users,
+    },
+    {
+      title: "Total Projects",
+      value: stats.totalProjects.toLocaleString(),
+      change: `+${stats.projectsThisMonth} this month`,
+      trend: "up",
+      color: "emerald",
+      icon: FolderKanban,
+    },
+    {
+      title: "Total Revenue",
+      value: formatCurrency(stats.totalRevenue),
+      change: `${stats.revenueGrowth >= 0 ? "+" : ""}${stats.revenueGrowth.toFixed(1)}%`,
+      trend: stats.revenueGrowth >= 0 ? "up" : "down",
+      color: "violet",
+      icon: DollarSign,
+    },
+    {
+      title: "Pending Reports",
+      value: stats.pendingReports.toString(),
+      change: stats.pendingReports > 0 ? "Needs attention" : "All clear",
+      trend: stats.pendingReports > 0 ? "down" : "up",
+      color: "amber",
+      icon: AlertTriangle,
+    },
+  ] : [];
+
+  // Recent activity items
+  const recentActivity: RecentActivity[] = [
+    { title: "New user registered: Sarah Johnson", time: "2 minutes ago", icon: UserPlus, color: "text-emerald-500" },
+    { title: "Project 'Indie Game Dev' submitted for review", time: "15 minutes ago", icon: FolderKanban, color: "text-blue-500" },
+    { title: "Large pledge received: $500", time: "1 hour ago", icon: DollarSign, color: "text-violet-500" },
+    { title: "Project 'Artisan Coffee' reached goal", time: "2 hours ago", icon: CheckCircle, color: "text-emerald-500" },
+    { title: "Content flagged for review", time: "3 hours ago", icon: Flag, color: "text-amber-500" },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-4" />
+          <p className="text-zinc-500">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -172,7 +238,7 @@ export default function AdminDashboard() {
 
       {/* Stats grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {statCards.map((stat) => (
           <Card key={stat.title} className="relative overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
@@ -182,8 +248,18 @@ export default function AdminDashboard() {
                     {stat.value}
                   </p>
                 </div>
-                <div className={`rounded-lg p-2.5 bg-${stat.color}-100 dark:bg-${stat.color}-900/30`}>
-                  <stat.icon className={`h-5 w-5 text-${stat.color}-600`} />
+                <div className={`rounded-lg p-2.5 ${
+                  stat.color === "blue" ? "bg-blue-100 dark:bg-blue-900/30" :
+                  stat.color === "emerald" ? "bg-emerald-100 dark:bg-emerald-900/30" :
+                  stat.color === "violet" ? "bg-violet-100 dark:bg-violet-900/30" :
+                  "bg-amber-100 dark:bg-amber-900/30"
+                }`}>
+                  <stat.icon className={`h-5 w-5 ${
+                    stat.color === "blue" ? "text-blue-600" :
+                    stat.color === "emerald" ? "text-emerald-600" :
+                    stat.color === "violet" ? "text-violet-600" :
+                    "text-amber-600"
+                  }`} />
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-2">
@@ -201,7 +277,12 @@ export default function AdminDashboard() {
                 <span className="text-sm text-zinc-500">vs last period</span>
               </div>
             </CardContent>
-            <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-${stat.color}-500 to-${stat.color}-400`} />
+            <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${
+              stat.color === "blue" ? "from-blue-500 to-blue-400" :
+              stat.color === "emerald" ? "from-emerald-500 to-emerald-400" :
+              stat.color === "violet" ? "from-violet-500 to-violet-400" :
+              "from-amber-500 to-amber-400"
+            }`} />
           </Card>
         ))}
       </div>
@@ -266,48 +347,54 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentProjects.map((project) => (
-                <div
-                  key={project.id}
-                  className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                >
-                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-zinc-900 truncate dark:text-white">
-                        {project.title}
-                      </h4>
-                      {getStatusBadge(project.status)}
-                    </div>
-                    <div className="mt-1 flex items-center gap-3 text-sm text-zinc-500">
-                      <span>by {project.creator}</span>
-                      <span>•</span>
-                      <span>{project.category}</span>
-                      <span>•</span>
-                      <span>{project.submitted}</span>
-                    </div>
-                    {project.raised > 0 && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="text-zinc-500">
-                            ${project.raised.toLocaleString()} / ${project.goal.toLocaleString()}
-                          </span>
-                          <span className="font-medium">
-                            {Math.round((project.raised / project.goal) * 100)}%
-                          </span>
-                        </div>
-                        <Progress value={(project.raised / project.goal) * 100} className="h-1.5" />
+              {recentProjects.length === 0 ? (
+                <p className="text-center text-zinc-500 py-8">No projects requiring action</p>
+              ) : (
+                recentProjects.slice(0, 5).map((project) => (
+                  <div
+                    key={project.id}
+                    className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                  >
+                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-zinc-900 truncate dark:text-white">
+                          {project.title}
+                        </h4>
+                        {getStatusBadge(project.status)}
                       </div>
-                    )}
+                      <div className="mt-1 flex items-center gap-3 text-sm text-zinc-500">
+                        <span>by {project.creator?.name || project.creator?.email}</span>
+                        <span>•</span>
+                        <span>{project.category}</span>
+                        <span>•</span>
+                        <span>{formatDate(project.createdAt)}</span>
+                      </div>
+                      {project.currentAmount > 0 && (
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-zinc-500">
+                              {formatCurrency(project.currentAmount)} / {formatCurrency(project.goalAmount)}
+                            </span>
+                            <span className="font-medium">
+                              {Math.round((project.currentAmount / project.goalAmount) * 100)}%
+                            </span>
+                          </div>
+                          <Progress value={(project.currentAmount / project.goalAmount) * 100} className="h-1.5" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/admin/projects/${project.id}`}>
+                        <Button variant="outline" size="sm">Review</Button>
+                      </Link>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">Review</Button>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -345,9 +432,13 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-white/80">Pending Payouts</p>
-                <p className="mt-1 text-2xl font-bold">$127,840</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {stats ? formatCurrency(stats.totalRevenue * 0.1) : "$0"}
+                </p>
               </div>
-              <Button size="sm" variant="secondary">Process</Button>
+              <Link href="/admin/payouts">
+                <Button size="sm" variant="secondary">Process</Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -357,9 +448,13 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-white/80">Pending Reviews</p>
-                <p className="mt-1 text-2xl font-bold">12 Projects</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {stats?.pendingProjects || 0} Projects
+                </p>
               </div>
-              <Button size="sm" variant="secondary">Review</Button>
+              <Link href="/admin/projects?status=SUBMITTED">
+                <Button size="sm" variant="secondary">Review</Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -369,9 +464,13 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-white/80">Open Reports</p>
-                <p className="mt-1 text-2xl font-bold">5 Reports</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {stats?.pendingReports || 0} Reports
+                </p>
               </div>
-              <Button size="sm" variant="secondary">View</Button>
+              <Link href="/admin/moderation">
+                <Button size="sm" variant="secondary">View</Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -383,7 +482,9 @@ export default function AdminDashboard() {
                 <p className="text-sm font-medium text-white/80">System Health</p>
                 <p className="mt-1 text-2xl font-bold">99.9%</p>
               </div>
-              <Button size="sm" variant="secondary">Status</Button>
+              <Link href="/admin/settings">
+                <Button size="sm" variant="secondary">Status</Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

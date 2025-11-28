@@ -5,6 +5,31 @@ import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
+// User role type (matches Prisma schema)
+type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
+
+// Extend the JWT and Session types to include role
+declare module "next-auth" {
+  interface User {
+    role?: UserRole;
+  }
+  interface Session {
+    user: {
+      id: string;
+      email: string;
+      name?: string | null;
+      image?: string | null;
+      role?: UserRole;
+    };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    role?: UserRole;
+  }
+}
+
 const nextAuth = NextAuth({
   adapter: PrismaAdapter(db),
   session: {
@@ -52,6 +77,7 @@ const nextAuth = NextAuth({
           email: user.email,
           name: user.name,
           image: user.image,
+          role: user.role,
         };
       },
     }),
@@ -60,12 +86,25 @@ const nextAuth = NextAuth({
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
+        session.user.role = token.role;
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.sub = user.id;
+        token.role = user.role;
+      }
+      // Fetch role from database if not present (e.g., Google OAuth users)
+      // or on session update
+      if (token.sub && (!token.role || trigger === "update")) {
+        const dbUser = await db.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+        }
       }
       return token;
     },

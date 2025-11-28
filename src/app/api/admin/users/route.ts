@@ -150,7 +150,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    let updateData: Record<string, unknown> = {};
+    const updateData: Record<string, unknown> = {};
 
     switch (action) {
       case "UPDATE_ROLE":

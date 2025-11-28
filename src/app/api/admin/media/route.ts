@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
         videos: stats[3],
         documents: stats[4]
       },
-      folders: folders.map(f => ({
+      folders: folders.map((f: { folder: string; _count: number }) => ({
         name: f.folder,
         count: f._count
       }))
