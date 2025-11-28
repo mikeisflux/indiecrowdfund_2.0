@@ -781,6 +781,11 @@ export default function TermsPage() {
                     Some projects may not be completed despite good-faith efforts.
                   </p>
 
+                  <h3 className="text-xl font-semibold mt-8 mb-4">F. Previous History</h3>
+                  <p className="mb-6">
+                    Your previous history on other crowdfunding sites may be taken into account. We reserve the right to refuse service to anyone, at any time, for any reason.
+                  </p>
+
                   <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-6 mt-8">
                     <p className="font-semibold text-lg mb-0">
                       By pledging, you agree you understand these risks.
