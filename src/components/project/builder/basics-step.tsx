@@ -16,10 +16,38 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Calendar, Lightbulb } from "lucide-react";
+import { Calendar, Lightbulb, Upload, Trash2, Video } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+
+// Helper to extract video embed URL from YouTube or Vimeo links
+function getVideoEmbedUrl(url: string): string | null {
+  if (!url) return null;
+
+  // YouTube patterns
+  const youtubeRegex = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const youtubeMatch = url.match(youtubeRegex);
+  if (youtubeMatch) {
+    return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+  }
+
+  // Vimeo patterns
+  const vimeoRegex = /(?:vimeo\.com\/)(\d+)/;
+  const vimeoMatch = url.match(vimeoRegex);
+  if (vimeoMatch) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+
+  return null;
+}
 
 export function BasicsStep() {
   const { basics, updateBasics } = useProjectStore();
+
+  // Get video embed URL
+  const videoEmbedUrl = useMemo(() => {
+    return getVideoEmbedUrl(basics.videoUrl || "");
+  }, [basics.videoUrl]);
 
   // Get subcategories for the selected primary category
   const primarySubcategories = useMemo(() => {
@@ -215,18 +243,90 @@ export function BasicsStep() {
         />
       </div>
 
-      {/* Video URL */}
-      <div className="space-y-2">
-        <Label htmlFor="videoUrl">Project Video (optional)</Label>
-        <Input
-          id="videoUrl"
-          placeholder="YouTube or Vimeo URL"
-          value={basics.videoUrl || ""}
-          onChange={(e) => updateBasics({ videoUrl: e.target.value })}
-        />
-        <p className="text-xs text-muted-foreground">
-          Videos help increase project success rates
-        </p>
+      {/* Project Video Section */}
+      <div className="grid gap-6 md:grid-cols-[300px_1fr] items-start rounded-lg border bg-card p-6">
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold">Project video (optional)</h3>
+          <p className="text-sm text-muted-foreground">
+            Add a video that describes your project.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Tell people what you&apos;re raising funds to do, how you plan to make it happen, who you are, and why you care about this project.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            After you&apos;ve added your video, use our editor to add captions and subtitles so your project is more accessible to everyone.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {/* Video Preview or Upload Area */}
+          {videoEmbedUrl ? (
+            <div className="space-y-3">
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
+                <iframe
+                  src={videoEmbedUrl}
+                  className="absolute inset-0 w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                <div className="flex items-center gap-2">
+                  <Switch id="captions" />
+                  <Label htmlFor="captions" className="text-sm font-normal">Add captions</Label>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "text";
+                    const url = prompt("Enter YouTube or Vimeo URL:", basics.videoUrl || "");
+                    if (url !== null) {
+                      updateBasics({ videoUrl: url });
+                    }
+                  }}
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => updateBasics({ videoUrl: "" })}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 p-6">
+                <Video className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <Input
+                  id="videoUrl"
+                  placeholder="Paste YouTube or Vimeo URL"
+                  value={basics.videoUrl || ""}
+                  onChange={(e) => updateBasics({ videoUrl: e.target.value })}
+                  className="max-w-sm"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Supports YouTube and Vimeo links
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Video Tip */}
+          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+            <Lightbulb className="h-4 w-4 flex-shrink-0" />
+            <span>
+              80% of successful projects have a video. Make a great one, regardless of your budget.{" "}
+              <a href="#" className="font-medium underline hover:no-underline">
+                Learn more...
+              </a>
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Funding Goal */}
