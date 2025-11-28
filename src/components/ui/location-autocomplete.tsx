@@ -1,3 +1,4 @@
+/// <reference types="@types/google.maps" />
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -78,11 +79,12 @@ export function LocationAutocomplete({
     }
   }, [isGoogleLoaded]);
 
-  // Sync with external value changes
+  // Sync with external value changes (intentionally only depends on `value` prop)
   useEffect(() => {
     if (value !== inputValue) {
       setInputValue(value || "");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   // Close dropdown when clicking outside
