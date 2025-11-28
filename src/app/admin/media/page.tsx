@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Image as ImageIcon,
   Upload,
-  Download,
   Trash2,
   Search,
   Filter,
@@ -89,7 +89,6 @@ export default function MediaPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [folderFilter, setFolderFilter] = useState("all");
-  const [sortOrder, setSortOrder] = useState("newest");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
@@ -452,12 +451,13 @@ export default function MediaPage() {
                     </Badge>
                   </div>
 
-                  <div className="aspect-square rounded bg-zinc-100 mb-2 flex items-center justify-center dark:bg-zinc-800 overflow-hidden">
+                  <div className="aspect-square rounded bg-zinc-100 mb-2 flex items-center justify-center dark:bg-zinc-800 overflow-hidden relative">
                     {file.thumbnailUrl || (file.mimeType.startsWith("image") && file.url) ? (
-                      <img
+                      <Image
                         src={file.thumbnailUrl || file.url}
                         alt={file.altText || file.originalName}
-                        className="h-full w-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                     ) : (
                       getFileIcon(file.mimeType)
@@ -536,12 +536,13 @@ export default function MediaPage() {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded bg-zinc-100 flex items-center justify-center dark:bg-zinc-700 overflow-hidden">
+                          <div className="h-8 w-8 rounded bg-zinc-100 flex items-center justify-center dark:bg-zinc-700 overflow-hidden relative">
                             {file.thumbnailUrl || (file.mimeType.startsWith("image") && file.url) ? (
-                              <img
+                              <Image
                                 src={file.thumbnailUrl || file.url}
                                 alt={file.altText || file.originalName}
-                                className="h-full w-full object-cover"
+                                fill
+                                className="object-cover"
                               />
                             ) : (
                               getFileIcon(file.mimeType)

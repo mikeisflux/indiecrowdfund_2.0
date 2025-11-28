@@ -33,7 +33,6 @@ import {
   Users,
   FolderKanban,
   Search,
-  Ban,
   ExternalLink,
   History,
   Loader2,
