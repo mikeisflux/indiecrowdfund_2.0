@@ -1,10 +1,6 @@
-import { Resend } from "resend";
+import sgMail from "@sendgrid/mail";
+import { db } from "@/lib/db";
 
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
-
-const FROM_EMAIL = process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -15,29 +11,46 @@ interface SendEmailOptions {
   text?: string;
 }
 
+// Get email settings from database
+async function getEmailSettings() {
+  try {
+    const settings = await db.siteSettings.findFirst();
+    return settings;
+  } catch {
+    return null;
+  }
+}
+
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
-  if (!resend) {
-    console.warn("Email not configured - RESEND_API_KEY is missing");
+  const settings = await getEmailSettings();
+
+  // Check for SendGrid API key (from DB settings or env)
+  const sendgridApiKey = settings?.sendgridApiKey || process.env.SENDGRID_API_KEY;
+  const fromEmail = settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
+  const fromName = settings?.smtpFromName || APP_NAME;
+
+  if (!sendgridApiKey) {
+    console.warn("Email not configured - SendGrid API key is missing");
     console.log("Would send email to:", to);
     console.log("Subject:", subject);
     return { success: false, error: "Email not configured" };
   }
 
   try {
-    const { data, error } = await resend.emails.send({
-      from: `${APP_NAME} <${FROM_EMAIL}>`,
+    sgMail.setApiKey(sendgridApiKey);
+
+    await sgMail.send({
       to,
+      from: {
+        email: fromEmail,
+        name: fromName,
+      },
       subject,
       html,
       text: text || html.replace(/<[^>]*>/g, ""),
     });
 
-    if (error) {
-      console.error("Failed to send email:", error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true, data };
+    return { success: true };
   } catch (error) {
     console.error("Error sending email:", error);
     return { success: false, error: "Failed to send email" };
