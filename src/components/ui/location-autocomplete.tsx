@@ -5,9 +5,6 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { MapPin, Loader2 } from "lucide-react";
 
-// Google Maps types
-type AutocompleteService = google.maps.places.AutocompleteService;
-
 interface LocationAutocompleteProps {
   value?: string;
   onChange: (value: string) => void;
@@ -39,7 +36,8 @@ export function LocationAutocomplete({
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const autocompleteServiceRef = useRef<AutocompleteService | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const autocompleteServiceRef = useRef<any>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load Google Maps script
@@ -119,10 +117,11 @@ export function LocationAutocomplete({
         input,
         types: ["(cities)"], // Focus on cities for project locations
       },
-      (results, status) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (results: any, status: any) => {
         setIsLoading(false);
-        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-          setPredictions(results as unknown as Prediction[]);
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+          setPredictions(results as Prediction[]);
           setShowDropdown(true);
         } else {
           setPredictions([]);
