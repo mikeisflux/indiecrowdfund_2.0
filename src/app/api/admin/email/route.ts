@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
+// Force dynamic - this route uses auth/headers
+export const dynamic = "force-dynamic";
+
 // Helper to check admin role
 async function requireAdmin() {
   const session = await auth();
