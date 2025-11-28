@@ -422,7 +422,7 @@ export default function EmailPage() {
           <Card className="h-full flex flex-col">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Mailboxes</CardTitle>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Mailboxes</h3>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCreateMailbox}>
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -507,7 +507,7 @@ export default function EmailPage() {
           <div className="w-40 flex-shrink-0">
             <Card className="h-full">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Folders</CardTitle>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Folders</h3>
               </CardHeader>
               <CardContent className="p-2">
                 <div className="space-y-1">
