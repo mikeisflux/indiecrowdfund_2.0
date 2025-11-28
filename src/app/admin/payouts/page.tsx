@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -385,9 +386,11 @@ export default function PayoutsPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {payout.project.thumbnailUrl ? (
-                          <img
+                          <Image
                             src={payout.project.thumbnailUrl}
                             alt={payout.project.title}
+                            width={40}
+                            height={40}
                             className="w-10 h-10 rounded object-cover"
                           />
                         ) : (
@@ -511,9 +514,11 @@ export default function PayoutsPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-3 pb-4 border-b">
                 {selectedPayout.project.thumbnailUrl ? (
-                  <img
+                  <Image
                     src={selectedPayout.project.thumbnailUrl}
                     alt={selectedPayout.project.title}
+                    width={64}
+                    height={64}
                     className="w-16 h-16 rounded object-cover"
                   />
                 ) : (
