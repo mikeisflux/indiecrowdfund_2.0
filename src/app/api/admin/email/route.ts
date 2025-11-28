@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -119,7 +120,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Create campaign or template
+// POST - Create campaign, template, or send single email
 export async function POST(req: NextRequest) {
   try {
     const authResult = await requireAdmin();
@@ -129,6 +130,57 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { type } = body;
+
+    // Send single email
+    if (type === "single" || (!type && body.to)) {
+      const { to, subject, body: emailBody } = body;
+
+      if (!to || !subject || !emailBody) {
+        return NextResponse.json(
+          { error: "To, subject, and body are required" },
+          { status: 400 }
+        );
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(to)) {
+        return NextResponse.json(
+          { error: "Invalid email address" },
+          { status: 400 }
+        );
+      }
+
+      // Convert plain text body to simple HTML
+      const htmlBody = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            ${emailBody.replace(/\n/g, '<br>')}
+          </body>
+        </html>
+      `;
+
+      const result = await sendEmail({
+        to,
+        subject,
+        html: htmlBody,
+        text: emailBody,
+      });
+
+      if (result.success) {
+        return NextResponse.json({ success: true });
+      } else {
+        return NextResponse.json(
+          { error: result.error || "Failed to send email" },
+          { status: 500 }
+        );
+      }
+    }
 
     if (type === "template") {
       const { name, subject, htmlContent, textContent, variables } = body;

@@ -18,16 +18,12 @@ import {
   ArrowDownRight,
   MoreHorizontal,
   ExternalLink,
-  Sparkles,
-  Brain,
   Zap,
   Users,
   FolderKanban,
   DollarSign,
   AlertTriangle,
   UserPlus,
-  CheckCircle,
-  Flag,
   Loader2,
   type LucideIcon,
 } from "lucide-react";
@@ -71,39 +67,20 @@ interface StatCard {
   icon: LucideIcon;
 }
 
-interface RecentActivity {
+interface ActivityItem {
+  id: string;
+  type: string;
   title: string;
-  time: string;
-  icon: LucideIcon;
-  color: string;
+  user?: string;
+  timestamp: string;
 }
-
-const aiInsights = [
-  {
-    title: "Unusual Traffic Pattern",
-    description: "We detected a 340% spike in traffic from Reddit. Consider engaging with the community.",
-    priority: "medium",
-    action: "View Details",
-  },
-  {
-    title: "High Churn Risk Users",
-    description: "AI identified 23 users with high churn probability. Personalized outreach recommended.",
-    priority: "high",
-    action: "View Users",
-  },
-  {
-    title: "Category Trend",
-    description: "Technology projects are converting 2.3x better than average this week.",
-    priority: "low",
-    action: "See Trends",
-  },
-];
 
 export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState("7d");
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+  const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
 
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
@@ -113,6 +90,12 @@ export default function AdminDashboard() {
         const data = await response.json();
         setStats(data.stats);
         setRecentProjects(data.recentActivity?.projects || []);
+        // Combine projects and users activity
+        const allActivity: ActivityItem[] = [
+          ...(data.recentActivity?.projects || []),
+          ...(data.recentActivity?.users || []),
+        ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setActivityItems(allActivity.slice(0, 10));
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -189,14 +172,20 @@ export default function AdminDashboard() {
     },
   ] : [];
 
-  // Recent activity items
-  const recentActivity: RecentActivity[] = [
-    { title: "New user registered: Sarah Johnson", time: "2 minutes ago", icon: UserPlus, color: "text-emerald-500" },
-    { title: "Project 'Indie Game Dev' submitted for review", time: "15 minutes ago", icon: FolderKanban, color: "text-blue-500" },
-    { title: "Large pledge received: $500", time: "1 hour ago", icon: DollarSign, color: "text-violet-500" },
-    { title: "Project 'Artisan Coffee' reached goal", time: "2 hours ago", icon: CheckCircle, color: "text-emerald-500" },
-    { title: "Content flagged for review", time: "3 hours ago", icon: Flag, color: "text-amber-500" },
-  ];
+  // Format relative time
+  const formatRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    return `${diffDays} days ago`;
+  };
 
   if (isLoading) {
     return (
@@ -287,52 +276,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* AI Insights Banner */}
-      <Card className="border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/50 dark:to-purple-950/50 dark:border-violet-800">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600">
-              <Brain className="h-4 w-4 text-white" />
-            </div>
-            <CardTitle className="text-lg">AI Insights</CardTitle>
-            <Badge className="bg-violet-600 hover:bg-violet-700">
-              <Sparkles className="mr-1 h-3 w-3" />
-              3 New
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            {aiInsights.map((insight, i) => (
-              <div
-                key={i}
-                className="rounded-lg border border-violet-200 bg-white/80 p-4 dark:border-violet-800 dark:bg-zinc-900/50"
-              >
-                <div className="mb-2 flex items-start justify-between">
-                  <h4 className="font-medium text-zinc-900 dark:text-white">{insight.title}</h4>
-                  <Badge
-                    variant="outline"
-                    className={
-                      insight.priority === "high"
-                        ? "border-red-200 text-red-700"
-                        : insight.priority === "medium"
-                        ? "border-amber-200 text-amber-700"
-                        : "border-emerald-200 text-emerald-700"
-                    }
-                  >
-                    {insight.priority}
-                  </Badge>
-                </div>
-                <p className="mb-3 text-sm text-zinc-500">{insight.description}</p>
-                <Button variant="outline" size="sm" className="w-full">
-                  {insight.action}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Projects needing attention */}
         <Card className="lg:col-span-2">
@@ -406,21 +349,26 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentActivity.map((activity, i) => (
-                <div key={i} className="flex gap-3">
-                  <div className={`mt-0.5 ${activity.color}`}>
-                    <activity.icon className="h-5 w-5" />
+              {activityItems.length === 0 ? (
+                <p className="text-center text-zinc-500 py-4">No recent activity</p>
+              ) : (
+                activityItems.map((activity) => (
+                  <div key={activity.id} className="flex gap-3">
+                    <div className={`mt-0.5 ${activity.type === "user" ? "text-emerald-500" : "text-blue-500"}`}>
+                      {activity.type === "user" ? (
+                        <UserPlus className="h-5 w-5" />
+                      ) : (
+                        <FolderKanban className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-zinc-700 dark:text-zinc-300">{activity.title}</p>
+                      <p className="text-xs text-zinc-500">{formatRelativeTime(activity.timestamp)}</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-zinc-700 dark:text-zinc-300">{activity.title}</p>
-                    <p className="text-xs text-zinc-500">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
-            <Button variant="ghost" className="mt-4 w-full">
-              View All Activity
-            </Button>
           </CardContent>
         </Card>
       </div>
