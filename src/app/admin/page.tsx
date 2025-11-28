@@ -14,6 +14,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   ArrowUpRight,
   ArrowDownRight,
   MoreHorizontal,
@@ -25,6 +32,11 @@ import {
   AlertTriangle,
   UserPlus,
   Loader2,
+  Mail,
+  FileText,
+  Shield,
+  Settings,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 
@@ -218,10 +230,61 @@ export default function AdminDashboard() {
               <SelectItem value="90d">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button className="bg-emerald-600 hover:bg-emerald-700">
-            <Zap className="mr-2 h-4 w-4" />
-            Quick Actions
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="bg-emerald-600 hover:bg-emerald-700">
+                <Zap className="mr-2 h-4 w-4" />
+                Quick Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link href="/admin/users">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Manage Users
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/projects?status=SUBMITTED">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Review Pending Projects
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/admin/email">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Email
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/notifications">
+                  <Bell className="mr-2 h-4 w-4" />
+                  Send Notification
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/admin/payouts">
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  Process Payouts
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/moderation">
+                  <Shield className="mr-2 h-4 w-4" />
+                  View Reports
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/admin/settings">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Platform Settings
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
