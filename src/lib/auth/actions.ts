@@ -94,13 +94,14 @@ export async function login(formData: FormData, callbackUrl?: string) {
   const redirectTo = callbackUrl || "/dashboard";
 
   try {
+    // Let NextAuth handle the redirect server-side
     await signIn("credentials", {
       email,
       password,
-      redirect: false,
+      redirectTo,
     });
   } catch (error) {
-    // Let redirect errors pass through (Next.js internal redirects)
+    // Let redirect errors pass through (this is the success case)
     if (isRedirectError(error)) {
       throw error;
     }
@@ -112,13 +113,9 @@ export async function login(formData: FormData, callbackUrl?: string) {
           return { error: { _form: ["Something went wrong. Please try again."] } };
       }
     }
-    // Log unexpected errors
     console.error("Unexpected login error:", error);
     return { error: { _form: ["Something went wrong. Please try again."] } };
   }
-
-  // Return success with redirect URL for client-side navigation
-  return { success: true, redirectTo };
 }
 
 export async function loginWithGoogle(callbackUrl?: string) {

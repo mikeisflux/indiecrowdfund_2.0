@@ -52,26 +52,19 @@ export function LoginForm() {
     setIsLoading(true);
     setError(null);
 
-    try {
-      const result = await login(formData, callbackUrl);
-      if (result?.error) {
-        if ("_form" in result.error && result.error._form) {
-          setError(result.error._form[0]);
-        } else if ("email" in result.error && result.error.email) {
-          setError(result.error.email[0]);
-        } else if ("password" in result.error && result.error.password) {
-          setError(result.error.password[0]);
-        }
-        setIsLoading(false);
-      } else if (result?.success) {
-        // Use hard redirect for reliable session hydration
-        window.location.href = result.redirectTo || "/dashboard";
+    const result = await login(formData, callbackUrl);
+    // If we get here with a result, it's an error (success redirects server-side)
+    if (result?.error) {
+      if ("_form" in result.error && result.error._form) {
+        setError(result.error._form[0]);
+      } else if ("email" in result.error && result.error.email) {
+        setError(result.error.email[0]);
+      } else if ("password" in result.error && result.error.password) {
+        setError(result.error.password[0]);
       }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("Something went wrong. Please try again.");
       setIsLoading(false);
     }
+    // If no result or no error, the redirect is happening server-side
   }
 
   async function handleGoogleSignIn() {
