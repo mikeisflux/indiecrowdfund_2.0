@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,6 +49,7 @@ import {
   Megaphone,
   TrendingUp,
   Zap,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -55,12 +57,24 @@ import { cn } from "@/lib/utils";
 
 // Platform configurations
 const SOCIAL_PLATFORMS = [
-  { id: "twitter", name: "X (Twitter)", icon: Twitter, color: "bg-black", connected: true },
-  { id: "facebook", name: "Facebook", icon: Facebook, color: "bg-blue-600", connected: true },
-  { id: "instagram", name: "Instagram", icon: Instagram, color: "bg-gradient-to-br from-purple-600 to-pink-500", connected: false },
-  { id: "linkedin", name: "LinkedIn", icon: Linkedin, color: "bg-blue-700", connected: false },
-  { id: "youtube", name: "YouTube", icon: Youtube, color: "bg-red-600", connected: false },
+  { id: "twitter", name: "X (Twitter)", icon: Twitter, color: "bg-black" },
+  { id: "facebook", name: "Facebook", icon: Facebook, color: "bg-blue-600" },
+  { id: "instagram", name: "Instagram", icon: Instagram, color: "bg-gradient-to-br from-purple-600 to-pink-500" },
+  { id: "linkedin", name: "LinkedIn", icon: Linkedin, color: "bg-blue-700" },
+  { id: "youtube", name: "YouTube", icon: Youtube, color: "bg-red-600" },
 ];
+
+// Platforms that support OAuth connection
+const OAUTH_PLATFORMS = ["twitter", "facebook", "instagram", "youtube"];
+
+// Connection status type
+interface ConnectionStatus {
+  connected: boolean;
+  accountId?: string;
+  providerAccountId?: string;
+  expiresAt?: number | null;
+  scope?: string | null;
+}
 
 // AI content generation templates
 const CONTENT_TEMPLATES = [
@@ -123,8 +137,9 @@ const mockPostAnalytics = [
 ];
 
 export default function SocialHubPage() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("create");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["twitter", "facebook"]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [postContent, setPostContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
@@ -132,9 +147,58 @@ export default function SocialHubPage() {
   const [scheduleTime, setScheduleTime] = useState("12:00");
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [scheduledPosts, setScheduledPosts] = useState(mockScheduledPosts);
+  const [connections, setConnections] = useState<Record<string, ConnectionStatus>>({});
+  const [isLoadingConnections, setIsLoadingConnections] = useState(true);
+  const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
+  const [disconnectingPlatform, setDisconnectingPlatform] = useState<string | null>(null);
 
-  const connectedPlatforms = SOCIAL_PLATFORMS.filter((p) => p.connected);
-  const disconnectedPlatforms = SOCIAL_PLATFORMS.filter((p) => !p.connected);
+  // Fetch connection status
+  const fetchConnections = useCallback(async () => {
+    try {
+      const response = await fetch("/api/auth/social/connections");
+      if (response.ok) {
+        const data = await response.json();
+        setConnections(data.connections);
+        // Auto-select connected platforms
+        const connectedIds = Object.entries(data.connections)
+          .filter(([, status]) => (status as ConnectionStatus).connected)
+          .map(([id]) => id);
+        if (connectedIds.length > 0 && selectedPlatforms.length === 0) {
+          setSelectedPlatforms(connectedIds);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch connections:", error);
+    } finally {
+      setIsLoadingConnections(false);
+    }
+  }, [selectedPlatforms.length]);
+
+  // Handle OAuth callback messages
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+
+    if (success) {
+      toast.success(success);
+      // Clear the URL params
+      window.history.replaceState({}, "", "/dashboard/social");
+      // Refresh connections
+      fetchConnections();
+    }
+    if (error) {
+      toast.error(error);
+      window.history.replaceState({}, "", "/dashboard/social");
+    }
+  }, [searchParams, fetchConnections]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchConnections();
+  }, [fetchConnections]);
+
+  const connectedPlatforms = SOCIAL_PLATFORMS.filter((p) => connections[p.id]?.connected);
+  const disconnectedPlatforms = SOCIAL_PLATFORMS.filter((p) => !connections[p.id]?.connected);
 
   const togglePlatform = (platformId: string) => {
     setSelectedPlatforms((prev) =>
@@ -211,8 +275,40 @@ export default function SocialHubPage() {
   };
 
   const connectPlatform = (platformId: string) => {
-    toast.success(`Connecting to ${platformId}...`);
-    // OAuth flow would happen here
+    if (!OAUTH_PLATFORMS.includes(platformId)) {
+      toast.error(`${platformId} connection is not yet supported`);
+      return;
+    }
+    setConnectingPlatform(platformId);
+    // Redirect to OAuth initiation endpoint
+    window.location.href = `/api/auth/social/${platformId}`;
+  };
+
+  const disconnectPlatform = async (platformId: string) => {
+    setDisconnectingPlatform(platformId);
+    try {
+      const response = await fetch("/api/auth/social/connections", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: platformId }),
+      });
+
+      if (response.ok) {
+        toast.success(`Disconnected from ${platformId}`);
+        // Remove from selected platforms
+        setSelectedPlatforms((prev) => prev.filter((p) => p !== platformId));
+        // Refresh connections
+        await fetchConnections();
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to disconnect");
+      }
+    } catch (error) {
+      console.error("Disconnect error:", error);
+      toast.error("Failed to disconnect");
+    } finally {
+      setDisconnectingPlatform(null);
+    }
   };
 
   return (
@@ -659,50 +755,84 @@ export default function SocialHubPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {SOCIAL_PLATFORMS.map((platform) => (
-                  <div
-                    key={platform.id}
-                    className="flex items-center justify-between rounded-lg border p-4"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={cn(
-                          "flex h-10 w-10 items-center justify-center rounded-lg text-white",
-                          platform.color
-                        )}
-                      >
-                        <platform.icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{platform.name}</p>
-                        {platform.connected ? (
-                          <p className="text-sm text-muted-foreground">
-                            @yourproject
-                          </p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            Not connected
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    {platform.connected ? (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-green-600 border-green-600">
-                          <Check className="mr-1 h-3 w-3" />
-                          Connected
-                        </Badge>
-                        <Button variant="ghost" size="sm">
-                          Disconnect
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button onClick={() => connectPlatform(platform.id)}>
-                        Connect
-                      </Button>
-                    )}
+                {isLoadingConnections ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
-                ))}
+                ) : (
+                  SOCIAL_PLATFORMS.map((platform) => {
+                    const isConnected = connections[platform.id]?.connected;
+                    const isOAuthSupported = OAUTH_PLATFORMS.includes(platform.id);
+                    const isConnecting = connectingPlatform === platform.id;
+                    const isDisconnecting = disconnectingPlatform === platform.id;
+
+                    return (
+                      <div
+                        key={platform.id}
+                        className="flex items-center justify-between rounded-lg border p-4"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={cn(
+                              "flex h-10 w-10 items-center justify-center rounded-lg text-white",
+                              platform.color
+                            )}
+                          >
+                            <platform.icon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{platform.name}</p>
+                            {isConnected ? (
+                              <p className="text-sm text-muted-foreground">
+                                Connected
+                              </p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                {isOAuthSupported ? "Not connected" : "Coming soon"}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {isConnected ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-green-600 border-green-600">
+                              <Check className="mr-1 h-3 w-3" />
+                              Connected
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => disconnectPlatform(platform.id)}
+                              disabled={isDisconnecting}
+                            >
+                              {isDisconnecting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Disconnect"
+                              )}
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={() => connectPlatform(platform.id)}
+                            disabled={!isOAuthSupported || isConnecting}
+                          >
+                            {isConnecting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Connecting...
+                              </>
+                            ) : isOAuthSupported ? (
+                              "Connect"
+                            ) : (
+                              "Coming Soon"
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </CardContent>
             </Card>
 
