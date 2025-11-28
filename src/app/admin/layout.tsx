@@ -79,8 +79,6 @@ const navigation = [
     title: "System",
     items: [
       { name: "Settings", href: "/admin/settings", icon: Settings },
-      { name: "API & Integrations", href: "/admin/api", icon: FileCode },
-      { name: "Database", href: "/admin/database", icon: Database },
       { name: "Security", href: "/admin/security", icon: Lock },
     ],
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,90 +53,36 @@ import {
   Building,
   MapPin,
   Bell,
+  RefreshCw,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
-// Mock users data
-const mockUsers = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john@example.com",
-    role: "backer",
-    status: "active",
-    verified: true,
-    totalPledged: 2345,
-    projectsBacked: 12,
-    projectsCreated: 0,
-    joinDate: "2023-06-15",
-    lastActive: "2 hours ago",
-    avatar: null,
-  },
-  {
-    id: "2",
-    name: "Sarah Chen",
-    email: "sarah@creator.com",
-    role: "creator",
-    status: "active",
-    verified: true,
-    totalPledged: 450,
-    projectsBacked: 3,
-    projectsCreated: 5,
-    joinDate: "2022-03-20",
-    lastActive: "5 minutes ago",
-    avatar: null,
-  },
-  {
-    id: "3",
-    name: "Mike Johnson",
-    email: "mike@test.com",
-    role: "backer",
-    status: "suspended",
-    verified: true,
-    totalPledged: 1200,
-    projectsBacked: 8,
-    projectsCreated: 0,
-    joinDate: "2023-09-10",
-    lastActive: "3 days ago",
-    avatar: null,
-  },
-  {
-    id: "4",
-    name: "Emma Wilson",
-    email: "emma@example.com",
-    role: "creator",
-    status: "active",
-    verified: false,
-    totalPledged: 890,
-    projectsBacked: 6,
-    projectsCreated: 2,
-    joinDate: "2024-01-05",
-    lastActive: "1 hour ago",
-    avatar: null,
-  },
-  {
-    id: "5",
-    name: "Admin User",
-    email: "admin@platform.com",
-    role: "admin",
-    status: "active",
-    verified: true,
-    totalPledged: 0,
-    projectsBacked: 0,
-    projectsCreated: 0,
-    joinDate: "2022-01-01",
-    lastActive: "Just now",
-    avatar: null,
-  },
-];
+// User interface
+interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+  role: string;
+  createdAt: string;
+  emailVerified: string | null;
+  projectCount: number;
+  pledgeCount: number;
+}
 
-const userStats = {
-  total: 89234,
-  active: 67543,
-  creators: 4567,
-  newThisMonth: 2456,
-  verified: 78234,
-  suspended: 234,
-};
+interface UserStats {
+  total: number;
+  users: number;
+  admins: number;
+  superAdmins: number;
+}
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
 
 // Mock retailer applications data
 const mockRetailers = [
@@ -268,13 +214,62 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [retailerStatusFilter, setRetailerStatusFilter] = useState("all");
-  const [selectedUser, setSelectedUser] = useState<typeof mockUsers[0] | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedRetailer, setSelectedRetailer] = useState<typeof mockRetailers[0] | null>(null);
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [showRetailerDialog, setShowRetailerDialog] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | "request_info" | null>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
+
+  // API data state
+  const [users, setUsers] = useState<User[]>([]);
+  const [userStats, setUserStats] = useState<UserStats>({ total: 0, users: 0, admins: 0, superAdmins: 0 });
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Fetch users from API
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: "20",
+      });
+
+      if (searchQuery) {
+        params.append("search", searchQuery);
+      }
+      if (roleFilter !== "all") {
+        params.append("role", roleFilter);
+      }
+
+      const response = await fetch(`/api/admin/users?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.users || []);
+        setUserStats(data.stats || { total: 0, users: 0, admins: 0, superAdmins: 0 });
+        setPagination(data.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 });
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, searchQuery, roleFilter]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  // Debounce search
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   const pendingRetailerCount = retailerStats.pending + retailerStats.underReview;
 
@@ -393,7 +388,7 @@ export default function UsersPage() {
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-6 mt-6">
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl font-bold">{userStats.total.toLocaleString()}</p>
@@ -402,32 +397,20 @@ export default function UsersPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-2xl font-bold text-emerald-600">{userStats.active.toLocaleString()}</p>
-            <p className="text-xs text-zinc-500">Active</p>
+            <p className="text-2xl font-bold text-emerald-600">{userStats.users.toLocaleString()}</p>
+            <p className="text-xs text-zinc-500">Regular Users</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-2xl font-bold text-blue-600">{userStats.creators.toLocaleString()}</p>
-            <p className="text-xs text-zinc-500">Creators</p>
+            <p className="text-2xl font-bold text-violet-600">{userStats.admins.toLocaleString()}</p>
+            <p className="text-xs text-zinc-500">Admins</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-2xl font-bold text-violet-600">{userStats.newThisMonth.toLocaleString()}</p>
-            <p className="text-xs text-zinc-500">New This Month</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-2xl font-bold">{userStats.verified.toLocaleString()}</p>
-            <p className="text-xs text-zinc-500">Verified</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-2xl font-bold text-red-600">{userStats.suspended}</p>
-            <p className="text-xs text-zinc-500">Suspended</p>
+            <p className="text-2xl font-bold text-amber-600">{userStats.superAdmins}</p>
+            <p className="text-xs text-zinc-500">Super Admins</p>
           </CardContent>
         </Card>
       </div>
@@ -470,32 +453,40 @@ export default function UsersPage() {
       {/* Users Table */}
       <Card>
         <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+            </div>
+          ) : users.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64">
+              <Users className="h-12 w-12 text-zinc-300 mb-4" />
+              <p className="text-zinc-500">No users found</p>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-zinc-50 dark:bg-zinc-800">
                   <th className="p-4 text-left text-sm font-medium">User</th>
                   <th className="p-4 text-left text-sm font-medium">Role</th>
-                  <th className="p-4 text-left text-sm font-medium">Status</th>
-                  <th className="p-4 text-left text-sm font-medium">Pledged</th>
-                  <th className="p-4 text-left text-sm font-medium">Backed</th>
-                  <th className="p-4 text-left text-sm font-medium">Created</th>
-                  <th className="p-4 text-left text-sm font-medium">Last Active</th>
+                  <th className="p-4 text-left text-sm font-medium">Projects</th>
+                  <th className="p-4 text-left text-sm font-medium">Pledges</th>
+                  <th className="p-4 text-left text-sm font-medium">Joined</th>
                   <th className="p-4 text-left text-sm font-medium w-24">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {mockUsers.map((user) => (
+                {users.map((user) => (
                   <tr key={user.id} className="border-b hover:bg-zinc-50 dark:hover:bg-zinc-800">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-200 font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-                          {user.name.charAt(0)}
+                          {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{user.name}</p>
-                            {user.verified && (
+                            <p className="font-medium">{user.name || "No name"}</p>
+                            {user.emailVerified && (
                               <CheckCircle className="h-4 w-4 text-blue-500" />
                             )}
                           </div>
@@ -504,13 +495,11 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td className="p-4">{getRoleBadge(user.role)}</td>
-                    <td className="p-4">{getStatusBadge(user.status)}</td>
-                    <td className="p-4">
-                      <span className="font-medium">${user.totalPledged.toLocaleString()}</span>
+                    <td className="p-4">{user.projectCount}</td>
+                    <td className="p-4">{user.pledgeCount}</td>
+                    <td className="p-4 text-sm text-zinc-500">
+                      {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
                     </td>
-                    <td className="p-4">{user.projectsBacked}</td>
-                    <td className="p-4">{user.projectsCreated}</td>
-                    <td className="p-4 text-sm text-zinc-500">{user.lastActive}</td>
                     <td className="p-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -539,17 +528,6 @@ export default function UsersPage() {
                             <Shield className="mr-2 h-4 w-4" />
                             Change Role
                           </DropdownMenuItem>
-                          {user.status === "active" ? (
-                            <DropdownMenuItem className="text-amber-600">
-                              <Ban className="mr-2 h-4 w-4" />
-                              Suspend User
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem className="text-emerald-600">
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Activate User
-                            </DropdownMenuItem>
-                          )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600">
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -563,19 +541,33 @@ export default function UsersPage() {
               </tbody>
             </table>
           </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-zinc-500">
-          Showing 1-10 of {userStats.total.toLocaleString()} users
+          Showing {((pagination.page - 1) * pagination.limit) + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total.toLocaleString()} users
         </p>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(p => p - 1)}
+          >
             Previous
           </Button>
-          <Button variant="outline" size="sm">
+          <span className="text-sm text-zinc-500">
+            Page {pagination.page} of {pagination.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage >= pagination.totalPages}
+            onClick={() => setCurrentPage(p => p + 1)}
+          >
             Next
           </Button>
         </div>
@@ -756,48 +748,38 @@ export default function UsersPage() {
             <div className="py-4">
               <div className="flex items-start gap-6">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold text-zinc-600">
-                  {selectedUser.name.charAt(0)}
+                  {selectedUser.name?.charAt(0) || selectedUser.email.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-semibold">{selectedUser.name}</h3>
+                    <h3 className="text-xl font-semibold">{selectedUser.name || "No name"}</h3>
                     {getRoleBadge(selectedUser.role)}
-                    {getStatusBadge(selectedUser.status)}
+                    {selectedUser.emailVerified && (
+                      <Badge className="bg-emerald-100 text-emerald-700">
+                        <CheckCircle className="h-3 w-3 mr-1" /> Verified
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-zinc-500">{selectedUser.email}</p>
                   <p className="mt-1 text-sm text-zinc-500">
-                    Member since {selectedUser.joinDate}
+                    Member since {formatDistanceToNow(new Date(selectedUser.createdAt), { addSuffix: true })}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-4">
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <DollarSign className="h-6 w-6 mx-auto text-emerald-500 mb-2" />
-                    <p className="text-2xl font-bold">${selectedUser.totalPledged}</p>
-                    <p className="text-xs text-zinc-500">Total Pledged</p>
-                  </CardContent>
-                </Card>
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <Card>
                   <CardContent className="p-4 text-center">
                     <Star className="h-6 w-6 mx-auto text-blue-500 mb-2" />
-                    <p className="text-2xl font-bold">{selectedUser.projectsBacked}</p>
-                    <p className="text-xs text-zinc-500">Projects Backed</p>
+                    <p className="text-2xl font-bold">{selectedUser.pledgeCount}</p>
+                    <p className="text-xs text-zinc-500">Pledges Made</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
                     <Crown className="h-6 w-6 mx-auto text-violet-500 mb-2" />
-                    <p className="text-2xl font-bold">{selectedUser.projectsCreated}</p>
+                    <p className="text-2xl font-bold">{selectedUser.projectCount}</p>
                     <p className="text-xs text-zinc-500">Projects Created</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <Clock className="h-6 w-6 mx-auto text-amber-500 mb-2" />
-                    <p className="text-lg font-bold">{selectedUser.lastActive}</p>
-                    <p className="text-xs text-zinc-500">Last Active</p>
                   </CardContent>
                 </Card>
               </div>

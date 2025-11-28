@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,7 @@ import {
   Twitter,
 } from "lucide-react";
 
-// Mock data
+// API keys and webhooks (these would come from a separate API in production)
 const apiKeys = [
   { id: "1", name: "Production API", key: "sk_live_xxxx...xxxx", created: "2024-01-15", lastUsed: "2 hours ago", status: "active" },
   { id: "2", name: "Development API", key: "sk_test_xxxx...xxxx", created: "2024-02-20", lastUsed: "5 days ago", status: "active" },
@@ -68,11 +68,70 @@ const webhooks = [
   { id: "2", url: "https://analytics.example.com/events", events: ["project.created", "pledge.created"], status: "active" },
 ];
 
+interface PlatformSettings {
+  siteName: string;
+  siteDescription: string | null;
+  supportEmail: string;
+  timezone: string;
+  currency: string;
+  platformFee: number;
+  maintenanceMode: boolean;
+  googlePlacesApiKey: string | null;
+  stripeEnabled: boolean;
+  stripePublishableKey: string | null;
+  stripeSecretKey: string | null;
+  stripeWebhookSecret: string | null;
+  ccbillEnabled: boolean;
+  ccbillClientAccountNo: string | null;
+  ccbillSubaccount: string | null;
+  ccbillFormName: string | null;
+  ccbillSalt: string | null;
+  emailProvider: string;
+  smtpHost: string | null;
+  smtpPort: number;
+  smtpUser: string | null;
+  smtpPassword: string | null;
+  smtpFromEmail: string | null;
+  smtpFromName: string | null;
+  sendgridApiKey: string | null;
+  mailgunApiKey: string | null;
+  mailgunDomain: string | null;
+  twitterHandle: string | null;
+  facebookUrl: string | null;
+  instagramHandle: string | null;
+  youtubeUrl: string | null;
+  discordUrl: string | null;
+  aiProvider: string;
+  openaiApiKey: string | null;
+  anthropicApiKey: string | null;
+  aiAutoModeration: boolean;
+  aiAutoTagging: boolean;
+  aiContentGeneration: boolean;
+  twoFactorRequired: boolean;
+  sessionTimeout: number;
+  maxLoginAttempts: number;
+  passwordMinLength: number;
+  requireSpecialChars: boolean;
+  ipRateLimitEnabled: boolean;
+  ipRateLimitRequests: number;
+  ipRateLimitWindow: number;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  textColor: string;
+  fontFamily: string;
+  borderRadius: string;
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [showApiKey, setShowApiKey] = useState<string | null>(null);
   const [isCreatingKey, setIsCreatingKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   // Form states
   const [generalSettings, setGeneralSettings] = useState({
@@ -87,25 +146,25 @@ export default function SettingsPage() {
   });
 
   const [paymentSettings, setPaymentSettings] = useState({
-    stripeEnabled: true,
-    stripePublicKey: "pk_live_xxxxxxxxxxxxxx",
-    stripeSecretKey: "sk_live_xxxxxxxxxxxxxx",
-    stripeWebhookSecret: "whsec_xxxxxxxxxxxxxx",
-    ccbillEnabled: true,
-    ccbillSubAccount: "1234567",
-    ccbillFlexId: "abcdefgh",
-    ccbillSalt: "xxxxxxxxxx",
+    stripeEnabled: false,
+    stripePublicKey: "",
+    stripeSecretKey: "",
+    stripeWebhookSecret: "",
+    ccbillEnabled: false,
+    ccbillSubAccount: "",
+    ccbillFlexId: "",
+    ccbillSalt: "",
     autoPayouts: true,
     payoutThreshold: "100",
     payoutSchedule: "weekly",
   });
 
   const [emailSettings, setEmailSettings] = useState({
-    provider: "sendgrid",
-    sendgridApiKey: "SG.xxxxxxxxxxxxxx",
-    fromEmail: "noreply@indiecrowdfund.com",
-    fromName: "IndieCrowdfund",
-    replyToEmail: "support@indiecrowdfund.com",
+    provider: "smtp",
+    sendgridApiKey: "",
+    fromEmail: "",
+    fromName: "",
+    replyToEmail: "",
     emailVerificationRequired: true,
     welcomeEmailEnabled: true,
     pledgeConfirmationEnabled: true,
@@ -126,16 +185,16 @@ export default function SettingsPage() {
   });
 
   const [aiSettings, setAiSettings] = useState({
-    openaiEnabled: true,
+    openaiEnabled: false,
     openaiApiKey: "",
     openaiModel: "gpt-4o",
-    anthropicEnabled: true,
+    anthropicEnabled: false,
     anthropicApiKey: "",
     anthropicModel: "claude-sonnet-4-20250514",
-    autoTagging: true,
-    marketingCopy: true,
-    contentModeration: true,
-    fraudDetection: true,
+    autoTagging: false,
+    marketingCopy: false,
+    contentModeration: false,
+    fraudDetection: false,
     moderationThreshold: "0.7",
   });
 
@@ -168,6 +227,95 @@ export default function SettingsPage() {
     defaultHashtags: "#crowdfunding #indiecrowdfund",
     postApprovalRequired: true,
   });
+
+  // Fetch settings from API
+  const fetchSettings = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await fetch("/api/admin/settings");
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          setError("You don't have permission to access admin settings");
+          return;
+        }
+        throw new Error("Failed to fetch settings");
+      }
+
+      const data = await response.json();
+      const settings: PlatformSettings = data.settings;
+
+      // Update form states with fetched data
+      setGeneralSettings({
+        siteName: settings.siteName || "IndieCrowdfund",
+        siteDescription: settings.siteDescription || "",
+        supportEmail: settings.supportEmail || "",
+        timezone: settings.timezone || "America/New_York",
+        currency: settings.currency || "USD",
+        platformFee: String(settings.platformFee || 5),
+        maintenanceMode: settings.maintenanceMode || false,
+        googlePlacesApiKey: settings.googlePlacesApiKey || "",
+      });
+
+      setPaymentSettings((prev) => ({
+        ...prev,
+        stripeEnabled: settings.stripeEnabled || false,
+        stripePublicKey: settings.stripePublishableKey || "",
+        stripeSecretKey: settings.stripeSecretKey || "",
+        stripeWebhookSecret: settings.stripeWebhookSecret || "",
+        ccbillEnabled: settings.ccbillEnabled || false,
+        ccbillSubAccount: settings.ccbillSubaccount || "",
+        ccbillFlexId: settings.ccbillFormName || "",
+        ccbillSalt: settings.ccbillSalt || "",
+      }));
+
+      setEmailSettings((prev) => ({
+        ...prev,
+        provider: settings.emailProvider || "smtp",
+        sendgridApiKey: settings.sendgridApiKey || "",
+        fromEmail: settings.smtpFromEmail || "",
+        fromName: settings.smtpFromName || "",
+      }));
+
+      setSecuritySettings((prev) => ({
+        ...prev,
+        require2FA: settings.twoFactorRequired || false,
+        sessionDuration: String(settings.sessionTimeout || 7),
+        maxLoginAttempts: String(settings.maxLoginAttempts || 5),
+        passwordMinLength: String(settings.passwordMinLength || 8),
+        requireSpecialChar: settings.requireSpecialChars || true,
+        rateLimit: String(settings.ipRateLimitRequests || 100),
+      }));
+
+      setAiSettings((prev) => ({
+        ...prev,
+        openaiEnabled: !!settings.openaiApiKey,
+        openaiApiKey: settings.openaiApiKey || "",
+        anthropicEnabled: !!settings.anthropicApiKey,
+        anthropicApiKey: settings.anthropicApiKey || "",
+        autoTagging: settings.aiAutoTagging || false,
+        contentModeration: settings.aiAutoModeration || false,
+        marketingCopy: settings.aiContentGeneration || false,
+      }));
+
+      setSocialSettings((prev) => ({
+        ...prev,
+        twitterApiKey: settings.twitterHandle || "",
+        facebookAppId: settings.facebookUrl || "",
+        youtubeClientId: settings.youtubeUrl || "",
+      }));
+    } catch (err) {
+      console.error("Error fetching settings:", err);
+      setError("Failed to load settings. Using default values.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const [socialTestResults, setSocialTestResults] = useState<{
     facebook: "idle" | "testing" | "success" | "error";
@@ -236,10 +384,116 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Simulate save
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
+    setSaveMessage(null);
+    setError(null);
+
+    try {
+      // Save based on active tab
+      let section = "";
+      let data: Record<string, unknown> = {};
+
+      switch (activeTab) {
+        case "general":
+          section = "general";
+          data = {
+            siteName: generalSettings.siteName,
+            siteDescription: generalSettings.siteDescription,
+            supportEmail: generalSettings.supportEmail,
+            timezone: generalSettings.timezone,
+            currency: generalSettings.currency,
+            platformFee: parseFloat(generalSettings.platformFee),
+            maintenanceMode: generalSettings.maintenanceMode,
+            googlePlacesApiKey: generalSettings.googlePlacesApiKey,
+          };
+          break;
+        case "payments":
+          section = "payments";
+          data = {
+            stripeEnabled: paymentSettings.stripeEnabled,
+            stripePublishableKey: paymentSettings.stripePublicKey,
+            stripeSecretKey: paymentSettings.stripeSecretKey,
+            stripeWebhookSecret: paymentSettings.stripeWebhookSecret,
+            ccbillEnabled: paymentSettings.ccbillEnabled,
+            ccbillSubaccount: paymentSettings.ccbillSubAccount,
+            ccbillFormName: paymentSettings.ccbillFlexId,
+            ccbillSalt: paymentSettings.ccbillSalt,
+          };
+          break;
+        case "email":
+          section = "email";
+          data = {
+            emailProvider: emailSettings.provider,
+            sendgridApiKey: emailSettings.sendgridApiKey,
+            smtpFromEmail: emailSettings.fromEmail,
+            smtpFromName: emailSettings.fromName,
+          };
+          break;
+        case "social":
+          section = "social";
+          data = {
+            twitterHandle: socialSettings.twitterApiKey,
+            facebookUrl: socialSettings.facebookAppId,
+            youtubeUrl: socialSettings.youtubeClientId,
+          };
+          break;
+        case "ai":
+          section = "ai";
+          data = {
+            aiProvider: aiSettings.openaiEnabled ? "openai" : aiSettings.anthropicEnabled ? "anthropic" : "openai",
+            openaiApiKey: aiSettings.openaiApiKey,
+            anthropicApiKey: aiSettings.anthropicApiKey,
+            aiAutoModeration: aiSettings.contentModeration,
+            aiAutoTagging: aiSettings.autoTagging,
+            aiContentGeneration: aiSettings.marketingCopy,
+          };
+          break;
+        case "security":
+          section = "security";
+          data = {
+            twoFactorRequired: securitySettings.require2FA,
+            sessionTimeout: parseInt(securitySettings.sessionDuration),
+            maxLoginAttempts: parseInt(securitySettings.maxLoginAttempts),
+            passwordMinLength: parseInt(securitySettings.passwordMinLength),
+            requireSpecialChars: securitySettings.requireSpecialChar,
+            ipRateLimitEnabled: true,
+            ipRateLimitRequests: parseInt(securitySettings.rateLimit),
+          };
+          break;
+        default:
+          // For tabs without database storage (API, Database)
+          setSaveMessage("Settings saved successfully");
+          setIsSaving(false);
+          return;
+      }
+
+      const response = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section, data }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save settings");
+      }
+
+      setSaveMessage("Settings saved successfully");
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      setError(err instanceof Error ? err.message : "Failed to save settings");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -249,19 +503,27 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Settings</h1>
           <p className="text-zinc-500">Configure platform settings and integrations</p>
         </div>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </>
+        <div className="flex items-center gap-4">
+          {saveMessage && (
+            <span className="text-sm text-emerald-600">{saveMessage}</span>
           )}
-        </Button>
+          {error && (
+            <span className="text-sm text-red-600">{error}</span>
+          )}
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

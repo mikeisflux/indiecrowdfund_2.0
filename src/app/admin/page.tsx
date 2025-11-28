@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,124 +28,46 @@ import {
   Brain,
   Zap,
   Target,
+  RefreshCw,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
-// Mock data
-const stats = [
-  {
-    title: "Total Revenue",
-    value: "$2,847,392",
-    change: "+12.5%",
-    trend: "up",
-    icon: DollarSign,
-    color: "emerald",
-  },
-  {
-    title: "Active Users",
-    value: "24,521",
-    change: "+8.2%",
-    trend: "up",
-    icon: Users,
-    color: "blue",
-  },
-  {
-    title: "Live Projects",
-    value: "156",
-    change: "+23",
-    trend: "up",
-    icon: FolderKanban,
-    color: "violet",
-  },
-  {
-    title: "Conversion Rate",
-    value: "3.24%",
-    change: "-0.4%",
-    trend: "down",
-    icon: Target,
-    color: "amber",
-  },
-];
+interface DashboardStats {
+  totalUsers: number;
+  newUsersThisMonth: number;
+  userGrowth: number;
+  totalProjects: number;
+  liveProjects: number;
+  pendingProjects: number;
+  projectsThisMonth: number;
+  totalPledges: number;
+  completedPledgeCount: number;
+  totalRevenue: number;
+  revenueThisMonth: number;
+  revenueGrowth: number;
+  pendingReports: number;
+}
 
-const recentProjects = [
-  {
-    id: "1",
-    title: "Solar-Powered Backpack",
-    creator: "Green Tech Labs",
-    status: "pending_review",
-    raised: 42500,
-    goal: 50000,
-    category: "Technology",
-    submitted: "2 hours ago",
-  },
-  {
-    id: "2",
-    title: "Artisan Coffee Collection",
-    creator: "Bean Masters Co.",
-    status: "approved",
-    raised: 18720,
-    goal: 15000,
-    category: "Food",
-    submitted: "5 hours ago",
-  },
-  {
-    id: "3",
-    title: "Indie Game: Lost Horizons",
-    creator: "Pixel Dreams",
-    status: "pending_review",
-    raised: 0,
-    goal: 100000,
-    category: "Games",
-    submitted: "1 day ago",
-  },
-  {
-    id: "4",
-    title: "Sustainable Fashion Line",
-    creator: "EcoWear Studio",
-    status: "flagged",
-    raised: 8400,
-    goal: 25000,
-    category: "Fashion",
-    submitted: "2 days ago",
-  },
-];
+interface PendingProject {
+  id: string;
+  title: string;
+  createdAt: string;
+  creator: {
+    name: string | null;
+    email: string;
+  };
+}
 
-const recentActivity = [
-  {
-    type: "project_funded",
-    title: "Art of Mindful Living reached its goal!",
-    time: "10 minutes ago",
-    icon: CheckCircle2,
-    color: "text-emerald-500",
-  },
-  {
-    type: "new_user",
-    title: "15 new users signed up in the last hour",
-    time: "1 hour ago",
-    icon: Users,
-    color: "text-blue-500",
-  },
-  {
-    type: "payment_failed",
-    title: "3 payment failures detected",
-    time: "2 hours ago",
-    icon: AlertTriangle,
-    color: "text-amber-500",
-  },
-  {
-    type: "project_submitted",
-    title: "New project submitted for review",
-    time: "3 hours ago",
-    icon: FolderKanban,
-    color: "text-violet-500",
-  },
-  {
-    type: "payout_complete",
-    title: "Payout of $15,420 completed",
-    time: "5 hours ago",
-    icon: CreditCard,
-    color: "text-emerald-500",
-  },
-];
+interface RecentProject {
+  id: string;
+  title: string;
+  status: string;
+  createdAt: string;
+  creator: {
+    name: string | null;
+    email: string;
+  };
+}
 
 const aiInsights = [
   {
@@ -170,6 +92,43 @@ const aiInsights = [
 
 export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState("7d");
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [pendingReviews, setPendingReviews] = useState<PendingProject[]>([]);
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+
+  const fetchDashboardData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/admin/dashboard");
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data.stats);
+        setPendingReviews(data.pendingReviews || []);
+        setRecentProjects(data.recentActivity?.projects || []);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat("en-US").format(num);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
