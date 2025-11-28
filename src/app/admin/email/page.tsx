@@ -415,93 +415,86 @@ export default function EmailPage() {
         </Alert>
       )}
 
-      {/* Main Content */}
-      <div className="flex-1 flex gap-4 min-h-0">
-        {/* Sidebar - Mailboxes */}
-        <div className="w-64 flex-shrink-0">
-          <Card className="h-full flex flex-col">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Mailboxes</h3>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCreateMailbox}>
-                  <Plus className="h-4 w-4" />
+      {/* Mailboxes - Horizontal Row */}
+      <Card className="mb-4">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex-shrink-0">Mailboxes</h3>
+            {mailboxes.length === 0 ? (
+              <div className="flex items-center gap-2 text-sm text-zinc-500">
+                <Mail className="h-4 w-4 text-zinc-300" />
+                <span>No mailboxes yet</span>
+                <Button size="sm" variant="outline" onClick={handleCreateMailbox}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  Create
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto p-2">
-              {mailboxes.length === 0 ? (
-                <div className="text-center py-8">
-                  <Mail className="h-8 w-8 text-zinc-300 mx-auto mb-2" />
-                  <p className="text-sm text-zinc-500 mb-3">No mailboxes yet</p>
-                  <Button size="sm" variant="outline" onClick={handleCreateMailbox}>
-                    <Plus className="h-3 w-3 mr-1" />
-                    Create Mailbox
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-1">
+            ) : (
+              <>
+                <div className="flex items-center gap-2 flex-wrap flex-1">
                   {mailboxes.map((mailbox) => (
                     <div
                       key={mailbox.id}
-                      className={`group rounded-lg p-2 cursor-pointer transition-colors ${
+                      className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 cursor-pointer transition-colors border ${
                         selectedMailbox?.id === mailbox.id
-                          ? "bg-emerald-50 dark:bg-emerald-900/20"
-                          : "hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                          ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800"
+                          : "hover:bg-zinc-50 border-transparent dark:hover:bg-zinc-800"
                       }`}
                       onClick={() => setSelectedMailbox(mailbox)}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className="h-2 w-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: mailbox.color || "#3B82F6" }}
-                          />
-                          <span className="text-sm font-medium truncate">{mailbox.name}</span>
-                          {mailbox.isDefault && (
-                            <Badge variant="secondary" className="text-[10px] px-1 py-0">Default</Badge>
-                          )}
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreVertical className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditMailbox(mailbox)}>
-                              <Pencil className="h-3 w-3 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => handleDeleteMailbox(mailbox)}
-                            >
-                              <Trash2 className="h-3 w-3 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      <p className="text-xs text-zinc-500 truncate mt-0.5">{mailbox.email}</p>
+                      <div
+                        className="h-2 w-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: mailbox.color || "#3B82F6" }}
+                      />
+                      <span className="text-sm font-medium">{mailbox.name}</span>
+                      {mailbox.isDefault && (
+                        <Badge variant="secondary" className="text-[10px] px-1 py-0">Default</Badge>
+                      )}
                       {mailbox.unreadCount > 0 && (
-                        <Badge className="mt-1 bg-emerald-600 text-[10px]">
-                          {mailbox.unreadCount} unread
+                        <Badge className="bg-emerald-600 text-[10px]">
+                          {mailbox.unreadCount}
                         </Badge>
                       )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 opacity-0 group-hover:opacity-100"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditMailbox(mailbox)}>
+                            <Pencil className="h-3 w-3 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteMailbox(mailbox)}
+                          >
+                            <Trash2 className="h-3 w-3 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleCreateMailbox}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Main Content */}
+      <div className="flex-1 flex gap-4 min-h-0">
         {/* Folders */}
         {selectedMailbox && (
           <div className="w-40 flex-shrink-0">
