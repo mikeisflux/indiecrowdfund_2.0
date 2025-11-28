@@ -268,4 +268,88 @@ Respond in JSON format:
   }
 }
 
+/**
+ * Generate personalized email campaign content using AI
+ */
+export async function generateCampaignContent(params: {
+  campaignName: string;
+  targetAudience: string;
+  projectCategory: string;
+  subjectTemplate: string;
+  introMessage: string;
+  projects: Array<{ title: string; description: string; category?: string; goalAmount?: number }>;
+}): Promise<{
+  subject: string;
+  preheader: string;
+  personalizedIntro: string;
+  projectRecommendations: Array<{
+    projectTitle: string;
+    recommendationReason: string;
+    callToAction: string;
+  }>;
+  footer: string;
+}> {
+  const prompt = `Generate personalized email campaign content for a crowdfunding platform.
+
+Campaign Details:
+- Name: ${params.campaignName}
+- Target Audience: ${params.targetAudience}
+- Category Filter: ${params.projectCategory}
+- Subject Template: ${params.subjectTemplate || "Projects you'll love this week"}
+- Intro Message: ${params.introMessage || "Check out these amazing projects we picked just for you."}
+
+Available Projects to Recommend:
+${params.projects.slice(0, 5).map((p, i) => `${i + 1}. "${p.title}" - ${p.description?.substring(0, 200) || "No description"}`).join("\n")}
+
+Generate compelling email content that:
+- Feels personal and authentic, not generic or salesy
+- Creates urgency without being pushy
+- Highlights what makes each project special
+- Includes clear calls-to-action
+
+Respond in JSON format:
+{
+  "subject": "An engaging email subject line",
+  "preheader": "A compelling preheader text (max 100 chars)",
+  "personalizedIntro": "A warm, personalized introduction paragraph",
+  "projectRecommendations": [
+    {
+      "projectTitle": "Project title",
+      "recommendationReason": "Why this project is perfect for this audience (1-2 sentences)",
+      "callToAction": "A compelling CTA for this project"
+    }
+  ],
+  "footer": "A friendly sign-off message"
+}`;
+
+  try {
+    const response = await getOpenAI().chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an expert email marketing specialist for crowdfunding platforms. Create authentic, personalized content that drives engagement without being pushy or salesy. Respond only with valid JSON.",
+        },
+        { role: "user", content: prompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+
+    return {
+      subject: result.subject || params.subjectTemplate || "Projects you'll love",
+      preheader: result.preheader || "Discover amazing projects tailored for you",
+      personalizedIntro: result.personalizedIntro || params.introMessage,
+      projectRecommendations: result.projectRecommendations || [],
+      footer: result.footer || "Happy exploring!",
+    };
+  } catch (error) {
+    console.error("OpenAI campaign content error:", error);
+    throw new Error("Failed to generate campaign content");
+  }
+}
+
 export { PROJECT_CATEGORIES, type ProjectCategory };

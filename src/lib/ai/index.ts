@@ -5,6 +5,7 @@ export {
   generateMarketingCopy,
   generateRecommendationReason,
   improveDescription,
+  generateCampaignContent,
   PROJECT_CATEGORIES,
   type ProjectCategory,
 } from "./openai";

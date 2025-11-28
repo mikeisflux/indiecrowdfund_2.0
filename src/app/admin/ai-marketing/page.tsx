@@ -100,6 +100,93 @@ export default function AIMarketingPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [showCampaignDialog, setShowCampaignDialog] = useState(false);
+  const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
+  const [campaignError, setCampaignError] = useState<string | null>(null);
+  const [campaignSuccess, setCampaignSuccess] = useState<string | null>(null);
+
+  // Campaign form state
+  const [campaignForm, setCampaignForm] = useState({
+    name: "",
+    targetAudience: "all",
+    projectCategory: "all",
+    subjectTemplate: "",
+    introMessage: "",
+    autoGenerateCopy: true,
+  });
+
+  // Preset campaign templates
+  const campaignTemplates = [
+    {
+      id: "weekly-picks",
+      name: "Weekly Project Picks",
+      targetAudience: "all",
+      projectCategory: "all",
+      subjectTemplate: "This week's must-see projects",
+      introMessage: "We've handpicked some amazing projects we think you'll love.",
+    },
+    {
+      id: "tech-enthusiasts",
+      name: "Tech Enthusiasts Newsletter",
+      targetAudience: "backers",
+      projectCategory: "technology",
+      subjectTemplate: "Innovative tech projects just for you",
+      introMessage: "As a tech supporter, we thought you'd want to see these cutting-edge projects.",
+    },
+    {
+      id: "high-value-exclusive",
+      name: "Exclusive VIP Showcase",
+      targetAudience: "high-value",
+      projectCategory: "all",
+      subjectTemplate: "Exclusive early access to premium projects",
+      introMessage: "As one of our top supporters, get first look at these exceptional projects.",
+    },
+    {
+      id: "game-launches",
+      name: "New Game Launches",
+      targetAudience: "backers",
+      projectCategory: "games",
+      subjectTemplate: "New games you won't want to miss",
+      introMessage: "Level up with these exciting new game projects!",
+    },
+    {
+      id: "creative-arts",
+      name: "Creative Arts Digest",
+      targetAudience: "all",
+      projectCategory: "art",
+      subjectTemplate: "Support incredible artists",
+      introMessage: "Discover beautiful art projects from talented creators.",
+    },
+    {
+      id: "creator-tips",
+      name: "Creator Success Tips",
+      targetAudience: "creators",
+      projectCategory: "all",
+      subjectTemplate: "Tips to make your project succeed",
+      introMessage: "Learn from successful campaigns and boost your project.",
+    },
+    {
+      id: "win-back",
+      name: "We Miss You Campaign",
+      targetAudience: "at-risk",
+      projectCategory: "all",
+      subjectTemplate: "Come back and see what's new!",
+      introMessage: "It's been a while! Check out these amazing new projects.",
+    },
+  ];
+
+  const applyTemplate = (templateId: string) => {
+    const template = campaignTemplates.find(t => t.id === templateId);
+    if (template) {
+      setCampaignForm({
+        ...campaignForm,
+        name: template.name,
+        targetAudience: template.targetAudience,
+        projectCategory: template.projectCategory,
+        subjectTemplate: campaignForm.autoGenerateCopy ? "" : template.subjectTemplate,
+        introMessage: campaignForm.autoGenerateCopy ? "" : template.introMessage,
+      });
+    }
+  };
 
   // Dynamic data from API
   const [stats, setStats] = useState<AIStats | null>(null);
@@ -284,6 +371,68 @@ export default function AIMarketingPage() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleCreateCampaign = async () => {
+    if (!campaignForm.name.trim()) {
+      setCampaignError("Please enter a campaign name");
+      return;
+    }
+
+    setIsCreatingCampaign(true);
+    setCampaignError(null);
+    setCampaignSuccess(null);
+
+    try {
+      const response = await fetch("/api/admin/ai-marketing/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(campaignForm),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create campaign");
+      }
+
+      setCampaignSuccess(data.message || "Campaign created successfully!");
+
+      // Reload data to show new campaign
+      await loadData();
+
+      // Close dialog after short delay to show success message
+      setTimeout(() => {
+        setShowCampaignDialog(false);
+        setCampaignSuccess(null);
+        setCampaignForm({
+          name: "",
+          targetAudience: "all",
+          projectCategory: "all",
+          subjectTemplate: "",
+          introMessage: "",
+        });
+      }, 2000);
+    } catch (error) {
+      console.error("Error creating campaign:", error);
+      setCampaignError(error instanceof Error ? error.message : "Failed to create campaign");
+    } finally {
+      setIsCreatingCampaign(false);
+    }
+  };
+
+  const resetCampaignDialog = () => {
+    setShowCampaignDialog(false);
+    setCampaignError(null);
+    setCampaignSuccess(null);
+    setCampaignForm({
+      name: "",
+      targetAudience: "all",
+      projectCategory: "all",
+      subjectTemplate: "",
+      introMessage: "",
+      autoGenerateCopy: true,
+    });
   };
 
   if (isLoading) {
@@ -1160,7 +1309,10 @@ export default function AIMarketingPage() {
       </Tabs>
 
       {/* Create Campaign Dialog */}
-      <Dialog open={showCampaignDialog} onOpenChange={setShowCampaignDialog}>
+      <Dialog open={showCampaignDialog} onOpenChange={(open) => {
+        if (!open) resetCampaignDialog();
+        else setShowCampaignDialog(true);
+      }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create AI-Powered Campaign</DialogTitle>
@@ -1168,80 +1320,170 @@ export default function AIMarketingPage() {
               Let AI match projects to users based on their interests and behavior
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Campaign Name</Label>
-              <Input placeholder="e.g., Tech Enthusiasts - November 2024" />
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Target Audience</Label>
-                <Select defaultValue="all">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Subscribers</SelectItem>
-                    <SelectItem value="backers">Previous Backers</SelectItem>
-                    <SelectItem value="high-value">High-Value Backers</SelectItem>
-                    <SelectItem value="at-risk">At-Risk Churners</SelectItem>
-                    <SelectItem value="creators">Project Creators</SelectItem>
-                  </SelectContent>
-                </Select>
+          {campaignSuccess ? (
+            <div className="py-8 text-center">
+              <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
+              <h3 className="font-semibold text-lg text-emerald-700">{campaignSuccess}</h3>
+              <p className="text-sm text-zinc-500 mt-2">Your campaign is being prepared with AI-generated content.</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 py-4">
+                {campaignError && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-400">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      {campaignError}
+                    </div>
+                  </div>
+                )}
+
+                {/* Quick Start Template */}
+                <div className="space-y-2">
+                  <Label>Quick Start Template</Label>
+                  <Select onValueChange={applyTemplate}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a campaign template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {campaignTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-zinc-500">Select a template to auto-fill campaign settings</p>
+                </div>
+
+                {/* AI Auto-Generate Toggle */}
+                <div className="flex items-center justify-between rounded-lg border bg-violet-50 p-4 dark:bg-violet-950/20">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="h-5 w-5 text-violet-600" />
+                    <div>
+                      <Label className="text-violet-900 dark:text-violet-100">AI Auto-Generate Copy</Label>
+                      <p className="text-sm text-violet-700 dark:text-violet-300">
+                        Let AI write the subject line and intro message
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={campaignForm.autoGenerateCopy}
+                    onCheckedChange={(checked) => setCampaignForm({ ...campaignForm, autoGenerateCopy: checked })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Campaign Name</Label>
+                  <Input
+                    placeholder="e.g., Tech Enthusiasts - November 2024"
+                    value={campaignForm.name}
+                    onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Target Audience</Label>
+                    <Select
+                      value={campaignForm.targetAudience}
+                      onValueChange={(value) => setCampaignForm({ ...campaignForm, targetAudience: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Subscribers</SelectItem>
+                        <SelectItem value="backers">Previous Backers</SelectItem>
+                        <SelectItem value="high-value">High-Value Backers</SelectItem>
+                        <SelectItem value="at-risk">At-Risk Churners</SelectItem>
+                        <SelectItem value="creators">Project Creators</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Project Categories</Label>
+                    <Select
+                      value={campaignForm.projectCategory}
+                      onValueChange={(value) => setCampaignForm({ ...campaignForm, projectCategory: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="technology">Technology</SelectItem>
+                        <SelectItem value="games">Games</SelectItem>
+                        <SelectItem value="film">Film & Video</SelectItem>
+                        <SelectItem value="design">Design</SelectItem>
+                        <SelectItem value="music">Music</SelectItem>
+                        <SelectItem value="art">Art</SelectItem>
+                        <SelectItem value="publishing">Publishing</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {!campaignForm.autoGenerateCopy && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Email Subject</Label>
+                      <Input
+                        placeholder="e.g., Projects you'll love this week"
+                        value={campaignForm.subjectTemplate}
+                        onChange={(e) => setCampaignForm({ ...campaignForm, subjectTemplate: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Intro Message</Label>
+                      <Textarea
+                        placeholder="Brief intro for the email. AI will add personalized project recommendations below."
+                        rows={3}
+                        value={campaignForm.introMessage}
+                        onChange={(e) => setCampaignForm({ ...campaignForm, introMessage: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {campaignForm.autoGenerateCopy && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/20">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-5 w-5 text-emerald-600" />
+                      <p className="font-medium text-emerald-900 dark:text-emerald-100">AI Will Generate</p>
+                    </div>
+                    <ul className="mt-2 text-sm text-emerald-700 dark:text-emerald-300 space-y-1">
+                      <li>• Compelling email subject line optimized for opens</li>
+                      <li>• Personalized intro message for your audience</li>
+                      <li>• 3-5 project recommendations per recipient</li>
+                      <li>• Custom reasons why each project matches the user</li>
+                    </ul>
+                  </div>
+                )}
               </div>
-
-              <div className="space-y-2">
-                <Label>Project Categories</Label>
-                <Select defaultValue="all">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="technology">Technology</SelectItem>
-                    <SelectItem value="games">Games</SelectItem>
-                    <SelectItem value="film">Film & Video</SelectItem>
-                    <SelectItem value="design">Design</SelectItem>
-                    <SelectItem value="music">Music</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Email Subject (AI will personalize)</Label>
-              <Input placeholder="e.g., Projects you'll love this week" />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Intro Message</Label>
-              <Textarea
-                placeholder="Brief intro for the email. AI will add personalized project recommendations below."
-                rows={3}
-              />
-            </div>
-
-            <div className="rounded-lg border bg-violet-50 p-4 dark:bg-violet-950/20">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-violet-600" />
-                <p className="font-medium text-violet-900 dark:text-violet-100">AI Personalization</p>
-              </div>
-              <p className="mt-1 text-sm text-violet-700 dark:text-violet-300">
-                Each recipient will receive 3-5 project recommendations based on their browsing history,
-                previous pledges, and matching tags.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCampaignDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setShowCampaignDialog(false)}>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Create Campaign
-            </Button>
-          </DialogFooter>
+              <DialogFooter>
+                <Button variant="outline" onClick={resetCampaignDialog} disabled={isCreatingCampaign}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateCampaign} disabled={isCreatingCampaign}>
+                  {isCreatingCampaign ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Creating with AI...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Create Campaign
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
