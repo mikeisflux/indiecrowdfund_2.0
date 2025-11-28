@@ -628,8 +628,8 @@ export default function RetailerApplyPage() {
                       />
                       <label htmlFor="agreeToPrivacy" className="text-sm">
                         I agree to the{" "}
-                        <Link href="/privacy" className="text-emerald-600 hover:underline">
-                          Privacy Policy
+                        <Link href="/terms" className="text-emerald-600 hover:underline">
+                          Terms of Service & Privacy Policy
                         </Link>{" "}
                         and consent to the collection and use of my business information.
                       </label>

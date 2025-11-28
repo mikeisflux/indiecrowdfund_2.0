@@ -101,11 +101,7 @@ export function RegisterForm() {
       <p className="text-center text-xs text-muted-foreground">
         By creating an account, you agree to our{" "}
         <Link href="/terms" className="underline">
-          Terms of Service
-        </Link>{" "}
-        and{" "}
-        <Link href="/privacy" className="underline">
-          Privacy Policy
+          Terms of Service & Privacy Policy
         </Link>
       </p>
     </div>
