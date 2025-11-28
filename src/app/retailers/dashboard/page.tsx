@@ -490,7 +490,7 @@ export default function RetailerDashboardPage() {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-emerald-600" />
-                    <span>Net-30 payment terms</span>
+                    <span>Secure payment processing</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-emerald-600" />

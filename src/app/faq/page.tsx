@@ -216,7 +216,7 @@ const faqCategories = [
       {
         question: "What are the payment terms for retailers?",
         answer:
-          "We offer Net-30 payment terms for established retailers. New retailers may be required to pay upfront for their first few orders. Invoices are generated after order placement with clear payment due dates.",
+          "Retailers pay at the time of order placement via credit card or bank transfer. Invoices are generated immediately with clear order confirmations and receipts.",
       },
       {
         question: "How does retailer fulfillment work?",

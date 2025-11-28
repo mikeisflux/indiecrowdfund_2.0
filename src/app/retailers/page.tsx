@@ -19,7 +19,6 @@ import {
   BarChart3,
   Globe,
   HeadphonesIcon,
-  Lock,
   Zap,
 } from "lucide-react";
 
@@ -41,8 +40,8 @@ const features = [
   },
   {
     icon: FileText,
-    title: "Net-30 Terms",
-    description: "Qualified retailers can access Net-30 payment terms on orders over $500.",
+    title: "Simple Invoicing",
+    description: "Easy-to-manage invoicing and payment processing for all your wholesale orders.",
   },
   {
     icon: Truck,
@@ -144,8 +143,7 @@ export default function RetailersPage() {
                 </Button>
               </Link>
               <Link href="/retailers/login">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                  <Lock className="mr-2 h-5 w-5" />
+                <Button size="lg" className="bg-white/10 text-white border-2 border-white hover:bg-white/20">
                   Retailer Login
                 </Button>
               </Link>

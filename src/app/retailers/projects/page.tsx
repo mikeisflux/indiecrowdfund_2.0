@@ -336,7 +336,7 @@ export default function RetailerProjectsPage() {
             <div>
               <h2 className="text-xl font-bold">50% Wholesale Discount</h2>
               <p className="text-emerald-100">
-                All prices shown include your retailer discount. Net-30 payment terms available.
+                All prices shown include your retailer discount. Secure checkout available.
               </p>
             </div>
           </div>

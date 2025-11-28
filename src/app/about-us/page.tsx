@@ -318,7 +318,7 @@ const platformFeatures = [
       {
         title: "Wholesale Portal",
         description:
-          "Certified retailers access a dedicated portal with wholesale pricing, bulk ordering, and Net-30 terms.",
+          "Certified retailers access a dedicated portal with wholesale pricing, bulk ordering, and easy invoicing.",
         icon: Store,
       },
       {

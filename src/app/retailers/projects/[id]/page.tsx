@@ -598,7 +598,7 @@ export default function RetailerProjectDetailPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5" />
-                      <span>Net-30 payment terms available</span>
+                      <span>Secure checkout with instant confirmation</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5" />
