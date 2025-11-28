@@ -301,9 +301,15 @@ export default function SettingsPage() {
 
       setSocialSettings((prev) => ({
         ...prev,
-        twitterApiKey: settings.twitterHandle || "",
-        facebookAppId: settings.facebookUrl || "",
-        youtubeClientId: settings.youtubeUrl || "",
+        facebookAppId: settings.facebookAppId || "",
+        facebookAppSecret: settings.facebookAppSecret || "",
+        youtubeClientId: settings.youtubeClientId || "",
+        youtubeClientSecret: settings.youtubeClientSecret || "",
+        youtubeApiKey: settings.youtubeApiKey || "",
+        twitterApiKey: settings.twitterApiKey || "",
+        twitterApiSecret: settings.twitterApiSecret || "",
+        dalleApiKey: settings.dalleApiKey || "",
+        stabilityApiKey: settings.stabilityApiKey || "",
       }));
     } catch (err) {
       console.error("Error fetching settings:", err);
@@ -431,9 +437,15 @@ export default function SettingsPage() {
         case "social":
           section = "social";
           data = {
-            twitterHandle: socialSettings.twitterApiKey,
-            facebookUrl: socialSettings.facebookAppId,
-            youtubeUrl: socialSettings.youtubeClientId,
+            facebookAppId: socialSettings.facebookAppId,
+            facebookAppSecret: socialSettings.facebookAppSecret,
+            youtubeClientId: socialSettings.youtubeClientId,
+            youtubeClientSecret: socialSettings.youtubeClientSecret,
+            youtubeApiKey: socialSettings.youtubeApiKey,
+            twitterApiKey: socialSettings.twitterApiKey,
+            twitterApiSecret: socialSettings.twitterApiSecret,
+            dalleApiKey: socialSettings.dalleApiKey,
+            stabilityApiKey: socialSettings.stabilityApiKey,
           };
           break;
         case "ai":

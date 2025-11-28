@@ -57,6 +57,13 @@ export async function GET() {
       openaiApiKey: settings.openaiApiKey ? "••••••••" : null,
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
       googlePlacesApiKey: settings.googlePlacesApiKey ? "••••••••" : null,
+      facebookAppSecret: settings.facebookAppSecret ? "••••••••" : null,
+      youtubeClientSecret: settings.youtubeClientSecret ? "••••••••" : null,
+      youtubeApiKey: settings.youtubeApiKey ? "••••••••" : null,
+      twitterApiKey: settings.twitterApiKey ? "••••••••" : null,
+      twitterApiSecret: settings.twitterApiSecret ? "••••••••" : null,
+      dalleApiKey: settings.dalleApiKey ? "••••••••" : null,
+      stabilityApiKey: settings.stabilityApiKey ? "••••••••" : null,
     };
 
     return NextResponse.json({ settings: maskedSettings });
@@ -107,7 +114,9 @@ export async function PATCH(req: NextRequest) {
         "smtpFromEmail", "smtpFromName", "sendgridApiKey", "mailgunApiKey", "mailgunDomain"
       ],
       social: [
-        "twitterHandle", "facebookUrl", "instagramHandle", "youtubeUrl", "discordUrl"
+        "twitterHandle", "facebookUrl", "instagramHandle", "youtubeUrl", "discordUrl",
+        "facebookAppId", "facebookAppSecret", "youtubeClientId", "youtubeClientSecret",
+        "youtubeApiKey", "twitterApiKey", "twitterApiSecret", "dalleApiKey", "stabilityApiKey"
       ],
       ai: [
         "aiProvider", "openaiApiKey", "anthropicApiKey",
@@ -173,6 +182,13 @@ export async function PATCH(req: NextRequest) {
       openaiApiKey: settings.openaiApiKey ? "••••••••" : null,
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
       googlePlacesApiKey: settings.googlePlacesApiKey ? "••••••••" : null,
+      facebookAppSecret: settings.facebookAppSecret ? "••••••••" : null,
+      youtubeClientSecret: settings.youtubeClientSecret ? "••••••••" : null,
+      youtubeApiKey: settings.youtubeApiKey ? "••••••••" : null,
+      twitterApiKey: settings.twitterApiKey ? "••••••••" : null,
+      twitterApiSecret: settings.twitterApiSecret ? "••••••••" : null,
+      dalleApiKey: settings.dalleApiKey ? "••••••••" : null,
+      stabilityApiKey: settings.stabilityApiKey ? "••••••••" : null,
     };
 
     return NextResponse.json({
