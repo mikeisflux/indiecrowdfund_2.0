@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,135 +34,119 @@ import {
   FolderKanban,
   Search,
   Ban,
-  ThumbsUp,
-  ThumbsDown,
   ExternalLink,
   History,
+  Loader2,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 
-// Mock reports data
-const reports = [
-  {
-    id: "1",
-    type: "project",
-    reason: "Fraud/Scam",
-    targetId: "proj-123",
-    targetName: "Amazing Widget Pro",
-    reportedBy: "user@example.com",
-    description: "This project appears to be using fake testimonials and stolen images.",
-    status: "pending",
-    priority: "high",
-    createdAt: "2024-03-18 14:23",
-    updatedAt: null,
-  },
-  {
-    id: "2",
-    type: "user",
-    reason: "Harassment",
-    targetId: "user-456",
-    targetName: "aggressive_user",
-    reportedBy: "victim@example.com",
-    description: "This user has been sending threatening messages.",
-    status: "pending",
-    priority: "high",
-    createdAt: "2024-03-18 12:45",
-    updatedAt: null,
-  },
-  {
-    id: "3",
-    type: "comment",
-    reason: "Spam",
-    targetId: "comment-789",
-    targetName: "Project comment",
-    reportedBy: "creator@example.com",
-    description: "Spam links to external websites.",
-    status: "resolved",
-    priority: "low",
-    createdAt: "2024-03-17 09:30",
-    updatedAt: "2024-03-17 11:00",
-  },
-  {
-    id: "4",
-    type: "project",
-    reason: "Copyright Violation",
-    targetId: "proj-456",
-    targetName: "Super Cool Game",
-    reportedBy: "copyright@holder.com",
-    description: "Using copyrighted assets without permission.",
-    status: "investigating",
-    priority: "medium",
-    createdAt: "2024-03-16 16:20",
-    updatedAt: "2024-03-17 10:00",
-  },
-  {
-    id: "5",
-    type: "update",
-    reason: "Misleading Content",
-    targetId: "update-321",
-    targetName: "Project Update #5",
-    reportedBy: "backer@example.com",
-    description: "The update contains false claims about shipping dates.",
-    status: "dismissed",
-    priority: "low",
-    createdAt: "2024-03-15 11:00",
-    updatedAt: "2024-03-16 09:00",
-  },
-];
+interface Report {
+  id: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  description: string;
+  status: string;
+  priority: string;
+  reporterId: string | null;
+  reporterEmail: string | null;
+  projectId: string | null;
+  userId: string | null;
+  evidence: string[];
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  resolution: string | null;
+  actionTaken: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const moderationStats = {
-  pending: 23,
-  investigating: 8,
-  resolved: 456,
-  dismissed: 89,
-  avgResponseTime: "4.2 hours",
-};
-
-const pendingReviews = [
-  {
-    id: "1",
-    type: "project",
-    name: "Revolutionary Tech Gadget",
-    creator: "new_creator@email.com",
-    submittedAt: "2024-03-18 10:00",
-    category: "Technology",
-    fundingGoal: 50000,
-    flags: ["first_project", "high_goal"],
-  },
-  {
-    id: "2",
-    type: "project",
-    name: "Indie Film: Dark Waters",
-    creator: "filmmaker@studio.com",
-    submittedAt: "2024-03-18 09:30",
-    category: "Film",
-    fundingGoal: 25000,
-    flags: [],
-  },
-  {
-    id: "3",
-    type: "project",
-    name: "Artisan Coffee Subscription",
-    creator: "coffee@lover.com",
-    submittedAt: "2024-03-17 16:00",
-    category: "Food",
-    fundingGoal: 10000,
-    flags: ["unverified_creator"],
-  },
-];
+interface Stats {
+  pending: number;
+  underReview: number;
+  resolved: number;
+  dismissed: number;
+  escalated: number;
+}
 
 export default function ModerationPage() {
   const [activeTab, setActiveTab] = useState("reports");
-  const [selectedReport, setSelectedReport] = useState<typeof reports[0] | null>(null);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [stats, setStats] = useState<Stats>({ pending: 0, underReview: 0, resolved: 0, dismissed: 0, escalated: 0 });
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("PENDING");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [moderatorNotes, setModeratorNotes] = useState("");
+
+  const fetchReports = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        status: statusFilter,
+        ...(priorityFilter !== "all" && { priority: priorityFilter }),
+      });
+      const response = await fetch(`/api/admin/reports?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setReports(data.reports || []);
+        setStats(data.stats || { pending: 0, underReview: 0, resolved: 0, dismissed: 0, escalated: 0 });
+      }
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [statusFilter, priorityFilter]);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
+
+  const handleReportAction = async (action: string) => {
+    if (!selectedReport) return;
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/admin/reports", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportId: selectedReport.id,
+          action,
+          resolution: moderatorNotes,
+          actionTaken: action === "RESOLVE" ? "ACTION_TAKEN" : action === "DISMISS" ? "NO_ACTION" : undefined,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchReports();
+        setShowReportDialog(false);
+        setSelectedReport(null);
+        setModeratorNotes("");
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to update report");
+      }
+    } catch (error) {
+      console.error("Error updating report:", error);
+      alert("Failed to update report");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
-      case "high":
+      case "URGENT":
+        return <Badge className="bg-red-100 text-red-700">Urgent</Badge>;
+      case "HIGH":
         return <Badge className="bg-red-100 text-red-700">High</Badge>;
-      case "medium":
+      case "MEDIUM":
         return <Badge className="bg-amber-100 text-amber-700">Medium</Badge>;
       default:
         return <Badge className="bg-zinc-100 text-zinc-700">Low</Badge>;
@@ -171,14 +155,16 @@ export default function ModerationPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "pending":
+      case "PENDING":
         return <Badge className="bg-amber-100 text-amber-700"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
-      case "investigating":
-        return <Badge className="bg-blue-100 text-blue-700"><Eye className="h-3 w-3 mr-1" /> Investigating</Badge>;
-      case "resolved":
+      case "UNDER_REVIEW":
+        return <Badge className="bg-blue-100 text-blue-700"><Eye className="h-3 w-3 mr-1" /> Under Review</Badge>;
+      case "RESOLVED":
         return <Badge className="bg-emerald-100 text-emerald-700"><CheckCircle className="h-3 w-3 mr-1" /> Resolved</Badge>;
-      case "dismissed":
+      case "DISMISSED":
         return <Badge className="bg-zinc-100 text-zinc-700"><XCircle className="h-3 w-3 mr-1" /> Dismissed</Badge>;
+      case "ESCALATED":
+        return <Badge className="bg-red-100 text-red-700"><AlertTriangle className="h-3 w-3 mr-1" /> Escalated</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -186,18 +172,39 @@ export default function ModerationPage() {
 
   const getTypeBadge = (type: string) => {
     switch (type) {
-      case "project":
+      case "PROJECT":
         return <Badge variant="outline"><FolderKanban className="h-3 w-3 mr-1" /> Project</Badge>;
-      case "user":
+      case "USER":
         return <Badge variant="outline"><Users className="h-3 w-3 mr-1" /> User</Badge>;
-      case "comment":
+      case "COMMENT":
         return <Badge variant="outline"><MessageSquare className="h-3 w-3 mr-1" /> Comment</Badge>;
-      case "update":
+      case "UPDATE":
         return <Badge variant="outline"><FileText className="h-3 w-3 mr-1" /> Update</Badge>;
       default:
         return <Badge variant="outline">{type}</Badge>;
     }
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const filteredReports = reports.filter((report) => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        report.reason.toLowerCase().includes(query) ||
+        report.description.toLowerCase().includes(query) ||
+        report.targetId.toLowerCase().includes(query)
+      );
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -208,9 +215,9 @@ export default function ModerationPage() {
           <p className="text-zinc-500">Review reports and moderate content</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline">
-            <History className="mr-2 h-4 w-4" />
-            View History
+          <Button variant="outline" onClick={() => fetchReports()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
           </Button>
         </div>
       </div>
@@ -224,7 +231,7 @@ export default function ModerationPage() {
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{moderationStats.pending}</p>
+                <p className="text-2xl font-bold">{stats.pending}</p>
                 <p className="text-xs text-zinc-500">Pending</p>
               </div>
             </div>
@@ -238,8 +245,8 @@ export default function ModerationPage() {
                 <Eye className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{moderationStats.investigating}</p>
-                <p className="text-xs text-zinc-500">Investigating</p>
+                <p className="text-2xl font-bold">{stats.underReview}</p>
+                <p className="text-xs text-zinc-500">Under Review</p>
               </div>
             </div>
           </CardContent>
@@ -252,7 +259,7 @@ export default function ModerationPage() {
                 <CheckCircle className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{moderationStats.resolved}</p>
+                <p className="text-2xl font-bold">{stats.resolved}</p>
                 <p className="text-xs text-zinc-500">Resolved</p>
               </div>
             </div>
@@ -266,7 +273,7 @@ export default function ModerationPage() {
                 <XCircle className="h-5 w-5 text-zinc-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{moderationStats.dismissed}</p>
+                <p className="text-2xl font-bold">{stats.dismissed}</p>
                 <p className="text-xs text-zinc-500">Dismissed</p>
               </div>
             </div>
@@ -276,12 +283,12 @@ export default function ModerationPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-violet-100 p-2 dark:bg-violet-900/30">
-                <Shield className="h-5 w-5 text-violet-600" />
+              <div className="rounded-full bg-red-100 p-2 dark:bg-red-900/30">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{moderationStats.avgResponseTime}</p>
-                <p className="text-xs text-zinc-500">Avg Response</p>
+                <p className="text-2xl font-bold">{stats.escalated}</p>
+                <p className="text-xs text-zinc-500">Escalated</p>
               </div>
             </div>
           </CardContent>
@@ -293,22 +300,15 @@ export default function ModerationPage() {
           <TabsTrigger value="reports">
             <Flag className="mr-2 h-4 w-4" />
             Reports
-            {moderationStats.pending > 0 && (
+            {stats.pending > 0 && (
               <Badge variant="destructive" className="ml-2">
-                {moderationStats.pending}
+                {stats.pending}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="review">
-            <Eye className="mr-2 h-4 w-4" />
-            Project Review
-            <Badge variant="secondary" className="ml-2">
-              {pendingReviews.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="banned">
-            <Ban className="mr-2 h-4 w-4" />
-            Banned Content
+          <TabsTrigger value="history">
+            <History className="mr-2 h-4 w-4" />
+            History
           </TabsTrigger>
         </TabsList>
 
@@ -331,10 +331,11 @@ export default function ModerationPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="investigating">Investigating</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-                <SelectItem value="dismissed">Dismissed</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="UNDER_REVIEW">Under Review</SelectItem>
+                <SelectItem value="RESOLVED">Resolved</SelectItem>
+                <SelectItem value="DISMISSED">Dismissed</SelectItem>
+                <SelectItem value="ESCALATED">Escalated</SelectItem>
               </SelectContent>
             </Select>
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
@@ -343,190 +344,158 @@ export default function ModerationPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Priority</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="URGENT">Urgent</SelectItem>
+                <SelectItem value="HIGH">High</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="LOW">Low</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Reports List */}
-          <div className="space-y-4">
-            {reports.map((report) => (
-              <Card key={report.id} className={`${
-                report.priority === "high" && report.status === "pending"
-                  ? "border-red-200 bg-red-50/50 dark:bg-red-950/10"
-                  : ""
-              }`}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                      <Flag className={`h-5 w-5 ${
-                        report.priority === "high" ? "text-red-500" : "text-zinc-500"
-                      }`} />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-semibold">{report.reason}</h4>
-                        {getTypeBadge(report.type)}
-                        {getPriorityBadge(report.priority)}
-                        {getStatusBadge(report.status)}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+            </div>
+          ) : filteredReports.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Shield className="h-12 w-12 text-emerald-300 mb-4" />
+                <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No reports found</h3>
+                <p className="text-sm text-zinc-500 max-w-sm">
+                  {statusFilter === "PENDING"
+                    ? "No pending reports at this time. The platform is clean!"
+                    : "No reports match your current filters."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            /* Reports List */
+            <div className="space-y-4">
+              {filteredReports.map((report) => (
+                <Card key={report.id} className={`${
+                  (report.priority === "HIGH" || report.priority === "URGENT") && report.status === "PENDING"
+                    ? "border-red-200 bg-red-50/50 dark:bg-red-950/10"
+                    : ""
+                }`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                        <Flag className={`h-5 w-5 ${
+                          report.priority === "HIGH" || report.priority === "URGENT" ? "text-red-500" : "text-zinc-500"
+                        }`} />
                       </div>
 
-                      <p className="mt-1 text-sm">
-                        <span className="text-zinc-500">Target:</span>{" "}
-                        <span className="font-medium">{report.targetName}</span>
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-semibold">{report.reason}</h4>
+                          {getTypeBadge(report.targetType)}
+                          {getPriorityBadge(report.priority)}
+                          {getStatusBadge(report.status)}
+                        </div>
 
-                      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
-                        {report.description}
-                      </p>
+                        <p className="mt-1 text-sm">
+                          <span className="text-zinc-500">Target ID:</span>{" "}
+                          <span className="font-medium">{report.targetId}</span>
+                        </p>
 
-                      <div className="mt-3 flex items-center gap-4 text-xs text-zinc-500">
-                        <span>Reported by: {report.reportedBy}</span>
-                        <span>•</span>
-                        <span>{report.createdAt}</span>
+                        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                          {report.description}
+                        </p>
+
+                        <div className="mt-3 flex items-center gap-4 text-xs text-zinc-500">
+                          <span>Reporter: {report.reporterEmail || report.reporterId || "Anonymous"}</span>
+                          <span>•</span>
+                          <span>{formatDate(report.createdAt)}</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedReport(report);
-                          setShowReportDialog(true);
-                        }}
-                      >
-                        <Eye className="mr-1 h-4 w-4" />
-                        Review
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* Project Review Tab */}
-        <TabsContent value="review" className="mt-6 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Projects Pending Review</CardTitle>
-              <CardDescription>Review and approve new project submissions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {pendingReviews.map((project) => (
-                  <div key={project.id} className="flex items-center gap-4 rounded-lg border p-4">
-                    <div className="flex h-16 w-24 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                      <FolderKanban className="h-8 w-8 text-zinc-400" />
-                    </div>
-
-                    <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-semibold">{project.name}</h4>
-                        {project.flags.includes("first_project") && (
-                          <Badge variant="outline" className="text-amber-600">
-                            First Project
-                          </Badge>
-                        )}
-                        {project.flags.includes("high_goal") && (
-                          <Badge variant="outline" className="text-blue-600">
-                            High Goal
-                          </Badge>
-                        )}
-                        {project.flags.includes("unverified_creator") && (
-                          <Badge variant="outline" className="text-red-600">
-                            Unverified
-                          </Badge>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedReport(report);
+                            setShowReportDialog(true);
+                          }}
+                        >
+                          <Eye className="mr-1 h-4 w-4" />
+                          Review
+                        </Button>
                       </div>
-                      <p className="text-sm text-zinc-500">
-                        by {project.creator} • {project.category} • ${project.fundingGoal.toLocaleString()} goal
-                      </p>
-                      <p className="text-xs text-zinc-400 mt-1">
-                        Submitted: {project.submittedAt}
-                      </p>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        <ExternalLink className="mr-1 h-4 w-4" />
-                        Preview
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-emerald-600">
-                        <ThumbsUp className="mr-1 h-4 w-4" />
-                        Approve
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-red-600">
-                        <ThumbsDown className="mr-1 h-4 w-4" />
-                        Reject
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
-        {/* Banned Content Tab */}
-        <TabsContent value="banned" className="mt-6 space-y-4">
+        {/* History Tab */}
+        <TabsContent value="history" className="mt-6 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Banned Keywords & Patterns</CardTitle>
-              <CardDescription>Manage auto-moderation rules</CardDescription>
+              <CardTitle>Resolved Reports</CardTitle>
+              <CardDescription>Previously handled reports</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex gap-2">
-                  <Input placeholder="Add banned keyword or pattern..." />
-                  <Button>Add</Button>
+                  <Button
+                    variant={statusFilter === "RESOLVED" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("RESOLVED")}
+                  >
+                    Resolved
+                  </Button>
+                  <Button
+                    variant={statusFilter === "DISMISSED" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("DISMISSED")}
+                  >
+                    Dismissed
+                  </Button>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {["spam-link", "scam", "fake", "fraud", "offensive-term"].map((word) => (
-                    <Badge key={word} variant="secondary" className="gap-1 px-3 py-1">
-                      {word}
-                      <button className="ml-1 hover:text-red-500">
-                        <XCircle className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Banned Users</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {[
-                  { name: "spammer_123", reason: "Spam", date: "2024-03-10" },
-                  { name: "scam_user", reason: "Fraud", date: "2024-03-08" },
-                  { name: "harasser_456", reason: "Harassment", date: "2024-03-05" },
-                ].map((user, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-lg border p-3">
-                    <div className="flex items-center gap-3">
-                      <Ban className="h-5 w-5 text-red-500" />
-                      <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-xs text-zinc-500">
-                          Banned for: {user.reason} • {user.date}
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      Unban
-                    </Button>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
                   </div>
-                ))}
+                ) : filteredReports.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <History className="h-12 w-12 text-zinc-300 mb-4" />
+                    <p className="text-sm text-zinc-500">No reports in this category</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredReports.map((report) => (
+                      <div key={report.id} className="flex items-center gap-4 rounded-lg border p-4">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                          report.status === "RESOLVED" ? "bg-emerald-100" : "bg-zinc-100"
+                        }`}>
+                          {report.status === "RESOLVED" ? (
+                            <CheckCircle className="h-5 w-5 text-emerald-600" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-zinc-600" />
+                          )}
+                        </div>
+
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{report.reason}</p>
+                            {getTypeBadge(report.targetType)}
+                          </div>
+                          <p className="text-sm text-zinc-500">
+                            {report.resolution || "No resolution notes"}
+                          </p>
+                        </div>
+
+                        <div className="text-right text-sm text-zinc-500">
+                          <p>{report.resolvedAt ? formatDate(report.resolvedAt) : "-"}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -542,7 +511,7 @@ export default function ModerationPage() {
           {selectedReport && (
             <div className="py-4 space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
-                {getTypeBadge(selectedReport.type)}
+                {getTypeBadge(selectedReport.targetType)}
                 {getPriorityBadge(selectedReport.priority)}
                 {getStatusBadge(selectedReport.status)}
               </div>
@@ -553,57 +522,97 @@ export default function ModerationPage() {
                   <p className="font-semibold">{selectedReport.reason}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-zinc-500">Target</p>
-                  <p className="font-medium">{selectedReport.targetName}</p>
+                  <p className="text-sm text-zinc-500">Target ID</p>
+                  <p className="font-medium">{selectedReport.targetId}</p>
                 </div>
                 <div>
                   <p className="text-sm text-zinc-500">Description</p>
                   <p>{selectedReport.description}</p>
                 </div>
+                {selectedReport.evidence && selectedReport.evidence.length > 0 && (
+                  <div>
+                    <p className="text-sm text-zinc-500">Evidence</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {selectedReport.evidence.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
+                          Evidence {i + 1}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-6">
                   <div>
                     <p className="text-sm text-zinc-500">Reported By</p>
-                    <p>{selectedReport.reportedBy}</p>
+                    <p>{selectedReport.reporterEmail || selectedReport.reporterId || "Anonymous"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-zinc-500">Reported At</p>
-                    <p>{selectedReport.createdAt}</p>
+                    <p>{formatDate(selectedReport.createdAt)}</p>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-medium">Moderator Notes</p>
-                <Textarea placeholder="Add notes about this report..." rows={3} />
+                <p className="text-sm font-medium">Resolution Notes</p>
+                <Textarea
+                  placeholder="Add notes about this report and the action taken..."
+                  rows={3}
+                  value={moderatorNotes}
+                  onChange={(e) => setModeratorNotes(e.target.value)}
+                />
               </div>
 
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View Content
-                </Button>
-                <Button variant="outline" className="flex-1">
-                  <Users className="mr-2 h-4 w-4" />
-                  View Reporter
+                <Button variant="outline" className="flex-1" asChild>
+                  <a href={`/${selectedReport.targetType.toLowerCase()}s/${selectedReport.targetId}`} target="_blank">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    View Content
+                  </a>
                 </Button>
               </div>
             </div>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowReportDialog(false)}>
+            <Button variant="outline" onClick={() => setShowReportDialog(false)} disabled={isSubmitting}>
               Close
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" className="text-zinc-600">
-                <XCircle className="mr-2 h-4 w-4" />
+              {selectedReport?.status === "PENDING" && (
+                <Button
+                  variant="outline"
+                  className="text-blue-600"
+                  onClick={() => handleReportAction("REVIEW")}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eye className="mr-2 h-4 w-4" />}
+                  Start Review
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="text-zinc-600"
+                onClick={() => handleReportAction("DISMISS")}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
                 Dismiss
               </Button>
-              <Button variant="outline" className="text-amber-600">
-                <Ban className="mr-2 h-4 w-4" />
-                Take Action
+              <Button
+                variant="outline"
+                className="text-amber-600"
+                onClick={() => handleReportAction("ESCALATE")}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <AlertTriangle className="mr-2 h-4 w-4" />}
+                Escalate
               </Button>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <CheckCircle className="mr-2 h-4 w-4" />
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => handleReportAction("RESOLVE")}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                 Mark Resolved
               </Button>
             </div>
