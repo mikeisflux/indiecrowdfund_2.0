@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { TrackingProvider } from "@/components/tracking-provider";
 import { auth } from "@/lib/auth";
 import "./globals.css";
 
@@ -42,7 +43,9 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <TrackingProvider>
+              {children}
+            </TrackingProvider>
             <Toaster />
           </ThemeProvider>
         </AuthProvider>

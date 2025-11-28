@@ -109,6 +109,21 @@ export default function AIMarketingPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<EmailCampaign | null>(null);
   const [isApplyingRecommendations, setIsApplyingRecommendations] = useState(false);
   const [activityLogs, setActivityLogs] = useState<Array<{ id: string; action: string; details: string; timestamp: string }>>([]);
+  const [showTagReview, setShowTagReview] = useState(false);
+  const [pendingTagUpdates, setPendingTagUpdates] = useState<Array<{
+    projectId: string;
+    projectTitle: string;
+    currentTags: string[];
+    suggestedTags: string[];
+    primaryCategory: string | null;
+    suggestedCategories: string[];
+    confidence: number;
+    status: "pending" | "approved" | "rejected" | "error";
+    error?: string;
+    selectedTags: string[];
+    applyCategory: boolean;
+  }>>([]);
+  const [isApplyingTags, setIsApplyingTags] = useState(false);
 
   // Campaign form state
   const [campaignForm, setCampaignForm] = useState({
@@ -200,6 +215,28 @@ export default function AIMarketingPage() {
   const [emailCampaigns, setEmailCampaigns] = useState<EmailCampaign[]>([]);
   const [behaviorEvents, setBehaviorEvents] = useState<BehaviorEvent[]>([]);
   const [userSegments, setUserSegments] = useState<UserSegment[]>([]);
+  const [liveEvents, setLiveEvents] = useState<Array<{
+    id: string;
+    sessionId: string;
+    eventType: string;
+    path: string;
+    projectId?: string;
+    projectTitle?: string;
+    searchQuery?: string;
+    timeSpent?: number;
+    scrollDepth?: number;
+    timestamp: string;
+    userId?: string;
+    userName?: string;
+  }>>([]);
+  const [behaviorStats, setBehaviorStats] = useState<{
+    todayCount: number;
+    yesterdayCount: number;
+    weekCount: number;
+    trend: string;
+  } | null>(null);
+  const [topProjects, setTopProjects] = useState<Array<{ projectId: string; projectTitle: string; count: number }>>([]);
+  const [topSearches, setTopSearches] = useState<Array<{ query: string; count: number }>>([]);
 
   // AI Settings
   const [aiSettings, setAiSettings] = useState({
@@ -241,10 +278,11 @@ export default function AIMarketingPage() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Load both settings and stats in parallel
-      const [settingsRes, statsRes] = await Promise.all([
+      // Load settings, stats, and behavior data in parallel
+      const [settingsRes, statsRes, behaviorRes] = await Promise.all([
         fetch("/api/admin/settings"),
-        fetch("/api/admin/ai-marketing/stats")
+        fetch("/api/admin/ai-marketing/stats"),
+        fetch("/api/admin/ai-marketing/behavior?limit=20")
       ]);
 
       // Load settings
@@ -298,10 +336,35 @@ export default function AIMarketingPage() {
         setBehaviorEvents(statsData.behaviorEvents || []);
         setUserSegments(statsData.userSegments || []);
       }
+
+      // Load behavior data
+      if (behaviorRes.ok) {
+        const behaviorData = await behaviorRes.json();
+        setLiveEvents(behaviorData.events || []);
+        setBehaviorStats(behaviorData.stats || null);
+        setTopProjects(behaviorData.topProjects || []);
+        setTopSearches(behaviorData.topSearches || []);
+      }
     } catch (error) {
       console.error("Failed to load AI data:", error);
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  // Refresh behavior data more frequently
+  const refreshBehaviorData = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/ai-marketing/behavior?limit=20");
+      if (response.ok) {
+        const data = await response.json();
+        setLiveEvents(data.events || []);
+        setBehaviorStats(data.stats || null);
+        setTopProjects(data.topProjects || []);
+        setTopSearches(data.topSearches || []);
+      }
+    } catch (error) {
+      console.debug("Failed to refresh behavior data:", error);
     }
   }, []);
 
@@ -370,13 +433,120 @@ export default function AIMarketingPage() {
   const runAutoTagging = async () => {
     setIsProcessing(true);
     try {
-      // This would call the AI auto-tagging endpoint
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      // Reload stats after tagging
-      await loadData();
+      const response = await fetch("/api/admin/ai-marketing/auto-tag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          confidenceThreshold: aiSettings.autoTagConfidence,
+          maxTags: aiSettings.maxTags,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to run auto-tagging");
+      }
+
+      if (data.taggedProjects && data.taggedProjects.length > 0) {
+        // Initialize selected tags and show review dialog
+        setPendingTagUpdates(
+          data.taggedProjects.map((p: {
+            projectId: string;
+            projectTitle: string;
+            currentTags: string[];
+            suggestedTags: string[];
+            primaryCategory: string | null;
+            suggestedCategories: string[];
+            confidence: number;
+            status: "pending" | "error";
+            error?: string;
+          }) => ({
+            ...p,
+            selectedTags: p.suggestedTags,
+            applyCategory: true,
+          }))
+        );
+        setShowTagReview(true);
+      } else {
+        setSaveMessage(data.message || "No projects to tag");
+        setTimeout(() => setSaveMessage(null), 3000);
+      }
+    } catch (error) {
+      console.error("Error running auto-tagging:", error);
+      setSaveMessage("Failed to run auto-tagging");
+      setTimeout(() => setSaveMessage(null), 3000);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleApplyTags = async () => {
+    setIsApplyingTags(true);
+    try {
+      const approvedUpdates = pendingTagUpdates
+        .filter(p => p.status === "approved" && p.selectedTags.length > 0)
+        .map(p => ({
+          projectId: p.projectId,
+          tags: p.selectedTags,
+          category: p.applyCategory && p.primaryCategory ? p.primaryCategory : undefined,
+        }));
+
+      if (approvedUpdates.length === 0) {
+        setSaveMessage("No tags approved for application");
+        setShowTagReview(false);
+        setTimeout(() => setSaveMessage(null), 3000);
+        return;
+      }
+
+      const response = await fetch("/api/admin/ai-marketing/auto-tag", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectUpdates: approvedUpdates }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to apply tags");
+      }
+
+      setSaveMessage(data.message || `Applied tags to ${approvedUpdates.length} projects`);
+      setShowTagReview(false);
+      setPendingTagUpdates([]);
+      await loadData();
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error("Error applying tags:", error);
+      setSaveMessage("Failed to apply tags");
+      setTimeout(() => setSaveMessage(null), 3000);
+    } finally {
+      setIsApplyingTags(false);
+    }
+  };
+
+  const toggleTagSelection = (projectId: string, tag: string) => {
+    setPendingTagUpdates(prev =>
+      prev.map(p => {
+        if (p.projectId !== projectId) return p;
+        const selectedTags = p.selectedTags.includes(tag)
+          ? p.selectedTags.filter(t => t !== tag)
+          : [...p.selectedTags, tag];
+        return { ...p, selectedTags };
+      })
+    );
+  };
+
+  const setProjectApproval = (projectId: string, status: "approved" | "rejected") => {
+    setPendingTagUpdates(prev =>
+      prev.map(p => p.projectId === projectId ? { ...p, status } : p)
+    );
+  };
+
+  const approveAllProjects = () => {
+    setPendingTagUpdates(prev =>
+      prev.map(p => p.status !== "error" ? { ...p, status: "approved" as const } : p)
+    );
   };
 
   const handleCreateCampaign = async () => {
@@ -1229,28 +1399,134 @@ export default function AIMarketingPage() {
             </CardContent>
           </Card>
 
+          {/* Stats Summary */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-zinc-500">Today&apos;s Events</p>
+                <p className="text-2xl font-bold">{behaviorStats?.todayCount?.toLocaleString() || 0}</p>
+                <p className="text-xs text-emerald-600">{behaviorStats?.trend || "+0%"} vs yesterday</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-zinc-500">This Week</p>
+                <p className="text-2xl font-bold">{behaviorStats?.weekCount?.toLocaleString() || 0}</p>
+                <p className="text-xs text-zinc-500">Total events</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-zinc-500">Top Searches</p>
+                <p className="text-2xl font-bold">{topSearches.length}</p>
+                <p className="text-xs text-zinc-500">Unique queries</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-zinc-500">Top Projects</p>
+                <p className="text-2xl font-bold">{topProjects.length}</p>
+                <p className="text-xs text-zinc-500">By engagement</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Top Projects */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Most Viewed Projects</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topProjects.length === 0 ? (
+                  <p className="text-sm text-zinc-500 text-center py-4">No project data yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {topProjects.slice(0, 5).map((project, i) => (
+                      <div key={project.projectId} className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-zinc-400 w-6">{i + 1}.</span>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{project.projectTitle}</p>
+                        </div>
+                        <Badge variant="secondary">{project.count} views</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Top Searches */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Popular Searches</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topSearches.length === 0 ? (
+                  <p className="text-sm text-zinc-500 text-center py-4">No search data yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {topSearches.slice(0, 5).map((search, i) => (
+                      <div key={search.query} className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-zinc-400 w-6">{i + 1}.</span>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">&quot;{search.query}&quot;</p>
+                        </div>
+                        <Badge variant="outline">{search.count} searches</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
-              <CardTitle>Real-Time Behavior Stream</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Real-Time Behavior Stream</CardTitle>
+                <Button variant="outline" size="sm" onClick={refreshBehaviorData}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {[
-                  { time: "2s ago", event: "project_view", user: "user_abc123", details: "Viewed 'Solar-Powered Backpack'" },
-                  { time: "5s ago", event: "reward_view", user: "user_def456", details: "Viewed $50 reward tier" },
-                  { time: "8s ago", event: "pledge_started", user: "user_ghi789", details: "Started pledge on 'Indie Game'" },
-                  { time: "12s ago", event: "scroll_depth", user: "user_jkl012", details: "Scrolled 75% on project page" },
-                  { time: "15s ago", event: "video_play", user: "user_mno345", details: "Started watching project video" },
-                ].map((event, i) => (
-                  <div key={i} className="flex items-center gap-4 rounded-lg border p-3 text-sm">
-                    <span className="w-16 text-zinc-500">{event.time}</span>
-                    <Badge variant="outline" className="w-28 justify-center">
-                      {event.event.replace(/_/g, " ")}
-                    </Badge>
-                    <code className="text-xs text-zinc-500">{event.user}</code>
-                    <span className="flex-1 text-zinc-600">{event.details}</span>
+                {liveEvents.length === 0 ? (
+                  <div className="text-center py-8 text-zinc-500">
+                    <Activity className="h-12 w-12 mx-auto mb-3 text-zinc-300" />
+                    <p className="font-medium">No events recorded yet</p>
+                    <p className="text-sm">User behavior will appear here in real-time as visitors interact with your site.</p>
                   </div>
-                ))}
+                ) : (
+                  liveEvents.map((event) => {
+                    const timeDiff = Math.floor((Date.now() - new Date(event.timestamp).getTime()) / 1000);
+                    const timeAgo = timeDiff < 60 ? `${timeDiff}s ago` : timeDiff < 3600 ? `${Math.floor(timeDiff / 60)}m ago` : `${Math.floor(timeDiff / 3600)}h ago`;
+
+                    let details = event.path;
+                    if (event.projectTitle) {
+                      details = `Viewed "${event.projectTitle}"`;
+                    } else if (event.searchQuery) {
+                      details = `Searched for "${event.searchQuery}"`;
+                    } else if (event.scrollDepth) {
+                      details = `Scrolled ${event.scrollDepth}% on ${event.path}`;
+                    } else if (event.timeSpent) {
+                      details = `Spent ${event.timeSpent}s on ${event.path}`;
+                    }
+
+                    return (
+                      <div key={event.id} className="flex items-center gap-4 rounded-lg border p-3 text-sm">
+                        <span className="w-16 text-zinc-500">{timeAgo}</span>
+                        <Badge variant="outline" className="w-28 justify-center text-xs">
+                          {event.eventType.toLowerCase().replace(/_/g, " ")}
+                        </Badge>
+                        <code className="text-xs text-zinc-500">{event.userName || event.sessionId}</code>
+                        <span className="flex-1 text-zinc-600 truncate">{details}</span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1725,6 +2001,187 @@ export default function AIMarketingPage() {
                 Send Campaign
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tag Review Dialog */}
+      <Dialog open={showTagReview} onOpenChange={setShowTagReview}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-violet-600" />
+              Review AI-Generated Tags
+            </DialogTitle>
+            <DialogDescription>
+              Review and approve the AI-suggested tags before applying them to projects.
+              You can toggle individual tags on/off and approve or reject each project.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
+            {pendingTagUpdates.length === 0 ? (
+              <p className="text-center text-zinc-500 py-8">No tags to review</p>
+            ) : (
+              <>
+                {/* Summary stats */}
+                <div className="flex items-center justify-between rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
+                  <div className="text-sm">
+                    <span className="font-medium">{pendingTagUpdates.length}</span> projects analyzed
+                    {" • "}
+                    <span className="text-emerald-600 font-medium">
+                      {pendingTagUpdates.filter(p => p.status === "approved").length}
+                    </span> approved
+                    {" • "}
+                    <span className="text-red-600 font-medium">
+                      {pendingTagUpdates.filter(p => p.status === "rejected").length}
+                    </span> rejected
+                  </div>
+                  <Button variant="outline" size="sm" onClick={approveAllProjects}>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Approve All
+                  </Button>
+                </div>
+
+                {/* Project list */}
+                {pendingTagUpdates.map((project) => (
+                  <div
+                    key={project.projectId}
+                    className={`rounded-lg border p-4 ${
+                      project.status === "approved"
+                        ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20"
+                        : project.status === "rejected"
+                        ? "border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20"
+                        : project.status === "error"
+                        ? "border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20"
+                        : ""
+                    }`}
+                  >
+                    {/* Project header */}
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold">{project.projectTitle}</h4>
+                          <Badge
+                            variant={project.confidence >= 80 ? "default" : project.confidence >= 60 ? "secondary" : "outline"}
+                            className="text-xs"
+                          >
+                            {project.confidence}% confidence
+                          </Badge>
+                          {project.status === "error" && (
+                            <Badge variant="destructive" className="text-xs">Error</Badge>
+                          )}
+                        </div>
+                        {project.primaryCategory && (
+                          <p className="text-sm text-zinc-500 mt-1">
+                            Suggested category: <span className="font-medium">{project.primaryCategory}</span>
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={project.status === "approved" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setProjectApproval(project.projectId, "approved")}
+                          disabled={project.status === "error"}
+                          className={project.status === "approved" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={project.status === "rejected" ? "destructive" : "outline"}
+                          size="sm"
+                          onClick={() => setProjectApproval(project.projectId, "rejected")}
+                          disabled={project.status === "error"}
+                        >
+                          <AlertCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Error message */}
+                    {project.error && (
+                      <div className="mb-3 text-sm text-amber-700 dark:text-amber-400">
+                        {project.error}
+                      </div>
+                    )}
+
+                    {/* Current tags */}
+                    {project.currentTags.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs text-zinc-500 mb-1">Current tags:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {project.currentTags.map((tag) => (
+                            <Badge key={tag} variant="outline" className="text-xs text-zinc-500">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Suggested tags (toggleable) */}
+                    {project.suggestedTags.length > 0 && (
+                      <div>
+                        <p className="text-xs text-zinc-500 mb-1">AI-suggested tags (click to toggle):</p>
+                        <div className="flex flex-wrap gap-2">
+                          {project.suggestedTags.map((tag) => (
+                            <Badge
+                              key={tag}
+                              variant={project.selectedTags.includes(tag) ? "default" : "outline"}
+                              className={`cursor-pointer transition-colors ${
+                                project.selectedTags.includes(tag)
+                                  ? "bg-violet-600 hover:bg-violet-700"
+                                  : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                              }`}
+                              onClick={() => toggleTagSelection(project.projectId, tag)}
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                        <p className="text-xs text-zinc-400 mt-2">
+                          {project.selectedTags.length} tags selected
+                        </p>
+                      </div>
+                    )}
+
+                    {project.suggestedTags.length === 0 && !project.error && (
+                      <p className="text-sm text-zinc-500">
+                        No tags met the confidence threshold
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+          <DialogFooter className="border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowTagReview(false);
+                setPendingTagUpdates([]);
+              }}
+              disabled={isApplyingTags}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApplyTags}
+              disabled={isApplyingTags || pendingTagUpdates.filter(p => p.status === "approved").length === 0}
+            >
+              {isApplyingTags ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Applying Tags...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Apply {pendingTagUpdates.filter(p => p.status === "approved").length} Approved
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
