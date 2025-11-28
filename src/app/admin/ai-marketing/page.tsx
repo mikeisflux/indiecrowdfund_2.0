@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,7 +86,10 @@ const userSegments = [
 
 export default function AIMarketingPage() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [showCampaignDialog, setShowCampaignDialog] = useState(false);
 
   // AI Settings
@@ -125,11 +128,74 @@ export default function AIMarketingPage() {
     retentionPeriod: 90,
   });
 
+  // Load AI settings from API
+  const loadSettings = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/admin/settings");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.settings?.aiMarketing) {
+          const settings = data.settings.aiMarketing;
+          if (settings.aiSettings) setAiSettings(prev => ({ ...prev, ...settings.aiSettings }));
+          if (settings.trackingSettings) setTrackingSettings(prev => ({ ...prev, ...settings.trackingSettings }));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load AI settings:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  const saveSettings = async () => {
+    setIsSaving(true);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          section: "aiMarketing",
+          data: {
+            aiSettings,
+            trackingSettings,
+          },
+        }),
+      });
+
+      if (response.ok) {
+        setSaveMessage("AI settings saved successfully");
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        throw new Error("Failed to save settings");
+      }
+    } catch (error) {
+      console.error("Error saving AI settings:", error);
+      setSaveMessage("Failed to save settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const runAutoTagging = async () => {
     setIsProcessing(true);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     setIsProcessing(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -140,6 +206,11 @@ export default function AIMarketingPage() {
           <p className="text-zinc-500">Intelligent automation for personalized user experiences</p>
         </div>
         <div className="flex items-center gap-3">
+          {saveMessage && (
+            <span className={`text-sm ${saveMessage.includes("Failed") ? "text-red-600" : "text-emerald-600"}`}>
+              {saveMessage}
+            </span>
+          )}
           <Badge variant="outline" className="gap-1">
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             AI Active
@@ -147,6 +218,19 @@ export default function AIMarketingPage() {
           <Button variant="outline">
             <History className="mr-2 h-4 w-4" />
             Activity Log
+          </Button>
+          <Button onClick={saveSettings} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Settings className="mr-2 h-4 w-4" />
+                Save Settings
+              </>
+            )}
           </Button>
         </div>
       </div>
