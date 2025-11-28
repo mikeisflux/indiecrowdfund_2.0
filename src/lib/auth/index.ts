@@ -83,7 +83,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 const nextAuth = NextAuth({
-  adapter: PrismaAdapter(db),
+  // Only use adapter if we have OAuth providers (Google)
+  ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ? { adapter: PrismaAdapter(db) }
+    : {}),
   session: {
     strategy: "jwt",
   },
