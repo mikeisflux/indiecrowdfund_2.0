@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { validateSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   // Verify admin access
   const session = await validateSession();
-  if (!session || session.user.role !== "SUPER_ADMIN") {
+  if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "ADMIN")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -25,18 +27,17 @@ export async function GET() {
       // Total projects count
       db.project.count(),
 
-      // Pending moderation (projects awaiting review + reported content)
+      // Pending moderation (projects awaiting review - using SUBMITTED status)
       db.project.count({
         where: {
-          status: "PENDING_REVIEW",
+          status: "SUBMITTED",
         },
       }),
 
-      // Pending payouts (completed projects with unpaid amounts)
+      // Pending payouts (funded projects)
       db.project.count({
         where: {
-          status: "SUCCESSFUL",
-          // Add payout status check if you have a payout tracking field
+          status: "FUNDED",
         },
       }),
 
