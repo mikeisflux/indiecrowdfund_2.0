@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { login, loginWithGoogle } from "@/lib/auth/actions";
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,33 +48,34 @@ export function LoginForm() {
       .catch(() => setGoogleEnabled(false));
   }, [searchParams]);
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    const result = await login(formData, callbackUrl);
-    // If we get here with a result, it's an error (success redirects server-side)
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    const result = await signIn("credentials", {
+      email,
+      password,
+      callbackUrl,
+      redirect: false,
+    });
+
     if (result?.error) {
-      if ("_form" in result.error && result.error._form) {
-        setError(result.error._form[0]);
-      } else if ("email" in result.error && result.error.email) {
-        setError(result.error.email[0]);
-      } else if ("password" in result.error && result.error.password) {
-        setError(result.error.password[0]);
-      }
+      setError("Invalid email or password");
       setIsLoading(false);
+    } else if (result?.ok) {
+      // Successful login - redirect
+      window.location.href = callbackUrl;
     }
-    // If no result or no error, the redirect is happening server-side
   }
 
   async function handleGoogleSignIn() {
     setIsLoading(true);
-    try {
-      await loginWithGoogle(callbackUrl);
-    } catch {
-      setError("Failed to sign in with Google");
-      setIsLoading(false);
-    }
+    await signIn("google", { callbackUrl });
   }
 
   return (
@@ -85,7 +86,7 @@ export function LoginForm() {
         </Alert>
       )}
 
-      <form action={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -93,6 +94,7 @@ export function LoginForm() {
             name="email"
             type="email"
             placeholder="you@example.com"
+            autoComplete="email"
             required
             disabled={isLoading}
           />
@@ -112,6 +114,7 @@ export function LoginForm() {
             id="password"
             name="password"
             type="password"
+            autoComplete="current-password"
             required
             disabled={isLoading}
           />
