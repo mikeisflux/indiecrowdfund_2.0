@@ -1657,42 +1657,106 @@ export default function AIMarketingPage() {
           <Card>
             <CardHeader>
               <CardTitle>AI Engine Configuration</CardTitle>
-              <CardDescription>Fine-tune the AI marketing and personalization engine</CardDescription>
+              <CardDescription>Fine-tune the AI marketing and personalization engine. Enable features and click &quot;Run Now&quot; to execute.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-4">
                   <h4 className="font-semibold">Core Features</h4>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between rounded-lg border p-3">
-                      <div>
-                        <Label>Email Personalization</Label>
-                        <p className="text-xs text-zinc-500">Personalize email content per user</p>
+                    <div className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Email Personalization</Label>
+                          <p className="text-xs text-zinc-500">Personalize email content per user</p>
+                        </div>
+                        <Switch
+                          checked={aiSettings.emailPersonalization}
+                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, emailPersonalization: checked })}
+                        />
                       </div>
-                      <Switch
-                        checked={aiSettings.emailPersonalization}
-                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, emailPersonalization: checked })}
-                      />
+                      <p className="text-xs text-zinc-400 mt-2">Automatically applies when sending campaigns</p>
                     </div>
-                    <div className="flex items-center justify-between rounded-lg border p-3">
-                      <div>
-                        <Label>Predictive Analytics</Label>
-                        <p className="text-xs text-zinc-500">Predict user behavior and conversion likelihood</p>
+                    <div className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Predictive Analytics</Label>
+                          <p className="text-xs text-zinc-500">Predict user behavior and conversion likelihood</p>
+                        </div>
+                        <Switch
+                          checked={aiSettings.predictiveAnalytics}
+                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, predictiveAnalytics: checked })}
+                        />
                       </div>
-                      <Switch
-                        checked={aiSettings.predictiveAnalytics}
-                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, predictiveAnalytics: checked })}
-                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-full"
+                        disabled={!aiSettings.predictiveAnalytics || isProcessing}
+                        onClick={async () => {
+                          setIsProcessing(true);
+                          try {
+                            const res = await fetch("/api/admin/ai-marketing/run", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "runPredictiveAnalytics", params: { limit: 100 } }),
+                            });
+                            const data = await res.json();
+                            setSaveMessage(data.message || "Analysis complete");
+                            setTimeout(() => setSaveMessage(null), 5000);
+                          } catch {
+                            setSaveMessage("Failed to run analytics");
+                            setTimeout(() => setSaveMessage(null), 3000);
+                          } finally {
+                            setIsProcessing(false);
+                          }
+                        }}
+                      >
+                        {isProcessing ? <RefreshCw className="mr-2 h-3 w-3 animate-spin" /> : <Play className="mr-2 h-3 w-3" />}
+                        Run Predictive Analytics
+                      </Button>
                     </div>
-                    <div className="flex items-center justify-between rounded-lg border p-3">
-                      <div>
-                        <Label>Smart Segmentation</Label>
-                        <p className="text-xs text-zinc-500">Auto-create user segments based on behavior</p>
+                    <div className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Smart Segmentation</Label>
+                          <p className="text-xs text-zinc-500">Auto-create user segments based on behavior</p>
+                        </div>
+                        <Switch
+                          checked={aiSettings.smartSegmentation}
+                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, smartSegmentation: checked })}
+                        />
                       </div>
-                      <Switch
-                        checked={aiSettings.smartSegmentation}
-                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, smartSegmentation: checked })}
-                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-full"
+                        disabled={!aiSettings.smartSegmentation || isProcessing}
+                        onClick={async () => {
+                          setIsProcessing(true);
+                          try {
+                            const res = await fetch("/api/admin/ai-marketing/run", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "runSegmentation" }),
+                            });
+                            const data = await res.json();
+                            setSaveMessage(data.message || "Segmentation complete");
+                            if (data.segments) {
+                              setUserSegments(data.segments);
+                            }
+                            setTimeout(() => setSaveMessage(null), 5000);
+                          } catch {
+                            setSaveMessage("Failed to run segmentation");
+                            setTimeout(() => setSaveMessage(null), 3000);
+                          } finally {
+                            setIsProcessing(false);
+                          }
+                        }}
+                      >
+                        {isProcessing ? <RefreshCw className="mr-2 h-3 w-3 animate-spin" /> : <Play className="mr-2 h-3 w-3" />}
+                        Run Smart Segmentation
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1700,35 +1764,70 @@ export default function AIMarketingPage() {
                 <div className="space-y-4">
                   <h4 className="font-semibold">Optimization</h4>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between rounded-lg border p-3">
-                      <div>
-                        <Label>Send Time Optimization</Label>
-                        <p className="text-xs text-zinc-500">AI picks optimal send time per user</p>
+                    <div className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Send Time Optimization</Label>
+                          <p className="text-xs text-zinc-500">AI picks optimal send time per user</p>
+                        </div>
+                        <Switch
+                          checked={aiSettings.sendTimeOptimization}
+                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, sendTimeOptimization: checked })}
+                        />
                       </div>
-                      <Switch
-                        checked={aiSettings.sendTimeOptimization}
-                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, sendTimeOptimization: checked })}
-                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-full"
+                        disabled={!aiSettings.sendTimeOptimization || isProcessing}
+                        onClick={async () => {
+                          setIsProcessing(true);
+                          try {
+                            const res = await fetch("/api/admin/ai-marketing/run", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "runSendTimeOptimization", params: { limit: 100 } }),
+                            });
+                            const data = await res.json();
+                            setSaveMessage(data.message || "Optimization complete");
+                            setTimeout(() => setSaveMessage(null), 5000);
+                          } catch {
+                            setSaveMessage("Failed to run optimization");
+                            setTimeout(() => setSaveMessage(null), 3000);
+                          } finally {
+                            setIsProcessing(false);
+                          }
+                        }}
+                      >
+                        {isProcessing ? <RefreshCw className="mr-2 h-3 w-3 animate-spin" /> : <Play className="mr-2 h-3 w-3" />}
+                        Analyze Send Times
+                      </Button>
                     </div>
-                    <div className="flex items-center justify-between rounded-lg border p-3">
-                      <div>
-                        <Label>Content Optimization</Label>
-                        <p className="text-xs text-zinc-500">A/B test subject lines and content</p>
+                    <div className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Content Optimization</Label>
+                          <p className="text-xs text-zinc-500">A/B test subject lines and content</p>
+                        </div>
+                        <Switch
+                          checked={aiSettings.contentOptimization}
+                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, contentOptimization: checked })}
+                        />
                       </div>
-                      <Switch
-                        checked={aiSettings.contentOptimization}
-                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, contentOptimization: checked })}
-                      />
+                      <p className="text-xs text-zinc-400 mt-2">Applies when creating campaigns with A/B variants</p>
                     </div>
-                    <div className="flex items-center justify-between rounded-lg border p-3">
-                      <div>
-                        <Label>Automatic A/B Testing</Label>
-                        <p className="text-xs text-zinc-500">Automatically run A/B tests on campaigns</p>
+                    <div className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Automatic A/B Testing</Label>
+                          <p className="text-xs text-zinc-500">Automatically run A/B tests on campaigns</p>
+                        </div>
+                        <Switch
+                          checked={aiSettings.abTesting}
+                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, abTesting: checked })}
+                        />
                       </div>
-                      <Switch
-                        checked={aiSettings.abTesting}
-                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, abTesting: checked })}
-                      />
+                      <p className="text-xs text-zinc-400 mt-2">Automatically splits campaigns and picks winners</p>
                     </div>
                   </div>
                 </div>

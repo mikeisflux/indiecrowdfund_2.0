@@ -41,6 +41,7 @@ import {
   HelpCircle,
   Lock,
   Loader2,
+  Brain,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -75,6 +76,7 @@ const navigation: NavSection[] = [
     items: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+      { name: "AI Control", href: "/admin/ai", icon: Brain, staticBadge: "NEW" },
       { name: "AI Marketing", href: "/admin/ai-marketing", icon: Zap, staticBadge: "AI" },
     ],
   },
