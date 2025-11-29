@@ -46,6 +46,8 @@ interface TrackEventParams {
   metadata?: Record<string, unknown>;
   referrer?: string;
   page?: string;
+  country?: string | null;
+  ipAddress?: string | null;
 }
 
 /**
@@ -60,6 +62,8 @@ export async function trackEvent({
   metadata,
   referrer,
   page,
+  country,
+  ipAddress,
 }: TrackEventParams) {
   try {
     await db.userBehavior.create({
@@ -72,6 +76,8 @@ export async function trackEvent({
         metadata: (metadata || {}) as object,
         referrer,
         path: page || "/",
+        country: country || undefined,
+        ipAddress: ipAddress || undefined,
       },
     });
   } catch (error) {
@@ -87,7 +93,9 @@ export async function trackProjectView(
   projectId: string,
   userId?: string,
   sessionId?: string,
-  referrer?: string
+  referrer?: string,
+  country?: string | null,
+  ipAddress?: string | null
 ) {
   try {
     // Track the event
@@ -98,6 +106,8 @@ export async function trackProjectView(
       projectId,
       referrer,
       page: `/projects/${projectId}`,
+      country,
+      ipAddress,
     });
 
     // Update or create project view record
