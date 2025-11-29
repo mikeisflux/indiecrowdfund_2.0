@@ -402,9 +402,7 @@ export default function ProjectPage() {
     setActiveTab(tab);
     // Scroll to tabs section so it sticks at the top and content shows below
     if (tabsSectionRef.current) {
-      const element = tabsSectionRef.current;
-      const y = element.getBoundingClientRect().top + window.pageYOffset;
-      window.scrollTo({ top: y, behavior: "smooth" });
+      tabsSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
