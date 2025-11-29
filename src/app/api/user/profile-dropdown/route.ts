@@ -1,0 +1,85 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    // Fetch backed projects (projects user has pledged to)
+    const backedPledges = await db.pledge.findMany({
+      where: {
+        userId,
+        status: { in: ["PENDING", "COMPLETED", "PROCESSING"] },
+      },
+      select: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            imageUrl: true,
+            status: true,
+          },
+        },
+      },
+      distinct: ["projectId"],
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    // Fetch created projects
+    const createdProjects = await db.project.findMany({
+      where: { creatorId: userId },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        imageUrl: true,
+        status: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    // Fetch collaborating projects
+    const collaborations = await db.projectCollaborator.findMany({
+      where: {
+        userId,
+        status: "ACCEPTED",
+      },
+      select: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            imageUrl: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { acceptedAt: "desc" },
+      take: 5,
+    });
+
+    return NextResponse.json({
+      backedProjects: backedPledges.map((p: { project: { id: string; title: string; slug: string; imageUrl: string | null; status: string } }) => p.project),
+      createdProjects,
+      collaboratingProjects: collaborations.map((c: { project: { id: string; title: string; slug: string; imageUrl: string | null; status: string } }) => c.project),
+    });
+  } catch (error) {
+    console.error("Profile dropdown error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch profile data" },
+      { status: 500 }
+    );
+  }
+}

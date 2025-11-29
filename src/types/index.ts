@@ -371,6 +371,10 @@ export interface RewardData {
   availableFrom?: Date;
   availableUntil?: Date;
   items: RewardItemData[];
+  // Live campaign fields
+  isEnded?: boolean;
+  endedAt?: Date;
+  backerCount?: number;
 }
 
 export interface RewardItemData {

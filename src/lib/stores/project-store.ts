@@ -50,6 +50,13 @@ interface ProjectBuilderState {
   // Project ID for editing existing projects
   projectId: string | null;
   setProjectId: (id: string | null) => void;
+
+  // Project status for live campaigns
+  projectStatus: string | null;
+  setProjectStatus: (status: string | null) => void;
+
+  // End a reward (for live campaigns with backers)
+  endReward: (index: number) => void;
 }
 
 const initialState = {
@@ -85,6 +92,7 @@ const initialState = {
     customReferralTags: [],
   },
   projectId: null,
+  projectStatus: null,
 };
 
 export const useProjectStore = create<ProjectBuilderState>()(
@@ -162,6 +170,15 @@ export const useProjectStore = create<ProjectBuilderState>()(
       reset: () => set(initialState),
 
       setProjectId: (id) => set({ projectId: id }),
+
+      setProjectStatus: (status) => set({ projectStatus: status }),
+
+      endReward: (index) =>
+        set((state) => ({
+          rewards: state.rewards.map((r, i) =>
+            i === index ? { ...r, isEnded: true, endedAt: new Date() } : r
+          ),
+        })),
     }),
     {
       name: "project-builder-storage",

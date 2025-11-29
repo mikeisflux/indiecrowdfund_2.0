@@ -27,6 +27,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Collapsible,
@@ -43,7 +44,21 @@ import {
   AlertCircle,
   Copy,
   Download,
+  Ban,
+  Lock,
+  Users,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { cn } from "@/lib/utils";
@@ -106,7 +121,12 @@ export function RewardsStep() {
     addReward,
     updateReward,
     removeReward,
+    projectStatus,
+    endReward,
   } = useProjectStore();
+
+  // Check if campaign is live (can't edit rewards with backers)
+  const isLive = projectStatus === "LIVE" || projectStatus === "FUNDED";
 
   const [activeTab, setActiveTab] = useState<"items" | "tiers" | "addons">("items");
 
@@ -273,8 +293,40 @@ export function RewardsStep() {
   };
 
   const handleDeleteReward = (index: number) => {
+    const reward = rewards[index];
+    // If reward has backers, show error
+    if (reward.backerCount && reward.backerCount > 0) {
+      toast.error("Cannot delete reward with backers. End the reward instead.");
+      return;
+    }
     removeReward(index);
     toast.success("Reward deleted");
+  };
+
+  const handleEndReward = async (index: number) => {
+    const reward = rewards[index];
+    if (!reward.id) {
+      toast.error("Reward must be saved before ending");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/rewards/${reward.id}/end`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to end reward");
+        return;
+      }
+
+      // Update local state
+      endReward(index);
+      toast.success(`${reward.type === "TIER" ? "Reward" : "Add-on"} has been ended`);
+    } catch {
+      toast.error("Failed to end reward");
+    }
   };
 
   const handleDuplicateReward = (index: number) => {
@@ -1056,31 +1108,84 @@ export function RewardsStep() {
 
                     {/* Actions Row */}
                     <div className="px-4 pb-3 flex items-center justify-between border-t pt-3">
-                      <span className="text-sm text-muted-foreground">0 backers</span>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {tier.backerCount || 0} backers
+                        </span>
+                        {tier.isEnded && (
+                          <Badge variant="secondary" className="text-xs">Ended</Badge>
+                        )}
+                        {isLive && tier.backerCount && tier.backerCount > 0 && !tier.isEnded && (
+                          <Badge variant="outline" className="text-xs">
+                            <Lock className="h-3 w-3 mr-1" />
+                            Locked
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm">Feature</Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditRewardForm(rewardIndex)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDuplicateReward(rewardIndex)}
-                        >
-                          Duplicate
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteReward(rewardIndex)}
-                        >
-                          Delete
-                        </Button>
+                        {!tier.isEnded && (
+                          <>
+                            <Button variant="ghost" size="sm">Feature</Button>
+                            {isLive && tier.backerCount && tier.backerCount > 0 ? (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-orange-600">
+                                    <Ban className="h-4 w-4 mr-1" />
+                                    End Reward
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>End this reward?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This reward has {tier.backerCount} backer(s). Ending it will:
+                                      <ul className="list-disc list-inside mt-2 space-y-1">
+                                        <li>Keep the reward for existing backers</li>
+                                        <li>Prevent new backers from selecting it</li>
+                                        <li>This action cannot be undone</li>
+                                      </ul>
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleEndReward(rewardIndex)}
+                                      className="bg-orange-600 hover:bg-orange-700"
+                                    >
+                                      End Reward
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditRewardForm(rewardIndex)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDuplicateReward(rewardIndex)}
+                                >
+                                  Duplicate
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => handleDeleteReward(rewardIndex)}
+                                >
+                                  Delete
+                                </Button>
+                              </>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1187,30 +1292,83 @@ export function RewardsStep() {
 
                     {/* Actions Row */}
                     <div className="px-4 pb-3 flex items-center justify-between border-t pt-3">
-                      <span className="text-sm text-muted-foreground">0 backers</span>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {addon.backerCount || 0} backers
+                        </span>
+                        {addon.isEnded && (
+                          <Badge variant="secondary" className="text-xs">Ended</Badge>
+                        )}
+                        {isLive && addon.backerCount && addon.backerCount > 0 && !addon.isEnded && (
+                          <Badge variant="outline" className="text-xs">
+                            <Lock className="h-3 w-3 mr-1" />
+                            Locked
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditRewardForm(rewardIndex)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDuplicateReward(rewardIndex)}
-                        >
-                          Duplicate
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteReward(rewardIndex)}
-                        >
-                          Delete
-                        </Button>
+                        {!addon.isEnded && (
+                          <>
+                            {isLive && addon.backerCount && addon.backerCount > 0 ? (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-orange-600">
+                                    <Ban className="h-4 w-4 mr-1" />
+                                    End Add-on
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>End this add-on?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This add-on has {addon.backerCount} backer(s). Ending it will:
+                                      <ul className="list-disc list-inside mt-2 space-y-1">
+                                        <li>Keep the add-on for existing backers</li>
+                                        <li>Prevent new backers from selecting it</li>
+                                        <li>This action cannot be undone</li>
+                                      </ul>
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleEndReward(rewardIndex)}
+                                      className="bg-orange-600 hover:bg-orange-700"
+                                    >
+                                      End Add-on
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditRewardForm(rewardIndex)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDuplicateReward(rewardIndex)}
+                                >
+                                  Duplicate
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => handleDeleteReward(rewardIndex)}
+                                >
+                                  Delete
+                                </Button>
+                              </>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

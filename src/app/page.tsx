@@ -22,6 +22,7 @@ import {
   Zap,
   Menu,
 } from "lucide-react";
+import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 
 /*
  * #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE#
@@ -114,14 +115,9 @@ export default function HomePage() {
                 className="w-64 pl-10"
               />
             </div>
-            <Link href="/login" className="hidden sm:block">
-              <Button variant="ghost" size="sm">
-                Log in
-              </Button>
-            </Link>
-            <Link href="/register" className="hidden sm:block">
-              <Button size="sm">Sign up</Button>
-            </Link>
+            <div className="hidden sm:block">
+              <UserProfileDropdown />
+            </div>
             {/* Mobile Menu */}
             <Sheet>
               <SheetTrigger asChild className="md:hidden">
@@ -150,13 +146,8 @@ export default function HomePage() {
                   <Link href="/faq" className="text-sm font-medium hover:text-primary py-2">
                     FAQ
                   </Link>
-                  <div className="border-t pt-4 mt-2 flex flex-col gap-2">
-                    <Link href="/login">
-                      <Button variant="outline" className="w-full">Log in</Button>
-                    </Link>
-                    <Link href="/register">
-                      <Button className="w-full">Sign up</Button>
-                    </Link>
+                  <div className="border-t pt-4 mt-2">
+                    <UserProfileDropdown />
                   </div>
                 </nav>
               </SheetContent>

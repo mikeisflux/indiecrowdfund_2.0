@@ -280,6 +280,10 @@ model Reward {
   availableFrom     DateTime?
   availableUntil    DateTime?
 
+  // Status - for ending rewards that have backers
+  isEnded           Boolean      @default(false)
+  endedAt           DateTime?
+
   // Tracking if copied
   copiedFromId      String?
 
