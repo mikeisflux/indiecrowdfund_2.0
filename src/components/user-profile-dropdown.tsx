@@ -135,9 +135,9 @@ export function UserProfileDropdown() {
 
           {/* Column 2: Backed Projects */}
           <div className="p-5">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+            <Link href="/dashboard/backer" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 hover:text-primary transition-colors">
               Backed Projects
-            </h3>
+            </Link>
             {loading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
@@ -179,9 +179,9 @@ export function UserProfileDropdown() {
 
           {/* Column 3: Created Projects */}
           <div className="p-5">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+            <Link href="/dashboard" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 hover:text-primary transition-colors">
               Created Projects
-            </h3>
+            </Link>
             {loading ? (
               <div className="space-y-3">
                 {[1, 2].map((i) => (
