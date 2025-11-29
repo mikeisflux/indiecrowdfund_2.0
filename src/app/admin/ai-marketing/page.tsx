@@ -606,6 +606,7 @@ export default function AIMarketingPage() {
           projectCategory: "all",
           subjectTemplate: "",
           introMessage: "",
+          autoGenerateCopy: true,
         });
       }, 2000);
     } catch (error) {
