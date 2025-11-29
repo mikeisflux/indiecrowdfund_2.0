@@ -40,6 +40,7 @@ import {
   Box,
   Image as ImageIcon,
   ChevronDown,
+  ChevronLeft,
   Info,
   AlertCircle,
   Copy,
@@ -383,10 +384,11 @@ export function RewardsStep() {
   if (isRewardFormOpen) {
     return (
       <div className="space-y-6">
-        {/* Header with Cancel/Save */}
+        {/* Header with Back/Save */}
         <div className="flex items-center justify-between border-b pb-4">
           <Button variant="outline" onClick={handleCancelRewardForm}>
-            Cancel
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back
           </Button>
           <Button onClick={handleSaveReward}>
             Save reward
