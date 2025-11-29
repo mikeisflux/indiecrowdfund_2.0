@@ -14,7 +14,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/choose-role";
 
   // Handle URL error params on mount
   useEffect(() => {

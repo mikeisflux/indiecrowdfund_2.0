@@ -530,11 +530,19 @@ export default function CreatorDashboard() {
           <TabsContent value="messages">
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <MessageSquare className="mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="mb-2 font-semibold">No messages yet</h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  Messages from backers will appear here
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center mb-6">
+                  <MessageSquare className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="mb-2 font-semibold text-lg">Backer Messages</h3>
+                <p className="mb-6 text-sm text-muted-foreground text-center max-w-md">
+                  Connect with your backers, answer questions, and keep them updated on your project&apos;s progress.
                 </p>
+                <Link href="/dashboard/messages">
+                  <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Open Messages
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </TabsContent>
