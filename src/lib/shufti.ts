@@ -128,7 +128,8 @@ export class ShuftiService {
     let redirectUrl = this.config.redirectUrl;
     if (redirectUrl && returnUrl) {
       const url = new URL(redirectUrl);
-      url.searchParams.set("returnUrl", encodeURIComponent(returnUrl));
+      // URLSearchParams.set() automatically encodes the value
+      url.searchParams.set("returnUrl", returnUrl);
       redirectUrl = url.toString();
     }
 

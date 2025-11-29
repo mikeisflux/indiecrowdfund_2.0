@@ -1,15 +1,57 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+
+/**
+ * Validates and sanitizes return URL to prevent open redirect attacks.
+ * Only allows relative paths starting with / (same-origin redirects).
+ */
+function getSafeReturnUrl(url: string | null): string {
+  if (!url) return "/";
+
+  // Check raw value first (browser already decodes once)
+  const checkUrl = (value: string): boolean => {
+    const lower = value.toLowerCase();
+    return (
+      value.startsWith("/") &&
+      !value.startsWith("//") &&
+      !lower.startsWith("/\\") &&
+      !lower.includes("javascript:") &&
+      !lower.includes("data:") &&
+      !lower.includes("vbscript:") &&
+      // Prevent encoded variants that might bypass checks
+      !lower.includes("%2f%2f") && // encoded //
+      !lower.includes("%5c") // encoded \
+    );
+  };
+
+  // Browser already decodes URL params, but check both raw and decoded for defense in depth
+  if (!checkUrl(url)) return "/";
+
+  try {
+    // Also validate after additional decode to catch double-encoding attacks
+    const decoded = decodeURIComponent(url);
+    if (!checkUrl(decoded)) return "/";
+    return url; // Return the original (already decoded by browser)
+  } catch {
+    // Invalid URL encoding - return original if it passed first check
+    return url;
+  }
+}
 
 export default function VerificationCompletePage() {
   const searchParams = useSearchParams();
   const [countdown, setCountdown] = useState(3);
   const [isPopup, setIsPopup] = useState(false);
-  const returnUrl = searchParams.get("returnUrl") || "/";
+
+  // Sanitize returnUrl to prevent open redirect attacks
+  const safeReturnUrl = useMemo(
+    () => getSafeReturnUrl(searchParams.get("returnUrl")),
+    [searchParams]
+  );
 
   useEffect(() => {
     // Check if opened as a popup
@@ -18,9 +60,13 @@ export default function VerificationCompletePage() {
 
     if (hasOpener) {
       // Notify the parent window that verification is complete
+      // Using window.location.origin for security instead of "*"
       try {
-        window.opener.postMessage({ type: "verification-complete" }, "*");
-      } catch (e) {
+        window.opener.postMessage(
+          { type: "verification-complete" },
+          window.location.origin
+        );
+      } catch {
         // Ignore cross-origin errors
       }
       // Close the popup after a brief delay
@@ -35,7 +81,7 @@ export default function VerificationCompletePage() {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          window.location.href = decodeURIComponent(returnUrl);
+          window.location.href = safeReturnUrl;
           return 0;
         }
         return prev - 1;
@@ -43,7 +89,7 @@ export default function VerificationCompletePage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [returnUrl]);
+  }, [safeReturnUrl]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">

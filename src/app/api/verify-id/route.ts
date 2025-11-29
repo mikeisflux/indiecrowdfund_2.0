@@ -53,6 +53,28 @@ export async function GET() {
 }
 
 /**
+ * Validates returnUrl to prevent open redirect attacks.
+ * Only allows relative paths starting with /
+ */
+function validateReturnUrl(url: string | undefined): string | undefined {
+  if (!url || typeof url !== "string") return undefined;
+
+  // Only allow relative paths starting with /
+  // Reject absolute URLs, protocol-relative URLs, and dangerous schemes
+  if (
+    url.startsWith("/") &&
+    !url.startsWith("//") &&
+    !url.toLowerCase().startsWith("/\\") &&
+    !url.toLowerCase().includes("javascript:") &&
+    !url.toLowerCase().includes("data:")
+  ) {
+    return url;
+  }
+
+  return undefined;
+}
+
+/**
  * POST /api/verify-id - Start new verification
  */
 export async function POST(req: NextRequest) {
@@ -63,11 +85,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get optional returnUrl from request body
+    // Get optional returnUrl from request body and validate it
     let returnUrl: string | undefined;
     try {
       const body = await req.json();
-      returnUrl = body.returnUrl;
+      returnUrl = validateReturnUrl(body.returnUrl);
     } catch {
       // No body or invalid JSON, that's fine
     }
