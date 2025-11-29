@@ -3,7 +3,7 @@
  * Documentation: https://api.shuftipro.com/
  */
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export interface ShuftiConfig {
   clientId: string;
@@ -169,7 +169,7 @@ export class ShuftiService {
       }
 
       // Store verification record in database
-      await prisma.iDVerification.create({
+      await db.iDVerification.create({
         data: {
           userId,
           shuftiReference: reference,
@@ -234,7 +234,7 @@ export class ShuftiService {
     }
 
     // Find the verification record
-    const verification = await prisma.iDVerification.findUnique({
+    const verification = await db.iDVerification.findUnique({
       where: { shuftiReference: reference },
       include: { user: true },
     });
@@ -277,7 +277,7 @@ export class ShuftiService {
     }
 
     // Update verification record
-    await prisma.iDVerification.update({
+    await db.iDVerification.update({
       where: { id: verification.id },
       data: {
         status,
@@ -296,7 +296,7 @@ export class ShuftiService {
 
     // If verified, update user record
     if (isVerified) {
-      await prisma.user.update({
+      await db.user.update({
         where: { id: verification.userId },
         data: {
           idVerified: true,
@@ -337,7 +337,7 @@ export class ShuftiService {
       }
 
       // Update database record
-      await prisma.iDVerification.updateMany({
+      await db.iDVerification.updateMany({
         where: { shuftiReference: reference },
         data: { status: "CANCELLED" },
       });
@@ -354,7 +354,7 @@ export class ShuftiService {
  * Get Shufti service instance with settings from database
  */
 export async function getShuftiService(): Promise<ShuftiService | null> {
-  const settings = await prisma.platformSettings.findUnique({
+  const settings = await db.platformSettings.findUnique({
     where: { id: "default" },
     select: {
       idVerificationEnabled: true,
@@ -387,7 +387,7 @@ export async function requiresIdVerification(
   userId?: string
 ): Promise<{ required: boolean; verified: boolean; reason?: string }> {
   // Get project content flags
-  const project = await prisma.project.findUnique({
+  const project = await db.project.findUnique({
     where: { id: projectId },
     select: {
       hasAdultContent: true,
@@ -414,7 +414,7 @@ export async function requiresIdVerification(
   }
 
   // Check if user is verified
-  const user = await prisma.user.findUnique({
+  const user = await db.user.findUnique({
     where: { id: userId },
     select: { idVerified: true },
   });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShuftiService } from "@/lib/shufti";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import crypto from "crypto";
 
 /**
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get("signature") || "";
 
     // Get settings to verify signature
-    const settings = await prisma.platformSettings.findUnique({
+    const settings = await db.platformSettings.findUnique({
       where: { id: "default" },
       select: { shuftiSecretKey: true },
     });

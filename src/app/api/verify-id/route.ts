@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { getShuftiService, requiresIdVerification } from "@/lib/shufti";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { getShuftiService } from "@/lib/shufti";
 
 /**
  * GET /api/verify-id - Get user's verification status
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get user verification status
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: {
         idVerified: true,
@@ -56,16 +55,16 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/verify-id - Start new verification
  */
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Check if user is already verified
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: {
         idVerified: true,

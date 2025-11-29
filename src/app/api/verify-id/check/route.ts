@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { requiresIdVerification } from "@/lib/shufti";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 /**
  * GET /api/verify-id/check?projectId=xxx - Check if project requires ID verification
@@ -17,10 +16,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Get session (optional - can check without being logged in)
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     // Check verification settings
-    const settings = await prisma.platformSettings.findUnique({
+    const settings = await db.platformSettings.findUnique({
       where: { id: "default" },
       select: { idVerificationEnabled: true },
     });
