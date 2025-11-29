@@ -259,7 +259,7 @@ export async function POST(request: Request) {
             });
             users = users.filter((u) => {
               const total = u.pledges.reduce(
-                (sum, p) => sum + Number(p.amount),
+                (sum: number, p: { amount: number | string }) => sum + Number(p.amount),
                 0
               );
               return total > 500 || u.pledges.length >= 5;
@@ -337,10 +337,7 @@ export async function POST(request: Request) {
         }
 
         const timesMap = await batchOptimalSendTimes(userIds.slice(0, 100));
-        result = Array.from(timesMap.entries()).map(([userId, time]) => ({
-          userId,
-          ...time,
-        }));
+        result = Array.from(timesMap.values());
         break;
       }
 
@@ -358,13 +355,13 @@ export async function POST(request: Request) {
 
         // Group by hour for scheduling
         const schedule = new Map<number, string[]>();
-        for (const [userId, time] of timesMap) {
+        Array.from(timesMap.entries()).forEach(([uid, time]) => {
           const hour = time.optimalHour;
           if (!schedule.has(hour)) {
             schedule.set(hour, []);
           }
-          schedule.get(hour)!.push(userId);
-        }
+          schedule.get(hour)!.push(uid);
+        });
 
         result = {
           campaignId,

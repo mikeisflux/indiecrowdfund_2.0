@@ -245,7 +245,7 @@ export class ShuftiService {
     }
 
     // Parse the event to determine verification status
-    let status: "VERIFIED" | "DECLINED" | "PENDING" | "PROCESSING" = "PENDING";
+    let status: "VERIFIED" | "DECLINED" | "PENDING" | "PROCESSING" | "CANCELLED" = "PENDING";
     let isVerified = false;
 
     switch (event) {

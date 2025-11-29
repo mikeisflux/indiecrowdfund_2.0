@@ -158,18 +158,18 @@ async function getUserProfile(userId: string): Promise<UserProfile> {
   }
 
   // Get backed categories
-  const backedCategories = [...new Set(user.pledges.map(p => p.project.category).filter(Boolean))] as string[];
+  const backedCategories = Array.from(new Set(user.pledges.map((p: { project: { category: string | null } }) => p.project.category).filter(Boolean))) as string[];
 
   // Calculate average pledge
-  const totalAmount = user.pledges.reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalAmount = user.pledges.reduce((sum: number, p: { amount: number | string }) => sum + Number(p.amount), 0);
   const avgPledgeAmount = user.pledges.length > 0 ? totalAmount / user.pledges.length : 0;
 
   // Determine engagement level
   const recentPledges = user.pledges.filter(
-    p => p.createdAt > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+    (p: { createdAt: Date }) => p.createdAt > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
   ).length;
   const recentActivity = user.behaviors.filter(
-    b => b.timestamp > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    (b: { timestamp: Date }) => b.timestamp > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   ).length;
 
   let engagementLevel: "high" | "medium" | "low" | "at-risk";
@@ -229,8 +229,8 @@ export async function predictUserBehavior(userId: string): Promise<PredictionRes
   const pledgeStarts = recentBehaviors.filter(b => b.eventType === "PLEDGE_START").length;
   const pledgeCompletes = recentBehaviors.filter(b => b.eventType === "PLEDGE_COMPLETE").length;
   const avgTimeOnSite = recentBehaviors
-    .filter(b => b.timeSpent)
-    .reduce((sum, b) => sum + (b.timeSpent || 0), 0) / Math.max(pageViews, 1);
+    .filter((b: { timeSpent?: number | null }) => b.timeSpent)
+    .reduce((sum: number, b: { timeSpent?: number | null }) => sum + (b.timeSpent || 0), 0) / Math.max(pageViews, 1);
 
   // Calculate conversion probability based on signals
   let conversionScore = 0;
@@ -356,14 +356,14 @@ export async function generateSmartSegments(): Promise<UserSegment[]> {
   const segments: UserSegment[] = [];
 
   // Segment 1: High-Value Backers
-  const highValueUsers = users.filter(u => {
-    const totalPledged = u.pledges.reduce((sum, p) => sum + Number(p.amount), 0);
+  const highValueUsers = users.filter((u: { pledges: Array<{ amount: number | string }> }) => {
+    const totalPledged = u.pledges.reduce((sum: number, p: { amount: number | string }) => sum + Number(p.amount), 0);
     return totalPledged > 500 || u.pledges.length >= 5;
   });
 
   if (highValueUsers.length > 0) {
     const avgValue = highValueUsers.reduce(
-      (sum, u) => sum + u.pledges.reduce((s, p) => s + Number(p.amount), 0),
+      (sum: number, u: { pledges: Array<{ amount: number | string }> }) => sum + u.pledges.reduce((s: number, p: { amount: number | string }) => s + Number(p.amount), 0),
       0
     ) / highValueUsers.length;
 
@@ -379,9 +379,9 @@ export async function generateSmartSegments(): Promise<UserSegment[]> {
   }
 
   // Segment 2: Active Explorers
-  const activeExplorers = users.filter(u => {
+  const activeExplorers = users.filter((u: { behaviors: Array<{ eventType: string; timestamp: Date }>; pledges: Array<{ amount: number | string }> }) => {
     const recentViews = u.behaviors.filter(
-      b => b.eventType === "PROJECT_VIEW" &&
+      (b: { eventType: string; timestamp: Date }) => b.eventType === "PROJECT_VIEW" &&
            b.timestamp > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     ).length;
     return recentViews >= 10 && u.pledges.length === 0;
@@ -400,7 +400,7 @@ export async function generateSmartSegments(): Promise<UserSegment[]> {
   }
 
   // Segment 3: At-Risk Churners
-  const atRiskUsers = users.filter(u => {
+  const atRiskUsers = users.filter((u: { behaviors: Array<{ timestamp: Date }>; pledges: Array<{ amount: number | string }> }) => {
     const lastActivity = u.behaviors[0]?.timestamp;
     if (!lastActivity) return false;
     const daysSince = (Date.now() - lastActivity.getTime()) / (24 * 60 * 60 * 1000);
@@ -409,7 +409,7 @@ export async function generateSmartSegments(): Promise<UserSegment[]> {
 
   if (atRiskUsers.length > 0) {
     const avgValue = atRiskUsers.reduce(
-      (sum, u) => sum + u.pledges.reduce((s, p) => s + Number(p.amount), 0),
+      (sum: number, u: { pledges: Array<{ amount: number | string }> }) => sum + u.pledges.reduce((s: number, p: { amount: number | string }) => s + Number(p.amount), 0),
       0
     ) / atRiskUsers.length;
 
@@ -458,18 +458,18 @@ export async function generateSmartSegments(): Promise<UserSegment[]> {
 async function identifyAISegments(
   users: Array<{
     id: string;
-    pledges: Array<{ amount: unknown }>;
+    pledges: Array<{ amount: number | string }>;
     behaviors: Array<{ eventType: string; timestamp: Date }>;
   }>
 ): Promise<UserSegment[]> {
   // Prepare anonymized user patterns
-  const patterns = users.map(u => ({
+  const patterns = users.map((u) => ({
     pledgeCount: u.pledges.length,
-    totalValue: u.pledges.reduce((sum, p) => sum + Number(p.amount), 0),
+    totalValue: u.pledges.reduce((sum: number, p) => sum + Number(p.amount), 0),
     recentActivity: u.behaviors.filter(
-      b => b.timestamp > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      (b) => b.timestamp > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     ).length,
-    eventTypes: [...new Set(u.behaviors.map(b => b.eventType))],
+    eventTypes: Array.from(new Set(u.behaviors.map((b) => b.eventType))),
   }));
 
   const prompt = `Analyze these user behavior patterns and identify 2-3 meaningful segments for a crowdfunding platform.

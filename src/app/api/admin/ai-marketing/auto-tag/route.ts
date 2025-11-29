@@ -98,7 +98,7 @@ export async function POST(request: Request) {
             description: project.description || "",
             category: project.category || undefined,
             goalAmount: project.goalAmount ? Number(project.goalAmount) : undefined,
-            rewards: project.rewards.map((r) => ({
+            rewards: project.rewards.map((r: { title: string; description: string | null; amount: number }) => ({
               title: r.title,
               description: r.description || "",
               amount: Number(r.amount)

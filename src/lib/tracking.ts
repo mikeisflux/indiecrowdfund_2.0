@@ -378,11 +378,11 @@ export async function getProjectAnalytics(
     return {
       views,
       uniqueVisitors: uniqueSessions.length,
-      topReferrers: referrers.map((r) => ({
+      topReferrers: referrers.map((r: { source: string; count: number }) => ({
         source: r.source,
         count: r.count,
       })),
-      viewsByDay: viewsByDay.map((v) => ({
+      viewsByDay: viewsByDay.map((v: { timestamp: Date; _count: number }) => ({
         date: v.timestamp.toISOString().split("T")[0],
         count: v._count,
       })),

@@ -137,9 +137,9 @@ export async function scheduleWithOptimalTimes(
     const times = await batchOptimalSendTimes(userIds);
     const schedule = new Map<string, { hour: number; day: number }>();
 
-    for (const [userId, time] of times) {
+    Array.from(times.entries()).forEach(([userId, time]) => {
       schedule.set(userId, { hour: time.optimalHour, day: time.optimalDay });
-    }
+    });
 
     return schedule;
   } catch (error) {

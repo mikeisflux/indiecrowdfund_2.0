@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { trackEvent, trackProjectView, trackReferrer } from "@/lib/tracking";
+import { trackEvent, trackProjectView, trackReferrer } from "@/lib/tracking/index";
 
 export async function POST(req: NextRequest) {
   try {

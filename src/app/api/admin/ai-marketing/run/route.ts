@@ -144,9 +144,9 @@ export async function POST(request: Request) {
 
         // Aggregate by hour
         const hourDistribution = new Map<number, number>();
-        for (const [, time] of times) {
+        Array.from(times.values()).forEach((time) => {
           hourDistribution.set(time.optimalHour, (hourDistribution.get(time.optimalHour) || 0) + 1);
-        }
+        });
 
         const distribution = Array.from(hourDistribution.entries())
           .map(([hour, count]) => ({ hour, count }))
@@ -210,7 +210,7 @@ export async function POST(request: Request) {
                 description: project.description || "",
                 category: project.category || undefined,
                 goalAmount: project.goalAmount ? Number(project.goalAmount) : undefined,
-                rewards: project.rewards.map((r) => ({
+                rewards: project.rewards.map((r: { title: string; description: string | null; amount: number }) => ({
                   title: r.title,
                   description: r.description || "",
                   amount: Number(r.amount),
