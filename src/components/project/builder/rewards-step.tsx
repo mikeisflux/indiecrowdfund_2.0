@@ -288,6 +288,8 @@ export function RewardsStep() {
   };
 
   const handleCancelRewardForm = () => {
+    // Navigate back to the correct tab based on reward type
+    setActiveTab(currentReward.type === "ADDON" ? "addons" : "tiers");
     setIsRewardFormOpen(false);
     setCurrentReward(defaultReward);
     setSelectedItemIds([]);
