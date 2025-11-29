@@ -124,6 +124,15 @@ interface PlatformSettings {
   aiAutoModeration: boolean;
   aiAutoTagging: boolean;
   aiContentGeneration: boolean;
+  // ID Verification (Shufti Pro)
+  idVerificationEnabled: boolean;
+  shuftiClientId: string | null;
+  shuftiSecretKey: string | null;
+  shuftiCallbackUrl: string | null;
+  shuftiRedirectUrl: string | null;
+  idVerificationMinAge: number;
+  idVerificationMode: string;
+  // Security
   twoFactorRequired: boolean;
   sessionTimeout: number;
   maxLoginAttempts: number;
@@ -256,6 +265,16 @@ export default function SettingsPage() {
     postApprovalRequired: true,
   });
 
+  const [idVerificationSettings, setIdVerificationSettings] = useState({
+    enabled: false,
+    clientId: "",
+    secretKey: "",
+    callbackUrl: "",
+    redirectUrl: "",
+    minAge: "18",
+    mode: "production",
+  });
+
   // Fetch settings from API
   const fetchSettings = useCallback(async () => {
     try {
@@ -366,6 +385,17 @@ export default function SettingsPage() {
         dalleApiKey: settings.dalleApiKey || "",
         stabilityApiKey: settings.stabilityApiKey || "",
       }));
+
+      // Load ID verification settings
+      setIdVerificationSettings({
+        enabled: settings.idVerificationEnabled || false,
+        clientId: settings.shuftiClientId || "",
+        secretKey: settings.shuftiSecretKey || "",
+        callbackUrl: settings.shuftiCallbackUrl || "",
+        redirectUrl: settings.shuftiRedirectUrl || "",
+        minAge: String(settings.idVerificationMinAge || 18),
+        mode: settings.idVerificationMode || "production",
+      });
     } catch (err) {
       console.error("Error fetching settings:", err);
       setError("Failed to load settings. Using default values.");
@@ -537,6 +567,18 @@ export default function SettingsPage() {
             ipRateLimitRequests: parseInt(securitySettings.rateLimit),
           };
           break;
+        case "idverify":
+          section = "idverify";
+          data = {
+            idVerificationEnabled: idVerificationSettings.enabled,
+            shuftiClientId: idVerificationSettings.clientId,
+            shuftiSecretKey: idVerificationSettings.secretKey,
+            shuftiCallbackUrl: idVerificationSettings.callbackUrl,
+            shuftiRedirectUrl: idVerificationSettings.redirectUrl,
+            idVerificationMinAge: parseInt(idVerificationSettings.minAge) || 18,
+            idVerificationMode: idVerificationSettings.mode,
+          };
+          break;
         default:
           // For tabs without database storage (API, Database)
           setSaveMessage("Settings saved successfully");
@@ -605,7 +647,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9 lg:w-auto lg:inline-grid">
           <TabsTrigger value="general">
             <Settings className="mr-2 h-4 w-4" />
             General
@@ -629,6 +671,10 @@ export default function SettingsPage() {
           <TabsTrigger value="security">
             <Shield className="mr-2 h-4 w-4" />
             Security
+          </TabsTrigger>
+          <TabsTrigger value="idverify">
+            <ShieldCheck className="mr-2 h-4 w-4" />
+            ID Verify
           </TabsTrigger>
           <TabsTrigger value="api">
             <Key className="mr-2 h-4 w-4" />
@@ -2009,6 +2055,179 @@ export default function SettingsPage() {
                     setSecuritySettings({ ...securitySettings, contentSecurityPolicy: checked })
                   }
                 />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ID Verification Settings */}
+        <TabsContent value="idverify" className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5" />
+                ID Verification Settings
+              </CardTitle>
+              <CardDescription>
+                Configure Shufti Pro integration for age and identity verification on restricted content
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4 bg-violet-50/50 dark:bg-violet-900/20">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Enable ID Verification</Label>
+                  <p className="text-sm text-zinc-500">
+                    Require users to verify their identity before viewing age-restricted projects
+                  </p>
+                </div>
+                <Switch
+                  checked={idVerificationSettings.enabled}
+                  onCheckedChange={(checked) =>
+                    setIdVerificationSettings({ ...idVerificationSettings, enabled: checked })
+                  }
+                />
+              </div>
+
+              <div className="rounded-lg border p-4 bg-amber-50/50 dark:bg-amber-900/20">
+                <div className="flex gap-2 items-start">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-amber-800 dark:text-amber-200">Important</p>
+                    <p className="text-amber-700 dark:text-amber-300">
+                      Projects with &quot;Adult Content&quot; or &quot;Risky Content&quot; declarations will require ID verification when this is enabled.
+                      Users only need to verify once - their verification status is stored in their account.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-medium">Shufti Pro API Configuration</h4>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="shuftiClientId">Client ID</Label>
+                    <Input
+                      id="shuftiClientId"
+                      value={idVerificationSettings.clientId}
+                      onChange={(e) =>
+                        setIdVerificationSettings({ ...idVerificationSettings, clientId: e.target.value })
+                      }
+                      placeholder="Enter your Shufti Pro Client ID"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="shuftiSecretKey">Secret Key</Label>
+                    <Input
+                      id="shuftiSecretKey"
+                      type="password"
+                      value={idVerificationSettings.secretKey}
+                      onChange={(e) =>
+                        setIdVerificationSettings({ ...idVerificationSettings, secretKey: e.target.value })
+                      }
+                      placeholder="Enter your Shufti Pro Secret Key"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="shuftiCallback">Callback URL</Label>
+                    <Input
+                      id="shuftiCallback"
+                      value={idVerificationSettings.callbackUrl}
+                      onChange={(e) =>
+                        setIdVerificationSettings({ ...idVerificationSettings, callbackUrl: e.target.value })
+                      }
+                      placeholder="https://yourdomain.com/api/verify-id/callback"
+                    />
+                    <p className="text-xs text-zinc-500">Webhook URL for Shufti Pro to send verification results</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="shuftiRedirect">Redirect URL</Label>
+                    <Input
+                      id="shuftiRedirect"
+                      value={idVerificationSettings.redirectUrl}
+                      onChange={(e) =>
+                        setIdVerificationSettings({ ...idVerificationSettings, redirectUrl: e.target.value })
+                      }
+                      placeholder="https://yourdomain.com/verification-complete"
+                    />
+                    <p className="text-xs text-zinc-500">URL to redirect users after verification</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="minAge">Minimum Age</Label>
+                    <Select
+                      value={idVerificationSettings.minAge}
+                      onValueChange={(v) =>
+                        setIdVerificationSettings({ ...idVerificationSettings, minAge: v })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="18">18 years</SelectItem>
+                        <SelectItem value="21">21 years</SelectItem>
+                        <SelectItem value="25">25 years</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-zinc-500">Minimum age required for verification</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="verifyMode">Verification Mode</Label>
+                    <Select
+                      value={idVerificationSettings.mode}
+                      onValueChange={(v) =>
+                        setIdVerificationSettings({ ...idVerificationSettings, mode: v })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sandbox">
+                          <div className="flex items-center gap-2">
+                            <TestTube className="h-4 w-4" />
+                            Sandbox (Testing)
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="production">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4" />
+                            Production (Live)
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-zinc-500">Use sandbox for testing, production for live verifications</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border p-4 bg-zinc-50 dark:bg-zinc-800/50">
+                <h4 className="font-medium mb-2">How ID Verification Works</h4>
+                <ul className="text-sm text-zinc-600 dark:text-zinc-400 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <span>Users attempting to view restricted projects are prompted to verify their identity</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <span>Verification is done through Shufti Pro&apos;s secure identity verification flow</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <span>Once verified, users can access all age-restricted content without re-verification</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <span>Verification status is stored securely in the user&apos;s account</span>
+                  </li>
+                </ul>
               </div>
             </CardContent>
           </Card>

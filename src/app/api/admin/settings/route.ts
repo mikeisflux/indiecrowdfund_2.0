@@ -68,6 +68,7 @@ export async function GET() {
       twitterAccessSecret: settings.twitterAccessSecret ? "••••••••" : null,
       dalleApiKey: settings.dalleApiKey ? "••••••••" : null,
       stabilityApiKey: settings.stabilityApiKey ? "••••••••" : null,
+      shuftiSecretKey: settings.shuftiSecretKey ? "••••••••" : null,
     };
 
     return NextResponse.json({ settings: maskedSettings });
@@ -145,6 +146,10 @@ export async function PATCH(req: NextRequest) {
         "passwordMinLength", "requireSpecialChars",
         "ipRateLimitEnabled", "ipRateLimitRequests", "ipRateLimitWindow"
       ],
+      idverify: [
+        "idVerificationEnabled", "shuftiClientId", "shuftiSecretKey",
+        "shuftiCallbackUrl", "shuftiRedirectUrl", "idVerificationMinAge", "idVerificationMode"
+      ],
       theme: [
         "primaryColor", "secondaryColor", "accentColor",
         "backgroundColor", "textColor", "fontFamily", "borderRadius"
@@ -211,6 +216,7 @@ export async function PATCH(req: NextRequest) {
       twitterAccessSecret: settings.twitterAccessSecret ? "••••••••" : null,
       dalleApiKey: settings.dalleApiKey ? "••••••••" : null,
       stabilityApiKey: settings.stabilityApiKey ? "••••••••" : null,
+      shuftiSecretKey: settings.shuftiSecretKey ? "••••••••" : null,
     };
 
     return NextResponse.json({

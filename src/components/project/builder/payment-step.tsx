@@ -113,6 +113,29 @@ export function PaymentStep() {
               My project contains high-risk or controversial content
             </Label>
           </div>
+
+          {/* Show SFW promo agreement only when adult/risky content is checked */}
+          {mustUseCCBill && (
+            <div className="mt-4 p-4 rounded-lg border bg-amber-50/50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="promo-sfw"
+                  checked={payment.promoContentSfw || false}
+                  onCheckedChange={(checked) =>
+                    updatePayment({ promoContentSfw: checked as boolean })
+                  }
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="promo-sfw" className="font-medium cursor-pointer">
+                    I agree that no NSFW content will be used in my project&apos;s promotional video, image, or project title
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    This allows your project to be displayed publicly on the platform. Users will need to verify their age before viewing the full project content.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {mustUseCCBill && (

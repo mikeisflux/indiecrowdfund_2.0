@@ -413,6 +413,7 @@ export interface ProjectPaymentData {
   paymentProcessor: PaymentProcessor;
   hasAdultContent: boolean;
   hasRiskyContent: boolean;
+  promoContentSfw: boolean; // Agrees that promotional video/image/title are SFW
   stripeAccountId?: string;
   ccbillAccountNumber?: string;
   ccbillSubaccount?: string;

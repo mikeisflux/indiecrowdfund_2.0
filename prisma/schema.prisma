@@ -26,6 +26,12 @@ model User {
   showNameOnly      Boolean   @default(false)
   role              UserRole  @default(USER)
 
+  // ID Verification
+  idVerified        Boolean   @default(false)
+  idVerifiedAt      DateTime?
+  idVerificationId  String?   // Shufti reference ID
+  dateOfBirth       DateTime?
+
   // Auth
   accounts          Account[]
   sessions          Session[]
@@ -42,6 +48,7 @@ model User {
   emailLogs         EmailLog[]
   stripeConfig      StripeConfig?
   ccbillConfig      CCBillConfig?
+  idVerifications   IDVerification[]
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -145,6 +152,7 @@ model Project {
   paymentProcessor      PaymentProcessor @default(STRIPE)
   hasAdultContent       Boolean       @default(false)
   hasRiskyContent       Boolean       @default(false)
+  promoContentSfw       Boolean       @default(true)  // Agrees promotional materials (video, image, title) are SFW
   bankAccountId         String?
 
   // Stripe
@@ -1169,6 +1177,15 @@ model PlatformSettings {
   aiFunnelAnalysis      Boolean  @default(true)
   aiRetentionDays       Int      @default(90)
 
+  // ID Verification Settings (Shufti Pro)
+  idVerificationEnabled Boolean  @default(false)
+  shuftiClientId        String?
+  shuftiSecretKey       String?
+  shuftiCallbackUrl     String?
+  shuftiRedirectUrl     String?
+  idVerificationMinAge  Int      @default(18)
+  idVerificationMode    String   @default("production") // "sandbox" or "production"
+
   // Security Settings
   twoFactorRequired     Boolean  @default(false)
   sessionTimeout        Int      @default(7)
@@ -1498,4 +1515,55 @@ enum AdminEmailStatus {
   DELIVERED
   FAILED
   BOUNCED
+}
+
+// ============================================
+// ID VERIFICATION
+// ============================================
+
+model IDVerification {
+  id                String                 @id @default(cuid())
+  userId            String
+
+  // Shufti Reference
+  shuftiReference   String                 @unique
+  verificationUrl   String?
+
+  // Verification Status
+  status            IDVerificationStatus   @default(PENDING)
+
+  // Results
+  isDocumentValid   Boolean?
+  isFaceMatch       Boolean?
+  isAgeVerified     Boolean?
+  detectedAge       Int?
+  documentType      String?
+  documentCountry   String?
+
+  // Decline info
+  declineReason     String?
+  declineCodes      String[]
+
+  // Raw response (for debugging)
+  rawResponse       Json?
+
+  // Timestamps
+  requestedAt       DateTime              @default(now())
+  completedAt       DateTime?
+  expiresAt         DateTime?
+
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([shuftiReference])
+  @@index([status])
+}
+
+enum IDVerificationStatus {
+  PENDING
+  PROCESSING
+  VERIFIED
+  DECLINED
+  EXPIRED
+  CANCELLED
 }
