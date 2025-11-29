@@ -8,9 +8,6 @@ import { useSession } from "@/components/providers/auth-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,7 +64,7 @@ export function UserProfileDropdown() {
 
   if (status === "loading") {
     return (
-      <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
+      <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
     );
   }
 
@@ -91,104 +88,106 @@ export function UserProfileDropdown() {
   return (
     <DropdownMenu onOpenChange={(open) => open && fetchProfileData()}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-          <Avatar className="h-9 w-9">
+        <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
+          <Avatar className="h-10 w-10">
             <AvatarImage src={session.user.image || undefined} alt={session.user.name || "User"} />
-            <AvatarFallback className="bg-primary text-primary-foreground">
+            <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
               {initials}
             </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[400px]" align="end" forceMount>
+      <DropdownMenuContent className="w-[580px] p-0" align="end" forceMount>
         {/* Three column layout like Kickstarter */}
-        <div className="grid grid-cols-3 gap-4 p-4">
+        <div className="grid grid-cols-3 divide-x">
           {/* Column 1: Your Account */}
-          <div className="space-y-1">
-            <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="p-5">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
               Your Account
-            </DropdownMenuLabel>
-            <Link href="/dashboard/saved" className="block text-sm hover:text-primary py-1">
-              Saved projects
-            </Link>
-            <Link href="/dashboard/recommended" className="block text-sm hover:text-primary py-1">
-              Recommended for you
-            </Link>
-            <Link href="/dashboard/following" className="block text-sm hover:text-primary py-1">
-              Following
-            </Link>
-            <div className="pt-2 space-y-1">
-              <Link href="/dashboard" className="block text-sm hover:text-primary py-1">
+            </h3>
+            <div className="space-y-3">
+              <Link href="/dashboard/backer" className="block text-sm hover:text-primary transition-colors">
+                Saved projects
+              </Link>
+              <Link href="/discover" className="block text-sm hover:text-primary transition-colors">
+                Recommended for you
+              </Link>
+              <Link href="/dashboard/following" className="block text-sm hover:text-primary transition-colors">
+                Following
+              </Link>
+            </div>
+            <div className="mt-6 space-y-3">
+              <Link href="/dashboard" className="block text-sm hover:text-primary transition-colors">
                 Profile
               </Link>
-              <Link href="/dashboard/settings" className="block text-sm hover:text-primary py-1">
+              <Link href="/dashboard/settings" className="block text-sm hover:text-primary transition-colors">
                 Settings
               </Link>
-              <Link href="/dashboard/messages" className="block text-sm hover:text-primary py-1">
+              <Link href="/dashboard/messages" className="block text-sm hover:text-primary transition-colors">
                 Messages
               </Link>
-              <Link href="/dashboard/activity" className="flex items-center gap-1 text-sm text-primary py-1">
-                <span className="h-2 w-2 rounded-full bg-primary" />
+              <Link href="/dashboard/activity" className="flex items-center gap-2 text-sm text-primary transition-colors">
+                <span className="h-2 w-2 rounded-full bg-green-500" />
                 Activity
               </Link>
             </div>
           </div>
 
           {/* Column 2: Backed Projects */}
-          <div className="space-y-1">
-            <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="p-5">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
               Backed Projects
-            </DropdownMenuLabel>
+            </h3>
             {loading ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded bg-muted animate-pulse" />
-                    <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded bg-muted animate-pulse flex-shrink-0" />
+                    <div className="h-3 w-24 bg-muted animate-pulse rounded" />
                   </div>
                 ))}
               </div>
             ) : profileData?.backedProjects && profileData.backedProjects.length > 0 ? (
               <div className="space-y-2">
-                {profileData.backedProjects.slice(0, 4).map((project) => (
+                {profileData.backedProjects.slice(0, 5).map((project) => (
                   <Link
                     key={project.id}
                     href={`/projects/${project.slug}`}
-                    className="flex items-center gap-2 hover:bg-muted rounded p-1 -ml-1"
+                    className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
                   >
-                    <div className="h-8 w-8 rounded bg-muted overflow-hidden flex-shrink-0">
+                    <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
                       {project.imageUrl ? (
                         <Image
                           src={project.imageUrl}
                           alt={project.title}
-                          width={32}
-                          height={32}
+                          width={40}
+                          height={40}
                           className="object-cover w-full h-full"
                         />
                       ) : (
-                        <div className="w-full h-full bg-muted" />
+                        <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
                       )}
                     </div>
-                    <span className="text-xs truncate">{project.title}</span>
+                    <span className="text-sm truncate max-w-[120px]">{project.title}</span>
                   </Link>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground py-2">No backed projects yet</p>
+              <p className="text-sm text-muted-foreground">No backed projects yet</p>
             )}
           </div>
 
           {/* Column 3: Created Projects */}
-          <div className="space-y-1">
-            <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="p-5">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
               Created Projects
-            </DropdownMenuLabel>
+            </h3>
             {loading ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {[1, 2].map((i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded bg-muted animate-pulse" />
-                    <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded bg-muted animate-pulse flex-shrink-0" />
+                    <div className="h-3 w-24 bg-muted animate-pulse rounded" />
                   </div>
                 ))}
               </div>
@@ -200,22 +199,22 @@ export function UserProfileDropdown() {
                       <Link
                         key={project.id}
                         href={`/projects/${project.slug}`}
-                        className="flex items-center gap-2 hover:bg-muted rounded p-1 -ml-1"
+                        className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
                       >
-                        <div className="h-8 w-8 rounded bg-muted overflow-hidden flex-shrink-0">
+                        <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
                           {project.imageUrl ? (
                             <Image
                               src={project.imageUrl}
                               alt={project.title}
-                              width={32}
-                              height={32}
+                              width={40}
+                              height={40}
                               className="object-cover w-full h-full"
                             />
                           ) : (
-                            <div className="w-full h-full bg-muted" />
+                            <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
                           )}
                         </div>
-                        <span className="text-xs truncate">{project.title}</span>
+                        <span className="text-sm truncate max-w-[120px]">{project.title}</span>
                       </Link>
                     ))}
                   </div>
@@ -223,37 +222,37 @@ export function UserProfileDropdown() {
 
                 {/* Collaborating projects */}
                 {profileData?.collaboratingProjects && profileData.collaboratingProjects.length > 0 && (
-                  <div className="pt-2 space-y-2">
+                  <div className="mt-3 space-y-2">
                     {profileData.collaboratingProjects.slice(0, 2).map((project) => (
                       <Link
                         key={project.id}
                         href={`/projects/${project.slug}`}
-                        className="flex items-center gap-2 hover:bg-muted rounded p-1 -ml-1"
+                        className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
                       >
-                        <div className="h-8 w-8 rounded bg-muted overflow-hidden flex-shrink-0">
+                        <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
                           {project.imageUrl ? (
                             <Image
                               src={project.imageUrl}
                               alt={project.title}
-                              width={32}
-                              height={32}
+                              width={40}
+                              height={40}
                               className="object-cover w-full h-full"
                             />
                           ) : (
-                            <div className="w-full h-full bg-muted" />
+                            <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
                           )}
                         </div>
-                        <span className="text-xs truncate">{project.title}</span>
+                        <span className="text-sm truncate max-w-[120px]">{project.title}</span>
                       </Link>
                     ))}
                   </div>
                 )}
 
                 {/* New project button */}
-                <div className="pt-3">
+                <div className="mt-4">
                   <Link
                     href="/projects/new"
-                    className="flex items-center gap-2 text-sm hover:text-primary"
+                    className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
                   >
                     <Plus className="h-4 w-4" />
                     New
@@ -265,7 +264,7 @@ export function UserProfileDropdown() {
                   (profileData?.collaboratingProjects?.length || 0) > 0) && (
                   <Link
                     href="/dashboard"
-                    className="block text-xs text-muted-foreground hover:text-primary pt-2"
+                    className="block text-sm text-muted-foreground hover:text-primary mt-3 transition-colors"
                   >
                     View all
                   </Link>
@@ -275,17 +274,15 @@ export function UserProfileDropdown() {
           </div>
         </div>
 
-        <DropdownMenuSeparator />
-
-        {/* Logout */}
-        <div className="p-2">
-          <DropdownMenuItem
+        {/* Logout - full width at bottom */}
+        <div className="border-t px-5 py-4">
+          <button
             onClick={handleLogout}
-            className="cursor-pointer"
+            className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
           >
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className="h-4 w-4" />
             Log out
-          </DropdownMenuItem>
+          </button>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
