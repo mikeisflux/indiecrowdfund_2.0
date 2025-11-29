@@ -1,30 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { trackEvent, trackProjectView, trackReferrer } from "@/lib/tracking/index";
 
+// Simple in-memory cache to avoid hitting IP-API rate limits (45 req/min)
+const geoCache = new Map<string, { country: string; timestamp: number }>();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
 /**
- * Get geolocation data from request headers
- * Works with Vercel's built-in geo headers, Cloudflare headers, or falls back to null
+ * Lookup country from IP using ip-api.com (free, no API key needed)
  */
-function getGeoData(req: NextRequest): { country: string | null; city: string | null; ip: string | null } {
-  // Vercel's built-in geolocation (free on Vercel)
-  const vercelCountry = req.headers.get("x-vercel-ip-country");
-  const vercelCity = req.headers.get("x-vercel-ip-city");
+async function lookupCountryFromIP(ip: string): Promise<string | null> {
+  // Check cache first
+  const cached = geoCache.get(ip);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.country;
+  }
 
-  // Cloudflare headers (if using Cloudflare)
-  const cfCountry = req.headers.get("cf-ipcountry");
-  const cfCity = req.headers.get("cf-ipcity");
+  try {
+    // ip-api.com is free, no API key needed
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
+      signal: AbortSignal.timeout(2000), // 2 second timeout
+    });
 
-  // Get IP address from various headers
+    if (response.ok) {
+      const data = await response.json();
+      if (data.countryCode) {
+        // Cache the result
+        geoCache.set(ip, { country: data.countryCode, timestamp: Date.now() });
+        return data.countryCode;
+      }
+    }
+  } catch {
+    // Don't let geo lookup failures affect tracking
+  }
+
+  return null;
+}
+
+/**
+ * Get geolocation data from IP address
+ */
+async function getGeoData(req: NextRequest): Promise<{ country: string | null; ip: string | null }> {
+  // Get IP address from headers
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || req.headers.get("x-real-ip")
-    || req.headers.get("cf-connecting-ip")
     || null;
 
-  return {
-    country: vercelCountry || cfCountry || null,
-    city: vercelCity || cfCity || null,
-    ip,
-  };
+  let country: string | null = null;
+
+  // Lookup country from IP (skip localhost/private IPs)
+  if (ip && !ip.startsWith("127.") && !ip.startsWith("192.168.") && !ip.startsWith("10.") && ip !== "::1") {
+    country = await lookupCountryFromIP(ip);
+  }
+
+  return { country, ip };
 }
 
 export async function POST(req: NextRequest) {
@@ -50,7 +78,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get geolocation data from request
-    const geo = getGeoData(req);
+    const geo = await getGeoData(req);
 
     // Handle different event types
     switch (eventType) {
