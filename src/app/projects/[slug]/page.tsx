@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Bookmark,
   MapPin,
@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Clock,
   Info,
+  Package,
 } from "lucide-react";
 
 // Social share icons as simple SVGs
@@ -109,46 +110,87 @@ const mockRewards = [
   {
     id: "r1",
     type: "TIER",
-    title: "Digital Edition",
-    description: "Get the digital PDF version of the art book.",
-    amount: 25,
-    estimatedDelivery: new Date("2025-08-01"),
-    shippingType: "NO_SHIPPING",
+    title: "Tributes: HR GIGER",
+    description: "TRIBUTES: HR GIGER features 240 pages featuring art by over 100 artists. The book is in A4 format (297 × 210 mm / 11.69 × 8.27 inches), bound in hardcover, and features debossed and embossed elements with a glossy varnish and spot UV.",
+    amount: 75,
+    estimatedDelivery: new Date("2026-12-01"),
+    shippingType: "WORLDWIDE",
+    shippingLocation: "Anywhere in the world",
     shippingCost: 0,
     quantityAvailable: null,
-    quantityClaimed: 156,
-    items: [{ title: "Digital Art Book (PDF)" }],
+    quantityClaimed: 341,
+    imageUrl: "/placeholder-reward-1.jpg",
+    items: [{ title: "Tributes: HR GIGER", quantity: 1 }],
   },
   {
     id: "r2",
     type: "TIER",
-    title: "Standard Hardcover",
-    description: "The complete 200+ page hardcover art book featuring tributes from artists worldwide.",
-    amount: 55,
-    estimatedDelivery: new Date("2025-08-01"),
+    title: "EARLY BIRD | Tributes: HR GIGER",
+    description: "Get your copy of the book! This reward includes the Swag Pack for free!",
+    amount: 74,
+    estimatedDelivery: new Date("2026-12-01"),
     shippingType: "WORLDWIDE",
-    shippingCost: 15,
-    quantityAvailable: null,
-    quantityClaimed: 489,
-    items: [{ title: "Hardcover Art Book" }, { title: "Digital PDF" }],
+    shippingLocation: "Anywhere in the world",
+    shippingCost: 0,
+    quantityAvailable: 500,
+    quantityClaimed: 500,
+    imageUrl: "/placeholder-reward-2.jpg",
+    items: [
+      { title: "Tributes: HR GIGER", quantity: 1 },
+      { title: "Swag Pack", quantity: 1 },
+      { title: "Digital Edition", quantity: 1 },
+    ],
   },
   {
     id: "r3",
     type: "TIER",
-    title: "Collector's Edition",
-    description: "Limited slipcase edition with exclusive print and artist signatures.",
-    amount: 120,
-    estimatedDelivery: new Date("2025-08-01"),
+    title: "Tributes: HR GIGER | Limited Edition",
+    description: "Limited slipcase edition with exclusive print and artist signatures. Only 200 available worldwide.",
+    amount: 180,
+    estimatedDelivery: new Date("2026-12-01"),
     shippingType: "WORLDWIDE",
+    shippingLocation: "Anywhere in the world",
     shippingCost: 0,
     quantityAvailable: 200,
-    quantityClaimed: 187,
+    quantityClaimed: 200,
+    imageUrl: "/placeholder-reward-3.jpg",
     items: [
-      { title: "Collector's Hardcover" },
-      { title: "Slipcase" },
-      { title: "Exclusive Print" },
-      { title: "Digital PDF" },
+      { title: "Tributes: HR GIGER (Limited Edition)", quantity: 1 },
+      { title: "Exclusive Slipcase", quantity: 1 },
+      { title: "Signed Art Print", quantity: 1 },
+      { title: "Digital Edition", quantity: 1 },
     ],
+  },
+];
+
+const mockAddons = [
+  {
+    id: "a1",
+    title: "Swag Pack",
+    description: "Get the set of 8 prints with work from the artists in the book!",
+    amount: 35,
+    imageUrl: "/placeholder-addon-1.jpg",
+  },
+  {
+    id: "a2",
+    title: "Tributes: HR GIGER",
+    description: "TRIBUTES: HR GIGER features 240 pages featuring art by over 100 artists. The book is in A4 format (2...",
+    amount: 87,
+    imageUrl: "/placeholder-addon-2.jpg",
+  },
+  {
+    id: "a3",
+    title: "Original Art (pencil) - Nikolay Georgiev",
+    description: "The conceptual drawing for the artwork 'Iter Obsequium', A3, graphite.",
+    amount: 2320,
+    imageUrl: "/placeholder-addon-3.jpg",
+  },
+  {
+    id: "a4",
+    title: "Original Art (mixed media) - Nikola",
+    description: "The finished artwork 'Iter Obsequium', in A3 format and mixed media, echoes Giger's process. It is the...",
+    amount: 6958,
+    imageUrl: "/placeholder-addon-4.jpg",
   },
 ];
 
@@ -169,14 +211,25 @@ const storyNavItems = [
   "Risks",
 ];
 
+type TabValue = "campaign" | "rewards" | "creator" | "faq" | "updates" | "comments" | "community";
+
 export default function ProjectPage() {
   const [isReminded, setIsReminded] = useState(false);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [pledgeAmount, setPledgeAmount] = useState("1");
+  const [activeTab, setActiveTab] = useState<TabValue>("campaign");
+  const [selectedRewardId, setSelectedRewardId] = useState<string>("r1");
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+
+  // Refs for tab content sections
+  const contentSectionRef = useRef<HTMLDivElement>(null);
 
   const project = mockProject;
   const rewards = mockRewards;
+  const addons = mockAddons;
   const tiers = rewards.filter((r) => r.type === "TIER");
+  const availableRewards = tiers.filter((r) => r.quantityAvailable === null || r.quantityClaimed < r.quantityAvailable);
+  const soldOutRewards = tiers.filter((r) => r.quantityAvailable !== null && r.quantityClaimed >= r.quantityAvailable);
 
   const fundingPercentage = (project.currentAmount / project.goalAmount) * 100;
 
@@ -187,6 +240,36 @@ export default function ProjectPage() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Track which reward section is in view (for Rewards tab)
+  useEffect(() => {
+    if (activeTab !== "rewards") return;
+
+    const observerCallback: IntersectionObserverCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const rewardId = entry.target.id.replace("reward-section-", "");
+          setSelectedRewardId(rewardId);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, {
+      root: null,
+      rootMargin: "-20% 0px -60% 0px",
+      threshold: 0,
+    });
+
+    // Observe all reward sections
+    tiers.forEach((reward) => {
+      const element = document.getElementById(`reward-section-${reward.id}`);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [activeTab, tiers]);
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -204,6 +287,25 @@ export default function ProjectPage() {
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  const handleTabClick = (tab: TabValue) => {
+    setActiveTab(tab);
+    // Scroll to content section with offset for sticky header
+    if (contentSectionRef.current) {
+      const yOffset = -60; // Account for sticky tabs
+      const element = contentSectionRef.current;
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  };
+
+  const toggleAddon = (addonId: string) => {
+    setSelectedAddons((prev) =>
+      prev.includes(addonId)
+        ? prev.filter((id) => id !== addonId)
+        : [...prev, addonId]
+    );
   };
 
   return (
@@ -407,228 +509,513 @@ export default function ProjectPage() {
       {/* Tabs Navigation */}
       <section className="border-b sticky top-0 z-40 bg-background">
         <div className="container">
-          <Tabs defaultValue="campaign">
-            <TabsList className="h-14 w-full justify-start rounded-none border-0 bg-transparent p-0">
-              <TabsTrigger
-                value="campaign"
-                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
+          <div className="flex h-14 items-center gap-0">
+            {[
+              { value: "campaign" as TabValue, label: "Campaign" },
+              { value: "rewards" as TabValue, label: "Rewards" },
+              { value: "creator" as TabValue, label: "Creator" },
+              { value: "faq" as TabValue, label: "FAQ", count: project.faqs.length },
+              { value: "updates" as TabValue, label: "Updates", count: project.updates.length },
+              { value: "comments" as TabValue, label: "Comments", count: project.comments },
+              { value: "community" as TabValue, label: "Community" },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => handleTabClick(tab.value)}
+                className={`h-14 px-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.value
+                    ? "border-foreground text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
               >
-                Campaign
-              </TabsTrigger>
-              <TabsTrigger
-                value="rewards"
-                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
-              >
-                Rewards
-              </TabsTrigger>
-              <TabsTrigger
-                value="creator"
-                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
-              >
-                Creator
-              </TabsTrigger>
-              <TabsTrigger
-                value="faq"
-                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
-              >
-                FAQ <sup className="ml-1">{project.faqs.length}</sup>
-              </TabsTrigger>
-              <TabsTrigger
-                value="updates"
-                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
-              >
-                Updates <sup className="ml-1">{project.updates.length}</sup>
-              </TabsTrigger>
-              <TabsTrigger
-                value="comments"
-                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
-              >
-                Comments <sup className="ml-1">{project.comments}</sup>
-              </TabsTrigger>
-              <TabsTrigger
-                value="community"
-                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
-              >
-                Community
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+                {tab.label}
+                {tab.count !== undefined && <sup className="ml-1">{tab.count}</sup>}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Main Content */}
-      <section className="container py-8">
-        <div className="grid gap-8 lg:grid-cols-12">
-          {/* Left Sidebar - Story Navigation */}
-          <div className="hidden lg:block lg:col-span-2">
-            <nav className="sticky top-20 space-y-2">
-              {storyNavItems.map((item, index) => (
-                <button
-                  key={index}
-                  className="block text-left text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-                >
-                  {item}
-                </button>
-              ))}
-            </nav>
-          </div>
+      <section ref={contentSectionRef} className="container py-8">
+        {/* Campaign Tab Content */}
+        {activeTab === "campaign" && (
+          <div className="grid gap-8 lg:grid-cols-12">
+            {/* Left Sidebar - Story Navigation */}
+            <div className="hidden lg:block lg:col-span-2">
+              <nav className="sticky top-20 space-y-2">
+                {storyNavItems.map((item, index) => (
+                  <button
+                    key={index}
+                    className="block text-left text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </nav>
+            </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-6">
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-              <h2 className="text-2xl font-serif">Story</h2>
-              <div dangerouslySetInnerHTML={{ __html: project.description }} />
+            {/* Main Content */}
+            <div className="lg:col-span-6">
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <h2 className="text-2xl font-serif">Story</h2>
+                <div dangerouslySetInnerHTML={{ __html: project.description }} />
 
-              <Separator className="my-8" />
+                <Separator className="my-8" />
 
-              {/* Risks Section */}
-              <div>
-                <div className="mb-4 flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-500" />
-                  <h3 className="font-semibold m-0">Risks and challenges</h3>
+                {/* Risks Section */}
+                <div>
+                  <div className="mb-4 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                    <h3 className="font-semibold m-0">Risks and challenges</h3>
+                  </div>
+                  <p className="text-muted-foreground">{project.risks}</p>
                 </div>
-                <p className="text-muted-foreground">{project.risks}</p>
               </div>
             </div>
-          </div>
 
-          {/* Right Sidebar */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Creator Card */}
+            {/* Right Sidebar */}
+            <div className="lg:col-span-4 space-y-6">
+              {/* Creator Card */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3 mb-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={project.creator.image} />
+                      <AvatarFallback className="bg-black text-white">
+                        {project.creator.name[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h4 className="font-semibold">{project.creator.name}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {project.creator.projectsCreated} created • {project.creator.projectsBacked} backed
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {project.creator.bio} <Link href="#" className="text-primary">See more</Link>
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Support Section - Pledge without reward */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Support</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-1">Make a pledge without a reward</h4>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">Pledge amount</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-medium">$</span>
+                      <Input
+                        type="number"
+                        value={pledgeAmount}
+                        onChange={(e) => setPledgeAmount(e.target.value)}
+                        className="w-24"
+                        min="1"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">ABOUT ${pledgeAmount}</p>
+                  </div>
+
+                  <div className="rounded-lg bg-[#028858] text-white p-4">
+                    <h5 className="font-semibold mb-1">Back it because you believe in it.</h5>
+                    <p className="text-sm opacity-90">
+                      Support the project for no reward, just because it speaks to you.
+                    </p>
+                  </div>
+
+                  <Link href={`/projects/${project.slug}/pledge?amount=${pledgeAmount}`}>
+                    <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
+                      Continue
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+              {/* Reward Tiers */}
+              {tiers.map((reward) => {
+                const isLimited = reward.quantityAvailable !== null;
+                const remaining = isLimited ? reward.quantityAvailable! - reward.quantityClaimed : null;
+                const isSoldOut = isLimited && remaining === 0;
+
+                return (
+                  <Card
+                    key={reward.id}
+                    className={`transition-all hover:border-primary ${isSoldOut ? "opacity-60" : ""}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="mb-2">
+                        <p className="text-lg font-semibold">
+                          Pledge ${reward.amount} or more
+                        </p>
+                        <p className="font-medium text-primary">{reward.title}</p>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {reward.description}
+                      </p>
+
+                      {/* Included Items */}
+                      <div className="mb-4 space-y-1">
+                        <p className="text-xs font-medium uppercase text-muted-foreground">
+                          Includes:
+                        </p>
+                        {reward.items.map((item, index) => (
+                          <div key={index} className="flex items-center gap-2 text-sm">
+                            <CheckCircle className="h-3 w-3 text-[#05ce78]" />
+                            {item.title}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Meta */}
+                      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-4">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Est. delivery {reward.estimatedDelivery.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                        </div>
+                        {reward.shippingType !== "NO_SHIPPING" && (
+                          <div>Ships worldwide</div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm">
+                          <span className="font-medium">{reward.quantityClaimed}</span>
+                          <span className="text-muted-foreground"> backers</span>
+                          {isLimited && !isSoldOut && (
+                            <span className="text-muted-foreground"> • {remaining} left</span>
+                          )}
+                        </div>
+                        {isSoldOut && (
+                          <Badge variant="secondary">Sold out</Badge>
+                        )}
+                      </div>
+
+                      {!isSoldOut && (
+                        <Link href={`/projects/${project.slug}/pledge?reward=${reward.id}`}>
+                          <Button className="w-full mt-4 bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
+                            Select
+                          </Button>
+                        </Link>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Rewards Tab Content */}
+        {activeTab === "rewards" && (
+          <div className="grid gap-8 lg:grid-cols-12">
+            {/* Left Sidebar - Rewards List */}
+            <div className="lg:col-span-3">
+              <div className="sticky top-20">
+                <h3 className="text-lg font-semibold mb-4">Available rewards</h3>
+                <div className="space-y-3">
+                  {availableRewards.map((reward) => (
+                    <button
+                      key={reward.id}
+                      onClick={() => {
+                        setSelectedRewardId(reward.id);
+                        // Scroll to the reward section
+                        const element = document.getElementById(`reward-section-${reward.id}`);
+                        if (element) {
+                          const yOffset = -80;
+                          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                          window.scrollTo({ top: y, behavior: "smooth" });
+                        }
+                      }}
+                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        selectedRewardId === reward.id
+                          ? "border-l-4 border-l-[#05ce78] border-t border-r border-b bg-muted/30"
+                          : "border-transparent hover:bg-muted/50"
+                      }`}
+                    >
+                      <p className="font-medium text-sm">{reward.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        €{reward.amount} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
+                      </p>
+                    </button>
+                  ))}
+                </div>
+
+                {soldOutRewards.length > 0 && (
+                  <>
+                    <h3 className="text-lg font-semibold mt-8 mb-4">All gone</h3>
+                    <div className="space-y-3 opacity-60">
+                      {soldOutRewards.map((reward) => (
+                        <button
+                          key={reward.id}
+                          onClick={() => {
+                            setSelectedRewardId(reward.id);
+                            const element = document.getElementById(`reward-section-${reward.id}`);
+                            if (element) {
+                              const yOffset = -80;
+                              const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                              window.scrollTo({ top: y, behavior: "smooth" });
+                            }
+                          }}
+                          className={`w-full text-left p-3 rounded-lg border transition-all ${
+                            selectedRewardId === reward.id
+                              ? "border-l-4 border-l-gray-400 border-t border-r border-b bg-muted/30"
+                              : "border-transparent hover:bg-muted/50"
+                          }`}
+                        >
+                          <p className="font-medium text-sm">{reward.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            €{reward.amount} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Main Content - All Rewards with Scroll Sections */}
+            <div className="lg:col-span-9">
+              {tiers.map((reward) => {
+                const isLimited = reward.quantityAvailable !== null;
+                const isSoldOut = isLimited && reward.quantityClaimed >= reward.quantityAvailable!;
+
+                return (
+                  <div
+                    key={reward.id}
+                    id={`reward-section-${reward.id}`}
+                    className="grid gap-8 lg:grid-cols-9 pb-12 mb-12 border-b last:border-b-0 last:mb-0 last:pb-0"
+                  >
+                    {/* Middle - Reward Card */}
+                    <div className="lg:col-span-5">
+                      <div className="sticky top-20">
+                        <Card className={`overflow-hidden ${isSoldOut ? "opacity-60" : ""}`}>
+                          {/* Reward Image */}
+                          <div className="aspect-[4/3] bg-muted relative">
+                            <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+                              <Package className="h-16 w-16 text-muted-foreground/50" />
+                            </div>
+                          </div>
+
+                          <CardContent className="p-6">
+                            {/* Title and Price */}
+                            <div className="flex items-start justify-between mb-6">
+                              <h2 className="text-xl font-semibold">{reward.title}</h2>
+                              <div className="text-right">
+                                <p className="text-xl font-bold">€{reward.amount}</p>
+                                <p className="text-xs text-muted-foreground uppercase">About ${Math.round(reward.amount * 1.08)}</p>
+                              </div>
+                            </div>
+
+                            {/* Backers and Shipping */}
+                            <div className="grid grid-cols-2 gap-6 mb-6">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase mb-1">Backers</p>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg font-semibold">{reward.quantityClaimed}</span>
+                                  <div className="flex -space-x-2">
+                                    {[1, 2, 3].map((i) => (
+                                      <div
+                                        key={i}
+                                        className="h-6 w-6 rounded-full bg-muted border-2 border-background"
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase mb-1">Ships to</p>
+                                <p className="text-sm">{reward.shippingLocation || "Anywhere in the world"}</p>
+                              </div>
+                            </div>
+
+                            {/* Estimated Delivery */}
+                            <div className="mb-6">
+                              <p className="text-xs text-muted-foreground uppercase mb-1">Estimated delivery</p>
+                              <p className="text-sm">
+                                {reward.estimatedDelivery.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                              </p>
+                            </div>
+
+                            {/* Pledge Button */}
+                            {isSoldOut ? (
+                              <Button className="w-full" disabled>
+                                Reward no longer available
+                              </Button>
+                            ) : (
+                              <Link href={`/projects/${project.slug}/pledge?reward=${reward.id}`}>
+                                <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white font-medium">
+                                  Pledge €{reward.amount}
+                                </Button>
+                              </Link>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+
+                    {/* Right Sidebar - Description, Items, Add-ons */}
+                    <div className="lg:col-span-4 space-y-6">
+                      {/* Reward Description */}
+                      <div>
+                        <p className="text-sm leading-relaxed">{reward.description}</p>
+                      </div>
+
+                      {/* Items Included */}
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included
+                        </p>
+                        <div className="space-y-2">
+                          {reward.items.map((item, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                              <span className="text-sm font-medium">{item.title}</span>
+                              <span className="text-xs text-muted-foreground">Quantity: {item.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Optional Add-ons */}
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-3">Optional add-ons</p>
+                        <div className="space-y-3">
+                          {addons.map((addon) => (
+                            <div
+                              key={addon.id}
+                              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                                selectedAddons.includes(addon.id)
+                                  ? "border-[#05ce78] bg-[#05ce78]/5"
+                                  : "border-border hover:border-muted-foreground/50"
+                              }`}
+                              onClick={() => toggleAddon(addon.id)}
+                            >
+                              <Checkbox
+                                checked={selectedAddons.includes(addon.id)}
+                                className="mt-1"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm">{addon.title}</p>
+                                    <p className="text-sm text-[#05ce78]">+${addon.amount}</p>
+                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                      {addon.description}
+                                      {addon.description.length > 80 && (
+                                        <button className="text-[#05ce78] ml-1">See more</button>
+                                      )}
+                                    </p>
+                                  </div>
+                                  <div className="h-12 w-12 rounded bg-muted flex-shrink-0" />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Creator Tab Content */}
+        {activeTab === "creator" && (
+          <div className="max-w-3xl mx-auto">
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3 mb-4">
-                  <Avatar className="h-12 w-12">
+              <CardContent className="p-8">
+                <div className="flex items-start gap-6 mb-6">
+                  <Avatar className="h-20 w-20">
                     <AvatarImage src={project.creator.image} />
-                    <AvatarFallback className="bg-black text-white">
+                    <AvatarFallback className="bg-black text-white text-2xl">
                       {project.creator.name[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h4 className="font-semibold">{project.creator.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {project.creator.projectsCreated} created • {project.creator.projectsBacked} backed
+                    <h2 className="text-2xl font-semibold">{project.creator.name}</h2>
+                    <p className="text-muted-foreground">{project.creator.location}</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {project.creator.projectsCreated} projects created • {project.creator.projectsBacked} backed
                     </p>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {project.creator.bio} <Link href="#" className="text-primary">See more</Link>
+                <p className="text-muted-foreground">{project.creator.bio}</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* FAQ Tab Content */}
+        {activeTab === "faq" && (
+          <div className="max-w-3xl mx-auto space-y-4">
+            <h2 className="text-2xl font-semibold mb-6">Frequently Asked Questions</h2>
+            {project.faqs.map((faq, index) => (
+              <Card key={index}>
+                <CardContent className="p-6">
+                  <h3 className="font-semibold mb-2">{faq.question}</h3>
+                  <p className="text-muted-foreground">{faq.answer}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Updates Tab Content */}
+        {activeTab === "updates" && (
+          <div className="max-w-3xl mx-auto space-y-4">
+            <h2 className="text-2xl font-semibold mb-6">Updates</h2>
+            {project.updates.map((update) => (
+              <Card key={update.id}>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                    <Clock className="h-4 w-4" />
+                    {update.createdAt.toLocaleDateString()}
+                  </div>
+                  <h3 className="font-semibold mb-2">{update.title}</h3>
+                  <p className="text-muted-foreground">{update.content}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Comments Tab Content */}
+        {activeTab === "comments" && (
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-semibold mb-6">Comments ({project.comments})</h2>
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground text-center py-8">
+                  Comments section coming soon...
                 </p>
               </CardContent>
             </Card>
+          </div>
+        )}
 
-            {/* Support Section - Pledge without reward */}
+        {/* Community Tab Content */}
+        {activeTab === "community" && (
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-semibold mb-6">Community</h2>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Support</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-1">Make a pledge without a reward</h4>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">Pledge amount</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-medium">$</span>
-                    <Input
-                      type="number"
-                      value={pledgeAmount}
-                      onChange={(e) => setPledgeAmount(e.target.value)}
-                      className="w-24"
-                      min="1"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">ABOUT ${pledgeAmount}</p>
-                </div>
-
-                <div className="rounded-lg bg-[#028858] text-white p-4">
-                  <h5 className="font-semibold mb-1">Back it because you believe in it.</h5>
-                  <p className="text-sm opacity-90">
-                    Support the project for no reward, just because it speaks to you.
-                  </p>
-                </div>
-
-                <Link href={`/projects/${project.slug}/pledge?amount=${pledgeAmount}`}>
-                  <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
-                    Continue
-                  </Button>
-                </Link>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground text-center py-8">
+                  Community features coming soon...
+                </p>
               </CardContent>
             </Card>
-
-            {/* Reward Tiers */}
-            {tiers.map((reward) => {
-              const isLimited = reward.quantityAvailable !== null;
-              const remaining = isLimited ? reward.quantityAvailable! - reward.quantityClaimed : null;
-              const isSoldOut = isLimited && remaining === 0;
-
-              return (
-                <Card
-                  key={reward.id}
-                  className={`transition-all hover:border-primary ${isSoldOut ? "opacity-60" : ""}`}
-                >
-                  <CardContent className="p-4">
-                    <div className="mb-2">
-                      <p className="text-lg font-semibold">
-                        Pledge ${reward.amount} or more
-                      </p>
-                      <p className="font-medium text-primary">{reward.title}</p>
-                    </div>
-
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {reward.description}
-                    </p>
-
-                    {/* Included Items */}
-                    <div className="mb-4 space-y-1">
-                      <p className="text-xs font-medium uppercase text-muted-foreground">
-                        Includes:
-                      </p>
-                      {reward.items.map((item, index) => (
-                        <div key={index} className="flex items-center gap-2 text-sm">
-                          <CheckCircle className="h-3 w-3 text-[#05ce78]" />
-                          {item.title}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Meta */}
-                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-4">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Est. delivery {reward.estimatedDelivery.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                      </div>
-                      {reward.shippingType !== "NO_SHIPPING" && (
-                        <div>Ships worldwide</div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm">
-                        <span className="font-medium">{reward.quantityClaimed}</span>
-                        <span className="text-muted-foreground"> backers</span>
-                        {isLimited && !isSoldOut && (
-                          <span className="text-muted-foreground"> • {remaining} left</span>
-                        )}
-                      </div>
-                      {isSoldOut && (
-                        <Badge variant="secondary">Sold out</Badge>
-                      )}
-                    </div>
-
-                    {!isSoldOut && (
-                      <Link href={`/projects/${project.slug}/pledge?reward=${reward.id}`}>
-                        <Button className="w-full mt-4 bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
-                          Select
-                        </Button>
-                      </Link>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
           </div>
-        </div>
+        )}
       </section>
     </div>
   );
