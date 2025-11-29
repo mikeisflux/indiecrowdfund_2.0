@@ -4,7 +4,28 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createSession, deleteSession } from "./session";
+import {
+  checkLoginRateLimit,
+  recordLoginAttempt,
+  checkPasswordResetRateLimit,
+  recordPasswordResetAttempt,
+} from "./rate-limit";
+
+/**
+ * Get client IP address from request headers
+ */
+async function getClientIP(): Promise<string | null> {
+  const headersList = await headers();
+  // Check common headers for client IP (in order of reliability)
+  return (
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    headersList.get("x-real-ip") ||
+    headersList.get("cf-connecting-ip") || // Cloudflare
+    null
+  );
+}
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -75,12 +96,27 @@ export async function login(formData: FormData, callbackUrl?: string) {
 
   const { email, password } = validatedFields.data;
 
+  // Check rate limit before attempting login
+  const clientIP = await getClientIP();
+  const rateLimitCheck = checkLoginRateLimit(clientIP, email);
+
+  if (!rateLimitCheck.allowed) {
+    return {
+      error: {
+        _form: [rateLimitCheck.message || "Too many login attempts. Please try again later."],
+      },
+      retryAfter: rateLimitCheck.retryAfter,
+    };
+  }
+
   // Find user
   const user = await db.user.findUnique({
     where: { email },
   });
 
   if (!user || !user.password) {
+    // Record failed attempt (even for non-existent users to prevent enumeration timing attacks)
+    recordLoginAttempt(clientIP, email, false);
     return { error: { _form: ["Invalid email or password"] } };
   }
 
@@ -88,8 +124,20 @@ export async function login(formData: FormData, callbackUrl?: string) {
   const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
-    return { error: { _form: ["Invalid email or password"] } };
+    // Record failed attempt
+    recordLoginAttempt(clientIP, email, false);
+
+    // Calculate remaining attempts for user feedback
+    const updatedCheck = checkLoginRateLimit(clientIP, email);
+    const remainingMsg = updatedCheck.remainingAttempts > 0
+      ? ` (${updatedCheck.remainingAttempts} attempts remaining)`
+      : "";
+
+    return { error: { _form: [`Invalid email or password${remainingMsg}`] } };
   }
+
+  // Record successful login (clears rate limit)
+  recordLoginAttempt(clientIP, email, true);
 
   // Create session
   await createSession(user.id);
@@ -135,7 +183,24 @@ export async function requestPasswordReset(formData: FormData) {
 
   const { email } = validatedFields.data;
 
+  // Check rate limit before processing reset request
+  const clientIP = await getClientIP();
+  const rateLimitCheck = checkPasswordResetRateLimit(clientIP, email);
+
+  if (!rateLimitCheck.allowed) {
+    // Still return success to prevent enumeration, but don't actually send email
+    // The rate limit message will be shown on the frontend
+    return {
+      success: true,
+      rateLimited: true,
+      retryAfter: rateLimitCheck.retryAfter,
+    };
+  }
+
   try {
+    // Record the reset attempt
+    recordPasswordResetAttempt(clientIP, email);
+
     // Check if user exists
     const user = await db.user.findUnique({
       where: { email },

@@ -3,16 +3,57 @@ import { db } from "@/lib/db";
 import { compare } from "bcryptjs";
 import { cookies } from "next/headers";
 import { SignJWT } from "jose";
+import {
+  checkRetailerLoginRateLimit,
+  recordRetailerLoginAttempt,
+} from "@/lib/auth/rate-limit";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.RETAILER_JWT_SECRET || "retailer-secret-key-change-in-production"
 );
+
+/**
+ * Get client IP from request headers
+ */
+function getClientIP(req: NextRequest): string | null {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    req.headers.get("cf-connecting-ip") ||
+    null
+  );
+}
 
 // POST - Retailer login
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { method, email, password, accessCode } = body;
+
+    // Get client IP for rate limiting
+    const clientIP = getClientIP(req);
+
+    // Determine identifier for rate limiting (email or access code)
+    const identifier = method === "credentials" ? email : accessCode;
+
+    if (!identifier) {
+      return NextResponse.json(
+        { error: method === "credentials" ? "Email is required" : "Access code is required" },
+        { status: 400 }
+      );
+    }
+
+    // Check rate limit before processing
+    const rateLimitCheck = checkRetailerLoginRateLimit(clientIP, identifier);
+    if (!rateLimitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: rateLimitCheck.message || "Too many login attempts. Please try again later.",
+          retryAfter: rateLimitCheck.retryAfter,
+        },
+        { status: 429 }
+      );
+    }
 
     let retailer;
 
@@ -30,6 +71,8 @@ export async function POST(req: NextRequest) {
       });
 
       if (!retailer) {
+        // Record failed attempt
+        recordRetailerLoginAttempt(clientIP, email, false);
         return NextResponse.json(
           { error: "Invalid email or password" },
           { status: 401 }
@@ -45,8 +88,17 @@ export async function POST(req: NextRequest) {
 
       const isPasswordValid = await compare(password, retailer.passwordHash);
       if (!isPasswordValid) {
+        // Record failed attempt
+        recordRetailerLoginAttempt(clientIP, email, false);
+
+        // Get remaining attempts for feedback
+        const updatedCheck = checkRetailerLoginRateLimit(clientIP, email);
+        const remainingMsg = updatedCheck.remainingAttempts > 0
+          ? ` (${updatedCheck.remainingAttempts} attempts remaining)`
+          : "";
+
         return NextResponse.json(
-          { error: "Invalid email or password" },
+          { error: `Invalid email or password${remainingMsg}` },
           { status: 401 }
         );
       }
@@ -64,6 +116,8 @@ export async function POST(req: NextRequest) {
       });
 
       if (!retailer) {
+        // Record failed attempt
+        recordRetailerLoginAttempt(clientIP, accessCode, false);
         return NextResponse.json(
           { error: "Invalid access code" },
           { status: 401 }
@@ -75,6 +129,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Record successful login (clears rate limit)
+    recordRetailerLoginAttempt(clientIP, identifier, true);
 
     // Check retailer status
     if (retailer.status === "PENDING") {
