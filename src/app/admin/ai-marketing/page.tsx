@@ -139,7 +139,8 @@ export default function AIMarketingPage() {
     applyCategory: boolean;
   }>>([]);
   const [isApplyingTags, setIsApplyingTags] = useState(false);
-  const [aiRunResults, setAiRunResults] = useState<Record<string, { success: boolean; message: string; data?: unknown; timestamp: string }>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [aiRunResults, setAiRunResults] = useState<Record<string, { success: boolean; message: string; data?: any; timestamp: string }>>({});
   const [showResultsViewer, setShowResultsViewer] = useState(false);
   const [resultsViewerTab, setResultsViewerTab] = useState("predictive");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" }>({ key: "conversionProbability", direction: "desc" });
