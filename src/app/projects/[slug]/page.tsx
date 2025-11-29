@@ -23,6 +23,7 @@ import {
   Package,
   ChevronRight,
   ChevronDown,
+  Pin,
 } from "lucide-react";
 
 // Social share icons as simple SVGs
@@ -236,6 +237,70 @@ const mockSimilarProjects = [
   },
 ];
 
+// Mock comments
+const mockComments = [
+  {
+    id: "c1",
+    author: "Spiridon",
+    avatarUrl: "/creator-avatar.jpg",
+    isCreator: true,
+    isSuperbacker: false,
+    isPinned: true,
+    createdAt: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000), // 16 days ago
+    content: "By popular demand, we are adding 100 more copies of the Limited Edition to this campaign. You can adjust your pledge, in case you wanted one of these, in about 4h from now. - Spiridon",
+  },
+  {
+    id: "c2",
+    author: "Peter Schmidt",
+    avatarUrl: "",
+    isCreator: false,
+    isSuperbacker: false,
+    isPinned: false,
+    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 14 days ago
+    content: "Love this campaign! And would love to upgrade to the LE if there was an option that didnt include the add-on prints. I love the art, its just not something I would hang on my walls, so it feels wrong to pay for the prints, knowing they would go to waste in storage.\n\nIf you made an option to just buy the LE book, I would be right on it <3",
+  },
+  {
+    id: "c3",
+    author: "matt",
+    avatarUrl: "",
+    isCreator: false,
+    isSuperbacker: true,
+    isPinned: false,
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+    content: "no .pdf version makes me saaaaad.\n\nno hard feelings I just have a $2000 samsung tablet I like to read and view on.",
+  },
+  {
+    id: "c4",
+    author: "Damien H",
+    avatarUrl: "",
+    isCreator: false,
+    isSuperbacker: true,
+    isPinned: false,
+    createdAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000), // 9 days ago
+    content: "I didn't see the binding type mentioned anywhere, only that it's hardcover. I would hope that such a book will have binding that allows the book to lie open completely flat, such as lay-flat perfect binding.\n\nWhat type of binding is being used for these books?\n\nAnd could you please provide some more detailed pictures to show the cover art of both editions for comparison?",
+  },
+  {
+    id: "c5",
+    author: "Tivon H. Creager",
+    avatarUrl: "",
+    isCreator: false,
+    isSuperbacker: false,
+    isPinned: false,
+    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
+    content: "Not sure if this is a possibility still, but I would be stoked to see and get an additional extra print from Markus Lenhard as a stretch goal if possible? Either way I am super excited and can't wait till next years shipping!!",
+  },
+  {
+    id: "c6",
+    author: "Paul Hill",
+    avatarUrl: "",
+    isCreator: false,
+    isSuperbacker: true,
+    isPinned: false,
+    createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000), // 12 days ago
+    content: "Hey there! If I back at the €1 tier for now, will this still grant me access to the pledge manager so I can upgrade my pledge for level? Thanking!",
+  },
+];
+
 // Story navigation items (table of contents)
 const storyNavItems = [
   "Welcome to TRIBUTES: HR GIGER",
@@ -360,6 +425,17 @@ export default function ProjectPage() {
   };
 
   const similarProjects = mockSimilarProjects;
+  const comments = mockComments;
+
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "today";
+    if (diffDays === 1) return "1 day ago";
+    return `${diffDays} days ago`;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -1122,15 +1198,135 @@ export default function ProjectPage() {
 
         {/* Comments Tab Content */}
         {activeTab === "comments" && (
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6">Comments ({project.comments})</h2>
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-muted-foreground text-center py-8">
-                  Comments section coming soon...
+          <div className="space-y-12">
+            {/* Comments Main Section */}
+            <div className="grid gap-8 lg:grid-cols-12">
+              {/* Left - Comments List */}
+              <div className="lg:col-span-8">
+                {/* Only backers notice */}
+                <p className="text-center text-muted-foreground text-sm mb-6">
+                  Only backers can post comments.
                 </p>
-              </CardContent>
-            </Card>
+
+                {/* Comments */}
+                <div className="space-y-0">
+                  {comments.map((comment) => (
+                    <div
+                      key={comment.id}
+                      className="border-l-2 border-transparent hover:border-muted-foreground/20 pl-4 py-4 -ml-4"
+                    >
+                      {/* Comment Header */}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={comment.avatarUrl} />
+                            <AvatarFallback className="bg-muted text-muted-foreground">
+                              {comment.author[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{comment.author}</span>
+                              {comment.isCreator && (
+                                <Badge className="bg-[#05ce78] hover:bg-[#05ce78] text-white text-xs px-2 py-0">
+                                  Creator
+                                </Badge>
+                              )}
+                              {comment.isSuperbacker && (
+                                <span className="text-[#e85b46] text-sm font-medium">Superbacker</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {formatRelativeTime(comment.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                        {comment.isPinned && (
+                          <div className="flex items-center gap-1 text-[#05ce78] text-sm">
+                            <Pin className="h-3 w-3" />
+                            <span>Pinned</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Comment Content */}
+                      <div className="pl-13 ml-[52px]">
+                        {comment.content.split("\n").map((paragraph, idx) => (
+                          <p key={idx} className="text-sm mb-2 last:mb-0">
+                            {paragraph}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right - Guidelines */}
+              <div className="lg:col-span-4">
+                <div className="sticky top-20">
+                  <p className="text-muted-foreground text-sm mb-4">
+                    This is your space to offer support and feedback. Remember to{" "}
+                    <Link href="#" className="text-primary underline">be constructive</Link>—there&apos;s a human behind this project.
+                  </p>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    Have a question for the creator?{" "}
+                    <button
+                      onClick={() => handleTabClick("faq")}
+                      className="text-primary underline"
+                    >
+                      Check this project&apos;s FAQ
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Similar Projects Section */}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold">Similar projects to check out</h3>
+                <Button variant="outline" size="sm">
+                  See more
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {similarProjects.map((proj) => (
+                  <Link key={proj.id} href="#" className="group">
+                    <div className="aspect-[4/3] bg-muted rounded-lg overflow-hidden mb-3">
+                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800" />
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarFallback className="text-xs bg-muted">
+                          {proj.creator[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1 mb-1">
+                          {proj.isProjectWeLove && (
+                            <Heart className="h-3 w-3 fill-[#05ce78] text-[#05ce78]" />
+                          )}
+                          <h4 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                            {proj.title}
+                          </h4>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{proj.creator}</p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{proj.daysLeft} days left</span>
+                          <span>•</span>
+                          <span>{proj.fundedPercent}% funded</span>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                        <Bookmark className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
