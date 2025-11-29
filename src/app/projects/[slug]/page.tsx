@@ -1,414 +1,581 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import {
-  ArrowLeft,
-  Heart,
-  Share2,
-  Users,
+  Bookmark,
   MapPin,
-  Calendar,
   CheckCircle,
   AlertTriangle,
   Play,
-  ExternalLink,
+  Heart,
+  Handshake,
+  ShieldCheck,
+  Clock,
+  Info,
 } from "lucide-react";
 
-// Mock project data - would be fetched from API
+// Social share icons as simple SVGs
+const FacebookIcon = () => (
+  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+  </svg>
+);
+
+const TwitterIcon = () => (
+  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+  </svg>
+);
+
+const BlueskyIcon = () => (
+  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 2.163c-5.488 3.364-8.165 8.51-6.995 12.495 1.17 3.985 5.995 5.505 9.995 5.505s8.825-1.52 9.995-5.505c1.17-3.985-1.507-9.131-6.995-12.495-2 1.5-4 3.5-6 6.5-2-3-4-5-6-6.5z"/>
+  </svg>
+);
+
+const EmailIcon = () => (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  </svg>
+);
+
+const LinkIcon = () => (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+  </svg>
+);
+
+// Mock project data
 const mockProject = {
   id: "1",
-  title: "Revolutionary Solar-Powered Backpack",
-  subtitle: "Charge your devices while you explore the great outdoors",
-  slug: "solar-powered-backpack",
-  category: "Technology",
-  location: "San Francisco, CA",
+  title: "Tributes: HR GIGER | A Collective Art Book",
+  subtitle: "In official collaboration with the HR Giger Estate: A collection of art, interviews, photos, and essays in tribute to HR Giger.",
+  slug: "hr-giger-tribute",
+  category: "Art Books",
+  subcategory: "Art",
+  location: "Strasbourg, France",
   imageUrl: "/placeholder-1.jpg",
   videoUrl: "https://example.com/video",
+  isProjectWeLove: true,
   description: `
-    <h2>About This Project</h2>
-    <p>We're creating the world's most efficient solar-powered backpack that lets you charge your devices on the go. Whether you're hiking through mountains, commuting to work, or traveling the world, you'll never run out of power again.</p>
+    <h2>Welcome to TRIBUTES: HR GIGER</h2>
+    <p>Together with the HR Giger Estate, we bring you a book that is true to the spirit of Hans Ruedi Giger (1940-2014) and offers additional insight into his life through anecdotes from those who called him a friend and worked with him for many years.</p>
 
-    <h3>Key Features</h3>
-    <ul>
-      <li>High-efficiency monocrystalline solar panels (22% conversion rate)</li>
-      <li>Built-in 20,000mAh battery pack</li>
-      <li>Water-resistant design (IPX4 rated)</li>
-      <li>Multiple USB-C and USB-A ports</li>
-      <li>Ergonomic design with padded straps</li>
-    </ul>
+    <h3>The Book</h3>
+    <p>In this publication, we are not seeking to highlight the movies he has worked on (most notably the ALIEN franchise, for which he created the xenomorph). Still, we want to focus on the body of work he made and how it has influenced artists around the world.</p>
 
-    <h3>Why We Need Your Support</h3>
-    <p>We've spent two years developing and testing prototypes. Now we need your help to bring this product to mass production. Your backing will help us:</p>
-    <ul>
-      <li>Finalize manufacturing partnerships</li>
-      <li>Complete certification testing</li>
-      <li>Set up distribution channels</li>
-    </ul>
+    <h3>Original art by Nikolay Georgiev</h3>
+    <p>Whether through the exploration of a new medium or simply through the groundbreaking style that has become his distinctive signature.</p>
   `,
-  risks: "As with any hardware project, there are risks of manufacturing delays. We've mitigated this by partnering with experienced manufacturers and building extra time into our timeline.",
-  goalAmount: 50000,
-  currentAmount: 42500,
-  backerCount: 847,
+  risks: "As with any publishing project, there are risks of printing and shipping delays. We've mitigated this by partnering with experienced printers and building extra time into our timeline.",
+  goalAmount: 28991,
+  currentAmount: 114258,
+  backerCount: 861,
   daysRemaining: 12,
+  endDate: new Date("2025-12-11"),
   launchedAt: new Date("2024-01-15"),
-  endDate: new Date("2024-02-28"),
   creator: {
     id: "creator1",
-    name: "Green Tech Labs",
+    name: "Spiridon",
     image: "/creator-avatar.jpg",
-    bio: "We're a team of engineers passionate about sustainable technology. This is our third crowdfunding campaign.",
-    location: "San Francisco, CA",
-    projectsCreated: 3,
-    projectsSuccessful: 2,
+    bio: "All campaigns on this account launch with a finished book. Before launching the content is outlined and provided by the artists that work...",
+    location: "France",
+    projectsCreated: 24,
+    projectsBacked: 44,
   },
   usesAI: false,
   faqs: [
-    {
-      question: "When will the backpacks ship?",
-      answer: "We expect to ship all rewards by August 2024, approximately 6 months after the campaign ends.",
-    },
-    {
-      question: "Do you ship internationally?",
-      answer: "Yes! We ship to most countries. Shipping costs vary by location and are calculated at checkout.",
-    },
-    {
-      question: "What's the warranty?",
-      answer: "All backpacks come with a 2-year limited warranty covering manufacturing defects.",
-    },
+    { question: "When will the books ship?", answer: "We expect to ship all rewards by August 2025." },
+    { question: "Do you ship internationally?", answer: "Yes! We ship worldwide." },
   ],
   updates: [
-    {
-      id: "1",
-      title: "We hit 80% funded!",
-      content: "Thank you all for your incredible support...",
-      createdAt: new Date("2024-01-20"),
-    },
+    { id: "1", title: "We're funded!", content: "Thank you all...", createdAt: new Date("2024-01-20") },
+    { id: "2", title: "Stretch goal unlocked", content: "Amazing news...", createdAt: new Date("2024-01-22") },
+    { id: "3", title: "New artwork revealed", content: "Check out...", createdAt: new Date("2024-01-25") },
+    { id: "4", title: "Production update", content: "We're on track...", createdAt: new Date("2024-01-28") },
   ],
+  comments: 28,
 };
 
 const mockRewards = [
   {
     id: "r1",
     type: "TIER",
-    title: "Early Bird Special",
-    description: "Be among the first to receive our solar backpack at a special price. Includes the backpack with all standard features.",
-    amount: 89,
-    estimatedDelivery: new Date("2024-08-01"),
-    shippingType: "WORLDWIDE",
-    shippingCost: 15,
-    quantityAvailable: 100,
-    quantityClaimed: 87,
-    items: [
-      { title: "Solar Backpack", description: "30L capacity" },
-    ],
+    title: "Digital Edition",
+    description: "Get the digital PDF version of the art book.",
+    amount: 25,
+    estimatedDelivery: new Date("2025-08-01"),
+    shippingType: "NO_SHIPPING",
+    shippingCost: 0,
+    quantityAvailable: null,
+    quantityClaimed: 156,
+    items: [{ title: "Digital Art Book (PDF)" }],
   },
   {
     id: "r2",
     type: "TIER",
-    title: "Standard Package",
-    description: "Get the solar backpack at our regular campaign price. Perfect for everyday adventurers.",
-    amount: 129,
-    estimatedDelivery: new Date("2024-08-01"),
+    title: "Standard Hardcover",
+    description: "The complete 200+ page hardcover art book featuring tributes from artists worldwide.",
+    amount: 55,
+    estimatedDelivery: new Date("2025-08-01"),
     shippingType: "WORLDWIDE",
     shippingCost: 15,
     quantityAvailable: null,
-    quantityClaimed: 456,
-    items: [
-      { title: "Solar Backpack", description: "30L capacity" },
-      { title: "USB-C Cable", description: "1.5m braided" },
-    ],
+    quantityClaimed: 489,
+    items: [{ title: "Hardcover Art Book" }, { title: "Digital PDF" }],
   },
   {
     id: "r3",
     type: "TIER",
-    title: "Deluxe Bundle",
-    description: "The complete package for serious adventurers. Includes extra accessories and priority shipping.",
-    amount: 199,
-    estimatedDelivery: new Date("2024-07-15"),
+    title: "Collector's Edition",
+    description: "Limited slipcase edition with exclusive print and artist signatures.",
+    amount: 120,
+    estimatedDelivery: new Date("2025-08-01"),
     shippingType: "WORLDWIDE",
     shippingCost: 0,
     quantityAvailable: 200,
-    quantityClaimed: 145,
+    quantityClaimed: 187,
     items: [
-      { title: "Solar Backpack", description: "30L capacity" },
-      { title: "Extra Battery Pack", description: "10,000mAh" },
-      { title: "Rain Cover", description: "Waterproof" },
-      { title: "Cable Set", description: "USB-C, Lightning, Micro" },
-    ],
-  },
-  {
-    id: "r4",
-    type: "ADDON",
-    title: "Extra Battery Pack",
-    description: "Add an additional 10,000mAh battery pack to your pledge.",
-    amount: 35,
-    estimatedDelivery: new Date("2024-08-01"),
-    shippingType: "WORLDWIDE",
-    shippingCost: 5,
-    quantityAvailable: null,
-    quantityClaimed: 234,
-    items: [
-      { title: "10,000mAh Battery Pack" },
+      { title: "Collector's Hardcover" },
+      { title: "Slipcase" },
+      { title: "Exclusive Print" },
+      { title: "Digital PDF" },
     ],
   },
 ];
 
+// Story navigation items (table of contents)
+const storyNavItems = [
+  "Welcome to TRIBUTES: HR GIGER",
+  "The Book",
+  "Original art by Nikolay Georgiev",
+  "HR GIGER",
+  "The HR GIGER Museum",
+  "Contributors",
+  "The Swag",
+  "Stretch Goals",
+  "The Artbook Team",
+  "Payment",
+  "Shipping",
+  "Past campaigns",
+  "Risks",
+];
+
 export default function ProjectPage() {
-  const [selectedReward, setSelectedReward] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
+  const [isReminded, setIsReminded] = useState(false);
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
+  const [pledgeAmount, setPledgeAmount] = useState("1");
 
   const project = mockProject;
   const rewards = mockRewards;
   const tiers = rewards.filter((r) => r.type === "TIER");
-  const addons = rewards.filter((r) => r.type === "ADDON");
 
   const fundingPercentage = (project.currentAmount / project.goalAmount) * 100;
-  const isFunded = fundingPercentage >= 100;
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowStickyHeader(window.scrollY > 600);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const formatMoney = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
+      weekday: "short",
       month: "long",
+      day: "numeric",
       year: "numeric",
     });
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container flex h-14 items-center gap-4">
-          <Link href="/discover" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-            Back to projects
+      {/* Main Navigation */}
+      <header className="border-b bg-background">
+        <div className="container flex h-14 items-center justify-between">
+          <Link href="/" className="text-xl font-bold">
+            IndieCrowdfund
           </Link>
+          <nav className="hidden md:flex items-center gap-6 text-sm">
+            <Link href="/discover?category=art" className="hover:text-primary">Art</Link>
+            <Link href="/discover?category=comics" className="hover:text-primary">Comics</Link>
+            <Link href="/discover?category=crafts" className="hover:text-primary">Crafts</Link>
+            <Link href="/discover?category=design" className="hover:text-primary">Design</Link>
+            <Link href="/discover?category=film" className="hover:text-primary">Film</Link>
+            <Link href="/discover?category=games" className="hover:text-primary">Games</Link>
+            <Link href="/discover?category=music" className="hover:text-primary">Music</Link>
+            <Link href="/discover?category=publishing" className="hover:text-primary">Publishing</Link>
+            <Link href="/discover?category=technology" className="hover:text-primary">Technology</Link>
+            <Link href="/discover" className="text-primary font-medium">Discover</Link>
+          </nav>
         </div>
       </header>
+
+      {/* Sticky Header (appears on scroll) */}
+      {showStickyHeader && (
+        <div className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur shadow-sm">
+          <div className="container flex h-14 items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="font-medium truncate max-w-md">{project.title}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link href={`/projects/${project.slug}/pledge`}>
+                <Button className="bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
+                  Back this project
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                onClick={() => setIsReminded(!isReminded)}
+                className={isReminded ? "border-primary text-primary" : ""}
+              >
+                <Bookmark className={`mr-2 h-4 w-4 ${isReminded ? "fill-current" : ""}`} />
+                Remind me
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="border-b">
         <div className="container py-8">
-          <div className="grid gap-8 lg:grid-cols-3">
-            {/* Media */}
-            <div className="lg:col-span-2">
-              <div className="aspect-video overflow-hidden rounded-lg bg-muted">
-                <div className="flex h-full items-center justify-center">
-                  <Play className="h-16 w-16 text-muted-foreground/50" />
+          {/* Title */}
+          <div className="text-center mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">{project.title}</h1>
+            <p className="text-muted-foreground max-w-2xl mx-auto">{project.subtitle}</p>
+          </div>
+
+          <div className="grid gap-8 lg:grid-cols-5">
+            {/* Media - Takes 3 columns */}
+            <div className="lg:col-span-3">
+              <div className="aspect-video overflow-hidden rounded-lg bg-muted relative">
+                <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                  <Play className="h-16 w-16 text-white/50" />
+                </div>
+              </div>
+
+              {/* Project badges below image */}
+              <div className="flex flex-wrap items-center gap-4 mt-4 text-sm">
+                {project.isProjectWeLove && (
+                  <div className="flex items-center gap-1.5 text-primary">
+                    <Heart className="h-4 w-4 fill-current" />
+                    <span className="font-medium">Project We Love</span>
+                  </div>
+                )}
+                <Link href={`/discover?category=${project.category.toLowerCase()}`} className="flex items-center gap-1.5 hover:text-primary">
+                  <span className="h-4 w-4 rounded-full border-2 flex items-center justify-center text-[10px] font-bold">?</span>
+                  <span>{project.category}</span>
+                </Link>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span>{project.location}</span>
                 </div>
               </div>
             </div>
 
-            {/* Summary */}
-            <div className="space-y-6">
+            {/* Stats - Takes 2 columns */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Progress bar */}
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#05ce78] rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(fundingPercentage, 100)}%` }}
+                />
+              </div>
+
+              {/* Funding amount */}
               <div>
-                <Badge className="mb-2">{project.category}</Badge>
-                <h1 className="text-2xl font-bold">{project.title}</h1>
-                <p className="mt-2 text-muted-foreground">{project.subtitle}</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-[#05ce78]">
+                    {formatMoney(project.currentAmount)}
+                  </span>
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  pledged of {formatMoney(project.goalAmount)} goal
+                </p>
               </div>
 
-              {/* Creator */}
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={project.creator.image} />
-                  <AvatarFallback>{project.creator.name[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium">{project.creator.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {project.creator.projectsSuccessful} successful projects
-                  </p>
-                </div>
+              {/* Backers */}
+              <div>
+                <p className="text-2xl font-bold">{project.backerCount.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">backers</p>
               </div>
 
-              {/* Funding Progress */}
-              <div className="space-y-3">
-                <Progress value={Math.min(fundingPercentage, 100)} className="h-3" />
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-2xl font-bold text-primary">
-                      ${project.currentAmount.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      of ${project.goalAmount.toLocaleString()} goal
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{project.backerCount}</p>
-                    <p className="text-xs text-muted-foreground">backers</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{project.daysRemaining}</p>
-                    <p className="text-xs text-muted-foreground">days to go</p>
-                  </div>
-                </div>
+              {/* Days remaining */}
+              <div>
+                <p className="text-2xl font-bold">{project.daysRemaining}</p>
+                <p className="text-sm text-muted-foreground">days to go</p>
               </div>
 
-              {/* Funding Status */}
-              {isFunded && (
-                <div className="flex items-center gap-2 rounded-lg bg-green-50 p-3 text-green-700 dark:bg-green-950 dark:text-green-300">
-                  <CheckCircle className="h-5 w-5" />
-                  <span className="text-sm font-medium">This project has been funded!</span>
-                </div>
-              )}
+              {/* Back button */}
+              <Link href={`/projects/${project.slug}/pledge`} className="block">
+                <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white font-medium" size="lg">
+                  Back this project
+                </Button>
+              </Link>
 
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                <Link href={`/projects/${project.slug}/pledge`} className="block">
-                  <Button className="w-full" size="lg">
-                    Back this project
+              {/* Remind me + Social sharing */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className={`flex-1 ${isReminded ? "border-primary text-primary" : ""}`}
+                  onClick={() => setIsReminded(!isReminded)}
+                >
+                  <Bookmark className={`mr-2 h-4 w-4 ${isReminded ? "fill-current" : ""}`} />
+                  Remind me
+                </Button>
+                <div className="flex items-center">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1877f2]">
+                    <FacebookIcon />
                   </Button>
-                </Link>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setIsSaved(!isSaved)}
-                  >
-                    <Heart className={`mr-2 h-4 w-4 ${isSaved ? "fill-red-500 text-red-500" : ""}`} />
-                    {isSaved ? "Saved" : "Save"}
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1da1f2]">
+                    <TwitterIcon />
                   </Button>
-                  <Button variant="outline" className="flex-1">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Share
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#0085ff]">
+                    <BlueskyIcon />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+                    <EmailIcon />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+                    <LinkIcon />
                   </Button>
                 </div>
               </div>
 
-              {/* Meta Info */}
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  {project.location}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Campaign ends {formatDate(project.endDate)}
-                </div>
-              </div>
+              {/* All or nothing note */}
+              <p className="text-xs text-muted-foreground">
+                <Link href="#" className="underline hover:text-foreground">All or nothing.</Link> This project will only be funded if it reaches its goal by {formatDate(project.endDate)}.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Info Bar */}
+      <section className="border-b bg-muted/30 py-6">
+        <div className="container">
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#ffc439] flex items-center justify-center flex-shrink-0">
+                <Handshake className="h-5 w-5 text-black" />
+              </div>
+              <p className="text-sm">
+                <strong>IndieCrowdfund connects creators with backers</strong> to fund projects.
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#ffc439] flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-black" />
+              </div>
+              <p className="text-sm">
+                <strong>Rewards aren&apos;t guaranteed,</strong> but creators must regularly update backers.
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#ffc439] flex items-center justify-center flex-shrink-0">
+                <ShieldCheck className="h-5 w-5 text-black" />
+              </div>
+              <p className="text-sm">
+                <strong>You&apos;re only charged if the project meets</strong> its funding goal by the campaign deadline.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tabs Navigation */}
+      <section className="border-b sticky top-0 z-40 bg-background">
+        <div className="container">
+          <Tabs defaultValue="campaign">
+            <TabsList className="h-14 w-full justify-start rounded-none border-0 bg-transparent p-0">
+              <TabsTrigger
+                value="campaign"
+                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
+              >
+                Campaign
+              </TabsTrigger>
+              <TabsTrigger
+                value="rewards"
+                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
+              >
+                Rewards
+              </TabsTrigger>
+              <TabsTrigger
+                value="creator"
+                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
+              >
+                Creator
+              </TabsTrigger>
+              <TabsTrigger
+                value="faq"
+                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
+              >
+                FAQ <sup className="ml-1">{project.faqs.length}</sup>
+              </TabsTrigger>
+              <TabsTrigger
+                value="updates"
+                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
+              >
+                Updates <sup className="ml-1">{project.updates.length}</sup>
+              </TabsTrigger>
+              <TabsTrigger
+                value="comments"
+                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
+              >
+                Comments <sup className="ml-1">{project.comments}</sup>
+              </TabsTrigger>
+              <TabsTrigger
+                value="community"
+                className="h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-4"
+              >
+                Community
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </section>
+
       {/* Main Content */}
       <section className="container py-8">
-        <div className="grid gap-8 lg:grid-cols-3">
-          {/* Left Column - Tabs */}
-          <div className="lg:col-span-2">
-            <Tabs defaultValue="story">
-              <TabsList className="w-full justify-start">
-                <TabsTrigger value="story">Story</TabsTrigger>
-                <TabsTrigger value="faqs">FAQs</TabsTrigger>
-                <TabsTrigger value="updates">
-                  Updates ({project.updates.length})
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="story" className="mt-6">
-                <div
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: project.description }}
-                />
-
-                <Separator className="my-8" />
-
-                {/* Risks Section */}
-                <div>
-                  <div className="mb-4 flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-amber-500" />
-                    <h3 className="font-semibold">Risks and challenges</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{project.risks}</p>
-                </div>
-
-                {project.usesAI && (
-                  <>
-                    <Separator className="my-8" />
-                    <div className="rounded-lg bg-muted p-4">
-                      <p className="text-sm">
-                        <strong>AI Disclosure:</strong> This project uses AI-generated content or AI tools in its creation or production.
-                      </p>
-                    </div>
-                  </>
-                )}
-              </TabsContent>
-
-              <TabsContent value="faqs" className="mt-6">
-                <div className="space-y-6">
-                  {project.faqs.map((faq, index) => (
-                    <div key={index}>
-                      <h4 className="font-medium">{faq.question}</h4>
-                      <p className="mt-2 text-sm text-muted-foreground">{faq.answer}</p>
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="updates" className="mt-6">
-                <div className="space-y-6">
-                  {project.updates.map((update) => (
-                    <Card key={update.id}>
-                      <CardHeader>
-                        <CardTitle className="text-lg">{update.title}</CardTitle>
-                        <p className="text-xs text-muted-foreground">
-                          {update.createdAt.toLocaleDateString()}
-                        </p>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm">{update.content}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
-            </Tabs>
+        <div className="grid gap-8 lg:grid-cols-12">
+          {/* Left Sidebar - Story Navigation */}
+          <div className="hidden lg:block lg:col-span-2">
+            <nav className="sticky top-20 space-y-2">
+              {storyNavItems.map((item, index) => (
+                <button
+                  key={index}
+                  className="block text-left text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                >
+                  {item}
+                </button>
+              ))}
+            </nav>
           </div>
 
-          {/* Right Column - Rewards */}
-          <div className="space-y-6">
-            <h3 className="font-semibold">Select a reward</h3>
+          {/* Main Content */}
+          <div className="lg:col-span-6">
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <h2 className="text-2xl font-serif">Story</h2>
+              <div dangerouslySetInnerHTML={{ __html: project.description }} />
+
+              <Separator className="my-8" />
+
+              {/* Risks Section */}
+              <div>
+                <div className="mb-4 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
+                  <h3 className="font-semibold m-0">Risks and challenges</h3>
+                </div>
+                <p className="text-muted-foreground">{project.risks}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Sidebar */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Creator Card */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3 mb-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={project.creator.image} />
+                    <AvatarFallback className="bg-black text-white">
+                      {project.creator.name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h4 className="font-semibold">{project.creator.name}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {project.creator.projectsCreated} created • {project.creator.projectsBacked} backed
+                    </p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {project.creator.bio} <Link href="#" className="text-primary">See more</Link>
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Support Section - Pledge without reward */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Support</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-1">Make a pledge without a reward</h4>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">Pledge amount</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-medium">$</span>
+                    <Input
+                      type="number"
+                      value={pledgeAmount}
+                      onChange={(e) => setPledgeAmount(e.target.value)}
+                      className="w-24"
+                      min="1"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">ABOUT ${pledgeAmount}</p>
+                </div>
+
+                <div className="rounded-lg bg-[#028858] text-white p-4">
+                  <h5 className="font-semibold mb-1">Back it because you believe in it.</h5>
+                  <p className="text-sm opacity-90">
+                    Support the project for no reward, just because it speaks to you.
+                  </p>
+                </div>
+
+                <Link href={`/projects/${project.slug}/pledge?amount=${pledgeAmount}`}>
+                  <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
+                    Continue
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
 
             {/* Reward Tiers */}
             {tiers.map((reward) => {
               const isLimited = reward.quantityAvailable !== null;
-              const remaining = isLimited
-                ? reward.quantityAvailable! - reward.quantityClaimed
-                : null;
+              const remaining = isLimited ? reward.quantityAvailable! - reward.quantityClaimed : null;
               const isSoldOut = isLimited && remaining === 0;
 
               return (
                 <Card
                   key={reward.id}
-                  className={`cursor-pointer transition-all ${
-                    selectedReward === reward.id
-                      ? "ring-2 ring-primary"
-                      : "hover:border-primary"
-                  } ${isSoldOut ? "opacity-60" : ""}`}
-                  onClick={() => !isSoldOut && setSelectedReward(reward.id)}
+                  className={`transition-all hover:border-primary ${isSoldOut ? "opacity-60" : ""}`}
                 >
                   <CardContent className="p-4">
-                    <div className="mb-2 flex items-start justify-between">
-                      <div>
-                        <p className="text-lg font-semibold">
-                          Pledge ${reward.amount}
-                        </p>
-                        <p className="font-medium">{reward.title}</p>
-                      </div>
-                      {isLimited && (
-                        <Badge variant={isSoldOut ? "secondary" : "outline"}>
-                          {isSoldOut ? "Sold out" : `${remaining} left`}
-                        </Badge>
-                      )}
+                    <div className="mb-2">
+                      <p className="text-lg font-semibold">
+                        Pledge ${reward.amount} or more
+                      </p>
+                      <p className="font-medium text-primary">{reward.title}</p>
                     </div>
 
-                    <p className="mb-4 text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-4">
                       {reward.description}
                     </p>
 
@@ -419,116 +586,47 @@ export default function ProjectPage() {
                       </p>
                       {reward.items.map((item, index) => (
                         <div key={index} className="flex items-center gap-2 text-sm">
-                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <CheckCircle className="h-3 w-3 text-[#05ce78]" />
                           {item.title}
-                          {"description" in item && item.description && (
-                            <span className="text-muted-foreground">
-                              ({item.description})
-                            </span>
-                          )}
                         </div>
                       ))}
                     </div>
 
                     {/* Meta */}
-                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-4">
                       <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        Est. {formatDate(reward.estimatedDelivery)}
+                        <Clock className="h-3 w-3" />
+                        Est. delivery {reward.estimatedDelivery.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {reward.quantityClaimed} backers
-                      </div>
+                      {reward.shippingType !== "NO_SHIPPING" && (
+                        <div>Ships worldwide</div>
+                      )}
                     </div>
 
-                    {reward.shippingCost > 0 && (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        + ${reward.shippingCost} shipping
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm">
+                        <span className="font-medium">{reward.quantityClaimed}</span>
+                        <span className="text-muted-foreground"> backers</span>
+                        {isLimited && !isSoldOut && (
+                          <span className="text-muted-foreground"> • {remaining} left</span>
+                        )}
+                      </div>
+                      {isSoldOut && (
+                        <Badge variant="secondary">Sold out</Badge>
+                      )}
+                    </div>
+
+                    {!isSoldOut && (
+                      <Link href={`/projects/${project.slug}/pledge?reward=${reward.id}`}>
+                        <Button className="w-full mt-4 bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
+                          Select
+                        </Button>
+                      </Link>
                     )}
                   </CardContent>
                 </Card>
               );
             })}
-
-            {/* Add-ons Section */}
-            {addons.length > 0 && (
-              <>
-                <Separator />
-                <h4 className="font-semibold">Add-ons</h4>
-                <p className="text-sm text-muted-foreground">
-                  Enhance your pledge with these optional extras
-                </p>
-                {addons.map((addon) => (
-                  <Card key={addon.id} className="cursor-pointer hover:border-primary">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium">{addon.title}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {addon.description}
-                          </p>
-                        </div>
-                        <p className="font-semibold">+${addon.amount}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </>
-            )}
-
-            {/* Custom Pledge */}
-            <Separator />
-            <Card
-              className={`cursor-pointer transition-all ${
-                selectedReward === "custom" ? "ring-2 ring-primary" : "hover:border-primary"
-              }`}
-              onClick={() => setSelectedReward("custom")}
-            >
-              <CardContent className="p-4">
-                <p className="font-semibold">Pledge without a reward</p>
-                <p className="text-sm text-muted-foreground">
-                  Support the project with any amount
-                </p>
-              </CardContent>
-            </Card>
-
-            {selectedReward && (
-              <Link href={`/projects/${project.slug}/pledge?reward=${selectedReward}`}>
-                <Button className="w-full" size="lg">
-                  Continue to pledge
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Creator Section */}
-      <section className="border-t bg-muted/30 py-12">
-        <div className="container">
-          <h3 className="mb-6 text-lg font-semibold">About the creator</h3>
-          <div className="flex items-start gap-6">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={project.creator.image} />
-              <AvatarFallback className="text-lg">
-                {project.creator.name[0]}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <h4 className="font-medium">{project.creator.name}</h4>
-              <p className="text-sm text-muted-foreground">{project.creator.location}</p>
-              <p className="mt-3 text-sm">{project.creator.bio}</p>
-              <div className="mt-4 flex gap-4 text-sm text-muted-foreground">
-                <span>{project.creator.projectsCreated} created</span>
-                <span>{project.creator.projectsSuccessful} successful</span>
-              </div>
-              <Button variant="outline" size="sm" className="mt-4">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View profile
-              </Button>
-            </div>
           </div>
         </div>
       </section>
