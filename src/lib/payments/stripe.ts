@@ -118,8 +118,27 @@ export async function createStripePayment({
     },
   });
 
-  // Create addon records if any (TODO: implement PledgeAddon creation)
-  void addonIds;
+  // Create addon records if any
+  if (addonIds.length > 0) {
+    // Fetch addon details to get their amounts
+    const addons = await db.reward.findMany({
+      where: {
+        id: { in: addonIds },
+        type: "ADDON",
+      },
+      select: { id: true, amount: true },
+    });
+
+    // Create PledgeAddon records
+    await db.pledgeAddon.createMany({
+      data: addons.map((addon) => ({
+        pledgeId: pledge.id,
+        addonId: addon.id,
+        quantity: 1,
+        amount: addon.amount,
+      })),
+    });
+  }
 
   // Calculate platform fee (5%)
   const platformFee = Math.round(amount * 0.05 * 100); // In cents

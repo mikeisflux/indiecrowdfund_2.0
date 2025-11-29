@@ -139,7 +139,8 @@ export async function PATCH(req: NextRequest) {
         "aiTrackPageViews", "aiTrackScrollDepth", "aiTrackTimeOnPage",
         "aiTrackClicks", "aiTrackHovers", "aiTrackFormInteractions",
         "aiTrackVideoEngagement", "aiTrackRewardComparisons", "aiTrackAbandonedCarts",
-        "aiSessionRecording", "aiHeatmaps", "aiFunnelAnalysis", "aiRetentionDays"
+        "aiSessionRecording", "aiHeatmaps", "aiFunnelAnalysis", "aiRetentionDays",
+        "aiCronSchedules"
       ],
       security: [
         "twoFactorRequired", "sessionTimeout", "maxLoginAttempts",

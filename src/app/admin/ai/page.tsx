@@ -139,12 +139,14 @@ export default function AIControlPage() {
     },
   ]);
 
-  const [cronJobs, setCronJobs] = useState<CronJob[]>([
+  const defaultCronJobs: CronJob[] = [
     { id: "cron-1", service: "auto-tagging", schedule: "0 2 * * *", enabled: false, nextRun: "Tomorrow 2:00 AM" },
     { id: "cron-2", service: "predictive-analytics", schedule: "0 3 * * *", enabled: false, nextRun: "Tomorrow 3:00 AM" },
     { id: "cron-3", service: "smart-segmentation", schedule: "0 4 * * 0", enabled: false, nextRun: "Sunday 4:00 AM" },
     { id: "cron-4", service: "send-time-optimization", schedule: "0 1 * * *", enabled: false, nextRun: "Tomorrow 1:00 AM" },
-  ]);
+  ];
+
+  const [cronJobs, setCronJobs] = useState<CronJob[]>(defaultCronJobs);
 
   const [isLoading, setIsLoading] = useState(true);
   const [runningService, setRunningService] = useState<string | null>(null);
@@ -161,16 +163,44 @@ export default function AIControlPage() {
   const [resultsViewerTab, setResultsViewerTab] = useState("predictive");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" }>({ key: "conversionProbability", direction: "desc" });
 
+  // Save cron schedules to database
+  const saveCronSchedules = useCallback(async (jobs: CronJob[]) => {
+    try {
+      await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          section: "aiMarketing",
+          data: {
+            aiCronSchedules: JSON.stringify(jobs.map(j => ({
+              id: j.id,
+              service: j.service,
+              schedule: j.schedule,
+              enabled: j.enabled,
+            }))),
+          },
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to save cron schedules:", error);
+    }
+  }, []);
+
   // Load initial status
   const loadStatus = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/admin/ai-marketing/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "getStatus" }),
-      });
-      const data = await res.json();
+      // Load AI status and settings
+      const [statusRes, settingsRes] = await Promise.all([
+        fetch("/api/admin/ai-marketing/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "getStatus" }),
+        }),
+        fetch("/api/admin/settings"),
+      ]);
+
+      const data = await statusRes.json();
       if (data.success) {
         setStats(data.stats);
         // Update service enabled states from settings
@@ -187,6 +217,29 @@ export default function AIControlPage() {
               s.enabled,
           }))
         );
+      }
+
+      // Load cron schedules from settings
+      const settingsData = await settingsRes.json();
+      if (settingsData.settings?.aiCronSchedules) {
+        try {
+          const savedSchedules = JSON.parse(settingsData.settings.aiCronSchedules) as Array<{
+            id: string;
+            service: string;
+            schedule: string;
+            enabled: boolean;
+          }>;
+          setCronJobs((prev) =>
+            prev.map((job) => {
+              const saved = savedSchedules.find((s) => s.id === job.id);
+              return saved
+                ? { ...job, schedule: saved.schedule, enabled: saved.enabled }
+                : job;
+            })
+          );
+        } catch {
+          // Use defaults if parse fails
+        }
       }
     } catch (error) {
       console.error("Failed to load status:", error);
@@ -262,20 +315,26 @@ export default function AIControlPage() {
 
   // Toggle cron job
   const toggleCronJob = (jobId: string) => {
-    setCronJobs((prev) =>
-      prev.map((job) =>
+    setCronJobs((prev) => {
+      const updated = prev.map((job) =>
         job.id === jobId ? { ...job, enabled: !job.enabled } : job
-      )
-    );
-    // TODO: Save to database
+      );
+      // Save to database
+      saveCronSchedules(updated);
+      return updated;
+    });
   };
 
   // Update cron schedule
   const updateCronSchedule = (jobId: string, schedule: string) => {
-    setCronJobs((prev) =>
-      prev.map((job) => (job.id === jobId ? { ...job, schedule } : job))
-    );
-    // TODO: Save to database
+    setCronJobs((prev) => {
+      const updated = prev.map((job) =>
+        job.id === jobId ? { ...job, schedule } : job
+      );
+      // Save to database
+      saveCronSchedules(updated);
+      return updated;
+    });
   };
 
   const getStatusColor = (status: string) => {

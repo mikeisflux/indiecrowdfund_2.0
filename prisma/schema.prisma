@@ -1165,6 +1165,7 @@ model PlatformSettings {
   aiDailyEmailLimit     Int      @default(1000)
   aiQuietHoursStart     String   @default("22:00")
   aiQuietHoursEnd       String   @default("08:00")
+  aiCronSchedules       String?  @db.Text // JSON string for cron job schedules
 
   // Behavior Tracking Settings
   aiTrackPageViews      Boolean  @default(true)
