@@ -18,6 +18,34 @@ export {
   moderateComment,
 } from "./anthropic";
 
+// Marketing AI Services
+export {
+  // Email Personalization
+  personalizeEmailForUser,
+  type PersonalizedEmailContent,
+  type UserProfile,
+  // Predictive Analytics
+  predictUserBehavior,
+  batchPredictUsers,
+  type PredictionResult,
+  // Smart Segmentation
+  generateSmartSegments,
+  type UserSegment,
+  // Send Time Optimization
+  getOptimalSendTime,
+  batchOptimalSendTimes,
+  type OptimalSendTime,
+  // Content Optimization
+  generateContentVariants,
+  type ContentVariant,
+  type ContentOptimizationResult,
+  // A/B Testing
+  createABTest,
+  analyzeABTestResults,
+  autoSelectWinner,
+  type ABTest,
+} from "./marketing-services";
+
 // Configuration check
 export function checkAIConfiguration(): {
   openai: boolean;

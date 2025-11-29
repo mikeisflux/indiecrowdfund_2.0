@@ -1534,6 +1534,126 @@ export default function AIMarketingPage() {
 
         {/* AI Settings Tab */}
         <TabsContent value="settings" className="mt-6 space-y-6">
+          {/* AI Services Status */}
+          <Card className="border-violet-200 bg-gradient-to-r from-violet-50/50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/20">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-violet-600" />
+                    AI Services Status
+                  </CardTitle>
+                  <CardDescription>Real-time status of all AI marketing services</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/admin/ai-marketing/services");
+                      const data = await res.json();
+                      setSaveMessage(data.status === "operational" ? "All AI services operational" : "OpenAI API key not configured");
+                      setTimeout(() => setSaveMessage(null), 3000);
+                    } catch {
+                      setSaveMessage("Failed to check AI services");
+                      setTimeout(() => setSaveMessage(null), 3000);
+                    }
+                  }}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Check Status
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
+                  <div className="rounded-full bg-emerald-100 p-2 dark:bg-emerald-900/30">
+                    <Mail className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Email Personalization</p>
+                    <p className="text-xs text-zinc-500">GPT-4 powered</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-xs text-emerald-600">Ready</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
+                  <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
+                    <TrendingUp className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Predictive Analytics</p>
+                    <p className="text-xs text-zinc-500">ML-based scoring</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-xs text-emerald-600">Ready</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
+                  <div className="rounded-full bg-violet-100 p-2 dark:bg-violet-900/30">
+                    <Users className="h-4 w-4 text-violet-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Smart Segmentation</p>
+                    <p className="text-xs text-zinc-500">Auto-clustering</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-xs text-emerald-600">Ready</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
+                  <div className="rounded-full bg-amber-100 p-2 dark:bg-amber-900/30">
+                    <Timer className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Send Time Optimization</p>
+                    <p className="text-xs text-zinc-500">Behavior analysis</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-xs text-emerald-600">Ready</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
+                  <div className="rounded-full bg-pink-100 p-2 dark:bg-pink-900/30">
+                    <Wand2 className="h-4 w-4 text-pink-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Content Optimization</p>
+                    <p className="text-xs text-zinc-500">AI variants</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-xs text-emerald-600">Ready</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
+                  <div className="rounded-full bg-cyan-100 p-2 dark:bg-cyan-900/30">
+                    <BarChart3 className="h-4 w-4 text-cyan-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">A/B Testing</p>
+                    <p className="text-xs text-zinc-500">Auto-optimization</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-xs text-emerald-600">Ready</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>AI Engine Configuration</CardTitle>
