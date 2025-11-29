@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getShuftiService } from "@/lib/shufti";
@@ -55,12 +55,21 @@ export async function GET() {
 /**
  * POST /api/verify-id - Start new verification
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get optional returnUrl from request body
+    let returnUrl: string | undefined;
+    try {
+      const body = await req.json();
+      returnUrl = body.returnUrl;
+    } catch {
+      // No body or invalid JSON, that's fine
     }
 
     // Check if user is already verified
@@ -91,11 +100,12 @@ export async function POST() {
       );
     }
 
-    // Create verification request
+    // Create verification request with optional returnUrl
     const result = await shufti.createVerification(
       session.user.id,
       user.email,
-      user.name || undefined
+      user.name || undefined,
+      returnUrl
     );
 
     if (!result.success) {

@@ -119,14 +119,23 @@ export class ShuftiService {
   async createVerification(
     userId: string,
     userEmail: string,
-    userName?: string
+    userName?: string,
+    returnUrl?: string
   ): Promise<{ success: boolean; verificationUrl?: string; reference?: string; error?: string }> {
     const reference = `VERIFY_${userId}_${Date.now()}`;
+
+    // Build redirect URL with returnUrl parameter if provided
+    let redirectUrl = this.config.redirectUrl;
+    if (redirectUrl && returnUrl) {
+      const url = new URL(redirectUrl);
+      url.searchParams.set("returnUrl", encodeURIComponent(returnUrl));
+      redirectUrl = url.toString();
+    }
 
     const requestBody: ShuftiVerificationRequest = {
       reference,
       callback_url: this.config.callbackUrl,
-      redirect_url: this.config.redirectUrl,
+      redirect_url: redirectUrl,
       email: userEmail,
       verification_mode: "any",
       document: {
