@@ -22,8 +22,6 @@ import {
   XCircle,
   Loader2,
   ExternalLink,
-  Eye,
-  EyeOff,
   UserCheck,
   Lock,
 } from "lucide-react";
@@ -60,7 +58,6 @@ export function IDVerificationGate({ projectId, children }: IDVerificationGatePr
   const [loading, setLoading] = useState(true);
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
   const [userVerification, setUserVerification] = useState<UserVerification | null>(null);
-  const [showGate, setShowGate] = useState(false);
   const [startingVerification, setStartingVerification] = useState(false);
   const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
 
@@ -71,11 +68,6 @@ export function IDVerificationGate({ projectId, children }: IDVerificationGatePr
         const res = await fetch(`/api/verify-id/check?projectId=${projectId}`);
         const data = await res.json();
         setVerificationStatus(data);
-
-        // Show gate if verification is required and user is not verified
-        if (data.required && !data.verified) {
-          setShowGate(true);
-        }
       } catch (error) {
         console.error("Error checking verification:", error);
       } finally {
@@ -152,10 +144,6 @@ export function IDVerificationGate({ projectId, children }: IDVerificationGatePr
       if (userRes) {
         const userData = await userRes.json();
         setUserVerification(userData);
-      }
-
-      if (!checkData.required || checkData.verified) {
-        setShowGate(false);
       }
     } catch (error) {
       console.error("Error refreshing status:", error);

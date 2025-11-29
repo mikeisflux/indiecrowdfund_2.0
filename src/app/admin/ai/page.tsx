@@ -159,7 +159,6 @@ export default function AIControlPage() {
   const [showResultsViewer, setShowResultsViewer] = useState(false);
   const [resultsViewerTab, setResultsViewerTab] = useState("predictive");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" }>({ key: "conversionProbability", direction: "desc" });
-  const [selectedResultService, setSelectedResultService] = useState<string | null>(null);
 
   // Load initial status
   const loadStatus = useCallback(async () => {
@@ -236,7 +235,7 @@ export default function AIControlPage() {
           prev.map((s) => (s.id === serviceId ? { ...s, status: "idle" } : s))
         );
       }, 10000);
-    } catch (error) {
+    } catch {
       setServices((prev) =>
         prev.map((s) =>
           s.id === serviceId

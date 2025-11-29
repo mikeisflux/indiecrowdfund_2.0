@@ -1591,7 +1591,7 @@ export default function AIMarketingPage() {
                             ...prev,
                             [action]: { success: data.success, message: data.message, data, timestamp: new Date().toLocaleTimeString() }
                           }));
-                        } catch (error) {
+                        } catch {
                           setAiRunResults(prev => ({
                             ...prev,
                             [action]: { success: false, message: "Failed to run", timestamp: new Date().toLocaleTimeString() }

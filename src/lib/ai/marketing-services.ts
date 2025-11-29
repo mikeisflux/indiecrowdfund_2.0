@@ -149,7 +149,6 @@ async function getUserProfile(userId: string): Promise<UserProfile> {
   }
 
   // Calculate interests from behavior
-  const categoryViews = new Map<string, number>();
   const searchTerms: string[] = [];
 
   for (const behavior of user.behaviors) {
@@ -443,14 +442,8 @@ export async function generateSmartSegments(): Promise<UserSegment[]> {
     });
   }
 
-  // Segment 5: Tech Enthusiasts
-  const techBackers = users.filter(u => {
-    const techPledges = u.pledges.filter(p => {
-      // Check if any project is tech related via behaviors
-      return true; // Simplified - would need project category data
-    });
-    return u.pledges.length >= 2;
-  });
+  // Segment 5: Tech Enthusiasts (placeholder for future implementation)
+  // Would need project category data to properly segment
 
   // Use AI to identify additional segments
   const aiSegments = await identifyAISegments(users.slice(0, 100));
@@ -834,12 +827,12 @@ export async function analyzeABTestResults(test: ABTest): Promise<{
 /**
  * Auto-select winner and apply to campaign
  */
-export async function autoSelectWinner(testId: string): Promise<{
+export async function autoSelectWinner(_testId: string): Promise<{
   success: boolean;
   winnerId?: string;
   message: string;
 }> {
-  // This would fetch the test from DB, analyze, and update the campaign
+  // This would fetch the test from DB using _testId, analyze, and update the campaign
   // Placeholder implementation
   return {
     success: true,
