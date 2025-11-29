@@ -827,13 +827,14 @@ export async function analyzeABTestResults(test: ABTest): Promise<{
 /**
  * Auto-select winner and apply to campaign
  */
-export async function autoSelectWinner(_testId: string): Promise<{
+export async function autoSelectWinner(testId: string): Promise<{
   success: boolean;
   winnerId?: string;
   message: string;
 }> {
-  // This would fetch the test from DB using _testId, analyze, and update the campaign
-  // Placeholder implementation
+  // TODO: Implement fetching test from DB, analyze results, and update the campaign
+  console.debug("Auto-selecting winner for test:", testId);
+
   return {
     success: true,
     winnerId: "variant-0",
