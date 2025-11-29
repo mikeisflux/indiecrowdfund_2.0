@@ -11,6 +11,15 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -52,6 +61,12 @@ import {
   ShoppingCart,
   MousePointer,
   Timer,
+  ChevronUp,
+  ChevronDown,
+  Clock,
+  AlertTriangle,
+  Maximize2,
+  Download,
 } from "lucide-react";
 
 // Types for dynamic data
@@ -124,6 +139,10 @@ export default function AIMarketingPage() {
     applyCategory: boolean;
   }>>([]);
   const [isApplyingTags, setIsApplyingTags] = useState(false);
+  const [aiRunResults, setAiRunResults] = useState<Record<string, { success: boolean; message: string; data?: unknown; timestamp: string }>>({});
+  const [showResultsViewer, setShowResultsViewer] = useState(false);
+  const [resultsViewerTab, setResultsViewerTab] = useState("predictive");
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" }>({ key: "conversionProbability", direction: "desc" });
 
   // Campaign form state
   const [campaignForm, setCampaignForm] = useState({
@@ -1534,229 +1553,475 @@ export default function AIMarketingPage() {
 
         {/* AI Settings Tab */}
         <TabsContent value="settings" className="mt-6 space-y-6">
-          {/* AI Services Status */}
-          <Card className="border-violet-200 bg-gradient-to-r from-violet-50/50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/20">
+          {/* Quick Run Panel */}
+          <Card className="border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Brain className="h-5 w-5 text-violet-600" />
-                    AI Services Status
+                    AI Services Control Panel
                   </CardTitle>
-                  <CardDescription>Real-time status of all AI marketing services</CardDescription>
+                  <CardDescription>Run AI services manually and view results</CardDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      const res = await fetch("/api/admin/ai-marketing/services");
-                      const data = await res.json();
-                      setSaveMessage(data.status === "operational" ? "All AI services operational" : "OpenAI API key not configured");
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAiRunResults({})}
+                  >
+                    Clear Results
+                  </Button>
+                  <Button
+                    className="bg-violet-600 hover:bg-violet-700"
+                    size="sm"
+                    disabled={isProcessing}
+                    onClick={async () => {
+                      setIsProcessing(true);
+                      const actions = ["runAutoTagging", "runPredictiveAnalytics", "runSegmentation", "runSendTimeOptimization"];
+                      for (const action of actions) {
+                        try {
+                          const res = await fetch("/api/admin/ai-marketing/run", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action, params: { limit: 50 } }),
+                          });
+                          const data = await res.json();
+                          setAiRunResults(prev => ({
+                            ...prev,
+                            [action]: { success: data.success, message: data.message, data, timestamp: new Date().toLocaleTimeString() }
+                          }));
+                        } catch (error) {
+                          setAiRunResults(prev => ({
+                            ...prev,
+                            [action]: { success: false, message: "Failed to run", timestamp: new Date().toLocaleTimeString() }
+                          }));
+                        }
+                      }
+                      setIsProcessing(false);
+                      setSaveMessage("All AI services completed");
                       setTimeout(() => setSaveMessage(null), 3000);
-                    } catch {
-                      setSaveMessage("Failed to check AI services");
-                      setTimeout(() => setSaveMessage(null), 3000);
-                    }
-                  }}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Check Status
-                </Button>
+                    }}
+                  >
+                    {isProcessing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+                    Run All AI Services
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
-                  <div className="rounded-full bg-emerald-100 p-2 dark:bg-emerald-900/30">
-                    <Mail className="h-4 w-4 text-emerald-600" />
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {/* Auto-Tagging */}
+                <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="rounded-full bg-emerald-100 p-2 dark:bg-emerald-900/30">
+                      <Tag className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Auto-Tagging</p>
+                      <p className="text-xs text-zinc-500">Tag projects with AI</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Email Personalization</p>
-                    <p className="text-xs text-zinc-500">GPT-4 powered</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-xs text-emerald-600">Ready</span>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={isProcessing}
+                    onClick={async () => {
+                      setIsProcessing(true);
+                      try {
+                        const res = await fetch("/api/admin/ai-marketing/run", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "runAutoTagging", params: { limit: 20 } }),
+                        });
+                        const data = await res.json();
+                        setAiRunResults(prev => ({
+                          ...prev,
+                          runAutoTagging: { success: data.success, message: data.message, data, timestamp: new Date().toLocaleTimeString() }
+                        }));
+                        setSaveMessage(data.message);
+                        setTimeout(() => setSaveMessage(null), 3000);
+                      } catch {
+                        setAiRunResults(prev => ({
+                          ...prev,
+                          runAutoTagging: { success: false, message: "Failed", timestamp: new Date().toLocaleTimeString() }
+                        }));
+                      } finally {
+                        setIsProcessing(false);
+                      }
+                    }}
+                  >
+                    {isProcessing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+                    <span className="ml-2">Run</span>
+                  </Button>
+                  {aiRunResults.runAutoTagging && (
+                    <div className={`mt-2 p-2 rounded text-xs ${aiRunResults.runAutoTagging.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                      {aiRunResults.runAutoTagging.message}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
-                  <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
-                    <TrendingUp className="h-4 w-4 text-blue-600" />
+                {/* Predictive Analytics */}
+                <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
+                      <TrendingUp className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Predictive Analytics</p>
+                      <p className="text-xs text-zinc-500">Score users</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Predictive Analytics</p>
-                    <p className="text-xs text-zinc-500">ML-based scoring</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-xs text-emerald-600">Ready</span>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={isProcessing}
+                    onClick={async () => {
+                      setIsProcessing(true);
+                      try {
+                        const res = await fetch("/api/admin/ai-marketing/run", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "runPredictiveAnalytics", params: { limit: 100 } }),
+                        });
+                        const data = await res.json();
+                        setAiRunResults(prev => ({
+                          ...prev,
+                          runPredictiveAnalytics: { success: data.success, message: data.message, data, timestamp: new Date().toLocaleTimeString() }
+                        }));
+                        setSaveMessage(data.message);
+                        setTimeout(() => setSaveMessage(null), 3000);
+                      } catch {
+                        setAiRunResults(prev => ({
+                          ...prev,
+                          runPredictiveAnalytics: { success: false, message: "Failed", timestamp: new Date().toLocaleTimeString() }
+                        }));
+                      } finally {
+                        setIsProcessing(false);
+                      }
+                    }}
+                  >
+                    {isProcessing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+                    <span className="ml-2">Run</span>
+                  </Button>
+                  {aiRunResults.runPredictiveAnalytics && (
+                    <div className={`mt-2 p-2 rounded text-xs ${aiRunResults.runPredictiveAnalytics.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                      {aiRunResults.runPredictiveAnalytics.message}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
-                  <div className="rounded-full bg-violet-100 p-2 dark:bg-violet-900/30">
-                    <Users className="h-4 w-4 text-violet-600" />
+                {/* Smart Segmentation */}
+                <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="rounded-full bg-violet-100 p-2 dark:bg-violet-900/30">
+                      <Users className="h-4 w-4 text-violet-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Smart Segmentation</p>
+                      <p className="text-xs text-zinc-500">Create segments</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Smart Segmentation</p>
-                    <p className="text-xs text-zinc-500">Auto-clustering</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-xs text-emerald-600">Ready</span>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={isProcessing}
+                    onClick={async () => {
+                      setIsProcessing(true);
+                      try {
+                        const res = await fetch("/api/admin/ai-marketing/run", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "runSegmentation" }),
+                        });
+                        const data = await res.json();
+                        setAiRunResults(prev => ({
+                          ...prev,
+                          runSegmentation: { success: data.success, message: data.message, data, timestamp: new Date().toLocaleTimeString() }
+                        }));
+                        if (data.segments) setUserSegments(data.segments);
+                        setSaveMessage(data.message);
+                        setTimeout(() => setSaveMessage(null), 3000);
+                      } catch {
+                        setAiRunResults(prev => ({
+                          ...prev,
+                          runSegmentation: { success: false, message: "Failed", timestamp: new Date().toLocaleTimeString() }
+                        }));
+                      } finally {
+                        setIsProcessing(false);
+                      }
+                    }}
+                  >
+                    {isProcessing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+                    <span className="ml-2">Run</span>
+                  </Button>
+                  {aiRunResults.runSegmentation && (
+                    <div className={`mt-2 p-2 rounded text-xs ${aiRunResults.runSegmentation.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                      {aiRunResults.runSegmentation.message}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
-                  <div className="rounded-full bg-amber-100 p-2 dark:bg-amber-900/30">
-                    <Timer className="h-4 w-4 text-amber-600" />
+                {/* Send Time Optimization */}
+                <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="rounded-full bg-amber-100 p-2 dark:bg-amber-900/30">
+                      <Timer className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Send Time Optimization</p>
+                      <p className="text-xs text-zinc-500">Optimal times</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Send Time Optimization</p>
-                    <p className="text-xs text-zinc-500">Behavior analysis</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-xs text-emerald-600">Ready</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
-                  <div className="rounded-full bg-pink-100 p-2 dark:bg-pink-900/30">
-                    <Wand2 className="h-4 w-4 text-pink-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Content Optimization</p>
-                    <p className="text-xs text-zinc-500">AI variants</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-xs text-emerald-600">Ready</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
-                  <div className="rounded-full bg-cyan-100 p-2 dark:bg-cyan-900/30">
-                    <BarChart3 className="h-4 w-4 text-cyan-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">A/B Testing</p>
-                    <p className="text-xs text-zinc-500">Auto-optimization</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-xs text-emerald-600">Ready</span>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={isProcessing}
+                    onClick={async () => {
+                      setIsProcessing(true);
+                      try {
+                        const res = await fetch("/api/admin/ai-marketing/run", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "runSendTimeOptimization", params: { limit: 100 } }),
+                        });
+                        const data = await res.json();
+                        setAiRunResults(prev => ({
+                          ...prev,
+                          runSendTimeOptimization: { success: data.success, message: data.message, data, timestamp: new Date().toLocaleTimeString() }
+                        }));
+                        setSaveMessage(data.message);
+                        setTimeout(() => setSaveMessage(null), 3000);
+                      } catch {
+                        setAiRunResults(prev => ({
+                          ...prev,
+                          runSendTimeOptimization: { success: false, message: "Failed", timestamp: new Date().toLocaleTimeString() }
+                        }));
+                      } finally {
+                        setIsProcessing(false);
+                      }
+                    }}
+                  >
+                    {isProcessing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+                    <span className="ml-2">Run</span>
+                  </Button>
+                  {aiRunResults.runSendTimeOptimization && (
+                    <div className={`mt-2 p-2 rounded text-xs ${aiRunResults.runSendTimeOptimization.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                      {aiRunResults.runSendTimeOptimization.message}
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Results Summary & Quick View */}
+              {Object.keys(aiRunResults).length > 0 && (
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold">Results Summary</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowResultsViewer(true)}
+                    >
+                      <Maximize2 className="mr-2 h-4 w-4" />
+                      View Full Results
+                    </Button>
+                  </div>
+
+                  {/* Quick Stats Grid */}
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                    {/* Predictive Analytics Summary */}
+                    {aiRunResults.runPredictiveAnalytics?.data && (
+                      <div className="rounded-lg border bg-gradient-to-br from-blue-50 to-white p-4 dark:from-blue-950/30 dark:to-zinc-900">
+                        <div className="flex items-center gap-2 mb-2">
+                          <TrendingUp className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium">Predictive Analytics</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-zinc-500 text-xs">Analyzed</p>
+                            <p className="font-semibold">{(aiRunResults.runPredictiveAnalytics.data as { summary?: { totalAnalyzed?: number } }).summary?.totalAnalyzed || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-zinc-500 text-xs">High Value</p>
+                            <p className="font-semibold text-emerald-600">{(aiRunResults.runPredictiveAnalytics.data as { summary?: { highValueProspects?: number } }).summary?.highValueProspects || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-zinc-500 text-xs">At Risk</p>
+                            <p className="font-semibold text-amber-600">{(aiRunResults.runPredictiveAnalytics.data as { summary?: { atRiskUsers?: number } }).summary?.atRiskUsers || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-zinc-500 text-xs">Predicted LTV</p>
+                            <p className="font-semibold">${((aiRunResults.runPredictiveAnalytics.data as { summary?: { predictedRevenue?: number } }).summary?.predictedRevenue || 0).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Segmentation Summary */}
+                    {aiRunResults.runSegmentation?.data && (
+                      <div className="rounded-lg border bg-gradient-to-br from-violet-50 to-white p-4 dark:from-violet-950/30 dark:to-zinc-900">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="h-4 w-4 text-violet-600" />
+                          <span className="text-sm font-medium">Smart Segments</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-zinc-500">Segments Created</span>
+                            <span className="font-semibold">{((aiRunResults.runSegmentation.data as { segments?: unknown[] }).segments || []).length}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-zinc-500">Total Users</span>
+                            <span className="font-semibold">{(aiRunResults.runSegmentation.data as { totalUsers?: number }).totalUsers || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Send Time Summary */}
+                    {aiRunResults.runSendTimeOptimization?.data && (
+                      <div className="rounded-lg border bg-gradient-to-br from-amber-50 to-white p-4 dark:from-amber-950/30 dark:to-zinc-900">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Clock className="h-4 w-4 text-amber-600" />
+                          <span className="text-sm font-medium">Send Time Optimization</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-zinc-500">Users Analyzed</span>
+                            <span className="font-semibold">{(aiRunResults.runSendTimeOptimization.data as { summary?: { totalAnalyzed?: number } }).summary?.totalAnalyzed || 0}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-zinc-500">Peak Hour</span>
+                            <span className="font-semibold">{(aiRunResults.runSendTimeOptimization.data as { summary?: { peakHour?: number } }).summary?.peakHour !== undefined ? `${(aiRunResults.runSendTimeOptimization.data as { summary: { peakHour: number } }).summary.peakHour}:00` : "N/A"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Auto-Tagging Summary */}
+                    {aiRunResults.runAutoTagging?.data && (
+                      <div className="rounded-lg border bg-gradient-to-br from-emerald-50 to-white p-4 dark:from-emerald-950/30 dark:to-zinc-900">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Tag className="h-4 w-4 text-emerald-600" />
+                          <span className="text-sm font-medium">Auto-Tagging</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-zinc-500">Projects Tagged</span>
+                            <span className="font-semibold">
+                              {((aiRunResults.runAutoTagging.data as { results?: { success: boolean }[] }).results || []).filter(r => r.success).length}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-zinc-500">Status</span>
+                            <Badge variant="outline" className="text-xs">
+                              {aiRunResults.runAutoTagging.success ? "Complete" : "Failed"}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Inline Quick Data Preview */}
+                  {aiRunResults.runPredictiveAnalytics?.data && (
+                    <div className="rounded-lg border bg-white dark:bg-zinc-900 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-2 border-b bg-zinc-50 dark:bg-zinc-800">
+                        <span className="text-sm font-medium">Top High-Value Prospects</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            setResultsViewerTab("predictive");
+                            setShowResultsViewer(true);
+                          }}
+                        >
+                          View All
+                          <ArrowRight className="ml-1 h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="p-2">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="text-xs">
+                              <TableHead className="h-8">User ID</TableHead>
+                              <TableHead className="h-8 text-right">Conversion %</TableHead>
+                              <TableHead className="h-8 text-right">Churn Risk</TableHead>
+                              <TableHead className="h-8 text-right">Predicted LTV</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {((aiRunResults.runPredictiveAnalytics.data as { topProspects?: { userId: string; conversionProbability: number; churnRisk: number; predictedLifetimeValue: number }[] }).topProspects || []).slice(0, 3).map((prospect) => (
+                              <TableRow key={prospect.userId} className="text-xs">
+                                <TableCell className="py-2 font-mono">{prospect.userId.slice(0, 8)}...</TableCell>
+                                <TableCell className="py-2 text-right">
+                                  <Badge variant={prospect.conversionProbability > 0.7 ? "default" : "secondary"} className="text-xs">
+                                    {(prospect.conversionProbability * 100).toFixed(0)}%
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-2 text-right">
+                                  <Badge variant={prospect.churnRisk > 0.5 ? "destructive" : "outline"} className="text-xs">
+                                    {(prospect.churnRisk * 100).toFixed(0)}%
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-2 text-right font-medium">${prospect.predictedLifetimeValue.toFixed(0)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
+          {/* AI Engine Configuration */}
           <Card>
             <CardHeader>
               <CardTitle>AI Engine Configuration</CardTitle>
-              <CardDescription>Fine-tune the AI marketing and personalization engine. Enable features and click &quot;Run Now&quot; to execute.</CardDescription>
+              <CardDescription>Enable/disable AI features globally. Changes are saved automatically.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-4">
                   <h4 className="font-semibold">Core Features</h4>
                   <div className="space-y-3">
-                    <div className="rounded-lg border p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>Email Personalization</Label>
-                          <p className="text-xs text-zinc-500">Personalize email content per user</p>
-                        </div>
-                        <Switch
-                          checked={aiSettings.emailPersonalization}
-                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, emailPersonalization: checked })}
-                        />
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div>
+                        <Label>Email Personalization</Label>
+                        <p className="text-xs text-zinc-500">Personalize email content per user</p>
                       </div>
-                      <p className="text-xs text-zinc-400 mt-2">Automatically applies when sending campaigns</p>
+                      <Switch
+                        checked={aiSettings.emailPersonalization}
+                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, emailPersonalization: checked })}
+                      />
                     </div>
-                    <div className="rounded-lg border p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>Predictive Analytics</Label>
-                          <p className="text-xs text-zinc-500">Predict user behavior and conversion likelihood</p>
-                        </div>
-                        <Switch
-                          checked={aiSettings.predictiveAnalytics}
-                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, predictiveAnalytics: checked })}
-                        />
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div>
+                        <Label>Predictive Analytics</Label>
+                        <p className="text-xs text-zinc-500">Predict user behavior and conversion</p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 w-full"
-                        disabled={!aiSettings.predictiveAnalytics || isProcessing}
-                        onClick={async () => {
-                          setIsProcessing(true);
-                          try {
-                            const res = await fetch("/api/admin/ai-marketing/run", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ action: "runPredictiveAnalytics", params: { limit: 100 } }),
-                            });
-                            const data = await res.json();
-                            setSaveMessage(data.message || "Analysis complete");
-                            setTimeout(() => setSaveMessage(null), 5000);
-                          } catch {
-                            setSaveMessage("Failed to run analytics");
-                            setTimeout(() => setSaveMessage(null), 3000);
-                          } finally {
-                            setIsProcessing(false);
-                          }
-                        }}
-                      >
-                        {isProcessing ? <RefreshCw className="mr-2 h-3 w-3 animate-spin" /> : <Play className="mr-2 h-3 w-3" />}
-                        Run Predictive Analytics
-                      </Button>
+                      <Switch
+                        checked={aiSettings.predictiveAnalytics}
+                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, predictiveAnalytics: checked })}
+                      />
                     </div>
-                    <div className="rounded-lg border p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>Smart Segmentation</Label>
-                          <p className="text-xs text-zinc-500">Auto-create user segments based on behavior</p>
-                        </div>
-                        <Switch
-                          checked={aiSettings.smartSegmentation}
-                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, smartSegmentation: checked })}
-                        />
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div>
+                        <Label>Smart Segmentation</Label>
+                        <p className="text-xs text-zinc-500">Auto-create user segments</p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 w-full"
-                        disabled={!aiSettings.smartSegmentation || isProcessing}
-                        onClick={async () => {
-                          setIsProcessing(true);
-                          try {
-                            const res = await fetch("/api/admin/ai-marketing/run", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ action: "runSegmentation" }),
-                            });
-                            const data = await res.json();
-                            setSaveMessage(data.message || "Segmentation complete");
-                            if (data.segments) {
-                              setUserSegments(data.segments);
-                            }
-                            setTimeout(() => setSaveMessage(null), 5000);
-                          } catch {
-                            setSaveMessage("Failed to run segmentation");
-                            setTimeout(() => setSaveMessage(null), 3000);
-                          } finally {
-                            setIsProcessing(false);
-                          }
-                        }}
-                      >
-                        {isProcessing ? <RefreshCw className="mr-2 h-3 w-3 animate-spin" /> : <Play className="mr-2 h-3 w-3" />}
-                        Run Smart Segmentation
-                      </Button>
+                      <Switch
+                        checked={aiSettings.smartSegmentation}
+                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, smartSegmentation: checked })}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1764,70 +2029,35 @@ export default function AIMarketingPage() {
                 <div className="space-y-4">
                   <h4 className="font-semibold">Optimization</h4>
                   <div className="space-y-3">
-                    <div className="rounded-lg border p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>Send Time Optimization</Label>
-                          <p className="text-xs text-zinc-500">AI picks optimal send time per user</p>
-                        </div>
-                        <Switch
-                          checked={aiSettings.sendTimeOptimization}
-                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, sendTimeOptimization: checked })}
-                        />
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div>
+                        <Label>Send Time Optimization</Label>
+                        <p className="text-xs text-zinc-500">AI picks optimal send time</p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 w-full"
-                        disabled={!aiSettings.sendTimeOptimization || isProcessing}
-                        onClick={async () => {
-                          setIsProcessing(true);
-                          try {
-                            const res = await fetch("/api/admin/ai-marketing/run", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ action: "runSendTimeOptimization", params: { limit: 100 } }),
-                            });
-                            const data = await res.json();
-                            setSaveMessage(data.message || "Optimization complete");
-                            setTimeout(() => setSaveMessage(null), 5000);
-                          } catch {
-                            setSaveMessage("Failed to run optimization");
-                            setTimeout(() => setSaveMessage(null), 3000);
-                          } finally {
-                            setIsProcessing(false);
-                          }
-                        }}
-                      >
-                        {isProcessing ? <RefreshCw className="mr-2 h-3 w-3 animate-spin" /> : <Play className="mr-2 h-3 w-3" />}
-                        Analyze Send Times
-                      </Button>
+                      <Switch
+                        checked={aiSettings.sendTimeOptimization}
+                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, sendTimeOptimization: checked })}
+                      />
                     </div>
-                    <div className="rounded-lg border p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>Content Optimization</Label>
-                          <p className="text-xs text-zinc-500">A/B test subject lines and content</p>
-                        </div>
-                        <Switch
-                          checked={aiSettings.contentOptimization}
-                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, contentOptimization: checked })}
-                        />
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div>
+                        <Label>Content Optimization</Label>
+                        <p className="text-xs text-zinc-500">A/B test subject lines and content</p>
                       </div>
-                      <p className="text-xs text-zinc-400 mt-2">Applies when creating campaigns with A/B variants</p>
+                      <Switch
+                        checked={aiSettings.contentOptimization}
+                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, contentOptimization: checked })}
+                      />
                     </div>
-                    <div className="rounded-lg border p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>Automatic A/B Testing</Label>
-                          <p className="text-xs text-zinc-500">Automatically run A/B tests on campaigns</p>
-                        </div>
-                        <Switch
-                          checked={aiSettings.abTesting}
-                          onCheckedChange={(checked) => setAiSettings({ ...aiSettings, abTesting: checked })}
-                        />
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div>
+                        <Label>Automatic A/B Testing</Label>
+                        <p className="text-xs text-zinc-500">Auto-run A/B tests on campaigns</p>
                       </div>
-                      <p className="text-xs text-zinc-400 mt-2">Automatically splits campaigns and picks winners</p>
+                      <Switch
+                        checked={aiSettings.abTesting}
+                        onCheckedChange={(checked) => setAiSettings({ ...aiSettings, abTesting: checked })}
+                      />
                     </div>
                   </div>
                 </div>
@@ -2400,6 +2630,419 @@ export default function AIMarketingPage() {
                   Apply {pendingTagUpdates.filter(p => p.status === "approved").length} Approved
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Results Viewer Dialog */}
+      <Dialog open={showResultsViewer} onOpenChange={setShowResultsViewer}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-violet-600" />
+              AI Analysis Results Viewer
+            </DialogTitle>
+            <DialogDescription>
+              Explore, sort, and analyze the detailed results from AI services
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={resultsViewerTab} onValueChange={setResultsViewerTab} className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="predictive" className="gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Predictive
+              </TabsTrigger>
+              <TabsTrigger value="segments" className="gap-2">
+                <Users className="h-4 w-4" />
+                Segments
+              </TabsTrigger>
+              <TabsTrigger value="sendtime" className="gap-2">
+                <Clock className="h-4 w-4" />
+                Send Times
+              </TabsTrigger>
+              <TabsTrigger value="tagging" className="gap-2">
+                <Tag className="h-4 w-4" />
+                Tagging
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Predictive Analytics Tab */}
+            <TabsContent value="predictive" className="flex-1 overflow-hidden mt-4">
+              {aiRunResults.runPredictiveAnalytics?.data ? (
+                <div className="space-y-4 h-full">
+                  {/* Stats Row */}
+                  <div className="grid gap-3 grid-cols-4">
+                    <div className="rounded-lg border bg-zinc-50 p-3 dark:bg-zinc-900">
+                      <p className="text-xs text-zinc-500">Total Analyzed</p>
+                      <p className="text-xl font-bold">{(aiRunResults.runPredictiveAnalytics.data as { summary?: { totalAnalyzed?: number } }).summary?.totalAnalyzed || 0}</p>
+                    </div>
+                    <div className="rounded-lg border bg-emerald-50 p-3 dark:bg-emerald-900/30">
+                      <p className="text-xs text-zinc-500">High Value Prospects</p>
+                      <p className="text-xl font-bold text-emerald-600">{(aiRunResults.runPredictiveAnalytics.data as { summary?: { highValueProspects?: number } }).summary?.highValueProspects || 0}</p>
+                    </div>
+                    <div className="rounded-lg border bg-amber-50 p-3 dark:bg-amber-900/30">
+                      <p className="text-xs text-zinc-500">At Risk Users</p>
+                      <p className="text-xl font-bold text-amber-600">{(aiRunResults.runPredictiveAnalytics.data as { summary?: { atRiskUsers?: number } }).summary?.atRiskUsers || 0}</p>
+                    </div>
+                    <div className="rounded-lg border bg-blue-50 p-3 dark:bg-blue-900/30">
+                      <p className="text-xs text-zinc-500">Predicted Revenue</p>
+                      <p className="text-xl font-bold text-blue-600">${((aiRunResults.runPredictiveAnalytics.data as { summary?: { predictedRevenue?: number } }).summary?.predictedRevenue || 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Data Tables */}
+                  <div className="grid gap-4 grid-cols-2 flex-1">
+                    {/* High Value Prospects */}
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="px-4 py-2 bg-emerald-50 border-b flex items-center justify-between dark:bg-emerald-900/30">
+                        <span className="font-medium text-sm flex items-center gap-2">
+                          <UserCheck className="h-4 w-4 text-emerald-600" />
+                          High-Value Prospects
+                        </span>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => {
+                          const newDirection = sortConfig.key === "conversionProbability" && sortConfig.direction === "desc" ? "asc" : "desc";
+                          setSortConfig({ key: "conversionProbability", direction: newDirection });
+                        }}>
+                          Sort
+                          {sortConfig.key === "conversionProbability" ? (
+                            sortConfig.direction === "desc" ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />
+                          ) : null}
+                        </Button>
+                      </div>
+                      <ScrollArea className="h-48">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="text-xs">
+                              <TableHead className="h-8">User ID</TableHead>
+                              <TableHead className="h-8 text-right cursor-pointer hover:bg-zinc-100" onClick={() => setSortConfig({ key: "conversionProbability", direction: sortConfig.direction === "desc" ? "asc" : "desc" })}>
+                                Conversion %
+                                {sortConfig.key === "conversionProbability" && (sortConfig.direction === "desc" ? <ChevronDown className="h-3 w-3 inline ml-1" /> : <ChevronUp className="h-3 w-3 inline ml-1" />)}
+                              </TableHead>
+                              <TableHead className="h-8 text-right">LTV</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {((aiRunResults.runPredictiveAnalytics.data as { topProspects?: { userId: string; conversionProbability: number; churnRisk: number; predictedLifetimeValue: number }[] }).topProspects || [])
+                              .sort((a, b) => sortConfig.direction === "desc" ? b.conversionProbability - a.conversionProbability : a.conversionProbability - b.conversionProbability)
+                              .map((prospect) => (
+                              <TableRow key={prospect.userId} className="text-xs">
+                                <TableCell className="py-2 font-mono text-xs">{prospect.userId.slice(0, 12)}...</TableCell>
+                                <TableCell className="py-2 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Progress value={prospect.conversionProbability * 100} className="w-16 h-1.5" />
+                                    <span className="w-10 text-right">{(prospect.conversionProbability * 100).toFixed(0)}%</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-2 text-right font-medium">${prospect.predictedLifetimeValue.toFixed(0)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </div>
+
+                    {/* At Risk Users */}
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="px-4 py-2 bg-amber-50 border-b flex items-center justify-between dark:bg-amber-900/30">
+                        <span className="font-medium text-sm flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-600" />
+                          At-Risk Users (Churn)
+                        </span>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => {
+                          const newDirection = sortConfig.key === "churnRisk" && sortConfig.direction === "desc" ? "asc" : "desc";
+                          setSortConfig({ key: "churnRisk", direction: newDirection });
+                        }}>
+                          Sort
+                          {sortConfig.key === "churnRisk" ? (
+                            sortConfig.direction === "desc" ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />
+                          ) : null}
+                        </Button>
+                      </div>
+                      <ScrollArea className="h-48">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="text-xs">
+                              <TableHead className="h-8">User ID</TableHead>
+                              <TableHead className="h-8 text-right cursor-pointer hover:bg-zinc-100" onClick={() => setSortConfig({ key: "churnRisk", direction: sortConfig.direction === "desc" ? "asc" : "desc" })}>
+                                Churn Risk
+                                {sortConfig.key === "churnRisk" && (sortConfig.direction === "desc" ? <ChevronDown className="h-3 w-3 inline ml-1" /> : <ChevronUp className="h-3 w-3 inline ml-1" />)}
+                              </TableHead>
+                              <TableHead className="h-8 text-right">Conv %</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {((aiRunResults.runPredictiveAnalytics.data as { atRiskUsers?: { userId: string; conversionProbability: number; churnRisk: number; predictedLifetimeValue: number }[] }).atRiskUsers || [])
+                              .sort((a, b) => sortConfig.direction === "desc" ? b.churnRisk - a.churnRisk : a.churnRisk - b.churnRisk)
+                              .map((user) => (
+                              <TableRow key={user.userId} className="text-xs">
+                                <TableCell className="py-2 font-mono text-xs">{user.userId.slice(0, 12)}...</TableCell>
+                                <TableCell className="py-2 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Progress value={user.churnRisk * 100} className="w-16 h-1.5 [&>div]:bg-amber-500" />
+                                    <span className="w-10 text-right text-amber-600">{(user.churnRisk * 100).toFixed(0)}%</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-2 text-right">{(user.conversionProbability * 100).toFixed(0)}%</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+                  <TrendingUp className="h-12 w-12 mb-4 text-zinc-300" />
+                  <p className="font-medium">No Predictive Analytics Data</p>
+                  <p className="text-sm">Run the Predictive Analytics service to see results here</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Segments Tab */}
+            <TabsContent value="segments" className="flex-1 overflow-hidden mt-4">
+              {aiRunResults.runSegmentation?.data ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{((aiRunResults.runSegmentation.data as { segments?: unknown[] }).segments || []).length} Segments Generated</p>
+                      <p className="text-sm text-zinc-500">{(aiRunResults.runSegmentation.data as { totalUsers?: number }).totalUsers || 0} total users segmented</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      // Export segments as JSON
+                      const data = JSON.stringify((aiRunResults.runSegmentation.data as { segments?: unknown[] }).segments || [], null, 2);
+                      const blob = new Blob([data], { type: "application/json" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "segments.json";
+                      a.click();
+                    }}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Export
+                    </Button>
+                  </div>
+                  <ScrollArea className="h-80">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {((aiRunResults.runSegmentation.data as { segments?: { name: string; description: string; userCount: number; avgEngagement: number; criteria: string[] }[] }).segments || []).map((segment, i) => (
+                        <div key={i} className="rounded-lg border p-4 hover:border-violet-300 transition-colors">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h4 className="font-semibold text-sm">{segment.name}</h4>
+                              <p className="text-xs text-zinc-500">{segment.description}</p>
+                            </div>
+                            <Badge variant="secondary">{segment.userCount} users</Badge>
+                          </div>
+                          <div className="flex items-center gap-4 mb-2">
+                            <div className="text-xs">
+                              <span className="text-zinc-500">Engagement:</span>
+                              <span className="ml-1 font-medium">{(segment.avgEngagement * 100).toFixed(0)}%</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {segment.criteria.slice(0, 3).map((c, j) => (
+                              <Badge key={j} variant="outline" className="text-xs">{c}</Badge>
+                            ))}
+                            {segment.criteria.length > 3 && (
+                              <Badge variant="outline" className="text-xs">+{segment.criteria.length - 3} more</Badge>
+                            )}
+                          </div>
+                          <div className="mt-3 pt-3 border-t flex gap-2">
+                            <Button variant="outline" size="sm" className="h-7 text-xs flex-1">
+                              <Mail className="mr-1 h-3 w-3" />
+                              Email Segment
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-7 text-xs flex-1">
+                              <Eye className="mr-1 h-3 w-3" />
+                              View Users
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+                  <Users className="h-12 w-12 mb-4 text-zinc-300" />
+                  <p className="font-medium">No Segmentation Data</p>
+                  <p className="text-sm">Run the Smart Segmentation service to see results here</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Send Time Tab */}
+            <TabsContent value="sendtime" className="flex-1 overflow-hidden mt-4">
+              {aiRunResults.runSendTimeOptimization?.data ? (
+                <div className="space-y-4">
+                  <div className="grid gap-3 grid-cols-3">
+                    <div className="rounded-lg border bg-zinc-50 p-3 dark:bg-zinc-900">
+                      <p className="text-xs text-zinc-500">Users Analyzed</p>
+                      <p className="text-xl font-bold">{(aiRunResults.runSendTimeOptimization.data as { summary?: { totalAnalyzed?: number } }).summary?.totalAnalyzed || 0}</p>
+                    </div>
+                    <div className="rounded-lg border bg-amber-50 p-3 dark:bg-amber-900/30">
+                      <p className="text-xs text-zinc-500">Peak Hour</p>
+                      <p className="text-xl font-bold text-amber-600">
+                        {(aiRunResults.runSendTimeOptimization.data as { summary?: { peakHour?: number } }).summary?.peakHour !== undefined
+                          ? `${(aiRunResults.runSendTimeOptimization.data as { summary: { peakHour: number } }).summary.peakHour}:00`
+                          : "N/A"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-blue-50 p-3 dark:bg-blue-900/30">
+                      <p className="text-xs text-zinc-500">Timestamp</p>
+                      <p className="text-sm font-medium text-blue-600">{aiRunResults.runSendTimeOptimization.timestamp}</p>
+                    </div>
+                  </div>
+
+                  {/* Hourly Distribution Chart */}
+                  <div className="rounded-lg border p-4">
+                    <h4 className="font-medium mb-4">Hourly Distribution</h4>
+                    <div className="flex items-end gap-1 h-40">
+                      {((aiRunResults.runSendTimeOptimization.data as { hourlyDistribution?: { hour: number; count: number }[] }).hourlyDistribution || []).map((slot) => {
+                        const maxCount = Math.max(...((aiRunResults.runSendTimeOptimization.data as { hourlyDistribution?: { count: number }[] }).hourlyDistribution || [{ count: 1 }]).map(h => h.count));
+                        const heightPercent = maxCount > 0 ? (slot.count / maxCount) * 100 : 0;
+                        const isPeak = (aiRunResults.runSendTimeOptimization.data as { summary?: { peakHour?: number } }).summary?.peakHour === slot.hour;
+                        return (
+                          <div key={slot.hour} className="flex-1 flex flex-col items-center gap-1">
+                            <div
+                              className={`w-full rounded-t transition-all ${isPeak ? "bg-amber-500" : "bg-blue-400"}`}
+                              style={{ height: `${heightPercent}%`, minHeight: slot.count > 0 ? "4px" : "0" }}
+                              title={`${slot.hour}:00 - ${slot.count} users`}
+                            />
+                            <span className="text-[10px] text-zinc-500">{slot.hour}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-2 text-center">Hour of day (0-23)</p>
+                  </div>
+
+                  {/* Distribution Table */}
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="px-4 py-2 bg-zinc-50 border-b dark:bg-zinc-800">
+                      <span className="font-medium text-sm">Detailed Distribution</span>
+                    </div>
+                    <ScrollArea className="h-32">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="text-xs">
+                            <TableHead className="h-8">Hour</TableHead>
+                            <TableHead className="h-8 text-right">Users</TableHead>
+                            <TableHead className="h-8">Distribution</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {((aiRunResults.runSendTimeOptimization.data as { hourlyDistribution?: { hour: number; count: number }[] }).hourlyDistribution || [])
+                            .sort((a, b) => b.count - a.count)
+                            .map((slot) => {
+                              const total = ((aiRunResults.runSendTimeOptimization.data as { summary?: { totalAnalyzed?: number } }).summary?.totalAnalyzed || 1);
+                              const percent = (slot.count / total) * 100;
+                              return (
+                                <TableRow key={slot.hour} className="text-xs">
+                                  <TableCell className="py-2">{slot.hour}:00</TableCell>
+                                  <TableCell className="py-2 text-right font-medium">{slot.count}</TableCell>
+                                  <TableCell className="py-2">
+                                    <div className="flex items-center gap-2">
+                                      <Progress value={percent} className="flex-1 h-1.5" />
+                                      <span className="w-10 text-right text-zinc-500">{percent.toFixed(1)}%</span>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+                  <Clock className="h-12 w-12 mb-4 text-zinc-300" />
+                  <p className="font-medium">No Send Time Data</p>
+                  <p className="text-sm">Run the Send Time Optimization service to see results here</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Tagging Tab */}
+            <TabsContent value="tagging" className="flex-1 overflow-hidden mt-4">
+              {aiRunResults.runAutoTagging?.data ? (
+                <div className="space-y-4">
+                  <div className="grid gap-3 grid-cols-3">
+                    <div className="rounded-lg border bg-zinc-50 p-3 dark:bg-zinc-900">
+                      <p className="text-xs text-zinc-500">Projects Processed</p>
+                      <p className="text-xl font-bold">{((aiRunResults.runAutoTagging.data as { results?: unknown[] }).results || []).length}</p>
+                    </div>
+                    <div className="rounded-lg border bg-emerald-50 p-3 dark:bg-emerald-900/30">
+                      <p className="text-xs text-zinc-500">Successfully Tagged</p>
+                      <p className="text-xl font-bold text-emerald-600">
+                        {((aiRunResults.runAutoTagging.data as { results?: { success: boolean }[] }).results || []).filter(r => r.success).length}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-red-50 p-3 dark:bg-red-900/30">
+                      <p className="text-xs text-zinc-500">Failed / Skipped</p>
+                      <p className="text-xl font-bold text-red-600">
+                        {((aiRunResults.runAutoTagging.data as { results?: { success: boolean }[] }).results || []).filter(r => !r.success).length}
+                      </p>
+                    </div>
+                  </div>
+
+                  <ScrollArea className="h-64">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Project ID</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Tags Applied</TableHead>
+                          <TableHead>Reason</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {((aiRunResults.runAutoTagging.data as { results?: { projectId: string; success: boolean; tags?: string[]; reason?: string }[] }).results || []).map((result) => (
+                          <TableRow key={result.projectId} className="text-sm">
+                            <TableCell className="py-2 font-mono text-xs">{result.projectId.slice(0, 16)}...</TableCell>
+                            <TableCell className="py-2">
+                              {result.success ? (
+                                <Badge variant="default" className="bg-emerald-600 text-xs">Tagged</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">Skipped</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <div className="flex flex-wrap gap-1 max-w-xs">
+                                {(result.tags || []).slice(0, 3).map((tag, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs">{tag}</Badge>
+                                ))}
+                                {(result.tags || []).length > 3 && (
+                                  <Badge variant="outline" className="text-xs">+{(result.tags || []).length - 3}</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-2 text-xs text-zinc-500 max-w-xs truncate">
+                              {result.reason || "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+                  <Tag className="h-12 w-12 mb-4 text-zinc-300" />
+                  <p className="font-medium">No Auto-Tagging Data</p>
+                  <p className="text-sm">Run the Auto-Tagging service to see results here</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setShowResultsViewer(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
