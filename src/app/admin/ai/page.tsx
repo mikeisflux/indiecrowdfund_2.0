@@ -155,7 +155,8 @@ export default function AIControlPage() {
     behaviorEvents: 0,
     emailsSent: 0,
   });
-  const [runResults, setRunResults] = useState<Record<string, unknown>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [runResults, setRunResults] = useState<Record<string, any>>({});
   const [showResultsViewer, setShowResultsViewer] = useState(false);
   const [resultsViewerTab, setResultsViewerTab] = useState("predictive");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" }>({ key: "conversionProbability", direction: "desc" });
