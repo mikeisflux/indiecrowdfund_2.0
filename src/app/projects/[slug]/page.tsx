@@ -331,6 +331,7 @@ export default function ProjectPage() {
 
   // Refs for tab content sections
   const contentSectionRef = useRef<HTMLDivElement>(null);
+  const tabsSectionRef = useRef<HTMLDivElement>(null);
 
   const project = mockProject;
   const rewards = mockRewards;
@@ -399,11 +400,10 @@ export default function ProjectPage() {
 
   const handleTabClick = (tab: TabValue) => {
     setActiveTab(tab);
-    // Scroll to content section with offset for sticky header
-    if (contentSectionRef.current) {
-      const yOffset = -60; // Account for sticky tabs
-      const element = contentSectionRef.current;
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+    // Scroll to tabs section so it sticks at the top and content shows below
+    if (tabsSectionRef.current) {
+      const element = tabsSectionRef.current;
+      const y = element.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({ top: y, behavior: "smooth" });
     }
   };
@@ -636,7 +636,7 @@ export default function ProjectPage() {
       </section>
 
       {/* Tabs Navigation */}
-      <section className="border-b sticky top-0 z-40 bg-background">
+      <section ref={tabsSectionRef} className="border-b sticky top-0 z-40 bg-background">
         <div className="container">
           <div className="flex h-14 items-center gap-0">
             {[
