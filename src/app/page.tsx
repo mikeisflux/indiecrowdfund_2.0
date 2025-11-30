@@ -23,7 +23,8 @@ import {
   Menu,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
-import { getPlatformStats, formatCurrency, formatNumber } from "@/lib/stats/actions";
+import { getPlatformStats } from "@/lib/stats/actions";
+import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 
 /*
  * #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE#
