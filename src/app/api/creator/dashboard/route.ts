@@ -271,18 +271,18 @@ export async function GET(req: NextRequest) {
 
     // Calculate cumulative
     const fundingData: { date: string; amount: number; cumulative: number }[] = [];
-    for (const [date, data] of fundingByDate.entries()) {
+    Array.from(fundingByDate.entries()).forEach(([date, data]) => {
       cumulative += data.amount;
       fundingData.push({
         date,
         amount: Math.round(data.amount * 100) / 100,
         cumulative: Math.round(cumulative * 100) / 100,
       });
-    }
+    });
 
     // Process reward stats
     const processedRewardStats = rewardStats.map((reward) => {
-      const totalPledged = reward.pledges.reduce((sum, p) => sum + p.amount, 0);
+      const totalPledged = reward.pledges.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0);
       const remaining = reward.quantityAvailable !== null
         ? reward.quantityAvailable - reward.quantityClaimed
         : null;
