@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -774,8 +775,19 @@ export default function ProjectPage() {
                 return (
                   <Card
                     key={reward.id}
-                    className={`transition-all hover:border-primary ${isSoldOut ? "opacity-60" : ""}`}
+                    className={`transition-all hover:border-primary overflow-hidden ${isSoldOut ? "opacity-60" : ""}`}
                   >
+                    {/* Reward Image */}
+                    {reward.imageUrl && (
+                      <div className="aspect-[3/2] bg-muted relative">
+                        <Image
+                          src={reward.imageUrl}
+                          alt={reward.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
                     <CardContent className="p-4">
                       <div className="mb-2">
                         <p className="text-lg font-semibold">
@@ -927,9 +939,18 @@ export default function ProjectPage() {
                         <Card className={`overflow-hidden ${isSoldOut ? "opacity-60" : ""}`}>
                           {/* Reward Image */}
                           <div className="aspect-[4/3] bg-muted relative">
-                            <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
-                              <Package className="h-16 w-16 text-muted-foreground/50" />
-                            </div>
+                            {reward.imageUrl ? (
+                              <Image
+                                src={reward.imageUrl}
+                                alt={reward.title}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+                                <Package className="h-16 w-16 text-muted-foreground/50" />
+                              </div>
+                            )}
                           </div>
 
                           <CardContent className="p-6">

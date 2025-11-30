@@ -1192,9 +1192,18 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
               <Card>
                 <CardContent className="p-0">
-                  {/* Image placeholder */}
-                  <div className="aspect-[3/2] bg-muted flex items-center justify-center border-b">
-                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                  {/* Image */}
+                  <div className="aspect-[3/2] bg-muted flex items-center justify-center border-b relative overflow-hidden">
+                    {currentReward.imageUrl ? (
+                      <Image
+                        src={currentReward.imageUrl}
+                        alt={currentReward.title || "Reward image"}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    )}
                   </div>
 
                   {/* Preview content */}
@@ -1461,9 +1470,19 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
                       {/* Image */}
                       <div className="col-span-3">
-                        <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
-                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                        </div>
+                        {tier.imageUrl ? (
+                          <Image
+                            src={tier.imageUrl}
+                            alt={tier.title}
+                            width={64}
+                            height={64}
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
+                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1645,9 +1664,19 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
                       {/* Image */}
                       <div className="col-span-3">
-                        <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
-                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                        </div>
+                        {addon.imageUrl ? (
+                          <Image
+                            src={addon.imageUrl}
+                            alt={addon.title}
+                            width={64}
+                            height={64}
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
+                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
                       </div>
                     </div>
 
