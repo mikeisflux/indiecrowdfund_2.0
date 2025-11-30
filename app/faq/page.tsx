@@ -13,13 +13,13 @@ import {
 } from 'lucide-react';
 
 const categories = [
-  { id: 'backers', label: 'For Backers', icon: Users },
-  { id: 'payments', label: 'Payments & Fees', icon: CreditCard },
-  { id: 'retailer', label: 'Retailer Program (LCS)', icon: Store },
-  { id: 'rewards', label: 'Rewards & Fulfillment', icon: Gift },
-  { id: 'analytics', label: 'Analytics & Tools', icon: BarChart3 },
-  { id: 'security', label: 'Security & Trust', icon: Shield },
-  { id: 'admin', label: 'Platform Administration', icon: Settings },
+  { id: 'backers', label: 'For Backers', icon: Users, description: 'Information for project backers' },
+  { id: 'payments', label: 'Payments & Fees', icon: CreditCard, description: 'Payment processing and platform fees' },
+  { id: 'retailer', label: 'Retailer Program (LCS)', icon: Store, description: 'Local comic shop retailer program' },
+  { id: 'rewards', label: 'Rewards & Fulfillment', icon: Gift, description: 'Reward tiers and delivery information' },
+  { id: 'analytics', label: 'Analytics & Tools', icon: BarChart3, description: 'Tracking and analytics features' },
+  { id: 'security', label: 'Security & Trust', icon: Shield, description: 'Security measures and trust policies' },
+  { id: 'admin', label: 'Platform Administration', icon: Settings, description: 'Platform management and support' },
 ];
 
 const faqData: Record<string, { question: string; answer: string }[]> = {
@@ -124,7 +124,7 @@ export default function FAQPage() {
                     {activeCategoryInfo.label}
                   </h2>
                   <p className="text-sm text-zinc-500">
-                    Payment processing and platform fees
+                    {activeCategoryInfo.description}
                   </p>
                 </div>
               </div>
