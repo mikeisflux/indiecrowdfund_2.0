@@ -1,0 +1,5 @@
+title,description,amount,shippingType,shippingCost,quantityAvailable,visibility,estimatedDeliveryMonth,estimatedDeliveryYear,itemTitles
+Basic Backer,Get a digital copy of our project and show your support,10,NO_SHIPPING,0,,PUBLIC,March,2026,Digital Download
+Super Supporter,Physical print plus digital copy - the perfect combo,50,WORLDWIDE,5,100,PUBLIC,April,2026,"Digital Download,Physical Print"
+Collector Edition,Everything plus a signed poster - for the true fans,100,WORLDWIDE,10,50,PUBLIC,May,2026,"Digital Download,Physical Print,Signed Poster"
+Ultimate Package,The complete collection with exclusive art book,200,WORLDWIDE,15,25,PUBLIC,June,2026,"Digital Download,Physical Print,Signed Poster,Art Book"

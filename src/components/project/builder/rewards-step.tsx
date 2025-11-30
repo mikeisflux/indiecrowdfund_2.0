@@ -48,6 +48,8 @@ import {
   Ban,
   Lock,
   Users,
+  Upload,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -112,7 +114,11 @@ const MONTHS = [
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 6 }, (_, i) => currentYear + i);
 
-export function RewardsStep() {
+interface RewardsStepProps {
+  onFormOpenChange?: (isOpen: boolean) => void;
+}
+
+export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const {
     items,
     rewards,
@@ -150,6 +156,12 @@ export function RewardsStep() {
   // Import reward dialog state
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
+
+  // CSV Import state
+  const [isImportScreenOpen, setIsImportScreenOpen] = useState(false);
+  const [importType, setImportType] = useState<"items" | "rewards" | "addons" | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const tiers = rewards.filter((r) => r.type === "TIER");
   const addons = rewards.filter((r) => r.type === "ADDON");
@@ -216,6 +228,7 @@ export function RewardsStep() {
     setDeliveryMonth("");
     setDeliveryYear("");
     setIsRewardFormOpen(true);
+    onFormOpenChange?.(true);
   };
 
   const openEditRewardForm = (index: number) => {
@@ -235,6 +248,7 @@ export function RewardsStep() {
       setDeliveryYear("");
     }
     setIsRewardFormOpen(true);
+    onFormOpenChange?.(true);
   };
 
   const handleSaveReward = () => {
@@ -282,7 +296,10 @@ export function RewardsStep() {
       toast.success("Reward created");
     }
 
+    // Navigate back to the correct tab based on reward type
+    setActiveTab(rewardToSave.type === "ADDON" ? "addons" : "tiers");
     setIsRewardFormOpen(false);
+    onFormOpenChange?.(false);
     setCurrentReward(defaultReward);
     setSelectedItemIds([]);
   };
@@ -291,6 +308,7 @@ export function RewardsStep() {
     // Navigate back to the correct tab based on reward type
     setActiveTab(currentReward.type === "ADDON" ? "addons" : "tiers");
     setIsRewardFormOpen(false);
+    onFormOpenChange?.(false);
     setCurrentReward(defaultReward);
     setSelectedItemIds([]);
   };
@@ -381,6 +399,341 @@ export function RewardsStep() {
     setIsImportDialogOpen(false);
     toast.success("Reward copied as add-on successfully");
   };
+
+  // CSV Import handlers
+  const openImportScreen = () => {
+    setIsImportScreenOpen(true);
+    onFormOpenChange?.(true);
+  };
+
+  const closeImportScreen = () => {
+    setIsImportScreenOpen(false);
+    setImportType(null);
+    setImportFile(null);
+    onFormOpenChange?.(false);
+  };
+
+  const downloadCSV = (type: "items" | "rewards" | "addons") => {
+    // Use static template files from the public directory
+    const filename = `${type}_template.csv`;
+    const link = document.createElement("a");
+    link.href = `/templates/${filename}`;
+    link.download = filename;
+    link.click();
+  };
+
+  const parseCSV = (text: string): Record<string, string>[] => {
+    const lines = text.trim().split("\n");
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(",").map(h => h.trim());
+    const rows: Record<string, string>[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values: string[] = [];
+      let current = "";
+      let inQuotes = false;
+
+      for (const char of lines[i]) {
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === "," && !inQuotes) {
+          values.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim());
+
+      const row: Record<string, string> = {};
+      headers.forEach((header, idx) => {
+        row[header] = values[idx] || "";
+      });
+      rows.push(row);
+    }
+
+    return rows;
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImportFile(file);
+    }
+  };
+
+  const handleImportCSV = async () => {
+    if (!importFile || !importType) return;
+
+    setIsImporting(true);
+
+    try {
+      const text = await importFile.text();
+      const rows = parseCSV(text);
+
+      if (rows.length === 0) {
+        toast.error("CSV file is empty or invalid");
+        return;
+      }
+
+      let importedCount = 0;
+
+      if (importType === "items") {
+        for (const row of rows) {
+          if (row.title?.trim()) {
+            addItem({
+              title: row.title.trim(),
+              description: row.description?.trim() || "",
+              imageUrl: "",
+            });
+            importedCount++;
+          }
+        }
+        toast.success(`Imported ${importedCount} items`);
+        setActiveTab("items");
+      } else {
+        // For rewards and addons
+        const rewardType = importType === "rewards" ? "TIER" : "ADDON";
+
+        for (const row of rows) {
+          if (row.title?.trim() && row.amount) {
+            // Parse item titles and find matching items
+            const itemTitles = row.itemTitles?.split(",").map(t => t.trim()).filter(Boolean) || [];
+            const matchedItems = items.filter(item =>
+              itemTitles.some(title => item.title.toLowerCase() === title.toLowerCase())
+            );
+
+            // Parse estimated delivery
+            let estimatedDelivery: Date | undefined;
+            if (row.estimatedDeliveryMonth && row.estimatedDeliveryYear) {
+              const monthIndex = MONTHS.findIndex(
+                m => m.toLowerCase() === row.estimatedDeliveryMonth.toLowerCase()
+              );
+              if (monthIndex >= 0) {
+                estimatedDelivery = new Date(parseInt(row.estimatedDeliveryYear), monthIndex, 1);
+              }
+            }
+
+            addReward({
+              type: rewardType,
+              title: row.title.trim(),
+              description: row.description?.trim() || "",
+              amount: parseFloat(row.amount) || 1,
+              shippingType: (row.shippingType as ShippingType) || "NO_SHIPPING",
+              shippingCost: parseFloat(row.shippingCost) || 0,
+              shippingCountries: ["US"],
+              quantityAvailable: row.quantityAvailable ? parseInt(row.quantityAvailable) : undefined,
+              visibility: row.visibility === "SECRET" ? "SECRET" : "PUBLIC",
+              estimatedDelivery,
+              items: matchedItems,
+            });
+            importedCount++;
+          }
+        }
+        toast.success(`Imported ${importedCount} ${importType}`);
+        setActiveTab(importType === "rewards" ? "tiers" : "addons");
+      }
+
+      closeImportScreen();
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error("Failed to import CSV. Please check the file format.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // If import screen is open, show import interface
+  if (isImportScreenOpen) {
+    return (
+      <div className="space-y-6">
+        {/* Header with Back */}
+        <div className="flex items-center justify-between border-b pb-4">
+          <Button variant="outline" onClick={closeImportScreen}>
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-semibold mb-2">Import from CSV</h2>
+          <p className="text-muted-foreground">
+            Import multiple items, rewards, or add-ons at once using a CSV file.
+            Download the template to see the expected format.
+          </p>
+        </div>
+
+        {!importType ? (
+          // Show import type selection
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Import Items Card */}
+            <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setImportType("items")}>
+              <CardContent className="p-6 space-y-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Box className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Import Items</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Import items that can be included in rewards and add-ons
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadCSV("items");
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Template
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Import Rewards Card */}
+            <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setImportType("rewards")}>
+              <CardContent className="p-6 space-y-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Gift className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Import Rewards</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Import reward tiers for backers to choose from
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadCSV("rewards");
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Template
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Import Add-ons Card */}
+            <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setImportType("addons")}>
+              <CardContent className="p-6 space-y-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Plus className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Import Add-ons</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Import optional add-ons backers can add to their pledge
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadCSV("addons");
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Template
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          // Show file upload interface
+          <Card>
+            <CardContent className="p-6 space-y-6">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="sm" onClick={() => setImportType(null)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div>
+                  <h3 className="font-semibold text-lg">
+                    Import {importType === "items" ? "Items" : importType === "rewards" ? "Rewards" : "Add-ons"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Upload a CSV file with your {importType}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-muted/50 border-2 border-dashed rounded-lg p-8 text-center">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="csv-upload"
+                />
+                <label htmlFor="csv-upload" className="cursor-pointer">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <FileSpreadsheet className="h-6 w-6 text-primary" />
+                    </div>
+                    {importFile ? (
+                      <div>
+                        <p className="font-medium">{importFile.name}</p>
+                        <p className="text-sm text-muted-foreground">Click to change file</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="font-medium">Click to upload CSV</p>
+                        <p className="text-sm text-muted-foreground">or drag and drop</p>
+                      </div>
+                    )}
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Button variant="outline" onClick={() => downloadCSV(importType)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Template
+                </Button>
+                <Button onClick={handleImportCSV} disabled={!importFile || isImporting}>
+                  {isImporting ? (
+                    <>
+                      <span className="animate-spin mr-2">...</span>
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import {importType === "items" ? "Items" : importType === "rewards" ? "Rewards" : "Add-ons"}
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {importType !== "items" && (
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="text-sm text-amber-800 dark:text-amber-200">
+                      <p className="font-medium">Important: Import items first</p>
+                      <p className="mt-1">
+                        {importType === "rewards" ? "Rewards" : "Add-ons"} reference items by title. Make sure you&apos;ve
+                        imported or created your items before importing {importType}. Any unmatched item titles will be skipped.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
 
   // If reward form is open, show full-page form instead
   if (isRewardFormOpen) {
@@ -878,8 +1231,12 @@ export function RewardsStep() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold mb-2">Create your rewards</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold">Create your rewards</h2>
+        <Button variant="outline" onClick={openImportScreen}>
+          <Upload className="h-4 w-4 mr-2" />
+          Import
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>

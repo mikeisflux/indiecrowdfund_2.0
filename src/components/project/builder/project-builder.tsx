@@ -31,6 +31,7 @@ export function ProjectBuilder() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubFormOpen, setIsSubFormOpen] = useState(false);
 
   const progress = ((currentStep + 1) / BUILDER_STEPS.length) * 100;
 
@@ -169,7 +170,7 @@ export function ProjectBuilder() {
       case 0:
         return <BasicsStep />;
       case 1:
-        return <RewardsStep />;
+        return <RewardsStep onFormOpenChange={setIsSubFormOpen} />;
       case 2:
         return <StoryStep />;
       case 3:
@@ -258,38 +259,40 @@ export function ProjectBuilder() {
 
           <div className="rounded-lg border bg-card p-6">{renderStep()}</div>
 
-          {/* Navigation Buttons */}
-          <div className="mt-6 flex justify-between">
-            <Button
-              variant="outline"
-              onClick={prevStep}
-              disabled={currentStep === 0}
-            >
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              Previous
-            </Button>
-
-            {currentStep < BUILDER_STEPS.length - 1 ? (
-              <Button onClick={nextStep}>
-                Next
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
+          {/* Navigation Buttons - hidden when a sub-form is open */}
+          {!isSubFormOpen && (
+            <div className="mt-6 flex justify-between">
               <Button
-                onClick={handleSubmitForReview}
-                disabled={isSaving || isSubmitting}
+                variant="outline"
+                onClick={prevStep}
+                disabled={currentStep === 0}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  "Submit for Review"
-                )}
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Previous
               </Button>
-            )}
-          </div>
+
+              {currentStep < BUILDER_STEPS.length - 1 ? (
+                <Button onClick={nextStep}>
+                  Next
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSubmitForReview}
+                  disabled={isSaving || isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit for Review"
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
