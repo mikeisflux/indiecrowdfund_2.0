@@ -21,6 +21,7 @@ import {
   HeadphonesIcon,
   Zap,
 } from "lucide-react";
+import { getRetailerStats, formatCurrency, formatNumber } from "@/lib/stats/actions";
 
 const features = [
   {
@@ -107,14 +108,33 @@ const testimonials = [
   },
 ];
 
-const stats = [
-  { value: "500+", label: "Certified Retailers" },
-  { value: "$2.4M", label: "Retailer Orders" },
-  { value: "1,200+", label: "Products Available" },
-  { value: "98%", label: "Satisfaction Rate" },
-];
+export default async function RetailersPage() {
+  const retailerStats = await getRetailerStats();
 
-export default function RetailersPage() {
+  const stats = [
+    {
+      value: retailerStats.certifiedRetailers > 0
+        ? formatNumber(retailerStats.certifiedRetailers)
+        : "0",
+      label: "Certified Retailers"
+    },
+    {
+      value: retailerStats.retailerOrdersTotal > 0
+        ? formatCurrency(retailerStats.retailerOrdersTotal)
+        : "$0",
+      label: "Retailer Orders"
+    },
+    {
+      value: retailerStats.productsAvailable > 0
+        ? formatNumber(retailerStats.productsAvailable)
+        : "0",
+      label: "Products Available"
+    },
+    {
+      value: `${retailerStats.satisfactionRate}%`,
+      label: "Satisfaction Rate"
+    },
+  ];
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       {/* Hero Section */}

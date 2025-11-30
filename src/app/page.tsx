@@ -23,6 +23,7 @@ import {
   Menu,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
+import { getPlatformStats, formatCurrency, formatNumber } from "@/lib/stats/actions";
 
 /*
  * #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE#
@@ -74,7 +75,9 @@ const categories = [
   { name: "Technology", count: 0 },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const stats = await getPlatformStats();
+
   return (
     <div className="min-h-screen">
       {/* Navigation */}
@@ -188,19 +191,27 @@ export default function HomePage() {
         <div className="container">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             <div className="text-center">
-              <p className="text-3xl font-bold text-primary">$2.5B+</p>
+              <p className="text-3xl font-bold text-primary">
+                {stats.totalPledged > 0 ? `${formatCurrency(stats.totalPledged)}+` : "$0"}
+              </p>
               <p className="text-sm text-muted-foreground">Pledged to projects</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-primary">245K+</p>
+              <p className="text-3xl font-bold text-primary">
+                {stats.projectsFunded > 0 ? formatNumber(stats.projectsFunded) : "0"}
+              </p>
               <p className="text-sm text-muted-foreground">Projects funded</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-primary">21M+</p>
+              <p className="text-3xl font-bold text-primary">
+                {stats.totalBackers > 0 ? formatNumber(stats.totalBackers) : "0"}
+              </p>
               <p className="text-sm text-muted-foreground">Backers worldwide</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-primary">89%</p>
+              <p className="text-3xl font-bold text-primary">
+                {stats.successRate > 0 ? `${stats.successRate}%` : "0%"}
+              </p>
               <p className="text-sm text-muted-foreground">Success rate</p>
             </div>
           </div>
