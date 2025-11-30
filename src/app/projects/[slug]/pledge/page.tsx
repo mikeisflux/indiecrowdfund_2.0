@@ -33,8 +33,11 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-// Mock data - would be fetched based on project slug and reward ID
-const mockProject = {
+// TODO: Fetch project and reward data from API based on project slug and reward ID
+// Demo data commented out - page should fetch from /api/projects/[id] and /api/rewards
+// Uncomment for testing:
+/*
+const mockProjectDemo = {
   id: "1",
   title: "Revolutionary Solar-Powered Backpack",
   slug: "solar-powered-backpack",
@@ -42,70 +45,34 @@ const mockProject = {
   paymentProcessor: "STRIPE" as const,
   hasAdultContent: false,
   estimatedDelivery: "Mar 2025",
-  creator: {
-    name: "Green Tech Labs",
-    location: "San Francisco, CA",
-  },
+  creator: { name: "Green Tech Labs", location: "San Francisco, CA" },
+};
+*/
+
+// Default empty project structure - will be populated from API
+const mockProject = {
+  id: "",
+  title: "Loading...",
+  slug: "",
+  imageUrl: "/placeholder-project.jpg",
+  paymentProcessor: "STRIPE" as const,
+  hasAdultContent: false,
+  estimatedDelivery: "",
+  creator: { name: "", location: "" },
 };
 
+// Default empty reward - will be populated from API
 const mockSelectedReward = {
-  id: "r2",
-  title: "Standard Package",
-  amount: 129,
-  shippingCost: 15,
-  estimatedDelivery: "Mar 2025",
-  items: [
-    { title: "Solar Backpack", quantity: 1 },
-    { title: "USB-C Cable", quantity: 1 },
-  ],
+  id: "",
+  title: "Loading...",
+  amount: 0,
+  shippingCost: 0,
+  estimatedDelivery: "",
+  items: [] as { title: string; quantity: number }[],
 };
 
-const mockAddons = [
-  {
-    id: "a1",
-    title: "Extra Battery Pack",
-    description: "High-capacity 20,000mAh portable battery pack with fast charging support. Perfect for extended trips.",
-    amount: 35,
-    shippingCost: 5,
-    imageUrl: null,
-    estimatedDelivery: "Mar 2025",
-    limitedQuantity: null,
-    includes: ["20,000mAh Battery Pack", "Carrying pouch", "USB-C cable"],
-  },
-  {
-    id: "a2",
-    title: "Rain Cover",
-    description: "Waterproof rain cover designed specifically for the Solar Backpack. Keeps your gear dry in any weather.",
-    amount: 15,
-    shippingCost: 3,
-    imageUrl: null,
-    estimatedDelivery: "Mar 2025",
-    limitedQuantity: 500,
-    includes: ["Waterproof rain cover", "Storage pouch"],
-  },
-  {
-    id: "a3",
-    title: "Cable Set",
-    description: "Complete cable set with USB-C, Lightning, and Micro-USB adapters for all your devices.",
-    amount: 20,
-    shippingCost: 2,
-    imageUrl: null,
-    estimatedDelivery: "Mar 2025",
-    limitedQuantity: null,
-    includes: ["USB-C cable", "Lightning adapter", "Micro-USB adapter", "Cable organizer"],
-  },
-  {
-    id: "a4",
-    title: "Travel Organizer",
-    description: "Compact organizer with multiple compartments for cables, chargers, and small accessories.",
-    amount: 25,
-    shippingCost: 3,
-    imageUrl: null,
-    estimatedDelivery: "Mar 2025",
-    limitedQuantity: 200,
-    includes: ["Travel organizer", "Removable pouches x2"],
-  },
-];
+// Empty addons - will be populated from API
+const mockAddons: { id: string; title: string; description: string; amount: number; shippingCost: number; imageUrl: string | null; estimatedDelivery: string; limitedQuantity: number | null; includes: string[] }[] = [];
 
 const COUNTRIES = [
   { code: "US", name: "United States", currency: "USD" },

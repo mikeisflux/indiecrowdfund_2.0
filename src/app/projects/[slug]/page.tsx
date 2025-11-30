@@ -58,249 +58,73 @@ const LinkIcon = () => (
   </svg>
 );
 
-// Mock project data
-const mockProject = {
+// TODO: Refactor to fetch real project data from /api/projects/[id] by slug
+// This page should use useParams() to get the slug and fetch from API
+// Demo data commented out - uncomment for testing:
+/*
+const mockProjectDemo = {
   id: "1",
   title: "Tributes: HR GIGER | A Collective Art Book",
-  subtitle: "In official collaboration with the HR Giger Estate: A collection of art, interviews, photos, and essays in tribute to HR Giger.",
+  subtitle: "In official collaboration with the HR Giger Estate",
   slug: "hr-giger-tribute",
   category: "Art Books",
   subcategory: "Art",
   location: "Strasbourg, France",
   imageUrl: "/placeholder-1.jpg",
-  videoUrl: "https://example.com/video",
-  isProjectWeLove: true,
-  description: `
-    <h2>Welcome to TRIBUTES: HR GIGER</h2>
-    <p>Together with the HR Giger Estate, we bring you a book that is true to the spirit of Hans Ruedi Giger (1940-2014) and offers additional insight into his life through anecdotes from those who called him a friend and worked with him for many years.</p>
-
-    <h3>The Book</h3>
-    <p>In this publication, we are not seeking to highlight the movies he has worked on (most notably the ALIEN franchise, for which he created the xenomorph). Still, we want to focus on the body of work he made and how it has influenced artists around the world.</p>
-
-    <h3>Original art by Nikolay Georgiev</h3>
-    <p>Whether through the exploration of a new medium or simply through the groundbreaking style that has become his distinctive signature.</p>
-  `,
-  risks: "As with any publishing project, there are risks of printing and shipping delays. We've mitigated this by partnering with experienced printers and building extra time into our timeline.",
   goalAmount: 28991,
   currentAmount: 114258,
   backerCount: 861,
   daysRemaining: 12,
-  endDate: new Date("2025-12-11"),
-  launchedAt: new Date("2024-01-15"),
+};
+*/
+
+// Default empty project structure - will be populated from API
+const mockProject = {
+  id: "",
+  title: "Loading...",
+  subtitle: "",
+  slug: "",
+  category: "",
+  subcategory: "",
+  location: "",
+  imageUrl: "/placeholder-1.jpg",
+  videoUrl: "",
+  isProjectWeLove: false,
+  description: "",
+  risks: "",
+  goalAmount: 0,
+  currentAmount: 0,
+  backerCount: 0,
+  daysRemaining: 0,
+  endDate: new Date(),
+  launchedAt: new Date(),
   creator: {
-    id: "creator1",
-    name: "Spiridon",
-    image: "/creator-avatar.jpg",
-    bio: "All campaigns on this account launch with a finished book. Before launching the content is outlined and provided by the artists that work...",
-    location: "France",
-    projectsCreated: 24,
-    projectsBacked: 44,
+    id: "",
+    name: "",
+    image: "",
+    bio: "",
+    location: "",
+    projectsCreated: 0,
+    projectsBacked: 0,
   },
   usesAI: false,
-  faqs: [
-    { question: "When will the books ship?", answer: "We expect to ship all rewards by August 2025." },
-    { question: "Do you ship internationally?", answer: "Yes! We ship worldwide." },
-  ],
-  updates: [
-    { id: "1", title: "We're funded!", content: "Thank you all...", createdAt: new Date("2024-01-20") },
-    { id: "2", title: "Stretch goal unlocked", content: "Amazing news...", createdAt: new Date("2024-01-22") },
-    { id: "3", title: "New artwork revealed", content: "Check out...", createdAt: new Date("2024-01-25") },
-    { id: "4", title: "Production update", content: "We're on track...", createdAt: new Date("2024-01-28") },
-  ],
-  comments: 28,
+  faqs: [] as { question: string; answer: string }[],
+  updates: [] as { id: string; title: string; content: string; createdAt: Date }[],
+  comments: 0,
 };
 
-const mockRewards = [
-  {
-    id: "r1",
-    type: "TIER",
-    title: "Tributes: HR GIGER",
-    description: "TRIBUTES: HR GIGER features 240 pages featuring art by over 100 artists. The book is in A4 format (297 × 210 mm / 11.69 × 8.27 inches), bound in hardcover, and features debossed and embossed elements with a glossy varnish and spot UV.",
-    amount: 75,
-    estimatedDelivery: new Date("2026-12-01"),
-    shippingType: "WORLDWIDE",
-    shippingLocation: "Anywhere in the world",
-    shippingCost: 0,
-    quantityAvailable: null,
-    quantityClaimed: 341,
-    imageUrl: "/placeholder-reward-1.jpg",
-    items: [{ title: "Tributes: HR GIGER", quantity: 1 }],
-  },
-  {
-    id: "r2",
-    type: "TIER",
-    title: "EARLY BIRD | Tributes: HR GIGER",
-    description: "Get your copy of the book! This reward includes the Swag Pack for free!",
-    amount: 74,
-    estimatedDelivery: new Date("2026-12-01"),
-    shippingType: "WORLDWIDE",
-    shippingLocation: "Anywhere in the world",
-    shippingCost: 0,
-    quantityAvailable: 500,
-    quantityClaimed: 500,
-    imageUrl: "/placeholder-reward-2.jpg",
-    items: [
-      { title: "Tributes: HR GIGER", quantity: 1 },
-      { title: "Swag Pack", quantity: 1 },
-      { title: "Digital Edition", quantity: 1 },
-    ],
-  },
-  {
-    id: "r3",
-    type: "TIER",
-    title: "Tributes: HR GIGER | Limited Edition",
-    description: "Limited slipcase edition with exclusive print and artist signatures. Only 200 available worldwide.",
-    amount: 180,
-    estimatedDelivery: new Date("2026-12-01"),
-    shippingType: "WORLDWIDE",
-    shippingLocation: "Anywhere in the world",
-    shippingCost: 0,
-    quantityAvailable: 200,
-    quantityClaimed: 200,
-    imageUrl: "/placeholder-reward-3.jpg",
-    items: [
-      { title: "Tributes: HR GIGER (Limited Edition)", quantity: 1 },
-      { title: "Exclusive Slipcase", quantity: 1 },
-      { title: "Signed Art Print", quantity: 1 },
-      { title: "Digital Edition", quantity: 1 },
-    ],
-  },
-];
+// TODO: Fetch rewards from API with project data
+// Empty state - will be populated from API
+const mockRewards: { id: string; type: string; title: string; description: string; amount: number; estimatedDelivery: Date; shippingType: string; shippingLocation: string; shippingCost: number; quantityAvailable: number | null; quantityClaimed: number; imageUrl: string; items: { title: string; quantity: number }[] }[] = [];
 
-const mockAddons = [
-  {
-    id: "a1",
-    title: "Swag Pack",
-    description: "Get the set of 8 prints with work from the artists in the book!",
-    amount: 35,
-    imageUrl: "/placeholder-addon-1.jpg",
-  },
-  {
-    id: "a2",
-    title: "Tributes: HR GIGER",
-    description: "TRIBUTES: HR GIGER features 240 pages featuring art by over 100 artists. The book is in A4 format (2...",
-    amount: 87,
-    imageUrl: "/placeholder-addon-2.jpg",
-  },
-  {
-    id: "a3",
-    title: "Original Art (pencil) - Nikolay Georgiev",
-    description: "The conceptual drawing for the artwork 'Iter Obsequium', A3, graphite.",
-    amount: 2320,
-    imageUrl: "/placeholder-addon-3.jpg",
-  },
-  {
-    id: "a4",
-    title: "Original Art (mixed media) - Nikola",
-    description: "The finished artwork 'Iter Obsequium', in A3 format and mixed media, echoes Giger's process. It is the...",
-    amount: 6958,
-    imageUrl: "/placeholder-addon-4.jpg",
-  },
-];
+// TODO: Fetch addons from API with project data
+const mockAddons: { id: string; title: string; description: string; amount: number; imageUrl: string }[] = [];
 
-// Mock similar projects
-const mockSimilarProjects = [
-  {
-    id: "sp1",
-    title: "Anubis. Thin Places - vol.3 of the artbook",
-    creator: "timof comics",
-    imageUrl: "/placeholder-similar-1.jpg",
-    daysLeft: 42,
-    fundedPercent: 210,
-    isProjectWeLove: true,
-  },
-  {
-    id: "sp2",
-    title: "Heavy Metal's Library Unlocks",
-    creator: "Heavy Metal",
-    imageUrl: "/placeholder-similar-2.jpg",
-    daysLeft: 13,
-    fundedPercent: 8479,
-    isProjectWeLove: true,
-  },
-  {
-    id: "sp3",
-    title: "THE FEW AND CURSED #12 - Season Finale!",
-    creator: "Felipe Cagno",
-    imageUrl: "/placeholder-similar-3.jpg",
-    daysLeft: 12,
-    fundedPercent: 769,
-    isProjectWeLove: true,
-  },
-  {
-    id: "sp4",
-    title: "NIGHTVISION: Legendary Erotic Horror Comic",
-    creator: "Halo Eight",
-    imageUrl: "/placeholder-similar-4.jpg",
-    daysLeft: 6,
-    fundedPercent: 537,
-    isProjectWeLove: false,
-  },
-];
+// TODO: Fetch similar/recommended projects from API
+const mockSimilarProjects: { id: string; title: string; creator: string; imageUrl: string; daysLeft: number; fundedPercent: number; isProjectWeLove: boolean }[] = [];
 
-// Mock comments
-const mockComments = [
-  {
-    id: "c1",
-    author: "Spiridon",
-    avatarUrl: "/creator-avatar.jpg",
-    isCreator: true,
-    isSuperbacker: false,
-    isPinned: true,
-    createdAt: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000), // 16 days ago
-    content: "By popular demand, we are adding 100 more copies of the Limited Edition to this campaign. You can adjust your pledge, in case you wanted one of these, in about 4h from now. - Spiridon",
-  },
-  {
-    id: "c2",
-    author: "Peter Schmidt",
-    avatarUrl: "",
-    isCreator: false,
-    isSuperbacker: false,
-    isPinned: false,
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 14 days ago
-    content: "Love this campaign! And would love to upgrade to the LE if there was an option that didnt include the add-on prints. I love the art, its just not something I would hang on my walls, so it feels wrong to pay for the prints, knowing they would go to waste in storage.\n\nIf you made an option to just buy the LE book, I would be right on it <3",
-  },
-  {
-    id: "c3",
-    author: "matt",
-    avatarUrl: "",
-    isCreator: false,
-    isSuperbacker: true,
-    isPinned: false,
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    content: "no .pdf version makes me saaaaad.\n\nno hard feelings I just have a $2000 samsung tablet I like to read and view on.",
-  },
-  {
-    id: "c4",
-    author: "Damien H",
-    avatarUrl: "",
-    isCreator: false,
-    isSuperbacker: true,
-    isPinned: false,
-    createdAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000), // 9 days ago
-    content: "I didn't see the binding type mentioned anywhere, only that it's hardcover. I would hope that such a book will have binding that allows the book to lie open completely flat, such as lay-flat perfect binding.\n\nWhat type of binding is being used for these books?\n\nAnd could you please provide some more detailed pictures to show the cover art of both editions for comparison?",
-  },
-  {
-    id: "c5",
-    author: "Tivon H. Creager",
-    avatarUrl: "",
-    isCreator: false,
-    isSuperbacker: false,
-    isPinned: false,
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
-    content: "Not sure if this is a possibility still, but I would be stoked to see and get an additional extra print from Markus Lenhard as a stretch goal if possible? Either way I am super excited and can't wait till next years shipping!!",
-  },
-  {
-    id: "c6",
-    author: "Paul Hill",
-    avatarUrl: "",
-    isCreator: false,
-    isSuperbacker: true,
-    isPinned: false,
-    createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000), // 12 days ago
-    content: "Hey there! If I back at the €1 tier for now, will this still grant me access to the pledge manager so I can upgrade my pledge for level? Thanking!",
-  },
-];
+// TODO: Fetch comments from API
+const mockComments: { id: string; author: string; avatarUrl: string; isCreator: boolean; isSuperbacker: boolean; isPinned: boolean; createdAt: Date; content: string }[] = [];
 
 // Story navigation items (table of contents)
 const storyNavItems = [

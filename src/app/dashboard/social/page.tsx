@@ -86,33 +86,21 @@ const CONTENT_TEMPLATES = [
   { id: "behindscenes", name: "Behind the Scenes", icon: Eye, description: "Share your creative process" },
 ];
 
-// Mock scheduled posts
+// TODO: Implement social posts API when social media integration is set up
+// Demo data commented out - will show empty state until social posts API is built
+// Uncomment to show demo posts for testing:
+/*
 const mockScheduledPosts = [
   {
     id: "1",
-    content: "We just hit 50% of our funding goal! 🎉 Thank you to all our amazing backers. If you haven't checked out our project yet, now's the time!",
+    content: "We just hit 50% of our funding goal! Thank you to all our amazing backers.",
     platforms: ["twitter", "facebook"],
     scheduledFor: new Date(Date.now() + 1000 * 60 * 60 * 2),
     status: "scheduled",
     imageUrl: "/placeholder-1.jpg",
   },
-  {
-    id: "2",
-    content: "Behind the scenes look at our manufacturing process. Quality is our top priority! 🔧",
-    platforms: ["instagram", "twitter"],
-    scheduledFor: new Date(Date.now() + 1000 * 60 * 60 * 24),
-    status: "scheduled",
-  },
-  {
-    id: "3",
-    content: "Only 5 days left to back our campaign! Don't miss out on early bird rewards.",
-    platforms: ["twitter", "facebook", "linkedin"],
-    scheduledFor: new Date(Date.now() + 1000 * 60 * 60 * 48),
-    status: "draft",
-  },
 ];
 
-// Mock post analytics
 const mockPostAnalytics = [
   {
     id: "1",
@@ -124,17 +112,12 @@ const mockPostAnalytics = [
     clicks: 234,
     shares: 45,
   },
-  {
-    id: "2",
-    content: "Thank you to our first 100 backers!",
-    platform: "facebook",
-    postedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    impressions: 8200,
-    engagements: 523,
-    clicks: 156,
-    shares: 28,
-  },
 ];
+*/
+
+// Empty state - no posts until social media integration is implemented
+const mockScheduledPosts: { id: string; content: string; platforms: string[]; scheduledFor: Date; status: string; imageUrl?: string }[] = [];
+const mockPostAnalytics: { id: string; content: string; platform: string; postedAt: Date; impressions: number; engagements: number; clicks: number; shares: number }[] = [];
 
 export default function SocialHubPage() {
   const searchParams = useSearchParams();

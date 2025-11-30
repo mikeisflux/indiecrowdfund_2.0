@@ -93,21 +93,30 @@ export default function SecurityPage() {
         }
       }
 
-      // Mock security events (would come from a security logs API)
+      // TODO: Implement security logs API endpoint when audit logging is set up
+      // Demo data removed - will show empty state until security events API is built
+      // Uncomment to show demo events for testing:
+      /*
       setSecurityEvents([
         { id: "1", type: "login_success", user: "admin@example.com", ip: "192.168.1.1", timestamp: new Date(Date.now() - 1000 * 60 * 5) },
         { id: "2", type: "login_failed", user: "test@example.com", ip: "10.0.0.50", timestamp: new Date(Date.now() - 1000 * 60 * 15), details: "Invalid password" },
         { id: "3", type: "password_changed", user: "user@example.com", ip: "172.16.0.100", timestamp: new Date(Date.now() - 1000 * 60 * 60) },
-        { id: "4", type: "2fa_enabled", user: "creator@example.com", ip: "192.168.1.50", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-        { id: "5", type: "ip_blocked", user: "unknown", ip: "45.33.32.156", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), details: "Too many failed attempts" },
       ]);
-
-      // Mock stats
       setStats({
         activeUsers: 847,
         blockedIPs: 12,
         failedLogins24h: 23,
         users2FAEnabled: 156,
+      });
+      */
+
+      // Empty state - no events until security logging is implemented
+      setSecurityEvents([]);
+      setStats({
+        activeUsers: 0,
+        blockedIPs: 0,
+        failedLogins24h: 0,
+        users2FAEnabled: 0,
       });
     } catch (error) {
       console.error("Failed to fetch security data:", error);

@@ -93,74 +93,10 @@ export default function RetailerProjectDetailPage() {
       const data = await response.json();
       setProject(data.project);
     } catch {
-      // Mock data for demonstration
-      setProject({
-        id: projectId,
-        title: "Cosmic Warriors Vol. 3: The Final Battle",
-        subtitle:
-          "An epic conclusion to the beloved sci-fi comic series featuring stunning artwork and an unforgettable story.",
-        description: `
-          Join Commander Nova and her crew for the final chapter of the Cosmic Warriors saga.
-          This 200-page graphic novel features:
-
-          - Full-color artwork by award-winning artist James Chen
-          - An epic story concluding the trilogy
-          - Exclusive character profiles and behind-the-scenes content
-          - Cover variants for collectors
-
-          The Cosmic Warriors series has sold over 50,000 copies and this final volume promises to be the most action-packed yet.
-        `,
-        imageUrl: "/api/placeholder/600/400",
-        category: "Comics",
-        goalAmount: 15000,
-        currentAmount: 12750,
-        backerCount: 342,
-        daysLeft: 12,
-        endDate: "2024-02-15",
-        retailerDiscount: 50,
-        retailerMinQuantity: 5,
-        retailerMaxQuantity: 100,
-        rewards: [
-          {
-            id: "r1",
-            title: "Standard Edition",
-            description:
-              "Single copy of Cosmic Warriors Vol. 3 in softcover format. 200 pages of full-color artwork.",
-            amount: 25,
-            retailerPrice: 12.5,
-            estimatedDelivery: "June 2024",
-            quantityAvailable: null,
-            quantityClaimed: 245,
-          },
-          {
-            id: "r2",
-            title: "Collector's Edition",
-            description:
-              "Hardcover edition with exclusive dust jacket, signed bookplate, and premium paper stock.",
-            amount: 45,
-            retailerPrice: 22.5,
-            estimatedDelivery: "June 2024",
-            quantityAvailable: 500,
-            quantityClaimed: 312,
-          },
-          {
-            id: "r3",
-            title: "Ultimate Bundle",
-            description:
-              "Complete set including all three volumes, collector's box, and exclusive merchandise.",
-            amount: 99,
-            retailerPrice: 49.5,
-            estimatedDelivery: "July 2024",
-            quantityAvailable: 200,
-            quantityClaimed: 89,
-          },
-        ],
-        creator: {
-          name: "Stellar Comics",
-          bio: "Independent comic publisher since 2018, specializing in sci-fi and fantasy graphic novels.",
-          projectCount: 5,
-        },
-      });
+      // TODO: Enable demo data for testing when needed
+      // Demo data removed - page uses real data from /api/retailers/projects/[id]
+      console.error("Failed to fetch project");
+      router.push("/retailers/projects");
     } finally {
       setIsLoading(false);
     }

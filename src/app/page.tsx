@@ -28,7 +28,10 @@ import { UserProfileDropdown } from "@/components/user-profile-dropdown";
  * #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE#
  */
 
-// Mock data for featured projects
+// TODO: Fetch featured projects from /api/projects with featured flag when we have real projects
+// Demo data commented out - will show empty state until live projects exist
+// Uncomment to show demo projects for testing:
+/*
 const featuredProjects = [
   {
     id: "1",
@@ -42,41 +45,33 @@ const featuredProjects = [
     backerCount: 847,
     daysRemaining: 12,
   },
-  {
-    id: "2",
-    title: "The Art of Mindful Living",
-    subtitle: "A beautifully illustrated guide to meditation",
-    category: "Publishing",
-    imageUrl: "/placeholder-2.jpg",
-    creator: "Sarah Chen",
-    goalAmount: 15000,
-    currentAmount: 18720,
-    backerCount: 456,
-    daysRemaining: 5,
-  },
-  {
-    id: "3",
-    title: "Indie Game: Lost Horizons",
-    subtitle: "An epic adventure RPG",
-    category: "Games",
-    imageUrl: "/placeholder-3.jpg",
-    creator: "Pixel Dreams Studio",
-    goalAmount: 100000,
-    currentAmount: 67800,
-    backerCount: 1243,
-    daysRemaining: 28,
-  },
 ];
+*/
 
+// Empty state - no featured projects until real projects are created
+const featuredProjects: { id: string; title: string; subtitle: string; category: string; imageUrl: string; creator: string; goalAmount: number; currentAmount: number; backerCount: number; daysRemaining: number }[] = [];
+
+// TODO: Fetch category counts from database when we have real projects
+// Demo counts commented out - will show zero counts until projects exist
+// Uncomment to show demo counts for testing:
+/*
 const categories = [
   { name: "Art", count: 234 },
   { name: "Comics", count: 156 },
-  { name: "Design", count: 312 },
-  { name: "Film", count: 189 },
-  { name: "Games", count: 445 },
-  { name: "Music", count: 278 },
-  { name: "Publishing", count: 321 },
   { name: "Technology", count: 412 },
+];
+*/
+
+// Categories with zero counts - will be populated with real data
+const categories = [
+  { name: "Art", count: 0 },
+  { name: "Comics", count: 0 },
+  { name: "Design", count: 0 },
+  { name: "Film", count: 0 },
+  { name: "Games", count: 0 },
+  { name: "Music", count: 0 },
+  { name: "Publishing", count: 0 },
+  { name: "Technology", count: 0 },
 ];
 
 export default function HomePage() {

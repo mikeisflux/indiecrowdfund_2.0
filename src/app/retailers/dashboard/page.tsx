@@ -89,9 +89,12 @@ export default function RetailerDashboardPage() {
     fetchData();
   }, [router]);
 
-  // Mock data for demonstration
+  // TODO: Enable demo data for testing when needed
+  // Demo data removed - dashboard uses real data from /api/retailers/me
+  // Uncomment the block below to show demo data when retailerData is null:
+  /*
   useEffect(() => {
-    if (!retailerData) {
+    if (!retailerData && !isLoading) {
       setRetailerData({
         businessName: "Demo Comic Shop",
         status: "APPROVED",
@@ -112,28 +115,6 @@ export default function RetailerDashboardPage() {
           createdAt: "2024-01-15",
           fulfillmentStatus: "PROCESSING",
         },
-        {
-          id: "2",
-          projectTitle: "Indie Horror Anthology",
-          projectImage: "/api/placeholder/100/100",
-          quantity: 15,
-          totalAmount: 187.50,
-          originalAmount: 375,
-          status: "SHIPPED",
-          createdAt: "2024-01-10",
-          fulfillmentStatus: "SHIPPED",
-        },
-        {
-          id: "3",
-          projectTitle: "Robot Revolution #1",
-          projectImage: "/api/placeholder/100/100",
-          quantity: 50,
-          totalAmount: 500,
-          originalAmount: 1000,
-          status: "DELIVERED",
-          createdAt: "2024-01-05",
-          fulfillmentStatus: "DELIVERED",
-        },
       ]);
       setFeaturedProjects([
         {
@@ -145,28 +126,10 @@ export default function RetailerDashboardPage() {
           fundingPercent: 78,
           retailerDiscount: 50,
         },
-        {
-          id: "2",
-          title: "Steampunk Adventures Collection",
-          imageUrl: "/api/placeholder/300/200",
-          category: "Comics",
-          daysLeft: 22,
-          fundingPercent: 134,
-          retailerDiscount: 50,
-        },
-        {
-          id: "3",
-          title: "Urban Legends Anthology",
-          imageUrl: "/api/placeholder/300/200",
-          category: "Comics",
-          daysLeft: 8,
-          fundingPercent: 92,
-          retailerDiscount: 50,
-        },
       ]);
-      setIsLoading(false);
     }
-  }, [retailerData]);
+  }, [retailerData, isLoading]);
+  */
 
   const handleLogout = async () => {
     await fetch("/api/retailers/logout", { method: "POST" });

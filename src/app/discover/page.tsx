@@ -45,7 +45,10 @@ import {
 } from "lucide-react";
 import { PROJECT_CATEGORIES } from "@/types";
 
-// Mock data - would be fetched from API
+// TODO: Fetch projects from /api/projects when we have real projects
+// Demo data commented out - will show empty state until live projects exist
+// Uncomment to show demo projects for testing:
+/*
 const mockProjects = [
   {
     id: "1",
@@ -61,77 +64,11 @@ const mockProjects = [
     daysRemaining: 12,
     isStaffPick: true,
   },
-  {
-    id: "2",
-    title: "The Art of Mindful Living",
-    subtitle: "A beautifully illustrated guide to meditation",
-    slug: "art-of-mindful-living",
-    category: "publishing",
-    imageUrl: "/placeholder-2.jpg",
-    creator: { name: "Sarah Chen" },
-    goalAmount: 15000,
-    currentAmount: 18720,
-    backerCount: 456,
-    daysRemaining: 5,
-    isStaffPick: false,
-  },
-  {
-    id: "3",
-    title: "Indie Game: Lost Horizons",
-    subtitle: "An epic adventure RPG with stunning visuals",
-    slug: "lost-horizons-game",
-    category: "games",
-    imageUrl: "/placeholder-3.jpg",
-    creator: { name: "Pixel Dreams Studio" },
-    goalAmount: 100000,
-    currentAmount: 67800,
-    backerCount: 1243,
-    daysRemaining: 28,
-    isStaffPick: true,
-  },
-  {
-    id: "4",
-    title: "Handcrafted Ceramic Collection",
-    subtitle: "Unique pottery for your modern home",
-    slug: "ceramic-collection",
-    category: "crafts",
-    imageUrl: "/placeholder-4.jpg",
-    creator: { name: "Clay Studio NYC" },
-    goalAmount: 8000,
-    currentAmount: 6400,
-    backerCount: 89,
-    daysRemaining: 21,
-    isStaffPick: false,
-  },
-  {
-    id: "5",
-    title: "Documentary: Ocean Guardians",
-    subtitle: "Following marine biologists protecting our seas",
-    slug: "ocean-guardians-doc",
-    category: "film",
-    imageUrl: "/placeholder-5.jpg",
-    creator: { name: "Blue Planet Films" },
-    goalAmount: 75000,
-    currentAmount: 45000,
-    backerCount: 612,
-    daysRemaining: 35,
-    isStaffPick: true,
-  },
-  {
-    id: "6",
-    title: "Smart Home Music System",
-    subtitle: "Hi-fi audio meets smart home convenience",
-    slug: "smart-music-system",
-    category: "technology",
-    imageUrl: "/placeholder-6.jpg",
-    creator: { name: "AudioTech Labs" },
-    goalAmount: 200000,
-    currentAmount: 156000,
-    backerCount: 892,
-    daysRemaining: 18,
-    isStaffPick: false,
-  },
 ];
+*/
+
+// Empty state - no projects until real projects are created
+const mockProjects: { id: string; title: string; subtitle: string; slug: string; category: string; imageUrl: string; creator: { name: string }; goalAmount: number; currentAmount: number; backerCount: number; daysRemaining: number; isStaffPick: boolean }[] = [];
 
 const SORT_OPTIONS = [
   { value: "trending", label: "Trending" },
