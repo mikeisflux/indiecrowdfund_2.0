@@ -1,0 +1,292 @@
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
+import { auth } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.RETAILER_JWT_SECRET || "retailer-secret-key-change-in-production"
+);
+
+// Helper to get retailer from token
+async function getRetailerFromToken() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("retailer_token")?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    return payload as { retailerId: string; email: string; businessName: string };
+  } catch {
+    return null;
+  }
+}
+
+// Helper to check if user is a super admin
+async function isSuperAdmin() {
+  const session = await auth();
+  if (!session?.user?.id) return false;
+
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true }
+  });
+
+  return user?.role === "SUPER_ADMIN";
+}
+
+// GET - Get current retailer data
+export async function GET() {
+  try {
+    const tokenData = await getRetailerFromToken();
+    const isAdmin = await isSuperAdmin();
+
+    // If not a retailer and not a super admin, unauthorized
+    if (!tokenData && !isAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // If super admin viewing retailer dashboard, show admin preview with all retailers' aggregate data
+    if (isAdmin && !tokenData) {
+      // Get aggregate stats for admin view
+      const [totalRetailers, activeRetailers, totalOrders, pendingOrders, activeProjects] = await Promise.all([
+        db.retailer.count(),
+        db.retailer.count({ where: { status: "APPROVED" } }),
+        db.retailerPledge.count(),
+        db.retailerPledge.count({ where: { status: { in: ["PENDING", "INVOICED", "PAID", "PROCESSING"] } } }),
+        db.project.count({ where: { status: "LIVE", allowRetailerPledges: true } }),
+      ]);
+
+      // Get recent orders across all retailers
+      const recentOrders = await db.retailerPledge.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: {
+          project: { select: { id: true, title: true, imageUrl: true } },
+          retailer: { select: { businessName: true } },
+        },
+      });
+
+      // Get featured projects
+      const featuredProjects = await db.project.findMany({
+        where: { status: "LIVE", allowRetailerPledges: true },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        select: {
+          id: true,
+          title: true,
+          imageUrl: true,
+          category: true,
+          goalAmount: true,
+          currentAmount: true,
+          endDate: true,
+          retailerDiscount: true,
+        },
+      });
+
+      const projectsWithDaysLeft = featuredProjects.map((project) => {
+        const endDate = project.endDate ? new Date(project.endDate) : null;
+        const daysLeft = endDate
+          ? Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+          : 0;
+        const fundingPercent = project.goalAmount
+          ? Math.round((project.currentAmount / project.goalAmount) * 100)
+          : 0;
+        return { ...project, daysLeft, fundingPercent };
+      });
+
+      return NextResponse.json({
+        retailer: {
+          id: "admin-preview",
+          businessName: "Admin Preview (All Retailers)",
+          businessType: "ADMIN",
+          status: "APPROVED",
+          totalOrders,
+          pendingOrders,
+          completedOrders: totalOrders - pendingOrders,
+          totalSavings: 0,
+          activeProjects,
+          isAdminPreview: true,
+          totalRetailers,
+          activeRetailers,
+        },
+        recentOrders: recentOrders.map((order: { id: string; project: { title: string; imageUrl: string | null }; retailer: { businessName: string }; quantity: number; totalAmount: number; originalAmount: number; status: string; fulfillmentStatus: string; createdAt: Date }) => ({
+          id: order.id,
+          projectTitle: order.project.title,
+          projectImage: order.project.imageUrl,
+          quantity: order.quantity,
+          totalAmount: order.totalAmount,
+          originalAmount: order.originalAmount,
+          status: order.status,
+          fulfillmentStatus: order.fulfillmentStatus,
+          createdAt: order.createdAt.toISOString(),
+          retailerName: order.retailer.businessName,
+        })),
+        featuredProjects: projectsWithDaysLeft,
+      });
+    }
+
+    // At this point, tokenData is not null (admin preview returned earlier if null)
+    if (!tokenData) {
+      return NextResponse.json(
+        { error: "No retailer token found" },
+        { status: 401 }
+      );
+    }
+
+    const retailer = await db.retailer.findUnique({
+      where: { id: tokenData.retailerId },
+      select: {
+        id: true,
+        businessName: true,
+        businessType: true,
+        contactName: true,
+        email: true,
+        phone: true,
+        address: true,
+        city: true,
+        state: true,
+        zipCode: true,
+        country: true,
+        websiteUrl: true,
+        status: true,
+        verifiedAt: true,
+        lastLoginAt: true,
+        createdAt: true,
+        _count: {
+          select: {
+            pledges: true,
+          },
+        },
+      },
+    });
+
+    if (!retailer) {
+      return NextResponse.json(
+        { error: "Retailer not found" },
+        { status: 404 }
+      );
+    }
+
+    // Get order statistics
+    const [totalOrders, pendingOrders, completedOrders, totalSpent, totalSavings] = await Promise.all([
+      db.retailerPledge.count({
+        where: { retailerId: retailer.id },
+      }),
+      db.retailerPledge.count({
+        where: { retailerId: retailer.id, status: { in: ["PENDING", "INVOICED", "PAID", "PROCESSING"] } },
+      }),
+      db.retailerPledge.count({
+        where: { retailerId: retailer.id, status: "DELIVERED" },
+      }),
+      db.retailerPledge.aggregate({
+        where: { retailerId: retailer.id, status: { not: "CANCELLED" } },
+        _sum: { totalAmount: true },
+      }),
+      db.retailerPledge.aggregate({
+        where: { retailerId: retailer.id, status: { not: "CANCELLED" } },
+        _sum: { originalAmount: true },
+      }),
+    ]);
+
+    const calculatedSavings = (totalSavings._sum.originalAmount || 0) - (totalSpent._sum.totalAmount || 0);
+
+    // Get recent orders
+    const recentOrders = await db.retailerPledge.findMany({
+      where: { retailerId: retailer.id },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            imageUrl: true,
+          },
+        },
+      },
+    });
+
+    // Get count of retailer-eligible live projects
+    const activeProjects = await db.project.count({
+      where: {
+        status: "LIVE",
+        allowRetailerPledges: true,
+      },
+    });
+
+    // Get featured projects
+    const featuredProjects = await db.project.findMany({
+      where: {
+        status: "LIVE",
+        allowRetailerPledges: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+      select: {
+        id: true,
+        title: true,
+        imageUrl: true,
+        category: true,
+        goalAmount: true,
+        currentAmount: true,
+        endDate: true,
+        retailerDiscount: true,
+      },
+    });
+
+    // Calculate days left for featured projects
+    const projectsWithDaysLeft = featuredProjects.map((project: { endDate: Date | null; goalAmount: number; currentAmount: number; id: string; title: string; imageUrl: string | null; retailerDiscount: number | null }) => {
+      const endDate = project.endDate ? new Date(project.endDate) : null;
+      const daysLeft = endDate
+        ? Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+        : 0;
+      const fundingPercent = project.goalAmount
+        ? Math.round((project.currentAmount / project.goalAmount) * 100)
+        : 0;
+
+      return {
+        ...project,
+        daysLeft,
+        fundingPercent,
+      };
+    });
+
+    return NextResponse.json({
+      retailer: {
+        ...retailer,
+        totalOrders,
+        pendingOrders,
+        completedOrders,
+        totalSavings: calculatedSavings,
+        activeProjects,
+      },
+      recentOrders: recentOrders.map((order: { id: string; project: { title: string; imageUrl: string | null }; quantity: number; totalAmount: number; originalAmount: number; status: string; fulfillmentStatus: string; createdAt: Date }) => ({
+        id: order.id,
+        projectTitle: order.project.title,
+        projectImage: order.project.imageUrl,
+        quantity: order.quantity,
+        totalAmount: order.totalAmount,
+        originalAmount: order.originalAmount,
+        status: order.status,
+        fulfillmentStatus: order.fulfillmentStatus,
+        createdAt: order.createdAt.toISOString(),
+      })),
+      featuredProjects: projectsWithDaysLeft,
+    });
+  } catch (error) {
+    console.error("Error fetching retailer data:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch retailer data" },
+      { status: 500 }
+    );
+  }
+}

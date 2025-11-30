@@ -1,0 +1,1574 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerified     DateTime?
+  name              String?
+  image             String?
+  password          String?
+  bio               String?   @db.Text
+  location          String?
+  timezone          String?
+  vanityUrl         String?   @unique
+  websites          String[]
+  showNameOnly      Boolean   @default(false)
+  role              UserRole  @default(USER)
+
+  // ID Verification
+  idVerified        Boolean   @default(false)
+  idVerifiedAt      DateTime?
+  idVerificationId  String?   // Shufti reference ID
+  dateOfBirth       DateTime?
+
+  // Auth
+  accounts          Account[]
+  sessions          Session[]
+
+  // Relations
+  createdProjects   Project[] @relation("ProjectCreator")
+  collaborations    ProjectCollaborator[]
+  pledges           Pledge[]
+  sentMessages      Message[] @relation("MessageSender")
+  receivedMessages  Message[] @relation("MessageRecipient")
+  comments          Comment[]
+  behaviors         UserBehavior[]
+  preferences       UserPreference?
+  emailLogs         EmailLog[]
+  stripeConfig      StripeConfig?
+  ccbillConfig      CCBillConfig?
+  idVerifications   IDVerification[]
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([email])
+  @@index([vanityUrl])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([token])
+}
+
+// ============================================
+// PROJECT MANAGEMENT
+// ============================================
+
+model Project {
+  id                    String        @id @default(cuid())
+  creatorId             String
+
+  // Basics
+  title                 String
+  subtitle              String?
+  slug                  String        @unique
+  category              String
+  subcategory           String?
+  secondaryCategory     String?
+  secondarySubcategory  String?
+  location              String?
+  imageUrl              String?
+  videoUrl              String?
+  goalAmount            Float
+  currency              String        @default("USD")
+
+  // Duration
+  durationType          DurationType
+  durationDays          Int?
+  endDate               DateTime?
+  launchDate            DateTime?
+
+  // Story
+  description           String        @db.Text
+  risks                 String        @db.Text
+  usesAI                Boolean       @default(false)
+  faqs                  Json?
+
+  // Payment
+  contactEmail          String
+  projectType           ProjectType
+  paymentProcessor      PaymentProcessor @default(STRIPE)
+  hasAdultContent       Boolean       @default(false)
+  hasRiskyContent       Boolean       @default(false)
+  promoContentSfw       Boolean       @default(true)  // Agrees promotional materials (video, image, title) are SFW
+  bankAccountId         String?
+
+  // Stripe
+  stripeAccountId       String?
+
+  // CCBill
+  ccbillAccountNumber   String?
+  ccbillSubaccount      String?
+
+  // Promotion
+  prelaunchActive       Boolean       @default(false)
+  prelaunchDescription  String?       @db.Text
+  customReferralTags    String[]
+  googleAnalyticsId     String?
+  googleAnalyticsSecret String?
+  metaPixelId           String?
+  metaConversionsToken  String?
+
+  // Retailer Settings
+  allowRetailerPledges  Boolean       @default(false)
+  retailerDiscount      Float         @default(50)
+  retailerMinQuantity   Int           @default(1)
+  retailerMaxQuantity   Int?
+
+  // Status
+  status                ProjectStatus @default(DRAFT)
+  currentAmount         Float         @default(0)
+  backerCount           Int           @default(0)
+  followerCount         Int           @default(0)
+
+  // Relations
+  creator               User          @relation("ProjectCreator", fields: [creatorId], references: [id])
+  rewards               Reward[]
+  pledges               Pledge[]
+  updates               Update[]
+  collaborators         ProjectCollaborator[]
+  messages              Message[]
+  analytics             AnalyticsEvent[]
+  comments              Comment[]
+  payouts               Payout[]
+  behaviors             UserBehavior[]
+  emailLogs             EmailLog[]
+  projectSimilarities   ProjectSimilarity[] @relation("ProjectSimilarities")
+  similarProjects       ProjectSimilarity[] @relation("SimilarProjects")
+  followers             ProjectFollower[]
+  retailerPledges       RetailerPledge[]
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  launchedAt            DateTime?
+  fundedAt              DateTime?
+
+  @@index([creatorId])
+  @@index([status])
+  @@index([category])
+  @@index([slug])
+}
+
+model ProjectFollower {
+  id          String   @id @default(cuid())
+  projectId   String
+  userId      String?
+  email       String?
+  isPrelaunch Boolean  @default(false)
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@unique([projectId, email])
+  @@index([projectId])
+}
+
+enum DurationType {
+  FIXED_DAYS
+  END_DATE
+}
+
+enum ProjectType {
+  INDIVIDUAL
+  BUSINESS
+  NONPROFIT
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  LIVE
+  FUNDED
+  FAILED
+  CANCELLED
+}
+
+enum PaymentProcessor {
+  STRIPE
+  CCBILL
+}
+
+// ============================================
+// REWARDS & ADD-ONS
+// ============================================
+
+model Reward {
+  id                String       @id @default(cuid())
+  projectId         String
+  type              RewardType   @default(TIER)
+
+  title             String
+  description       String       @db.Text
+  amount            Float
+  imageUrl          String?
+
+  // Delivery
+  estimatedDelivery DateTime?
+  shippingType      ShippingType
+  shippingCountries String[]
+  shippingCost      Float        @default(0)
+
+  // Availability
+  quantityAvailable Int?
+  quantityClaimed   Int          @default(0)
+  visibility        Visibility   @default(PUBLIC)
+  availableFrom     DateTime?
+  availableUntil    DateTime?
+
+  // Status - for ending rewards that have backers
+  isEnded           Boolean      @default(false)
+  endedAt           DateTime?
+
+  // Tracking if copied
+  copiedFromId      String?
+
+  // Relations
+  project           Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pledges           Pledge[]
+  items             RewardItem[]
+  copiedFrom        Reward?      @relation("RewardCopies", fields: [copiedFromId], references: [id])
+  copies            Reward[]     @relation("RewardCopies")
+  selectedAddons    PledgeAddon[]
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([projectId, type])
+}
+
+enum RewardType {
+  TIER
+  ADDON
+}
+
+enum ShippingType {
+  WORLDWIDE
+  SELECTED_COUNTRIES
+  NO_SHIPPING
+}
+
+enum Visibility {
+  PUBLIC
+  SECRET
+}
+
+model RewardItem {
+  id          String  @id @default(cuid())
+  rewardId    String
+  title       String
+  description String? @db.Text
+  imageUrl    String?
+
+  reward      Reward  @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@index([rewardId])
+}
+
+// ============================================
+// PLEDGES & PAYMENTS
+// ============================================
+
+model Pledge {
+  id                    String       @id @default(cuid())
+  userId                String
+  projectId             String
+  rewardId              String
+
+  // Amounts
+  amount                Float
+  rewardAmount          Float
+  addonsAmount          Float        @default(0)
+  shippingAmount        Float        @default(0)
+
+  // Payment
+  status                PledgeStatus
+  paymentProcessor      PaymentProcessor
+
+  // Stripe fields
+  stripePaymentIntentId String?      @unique
+  stripeChargeId        String?
+
+  // CCBill fields
+  ccbillTransactionId   String?      @unique
+  ccbillSubscriptionId  String?      @unique
+
+  // Survey
+  surveyCompleted       Boolean      @default(false)
+  shippingAddress       Json?
+  surveyResponses       Json?
+
+  // Fulfillment
+  fulfillmentStatus     FulfillmentStatus @default(NOT_STARTED)
+
+  // Relations
+  user                  User         @relation(fields: [userId], references: [id])
+  project               Project      @relation(fields: [projectId], references: [id])
+  reward                Reward       @relation(fields: [rewardId], references: [id])
+  addons                PledgeAddon[]
+
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@index([projectId, status])
+  @@index([userId])
+  @@index([rewardId])
+}
+
+model PledgeAddon {
+  id        String @id @default(cuid())
+  pledgeId  String
+  addonId   String
+  quantity  Int    @default(1)
+  amount    Float
+
+  pledge    Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  addon     Reward @relation(fields: [addonId], references: [id])
+
+  @@unique([pledgeId, addonId])
+  @@index([pledgeId])
+}
+
+enum PledgeStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+  CHARGEBACK
+}
+
+enum FulfillmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SHIPPED
+  DELIVERED
+}
+
+// ============================================
+// PAYOUTS
+// ============================================
+
+model Payout {
+  id                String       @id @default(cuid())
+  projectId         String
+  amount            Float
+  grossAmount       Float
+  processorFees     Float
+  platformFees      Float
+  type              PayoutType
+  status            PayoutStatus
+  payoutId          String?      @unique
+  bankAccountLast4  String?
+
+  project           Project      @relation(fields: [projectId], references: [id])
+
+  sentAt            DateTime?
+  createdAt         DateTime     @default(now())
+
+  @@index([projectId])
+}
+
+enum PayoutType {
+  CAMPAIGN
+  LATE_PLEDGE
+  PLEDGE_MANAGER
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ============================================
+// COLLABORATORS
+// ============================================
+
+model ProjectCollaborator {
+  id                        String             @id @default(cuid())
+  projectId                 String
+  userId                    String
+  email                     String?
+  title                     String?
+
+  // Permissions
+  canEditProject            Boolean            @default(false)
+  canManageCommunity        Boolean            @default(false)
+  canCoordinateFulfillment  Boolean            @default(false)
+  canConfigurePledgeManager Boolean            @default(false)
+
+  status                    CollaboratorStatus @default(PENDING)
+
+  project                   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user                      User               @relation(fields: [userId], references: [id])
+
+  invitedAt                 DateTime           @default(now())
+  acceptedAt                DateTime?
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+enum CollaboratorStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+// ============================================
+// UPDATES
+// ============================================
+
+model Update {
+  id          String           @id @default(cuid())
+  projectId   String
+  title       String
+  content     String           @db.Text
+  visibility  UpdateVisibility @default(PUBLIC)
+  status      UpdateStatus     @default(DRAFT)
+
+  likes       Int              @default(0)
+  commentsCount Int            @default(0)
+
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+
+  publishedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([projectId, status])
+}
+
+enum UpdateVisibility {
+  PUBLIC
+  BACKERS_ONLY
+}
+
+enum UpdateStatus {
+  DRAFT
+  PUBLISHED
+}
+
+// ============================================
+// COMMENTS
+// ============================================
+
+model Comment {
+  id          String   @id @default(cuid())
+  projectId   String?
+  updateId    String?
+  userId      String
+  content     String   @db.Text
+
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  update      Update?  @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([updateId])
+  @@index([userId])
+}
+
+// ============================================
+// MESSAGES
+// ============================================
+
+model Message {
+  id              String   @id @default(cuid())
+  projectId       String
+  senderId        String
+  recipientId     String
+  subject         String?
+  content         String   @db.Text
+  read            Boolean  @default(false)
+  isSpam          Boolean  @default(false)
+
+  project         Project  @relation(fields: [projectId], references: [id])
+  sender          User     @relation("MessageSender", fields: [senderId], references: [id])
+  recipient       User     @relation("MessageRecipient", fields: [recipientId], references: [id])
+
+  createdAt       DateTime @default(now())
+  readAt          DateTime?
+
+  @@index([projectId, recipientId])
+  @@index([senderId])
+  @@index([recipientId])
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+model AnalyticsEvent {
+  id          String    @id @default(cuid())
+  projectId   String
+  eventType   EventType
+
+  // Attribution
+  referrer    String?
+  channel     String?
+  customTag   String?
+
+  // Data
+  amount      Float?
+  userId      String?
+  metadata    Json?
+
+  project     Project   @relation(fields: [projectId], references: [id])
+
+  timestamp   DateTime  @default(now())
+
+  @@index([projectId, eventType, timestamp])
+  @@index([projectId, referrer])
+}
+
+enum EventType {
+  PAGE_VIEW
+  PROJECT_FOLLOW
+  VIDEO_PLAY
+  VIDEO_COMPLETE
+  PLEDGE_STARTED
+  PLEDGE_COMPLETED
+  PLEDGE_FAILED
+  REWARD_SELECTED
+  ADDON_SELECTED
+  SHARE
+}
+
+// ============================================
+// PAYMENT PROCESSOR CONFIGURATION
+// ============================================
+
+model StripeConfig {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  stripeAccountId String   @unique
+  isOnboarded     Boolean  @default(false)
+  isActive        Boolean  @default(true)
+
+  user            User     @relation(fields: [userId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CCBillConfig {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  accountNumber     String
+  subaccountNumber  String
+  formName          String
+  apiUsername       String?
+  apiPassword       String? @db.Text
+
+  isLive            Boolean @default(false)
+
+  user              User    @relation(fields: [userId], references: [id])
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ============================================
+// RECOMMENDATION ENGINE & BEHAVIORAL TRACKING
+// ============================================
+
+model UserBehavior {
+  id          String            @id @default(cuid())
+  userId      String?
+  sessionId   String
+  eventType   BehaviorEventType
+
+  // Event data
+  projectId   String?
+  categoryId  String?
+  rewardId    String?
+  searchQuery String?
+
+  // Context
+  path        String
+  referrer    String?
+  userAgent   String?
+  ipAddress   String?
+  country     String?
+
+  // Engagement metrics
+  timeSpent   Int?
+  scrollDepth Float?
+
+  metadata    Json?
+
+  timestamp   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+  project     Project? @relation(fields: [projectId], references: [id])
+
+  @@index([userId, eventType, timestamp])
+  @@index([sessionId, timestamp])
+  @@index([projectId, eventType])
+  @@index([categoryId, timestamp])
+}
+
+enum BehaviorEventType {
+  PAGE_VIEW
+  PAGE_EXIT
+  PROJECT_VIEW
+  PROJECT_CLICK
+  REWARD_CLICK
+  VIDEO_PLAY
+  VIDEO_COMPLETE
+  SEARCH
+  FILTER_APPLY
+  PROJECT_SAVE
+  PROJECT_SHARE
+  COMMENT_POST
+  PLEDGE_START
+  PLEDGE_COMPLETE
+  SCROLL_DEPTH
+  HOVER
+  CREATOR_VIEW
+}
+
+model UserPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+
+  // Category preferences (weighted scores 0-1)
+  categoryScores  Json
+
+  // Preferred pledge ranges
+  minPledge       Float?
+  maxPledge       Float?
+  avgPledge       Float?
+
+  // Creator preferences
+  followedCreators String[]
+  backedCreators   String[]
+
+  // Content preferences
+  prefersVideo     Boolean  @default(true)
+  prefersLongForm  Boolean  @default(true)
+
+  // Geographic preferences
+  prefersLocal     Boolean  @default(false)
+  preferredCountries String[]
+
+  // Engagement level (0-100)
+  engagementScore  Int      @default(50)
+
+  // Email preferences
+  emailPreferences Json?
+
+  // Last calculated
+  lastUpdated      DateTime @updatedAt
+
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model ProjectSimilarity {
+  id               String   @id @default(cuid())
+  projectId        String
+  similarProjectId String
+  similarityScore  Float
+  reason           String
+
+  project          Project  @relation("ProjectSimilarities", fields: [projectId], references: [id])
+  similarProject   Project  @relation("SimilarProjects", fields: [similarProjectId], references: [id])
+
+  createdAt        DateTime @default(now())
+
+  @@unique([projectId, similarProjectId])
+  @@index([projectId, similarityScore])
+}
+
+model EmailLog {
+  id          String    @id @default(cuid())
+  userId      String
+  projectId   String?
+  type        EmailType
+  subject     String?
+
+  sentAt      DateTime  @default(now())
+  openedAt    DateTime?
+  clickedAt   DateTime?
+
+  user        User      @relation(fields: [userId], references: [id])
+  project     Project?  @relation(fields: [projectId], references: [id])
+
+  @@index([userId, type, sentAt])
+  @@index([projectId, type])
+}
+
+enum EmailType {
+  WEEKLY_DISCOVERY
+  CREATOR_LAUNCH
+  CATEGORY_ALERT
+  ENDING_SOON
+  PROJECT_FUNDED
+  FUNDING_MILESTONE
+  UPDATE_NOTIFICATION
+  SURVEY_REMINDER
+  PLEDGE_CONFIRMATION
+  WELCOME
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+// ============================================
+// SURVEYS
+// ============================================
+
+model Survey {
+  id          String         @id @default(cuid())
+  projectId   String         @unique
+  title       String?
+  description String?        @db.Text
+  questions   Json
+  isActive    Boolean        @default(false)
+  lockedAt    DateTime?
+
+  responses   SurveyResponse[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([projectId])
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String
+  pledgeId    String   @unique
+  responses   Json
+
+  survey      Survey   @relation(fields: [surveyId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([surveyId])
+}
+
+// ============================================
+// PROJECT VIEWS & REFERRAL TRACKING
+// ============================================
+
+model ProjectView {
+  id          String   @id @default(cuid())
+  projectId   String
+  date        DateTime @db.Date
+  views       Int      @default(0)
+  uniqueViews Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, date])
+  @@index([projectId, date])
+}
+
+model ReferralTracker {
+  id           String   @id @default(cuid())
+  projectId    String
+  referrer     String
+  referrerType String
+  tag          String?
+  date         DateTime @db.Date
+  visits       Int      @default(0)
+  pledges      Int      @default(0)
+  pledgeAmount Float    @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([projectId, referrer, date])
+  @@index([projectId, date])
+  @@index([projectId, referrerType])
+}
+
+// ============================================
+// PROJECT REVIEW & APPROVAL
+// ============================================
+
+model ProjectReview {
+  id              String              @id @default(cuid())
+  projectId       String
+  reviewerId      String?
+  reviewerEmail   String?
+
+  // Review action
+  action          ReviewAction
+  previousStatus  ProjectStatus
+  newStatus       ProjectStatus
+
+  // Feedback
+  notes           String?             @db.Text
+  internalNotes   String?             @db.Text
+  rejectionReason ReviewRejectionReason?
+
+  // Auto-review flags
+  flagsRaised     String[]
+  aiConfidenceScore Float?
+
+  createdAt       DateTime            @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([reviewerId])
+}
+
+model ProjectTag {
+  id          String   @id @default(cuid())
+  projectId   String
+  tag         String
+  confidence  Float    @default(1.0)
+  source      TagSource @default(MANUAL)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, tag])
+  @@index([projectId])
+  @@index([tag])
+}
+
+enum ReviewAction {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REQUESTED_CHANGES
+  RESUBMITTED
+  FLAGGED
+  UNFLAGGED
+}
+
+enum ReviewRejectionReason {
+  INCOMPLETE_INFORMATION
+  POLICY_VIOLATION
+  PROHIBITED_CONTENT
+  INTELLECTUAL_PROPERTY
+  FRAUD_SUSPECTED
+  UNREALISTIC_GOALS
+  MISSING_REWARDS
+  IDENTITY_VERIFICATION
+  OTHER
+}
+
+enum TagSource {
+  MANUAL
+  AI_GENERATED
+  USER_SUGGESTED
+}
+
+// ============================================
+// RETAILER / LCS SYSTEM
+// ============================================
+
+model Retailer {
+  id                    String          @id @default(cuid())
+  userId                String?         @unique
+
+  // Business Information
+  businessName          String
+  businessType          RetailerType
+  contactName           String
+  email                 String          @unique
+  phone                 String
+
+  // Address
+  address               String
+  city                  String
+  state                 String
+  zipCode               String
+  country               String          @default("US")
+
+  // Tax Information
+  taxId                 String
+  taxIdType             TaxIdType       @default(EIN)
+  resaleCertificate     String?
+
+  // Business Details
+  yearsInBusiness       Int?
+  numberOfLocations     Int             @default(1)
+  annualRevenue         String?
+  websiteUrl            String?
+  socialMedia           Json?
+
+  // Verification
+  status                RetailerStatus  @default(PENDING)
+  verificationNotes     String?         @db.Text
+  verifiedAt            DateTime?
+  verifiedBy            String?
+
+  // Access
+  accessCode            String?         @unique
+  passwordHash          String?
+  lastLoginAt           DateTime?
+
+  // Relations
+  pledges               RetailerPledge[]
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([accessCode])
+}
+
+model RetailerPledge {
+  id                    String              @id @default(cuid())
+  retailerId            String
+  projectId             String
+  rewardId              String
+
+  // Order Details
+  quantity              Int
+  unitPrice             Float
+  discountPercent       Float
+  totalAmount           Float
+  originalAmount        Float
+
+  // Payment
+  status                RetailerPledgeStatus @default(PENDING)
+  paymentMethod         String?
+  paymentReference      String?
+  invoiceNumber         String?             @unique
+
+  // Shipping
+  shippingAddress       Json?
+  shippingMethod        String?
+  shippingCost          Float               @default(0)
+  trackingNumber        String?
+
+  // Fulfillment
+  fulfillmentStatus     FulfillmentStatus   @default(NOT_STARTED)
+  fulfillmentNotes      String?             @db.Text
+
+  // PO Information
+  purchaseOrderNumber   String?
+
+  // Relations
+  retailer              Retailer            @relation(fields: [retailerId], references: [id])
+  project               Project             @relation(fields: [projectId], references: [id])
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  paidAt                DateTime?
+  shippedAt             DateTime?
+  deliveredAt           DateTime?
+
+  @@index([retailerId])
+  @@index([projectId])
+  @@index([status])
+}
+
+enum RetailerType {
+  COMIC_SHOP
+  BOOKSTORE
+  GAME_STORE
+  HOBBY_SHOP
+  ONLINE_RETAILER
+  DISTRIBUTOR
+  OTHER
+}
+
+enum TaxIdType {
+  EIN
+  SSN
+  VAT
+  OTHER
+}
+
+enum RetailerStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum RetailerPledgeStatus {
+  PENDING
+  INVOICED
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+// ============================================
+// PLATFORM SETTINGS
+// ============================================
+
+model PlatformSettings {
+  id                    String   @id @default("default")
+
+  // General Settings
+  siteName              String   @default("IndieCrowdfund")
+  siteDescription       String?  @db.Text
+  supportEmail          String   @default("support@indiecrowdfund.com")
+  timezone              String   @default("America/New_York")
+  currency              String   @default("USD")
+  platformFee           Float    @default(5)
+  maintenanceMode       Boolean  @default(false)
+  logoUrl               String?
+  faviconUrl            String?
+
+  // API Keys (encrypted in production)
+  googlePlacesApiKey    String?
+
+  // Payment Settings
+  stripeEnabled         Boolean  @default(false)
+  stripePublishableKey  String?
+  stripeSecretKey       String?
+  stripeWebhookSecret   String?
+  ccbillEnabled         Boolean  @default(false)
+  ccbillClientAccountNo String?
+  ccbillSubaccount      String?
+  ccbillFormName        String?
+  ccbillSalt            String?
+
+  // Email Settings
+  emailProvider         String   @default("smtp")
+  smtpHost              String?
+  smtpPort              Int      @default(587)
+  smtpUser              String?
+  smtpPassword          String?
+  smtpFromEmail         String?
+  smtpFromName          String?
+  sendgridApiKey        String?
+  mailgunApiKey         String?
+  mailgunDomain         String?
+
+  // Social Settings
+  twitterHandle         String?
+  facebookUrl           String?
+  instagramHandle       String?
+  youtubeUrl            String?
+  discordUrl            String?
+
+  // Social OAuth Settings
+  facebookAppId         String?
+  facebookAppSecret     String?
+  facebookPageAccessToken String?
+  youtubeClientId       String?
+  youtubeClientSecret   String?
+  youtubeApiKey         String?
+  twitterApiKey         String?
+  twitterApiSecret      String?
+  twitterBearerToken    String?
+  twitterAccessToken    String?
+  twitterAccessSecret   String?
+
+  // Image Generation API Keys
+  dalleApiKey           String?
+  stabilityApiKey       String?
+
+  // AI Settings
+  aiProvider            String   @default("openai")
+  openaiApiKey          String?
+  anthropicApiKey       String?
+  aiAutoModeration      Boolean  @default(false)
+  aiAutoTagging         Boolean  @default(false)
+  aiContentGeneration   Boolean  @default(false)
+
+  // AI Marketing Settings
+  aiAutoTagConfidence   Int      @default(75)
+  aiMaxTags             Int      @default(5)
+  aiEmailPersonalization Boolean @default(false)
+  aiBehaviorTracking    Boolean  @default(false)
+  aiPredictiveAnalytics Boolean  @default(false)
+  aiSmartSegmentation   Boolean  @default(false)
+  aiAutoOptimization    Boolean  @default(false)
+  aiSendTimeOptimization Boolean @default(false)
+  aiContentOptimization Boolean  @default(false)
+  aiAbTesting           Boolean  @default(false)
+  aiEmailFrequencyCap   Int      @default(3)
+  aiDailyEmailLimit     Int      @default(1000)
+  aiQuietHoursStart     String   @default("22:00")
+  aiQuietHoursEnd       String   @default("08:00")
+  aiCronSchedules       String?  @db.Text // JSON string for cron job schedules
+
+  // Behavior Tracking Settings
+  aiTrackPageViews      Boolean  @default(true)
+  aiTrackScrollDepth    Boolean  @default(false)
+  aiTrackTimeOnPage     Boolean  @default(true)
+  aiTrackClicks         Boolean  @default(true)
+  aiTrackHovers         Boolean  @default(false)
+  aiTrackFormInteractions Boolean @default(false)
+  aiTrackVideoEngagement Boolean @default(false)
+  aiTrackRewardComparisons Boolean @default(false)
+  aiTrackAbandonedCarts Boolean  @default(true)
+  aiSessionRecording    Boolean  @default(false)
+  aiHeatmaps            Boolean  @default(false)
+  aiFunnelAnalysis      Boolean  @default(true)
+  aiRetentionDays       Int      @default(90)
+
+  // ID Verification Settings (Shufti Pro)
+  idVerificationEnabled Boolean  @default(false)
+  shuftiClientId        String?
+  shuftiSecretKey       String?
+  shuftiCallbackUrl     String?
+  shuftiRedirectUrl     String?
+  idVerificationMinAge  Int      @default(18)
+  idVerificationMode    String   @default("production") // "sandbox" or "production"
+
+  // Security Settings
+  twoFactorRequired     Boolean  @default(false)
+  sessionTimeout        Int      @default(7)
+  maxLoginAttempts      Int      @default(5)
+  passwordMinLength     Int      @default(8)
+  requireSpecialChars   Boolean  @default(true)
+  ipRateLimitEnabled    Boolean  @default(true)
+  ipRateLimitRequests   Int      @default(100)
+  ipRateLimitWindow     Int      @default(60)
+
+  // Theme Settings
+  primaryColor          String   @default("#0066FF")
+  secondaryColor        String   @default("#6366F1")
+  accentColor           String   @default("#F59E0B")
+  backgroundColor       String   @default("#FFFFFF")
+  textColor             String   @default("#1F2937")
+  fontFamily            String   @default("Inter")
+  borderRadius          String   @default("8")
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// ============================================
+// MODERATION & REPORTS
+// ============================================
+
+model Report {
+  id            String       @id @default(cuid())
+  reporterId    String?
+  reporterEmail String?
+
+  // What is being reported
+  targetType    ReportTarget
+  targetId      String
+  projectId     String?
+  userId        String?
+
+  // Report details
+  reason        ReportReason
+  description   String       @db.Text
+  evidence      String[]
+
+  // Status
+  status        ReportStatus @default(PENDING)
+  priority      ReportPriority @default(MEDIUM)
+
+  // Resolution
+  resolvedBy    String?
+  resolvedAt    DateTime?
+  resolution    String?      @db.Text
+  actionTaken   ReportAction?
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([status, priority])
+  @@index([targetType, targetId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+enum ReportTarget {
+  PROJECT
+  USER
+  COMMENT
+  MESSAGE
+  UPDATE
+  REWARD
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  FRAUD
+  COPYRIGHT
+  INAPPROPRIATE_CONTENT
+  MISLEADING
+  IMPERSONATION
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+  ESCALATED
+}
+
+enum ReportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ReportAction {
+  WARNING_ISSUED
+  CONTENT_REMOVED
+  USER_SUSPENDED
+  USER_BANNED
+  PROJECT_SUSPENDED
+  PROJECT_REMOVED
+  NO_ACTION
+}
+
+// ============================================
+// MEDIA LIBRARY
+// ============================================
+
+model MediaFile {
+  id            String     @id @default(cuid())
+  uploaderId    String?
+
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  url           String
+  thumbnailUrl  String?
+
+  // Metadata
+  width         Int?
+  height        Int?
+  duration      Int?
+
+  // Organization
+  folder        String     @default("uploads")
+  tags          String[]
+  altText       String?
+
+  // Usage tracking
+  usageCount    Int        @default(0)
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([uploaderId])
+  @@index([folder])
+  @@index([mimeType])
+}
+
+// ============================================
+// PAGE BUILDER
+// ============================================
+
+model CustomPage {
+  id            String     @id @default(cuid())
+  slug          String     @unique
+  title         String
+  description   String?
+
+  // Page content (JSON structure)
+  content       Json
+
+  // SEO
+  metaTitle     String?
+  metaDescription String?
+  ogImage       String?
+
+  // Status
+  isPublished   Boolean    @default(false)
+  publishedAt   DateTime?
+
+  createdBy     String?
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([slug])
+  @@index([isPublished])
+}
+
+// ============================================
+// EMAIL TEMPLATES & CAMPAIGNS
+// ============================================
+
+model EmailTemplate {
+  id            String     @id @default(cuid())
+  name          String     @unique
+  subject       String
+  htmlContent   String     @db.Text
+  textContent   String?    @db.Text
+
+  // Variables that can be used
+  variables     String[]
+
+  isActive      Boolean    @default(true)
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model EmailCampaign {
+  id            String           @id @default(cuid())
+  name          String
+  subject       String
+  htmlContent   String           @db.Text
+
+  // Targeting
+  targetAudience String          @default("all")
+  filters       Json?
+
+  // Status
+  status        CampaignStatus   @default(DRAFT)
+  scheduledFor  DateTime?
+  sentAt        DateTime?
+
+  // Stats
+  recipientCount Int             @default(0)
+  sentCount     Int              @default(0)
+  openCount     Int              @default(0)
+  clickCount    Int              @default(0)
+  bounceCount   Int              @default(0)
+  unsubscribeCount Int           @default(0)
+
+  createdBy     String?
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([status])
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+// ============================================
+// MAILBOX MANAGEMENT
+// ============================================
+
+model Mailbox {
+  id            String        @id @default(cuid())
+  name          String
+  email         String        @unique
+  description   String?
+  color         String?       @default("#3B82F6")
+
+  // IMAP/SMTP settings for external mailboxes (optional)
+  imapHost      String?
+  imapPort      Int?
+  smtpHost      String?
+  smtpPort      Int?
+  username      String?
+  password      String?       // Encrypted
+  useSSL        Boolean       @default(true)
+
+  isDefault     Boolean       @default(false)
+  isActive      Boolean       @default(true)
+
+  emails        AdminEmail[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([isActive])
+}
+
+model AdminEmail {
+  id            String           @id @default(cuid())
+  mailboxId     String
+
+  // Email details
+  fromEmail     String
+  fromName      String?
+  toEmail       String
+  toName        String?
+  ccEmails      String[]
+  bccEmails     String[]
+  replyTo       String?
+  subject       String
+  bodyHtml      String           @db.Text
+  bodyText      String?          @db.Text
+
+  // Folder/status
+  folder        EmailFolder      @default(INBOX)
+  status        AdminEmailStatus @default(PENDING)
+
+  // Tracking
+  isRead        Boolean          @default(false)
+  isStarred     Boolean          @default(false)
+  isArchived    Boolean          @default(false)
+
+  // Dates
+  sentAt        DateTime?
+  receivedAt    DateTime?
+  openedAt      DateTime?
+
+  // Thread support
+  threadId      String?
+  inReplyTo     String?
+
+  // Attachments stored as JSON array
+  attachments   Json?
+
+  mailbox       Mailbox          @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([mailboxId, folder])
+  @@index([mailboxId, status])
+  @@index([mailboxId, isRead])
+  @@index([threadId])
+}
+
+enum EmailFolder {
+  INBOX
+  SENT
+  DRAFTS
+  TRASH
+  SPAM
+  ARCHIVE
+}
+
+enum AdminEmailStatus {
+  PENDING
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+// ============================================
+// ID VERIFICATION
+// ============================================
+
+model IDVerification {
+  id                String                 @id @default(cuid())
+  userId            String
+
+  // Shufti Reference
+  shuftiReference   String                 @unique
+  verificationUrl   String?
+
+  // Verification Status
+  status            IDVerificationStatus   @default(PENDING)
+
+  // Results
+  isDocumentValid   Boolean?
+  isFaceMatch       Boolean?
+  isAgeVerified     Boolean?
+  detectedAge       Int?
+  documentType      String?
+  documentCountry   String?
+
+  // Decline info
+  declineReason     String?
+  declineCodes      String[]
+
+  // Raw response (for debugging)
+  rawResponse       Json?
+
+  // Timestamps
+  requestedAt       DateTime              @default(now())
+  completedAt       DateTime?
+  expiresAt         DateTime?
+
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([shuftiReference])
+  @@index([status])
+}
+
+enum IDVerificationStatus {
+  PENDING
+  PROCESSING
+  VERIFIED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}

@@ -1,22 +1,55 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { AuthProvider } from "@/components/providers/auth-provider";
+import { TrackingProvider } from "@/components/tracking-provider";
+import { auth } from "@/lib/auth";
+import "./globals.css";
 
-const inter = Inter({ subsets: ['latin'] });
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
 
 export const metadata: Metadata = {
-  title: 'IndieCrowdfund - Bring Your Ideas to Life',
-  description: 'IndieCrowdfund is home to creative projects in art, design, film, games, music, and more. Back a project or start your own today.',
+  title: "IndieCrowdfund - Fund Creative Projects",
+  description: "A modern crowdfunding platform for creative projects. Back innovative ideas or launch your own campaign.",
+  keywords: ["crowdfunding", "creative projects", "funding", "backing", "campaigns"],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
+  const session = await auth();
+
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+      >
+        <AuthProvider session={session}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <TrackingProvider>
+              {children}
+            </TrackingProvider>
+            <Toaster />
+          </ThemeProvider>
+        </AuthProvider>
+      </body>
     </html>
   );
 }
