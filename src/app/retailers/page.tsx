@@ -21,7 +21,8 @@ import {
   HeadphonesIcon,
   Zap,
 } from "lucide-react";
-import { getRetailerStats, formatCurrency, formatNumber } from "@/lib/stats/actions";
+import { getRetailerStats } from "@/lib/stats/actions";
+import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 
 const features = [
   {
