@@ -3,6 +3,9 @@ import { auth } from "@/lib/auth";
 import { requiresIdVerification } from "@/lib/shufti";
 import { db } from "@/lib/db";
 
+// Force dynamic - this route uses request.url
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/verify-id/check?projectId=xxx - Check if project requires ID verification
  */

@@ -17,6 +17,21 @@ export interface RetailerStats {
   satisfactionRate: number;
 }
 
+// Default stats returned during build time or when db is unavailable
+const DEFAULT_PLATFORM_STATS: PlatformStats = {
+  totalPledged: 0,
+  projectsFunded: 0,
+  totalBackers: 0,
+  successRate: 0,
+};
+
+const DEFAULT_RETAILER_STATS: RetailerStats = {
+  certifiedRetailers: 0,
+  retailerOrdersTotal: 0,
+  productsAvailable: 0,
+  satisfactionRate: 98,
+};
+
 // Note: formatCurrency and formatNumber are in ./utils.ts (not 'use server')
 
 /**
@@ -25,6 +40,11 @@ export interface RetailerStats {
  */
 async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
   try {
+    // Check if db is available (it returns empty object during build)
+    if (!db.pledge || typeof db.pledge.aggregate !== 'function') {
+      return DEFAULT_PLATFORM_STATS;
+    }
+
     // Get total pledged amount from completed pledges
     const pledgeStats = await db.pledge.aggregate({
       where: {
@@ -70,13 +90,7 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
     };
   } catch (error) {
     console.error("Error fetching platform stats:", error);
-    // Return zeros if there's an error
-    return {
-      totalPledged: 0,
-      projectsFunded: 0,
-      totalBackers: 0,
-      successRate: 0,
-    };
+    return DEFAULT_PLATFORM_STATS;
   }
 }
 
@@ -95,6 +109,11 @@ export const getPlatformStats = unstable_cache(
  */
 async function fetchRetailerStatsUncached(): Promise<RetailerStats> {
   try {
+    // Check if db is available (it returns empty object during build)
+    if (!db.retailer || typeof db.retailer.count !== 'function') {
+      return DEFAULT_RETAILER_STATS;
+    }
+
     // Get count of approved/certified retailers
     const certifiedRetailers = await db.retailer.count({
       where: {
@@ -155,13 +174,7 @@ async function fetchRetailerStatsUncached(): Promise<RetailerStats> {
     };
   } catch (error) {
     console.error("Error fetching retailer stats:", error);
-    // Return zeros if there's an error
-    return {
-      certifiedRetailers: 0,
-      retailerOrdersTotal: 0,
-      productsAvailable: 0,
-      satisfactionRate: 98,
-    };
+    return DEFAULT_RETAILER_STATS;
   }
 }
 
