@@ -112,12 +112,33 @@ export async function GET() {
 // PATCH - Update platform settings
 export async function PATCH(req: NextRequest) {
   try {
-    const authResult = await requireAdmin();
+    // Check auth
+    let authResult;
+    try {
+      authResult = await requireAdmin();
+    } catch (authError) {
+      console.error("Auth error in PATCH settings:", authError);
+      return NextResponse.json(
+        { error: "Authentication failed", details: String(authError) },
+        { status: 500 }
+      );
+    }
+
     if ('error' in authResult) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      return NextResponse.json(
+        { error: "Invalid JSON body", details: String(parseError) },
+        { status: 400 }
+      );
+    }
+
     const { section, data } = body;
 
     if (!section || !data) {
@@ -255,7 +276,7 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     console.error("Error updating settings:", error);
     return NextResponse.json(
-      { error: "Failed to update settings" },
+      { error: "Failed to update settings", details: String(error) },
       { status: 500 }
     );
   }
