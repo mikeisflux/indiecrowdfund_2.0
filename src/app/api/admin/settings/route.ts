@@ -28,24 +28,52 @@ async function requireAdmin() {
 // GET - Get platform settings
 export async function GET() {
   try {
-    const authResult = await requireAdmin();
+    // Check auth first
+    let authResult;
+    try {
+      authResult = await requireAdmin();
+    } catch (authError) {
+      console.error("Auth error in settings:", authError);
+      return NextResponse.json(
+        { error: "Authentication failed", details: String(authError) },
+        { status: 500 }
+      );
+    }
+
     if ('error' in authResult) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
     // Get or create default settings
-    let settings = await db.platformSettings.findUnique({
-      where: { id: "default" }
-    });
-
-    if (!settings) {
-      // Create default settings if they don't exist
-      settings = await db.platformSettings.create({
-        data: { id: "default" }
+    let settings;
+    try {
+      settings = await db.platformSettings.findUnique({
+        where: { id: "default" }
       });
+    } catch (dbError) {
+      console.error("Database error fetching settings:", dbError);
+      return NextResponse.json(
+        { error: "Database error fetching settings", details: String(dbError) },
+        { status: 500 }
+      );
     }
 
-    // Mask sensitive fields for security
+    if (!settings) {
+      try {
+        // Create default settings if they don't exist
+        settings = await db.platformSettings.create({
+          data: { id: "default" }
+        });
+      } catch (createError) {
+        console.error("Error creating default settings:", createError);
+        return NextResponse.json(
+          { error: "Failed to create default settings", details: String(createError) },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Mask sensitive fields for security (but indicate they exist)
     const maskedSettings = {
       ...settings,
       stripeSecretKey: settings.stripeSecretKey ? "••••••••" : null,
@@ -73,9 +101,9 @@ export async function GET() {
 
     return NextResponse.json({ settings: maskedSettings });
   } catch (error) {
-    console.error("Error fetching settings:", error);
+    console.error("Unexpected error fetching settings:", error);
     return NextResponse.json(
-      { error: "Failed to fetch settings" },
+      { error: "Failed to fetch settings", details: String(error) },
       { status: 500 }
     );
   }
