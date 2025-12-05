@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
+import { auth } from "@/lib/auth";
 import { initiateCreatorOnboarding } from "@/lib/payments/wise";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await auth();
 
-    if (!session?.userId) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -19,8 +19,8 @@ export async function POST(request: NextRequest) {
     const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/payment/wise/callback`;
 
     const result = await initiateCreatorOnboarding({
-      userId: session.userId,
-      email: session.email || "",
+      userId: session.user.id,
+      email: session.user.email || "",
       profileType,
       returnUrl,
     });

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
+import { auth } from "@/lib/auth";
 import { issueCreatorCard, listCards, freezeCard, unfreezeCard } from "@/lib/payments/wise";
 import { db } from "@/lib/db";
 
 // Issue a new card for creator
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await auth();
 
-    if (!session?.userId) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const card = await issueCreatorCard({
-      userId: session.userId,
+      userId: session.user.id,
       cardType,
       currency,
     });
@@ -54,9 +54,9 @@ export async function POST(request: NextRequest) {
 // Get creator's cards
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await auth();
 
-    if (!session?.userId) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     }
 
     const wiseConfig = await db.wiseConfig.findUnique({
-      where: { userId: session.userId },
+      where: { userId: session.user.id },
     });
 
     if (!wiseConfig?.wiseProfileId) {
@@ -95,9 +95,9 @@ export async function GET(request: NextRequest) {
 // Freeze/Unfreeze card
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await auth();
 
-    if (!session?.userId) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -115,7 +115,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const wiseConfig = await db.wiseConfig.findUnique({
-      where: { userId: session.userId },
+      where: { userId: session.user.id },
     });
 
     if (!wiseConfig?.wiseProfileId) {
@@ -134,7 +134,7 @@ export async function PATCH(request: NextRequest) {
     // Update local record
     if (wiseConfig.wiseCardId === cardId) {
       await db.wiseConfig.update({
-        where: { userId: session.userId },
+        where: { userId: session.user.id },
         data: { cardStatus: card.status },
       });
     }

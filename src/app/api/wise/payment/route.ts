@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
+import { auth } from "@/lib/auth";
 import { createPledgePayment, calculateWiseFees } from "@/lib/payments/wise";
 import { db } from "@/lib/db";
 
 // Create a payment for a pledge
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await auth();
 
-    if (!session?.userId) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       rewardId,
       addonIds,
       amount,
-      userId: session.userId,
+      userId: session.user.id,
       isNsfw,
     });
 
