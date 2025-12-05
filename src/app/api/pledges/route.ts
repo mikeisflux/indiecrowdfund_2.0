@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { createStripePayment } from "@/lib/payments/stripe";
-import { createCCBillPaymentUrl } from "@/lib/payments/ccbill";
+import { createPledgePayment } from "@/lib/payments/wise";
 
 const createPledgeSchema = z.object({
   projectId: z.string(),
@@ -32,14 +31,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createPledgeSchema.parse(body);
 
-    // Get project to determine payment processor
+    // Get project to determine payment method
     const project = await db.project.findUnique({
       where: { id: data.projectId },
       include: {
         creator: {
           include: {
-            stripeConfig: true,
-            ccbillConfig: true,
+            wiseConfig: true,
           },
         },
       },
@@ -70,56 +68,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Reward sold out" }, { status: 400 });
     }
 
-    // Create payment based on processor
-    if (project.paymentProcessor === "STRIPE") {
-      const stripeConfig = project.creator.stripeConfig;
-      if (!stripeConfig?.isOnboarded) {
-        return NextResponse.json(
-          { error: "Creator payment not configured" },
-          { status: 400 }
-        );
-      }
+    // Determine if NSFW (forces ACH-only)
+    const isNsfw = project.hasAdultContent || project.hasRiskyContent;
 
-      const { clientSecret, pledgeId } = await createStripePayment({
-        projectId: data.projectId,
-        rewardId: data.rewardId,
-        addonIds: data.addonIds,
-        amount: data.amount,
-        userId: session.user.id,
-      });
+    // Create payment via Wise
+    const result = await createPledgePayment({
+      projectId: data.projectId,
+      rewardId: data.rewardId,
+      addonIds: data.addonIds,
+      amount: data.amount,
+      userId: session.user.id,
+      isNsfw,
+    });
 
-      return NextResponse.json({
-        paymentMethod: "STRIPE",
-        clientSecret,
-        pledgeId,
-      });
-    } else {
-      // CCBill
-      const ccbillConfig = project.creator.ccbillConfig;
-      if (!ccbillConfig) {
-        return NextResponse.json(
-          { error: "Creator payment not configured" },
-          { status: 400 }
-        );
-      }
-
-      const { paymentUrl, pledgeId } = await createCCBillPaymentUrl({
-        projectId: data.projectId,
-        rewardId: data.rewardId,
-        addonIds: data.addonIds,
-        amount: data.amount,
-        userId: session.user.id,
-        clientAccnum: ccbillConfig.accountNumber,
-        clientSubacc: ccbillConfig.subaccountNumber,
-        formName: ccbillConfig.formName,
-      });
-
-      return NextResponse.json({
-        paymentMethod: "CCBILL",
-        paymentUrl,
-        pledgeId,
-      });
-    }
+    return NextResponse.json({
+      paymentMethod: result.paymentMethod,
+      pledgeId: result.pledgeId,
+      ...result.paymentDetails,
+    });
   } catch (error) {
     console.error("Create pledge error:", error);
     if (error instanceof z.ZodError) {
