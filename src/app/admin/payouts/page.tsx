@@ -53,31 +53,19 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
-// Payout interface - Wise integration
+// Payout interface
 interface Payout {
   id: string;
   projectId: string;
-  creatorId: string | null;
   amount: number;
   grossAmount: number;
-  wiseFees: number;
+  processorFees: number;
   platformFees: number;
   type: "CAMPAIGN" | "LATE_PLEDGE" | "PLEDGE_MANAGER";
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
-  // Wise-specific fields
-  wiseTransferId: string | null;
-  wiseQuoteId: string | null;
-  wiseRecipientId: string | null;
-  sourceCurrency: string;
-  targetCurrency: string;
-  exchangeRate: number | null;
-  payoutMethod: string;
+  payoutId: string | null;
   bankAccountLast4: string | null;
-  bankRoutingLast4: string | null;
-  cardLast4: string | null;
-  estimatedArrival: string | null;
   sentAt: string | null;
-  completedAt: string | null;
   createdAt: string;
   project: {
     id: string;
@@ -90,11 +78,6 @@ interface Payout {
       id: string;
       name: string | null;
       email: string;
-      wiseConfig?: {
-        hasWiseCard: boolean;
-        cardLast4: string | null;
-        preferredPayout: string;
-      };
     };
   };
 }
@@ -231,7 +214,7 @@ export default function PayoutsPage() {
   // Export payouts as CSV
   const exportPayouts = () => {
     const csv = [
-      ["ID", "Project", "Creator", "Type", "Status", "Gross Amount", "Net Amount", "Platform Fees", "Wise Fees", "Created", "Sent"].join(","),
+      ["ID", "Project", "Creator", "Type", "Status", "Gross Amount", "Net Amount", "Platform Fees", "Processor Fees", "Created", "Sent"].join(","),
       ...payouts.map((p) =>
         [
           p.id,
@@ -242,7 +225,7 @@ export default function PayoutsPage() {
           p.grossAmount,
           p.amount,
           p.platformFees,
-          p.wiseFees,
+          p.processorFees,
           p.createdAt,
           p.sentAt || "",
         ].join(",")
@@ -572,65 +555,28 @@ export default function PayoutsPage() {
                   <span className="text-red-500">-{formatCurrency(selectedPayout.platformFees)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Wise Fee</span>
-                  <span className="text-red-500">-{formatCurrency(selectedPayout.wiseFees)}</span>
+                  <span className="text-zinc-500">Processor Fee</span>
+                  <span className="text-red-500">-{formatCurrency(selectedPayout.processorFees)}</span>
                 </div>
-                {selectedPayout.exchangeRate && selectedPayout.sourceCurrency !== selectedPayout.targetCurrency && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500">Exchange Rate</span>
-                    <span>1 {selectedPayout.sourceCurrency} = {selectedPayout.exchangeRate.toFixed(4)} {selectedPayout.targetCurrency}</span>
-                  </div>
-                )}
                 <div className="border-t pt-2 flex justify-between font-bold">
                   <span>Net Payout</span>
                   <span className="text-emerald-600">{formatCurrency(selectedPayout.amount)}</span>
                 </div>
               </div>
 
-              {/* Wise Transfer Details */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-sm text-zinc-700 dark:text-zinc-300">Wise Transfer Details</h4>
-
-                {selectedPayout.wiseTransferId && (
-                  <div>
-                    <p className="text-sm text-zinc-500">Wise Transfer ID</p>
-                    <p className="font-mono text-sm">{selectedPayout.wiseTransferId}</p>
-                  </div>
-                )}
-
+              {selectedPayout.payoutId && (
                 <div>
-                  <p className="text-sm text-zinc-500">Payout Method</p>
-                  <Badge variant="outline" className="mt-1">
-                    {selectedPayout.payoutMethod === "ACH" && "ACH Bank Transfer"}
-                    {selectedPayout.payoutMethod === "WISE_CARD" && "Wise Debit Card"}
-                    {selectedPayout.payoutMethod === "WIRE" && "Wire Transfer"}
-                  </Badge>
+                  <p className="text-sm text-zinc-500">Payout ID</p>
+                  <p className="font-mono text-sm">{selectedPayout.payoutId}</p>
                 </div>
+              )}
 
-                {selectedPayout.bankAccountLast4 && (
-                  <div>
-                    <p className="text-sm text-zinc-500">Bank Account</p>
-                    <p className="font-medium">****{selectedPayout.bankAccountLast4}</p>
-                    {selectedPayout.bankRoutingLast4 && (
-                      <p className="text-xs text-zinc-400">Routing: ****{selectedPayout.bankRoutingLast4}</p>
-                    )}
-                  </div>
-                )}
-
-                {selectedPayout.cardLast4 && (
-                  <div>
-                    <p className="text-sm text-zinc-500">Wise Card</p>
-                    <p className="font-medium">****{selectedPayout.cardLast4}</p>
-                  </div>
-                )}
-
-                {selectedPayout.estimatedArrival && (
-                  <div>
-                    <p className="text-sm text-zinc-500">Estimated Arrival</p>
-                    <p className="font-medium">{format(new Date(selectedPayout.estimatedArrival), "PPp")}</p>
-                  </div>
-                )}
-              </div>
+              {selectedPayout.bankAccountLast4 && (
+                <div>
+                  <p className="text-sm text-zinc-500">Bank Account</p>
+                  <p className="font-medium">****{selectedPayout.bankAccountLast4}</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>

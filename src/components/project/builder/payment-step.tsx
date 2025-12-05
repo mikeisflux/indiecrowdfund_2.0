@@ -17,19 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  CreditCard,
-  Check,
-  ExternalLink,
-  Store,
-  Info,
-  Wallet,
-  Building,
-  Globe,
-  Zap,
-  Shield,
-  Banknote,
-} from "lucide-react";
+import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 export function PaymentStep() {
@@ -37,32 +25,24 @@ export function PaymentStep() {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const goalAmount = basics.goalAmount || 10000;
-  const isNsfw = payment.hasAdultContent || payment.hasRiskyContent;
+  const hasAdultContent = payment.hasAdultContent || payment.hasRiskyContent;
 
-  // Wise fee calculations (much lower than Stripe/CCBill)
+  // Stripe fee calculations
+  // Stripe: 2.9% + $0.30 per transaction
   // Platform fee: 5%
-  // Wise fee: ~0.5% domestic, ~1.2% international
-  const wiseFeePercent = 0.005; // 0.5% average
-  const platformFeePercent = 0.05; // 5%
-
-  const wiseFee = goalAmount * wiseFeePercent;
-  const platformFee = goalAmount * platformFeePercent;
-  const totalFees = wiseFee + platformFee;
+  const avgPledgeSize = 50; // Assume average pledge
+  const numTransactions = goalAmount / avgPledgeSize;
+  const stripeFee = goalAmount * 0.029 + numTransactions * 0.30;
+  const platformFee = goalAmount * 0.05;
+  const totalFees = stripeFee + platformFee;
   const netAmount = goalAmount - totalFees;
 
-  // For comparison - what they would pay with old processors
-  const stripeFee = goalAmount * 0.029 + (goalAmount / 50) * 0.3;
-  const ccbillFee = goalAmount * 0.105;
-
-  const handleConnectWise = async () => {
+  const handleConnectStripe = async () => {
     setIsConnecting(true);
     try {
-      const response = await fetch("/api/wise/onboard", {
+      const response = await fetch("/api/stripe/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          profileType: payment.projectType === "BUSINESS" ? "business" : "personal",
-        }),
       });
 
       const data = await response.json();
@@ -71,7 +51,7 @@ export function PaymentStep() {
         window.location.href = data.onboardingUrl;
       }
     } catch (error) {
-      console.error("Failed to initiate Wise connection:", error);
+      console.error("Failed to initiate Stripe connection:", error);
     } finally {
       setIsConnecting(false);
     }
@@ -161,7 +141,7 @@ export function PaymentStep() {
           </div>
 
           {/* Show SFW promo agreement only when adult/risky content is checked */}
-          {isNsfw && (
+          {hasAdultContent && (
             <div className="mt-4 p-4 rounded-lg border bg-amber-50/50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
               <div className="flex items-start space-x-2">
                 <Checkbox
@@ -184,14 +164,13 @@ export function PaymentStep() {
           )}
         </div>
 
-        {isNsfw && (
+        {hasAdultContent && (
           <Alert>
-            <Banknote className="h-4 w-4" />
-            <AlertTitle>ACH Payments Only</AlertTitle>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Age-Restricted Content</AlertTitle>
             <AlertDescription>
-              Due to your content type, backers will only be able to pay via ACH bank transfer.
-              This is required for compliance with payment regulations for age-restricted content.
-              Card payments are not available for NSFW campaigns.
+              Projects with adult or high-risk content require additional review before launch.
+              Please ensure your promotional materials are safe for work.
             </AlertDescription>
           </Alert>
         )}
@@ -199,75 +178,74 @@ export function PaymentStep() {
 
       <Separator />
 
-      {/* Payment Processor - Wise */}
+      {/* Payment Processor - Stripe */}
       <div className="space-y-4">
         <div>
           <h3 className="font-semibold">Payment Processing</h3>
           <p className="text-sm text-muted-foreground">
-            All payments are processed securely through Wise
+            All payments are processed securely through Stripe
           </p>
         </div>
 
-        {/* Wise Card */}
-        <Card className="border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20">
+        {/* Stripe Card */}
+        <Card className="border-2 border-primary/50">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-                  <Wallet className="h-5 w-5 text-white" />
+                <div className="h-8 w-8 rounded-lg bg-[#635BFF] flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-white" />
                 </div>
-                Wise Payments
-                <Badge variant="secondary" className="ml-2 bg-emerald-100 text-emerald-700">
-                  Lowest Fees
+                Stripe Payments
+                <Badge variant="secondary" className="ml-2">
+                  Recommended
                 </Badge>
               </CardTitle>
             </div>
             <CardDescription>
-              Global payments with industry-leading low fees
+              Industry-leading payment processing with low fees
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-emerald-500 mt-0.5" />
+                <Check className="h-4 w-4 text-green-500 mt-0.5" />
                 <div className="text-sm">
-                  <span className="font-medium">Ultra-low fees</span>
-                  <p className="text-muted-foreground">~0.5% + platform fee</p>
+                  <span className="font-medium">Low fees</span>
+                  <p className="text-muted-foreground">2.9% + $0.30</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <Zap className="h-4 w-4 text-emerald-500 mt-0.5" />
+                <Check className="h-4 w-4 text-green-500 mt-0.5" />
                 <div className="text-sm">
                   <span className="font-medium">Fast payouts</span>
-                  <p className="text-muted-foreground">1-2 business days</p>
+                  <p className="text-muted-foreground">2 business days</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <Globe className="h-4 w-4 text-emerald-500 mt-0.5" />
+                <Check className="h-4 w-4 text-green-500 mt-0.5" />
                 <div className="text-sm">
-                  <span className="font-medium">Multi-currency</span>
-                  <p className="text-muted-foreground">50+ currencies</p>
+                  <span className="font-medium">All major cards</span>
+                  <p className="text-muted-foreground">Visa, MC, Amex</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <CreditCard className="h-4 w-4 text-emerald-500 mt-0.5" />
+                <Check className="h-4 w-4 text-green-500 mt-0.5" />
                 <div className="text-sm">
-                  <span className="font-medium">Wise Card</span>
-                  <p className="text-muted-foreground">Spend earnings instantly</p>
+                  <span className="font-medium">Digital wallets</span>
+                  <p className="text-muted-foreground">Apple Pay, Google Pay</p>
                 </div>
               </div>
             </div>
 
             {/* Fee Calculator */}
-            <div className="rounded-lg bg-white/80 dark:bg-gray-900/50 p-4 border">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                <Building className="h-4 w-4" />
+            <div className="rounded-lg bg-muted/50 p-4 border">
+              <h4 className="font-medium mb-3">
                 Fee Breakdown for {formatCurrency(goalAmount)} Goal
               </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span>Wise processing fee (~0.5%)</span>
-                  <span className="font-medium">{formatCurrency(wiseFee)}</span>
+                  <span>Stripe processing fee (~2.9% + $0.30/txn)</span>
+                  <span className="font-medium">{formatCurrency(stripeFee)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Platform fee (5%)</span>
@@ -280,50 +258,8 @@ export function PaymentStep() {
                 </div>
                 <div className="flex justify-between font-semibold text-lg">
                   <span>You receive</span>
-                  <span className="text-emerald-600">{formatCurrency(netAmount)}</span>
+                  <span className="text-green-600">{formatCurrency(netAmount)}</span>
                 </div>
-              </div>
-
-              {/* Comparison */}
-              <div className="mt-4 p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-                <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200 mb-1">
-                  Savings compared to traditional processors:
-                </p>
-                <div className="flex gap-4 text-xs">
-                  <span className="text-muted-foreground">
-                    vs Stripe: <span className="font-medium text-emerald-600">+{formatCurrency(stripeFee - totalFees)}</span>
-                  </span>
-                  <span className="text-muted-foreground">
-                    vs CCBill: <span className="font-medium text-emerald-600">+{formatCurrency(ccbillFee - totalFees)}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Payment Methods */}
-            <div className="rounded-lg border p-4">
-              <h4 className="font-medium mb-2">Available Payment Methods</h4>
-              <div className="flex flex-wrap gap-2">
-                {!isNsfw && (
-                  <>
-                    <Badge variant="outline" className="gap-1">
-                      <CreditCard className="h-3 w-3" /> Credit/Debit Card
-                    </Badge>
-                    <Badge variant="outline" className="gap-1">
-                      <Wallet className="h-3 w-3" /> Apple Pay
-                    </Badge>
-                    <Badge variant="outline" className="gap-1">
-                      <Wallet className="h-3 w-3" /> Google Pay
-                    </Badge>
-                  </>
-                )}
-                <Badge variant="outline" className={`gap-1 ${isNsfw ? "border-amber-500 bg-amber-50" : ""}`}>
-                  <Building className="h-3 w-3" /> ACH Bank Transfer
-                  {isNsfw && <span className="text-amber-600 ml-1">(Required)</span>}
-                </Badge>
-                <Badge variant="outline" className="gap-1">
-                  <Globe className="h-3 w-3" /> International Wire
-                </Badge>
               </div>
             </div>
           </CardContent>
@@ -332,66 +268,43 @@ export function PaymentStep() {
 
       <Separator />
 
-      {/* Connect Wise Account */}
+      {/* Connect Stripe Account */}
       <div className="space-y-4">
-        <h3 className="font-semibold">Connect Your Wise Account</h3>
+        <h3 className="font-semibold">Connect Your Stripe Account</h3>
 
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
-                  <Wallet className="h-6 w-6 text-white" />
+                <div className="h-12 w-12 rounded-xl bg-[#635BFF] flex items-center justify-center shrink-0">
+                  <CreditCard className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-medium">Wise Business Account</p>
+                  <p className="font-medium">Stripe Connect</p>
                   <p className="text-sm text-muted-foreground">
-                    Connect or create a Wise account to receive payouts. You&apos;ll complete
-                    identity verification through Wise&apos;s secure process.
+                    Connect or create a Stripe account to receive payouts. You&apos;ll complete
+                    identity verification through Stripe&apos;s secure process.
                   </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Shield className="h-4 w-4 text-emerald-500" />
-                    <span className="text-xs text-muted-foreground">
-                      Bank-level security &bull; Regulated financial institution
-                    </span>
-                  </div>
                 </div>
               </div>
               <Button
-                onClick={handleConnectWise}
+                onClick={handleConnectStripe}
                 disabled={isConnecting}
-                className="bg-emerald-500 hover:bg-emerald-600"
               >
-                {isConnecting ? "Connecting..." : "Connect Wise"}
+                {isConnecting ? "Connecting..." : "Connect Stripe"}
                 <ExternalLink className="ml-2 h-4 w-4" />
               </Button>
-            </div>
-
-            {/* Wise Card Option */}
-            <div className="mt-6 p-4 rounded-lg border bg-gradient-to-r from-gray-900 to-gray-800 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-8 w-8" />
-                  <div>
-                    <p className="font-medium">Get a Wise Debit Card</p>
-                    <p className="text-sm text-gray-300">
-                      Spend your earnings anywhere Mastercard is accepted
-                    </p>
-                  </div>
-                </div>
-                <Badge className="bg-white text-gray-900">Free Virtual Card</Badge>
-              </div>
             </div>
           </CardContent>
         </Card>
 
         <p className="text-xs text-muted-foreground">
-          Don&apos;t have a Wise account?{" "}
+          Don&apos;t have a Stripe account?{" "}
           <a
-            href="https://wise.com/business"
+            href="https://stripe.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-emerald-600 underline"
+            className="text-primary underline"
           >
             Sign up for free
           </a>
@@ -413,7 +326,7 @@ export function PaymentStep() {
           </p>
         </div>
 
-        <Card className={payment.allowRetailerPledges ? "border-emerald-500" : ""}>
+        <Card className={payment.allowRetailerPledges ? "border-primary" : ""}>
           <CardContent className="pt-6">
             <div className="flex items-start space-x-3">
               <Checkbox
@@ -437,9 +350,9 @@ export function PaymentStep() {
 
             {payment.allowRetailerPledges && (
               <div className="mt-6 space-y-4 border-t pt-4">
-                <Alert className="bg-emerald-50 border-emerald-200">
-                  <Info className="h-4 w-4 text-emerald-600" />
-                  <AlertDescription className="text-emerald-800">
+                <Alert className="bg-primary/5 border-primary/20">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
                     Your project will be visible to all certified retailers in our LCS Program.
                     Retailers must place orders that meet your minimum quantity requirement.
                   </AlertDescription>
@@ -514,7 +427,7 @@ export function PaymentStep() {
                     <p>
                       If your reward tier is priced at <span className="font-medium">{formatCurrency(25)}</span>,
                       retailers will pay{" "}
-                      <span className="font-medium text-emerald-600">
+                      <span className="font-medium text-green-600">
                         {formatCurrency(25 * (1 - (payment.retailerDiscount || 50) / 100))}
                       </span>{" "}
                       per unit ({payment.retailerDiscount || 50}% discount)

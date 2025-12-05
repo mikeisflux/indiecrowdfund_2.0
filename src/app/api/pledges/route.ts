@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { createPledgePayment } from "@/lib/payments/wise";
+import { createStripePayment } from "@/lib/payments/stripe";
 
 const createPledgeSchema = z.object({
   projectId: z.string(),
@@ -31,13 +31,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createPledgeSchema.parse(body);
 
-    // Get project to determine payment method
+    // Get project to determine payment processor
     const project = await db.project.findUnique({
       where: { id: data.projectId },
       include: {
         creator: {
           include: {
-            wiseConfig: true,
+            stripeConfig: true,
           },
         },
       },
@@ -68,23 +68,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Reward sold out" }, { status: 400 });
     }
 
-    // Determine if NSFW (forces ACH-only)
-    const isNsfw = project.hasAdultContent || project.hasRiskyContent;
+    // Create payment via Stripe
+    const stripeConfig = project.creator.stripeConfig;
+    if (!stripeConfig?.isOnboarded) {
+      return NextResponse.json(
+        { error: "Creator payment not configured" },
+        { status: 400 }
+      );
+    }
 
-    // Create payment via Wise
-    const result = await createPledgePayment({
+    const { clientSecret, pledgeId } = await createStripePayment({
       projectId: data.projectId,
       rewardId: data.rewardId,
       addonIds: data.addonIds,
       amount: data.amount,
       userId: session.user.id,
-      isNsfw,
     });
 
     return NextResponse.json({
-      paymentMethod: result.paymentMethod,
-      pledgeId: result.pledgeId,
-      ...result.paymentDetails,
+      paymentMethod: "STRIPE",
+      clientSecret,
+      pledgeId,
     });
   } catch (error) {
     console.error("Create pledge error:", error);

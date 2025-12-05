@@ -12,7 +12,7 @@ export type ProjectType = "INDIVIDUAL" | "BUSINESS" | "NONPROFIT";
 
 export type DurationType = "FIXED_DAYS" | "END_DATE";
 
-export type PaymentProcessor = "WISE" | "ACH_ONLY";
+export type PaymentProcessor = "STRIPE";
 
 // Reward types
 export type RewardType = "TIER" | "ADDON";
@@ -424,8 +424,7 @@ export interface ProjectPaymentData {
   hasAdultContent: boolean;
   hasRiskyContent: boolean;
   promoContentSfw: boolean; // Agrees that promotional video/image/title are SFW
-  wiseProfileId?: string;
-  wiseRecipientId?: string;
+  stripeAccountId?: string;
   // Retailer settings
   allowRetailerPledges: boolean;
   retailerDiscount: number;
