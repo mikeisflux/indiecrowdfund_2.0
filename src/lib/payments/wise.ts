@@ -671,7 +671,7 @@ interface OnboardCreatorParams {
 
 export async function initiateCreatorOnboarding({
   userId,
-  email,
+  email: _email,
   profileType,
   returnUrl,
 }: OnboardCreatorParams): Promise<{ onboardingUrl: string }> {

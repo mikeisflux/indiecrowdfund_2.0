@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { completeCreatorOnboarding, wiseApiRequest } from "@/lib/payments/wise";
+import { completeCreatorOnboarding } from "@/lib/payments/wise";
 
 // Handle OAuth callback from Wise
 export async function GET(request: NextRequest) {

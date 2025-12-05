@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/select";
 import {
   CreditCard,
-  AlertTriangle,
   Check,
   ExternalLink,
   Store,

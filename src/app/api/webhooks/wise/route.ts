@@ -162,7 +162,7 @@ async function handleTransferStateChange(event: WiseWebhookEvent) {
 }
 
 async function handleBalanceCredit(event: WiseWebhookEvent) {
-  const { amount, currency, reference } = event.data;
+  const { amount, reference } = event.data;
 
   if (!reference) {
     console.log("Balance credit without reference, skipping");
