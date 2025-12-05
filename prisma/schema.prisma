@@ -148,7 +148,7 @@ model Project {
   // Payment
   contactEmail          String
   projectType           ProjectType
-  paymentProcessor      PaymentProcessor @default(STRIPE)
+  paymentProcessor      PaymentProcessor @default(WISE)
   hasAdultContent       Boolean       @default(false)
   hasRiskyContent       Boolean       @default(false)
   promoContentSfw       Boolean       @default(true)  // Agrees promotional materials (video, image, title) are SFW
