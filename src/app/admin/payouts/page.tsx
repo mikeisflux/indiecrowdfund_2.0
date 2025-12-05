@@ -231,7 +231,7 @@ export default function PayoutsPage() {
   // Export payouts as CSV
   const exportPayouts = () => {
     const csv = [
-      ["ID", "Project", "Creator", "Type", "Status", "Gross Amount", "Net Amount", "Platform Fees", "Processor Fees", "Created", "Sent"].join(","),
+      ["ID", "Project", "Creator", "Type", "Status", "Gross Amount", "Net Amount", "Platform Fees", "Wise Fees", "Created", "Sent"].join(","),
       ...payouts.map((p) =>
         [
           p.id,
@@ -242,7 +242,7 @@ export default function PayoutsPage() {
           p.grossAmount,
           p.amount,
           p.platformFees,
-          p.processorFees,
+          p.wiseFees,
           p.createdAt,
           p.sentAt || "",
         ].join(",")
