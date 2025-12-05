@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { completeCreatorOnboarding } from "@/lib/payments/wise";
 
+// Force dynamic rendering for OAuth callback
+export const dynamic = "force-dynamic";
+
 // Handle OAuth callback from Wise
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get("code");
     const state = searchParams.get("state"); // userId
     const error = searchParams.get("error");
