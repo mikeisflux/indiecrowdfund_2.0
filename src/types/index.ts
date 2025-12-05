@@ -12,7 +12,7 @@ export type ProjectType = "INDIVIDUAL" | "BUSINESS" | "NONPROFIT";
 
 export type DurationType = "FIXED_DAYS" | "END_DATE";
 
-export type PaymentProcessor = "STRIPE" | "CCBILL";
+export type PaymentProcessor = "WISE" | "ACH_ONLY";
 
 // Reward types
 export type RewardType = "TIER" | "ADDON";
@@ -418,15 +418,14 @@ export interface CollaboratorData {
 }
 
 export interface ProjectPaymentData {
-  contactEmail: string;
+  contactEmail?: string;
   projectType: ProjectType;
   paymentProcessor: PaymentProcessor;
   hasAdultContent: boolean;
   hasRiskyContent: boolean;
   promoContentSfw: boolean; // Agrees that promotional video/image/title are SFW
-  stripeAccountId?: string;
-  ccbillAccountNumber?: string;
-  ccbillSubaccount?: string;
+  wiseProfileId?: string;
+  wiseRecipientId?: string;
   // Retailer settings
   allowRetailerPledges: boolean;
   retailerDiscount: number;
