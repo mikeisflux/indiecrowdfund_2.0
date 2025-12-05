@@ -46,8 +46,7 @@ model User {
   behaviors         UserBehavior[]
   preferences       UserPreference?
   emailLogs         EmailLog[]
-  stripeConfig      StripeConfig?
-  ccbillConfig      CCBillConfig?
+  wiseConfig        WiseConfig?
   idVerifications   IDVerification[]
 
   createdAt         DateTime  @default(now())
@@ -155,12 +154,9 @@ model Project {
   promoContentSfw       Boolean       @default(true)  // Agrees promotional materials (video, image, title) are SFW
   bankAccountId         String?
 
-  // Stripe
-  stripeAccountId       String?
-
-  // CCBill
-  ccbillAccountNumber   String?
-  ccbillSubaccount      String?
+  // Wise - Creator's connected account for payouts
+  wiseProfileId         String?
+  wiseRecipientId       String?
 
   // Promotion
   prelaunchActive       Boolean       @default(false)
@@ -249,8 +245,8 @@ enum ProjectStatus {
 }
 
 enum PaymentProcessor {
-  STRIPE
-  CCBILL
+  WISE
+  ACH_ONLY  // For NSFW campaigns - forces ACH instead of card
 }
 
 // ============================================
@@ -349,13 +345,10 @@ model Pledge {
   status                PledgeStatus
   paymentProcessor      PaymentProcessor
 
-  // Stripe fields
-  stripePaymentIntentId String?      @unique
-  stripeChargeId        String?
-
-  // CCBill fields
-  ccbillTransactionId   String?      @unique
-  ccbillSubscriptionId  String?      @unique
+  // Wise fields
+  wiseQuoteId           String?
+  wiseTransferId        String?      @unique
+  wisePayInReference    String?      @unique  // For ACH pay-ins
 
   // Survey
   surveyCompleted       Boolean      @default(false)
@@ -416,21 +409,49 @@ enum FulfillmentStatus {
 model Payout {
   id                String       @id @default(cuid())
   projectId         String
-  amount            Float
-  grossAmount       Float
-  processorFees     Float
+  creatorId         String?
+
+  // Amount breakdown
+  amount            Float        // Net amount to creator
+  grossAmount       Float        // Total before fees
+  wiseFees          Float        @default(0)
   platformFees      Float
+
+  // Wise-specific
+  wiseTransferId    String?      @unique
+  wiseQuoteId       String?
+  wiseRecipientId   String?
+
+  // Transfer details
+  sourceCurrency    String       @default("USD")
+  targetCurrency    String       @default("USD")
+  exchangeRate      Float?
+
+  // Status
   type              PayoutType
   status            PayoutStatus
-  payoutId          String?      @unique
+
+  // Payout method used
+  payoutMethod      String       @default("ACH")  // ACH, WISE_CARD, WIRE
+
+  // Bank details (masked)
   bankAccountLast4  String?
+  bankRoutingLast4  String?
+
+  // Card payout details
+  cardLast4         String?
 
   project           Project      @relation(fields: [projectId], references: [id])
 
+  // Timing
+  estimatedArrival  DateTime?
   sentAt            DateTime?
+  completedAt       DateTime?
   createdAt         DateTime     @default(now())
 
   @@index([projectId])
+  @@index([wiseTransferId])
+  @@index([status])
 }
 
 enum PayoutType {
@@ -610,38 +631,48 @@ enum EventType {
 // PAYMENT PROCESSOR CONFIGURATION
 // ============================================
 
-model StripeConfig {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  stripeAccountId String   @unique
-  isOnboarded     Boolean  @default(false)
-  isActive        Boolean  @default(true)
+model WiseConfig {
+  id                String   @id @default(cuid())
+  userId            String   @unique
 
-  user            User     @relation(fields: [userId], references: [id])
+  // Wise Profile & Recipient
+  wiseProfileId     String?  @unique
+  wiseRecipientId   String?  @unique
+  profileType       String   @default("personal")  // personal or business
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  // KYC Status
+  isOnboarded       Boolean  @default(false)
+  kycStatus         String   @default("pending")  // pending, in_progress, verified, rejected
+  kycVerifiedAt     DateTime?
 
-  @@index([userId])
-}
+  // Bank Account Details (encrypted reference)
+  bankAccountType   String?  // ach, wire, local
+  bankAccountLast4  String?
+  bankRoutingLast4  String?
+  bankCurrency      String   @default("USD")
 
-model CCBillConfig {
-  id                String  @id @default(cuid())
-  userId            String  @unique
-  accountNumber     String
-  subaccountNumber  String
-  formName          String
-  apiUsername       String?
-  apiPassword       String? @db.Text
+  // Card Settings
+  hasWiseCard       Boolean  @default(false)
+  wiseCardId        String?  @unique
+  cardLast4         String?
+  cardType          String?  // VIRTUAL or PHYSICAL
+  cardStatus        String?  // ACTIVE, FROZEN, CANCELLED
 
-  isLive            Boolean @default(false)
+  // Payout Preferences
+  preferredPayout   String   @default("ACH")  // ACH, WISE_CARD, WIRE
+  autoPayoutEnabled Boolean  @default(false)
+  autoPayoutThreshold Float? @default(100)
 
-  user              User    @relation(fields: [userId], references: [id])
+  // Multi-currency balances (JSON for flexibility)
+  balances          Json?    // { "USD": 1000.50, "EUR": 500.00 }
+
+  user              User     @relation(fields: [userId], references: [id])
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   @@index([userId])
+  @@index([wiseProfileId])
 }
 
 // ============================================
@@ -1095,16 +1126,26 @@ model PlatformSettings {
   // API Keys (encrypted in production)
   googlePlacesApiKey    String?
 
-  // Payment Settings
-  stripeEnabled         Boolean  @default(false)
-  stripePublishableKey  String?
-  stripeSecretKey       String?
-  stripeWebhookSecret   String?
-  ccbillEnabled         Boolean  @default(false)
-  ccbillClientAccountNo String?
-  ccbillSubaccount      String?
-  ccbillFormName        String?
-  ccbillSalt            String?
+  // Wise Platform Settings
+  wiseEnabled           Boolean  @default(true)
+  wiseApiToken          String?  @db.Text  // Encrypted API token
+  wiseProfileId         String?  // Platform's own Wise profile
+  wiseWebhookSecret     String?
+  wiseEnvironment       String   @default("sandbox")  // sandbox or production
+
+  // Wise Payment Options
+  wiseCardPayments      Boolean  @default(true)   // Allow card payments for SFW
+  wiseAchPayments       Boolean  @default(true)   // Allow ACH payments
+  wiseForceAchForNsfw   Boolean  @default(true)   // Force ACH-only for NSFW
+
+  // Wise Card Issuance
+  wiseCardIssuance      Boolean  @default(true)   // Enable creator card issuance
+  wiseCardVirtual       Boolean  @default(true)   // Allow virtual cards
+  wiseCardPhysical      Boolean  @default(true)   // Allow physical cards
+
+  // Wise Fee Configuration
+  wisePlatformFeePercent Float   @default(5)      // Platform fee percentage
+  wiseHoldPeriodDays    Int      @default(14)     // Hold period for refunds
 
   // Email Settings
   emailProvider         String   @default("smtp")

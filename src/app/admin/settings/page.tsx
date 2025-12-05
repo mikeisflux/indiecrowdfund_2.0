@@ -77,15 +77,20 @@ interface PlatformSettings {
   platformFee: number;
   maintenanceMode: boolean;
   googlePlacesApiKey: string | null;
-  stripeEnabled: boolean;
-  stripePublishableKey: string | null;
-  stripeSecretKey: string | null;
-  stripeWebhookSecret: string | null;
-  ccbillEnabled: boolean;
-  ccbillClientAccountNo: string | null;
-  ccbillSubaccount: string | null;
-  ccbillFormName: string | null;
-  ccbillSalt: string | null;
+  // Wise Platform Settings
+  wiseEnabled: boolean;
+  wiseApiToken: string | null;
+  wiseProfileId: string | null;
+  wiseWebhookSecret: string | null;
+  wiseEnvironment: string;
+  wiseCardPayments: boolean;
+  wiseAchPayments: boolean;
+  wiseForceAchForNsfw: boolean;
+  wiseCardIssuance: boolean;
+  wiseCardVirtual: boolean;
+  wiseCardPhysical: boolean;
+  wisePlatformFeePercent: number;
+  wiseHoldPeriodDays: number;
   emailProvider: string;
   smtpHost: string | null;
   smtpPort: number;
@@ -172,16 +177,21 @@ export default function SettingsPage() {
   });
 
   const [paymentSettings, setPaymentSettings] = useState({
-    stripeEnabled: false,
-    stripePublicKey: "",
-    stripeSecretKey: "",
-    stripeWebhookSecret: "",
-    ccbillEnabled: false,
-    ccbillClientAccountNo: "",
-    ccbillSubAccount: "",
-    ccbillFlexId: "",
-    ccbillSalt: "",
-    // Local UI settings (not in DB yet)
+    // Wise Platform Settings
+    wiseEnabled: true,
+    wiseApiToken: "",
+    wiseProfileId: "",
+    wiseWebhookSecret: "",
+    wiseEnvironment: "sandbox",
+    wiseCardPayments: true,
+    wiseAchPayments: true,
+    wiseForceAchForNsfw: true,
+    wiseCardIssuance: true,
+    wiseCardVirtual: true,
+    wiseCardPhysical: true,
+    wisePlatformFeePercent: "5",
+    wiseHoldPeriodDays: "14",
+    // Payout settings
     autoPayouts: true,
     payoutThreshold: "100",
     payoutSchedule: "weekly",
@@ -307,15 +317,19 @@ export default function SettingsPage() {
 
       setPaymentSettings((prev) => ({
         ...prev,
-        stripeEnabled: settings.stripeEnabled || false,
-        stripePublicKey: settings.stripePublishableKey || "",
-        stripeSecretKey: settings.stripeSecretKey || "",
-        stripeWebhookSecret: settings.stripeWebhookSecret || "",
-        ccbillEnabled: settings.ccbillEnabled || false,
-        ccbillClientAccountNo: settings.ccbillClientAccountNo || "",
-        ccbillSubAccount: settings.ccbillSubaccount || "",
-        ccbillFlexId: settings.ccbillFormName || "",
-        ccbillSalt: settings.ccbillSalt || "",
+        wiseEnabled: settings.wiseEnabled ?? true,
+        wiseApiToken: settings.wiseApiToken || "",
+        wiseProfileId: settings.wiseProfileId || "",
+        wiseWebhookSecret: settings.wiseWebhookSecret || "",
+        wiseEnvironment: settings.wiseEnvironment || "sandbox",
+        wiseCardPayments: settings.wiseCardPayments ?? true,
+        wiseAchPayments: settings.wiseAchPayments ?? true,
+        wiseForceAchForNsfw: settings.wiseForceAchForNsfw ?? true,
+        wiseCardIssuance: settings.wiseCardIssuance ?? true,
+        wiseCardVirtual: settings.wiseCardVirtual ?? true,
+        wiseCardPhysical: settings.wiseCardPhysical ?? true,
+        wisePlatformFeePercent: String(settings.wisePlatformFeePercent ?? 5),
+        wiseHoldPeriodDays: String(settings.wiseHoldPeriodDays ?? 14),
       }));
 
       setEmailSettings((prev) => ({
@@ -500,15 +514,19 @@ export default function SettingsPage() {
         case "payments":
           section = "payments";
           data = {
-            stripeEnabled: paymentSettings.stripeEnabled,
-            stripePublishableKey: paymentSettings.stripePublicKey,
-            stripeSecretKey: paymentSettings.stripeSecretKey,
-            stripeWebhookSecret: paymentSettings.stripeWebhookSecret,
-            ccbillEnabled: paymentSettings.ccbillEnabled,
-            ccbillClientAccountNo: paymentSettings.ccbillClientAccountNo,
-            ccbillSubaccount: paymentSettings.ccbillSubAccount,
-            ccbillFormName: paymentSettings.ccbillFlexId,
-            ccbillSalt: paymentSettings.ccbillSalt,
+            wiseEnabled: paymentSettings.wiseEnabled,
+            wiseApiToken: paymentSettings.wiseApiToken,
+            wiseProfileId: paymentSettings.wiseProfileId,
+            wiseWebhookSecret: paymentSettings.wiseWebhookSecret,
+            wiseEnvironment: paymentSettings.wiseEnvironment,
+            wiseCardPayments: paymentSettings.wiseCardPayments,
+            wiseAchPayments: paymentSettings.wiseAchPayments,
+            wiseForceAchForNsfw: paymentSettings.wiseForceAchForNsfw,
+            wiseCardIssuance: paymentSettings.wiseCardIssuance,
+            wiseCardVirtual: paymentSettings.wiseCardVirtual,
+            wiseCardPhysical: paymentSettings.wiseCardPhysical,
+            wisePlatformFeePercent: parseFloat(paymentSettings.wisePlatformFeePercent),
+            wiseHoldPeriodDays: parseInt(paymentSettings.wiseHoldPeriodDays),
           };
           break;
         case "email":
@@ -866,53 +884,139 @@ export default function SettingsPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Stripe Configuration</CardTitle>
-                  <CardDescription>Primary payment processor settings</CardDescription>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-emerald-500 flex items-center justify-center">
+                      <CreditCard className="h-4 w-4 text-white" />
+                    </div>
+                    Wise Platform Configuration
+                  </CardTitle>
+                  <CardDescription>Configure Wise as your payment processor for low-fee global payments</CardDescription>
                 </div>
-                <Badge variant={paymentSettings.stripeEnabled ? "default" : "secondary"}>
-                  {paymentSettings.stripeEnabled ? "Enabled" : "Disabled"}
+                <Badge variant={paymentSettings.wiseEnabled ? "default" : "secondary"} className={paymentSettings.wiseEnabled ? "bg-emerald-500" : ""}>
+                  {paymentSettings.wiseEnabled ? "Enabled" : "Disabled"}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
-                  <Label>Enable Stripe</Label>
-                  <p className="text-sm text-zinc-500">Accept payments via Stripe</p>
+                  <Label>Enable Wise Payments</Label>
+                  <p className="text-sm text-zinc-500">Accept payments and process payouts via Wise Platform API</p>
                 </div>
                 <Switch
-                  checked={paymentSettings.stripeEnabled}
+                  checked={paymentSettings.wiseEnabled}
                   onCheckedChange={(checked) =>
-                    setPaymentSettings({ ...paymentSettings, stripeEnabled: checked })
+                    setPaymentSettings({ ...paymentSettings, wiseEnabled: checked })
                   }
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label>Environment</Label>
+                <Select
+                  value={paymentSettings.wiseEnvironment}
+                  onValueChange={(v) => setPaymentSettings({ ...paymentSettings, wiseEnvironment: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                    <SelectItem value="production">Production (Live)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-zinc-500">
+                  Use sandbox for testing. Switch to production for live payments.
+                </p>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Publishable Key</Label>
+                  <Label>API Token</Label>
                   <Input
                     type="password"
-                    value={paymentSettings.stripePublicKey}
-                    onChange={(e) => setPaymentSettings({ ...paymentSettings, stripePublicKey: e.target.value })}
+                    placeholder="Enter your Wise API token"
+                    value={paymentSettings.wiseApiToken}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, wiseApiToken: e.target.value })}
                   />
+                  <p className="text-xs text-zinc-500">Your Wise Platform API token</p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Secret Key</Label>
+                  <Label>Profile ID</Label>
                   <Input
-                    type="password"
-                    value={paymentSettings.stripeSecretKey}
-                    onChange={(e) => setPaymentSettings({ ...paymentSettings, stripeSecretKey: e.target.value })}
+                    placeholder="Your Wise Business profile ID"
+                    value={paymentSettings.wiseProfileId}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, wiseProfileId: e.target.value })}
                   />
+                  <p className="text-xs text-zinc-500">The profile that receives platform funds</p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>Webhook Secret</Label>
-                <Input
-                  type="password"
-                  value={paymentSettings.stripeWebhookSecret}
-                  onChange={(e) => setPaymentSettings({ ...paymentSettings, stripeWebhookSecret: e.target.value })}
+                <div className="flex gap-2">
+                  <Input
+                    type="password"
+                    value={paymentSettings.wiseWebhookSecret}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, wiseWebhookSecret: e.target.value })}
+                  />
+                  <Button variant="outline" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/wise`)}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Webhook URL
+                  </Button>
+                </div>
+                <p className="text-xs text-zinc-500">
+                  Webhook URL: <code className="bg-zinc-100 px-1 rounded">{typeof window !== "undefined" ? window.location.origin : ""}/api/webhooks/wise</code>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Methods</CardTitle>
+              <CardDescription>Configure which payment methods are available to backers</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label>Card Payments</Label>
+                  <p className="text-sm text-zinc-500">Accept credit/debit card payments (SFW campaigns only)</p>
+                </div>
+                <Switch
+                  checked={paymentSettings.wiseCardPayments}
+                  onCheckedChange={(checked) =>
+                    setPaymentSettings({ ...paymentSettings, wiseCardPayments: checked })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label>ACH Bank Transfers</Label>
+                  <p className="text-sm text-zinc-500">Accept ACH bank transfers (US only)</p>
+                </div>
+                <Switch
+                  checked={paymentSettings.wiseAchPayments}
+                  onCheckedChange={(checked) =>
+                    setPaymentSettings({ ...paymentSettings, wiseAchPayments: checked })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-4 bg-amber-50 dark:bg-amber-900/20">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-amber-600" />
+                    Force ACH for NSFW Campaigns
+                  </Label>
+                  <p className="text-sm text-zinc-500">Only allow ACH payments for adult/high-risk content</p>
+                </div>
+                <Switch
+                  checked={paymentSettings.wiseForceAchForNsfw}
+                  onCheckedChange={(checked) =>
+                    setPaymentSettings({ ...paymentSettings, wiseForceAchForNsfw: checked })
+                  }
                 />
               </div>
             </CardContent>
@@ -920,52 +1024,84 @@ export default function SettingsPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>CCBill Configuration</CardTitle>
-                  <CardDescription>High-risk payment processor for adult/regulated content</CardDescription>
-                </div>
-                <Badge variant={paymentSettings.ccbillEnabled ? "default" : "secondary"}>
-                  {paymentSettings.ccbillEnabled ? "Enabled" : "Disabled"}
-                </Badge>
-              </div>
+              <CardTitle>Creator Card Issuance</CardTitle>
+              <CardDescription>Allow creators to get Wise debit cards to spend their earnings</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
-                  <Label>Enable CCBill</Label>
-                  <p className="text-sm text-zinc-500">Accept payments via CCBill FlexForms</p>
+                  <Label>Enable Card Issuance</Label>
+                  <p className="text-sm text-zinc-500">Allow creators to request Wise debit cards</p>
                 </div>
                 <Switch
-                  checked={paymentSettings.ccbillEnabled}
+                  checked={paymentSettings.wiseCardIssuance}
                   onCheckedChange={(checked) =>
-                    setPaymentSettings({ ...paymentSettings, ccbillEnabled: checked })
+                    setPaymentSettings({ ...paymentSettings, wiseCardIssuance: checked })
                   }
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
+              {paymentSettings.wiseCardIssuance && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label>Virtual Cards</Label>
+                      <p className="text-sm text-zinc-500">Instant digital cards for online spending</p>
+                    </div>
+                    <Switch
+                      checked={paymentSettings.wiseCardVirtual}
+                      onCheckedChange={(checked) =>
+                        setPaymentSettings({ ...paymentSettings, wiseCardVirtual: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label>Physical Cards</Label>
+                      <p className="text-sm text-zinc-500">Mail physical debit cards to creators</p>
+                    </div>
+                    <Switch
+                      checked={paymentSettings.wiseCardPhysical}
+                      onCheckedChange={(checked) =>
+                        setPaymentSettings({ ...paymentSettings, wiseCardPhysical: checked })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Fee Configuration</CardTitle>
+              <CardDescription>Configure platform fees and hold periods</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Sub Account ID</Label>
+                  <Label>Platform Fee (%)</Label>
                   <Input
-                    value={paymentSettings.ccbillSubAccount}
-                    onChange={(e) => setPaymentSettings({ ...paymentSettings, ccbillSubAccount: e.target.value })}
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.1"
+                    value={paymentSettings.wisePlatformFeePercent}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, wisePlatformFeePercent: e.target.value })}
                   />
+                  <p className="text-xs text-zinc-500">Your platform&apos;s fee percentage on each transaction</p>
                 </div>
                 <div className="space-y-2">
-                  <Label>FlexForm ID</Label>
+                  <Label>Hold Period (Days)</Label>
                   <Input
-                    value={paymentSettings.ccbillFlexId}
-                    onChange={(e) => setPaymentSettings({ ...paymentSettings, ccbillFlexId: e.target.value })}
+                    type="number"
+                    min="0"
+                    max="90"
+                    value={paymentSettings.wiseHoldPeriodDays}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, wiseHoldPeriodDays: e.target.value })}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Salt Key</Label>
-                  <Input
-                    type="password"
-                    value={paymentSettings.ccbillSalt}
-                    onChange={(e) => setPaymentSettings({ ...paymentSettings, ccbillSalt: e.target.value })}
-                  />
+                  <p className="text-xs text-zinc-500">Days to hold funds before payout (for refund protection)</p>
                 </div>
               </div>
             </CardContent>

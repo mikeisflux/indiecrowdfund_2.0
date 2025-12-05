@@ -79,7 +79,7 @@ const initialState = {
   },
   payment: {
     projectType: "INDIVIDUAL" as const,
-    paymentProcessor: "STRIPE" as const,
+    paymentProcessor: "WISE" as const,
     hasAdultContent: false,
     hasRiskyContent: false,
     promoContentSfw: true,

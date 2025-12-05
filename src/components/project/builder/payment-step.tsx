@@ -1,14 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -16,20 +17,66 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreditCard, AlertTriangle, Check, ExternalLink, Store, Info } from "lucide-react";
+import {
+  CreditCard,
+  AlertTriangle,
+  Check,
+  ExternalLink,
+  Store,
+  Info,
+  Wallet,
+  Building,
+  Globe,
+  Zap,
+  Shield,
+  Banknote,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 export function PaymentStep() {
   const { payment, updatePayment, basics } = useProjectStore();
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const goalAmount = basics.goalAmount || 10000;
-  const mustUseCCBill = payment.hasAdultContent || payment.hasRiskyContent;
+  const isNsfw = payment.hasAdultContent || payment.hasRiskyContent;
 
-  // Fee calculations
-  const stripeFee = goalAmount * 0.029 + 0.3 * (goalAmount / 50); // Rough estimate
-  const stripeNet = goalAmount - stripeFee;
+  // Wise fee calculations (much lower than Stripe/CCBill)
+  // Platform fee: 5%
+  // Wise fee: ~0.5% domestic, ~1.2% international
+  const wiseFeePercent = 0.005; // 0.5% average
+  const platformFeePercent = 0.05; // 5%
+
+  const wiseFee = goalAmount * wiseFeePercent;
+  const platformFee = goalAmount * platformFeePercent;
+  const totalFees = wiseFee + platformFee;
+  const netAmount = goalAmount - totalFees;
+
+  // For comparison - what they would pay with old processors
+  const stripeFee = goalAmount * 0.029 + (goalAmount / 50) * 0.3;
   const ccbillFee = goalAmount * 0.105;
-  const ccbillNet = goalAmount - ccbillFee;
+
+  const handleConnectWise = async () => {
+    setIsConnecting(true);
+    try {
+      const response = await fetch("/api/wise/onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profileType: payment.projectType === "BUSINESS" ? "business" : "personal",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.onboardingUrl) {
+        window.location.href = data.onboardingUrl;
+      }
+    } catch (error) {
+      console.error("Failed to initiate Wise connection:", error);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -115,7 +162,7 @@ export function PaymentStep() {
           </div>
 
           {/* Show SFW promo agreement only when adult/risky content is checked */}
-          {mustUseCCBill && (
+          {isNsfw && (
             <div className="mt-4 p-4 rounded-lg border bg-amber-50/50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
               <div className="flex items-start space-x-2">
                 <Checkbox
@@ -138,14 +185,14 @@ export function PaymentStep() {
           )}
         </div>
 
-        {mustUseCCBill && (
+        {isNsfw && (
           <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>CCBill Required</AlertTitle>
+            <Banknote className="h-4 w-4" />
+            <AlertTitle>ACH Payments Only</AlertTitle>
             <AlertDescription>
-              Due to your content type, you must use CCBill as your payment
-              processor. CCBill specializes in processing payments for
-              age-restricted and high-risk content.
+              Due to your content type, backers will only be able to pay via ACH bank transfer.
+              This is required for compliance with payment regulations for age-restricted content.
+              Card payments are not available for NSFW campaigns.
             </AlertDescription>
           </Alert>
         )}
@@ -153,198 +200,204 @@ export function PaymentStep() {
 
       <Separator />
 
-      {/* Payment Processor Selection */}
+      {/* Payment Processor - Wise */}
       <div className="space-y-4">
         <div>
-          <h3 className="font-semibold">Payment Processor</h3>
+          <h3 className="font-semibold">Payment Processing</h3>
           <p className="text-sm text-muted-foreground">
-            Choose how you want to receive payments from backers
+            All payments are processed securely through Wise
           </p>
         </div>
 
-        <RadioGroup
-          value={mustUseCCBill ? "CCBILL" : payment.paymentProcessor || "STRIPE"}
-          onValueChange={(value) =>
-            updatePayment({ paymentProcessor: value as "STRIPE" | "CCBILL" })
-          }
-          disabled={mustUseCCBill}
-        >
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Stripe Option */}
-            <Card
-              className={`cursor-pointer transition-colors ${
-                payment.paymentProcessor === "STRIPE" && !mustUseCCBill
-                  ? "border-primary"
-                  : ""
-              } ${mustUseCCBill ? "opacity-50" : ""}`}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Stripe
-                  </CardTitle>
-                  <RadioGroupItem value="STRIPE" disabled={mustUseCCBill} />
+        {/* Wise Card */}
+        <Card className="border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-emerald-500 flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-white" />
                 </div>
-                <CardDescription>Recommended for most projects</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <ul className="space-y-1 text-sm">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    Lower fees (2.9% + $0.30)
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    Faster payouts (2 days)
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    More payment methods
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    Better international support
-                  </li>
-                </ul>
-                <div className="rounded-md bg-muted p-3">
-                  <p className="text-sm">
-                    Estimated fees: {formatCurrency(stripeFee)}
-                  </p>
-                  <p className="text-lg font-semibold text-green-600">
-                    Net: {formatCurrency(stripeNet)}
-                  </p>
+                Wise Payments
+                <Badge variant="secondary" className="ml-2 bg-emerald-100 text-emerald-700">
+                  Lowest Fees
+                </Badge>
+              </CardTitle>
+            </div>
+            <CardDescription>
+              Global payments with industry-leading low fees
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="flex items-start gap-2">
+                <Check className="h-4 w-4 text-emerald-500 mt-0.5" />
+                <div className="text-sm">
+                  <span className="font-medium">Ultra-low fees</span>
+                  <p className="text-muted-foreground">~0.5% + platform fee</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="flex items-start gap-2">
+                <Zap className="h-4 w-4 text-emerald-500 mt-0.5" />
+                <div className="text-sm">
+                  <span className="font-medium">Fast payouts</span>
+                  <p className="text-muted-foreground">1-2 business days</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Globe className="h-4 w-4 text-emerald-500 mt-0.5" />
+                <div className="text-sm">
+                  <span className="font-medium">Multi-currency</span>
+                  <p className="text-muted-foreground">50+ currencies</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <CreditCard className="h-4 w-4 text-emerald-500 mt-0.5" />
+                <div className="text-sm">
+                  <span className="font-medium">Wise Card</span>
+                  <p className="text-muted-foreground">Spend earnings instantly</p>
+                </div>
+              </div>
+            </div>
 
-            {/* CCBill Option */}
-            <Card
-              className={`cursor-pointer transition-colors ${
-                payment.paymentProcessor === "CCBILL" || mustUseCCBill
-                  ? "border-primary"
-                  : ""
-              }`}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    CCBill
-                  </CardTitle>
-                  <RadioGroupItem value="CCBILL" />
+            {/* Fee Calculator */}
+            <div className="rounded-lg bg-white/80 dark:bg-gray-900/50 p-4 border">
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                Fee Breakdown for {formatCurrency(goalAmount)} Goal
+              </h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Wise processing fee (~0.5%)</span>
+                  <span className="font-medium">{formatCurrency(wiseFee)}</span>
                 </div>
-                <CardDescription>
-                  {mustUseCCBill
-                    ? "Required for your content type"
-                    : "For adult/high-risk content"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <ul className="space-y-1 text-sm">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    Accepts adult content
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    High-risk merchant friendly
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    Chargeback protection
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    Established industry leader
-                  </li>
-                </ul>
-                <div className="rounded-md bg-muted p-3">
-                  <p className="text-sm">
-                    Estimated fees: {formatCurrency(ccbillFee)}
-                  </p>
-                  <p className="text-lg font-semibold text-green-600">
-                    Net: {formatCurrency(ccbillNet)}
-                  </p>
+                <div className="flex justify-between">
+                  <span>Platform fee (5%)</span>
+                  <span className="font-medium">{formatCurrency(platformFee)}</span>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </RadioGroup>
+                <Separator className="my-2" />
+                <div className="flex justify-between font-semibold">
+                  <span>Total fees</span>
+                  <span className="text-amber-600">{formatCurrency(totalFees)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg">
+                  <span>You receive</span>
+                  <span className="text-emerald-600">{formatCurrency(netAmount)}</span>
+                </div>
+              </div>
+
+              {/* Comparison */}
+              <div className="mt-4 p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200 mb-1">
+                  Savings compared to traditional processors:
+                </p>
+                <div className="flex gap-4 text-xs">
+                  <span className="text-muted-foreground">
+                    vs Stripe: <span className="font-medium text-emerald-600">+{formatCurrency(stripeFee - totalFees)}</span>
+                  </span>
+                  <span className="text-muted-foreground">
+                    vs CCBill: <span className="font-medium text-emerald-600">+{formatCurrency(ccbillFee - totalFees)}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Methods */}
+            <div className="rounded-lg border p-4">
+              <h4 className="font-medium mb-2">Available Payment Methods</h4>
+              <div className="flex flex-wrap gap-2">
+                {!isNsfw && (
+                  <>
+                    <Badge variant="outline" className="gap-1">
+                      <CreditCard className="h-3 w-3" /> Credit/Debit Card
+                    </Badge>
+                    <Badge variant="outline" className="gap-1">
+                      <Wallet className="h-3 w-3" /> Apple Pay
+                    </Badge>
+                    <Badge variant="outline" className="gap-1">
+                      <Wallet className="h-3 w-3" /> Google Pay
+                    </Badge>
+                  </>
+                )}
+                <Badge variant="outline" className={`gap-1 ${isNsfw ? "border-amber-500 bg-amber-50" : ""}`}>
+                  <Building className="h-3 w-3" /> ACH Bank Transfer
+                  {isNsfw && <span className="text-amber-600 ml-1">(Required)</span>}
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  <Globe className="h-3 w-3" /> International Wire
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Separator />
 
-      {/* Payment Processor Setup */}
+      {/* Connect Wise Account */}
       <div className="space-y-4">
-        <h3 className="font-semibold">Connect Your Account</h3>
+        <h3 className="font-semibold">Connect Your Wise Account</h3>
 
-        {(payment.paymentProcessor === "STRIPE" && !mustUseCCBill) ? (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
+                  <Wallet className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <p className="font-medium">Stripe Connect</p>
+                  <p className="font-medium">Wise Business Account</p>
                   <p className="text-sm text-muted-foreground">
-                    Connect your Stripe account to receive payments
+                    Connect or create a Wise account to receive payouts. You&apos;ll complete
+                    identity verification through Wise&apos;s secure process.
                   </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Shield className="h-4 w-4 text-emerald-500" />
+                    <span className="text-xs text-muted-foreground">
+                      Bank-level security &bull; Regulated financial institution
+                    </span>
+                  </div>
                 </div>
-                <Button>
-                  Connect Stripe
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </Button>
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Enter your CCBill merchant account details
-                </p>
+              <Button
+                onClick={handleConnectWise}
+                disabled={isConnecting}
+                className="bg-emerald-500 hover:bg-emerald-600"
+              >
+                {isConnecting ? "Connecting..." : "Connect Wise"}
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="ccbill-account">Account Number</Label>
-                    <Input
-                      id="ccbill-account"
-                      placeholder="000000"
-                      value={payment.ccbillAccountNumber || ""}
-                      onChange={(e) =>
-                        updatePayment({ ccbillAccountNumber: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="ccbill-subaccount">Subaccount Number</Label>
-                    <Input
-                      id="ccbill-subaccount"
-                      placeholder="0000"
-                      value={payment.ccbillSubaccount || ""}
-                      onChange={(e) =>
-                        updatePayment({ ccbillSubaccount: e.target.value })
-                      }
-                    />
+            {/* Wise Card Option */}
+            <div className="mt-6 p-4 rounded-lg border bg-gradient-to-r from-gray-900 to-gray-800 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-8 w-8" />
+                  <div>
+                    <p className="font-medium">Get a Wise Debit Card</p>
+                    <p className="text-sm text-gray-300">
+                      Spend your earnings anywhere Mastercard is accepted
+                    </p>
                   </div>
                 </div>
+                <Badge className="bg-white text-gray-900">Free Virtual Card</Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-                <p className="text-xs text-muted-foreground">
-                  Don&apos;t have a CCBill account?{" "}
-                  <a
-                    href="https://www.ccbill.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline"
-                  >
-                    Sign up here
-                  </a>
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <p className="text-xs text-muted-foreground">
+          Don&apos;t have a Wise account?{" "}
+          <a
+            href="https://wise.com/business"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-emerald-600 underline"
+          >
+            Sign up for free
+          </a>
+          {" "}&bull; It only takes a few minutes to get started
+        </p>
       </div>
 
       <Separator />
