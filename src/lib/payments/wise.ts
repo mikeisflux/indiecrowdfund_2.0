@@ -11,7 +11,7 @@ const WISE_API_URL = process.env.WISE_ENVIRONMENT === "production"
 
 interface WiseApiOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-  body?: Record<string, unknown>;
+  body?: unknown;
   headers?: Record<string, string>;
 }
 
