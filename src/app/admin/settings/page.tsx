@@ -64,10 +64,6 @@ const apiKeys = [
   { id: "3", name: "Mobile App", key: "sk_live_yyyy...yyyy", created: "2024-03-10", lastUsed: "1 hour ago", status: "active" },
 ];
 
-const webhooks = [
-  { id: "1", url: "https://api.example.com/webhooks/payments", events: ["payment.success", "payment.failed"], status: "active" },
-  { id: "2", url: "https://analytics.example.com/events", events: ["project.created", "pledge.created"], status: "active" },
-];
 
 interface PlatformSettings {
   siteName: string;
@@ -2334,37 +2330,91 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Webhooks</CardTitle>
-                  <CardDescription>Configure webhook endpoints for event notifications</CardDescription>
+                  <CardDescription>Webhook endpoints for payment and event notifications</CardDescription>
                 </div>
-                <Button variant="outline">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Webhook
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {webhooks.map((webhook) => (
-                  <div key={webhook.id} className="flex items-center gap-4 rounded-lg border p-4">
-                    <Webhook className="h-5 w-5 text-zinc-400" />
-                    <div className="flex-1">
-                      <p className="font-medium">{webhook.url}</p>
-                      <div className="mt-1 flex gap-2">
-                        {webhook.events.map((event) => (
-                          <Badge key={event} variant="secondary" className="text-xs">
-                            {event}
-                          </Badge>
-                        ))}
-                      </div>
+              <div className="space-y-6">
+                {/* Stripe Webhook */}
+                <div className="rounded-lg border p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Webhook className="h-5 w-5 text-[#635BFF]" />
+                    <div>
+                      <p className="font-medium">Stripe Webhook</p>
+                      <p className="text-sm text-muted-foreground">Receives payment events from Stripe</p>
                     </div>
-                    <Badge variant={webhook.status === "active" ? "default" : "secondary"}>
-                      {webhook.status}
-                    </Badge>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
-                ))}
+                  <div className="space-y-2">
+                    <Label>Endpoint URL</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        readOnly
+                        value={`${typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}/api/webhooks/stripe`}
+                        className="font-mono text-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe`);
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">payment_intent.succeeded</Badge>
+                    <Badge variant="secondary">payment_intent.payment_failed</Badge>
+                    <Badge variant="secondary">account.updated</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Configure this webhook in your{" "}
+                    <a
+                      href="https://dashboard.stripe.com/webhooks"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#635BFF] hover:underline"
+                    >
+                      Stripe Dashboard → Webhooks
+                    </a>
+                    . Select &quot;Connected and v2 accounts&quot; for Stripe Connect.
+                  </p>
+                </div>
+
+                {/* ID Verification Webhook */}
+                <div className="rounded-lg border p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Webhook className="h-5 w-5 text-emerald-600" />
+                    <div>
+                      <p className="font-medium">ID Verification Webhook</p>
+                      <p className="text-sm text-muted-foreground">Receives verification results from Shufti Pro</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Endpoint URL</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        readOnly
+                        value={`${typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}/api/verify-id/callback`}
+                        className="font-mono text-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/api/verify-id/callback`);
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Configure this in your Shufti Pro dashboard under callback settings.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
