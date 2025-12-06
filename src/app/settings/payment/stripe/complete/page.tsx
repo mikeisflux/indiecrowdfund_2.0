@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2, ArrowRight } from "lucide-react";
 
 export default function StripeCompletePage() {
-  const router = useRouter();
   const [status, setStatus] = useState<"loading" | "success" | "pending">("loading");
 
   useEffect(() => {

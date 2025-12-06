@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Loader2, ArrowRight, AlertCircle } from "lucide-react";
+import { RefreshCw, Loader2, AlertCircle } from "lucide-react";
 
 export default function StripeRefreshPage() {
   const [isLoading, setIsLoading] = useState(false);

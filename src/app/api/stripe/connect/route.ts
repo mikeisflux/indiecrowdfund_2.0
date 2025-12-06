@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createStripeConnectAccount } from "@/lib/payments/stripe";
 import { db } from "@/lib/db";
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const session = await auth();
     if (!session?.user?.id || !session.user.email) {
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {

@@ -39,7 +39,7 @@ export default function PaymentSettingsPage() {
       }
       const data = await res.json();
       setStripeStatus(data);
-    } catch (err) {
+    } catch {
       setError("Failed to load payment settings");
     } finally {
       setIsLoading(false);
