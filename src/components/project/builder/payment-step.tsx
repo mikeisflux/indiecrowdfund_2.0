@@ -136,7 +136,7 @@ export function PaymentStep() {
               }
             />
             <Label htmlFor="risky-content" className="font-normal">
-              My project contains controversial or violent content but is used in a way to further the narrative of the story and not in an explicit way.
+              My project contains controversial or violent content but is used to further the narrative of the story and not in an explicit way.
             </Label>
           </div>
 
@@ -168,7 +168,7 @@ export function PaymentStep() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>I agree that no NSFW content will be used in my project&apos;s promotional video, image, or project title</AlertTitle>
             <AlertDescription>
-              Projects with controversial or violent content but is used in a way to further the narrative require additional review before launch.
+              Projects with controversial or violent content but is used to further the narrative require additional review before launch.
               Please ensure your promotional materials are safe for work.
             </AlertDescription>
           </Alert>
