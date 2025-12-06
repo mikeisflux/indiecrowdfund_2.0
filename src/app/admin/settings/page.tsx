@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SecureKeyInput } from "@/components/ui/secure-key-input";
 import {
   Select,
   SelectContent,
@@ -833,12 +834,11 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="googlePlacesApiKey">Google Places API Key</Label>
-                <Input
-                  id="googlePlacesApiKey"
-                  type="password"
-                  placeholder="AIza..."
+                <SecureKeyInput
                   value={generalSettings.googlePlacesApiKey}
-                  onChange={(e) => setGeneralSettings({ ...generalSettings, googlePlacesApiKey: e.target.value })}
+                  onChange={(value) => setGeneralSettings({ ...generalSettings, googlePlacesApiKey: value })}
+                  hasExistingValue={generalSettings.googlePlacesApiKey === "••••••••"}
+                  placeholder="AIza..."
                 />
                 <p className="text-xs text-zinc-500">
                   Used for location autocomplete in project creation. Get your API key from{" "}
@@ -891,28 +891,31 @@ export default function SettingsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Publishable Key</Label>
-                  <Input
-                    type="password"
+                  <SecureKeyInput
                     value={paymentSettings.stripePublicKey}
-                    onChange={(e) => setPaymentSettings({ ...paymentSettings, stripePublicKey: e.target.value })}
+                    onChange={(value) => setPaymentSettings({ ...paymentSettings, stripePublicKey: value })}
+                    hasExistingValue={paymentSettings.stripePublicKey === "••••••••"}
+                    placeholder="pk_live_..."
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Secret Key</Label>
-                  <Input
-                    type="password"
+                  <SecureKeyInput
                     value={paymentSettings.stripeSecretKey}
-                    onChange={(e) => setPaymentSettings({ ...paymentSettings, stripeSecretKey: e.target.value })}
+                    onChange={(value) => setPaymentSettings({ ...paymentSettings, stripeSecretKey: value })}
+                    hasExistingValue={paymentSettings.stripeSecretKey === "••••••••"}
+                    placeholder="sk_live_..."
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>Webhook Secret</Label>
-                <Input
-                  type="password"
+                <SecureKeyInput
                   value={paymentSettings.stripeWebhookSecret}
-                  onChange={(e) => setPaymentSettings({ ...paymentSettings, stripeWebhookSecret: e.target.value })}
+                  onChange={(value) => setPaymentSettings({ ...paymentSettings, stripeWebhookSecret: value })}
+                  hasExistingValue={paymentSettings.stripeWebhookSecret === "••••••••"}
+                  placeholder="whsec_..."
                 />
               </div>
             </CardContent>
@@ -961,10 +964,11 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Salt Key</Label>
-                  <Input
-                    type="password"
+                  <SecureKeyInput
                     value={paymentSettings.ccbillSalt}
-                    onChange={(e) => setPaymentSettings({ ...paymentSettings, ccbillSalt: e.target.value })}
+                    onChange={(value) => setPaymentSettings({ ...paymentSettings, ccbillSalt: value })}
+                    hasExistingValue={paymentSettings.ccbillSalt === "••••••••"}
+                    placeholder="Your CCBill salt..."
                   />
                 </div>
               </div>
@@ -1050,10 +1054,11 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>API Key</Label>
-                  <Input
-                    type="password"
+                  <SecureKeyInput
                     value={emailSettings.sendgridApiKey}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, sendgridApiKey: e.target.value })}
+                    onChange={(value) => setEmailSettings({ ...emailSettings, sendgridApiKey: value })}
+                    hasExistingValue={emailSettings.sendgridApiKey === "••••••••"}
+                    placeholder="SG.xxx..."
                   />
                 </div>
               </div>
@@ -1260,22 +1265,22 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>App Secret</Label>
-                  <Input
-                    type="password"
-                    placeholder="Your Facebook App Secret"
+                  <SecureKeyInput
                     value={socialSettings.facebookAppSecret}
-                    onChange={(e) => setSocialSettings({ ...socialSettings, facebookAppSecret: e.target.value })}
+                    onChange={(value) => setSocialSettings({ ...socialSettings, facebookAppSecret: value })}
+                    hasExistingValue={socialSettings.facebookAppSecret === "••••••••"}
+                    placeholder="Your Facebook App Secret"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>System User Access Token (optional)</Label>
-                <Input
-                  type="password"
-                  placeholder="For server-to-server API calls"
+                <SecureKeyInput
                   value={socialSettings.facebookPageAccessToken}
-                  onChange={(e) => setSocialSettings({ ...socialSettings, facebookPageAccessToken: e.target.value })}
+                  onChange={(value) => setSocialSettings({ ...socialSettings, facebookPageAccessToken: value })}
+                  hasExistingValue={socialSettings.facebookPageAccessToken === "••••••••"}
+                  placeholder="For server-to-server API calls"
                 />
                 <p className="text-xs text-zinc-500">
                   Create an app at <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">developers.facebook.com</a>. Required scopes: pages_manage_posts, instagram_basic, instagram_content_publish
@@ -1343,22 +1348,22 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>OAuth Client Secret</Label>
-                  <Input
-                    type="password"
-                    placeholder="Your Google OAuth Client Secret"
+                  <SecureKeyInput
                     value={socialSettings.youtubeClientSecret}
-                    onChange={(e) => setSocialSettings({ ...socialSettings, youtubeClientSecret: e.target.value })}
+                    onChange={(value) => setSocialSettings({ ...socialSettings, youtubeClientSecret: value })}
+                    hasExistingValue={socialSettings.youtubeClientSecret === "••••••••"}
+                    placeholder="Your Google OAuth Client Secret"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>API Key (optional)</Label>
-                <Input
-                  type="password"
-                  placeholder="For public data access"
+                <SecureKeyInput
                   value={socialSettings.youtubeApiKey}
-                  onChange={(e) => setSocialSettings({ ...socialSettings, youtubeApiKey: e.target.value })}
+                  onChange={(value) => setSocialSettings({ ...socialSettings, youtubeApiKey: value })}
+                  hasExistingValue={socialSettings.youtubeApiKey === "••••••••"}
+                  placeholder="For public data access"
                 />
                 <p className="text-xs text-zinc-500">
                   Create credentials at <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-red-600 hover:underline">Google Cloud Console</a>. Enable YouTube Data API v3.
@@ -1426,42 +1431,42 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>API Secret (Consumer Secret)</Label>
-                  <Input
-                    type="password"
-                    placeholder="Your Twitter API Secret"
+                  <SecureKeyInput
                     value={socialSettings.twitterApiSecret}
-                    onChange={(e) => setSocialSettings({ ...socialSettings, twitterApiSecret: e.target.value })}
+                    onChange={(value) => setSocialSettings({ ...socialSettings, twitterApiSecret: value })}
+                    hasExistingValue={socialSettings.twitterApiSecret === "••••••••"}
+                    placeholder="Your Twitter API Secret"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>Bearer Token</Label>
-                <Input
-                  type="password"
-                  placeholder="For app-only authentication"
+                <SecureKeyInput
                   value={socialSettings.twitterBearerToken}
-                  onChange={(e) => setSocialSettings({ ...socialSettings, twitterBearerToken: e.target.value })}
+                  onChange={(value) => setSocialSettings({ ...socialSettings, twitterBearerToken: value })}
+                  hasExistingValue={socialSettings.twitterBearerToken === "••••••••"}
+                  placeholder="For app-only authentication"
                 />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Access Token (optional)</Label>
-                  <Input
-                    type="password"
-                    placeholder="For user-context requests"
+                  <SecureKeyInput
                     value={socialSettings.twitterAccessToken}
-                    onChange={(e) => setSocialSettings({ ...socialSettings, twitterAccessToken: e.target.value })}
+                    onChange={(value) => setSocialSettings({ ...socialSettings, twitterAccessToken: value })}
+                    hasExistingValue={socialSettings.twitterAccessToken === "••••••••"}
+                    placeholder="For user-context requests"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Access Token Secret (optional)</Label>
-                  <Input
-                    type="password"
-                    placeholder="Paired with access token"
+                  <SecureKeyInput
                     value={socialSettings.twitterAccessSecret}
-                    onChange={(e) => setSocialSettings({ ...socialSettings, twitterAccessSecret: e.target.value })}
+                    onChange={(value) => setSocialSettings({ ...socialSettings, twitterAccessSecret: value })}
+                    hasExistingValue={socialSettings.twitterAccessSecret === "••••••••"}
+                    placeholder="Paired with access token"
                   />
                 </div>
               </div>
@@ -1499,11 +1504,11 @@ export default function SettingsPage() {
                   {socialSettings.dalleEnabled && (
                     <div className="space-y-2">
                       <Label className="text-xs">API Key (uses OpenAI key from AI settings if empty)</Label>
-                      <Input
-                        type="password"
-                        placeholder="Optional separate key"
+                      <SecureKeyInput
                         value={socialSettings.dalleApiKey}
-                        onChange={(e) => setSocialSettings({ ...socialSettings, dalleApiKey: e.target.value })}
+                        onChange={(value) => setSocialSettings({ ...socialSettings, dalleApiKey: value })}
+                        hasExistingValue={socialSettings.dalleApiKey === "••••••••"}
+                        placeholder="Optional separate key"
                       />
                     </div>
                   )}
@@ -1524,11 +1529,11 @@ export default function SettingsPage() {
                   {socialSettings.stabilityEnabled && (
                     <div className="space-y-2">
                       <Label className="text-xs">API Key</Label>
-                      <Input
-                        type="password"
-                        placeholder="Your Stability AI API key"
+                      <SecureKeyInput
                         value={socialSettings.stabilityApiKey}
-                        onChange={(e) => setSocialSettings({ ...socialSettings, stabilityApiKey: e.target.value })}
+                        onChange={(value) => setSocialSettings({ ...socialSettings, stabilityApiKey: value })}
+                        hasExistingValue={socialSettings.stabilityApiKey === "••••••••"}
+                        placeholder="Your Stability AI API key"
                       />
                       <p className="text-xs text-zinc-500">
                         Get your key from <a href="https://platform.stability.ai" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">platform.stability.ai</a>
@@ -1691,28 +1696,29 @@ export default function SettingsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>API Key</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="password"
-                      placeholder="sk-..."
-                      value={aiSettings.openaiApiKey}
-                      onChange={(e) => setAiSettings({ ...aiSettings, openaiApiKey: e.target.value })}
-                      className="flex-1"
-                    />
+                  <SecureKeyInput
+                    value={aiSettings.openaiApiKey}
+                    onChange={(value) => setAiSettings({ ...aiSettings, openaiApiKey: value })}
+                    hasExistingValue={aiSettings.openaiApiKey === "••••••••"}
+                    placeholder="sk-..."
+                  />
+                  <div className="flex justify-end">
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={testOpenAI}
                       disabled={aiTestResults.openai === "testing"}
                     >
                       {aiTestResults.openai === "testing" ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                       ) : aiTestResults.openai === "success" ? (
-                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        <CheckCircle className="h-4 w-4 text-emerald-600 mr-2" />
                       ) : aiTestResults.openai === "error" ? (
-                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
                       ) : (
-                        <TestTube className="h-4 w-4" />
+                        <TestTube className="h-4 w-4 mr-2" />
                       )}
+                      Test
                     </Button>
                   </div>
                   <p className="text-xs text-zinc-500">
@@ -1802,28 +1808,29 @@ export default function SettingsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>API Key</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="password"
-                      placeholder="sk-ant-..."
-                      value={aiSettings.anthropicApiKey}
-                      onChange={(e) => setAiSettings({ ...aiSettings, anthropicApiKey: e.target.value })}
-                      className="flex-1"
-                    />
+                  <SecureKeyInput
+                    value={aiSettings.anthropicApiKey}
+                    onChange={(value) => setAiSettings({ ...aiSettings, anthropicApiKey: value })}
+                    hasExistingValue={aiSettings.anthropicApiKey === "••••••••"}
+                    placeholder="sk-ant-..."
+                  />
+                  <div className="flex justify-end">
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={testAnthropic}
                       disabled={aiTestResults.anthropic === "testing"}
                     >
                       {aiTestResults.anthropic === "testing" ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                       ) : aiTestResults.anthropic === "success" ? (
-                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        <CheckCircle className="h-4 w-4 text-emerald-600 mr-2" />
                       ) : aiTestResults.anthropic === "error" ? (
-                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
                       ) : (
-                        <TestTube className="h-4 w-4" />
+                        <TestTube className="h-4 w-4 mr-2" />
                       )}
+                      Test
                     </Button>
                   </div>
                   <p className="text-xs text-zinc-500">
@@ -2118,13 +2125,12 @@ export default function SettingsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="shuftiSecretKey">Secret Key</Label>
-                    <Input
-                      id="shuftiSecretKey"
-                      type="password"
+                    <SecureKeyInput
                       value={idVerificationSettings.secretKey}
-                      onChange={(e) =>
-                        setIdVerificationSettings({ ...idVerificationSettings, secretKey: e.target.value })
+                      onChange={(value) =>
+                        setIdVerificationSettings({ ...idVerificationSettings, secretKey: value })
                       }
+                      hasExistingValue={idVerificationSettings.secretKey === "••••••••"}
                       placeholder="Enter your Shufti Pro Secret Key"
                     />
                   </div>
