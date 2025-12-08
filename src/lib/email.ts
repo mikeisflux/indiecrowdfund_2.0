@@ -41,7 +41,9 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   try {
     sgMail.setApiKey(sendgridApiKey);
 
-    await sgMail.send({
+    console.log(`Sending email to: ${to}, subject: ${subject}, from: ${fromEmail}`);
+
+    const response = await sgMail.send({
       to,
       from: {
         email: fromEmail,
@@ -52,9 +54,20 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       text: text || html.replace(/<[^>]*>/g, ""),
     });
 
+    console.log("Email sent successfully, status:", response[0]?.statusCode);
     return { success: true };
-  } catch (error) {
-    console.error("Error sending email:", error);
+  } catch (error: unknown) {
+    console.error("Error sending email via SendGrid:");
+
+    // Log detailed SendGrid error information
+    if (error && typeof error === "object" && "response" in error) {
+      const sgError = error as { response?: { body?: unknown; statusCode?: number } };
+      console.error("SendGrid status code:", sgError.response?.statusCode);
+      console.error("SendGrid response body:", JSON.stringify(sgError.response?.body, null, 2));
+    } else {
+      console.error("Error details:", error);
+    }
+
     return { success: false, error: "Failed to send email" };
   }
 }

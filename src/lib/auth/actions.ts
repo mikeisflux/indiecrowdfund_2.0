@@ -231,7 +231,12 @@ export async function requestPasswordReset(formData: FormData) {
 
     // Send the reset email
     const { sendPasswordResetEmail } = await import("@/lib/email");
-    await sendPasswordResetEmail(email, token);
+    const emailResult = await sendPasswordResetEmail(email, token);
+
+    if (!emailResult.success) {
+      console.error("Failed to send password reset email:", emailResult.error);
+      // Still return success to prevent email enumeration, but log the error
+    }
 
     return { success: true };
   } catch (error) {
