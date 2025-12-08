@@ -50,18 +50,20 @@ export function SecureKeyInput({
   };
 
   // Auto-commit on blur so value isn't lost when user clicks main Save button
+  // This fires IMMEDIATELY (no timeout) to ensure state is updated before parent save
   const handleBlur = () => {
-    // Small delay to allow cancel button click to register first
-    setTimeout(() => {
-      if (tempValue && !cancelClickedRef.current) {
-        onChange(tempValue);
-      }
-      cancelClickedRef.current = false;
-    }, 100);
+    if (tempValue && !cancelClickedRef.current) {
+      onChange(tempValue);
+    }
+    cancelClickedRef.current = false;
+  };
+
+  // Use onMouseDown to set flag BEFORE blur fires (mousedown happens before blur)
+  const handleCancelMouseDown = () => {
+    cancelClickedRef.current = true;
   };
 
   const handleCancel = () => {
-    cancelClickedRef.current = true;
     setIsEditing(false);
     setTempValue("");
     setShowValue(false);
@@ -94,7 +96,13 @@ export function SecureKeyInput({
         <Button type="button" size="icon" variant="outline" onClick={handleSave}>
           <Check className="h-4 w-4" />
         </Button>
-        <Button type="button" size="icon" variant="ghost" onClick={handleCancel}>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          onMouseDown={handleCancelMouseDown}
+          onClick={handleCancel}
+        >
           <X className="h-4 w-4" />
         </Button>
       </div>

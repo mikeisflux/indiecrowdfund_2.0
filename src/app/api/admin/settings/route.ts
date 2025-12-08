@@ -142,6 +142,10 @@ export async function PATCH(req: NextRequest) {
 
     const { section, data } = body;
 
+    console.log("=== SETTINGS SAVE DEBUG ===");
+    console.log("Section:", section);
+    console.log("Raw data received:", JSON.stringify(data, null, 2));
+
     if (!section || !data) {
       return NextResponse.json(
         { error: "Section and data are required" },
@@ -171,7 +175,7 @@ export async function PATCH(req: NextRequest) {
       })
     );
 
-    console.log("Saving settings - section:", section, "fields:", Object.keys(filteredData));
+    console.log("After filtering masked/empty:", JSON.stringify(filteredData, null, 2));
 
     // Validate based on section
     const allowedFields: Record<string, string[]> = {
@@ -238,6 +242,8 @@ export async function PATCH(req: NextRequest) {
     const updateData = Object.fromEntries(
       Object.entries(filteredData).filter(([key]) => allowed.includes(key))
     );
+
+    console.log("Final updateData for DB:", JSON.stringify(updateData, null, 2));
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(

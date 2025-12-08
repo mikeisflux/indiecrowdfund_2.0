@@ -583,6 +583,10 @@ export default function SettingsPage() {
           return;
       }
 
+      console.log("=== FRONTEND SAVE DEBUG ===");
+      console.log("Section:", section);
+      console.log("Data being sent:", JSON.stringify(data, null, 2));
+
       const response = await fetch("/api/admin/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
