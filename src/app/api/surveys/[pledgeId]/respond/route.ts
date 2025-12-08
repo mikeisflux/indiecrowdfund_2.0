@@ -120,16 +120,18 @@ export async function GET(
     );
 
     // Filter backer questions based on targeting
-    const relevantBackerQuestions = survey.backerQuestions.filter((bq) => {
-      if (bq.targetType === "ALL_BACKERS") return true;
-      if (bq.targetType === "SPECIFIC_REWARDS") {
-        return (
-          bq.targetRewardIds.includes(pledge.rewardId) ||
-          bq.targetRewardIds.some((id) => addonIds.includes(id))
-        );
+    const relevantBackerQuestions = survey.backerQuestions.filter(
+      (bq: { targetType: string; targetRewardIds: string[] }) => {
+        if (bq.targetType === "ALL_BACKERS") return true;
+        if (bq.targetType === "SPECIFIC_REWARDS") {
+          return (
+            bq.targetRewardIds.includes(pledge.rewardId) ||
+            bq.targetRewardIds.some((id: string) => addonIds.includes(id))
+          );
+        }
+        return false;
       }
-      return false;
-    });
+    );
 
     return NextResponse.json({
       survey: {
@@ -145,7 +147,7 @@ export async function GET(
         projectTitle: pledge.project.title,
         projectImage: pledge.project.imageUrl,
         rewardTitle: pledge.reward.title,
-        addons: pledge.addons.map((a) => ({
+        addons: pledge.addons.map((a: { addon: { id: string; title: string } }) => ({
           id: a.addon.id,
           title: a.addon.title,
         })),
