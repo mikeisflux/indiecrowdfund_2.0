@@ -17,7 +17,7 @@ export async function GET() {
     const backedPledges = await db.pledge.findMany({
       where: {
         userId,
-        status: { in: ["PENDING", "COMPLETED", "PROCESSING"] },
+        status: { in: ["PENDING", "COMPLETED"] },
       },
       select: {
         project: {
