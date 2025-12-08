@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, X, Check } from "lucide-react";
@@ -30,6 +30,7 @@ export function SecureKeyInput({
   const [isEditing, setIsEditing] = useState(false);
   const [showValue, setShowValue] = useState(false);
   const [tempValue, setTempValue] = useState("");
+  const cancelClickedRef = useRef(false);
 
   // Check if there's an existing value (masked from server) or new value being set
   const isConfigured = hasExistingValue || (value && value !== "" && value !== "••••••••");
@@ -48,7 +49,19 @@ export function SecureKeyInput({
     setShowValue(false);
   };
 
+  // Auto-commit on blur so value isn't lost when user clicks main Save button
+  const handleBlur = () => {
+    // Small delay to allow cancel button click to register first
+    setTimeout(() => {
+      if (tempValue && !cancelClickedRef.current) {
+        onChange(tempValue);
+      }
+      cancelClickedRef.current = false;
+    }, 100);
+  };
+
   const handleCancel = () => {
+    cancelClickedRef.current = true;
     setIsEditing(false);
     setTempValue("");
     setShowValue(false);
@@ -62,6 +75,7 @@ export function SecureKeyInput({
             type={showValue ? "text" : "password"}
             value={tempValue}
             onChange={(e) => setTempValue(e.target.value)}
+            onBlur={handleBlur}
             placeholder={placeholder}
             autoComplete="off"
             data-lpignore="true"
