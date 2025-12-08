@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,12 +17,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle } from "lucide-react";
+import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 export function PaymentStep() {
   const { payment, updatePayment, basics } = useProjectStore();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState<{
+    connected: boolean;
+    onboarded: boolean;
+    loading: boolean;
+  }>({ connected: false, onboarded: false, loading: true });
+
+  // Check Stripe connection status on mount
+  useEffect(() => {
+    async function checkStripeStatus() {
+      try {
+        const response = await fetch("/api/stripe/connect");
+        const data = await response.json();
+        setStripeStatus({
+          connected: data.connected || false,
+          onboarded: data.onboarded || false,
+          loading: false,
+        });
+      } catch (error) {
+        console.error("Failed to check Stripe status:", error);
+        setStripeStatus({ connected: false, onboarded: false, loading: false });
+      }
+    }
+    checkStripeStatus();
+  }, []);
 
   const goalAmount = basics.goalAmount || 10000;
   const hasAdultContent = payment.hasAdultContent || payment.hasRiskyContent;
@@ -271,44 +295,68 @@ export function PaymentStep() {
       <div className="space-y-4">
         <h3 className="font-semibold">Connect Your Stripe Account</h3>
 
-        <Card>
+        <Card className={stripeStatus.onboarded ? "border-green-500" : ""}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-xl bg-[#635BFF] flex items-center justify-center shrink-0">
-                  <CreditCard className="h-6 w-6 text-white" />
+                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
+                  stripeStatus.onboarded ? "bg-green-500" : "bg-[#635BFF]"
+                }`}>
+                  {stripeStatus.onboarded ? (
+                    <CheckCircle className="h-6 w-6 text-white" />
+                  ) : (
+                    <CreditCard className="h-6 w-6 text-white" />
+                  )}
                 </div>
                 <div>
-                  <p className="font-medium">Stripe Connect</p>
+                  <p className="font-medium">
+                    {stripeStatus.onboarded ? "Stripe Connected" : "Stripe Connect"}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    Connect or create a Stripe account to receive payouts. You&apos;ll complete
-                    identity verification through Stripe&apos;s secure process.
+                    {stripeStatus.loading ? (
+                      "Checking connection status..."
+                    ) : stripeStatus.onboarded ? (
+                      "Your Stripe account is connected and ready to receive payments."
+                    ) : stripeStatus.connected ? (
+                      "Your Stripe account is connected but onboarding is incomplete. Click to continue setup."
+                    ) : (
+                      "Connect or create a Stripe account to receive payouts. You'll complete identity verification through Stripe's secure process."
+                    )}
                   </p>
                 </div>
               </div>
-              <Button
-                onClick={handleConnectStripe}
-                disabled={isConnecting}
-              >
-                {isConnecting ? "Connecting..." : "Connect Stripe"}
-                <ExternalLink className="ml-2 h-4 w-4" />
-              </Button>
+              {stripeStatus.onboarded ? (
+                <Badge variant="default" className="bg-green-500">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Connected
+                </Badge>
+              ) : (
+                <Button
+                  onClick={handleConnectStripe}
+                  disabled={isConnecting || stripeStatus.loading}
+                >
+                  {stripeStatus.loading ? "Checking..." : isConnecting ? "Connecting..." : stripeStatus.connected ? "Complete Setup" : "Connect Stripe"}
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        <p className="text-xs text-muted-foreground">
-          Don&apos;t have a Stripe account?{" "}
-          <a
-            href="https://stripe.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline"
-          >
-            Sign up for free
-          </a>
-          {" "}&bull; It only takes a few minutes to get started
-        </p>
+        {!stripeStatus.onboarded && (
+          <p className="text-xs text-muted-foreground">
+            Don&apos;t have a Stripe account?{" "}
+            <a
+              href="https://stripe.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline"
+            >
+              Sign up for free
+            </a>
+            {" "}&bull; It only takes a few minutes to get started
+          </p>
+        )}
       </div>
 
       <Separator />
