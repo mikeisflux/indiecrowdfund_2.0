@@ -124,7 +124,7 @@ export default function EditProjectPage() {
               : undefined,
             shippingType: reward.shippingType || "NO_SHIPPING",
             shippingCountries: reward.shippingCountries || [],
-            shippingCost: reward.shippingCost || 0,
+            shippingCost: (typeof reward.shippingCost === 'object' ? reward.shippingCost : {}) as Record<string, number>,
             quantityAvailable: reward.quantityAvailable,
             quantityClaimed: reward.quantityClaimed || 0,
             visibility: reward.visibility || "PUBLIC",

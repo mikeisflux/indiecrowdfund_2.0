@@ -371,7 +371,7 @@ export interface RewardData {
   estimatedDelivery?: Date;
   shippingType: ShippingType;
   shippingCountries: string[];
-  shippingCost: number;
+  shippingCost: Record<string, number>;  // Per-country rates: { "US": 5, "CA": 8 }
   quantityAvailable?: number;
   quantityClaimed?: number;
   visibility: Visibility;

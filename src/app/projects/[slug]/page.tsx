@@ -119,7 +119,8 @@ interface RewardData {
   estimatedDelivery: string | Date | null;
   shippingType: string;
   shippingLocation: string;
-  shippingCost: number;
+  shippingCost: Record<string, number>;  // Per-country rates: { "US": 5, "CA": 8 }
+  shippingCountries: string[];
   quantityAvailable: number | null;
   quantityClaimed: number;
   imageUrl: string;
@@ -134,6 +135,8 @@ interface AddonData {
   description: string;
   amount: number;
   imageUrl: string;
+  shippingCost: Record<string, number>;  // Per-country rates
+  shippingCountries: string[];
 }
 
 interface SimilarProject {

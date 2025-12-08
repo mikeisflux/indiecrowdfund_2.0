@@ -69,7 +69,7 @@ export function ProjectBuilder() {
           : null,
         shippingType: reward.shippingType || "NO_SHIPPING",
         shippingCountries: reward.shippingCountries || [],
-        shippingCost: reward.shippingCost || 0,
+        shippingCost: reward.shippingCost || {},
         quantityAvailable: reward.quantityAvailable,
         isEnded: reward.isEnded || false,
         items: reward.items?.map((item) => {

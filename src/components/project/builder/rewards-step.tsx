@@ -79,7 +79,7 @@ const defaultReward: RewardData = {
   amount: 1,
   shippingType: "NO_SHIPPING",
   shippingCountries: ["US"], // Default to United States
-  shippingCost: 0,
+  shippingCost: {},  // Per-country rates: { "US": 5, "CA": 8 }
   visibility: "PUBLIC",
   items: [],
 };
@@ -515,13 +515,30 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               }
             }
 
+            // Parse shipping cost - can be a single number or JSON object
+            let shippingCost: Record<string, number> = {};
+            if (row.shippingCost) {
+              try {
+                // Try parsing as JSON first (e.g., {"US": 5, "CA": 8})
+                shippingCost = JSON.parse(row.shippingCost);
+              } catch {
+                // Fall back to single value applied to US or WORLDWIDE
+                const cost = parseFloat(row.shippingCost) || 0;
+                if ((row.shippingType as ShippingType) === "WORLDWIDE") {
+                  shippingCost = { WORLDWIDE: cost };
+                } else {
+                  shippingCost = { US: cost };
+                }
+              }
+            }
+
             addReward({
               type: rewardType,
               title: row.title.trim(),
               description: row.description?.trim() || "",
               amount: parseFloat(row.amount) || 1,
               shippingType: (row.shippingType as ShippingType) || "NO_SHIPPING",
-              shippingCost: parseFloat(row.shippingCost) || 0,
+              shippingCost,
               shippingCountries: ["US"],
               quantityAvailable: row.quantityAvailable ? parseInt(row.quantityAvailable) : undefined,
               visibility: row.visibility === "SECRET" ? "SECRET" : "PUBLIC",
@@ -1157,25 +1174,88 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
                 )}
 
                 {currentReward.shippingType !== "NO_SHIPPING" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="shipping-cost">Shipping Cost</Label>
-                    <div className="relative max-w-xs">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        $
-                      </span>
-                      <Input
-                        id="shipping-cost"
-                        type="number"
-                        className="pl-8"
-                        value={currentReward.shippingCost || ""}
-                        onChange={(e) =>
-                          setCurrentReward({
-                            ...currentReward,
-                            shippingCost: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                      />
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Shipping Costs</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {currentReward.shippingType === "WORLDWIDE"
+                          ? "Set a worldwide shipping rate"
+                          : "Set shipping rates for each selected country"}
+                      </p>
                     </div>
+
+                    {currentReward.shippingType === "WORLDWIDE" ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="shipping-worldwide">Worldwide Rate</Label>
+                        <div className="relative max-w-xs">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                            $
+                          </span>
+                          <Input
+                            id="shipping-worldwide"
+                            type="number"
+                            className="pl-8"
+                            placeholder="0.00"
+                            value={currentReward.shippingCost["WORLDWIDE"] || ""}
+                            onChange={(e) =>
+                              setCurrentReward({
+                                ...currentReward,
+                                shippingCost: {
+                                  ...currentReward.shippingCost,
+                                  WORLDWIDE: parseFloat(e.target.value) || 0,
+                                },
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {currentReward.shippingCountries.length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic">
+                            Select countries above to set shipping rates
+                          </p>
+                        ) : (
+                          <div className="grid gap-3">
+                            {currentReward.shippingCountries.map((countryCode) => {
+                              const country = SHIPPING_COUNTRIES.find(
+                                (c) => c.code === countryCode
+                              );
+                              return (
+                                <div
+                                  key={countryCode}
+                                  className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30"
+                                >
+                                  <span className="font-medium min-w-[140px]">
+                                    {country?.name || countryCode}
+                                  </span>
+                                  <div className="relative flex-1 max-w-[120px]">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                                      $
+                                    </span>
+                                    <Input
+                                      type="number"
+                                      className="pl-7 h-9"
+                                      placeholder="0.00"
+                                      value={currentReward.shippingCost[countryCode] || ""}
+                                      onChange={(e) =>
+                                        setCurrentReward({
+                                          ...currentReward,
+                                          shippingCost: {
+                                            ...currentReward.shippingCost,
+                                            [countryCode]: parseFloat(e.target.value) || 0,
+                                          },
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>

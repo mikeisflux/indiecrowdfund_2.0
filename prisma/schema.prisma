@@ -265,7 +265,7 @@ model Reward {
   estimatedDelivery DateTime?
   shippingType      ShippingType
   shippingCountries String[]
-  shippingCost      Float        @default(0)
+  shippingCost      Json         @default("{}")  // Per-country rates: { "US": 5, "CA": 8 }
 
   // Availability
   quantityAvailable Int?

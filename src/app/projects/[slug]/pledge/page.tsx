@@ -66,13 +66,27 @@ const mockSelectedReward = {
   id: "",
   title: "Loading...",
   amount: 0,
-  shippingCost: 0,
+  shippingCost: {} as Record<string, number>,  // Per-country rates: { "US": 5, "CA": 8, "WORLDWIDE": 10 }
+  shippingType: "NO_SHIPPING" as "NO_SHIPPING" | "WORLDWIDE" | "SELECTED_COUNTRIES",
+  shippingCountries: [] as string[],
   estimatedDelivery: "",
   items: [] as { title: string; quantity: number }[],
 };
 
 // Empty addons - will be populated from API
-const mockAddons: { id: string; title: string; description: string; amount: number; shippingCost: number; imageUrl: string | null; estimatedDelivery: string; limitedQuantity: number | null; includes: string[] }[] = [];
+const mockAddons: {
+  id: string;
+  title: string;
+  description: string;
+  amount: number;
+  shippingCost: Record<string, number>;  // Per-country rates
+  shippingType: "NO_SHIPPING" | "WORLDWIDE" | "SELECTED_COUNTRIES";
+  shippingCountries: string[];
+  imageUrl: string | null;
+  estimatedDelivery: string;
+  limitedQuantity: number | null;
+  includes: string[];
+}[] = [];
 
 const COUNTRIES = [
   { code: "US", name: "United States", currency: "USD" },
@@ -138,9 +152,27 @@ export default function PledgePage() {
   const selectedReward = mockSelectedReward;
   const addons = mockAddons;
 
+  // Helper function to get shipping cost for a country
+  const getShippingCostForCountry = (
+    shippingCost: Record<string, number>,
+    shippingType: string,
+    country: string
+  ): number => {
+    if (shippingType === "NO_SHIPPING") return 0;
+    if (shippingType === "WORLDWIDE") {
+      return shippingCost["WORLDWIDE"] || 0;
+    }
+    // For selected countries, look up the specific country rate
+    return shippingCost[country] || 0;
+  };
+
   // Calculate totals
   const rewardAmount = selectedReward.amount;
-  const rewardShipping = selectedReward.shippingCost;
+  const rewardShipping = getShippingCostForCountry(
+    selectedReward.shippingCost,
+    selectedReward.shippingType,
+    shippingCountry
+  );
 
   const addonsTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
     const addon = addons.find((a) => a.id === id);
@@ -149,7 +181,13 @@ export default function PledgePage() {
 
   const addonsShipping = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
     const addon = addons.find((a) => a.id === id);
-    return sum + (addon?.shippingCost || 0) * qty;
+    if (!addon) return sum;
+    const addonShipping = getShippingCostForCountry(
+      addon.shippingCost,
+      addon.shippingType,
+      shippingCountry
+    );
+    return sum + addonShipping * qty;
   }, 0);
 
   const subtotal = rewardAmount + addonsTotal + bonusSupport;
@@ -338,7 +376,13 @@ export default function PledgePage() {
                                       <span className="font-semibold text-foreground text-base">
                                         ${addon.amount}
                                       </span>
-                                      <span>Estimated Shipping: ${addon.shippingCost}</span>
+                                      <span>
+                                        Estimated Shipping: ${getShippingCostForCountry(
+                                          addon.shippingCost,
+                                          addon.shippingType,
+                                          shippingCountry
+                                        )}
+                                      </span>
                                     </div>
                                   </div>
 
