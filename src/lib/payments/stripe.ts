@@ -1,5 +1,10 @@
 import Stripe from "stripe";
 import { db } from "@/lib/db";
+import {
+  notifyPledgeReceived,
+  notifyPledgeFailed,
+  notifyProjectFunded,
+} from "@/lib/notifications";
 
 let stripeInstance: Stripe | null = null;
 let cachedSecretKey: string | null = null;
@@ -283,13 +288,17 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       stripePaymentIntentId: paymentIntent.id,
     },
     include: {
-      project: true,
+      project: {
+        include: {
+          creator: true,
+        },
+      },
       user: true,
     },
   });
 
   // Update project funding
-  await db.project.update({
+  const updatedProject = await db.project.update({
     where: { id: pledge.projectId },
     data: {
       currentAmount: { increment: pledge.amount },
@@ -304,6 +313,23 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       quantityClaimed: { increment: 1 },
     },
   });
+
+  // Notify creator of new pledge
+  await notifyPledgeReceived(
+    pledge.projectId,
+    pledge.project.creatorId,
+    pledge.user.name || "A backer",
+    pledge.amount
+  );
+
+  // Check if project just got funded
+  if (
+    updatedProject.currentAmount >= updatedProject.goalAmount &&
+    updatedProject.currentAmount - pledge.amount < updatedProject.goalAmount
+  ) {
+    // Project just reached its goal!
+    await notifyProjectFunded(pledge.projectId);
+  }
 }
 
 async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
@@ -311,12 +337,28 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
 
   if (!pledgeId) return;
 
-  await db.pledge.update({
+  const pledge = await db.pledge.update({
     where: { id: pledgeId },
     data: {
       status: "FAILED",
     },
+    include: {
+      project: {
+        select: {
+          title: true,
+          slug: true,
+        },
+      },
+    },
   });
+
+  // Notify backer of failed pledge
+  await notifyPledgeFailed(
+    pledge.projectId,
+    pledge.userId,
+    pledge.project.title,
+    pledge.project.slug
+  );
 }
 
 async function handleAccountUpdate(account: Stripe.Account) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { notifyProjectLaunched } from "@/lib/notifications";
 
 // POST - Launch an approved project
 export async function POST(
@@ -95,8 +96,8 @@ export async function POST(
       },
     });
 
-    // In production: Send launch notifications to followers
-    // await notifyFollowers(projectId, "launch");
+    // Send launch notifications to followers and creator
+    await notifyProjectLaunched(projectId);
 
     return NextResponse.json({
       success: true,

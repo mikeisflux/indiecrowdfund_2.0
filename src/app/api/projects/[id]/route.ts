@@ -22,10 +22,20 @@ const rewardSchema = z.object({
   estimatedDelivery: z.string().optional().nullable(),
   shippingType: z.enum(["WORLDWIDE", "SELECTED_COUNTRIES", "NO_SHIPPING"]),
   shippingCountries: z.array(z.string()).optional(),
-  shippingCost: z.number().optional(),
+  shippingCost: z.union([z.number(), z.record(z.string(), z.number())]).optional(),
   quantityAvailable: z.number().optional().nullable(),
   items: z.array(rewardItemSchema).optional(),
   isEnded: z.boolean().optional(),
+});
+
+// Schema for collaborators
+const collaboratorSchema = z.object({
+  email: z.string().email(),
+  title: z.string().optional(),
+  canEditProject: z.boolean().optional(),
+  canManageCommunity: z.boolean().optional(),
+  canCoordinateFulfillment: z.boolean().optional(),
+  canConfigurePledgeManager: z.boolean().optional(),
 });
 
 // Full update schema including all project data
@@ -74,9 +84,81 @@ const updateProjectSchema = z.object({
   // Rewards (array to replace all rewards)
   rewards: z.array(rewardSchema).optional(),
 
+  // Collaborators
+  collaborators: z.array(collaboratorSchema).optional(),
+
   // Status
   status: z.enum(["DRAFT", "SUBMITTED"]).optional(),
 });
+
+// Helper function to handle collaborators and create notifications
+async function handleCollaborators(
+  projectId: string,
+  collaborators: z.infer<typeof collaboratorSchema>[],
+  creatorId: string,
+  creatorName: string
+) {
+  // Get project title for notification
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: { title: true, slug: true },
+  });
+
+  if (!project) return;
+
+  // Get existing collaborators
+  const existingCollaborators = await db.projectCollaborator.findMany({
+    where: { projectId },
+    select: { email: true, userId: true },
+  });
+
+  const existingEmails = new Set(existingCollaborators.map((c: { email: string | null }) => c.email?.toLowerCase()));
+
+  for (const collab of collaborators) {
+    const emailLower = collab.email.toLowerCase();
+
+    // Skip if already a collaborator
+    if (existingEmails.has(emailLower)) continue;
+
+    // Find user by email
+    const user = await db.user.findUnique({
+      where: { email: emailLower },
+      select: { id: true },
+    });
+
+    if (user) {
+      // Create collaborator entry
+      await db.projectCollaborator.create({
+        data: {
+          projectId,
+          userId: user.id,
+          email: collab.email,
+          title: collab.title || null,
+          canEditProject: collab.canEditProject || false,
+          canManageCommunity: collab.canManageCommunity || false,
+          canCoordinateFulfillment: collab.canCoordinateFulfillment || false,
+          canConfigurePledgeManager: collab.canConfigurePledgeManager || false,
+          status: "PENDING",
+        },
+      });
+
+      // Create notification for the user
+      await db.notification.create({
+        data: {
+          userId: user.id,
+          type: "COLLABORATOR_INVITE",
+          title: "You've been invited to collaborate",
+          message: `${creatorName} has invited you to collaborate on "${project.title}"`,
+          actionUrl: `/projects/${project.slug}`,
+          projectId,
+          senderId: creatorId,
+        },
+      });
+    }
+    // If user doesn't exist, they'll need to sign up first
+    // The invitation will be sent via email when they register
+  }
+}
 
 export async function GET(
   req: NextRequest,
@@ -163,8 +245,8 @@ export async function PATCH(
     const body = await req.json();
     const data = updateProjectSchema.parse(body);
 
-    // Extract rewards for separate handling
-    const { rewards, ...projectData } = data;
+    // Extract rewards and collaborators for separate handling
+    const { rewards, collaborators, ...projectData } = data;
 
     // Prepare project update data
     const updateData: Record<string, unknown> = {};
@@ -299,6 +381,11 @@ export async function PATCH(
         return updatedProject;
       });
 
+      // Handle collaborators if provided
+      if (collaborators && collaborators.length > 0) {
+        await handleCollaborators(params.id, collaborators, session.user.id, session.user.name || "Project Creator");
+      }
+
       return NextResponse.json({ project: updated });
     } else {
       // No rewards to handle, just update project
@@ -306,6 +393,11 @@ export async function PATCH(
         where: { id: params.id },
         data: updateData,
       });
+
+      // Handle collaborators if provided
+      if (collaborators && collaborators.length > 0) {
+        await handleCollaborators(params.id, collaborators, session.user.id, session.user.name || "Project Creator");
+      }
 
       return NextResponse.json({ project: updated });
     }
