@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle } from "lucide-react";
+import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 export function PaymentStep() {
@@ -27,7 +27,10 @@ export function PaymentStep() {
     connected: boolean;
     onboarded: boolean;
     loading: boolean;
-  }>({ connected: false, onboarded: false, loading: true });
+    error: string | null;
+  }>({ connected: false, onboarded: false, loading: true, error: null });
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Check Stripe connection status on mount
   useEffect(() => {
@@ -35,14 +38,32 @@ export function PaymentStep() {
       try {
         const response = await fetch("/api/stripe/connect");
         const data = await response.json();
+        console.log("Stripe status response:", data);
+
+        if (!response.ok) {
+          setStripeStatus({
+            connected: false,
+            onboarded: false,
+            loading: false,
+            error: data.error || "Failed to check status",
+          });
+          return;
+        }
+
         setStripeStatus({
           connected: data.connected || false,
           onboarded: data.onboarded || false,
           loading: false,
+          error: null,
         });
       } catch (error) {
         console.error("Failed to check Stripe status:", error);
-        setStripeStatus({ connected: false, onboarded: false, loading: false });
+        setStripeStatus({
+          connected: false,
+          onboarded: false,
+          loading: false,
+          error: "Network error checking status"
+        });
       }
     }
     checkStripeStatus();
@@ -63,6 +84,7 @@ export function PaymentStep() {
 
   const handleConnectStripe = async () => {
     setIsConnecting(true);
+    setConnectError(null);
     try {
       const response = await fetch("/api/stripe/connect", {
         method: "POST",
@@ -70,14 +92,56 @@ export function PaymentStep() {
       });
 
       const data = await response.json();
+      console.log("Stripe connect response:", data);
+
+      if (!response.ok) {
+        setConnectError(data.error || "Failed to connect Stripe");
+        return;
+      }
 
       if (data.onboardingUrl) {
         window.location.href = data.onboardingUrl;
       }
     } catch (error) {
       console.error("Failed to initiate Stripe connection:", error);
+      setConnectError("Network error connecting to Stripe");
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const handleResetStripe = async () => {
+    if (!confirm("Are you sure you want to disconnect your Stripe account? You will need to reconnect it.")) {
+      return;
+    }
+
+    setIsResetting(true);
+    setConnectError(null);
+    try {
+      const response = await fetch("/api/stripe/connect/reset", {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+      console.log("Stripe reset response:", data);
+
+      if (!response.ok) {
+        setConnectError(data.error || "Failed to reset Stripe");
+        return;
+      }
+
+      // Reset the status
+      setStripeStatus({
+        connected: false,
+        onboarded: false,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      console.error("Failed to reset Stripe connection:", error);
+      setConnectError("Network error resetting Stripe");
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -295,6 +359,44 @@ export function PaymentStep() {
       <div className="space-y-4">
         <h3 className="font-semibold">Connect Your Stripe Account</h3>
 
+        {/* Show errors if any */}
+        {(stripeStatus.error || connectError) && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Stripe Connection Issue</AlertTitle>
+            <AlertDescription className="space-y-3">
+              <span>{stripeStatus.error || connectError}</span>
+              {connectError?.includes("already connected") && (
+                <div className="flex flex-col gap-2">
+                  <span>
+                    If you previously connected a Stripe account but never completed onboarding,
+                    you can reset your connection and try again.
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetStripe}
+                    disabled={isResetting}
+                    className="w-fit"
+                  >
+                    {isResetting ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Resetting...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Reset Stripe Connection
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card className={stripeStatus.onboarded ? "border-green-500" : ""}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -326,10 +428,21 @@ export function PaymentStep() {
                 </div>
               </div>
               {stripeStatus.onboarded ? (
-                <Badge variant="default" className="bg-green-500">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Connected
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="default" className="bg-green-500">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Connected
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetStripe}
+                    disabled={isResetting}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    {isResetting ? "Disconnecting..." : "Disconnect"}
+                  </Button>
+                </div>
               ) : (
                 <Button
                   onClick={handleConnectStripe}

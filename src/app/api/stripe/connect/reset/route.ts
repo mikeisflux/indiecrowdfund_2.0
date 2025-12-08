@@ -1,0 +1,40 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+
+// DELETE - Reset/disconnect Stripe account
+export async function DELETE() {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Delete user's Stripe config
+    const existingConfig = await db.stripeConfig.findUnique({
+      where: { userId: session.user.id },
+    });
+
+    if (!existingConfig) {
+      return NextResponse.json({
+        success: true,
+        message: "No Stripe account was connected",
+      });
+    }
+
+    await db.stripeConfig.delete({
+      where: { userId: session.user.id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Stripe account disconnected successfully",
+    });
+  } catch (error) {
+    console.error("Stripe reset error:", error);
+    return NextResponse.json(
+      { error: "Failed to reset Stripe connection" },
+      { status: 500 }
+    );
+  }
+}
