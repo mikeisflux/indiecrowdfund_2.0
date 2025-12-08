@@ -125,6 +125,7 @@ export default function EditProjectPage() {
             shippingCost: reward.shippingCost || 0,
             quantityAvailable: reward.quantityAvailable,
             quantityClaimed: reward.quantityClaimed || 0,
+            visibility: reward.visibility || "PUBLIC",
             items: (reward.items || []).map((item: { id: string; title: string; quantity?: number }) => ({
               id: item.id,
               title: item.title,

@@ -373,6 +373,7 @@ export interface RewardData {
   shippingCountries: string[];
   shippingCost: number;
   quantityAvailable?: number;
+  quantityClaimed?: number;
   visibility: Visibility;
   availableFrom?: Date;
   availableUntil?: Date;
