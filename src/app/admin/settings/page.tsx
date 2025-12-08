@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -183,6 +183,12 @@ export default function SettingsPage() {
     payoutThreshold: "100",
     payoutSchedule: "weekly",
   });
+
+  // Ref to track latest payment settings for save handler (avoids stale closure)
+  const paymentSettingsRef = useRef(paymentSettings);
+  useEffect(() => {
+    paymentSettingsRef.current = paymentSettings;
+  }, [paymentSettings]);
 
   const [emailSettings, setEmailSettings] = useState({
     provider: "smtp",
@@ -496,16 +502,18 @@ export default function SettingsPage() {
           break;
         case "payments":
           section = "payments";
+          // Use ref to get latest values (avoids stale closure from blur events)
+          const currentPaymentSettings = paymentSettingsRef.current;
           data = {
-            stripeEnabled: paymentSettings.stripeEnabled,
-            stripePublishableKey: paymentSettings.stripePublicKey,
-            stripeSecretKey: paymentSettings.stripeSecretKey,
-            stripeWebhookSecret: paymentSettings.stripeWebhookSecret,
-            ccbillEnabled: paymentSettings.ccbillEnabled,
-            ccbillClientAccountNo: paymentSettings.ccbillClientAccountNo,
-            ccbillSubaccount: paymentSettings.ccbillSubAccount,
-            ccbillFormName: paymentSettings.ccbillFlexId,
-            ccbillSalt: paymentSettings.ccbillSalt,
+            stripeEnabled: currentPaymentSettings.stripeEnabled,
+            stripePublishableKey: currentPaymentSettings.stripePublicKey,
+            stripeSecretKey: currentPaymentSettings.stripeSecretKey,
+            stripeWebhookSecret: currentPaymentSettings.stripeWebhookSecret,
+            ccbillEnabled: currentPaymentSettings.ccbillEnabled,
+            ccbillClientAccountNo: currentPaymentSettings.ccbillClientAccountNo,
+            ccbillSubaccount: currentPaymentSettings.ccbillSubAccount,
+            ccbillFormName: currentPaymentSettings.ccbillFlexId,
+            ccbillSalt: currentPaymentSettings.ccbillSalt,
           };
           break;
         case "email":
