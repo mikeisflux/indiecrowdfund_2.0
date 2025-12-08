@@ -34,8 +34,13 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Stripe Connect error:", error);
+
+    // Extract Stripe error message if available
+    const stripeError = error as { message?: string; type?: string; code?: string };
+    const errorMessage = stripeError.message || "Failed to create Stripe account";
+
     return NextResponse.json(
-      { error: "Failed to create Stripe account" },
+      { error: errorMessage, type: stripeError.type, code: stripeError.code },
       { status: 500 }
     );
   }
