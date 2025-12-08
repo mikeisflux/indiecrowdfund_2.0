@@ -477,6 +477,8 @@ export default function SettingsPage() {
   };
 
   const handleSave = async () => {
+    console.log("=== HANDLE SAVE TRIGGERED ===");
+    console.log("Active tab:", activeTab);
     setIsSaving(true);
     setSaveMessage(null);
     setError(null);
@@ -504,6 +506,7 @@ export default function SettingsPage() {
           section = "payments";
           // Use ref to get latest values (avoids stale closure from blur events)
           const currentPaymentSettings = paymentSettingsRef.current;
+          console.log("Payments case - ref value:", JSON.stringify(currentPaymentSettings, null, 2));
           data = {
             stripeEnabled: currentPaymentSettings.stripeEnabled,
             stripePublishableKey: currentPaymentSettings.stripePublicKey,

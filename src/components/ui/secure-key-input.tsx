@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, X, Check } from "lucide-react";
@@ -15,11 +15,8 @@ interface SecureKeyInputProps {
 /**
  * SecureKeyInput - A secure input component for API keys and secrets
  *
- * This component NEVER displays actual key values in the DOM.
- * Instead, it shows:
- * - "Configured" badge when a key exists
- * - "Not configured" when no key is set
- * - An edit mode where users can enter a NEW key (without seeing the old one)
+ * Calls onChange on every keystroke (like a normal input).
+ * Shows "Configured" when a value exists, edit mode for entering new values.
  */
 export function SecureKeyInput({
   value,
@@ -29,44 +26,30 @@ export function SecureKeyInput({
 }: SecureKeyInputProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showValue, setShowValue] = useState(false);
-  const [tempValue, setTempValue] = useState("");
-  const cancelClickedRef = useRef(false);
 
   // Check if there's an existing value (masked from server) or new value being set
   const isConfigured = hasExistingValue || (value && value !== "" && value !== "••••••••");
 
   const handleEdit = () => {
     setIsEditing(true);
-    setTempValue("");
+    // Clear the masked value when editing
+    if (value === "••••••••") {
+      onChange("");
+    }
   };
 
   const handleSave = () => {
-    if (tempValue) {
-      onChange(tempValue);
-    }
     setIsEditing(false);
-    setTempValue("");
     setShowValue(false);
-  };
-
-  // Auto-commit on blur so value isn't lost when user clicks main Save button
-  // This fires IMMEDIATELY (no timeout) to ensure state is updated before parent save
-  const handleBlur = () => {
-    if (tempValue && !cancelClickedRef.current) {
-      onChange(tempValue);
-    }
-    cancelClickedRef.current = false;
-  };
-
-  // Use onMouseDown to set flag BEFORE blur fires (mousedown happens before blur)
-  const handleCancelMouseDown = () => {
-    cancelClickedRef.current = true;
   };
 
   const handleCancel = () => {
     setIsEditing(false);
-    setTempValue("");
     setShowValue(false);
+    // If we had cleared a masked value, restore it
+    if (hasExistingValue && !value) {
+      onChange("••••••••");
+    }
   };
 
   if (isEditing) {
@@ -75,9 +58,8 @@ export function SecureKeyInput({
         <div className="relative flex-1">
           <Input
             type={showValue ? "text" : "password"}
-            value={tempValue}
-            onChange={(e) => setTempValue(e.target.value)}
-            onBlur={handleBlur}
+            value={value === "••••••••" ? "" : value}
+            onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             autoComplete="off"
             data-lpignore="true"
@@ -96,13 +78,7 @@ export function SecureKeyInput({
         <Button type="button" size="icon" variant="outline" onClick={handleSave}>
           <Check className="h-4 w-4" />
         </Button>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          onMouseDown={handleCancelMouseDown}
-          onClick={handleCancel}
-        >
+        <Button type="button" size="icon" variant="ghost" onClick={handleCancel}>
           <X className="h-4 w-4" />
         </Button>
       </div>
