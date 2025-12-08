@@ -149,10 +149,29 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Filter out masked values (don't update if user hasn't changed them)
+    // Filter out masked values and empty strings for secret fields (don't update if user hasn't changed them)
+    const secretFields = [
+      'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret',
+      'ccbillSalt', 'smtpPassword', 'sendgridApiKey', 'mailgunApiKey',
+      'openaiApiKey', 'anthropicApiKey', 'googlePlacesApiKey',
+      'facebookAppSecret', 'facebookPageAccessToken',
+      'youtubeClientSecret', 'youtubeApiKey',
+      'twitterApiKey', 'twitterApiSecret', 'twitterBearerToken',
+      'twitterAccessToken', 'twitterAccessSecret',
+      'dalleApiKey', 'stabilityApiKey', 'shuftiSecretKey'
+    ];
+
     const filteredData = Object.fromEntries(
-      Object.entries(data).filter(([, value]) => value !== "••••••••")
+      Object.entries(data).filter(([key, value]) => {
+        // Always filter out masked placeholder values
+        if (value === "••••••••") return false;
+        // For secret fields, also filter out empty strings (don't overwrite existing with empty)
+        if (secretFields.includes(key) && (value === "" || value === null)) return false;
+        return true;
+      })
     );
+
+    console.log("Saving settings - section:", section, "fields:", Object.keys(filteredData));
 
     // Validate based on section
     const allowedFields: Record<string, string[]> = {

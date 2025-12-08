@@ -594,6 +594,9 @@ export default function SettingsPage() {
         throw new Error(errorData.error || "Failed to save settings");
       }
 
+      // Reload settings from database to confirm save and show masked values
+      await loadSettings();
+
       setSaveMessage("Settings saved successfully");
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (err) {
