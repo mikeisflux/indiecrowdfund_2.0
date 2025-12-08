@@ -236,7 +236,7 @@ export const useProjectStore = create<ProjectBuilderState>()(
         promotion: state.promotion,
         projectId: state.projectId,
         projectStatus: state.projectStatus,
-      }),
+      }) as ProjectBuilderState,
     }
   )
 );
