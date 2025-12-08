@@ -36,7 +36,7 @@ export function UserProfileDropdown() {
 
   // Fetch user's projects when dropdown opens
   const fetchProfileData = async () => {
-    if (!session?.user?.id || profileData) return;
+    if (!session?.user?.id) return;
 
     setLoading(true);
     try {
@@ -195,28 +195,40 @@ export function UserProfileDropdown() {
               <>
                 {profileData?.createdProjects && profileData.createdProjects.length > 0 ? (
                   <div className="space-y-2">
-                    {profileData.createdProjects.slice(0, 4).map((project) => (
-                      <Link
-                        key={project.id}
-                        href={`/projects/${project.slug}`}
-                        className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
-                      >
-                        <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
-                          {project.imageUrl ? (
-                            <Image
-                              src={project.imageUrl}
-                              alt={project.title}
-                              width={40}
-                              height={40}
-                              className="object-cover w-full h-full"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
-                          )}
-                        </div>
-                        <span className="text-sm truncate max-w-[120px]">{project.title}</span>
-                      </Link>
-                    ))}
+                    {profileData.createdProjects.slice(0, 4).map((project) => {
+                      // Draft/submitted projects go to edit page, live+ go to public page
+                      const isDraft = project.status === "DRAFT" || project.status === "SUBMITTED";
+                      const href = isDraft
+                        ? `/projects/${project.slug}/edit`
+                        : `/projects/${project.slug}`;
+                      return (
+                        <Link
+                          key={project.id}
+                          href={href}
+                          className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
+                        >
+                          <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
+                            {project.imageUrl ? (
+                              <Image
+                                src={project.imageUrl}
+                                alt={project.title}
+                                width={40}
+                                height={40}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
+                            )}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm truncate max-w-[120px]">{project.title}</span>
+                            {isDraft && (
+                              <span className="text-xs text-muted-foreground">{project.status}</span>
+                            )}
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                 ) : null}
 
