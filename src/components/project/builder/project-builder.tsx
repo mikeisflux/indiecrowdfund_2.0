@@ -26,6 +26,7 @@ export function ProjectBuilder() {
     story,
     rewards,
     items,
+    people,
     payment,
     promotion,
     projectId,
@@ -125,6 +126,9 @@ export function ProjectBuilder() {
 
         // Rewards
         rewards: transformedRewards,
+
+        // Collaborators
+        collaborators: people.collaborators || [],
       };
 
       let response;
