@@ -463,10 +463,10 @@ export default function SettingsPage() {
               </div>
 
               <div className="text-sm text-muted-foreground">
-                Member since {new Date(settings.createdAt).toLocaleDateString("en-US", {
+                Member since {settings.createdAt ? new Date(settings.createdAt).toLocaleDateString("en-US", {
                   month: "long",
                   year: "numeric",
-                })}
+                }) : "Unknown"}
               </div>
             </CardContent>
           </Card>
