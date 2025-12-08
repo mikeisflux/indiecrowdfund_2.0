@@ -17,6 +17,9 @@ import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
 
+// Force dynamic rendering to ensure database is available
+export const dynamic = "force-dynamic";
+
 // Fetch successful projects from database
 async function getSuccessfulProjects() {
   const projects = await db.project.findMany({

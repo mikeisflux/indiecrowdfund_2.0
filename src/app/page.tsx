@@ -27,6 +27,9 @@ import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
 
+// Force dynamic rendering to ensure database is available
+export const dynamic = "force-dynamic";
+
 /*
  * #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE#
  */
