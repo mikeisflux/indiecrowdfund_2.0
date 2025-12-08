@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Plus, Trash2, AlertTriangle, HelpCircle } from "lucide-react";
 
 export function StoryStep() {
@@ -42,18 +43,13 @@ export function StoryStep() {
         </Label>
         <p className="text-sm text-muted-foreground">
           Tell potential backers about your project. What are you making? Why does it matter?
+          Copy and paste content from other websites - formatting and images will be preserved.
         </p>
-        <Textarea
-          id="description"
-          placeholder="Describe your project in detail. Include what you're creating, why it matters, and what makes it unique..."
-          rows={12}
+        <RichTextEditor
           value={story.description || ""}
-          onChange={(e) => updateStory({ description: e.target.value })}
-          className="font-sans"
+          onChange={(value) => updateStory({ description: value })}
+          placeholder="Describe your project in detail. Include what you're creating, why it matters, and what makes it unique..."
         />
-        <p className="text-xs text-muted-foreground">
-          Tip: Include images and videos to make your story more engaging
-        </p>
       </div>
 
       {/* Risks & Challenges */}
