@@ -35,6 +35,8 @@ const updateProjectSchema = z.object({
   subtitle: z.string().optional(),
   category: z.string().optional(),
   subcategory: z.string().optional().nullable(),
+  secondaryCategory: z.string().optional().nullable(),
+  secondarySubcategory: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   imageUrl: z.string().optional().nullable(),
   videoUrl: z.string().optional().nullable(),
@@ -172,6 +174,8 @@ export async function PATCH(
     if (projectData.subtitle !== undefined) updateData.subtitle = projectData.subtitle;
     if (projectData.category !== undefined) updateData.category = projectData.category;
     if (projectData.subcategory !== undefined) updateData.subcategory = projectData.subcategory;
+    if (projectData.secondaryCategory !== undefined) updateData.secondaryCategory = projectData.secondaryCategory;
+    if (projectData.secondarySubcategory !== undefined) updateData.secondarySubcategory = projectData.secondarySubcategory;
     if (projectData.location !== undefined) updateData.location = projectData.location;
     if (projectData.imageUrl !== undefined) updateData.imageUrl = projectData.imageUrl;
     if (projectData.videoUrl !== undefined) updateData.videoUrl = projectData.videoUrl;

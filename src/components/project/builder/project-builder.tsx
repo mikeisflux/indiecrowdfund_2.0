@@ -90,6 +90,8 @@ export function ProjectBuilder() {
         subtitle: basics.subtitle,
         category: basics.category,
         subcategory: basics.subcategory,
+        secondaryCategory: basics.secondaryCategory,
+        secondarySubcategory: basics.secondarySubcategory,
         location: basics.location,
         imageUrl: basics.imageUrl,
         videoUrl: basics.videoUrl,

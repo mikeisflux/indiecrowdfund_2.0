@@ -58,6 +58,8 @@ export default function EditProjectPage() {
           subtitle: project.subtitle || "",
           category: project.category,
           subcategory: project.subcategory || "",
+          secondaryCategory: project.secondaryCategory || "",
+          secondarySubcategory: project.secondarySubcategory || "",
           location: project.location || "",
           imageUrl: project.imageUrl || "",
           videoUrl: project.videoUrl || "",

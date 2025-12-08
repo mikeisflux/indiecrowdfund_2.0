@@ -57,26 +57,55 @@ export async function GET(
       daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
     }
 
-    // Transform to the expected format
+    // Transform to the expected format - include ALL fields needed for editing
     const formattedProject = {
       id: project.id,
       title: project.title,
       subtitle: project.subtitle || "",
       slug: project.slug,
+      // Categories
       category: project.category,
       subcategory: project.subcategory || "",
+      secondaryCategory: project.secondaryCategory || "",
+      secondarySubcategory: project.secondarySubcategory || "",
+      // Location & Media
       location: project.location || "",
       imageUrl: project.imageUrl || "/placeholder-1.jpg",
       videoUrl: project.videoUrl || "",
-      isProjectWeLove: false, // This could be a field in the future
+      isProjectWeLove: false,
+      // Story
       description: project.description,
       risks: project.risks,
+      usesAI: project.usesAI,
+      faqs: (project.faqs as { question: string; answer: string }[]) || [],
+      // Funding
       goalAmount: project.goalAmount,
       currentAmount: project.currentAmount,
       backerCount: project.backerCount,
-      daysRemaining,
+      // Duration
+      durationType: project.durationType,
+      durationDays: project.durationDays,
       endDate: project.endDate,
+      launchDate: project.launchDate,
       launchedAt: project.launchedAt,
+      daysRemaining,
+      // Payment settings
+      projectType: project.projectType,
+      hasAdultContent: project.hasAdultContent,
+      hasRiskyContent: project.hasRiskyContent,
+      promoContentSfw: project.promoContentSfw,
+      allowRetailerPledges: project.allowRetailerPledges,
+      retailerDiscount: project.retailerDiscount,
+      retailerMinQuantity: project.retailerMinQuantity,
+      // Promotion settings
+      prelaunchActive: project.prelaunchActive,
+      prelaunchDescription: project.prelaunchDescription || "",
+      customReferralTags: project.customReferralTags || [],
+      googleAnalyticsId: project.googleAnalyticsId || "",
+      metaPixelId: project.metaPixelId || "",
+      // Status
+      status: project.status,
+      // Creator
       creator: {
         id: project.creator.id,
         name: project.creator.name || "Creator",
@@ -86,8 +115,7 @@ export async function GET(
         projectsCreated: project.creator._count.createdProjects,
         projectsBacked: project.creator._count.pledges,
       },
-      usesAI: project.usesAI,
-      faqs: (project.faqs as { question: string; answer: string }[]) || [],
+      // Updates and comments
       updates: project.updates.map((u: { id: string; title: string; content: string; publishedAt: Date | null; createdAt: Date }) => ({
         id: u.id,
         title: u.title,
@@ -97,10 +125,12 @@ export async function GET(
       comments: project._count.comments,
     };
 
-    // Transform rewards
+    // Transform rewards - include ALL fields needed for editing
     interface RewardItem {
       id: string;
       title: string;
+      description: string | null;
+      imageUrl: string | null;
     }
     interface Reward {
       id: string;
@@ -114,6 +144,7 @@ export async function GET(
       shippingCost: number | null;
       quantityAvailable: number | null;
       quantityClaimed: number;
+      visibility: string;
       imageUrl: string | null;
       items: RewardItem[];
       isEnded: boolean;
@@ -127,17 +158,21 @@ export async function GET(
       amount: r.amount,
       estimatedDelivery: r.estimatedDelivery,
       shippingType: r.shippingType,
+      shippingCountries: r.shippingCountries || [],
       shippingLocation: r.shippingCountries.length > 0 ? r.shippingCountries.join(", ") : "Worldwide",
-      shippingCost: r.shippingCost,
+      shippingCost: r.shippingCost || 0,
       quantityAvailable: r.quantityAvailable,
-      quantityClaimed: r.quantityClaimed,
+      quantityClaimed: r.quantityClaimed || 0,
+      visibility: r.visibility || "PUBLIC",
       imageUrl: r.imageUrl || "",
       items: r.items.map((i: RewardItem) => ({
         id: i.id,
         title: i.title,
-        quantity: 1, // Default quantity per reward
+        description: i.description || "",
+        imageUrl: i.imageUrl || "",
+        quantity: 1,
       })),
-      isEnded: r.isEnded,
+      isEnded: r.isEnded || false,
       endedAt: r.endedAt,
     }));
 
