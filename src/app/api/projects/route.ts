@@ -24,9 +24,13 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
     const status = searchParams.get("status");
+    const search = searchParams.get("q");
+    const sort = searchParams.get("sort") || "trending";
+    const staffPicks = searchParams.get("staffPicks") === "true";
     const limit = parseInt(searchParams.get("limit") || "12");
     const offset = parseInt(searchParams.get("offset") || "0");
 
+    // Build where clause
     const where: Record<string, unknown> = {};
 
     if (category) {
@@ -38,6 +42,39 @@ export async function GET(req: NextRequest) {
     } else {
       // Default to showing live projects
       where.status = "LIVE";
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { subtitle: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (staffPicks) {
+      where.isStaffPick = true;
+    }
+
+    // Build orderBy based on sort param
+    let orderBy: Record<string, string> | Record<string, string>[];
+    switch (sort) {
+      case "newest":
+        orderBy = { createdAt: "desc" };
+        break;
+      case "most-funded":
+        orderBy = { currentAmount: "desc" };
+        break;
+      case "ending-soon":
+        orderBy = { endDate: "asc" };
+        break;
+      case "most-backed":
+        orderBy = { backerCount: "desc" };
+        break;
+      case "trending":
+      default:
+        // Trending = combination of recent activity and funding momentum
+        orderBy = [{ backerCount: "desc" }, { currentAmount: "desc" }];
+        break;
     }
 
     const [projects, total] = await Promise.all([
@@ -57,17 +94,44 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-        orderBy: {
-          createdAt: "desc",
-        },
+        orderBy,
         take: limit,
         skip: offset,
       }),
       db.project.count({ where }),
     ]);
 
+    // Format projects for frontend
+    const formattedProjects = projects.map((project) => {
+      let daysRemaining = 0;
+      if (project.endDate) {
+        const now = new Date();
+        const end = new Date(project.endDate);
+        daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      }
+
+      return {
+        id: project.id,
+        title: project.title,
+        subtitle: project.subtitle || "",
+        slug: project.slug,
+        category: project.category,
+        imageUrl: project.imageUrl || "/placeholder-1.jpg",
+        creator: {
+          id: project.creator.id,
+          name: project.creator.name || "Creator",
+          image: project.creator.image,
+        },
+        goalAmount: project.goalAmount,
+        currentAmount: project.currentAmount,
+        backerCount: project.backerCount,
+        daysRemaining,
+        isStaffPick: project.isStaffPick,
+      };
+    });
+
     return NextResponse.json({
-      projects,
+      projects: formattedProjects,
       pagination: {
         total,
         limit,

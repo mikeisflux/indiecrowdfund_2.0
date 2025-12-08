@@ -10,93 +10,79 @@ import {
   ArrowRight,
   Quote,
   Star,
-  Play,
   Sparkles,
+  Rocket,
 } from "lucide-react";
+import { getPlatformStats } from "@/lib/stats/actions";
+import { formatCurrency, formatNumber } from "@/lib/stats/utils";
+import { db } from "@/lib/db";
 
-const featuredStories = [
-  {
-    id: 1,
-    title: "NeoBoard: The Smart Skateboard",
-    creator: "Alex Chen",
-    category: "Technology",
-    raised: 847000,
-    goal: 50000,
-    backers: 4521,
-    image: "/placeholder-project-1.jpg",
-    quote: "IndieCrowdfund gave us the platform to turn our garage prototype into a product shipping to 40+ countries. The community support was incredible.",
-    highlight: "1,694% funded",
-    launchDate: "2023",
-  },
-  {
-    id: 2,
-    title: "Echoes of Avalon",
-    creator: "Mythic Games Studio",
-    category: "Games",
-    raised: 1250000,
-    goal: 100000,
-    backers: 12847,
-    image: "/placeholder-project-2.jpg",
-    quote: "We went from a small indie team to shipping a AAA-quality board game. The retailer program alone brought in 200+ stores worldwide.",
-    highlight: "12,500+ backers",
-    launchDate: "2023",
-  },
-  {
-    id: 3,
-    title: "Solar Bloom: Smart Garden",
-    creator: "GreenTech Innovations",
-    category: "Design",
-    raised: 523000,
-    goal: 75000,
-    backers: 3892,
-    image: "/placeholder-project-3.jpg",
-    quote: "The AI marketing tools helped us reach audiences we never knew existed. Our campaign went viral in the sustainability community.",
-    highlight: "Featured in Forbes",
-    launchDate: "2024",
-  },
-];
+// Fetch successful projects from database
+async function getSuccessfulProjects() {
+  const projects = await db.project.findMany({
+    where: {
+      status: "FUNDED",
+    },
+    include: {
+      creator: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      currentAmount: "desc",
+    },
+    take: 3,
+  });
 
-const stats = [
-  { value: "$47M+", label: "Total Raised", icon: DollarSign },
-  { value: "892", label: "Funded Projects", icon: Trophy },
-  { value: "156K+", label: "Happy Backers", icon: Users },
-  { value: "87%", label: "Success Rate", icon: TrendingUp },
-];
+  return projects.map((project) => ({
+    id: project.id,
+    title: project.title,
+    creator: project.creator.name || "Creator",
+    category: project.category,
+    raised: project.currentAmount,
+    goal: project.goalAmount,
+    backers: project.backerCount,
+    image: project.imageUrl || "/placeholder-project-1.jpg",
+    highlight: `${Math.round((project.currentAmount / project.goalAmount) * 100)}% funded`,
+  }));
+}
 
-const categories = [
-  { name: "Technology", projects: 234, funded: "$12.4M" },
-  { name: "Games", projects: 189, funded: "$15.2M" },
-  { name: "Design", projects: 156, funded: "$8.7M" },
-  { name: "Film & Video", projects: 98, funded: "$4.1M" },
-  { name: "Music", projects: 87, funded: "$2.3M" },
-  { name: "Publishing", projects: 128, funded: "$4.3M" },
-];
+// Fetch category stats from database
+async function getCategoryStats() {
+  const categoryStats = await db.project.groupBy({
+    by: ["category"],
+    where: {
+      status: { in: ["LIVE", "FUNDED", "SUCCESSFUL"] },
+    },
+    _sum: {
+      currentAmount: true,
+    },
+    _count: true,
+  });
 
-const testimonials = [
-  {
-    quote: "The team at IndieCrowdfund went above and beyond. When we hit a shipping snag, they connected us with fulfillment partners that saved our campaign.",
-    author: "Sarah Mitchell",
-    project: "AquaPure Water Bottle",
-    avatar: "S",
-    raised: "$234,000",
-  },
-  {
-    quote: "As a first-time creator, I was nervous. The creator tools and community support made it feel like I had a whole team behind me.",
-    author: "Marcus Thompson",
-    project: "Urban Beats Headphones",
-    avatar: "M",
-    raised: "$89,000",
-  },
-  {
-    quote: "We've launched on multiple platforms. IndieCrowdfund's backer engagement tools are simply the best in the industry.",
-    author: "Jennifer Walsh",
-    project: "Pocket Drone Pro",
-    avatar: "J",
-    raised: "$567,000",
-  },
-];
+  return categoryStats.map((cat) => ({
+    name: cat.category,
+    projects: cat._count,
+    funded: formatCurrency(cat._sum.currentAmount || 0),
+  }));
+}
 
-export default function SuccessStoriesPage() {
+export default async function SuccessStoriesPage() {
+  const [platformStats, successfulProjects, categoryStats] = await Promise.all([
+    getPlatformStats(),
+    getSuccessfulProjects(),
+    getCategoryStats(),
+  ]);
+
+  const stats = [
+    { value: platformStats.totalPledged > 0 ? formatCurrency(platformStats.totalPledged) : "$0", label: "Total Raised", icon: DollarSign },
+    { value: formatNumber(platformStats.projectsFunded), label: "Funded Projects", icon: Trophy },
+    { value: formatNumber(platformStats.totalBackers), label: "Happy Backers", icon: Users },
+    { value: `${platformStats.successRate}%`, label: "Success Rate", icon: TrendingUp },
+  ];
+
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       {/* Hero Section */}
@@ -169,69 +155,94 @@ export default function SuccessStoriesPage() {
             </p>
           </div>
 
-          <div className="mt-16 space-y-16">
-            {featuredStories.map((story, index) => (
-              <div
-                key={story.id}
-                className={`grid gap-8 lg:grid-cols-2 lg:items-center ${
-                  index % 2 === 1 ? "lg:grid-flow-dense" : ""
-                }`}
-              >
-                <div className={index % 2 === 1 ? "lg:col-start-2" : ""}>
-                  <div className="relative aspect-video overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <Play className="mx-auto h-16 w-16 text-zinc-400" />
-                        <p className="mt-2 text-sm text-zinc-500">Campaign Video</p>
+          {successfulProjects.length === 0 ? (
+            <div className="mt-16 flex flex-col items-center justify-center py-16 text-center">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+                <Rocket className="h-10 w-10 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-zinc-900 dark:text-white mb-2">
+                Be the First Success Story!
+              </h3>
+              <p className="mx-auto max-w-md text-zinc-600 dark:text-zinc-400 mb-6">
+                No projects have reached their funding goals yet. Your project could be the first success story featured here!
+              </p>
+              <Link href="/projects/new">
+                <Button className="bg-orange-500 hover:bg-orange-600">
+                  Start Your Campaign
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-16 space-y-16">
+              {successfulProjects.map((story, index) => (
+                <div
+                  key={story.id}
+                  className={`grid gap-8 lg:grid-cols-2 lg:items-center ${
+                    index % 2 === 1 ? "lg:grid-flow-dense" : ""
+                  }`}
+                >
+                  <div className={index % 2 === 1 ? "lg:col-start-2" : ""}>
+                    <div className="relative aspect-video overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800">
+                      {story.image && story.image !== "/placeholder-project-1.jpg" ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={story.image} alt={story.title} className="object-cover w-full h-full" />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center">
+                            <Trophy className="mx-auto h-16 w-16 text-orange-400" />
+                            <p className="mt-2 text-sm text-zinc-500">Funded Campaign</p>
+                          </div>
+                        </div>
+                      )}
+                      <Badge className="absolute top-4 left-4 bg-orange-500">
+                        {story.highlight}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className={index % 2 === 1 ? "lg:col-start-1" : ""}>
+                    <Badge variant="outline" className="mb-2">{story.category}</Badge>
+                    <h3 className="text-2xl font-bold text-zinc-900 dark:text-white lg:text-3xl">
+                      {story.title}
+                    </h3>
+                    <p className="mt-2 text-zinc-600 dark:text-zinc-400">by {story.creator}</p>
+
+                    <div className="mt-6 grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-2xl font-bold text-emerald-600">
+                          {formatCurrency(story.raised)}
+                        </p>
+                        <p className="text-sm text-zinc-500">Raised</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+                          {story.backers.toLocaleString()}
+                        </p>
+                        <p className="text-sm text-zinc-500">Backers</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+                          {Math.round((story.raised / story.goal) * 100)}%
+                        </p>
+                        <p className="text-sm text-zinc-500">Funded</p>
                       </div>
                     </div>
-                    <Badge className="absolute top-4 left-4 bg-orange-500">
-                      {story.highlight}
-                    </Badge>
-                  </div>
-                </div>
 
-                <div className={index % 2 === 1 ? "lg:col-start-1" : ""}>
-                  <Badge variant="outline" className="mb-2">{story.category}</Badge>
-                  <h3 className="text-2xl font-bold text-zinc-900 dark:text-white lg:text-3xl">
-                    {story.title}
-                  </h3>
-                  <p className="mt-2 text-zinc-600 dark:text-zinc-400">by {story.creator}</p>
-
-                  <div className="mt-6 grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-2xl font-bold text-emerald-600">
-                        ${(story.raised / 1000).toFixed(0)}K
+                    <div className="mt-6 border-l-4 border-orange-500 pl-4">
+                      <Quote className="h-6 w-6 text-orange-500 mb-2" />
+                      <p className="text-zinc-600 dark:text-zinc-400 italic">
+                        A successfully funded project on IndieCrowdfund!
                       </p>
-                      <p className="text-sm text-zinc-500">Raised</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-zinc-900 dark:text-white">
-                        {story.backers.toLocaleString()}
-                      </p>
-                      <p className="text-sm text-zinc-500">Backers</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-zinc-900 dark:text-white">
-                        {Math.round((story.raised / story.goal) * 100)}%
-                      </p>
-                      <p className="text-sm text-zinc-500">Funded</p>
+                      <footer className="mt-2 text-sm font-medium text-zinc-900 dark:text-white">
+                        — {story.creator}
+                      </footer>
                     </div>
                   </div>
-
-                  <blockquote className="mt-6 border-l-4 border-orange-500 pl-4">
-                    <Quote className="h-6 w-6 text-orange-500 mb-2" />
-                    <p className="text-zinc-600 dark:text-zinc-400 italic">
-                      &ldquo;{story.quote}&rdquo;
-                    </p>
-                    <footer className="mt-2 text-sm font-medium text-zinc-900 dark:text-white">
-                      — {story.creator}
-                    </footer>
-                  </blockquote>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -247,59 +258,91 @@ export default function SuccessStoriesPage() {
             </p>
           </div>
 
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.map((category) => (
-              <Card key={category.name} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-zinc-900 dark:text-white">{category.name}</h3>
-                      <p className="text-sm text-zinc-500">{category.projects} funded projects</p>
+          {categoryStats.length === 0 ? (
+            <div className="mt-12 text-center py-8">
+              <p className="text-zinc-500">No category data available yet. Be the first to launch a project!</p>
+            </div>
+          ) : (
+            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {categoryStats.map((category) => (
+                <Card key={category.name} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-zinc-900 dark:text-white">{category.name}</h3>
+                        <p className="text-sm text-zinc-500">{category.projects} project{category.projects !== 1 ? 's' : ''}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-emerald-600">{category.funded}</p>
+                        <p className="text-xs text-zinc-500">total raised</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-emerald-600">{category.funded}</p>
-                      <p className="text-xs text-zinc-500">total raised</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Community Section - replaces hardcoded testimonials */}
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
-              Creator Testimonials
+              Join Our Creator Community
             </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+              Thousands of creators trust IndieCrowdfund to bring their ideas to life.
+            </p>
           </div>
 
           <div className="mt-12 grid gap-8 md:grid-cols-3">
-            {testimonials.map((testimonial) => (
-              <Card key={testimonial.author} className="relative">
-                <CardContent className="pt-8 pb-6">
-                  <Quote className="absolute top-4 left-4 h-8 w-8 text-orange-200" />
-                  <p className="text-zinc-600 dark:text-zinc-400 relative z-10">
-                    &ldquo;{testimonial.quote}&rdquo;
-                  </p>
-                  <div className="mt-6 flex items-center gap-3 border-t pt-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 font-semibold text-orange-700">
-                      {testimonial.avatar}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-zinc-900 dark:text-white">{testimonial.author}</p>
-                      <p className="text-sm text-zinc-500">{testimonial.project}</p>
-                    </div>
-                    <Badge className="ml-auto bg-emerald-100 text-emerald-700">
-                      {testimonial.raised}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            <Card className="relative">
+              <CardContent className="pt-8 pb-6">
+                <Quote className="absolute top-4 left-4 h-8 w-8 text-orange-200" />
+                <p className="text-zinc-600 dark:text-zinc-400 relative z-10">
+                  Start your journey today and join our growing community of successful creators and passionate backers.
+                </p>
+                <div className="mt-6 pt-4 border-t">
+                  <Link href="/projects/new">
+                    <Button className="w-full bg-orange-500 hover:bg-orange-600">
+                      Start a Project
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="relative">
+              <CardContent className="pt-8 pb-6">
+                <Quote className="absolute top-4 left-4 h-8 w-8 text-orange-200" />
+                <p className="text-zinc-600 dark:text-zinc-400 relative z-10">
+                  Discover innovative projects from creators around the world and be part of bringing new ideas to life.
+                </p>
+                <div className="mt-6 pt-4 border-t">
+                  <Link href="/discover">
+                    <Button variant="outline" className="w-full">
+                      Discover Projects
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="relative">
+              <CardContent className="pt-8 pb-6">
+                <Quote className="absolute top-4 left-4 h-8 w-8 text-orange-200" />
+                <p className="text-zinc-600 dark:text-zinc-400 relative z-10">
+                  Need help getting started? Our creator resources and guides will help you launch a successful campaign.
+                </p>
+                <div className="mt-6 pt-4 border-t">
+                  <Link href="/creator-handbook">
+                    <Button variant="outline" className="w-full">
+                      Creator Resources
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

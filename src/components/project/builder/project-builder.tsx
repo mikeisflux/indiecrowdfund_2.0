@@ -26,7 +26,6 @@ export function ProjectBuilder() {
     story,
     rewards,
     items,
-    people,
     payment,
     promotion,
     projectId,

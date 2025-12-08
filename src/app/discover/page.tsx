@@ -4,7 +4,7 @@
  * #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE#
  */
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -42,33 +42,25 @@ import {
   ArrowUpDown,
   X,
   Menu,
+  Loader2,
 } from "lucide-react";
 import { PROJECT_CATEGORIES } from "@/types";
 
-// TODO: Fetch projects from /api/projects when we have real projects
-// Demo data commented out - will show empty state until live projects exist
-// Uncomment to show demo projects for testing:
-/*
-const mockProjects = [
-  {
-    id: "1",
-    title: "Revolutionary Solar-Powered Backpack",
-    subtitle: "Charge your devices while you explore",
-    slug: "solar-powered-backpack",
-    category: "technology",
-    imageUrl: "/placeholder-1.jpg",
-    creator: { name: "Green Tech Labs" },
-    goalAmount: 50000,
-    currentAmount: 42500,
-    backerCount: 847,
-    daysRemaining: 12,
-    isStaffPick: true,
-  },
-];
-*/
-
-// Empty state - no projects until real projects are created
-const mockProjects: { id: string; title: string; subtitle: string; slug: string; category: string; imageUrl: string; creator: { name: string }; goalAmount: number; currentAmount: number; backerCount: number; daysRemaining: number; isStaffPick: boolean }[] = [];
+// Project type from API
+interface Project {
+  id: string;
+  title: string;
+  subtitle: string;
+  slug: string;
+  category: string;
+  imageUrl: string;
+  creator: { id: string; name: string; image: string | null };
+  goalAmount: number;
+  currentAmount: number;
+  backerCount: number;
+  daysRemaining: number;
+  isStaffPick: boolean;
+}
 
 const SORT_OPTIONS = [
   { value: "trending", label: "Trending" },
@@ -120,25 +112,68 @@ function DiscoverContent() {
   const [showFunded, setShowFunded] = useState(
     searchParams.get("funded") !== "false"
   );
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [totalProjects, setTotalProjects] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
-  // Filter projects based on current filters
-  const filteredProjects = mockProjects.filter((project) => {
-    if (search && !project.title.toLowerCase().includes(search.toLowerCase())) {
-      return false;
+  // Fetch projects from API
+  const fetchProjects = useCallback(async (reset = false) => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("q", search);
+      if (category) params.set("category", category);
+      if (sort) params.set("sort", sort);
+      if (showStaffPicks) params.set("staffPicks", "true");
+      params.set("limit", "12");
+      params.set("offset", reset ? "0" : String(offset));
+
+      const response = await fetch(`/api/projects?${params.toString()}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        // Filter out fully funded if showFunded is false
+        let filteredData = data.projects;
+        if (!showFunded) {
+          filteredData = data.projects.filter((p: Project) => {
+            const percent = (p.currentAmount / p.goalAmount) * 100;
+            return percent < 100;
+          });
+        }
+
+        if (reset) {
+          setProjects(filteredData);
+          setOffset(12);
+        } else {
+          setProjects((prev) => [...prev, ...filteredData]);
+          setOffset((prev) => prev + 12);
+        }
+        setTotalProjects(data.pagination.total);
+        setHasMore(data.pagination.hasMore);
+      }
+    } catch (error) {
+      console.error("Failed to fetch projects:", error);
+    } finally {
+      setIsLoading(false);
     }
-    if (category && project.category !== category) {
-      return false;
+  }, [search, category, sort, showStaffPicks, showFunded, offset]);
+
+  // Initial fetch and refetch when filters change
+  useEffect(() => {
+    fetchProjects(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, category, sort, showStaffPicks, showFunded]);
+
+  const loadMore = () => {
+    if (!isLoading && hasMore) {
+      fetchProjects(false);
     }
-    if (showStaffPicks && !project.isStaffPick) {
-      return false;
-    }
-    if (!showFunded) {
-      const fundedPercent = (project.currentAmount / project.goalAmount) * 100;
-      if (fundedPercent >= 100) return false;
-    }
-    return true;
-  });
+  };
+
+  // Use fetched projects
+  const filteredProjects = projects;
 
   // Update URL when filters change
   const updateFilters = (updates: Record<string, string | boolean | null>) => {
@@ -478,11 +513,18 @@ function DiscoverContent() {
       <section className="container py-8">
         <div className="mb-6 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {filteredProjects.length} projects found
+            {isLoading && filteredProjects.length === 0 ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading projects...
+              </span>
+            ) : (
+              `${totalProjects} projects found`
+            )}
           </p>
         </div>
 
-        {filteredProjects.length === 0 ? (
+        {filteredProjects.length === 0 && !isLoading ? (
           <div className="py-12 text-center">
             <Sparkles className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <h3 className="mb-2 font-semibold">No projects found</h3>
@@ -492,6 +534,11 @@ function DiscoverContent() {
             <Button variant="outline" onClick={clearFilters}>
               Clear filters
             </Button>
+          </div>
+        ) : filteredProjects.length === 0 && isLoading ? (
+          <div className="py-12 text-center">
+            <Loader2 className="mx-auto mb-4 h-12 w-12 text-muted-foreground animate-spin" />
+            <h3 className="mb-2 font-semibold">Loading projects...</h3>
           </div>
         ) : view === "grid" ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -508,10 +555,17 @@ function DiscoverContent() {
         )}
 
         {/* Load More */}
-        {filteredProjects.length > 0 && (
+        {filteredProjects.length > 0 && hasMore && (
           <div className="mt-12 text-center">
-            <Button variant="outline" disabled={isLoading}>
-              {isLoading ? "Loading..." : "Load more projects"}
+            <Button variant="outline" disabled={isLoading} onClick={loadMore}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                "Load more projects"
+              )}
             </Button>
           </div>
         )}
@@ -520,7 +574,7 @@ function DiscoverContent() {
   );
 }
 
-function ProjectCard({ project }: { project: typeof mockProjects[0] }) {
+function ProjectCard({ project }: { project: Project }) {
   const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
 
   return (
@@ -579,7 +633,7 @@ function ProjectCard({ project }: { project: typeof mockProjects[0] }) {
   );
 }
 
-function ProjectListItem({ project }: { project: typeof mockProjects[0] }) {
+function ProjectListItem({ project }: { project: Project }) {
   const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
 
   return (

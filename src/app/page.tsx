@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,59 +26,88 @@ import {
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
+import { db } from "@/lib/db";
 
 /*
  * #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE#
  */
 
-// TODO: Fetch featured projects from /api/projects with featured flag when we have real projects
-// Demo data commented out - will show empty state until live projects exist
-// Uncomment to show demo projects for testing:
-/*
-const featuredProjects = [
-  {
-    id: "1",
-    title: "Revolutionary Solar-Powered Backpack",
-    subtitle: "Charge your devices while you explore",
-    category: "Technology",
-    imageUrl: "/placeholder-1.jpg",
-    creator: "Green Tech Labs",
-    goalAmount: 50000,
-    currentAmount: 42500,
-    backerCount: 847,
-    daysRemaining: 12,
-  },
-];
-*/
+// Fetch featured/live projects from database
+async function getFeaturedProjects() {
+  const projects = await db.project.findMany({
+    where: {
+      status: "LIVE",
+    },
+    include: {
+      creator: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      currentAmount: "desc",
+    },
+    take: 6,
+  });
 
-// Empty state - no featured projects until real projects are created
-const featuredProjects: { id: string; title: string; subtitle: string; category: string; imageUrl: string; creator: string; goalAmount: number; currentAmount: number; backerCount: number; daysRemaining: number }[] = [];
+  return projects.map((project) => {
+    // Calculate days remaining
+    let daysRemaining = 0;
+    if (project.endDate) {
+      const now = new Date();
+      const end = new Date(project.endDate);
+      daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    }
 
-// TODO: Fetch category counts from database when we have real projects
-// Demo counts commented out - will show zero counts until projects exist
-// Uncomment to show demo counts for testing:
-/*
-const categories = [
-  { name: "Art", count: 234 },
-  { name: "Comics", count: 156 },
-  { name: "Technology", count: 412 },
-];
-*/
+    return {
+      id: project.id,
+      slug: project.slug,
+      title: project.title,
+      subtitle: project.subtitle || "",
+      category: project.category,
+      imageUrl: project.imageUrl || "/placeholder-1.jpg",
+      creator: project.creator.name || "Creator",
+      goalAmount: project.goalAmount,
+      currentAmount: project.currentAmount,
+      backerCount: project.backerCount,
+      daysRemaining,
+    };
+  });
+}
 
-// Categories with zero counts - will be populated with real data
-const categories = [
-  { name: "Art", count: 0 },
-  { name: "Comics", count: 0 },
-  { name: "Design", count: 0 },
-  { name: "Film", count: 0 },
-  { name: "Games", count: 0 },
-  { name: "Music", count: 0 },
-  { name: "Publishing", count: 0 },
-  { name: "Technology", count: 0 },
-];
+// Fetch category counts from database
+async function getCategoryCounts() {
+  const categoryCounts = await db.project.groupBy({
+    by: ["category"],
+    where: {
+      status: "LIVE",
+    },
+    _count: true,
+  });
+
+  const categoryMap = new Map(categoryCounts.map(c => [c.category.toLowerCase(), c._count]));
+
+  const categories = [
+    { name: "Art", count: categoryMap.get("art") || 0 },
+    { name: "Comics", count: categoryMap.get("comics") || 0 },
+    { name: "Design", count: categoryMap.get("design") || 0 },
+    { name: "Film", count: categoryMap.get("film") || 0 },
+    { name: "Games", count: categoryMap.get("games") || 0 },
+    { name: "Music", count: categoryMap.get("music") || 0 },
+    { name: "Publishing", count: categoryMap.get("publishing") || 0 },
+    { name: "Technology", count: categoryMap.get("technology") || 0 },
+  ];
+
+  return categories;
+}
 
 export default async function HomePage() {
-  const stats = await getPlatformStats();
+  const [stats, featuredProjects, categories] = await Promise.all([
+    getPlatformStats(),
+    getFeaturedProjects(),
+    getCategoryCounts(),
+  ]);
 
   return (
     <div className="min-h-screen">
