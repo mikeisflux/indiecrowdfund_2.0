@@ -483,6 +483,9 @@ export default function SettingsPage() {
     setSaveMessage(null);
     setError(null);
 
+    // Small delay to ensure React state and refs are fully updated
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     try {
       // Save based on active tab
       let section = "";
@@ -908,6 +911,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={paymentSettings.stripePublicKey}
                     onChange={(value) => setPaymentSettings({ ...paymentSettings, stripePublicKey: value })}
+                    onSave={handleSave}
                     hasExistingValue={paymentSettings.stripePublicKey === "••••••••"}
                     placeholder="pk_live_..."
                   />
@@ -917,6 +921,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={paymentSettings.stripeSecretKey}
                     onChange={(value) => setPaymentSettings({ ...paymentSettings, stripeSecretKey: value })}
+                    onSave={handleSave}
                     hasExistingValue={paymentSettings.stripeSecretKey === "••••••••"}
                     placeholder="sk_live_..."
                   />
@@ -928,6 +933,7 @@ export default function SettingsPage() {
                 <SecureKeyInput
                   value={paymentSettings.stripeWebhookSecret}
                   onChange={(value) => setPaymentSettings({ ...paymentSettings, stripeWebhookSecret: value })}
+                  onSave={handleSave}
                   hasExistingValue={paymentSettings.stripeWebhookSecret === "••••••••"}
                   placeholder="whsec_..."
                 />

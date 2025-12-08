@@ -8,6 +8,7 @@ import { Eye, EyeOff, X, Check } from "lucide-react";
 interface SecureKeyInputProps {
   value: string;
   onChange: (value: string) => void;
+  onSave?: () => void;  // Called when checkmark is clicked to trigger parent save
   placeholder?: string;
   hasExistingValue?: boolean;
 }
@@ -21,6 +22,7 @@ interface SecureKeyInputProps {
 export function SecureKeyInput({
   value,
   onChange,
+  onSave,
   placeholder = "Enter new key...",
   hasExistingValue = false,
 }: SecureKeyInputProps) {
@@ -41,6 +43,10 @@ export function SecureKeyInput({
   const handleSave = () => {
     setIsEditing(false);
     setShowValue(false);
+    // Trigger parent save to persist to database
+    if (onSave) {
+      onSave();
+    }
   };
 
   const handleCancel = () => {
