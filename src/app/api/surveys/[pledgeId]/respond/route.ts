@@ -110,13 +110,13 @@ export async function GET(
 
     // Filter item questions to only show those relevant to this backer's reward
     const relevantItemQuestions = survey.itemQuestions.filter(
-      (iq) => iq.rewardId === pledge.rewardId
+      (iq: { rewardId: string }) => iq.rewardId === pledge.rewardId
     );
 
     // Also include item questions for any addons
     const addonIds = pledge.addons.map((a) => a.addonId);
     const addonItemQuestions = survey.itemQuestions.filter(
-      (iq) => addonIds.includes(iq.rewardId)
+      (iq: { rewardId: string }) => addonIds.includes(iq.rewardId)
     );
 
     // Filter backer questions based on targeting
