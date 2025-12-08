@@ -114,7 +114,7 @@ export async function GET(
     );
 
     // Also include item questions for any addons
-    const addonIds = pledge.addons.map((a) => a.addonId);
+    const addonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
     const addonItemQuestions = survey.itemQuestions.filter(
       (iq: { rewardId: string }) => addonIds.includes(iq.rewardId)
     );

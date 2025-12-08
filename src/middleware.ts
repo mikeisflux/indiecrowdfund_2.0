@@ -9,8 +9,34 @@ const protectedRoutes = ["/dashboard", "/projects/new"];
 // Routes that require SUPER_ADMIN role (validated in actual routes)
 const adminRoutes = ["/admin", "/api/admin"];
 
+// Routes that bypass maintenance mode
+const maintenanceBypassRoutes = [
+  "/api/health",
+  "/maintenance.html",
+  "/_next",
+  "/favicon.ico",
+];
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Check for maintenance mode (set MAINTENANCE_MODE=true in env)
+  const isMaintenanceMode = process.env.MAINTENANCE_MODE === "true";
+
+  if (isMaintenanceMode) {
+    // Allow certain routes to bypass maintenance
+    const bypassMaintenance = maintenanceBypassRoutes.some(
+      (route) => pathname.startsWith(route) || pathname === route
+    );
+
+    // Allow admin routes during maintenance
+    const isAdminAccess = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
+
+    if (!bypassMaintenance && !isAdminAccess) {
+      // Redirect to static maintenance page
+      return NextResponse.rewrite(new URL("/maintenance.html", req.url));
+    }
+  }
 
   // Check if this is a protected route
   const isProtectedRoute = protectedRoutes.some((route) =>
@@ -42,13 +68,13 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match admin routes
-    "/admin/:path*",
-    // Match API admin routes
-    "/api/admin/:path*",
-    // Match dashboard routes
-    "/dashboard/:path*",
-    // Match project creation
-    "/projects/new",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder files
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
