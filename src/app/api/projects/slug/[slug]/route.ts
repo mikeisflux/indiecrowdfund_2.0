@@ -88,7 +88,7 @@ export async function GET(
       },
       usesAI: project.usesAI,
       faqs: (project.faqs as { question: string; answer: string }[]) || [],
-      updates: project.updates.map((u) => ({
+      updates: project.updates.map((u: { id: string; title: string; content: string; publishedAt: Date | null; createdAt: Date }) => ({
         id: u.id,
         title: u.title,
         content: u.content,
