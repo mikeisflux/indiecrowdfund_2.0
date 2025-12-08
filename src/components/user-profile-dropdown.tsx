@@ -264,10 +264,12 @@ export function UserProfileDropdown() {
                 <div className="mt-4">
                   <Link
                     href="/projects/new"
-                    className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                    className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
                   >
-                    <Plus className="h-4 w-4" />
-                    New
+                    <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center">
+                      <Plus className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <span className="text-sm">New</span>
                   </Link>
                 </div>
 
