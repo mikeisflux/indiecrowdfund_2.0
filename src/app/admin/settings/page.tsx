@@ -854,6 +854,7 @@ export default function SettingsPage() {
                 <SecureKeyInput
                   value={generalSettings.googlePlacesApiKey}
                   onChange={(value) => setGeneralSettings({ ...generalSettings, googlePlacesApiKey: value })}
+                  onSave={handleSave}
                   hasExistingValue={generalSettings.googlePlacesApiKey === "••••••••"}
                   placeholder="AIza..."
                 />
@@ -987,6 +988,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={paymentSettings.ccbillSalt}
                     onChange={(value) => setPaymentSettings({ ...paymentSettings, ccbillSalt: value })}
+                    onSave={handleSave}
                     hasExistingValue={paymentSettings.ccbillSalt === "••••••••"}
                     placeholder="Your CCBill salt..."
                   />
@@ -1077,6 +1079,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={emailSettings.sendgridApiKey}
                     onChange={(value) => setEmailSettings({ ...emailSettings, sendgridApiKey: value })}
+                    onSave={handleSave}
                     hasExistingValue={emailSettings.sendgridApiKey === "••••••••"}
                     placeholder="SG.xxx..."
                   />
@@ -1288,6 +1291,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={socialSettings.facebookAppSecret}
                     onChange={(value) => setSocialSettings({ ...socialSettings, facebookAppSecret: value })}
+                    onSave={handleSave}
                     hasExistingValue={socialSettings.facebookAppSecret === "••••••••"}
                     placeholder="Your Facebook App Secret"
                   />
@@ -1299,6 +1303,7 @@ export default function SettingsPage() {
                 <SecureKeyInput
                   value={socialSettings.facebookPageAccessToken}
                   onChange={(value) => setSocialSettings({ ...socialSettings, facebookPageAccessToken: value })}
+                  onSave={handleSave}
                   hasExistingValue={socialSettings.facebookPageAccessToken === "••••••••"}
                   placeholder="For server-to-server API calls"
                 />
@@ -1371,6 +1376,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={socialSettings.youtubeClientSecret}
                     onChange={(value) => setSocialSettings({ ...socialSettings, youtubeClientSecret: value })}
+                    onSave={handleSave}
                     hasExistingValue={socialSettings.youtubeClientSecret === "••••••••"}
                     placeholder="Your Google OAuth Client Secret"
                   />
@@ -1382,6 +1388,7 @@ export default function SettingsPage() {
                 <SecureKeyInput
                   value={socialSettings.youtubeApiKey}
                   onChange={(value) => setSocialSettings({ ...socialSettings, youtubeApiKey: value })}
+                  onSave={handleSave}
                   hasExistingValue={socialSettings.youtubeApiKey === "••••••••"}
                   placeholder="For public data access"
                 />
@@ -1454,6 +1461,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={socialSettings.twitterApiSecret}
                     onChange={(value) => setSocialSettings({ ...socialSettings, twitterApiSecret: value })}
+                    onSave={handleSave}
                     hasExistingValue={socialSettings.twitterApiSecret === "••••••••"}
                     placeholder="Your Twitter API Secret"
                   />
@@ -1465,6 +1473,7 @@ export default function SettingsPage() {
                 <SecureKeyInput
                   value={socialSettings.twitterBearerToken}
                   onChange={(value) => setSocialSettings({ ...socialSettings, twitterBearerToken: value })}
+                  onSave={handleSave}
                   hasExistingValue={socialSettings.twitterBearerToken === "••••••••"}
                   placeholder="For app-only authentication"
                 />
@@ -1476,6 +1485,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={socialSettings.twitterAccessToken}
                     onChange={(value) => setSocialSettings({ ...socialSettings, twitterAccessToken: value })}
+                    onSave={handleSave}
                     hasExistingValue={socialSettings.twitterAccessToken === "••••••••"}
                     placeholder="For user-context requests"
                   />
@@ -1485,6 +1495,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={socialSettings.twitterAccessSecret}
                     onChange={(value) => setSocialSettings({ ...socialSettings, twitterAccessSecret: value })}
+                    onSave={handleSave}
                     hasExistingValue={socialSettings.twitterAccessSecret === "••••••••"}
                     placeholder="Paired with access token"
                   />
@@ -1527,6 +1538,7 @@ export default function SettingsPage() {
                       <SecureKeyInput
                         value={socialSettings.dalleApiKey}
                         onChange={(value) => setSocialSettings({ ...socialSettings, dalleApiKey: value })}
+                        onSave={handleSave}
                         hasExistingValue={socialSettings.dalleApiKey === "••••••••"}
                         placeholder="Optional separate key"
                       />
@@ -1552,6 +1564,7 @@ export default function SettingsPage() {
                       <SecureKeyInput
                         value={socialSettings.stabilityApiKey}
                         onChange={(value) => setSocialSettings({ ...socialSettings, stabilityApiKey: value })}
+                        onSave={handleSave}
                         hasExistingValue={socialSettings.stabilityApiKey === "••••••••"}
                         placeholder="Your Stability AI API key"
                       />
@@ -1719,6 +1732,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={aiSettings.openaiApiKey}
                     onChange={(value) => setAiSettings({ ...aiSettings, openaiApiKey: value })}
+                    onSave={handleSave}
                     hasExistingValue={aiSettings.openaiApiKey === "••••••••"}
                     placeholder="sk-..."
                   />
@@ -1831,6 +1845,7 @@ export default function SettingsPage() {
                   <SecureKeyInput
                     value={aiSettings.anthropicApiKey}
                     onChange={(value) => setAiSettings({ ...aiSettings, anthropicApiKey: value })}
+                    onSave={handleSave}
                     hasExistingValue={aiSettings.anthropicApiKey === "••••••••"}
                     placeholder="sk-ant-..."
                   />
@@ -2150,6 +2165,7 @@ export default function SettingsPage() {
                       onChange={(value) =>
                         setIdVerificationSettings({ ...idVerificationSettings, secretKey: value })
                       }
+                      onSave={handleSave}
                       hasExistingValue={idVerificationSettings.secretKey === "••••••••"}
                       placeholder="Enter your Shufti Pro Secret Key"
                     />
