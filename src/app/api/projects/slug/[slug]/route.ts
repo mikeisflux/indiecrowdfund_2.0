@@ -98,7 +98,28 @@ export async function GET(
     };
 
     // Transform rewards
-    const formattedRewards = project.rewards.map((r) => ({
+    interface RewardItem {
+      id: string;
+      title: string;
+    }
+    interface Reward {
+      id: string;
+      type: string;
+      title: string;
+      description: string;
+      amount: number;
+      estimatedDelivery: Date | null;
+      shippingType: string;
+      shippingCountries: string[];
+      shippingCost: number | null;
+      quantityAvailable: number | null;
+      quantityClaimed: number;
+      imageUrl: string | null;
+      items: RewardItem[];
+      isEnded: boolean;
+      endedAt: Date | null;
+    }
+    const formattedRewards = project.rewards.map((r: Reward) => ({
       id: r.id,
       type: r.type,
       title: r.title,
@@ -111,7 +132,7 @@ export async function GET(
       quantityAvailable: r.quantityAvailable,
       quantityClaimed: r.quantityClaimed,
       imageUrl: r.imageUrl || "",
-      items: r.items.map((i) => ({
+      items: r.items.map((i: RewardItem) => ({
         id: i.id,
         title: i.title,
         quantity: 1, // Default quantity per reward
