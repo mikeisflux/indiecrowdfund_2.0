@@ -38,7 +38,7 @@ export async function GET(
     }
 
     // Get or create survey
-    let survey = await db.survey.findUnique({
+    const survey = await db.survey.findUnique({
       where: { projectId },
       include: {
         itemQuestions: {

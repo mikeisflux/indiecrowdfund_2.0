@@ -36,10 +36,7 @@ import {
   Lock,
   Eye,
   RefreshCw,
-  ChevronDown,
-  ChevronUp,
   AlertCircle,
-  CheckCircle,
 } from "lucide-react";
 
 interface Reward {

@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/table";
 import {
   ArrowLeft,
-  Download,
   RefreshCw,
   Search,
   CheckCircle,
@@ -43,11 +42,6 @@ import {
 } from "lucide-react";
 
 interface Reward {
-  id: string;
-  title: string;
-}
-
-interface Addon {
   id: string;
   title: string;
 }
