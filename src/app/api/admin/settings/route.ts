@@ -76,6 +76,7 @@ export async function GET() {
     // Mask sensitive fields for security (but indicate they exist)
     const maskedSettings = {
       ...settings,
+      stripePublishableKey: settings.stripePublishableKey ? "••••••••" : null,
       stripeSecretKey: settings.stripeSecretKey ? "••••••••" : null,
       stripeWebhookSecret: settings.stripeWebhookSecret ? "••••••••" : null,
       ccbillSalt: settings.ccbillSalt ? "••••••••" : null,
@@ -246,6 +247,7 @@ export async function PATCH(req: NextRequest) {
     // Mask sensitive fields in response
     const maskedSettings = {
       ...settings,
+      stripePublishableKey: settings.stripePublishableKey ? "••••••••" : null,
       stripeSecretKey: settings.stripeSecretKey ? "••••••••" : null,
       stripeWebhookSecret: settings.stripeWebhookSecret ? "••••••••" : null,
       ccbillSalt: settings.ccbillSalt ? "••••••••" : null,
