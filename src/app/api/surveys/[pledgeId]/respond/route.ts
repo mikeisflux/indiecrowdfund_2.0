@@ -15,11 +15,11 @@ const addressSchema = z.object({
 });
 
 const responseSchema = z.object({
-  itemResponses: z.record(z.object({
-    variants: z.record(z.string()).optional(),
-    customAnswers: z.record(z.union([z.string(), z.array(z.string())])).optional(),
+  itemResponses: z.record(z.string(), z.object({
+    variants: z.record(z.string(), z.string()).optional(),
+    customAnswers: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(),
   })).optional(),
-  backerResponses: z.record(z.union([z.string(), z.array(z.string())])).optional(),
+  backerResponses: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(),
   shippingAddress: addressSchema.optional().nullable(),
   submit: z.boolean().default(false), // If true, mark as complete
 });
