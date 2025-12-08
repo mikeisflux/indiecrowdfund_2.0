@@ -595,7 +595,7 @@ export default function SettingsPage() {
       }
 
       // Reload settings from database to confirm save and show masked values
-      await loadSettings();
+      await fetchSettings();
 
       setSaveMessage("Settings saved successfully");
       setTimeout(() => setSaveMessage(null), 3000);
