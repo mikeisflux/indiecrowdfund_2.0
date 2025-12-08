@@ -2,9 +2,20 @@ import { NextResponse } from "next/server";
 import { getStripePublishableKey } from "@/lib/payments/stripe";
 import { db } from "@/lib/db";
 
+// Force dynamic - this route requires database access
+export const dynamic = "force-dynamic";
+
 // Get Stripe configuration for the frontend (publishable key only)
 export async function GET() {
   try {
+    // Check if database is available
+    if (!db?.platformSettings) {
+      return NextResponse.json({
+        enabled: false,
+        publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || null,
+      });
+    }
+
     // Check if Stripe is enabled
     const settings = await db.platformSettings.findUnique({
       where: { id: "default" },
@@ -27,9 +38,10 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error getting Stripe config:", error);
-    return NextResponse.json(
-      { error: "Failed to get Stripe configuration" },
-      { status: 500 }
-    );
+    // Fall back to env var if database fails
+    return NextResponse.json({
+      enabled: !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+      publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || null,
+    });
   }
 }
