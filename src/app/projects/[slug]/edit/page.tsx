@@ -128,9 +128,10 @@ export default function EditProjectPage() {
             quantityAvailable: reward.quantityAvailable,
             quantityClaimed: reward.quantityClaimed || 0,
             visibility: reward.visibility || "PUBLIC",
-            items: (reward.items || []).map((item: { id: string; title: string; quantity?: number }) => ({
+            items: (reward.items || []).map((item: { id: string; title: string; imageUrl?: string; quantity?: number }) => ({
               id: item.id,
               title: item.title,
+              imageUrl: item.imageUrl || "",
               quantity: item.quantity || 1,
             })),
             isEnded: reward.isEnded || false,
