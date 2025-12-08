@@ -135,7 +135,10 @@ export default function UsersPage() {
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [editUserData, setEditUserData] = useState({ name: "", email: "" });
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -445,6 +448,83 @@ export default function UsersPage() {
     }
   };
 
+  // Handle opening set password dialog
+  const handleSetPassword = (user: User) => {
+    setSelectedUser(user);
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowPasswordDialog(true);
+  };
+
+  // Submit set password
+  const submitSetPassword = async () => {
+    if (!selectedUser) return;
+    if (newPassword.length < 8) {
+      alert("Password must be at least 8 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          action: "SET_PASSWORD",
+          data: { password: newPassword },
+        }),
+      });
+
+      if (response.ok) {
+        alert("Password updated successfully");
+        setShowPasswordDialog(false);
+        setSelectedUser(null);
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to set password");
+      }
+    } catch (error) {
+      console.error("Error setting password:", error);
+      alert("Failed to set password");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle send reset email
+  const handleSendResetEmail = async (user: User) => {
+    if (!confirm(`Send password reset email to ${user.email}?`)) return;
+
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          action: "SEND_RESET_EMAIL",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(data.message || "Password reset email sent");
+      } else {
+        alert(data.error || "Failed to send reset email");
+      }
+    } catch (error) {
+      console.error("Error sending reset email:", error);
+      alert("Failed to send reset email");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -634,6 +714,15 @@ export default function UsersPage() {
                           <DropdownMenuItem onClick={() => handleChangeRole(user)}>
                             <Shield className="mr-2 h-4 w-4" />
                             Change Role
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleSendResetEmail(user)}>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Send Reset Email
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleSetPassword(user)}>
+                            <Shield className="mr-2 h-4 w-4" />
+                            Set Password
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -1304,6 +1393,73 @@ export default function UsersPage() {
               disabled={isUpdating}
             >
               {isUpdating ? "Deleting..." : "Delete User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Set Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set User Password</DialogTitle>
+            <DialogDescription>
+              Set a new password for {selectedUser?.name || selectedUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="py-4 space-y-4">
+              <div className="flex items-center gap-3 mb-4 p-3 bg-zinc-50 rounded-lg">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-200 font-medium text-zinc-600">
+                  {selectedUser.name?.charAt(0) || selectedUser.email.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-medium">{selectedUser.name || "No name"}</p>
+                  <p className="text-sm text-zinc-500">{selectedUser.email}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                />
+                <p className="text-xs text-zinc-500">Password must be at least 8 characters</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                <p className="text-sm text-red-500">Passwords do not match</p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowPasswordDialog(false);
+              setNewPassword("");
+              setConfirmPassword("");
+            }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={submitSetPassword}
+              disabled={isUpdating || !newPassword || newPassword !== confirmPassword || newPassword.length < 8}
+            >
+              {isUpdating ? "Setting..." : "Set Password"}
             </Button>
           </DialogFooter>
         </DialogContent>

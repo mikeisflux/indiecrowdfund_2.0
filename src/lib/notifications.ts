@@ -7,10 +7,17 @@ type NotificationType =
   | "PROJECT_UPDATE"
   | "PROJECT_FUNDED"
   | "PROJECT_LAUNCHED"
+  | "PROJECT_ENDED"
   | "PLEDGE_RECEIVED"
   | "PLEDGE_FAILED"
+  | "PLEDGE_SHIPPED"
+  | "PLEDGE_DELIVERED"
   | "COMMENT_REPLY"
+  | "COMMENT_NEW"
   | "MESSAGE_RECEIVED"
+  | "SURVEY_SENT"
+  | "SURVEY_REMINDER"
+  | "FOLLOWED_PROJECT_LAUNCHED"
   | "SYSTEM";
 
 interface CreateNotificationParams {
@@ -309,4 +316,228 @@ export async function markAllAsRead(userId: string) {
     where: { userId, read: false },
     data: { read: true, readAt: new Date() },
   });
+}
+
+/**
+ * Notify backers when a survey is sent
+ */
+export async function notifySurveySent(projectId: string, projectTitle: string) {
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: {
+      slug: true,
+      pledges: {
+        where: { status: "COMPLETED" },
+        select: { userId: true, id: true },
+      },
+    },
+  });
+
+  if (!project) return;
+
+  const notifications = project.pledges.map((pledge: { userId: string; id: string }) => ({
+    userId: pledge.userId,
+    type: "SURVEY_SENT" as NotificationType,
+    title: "Survey Available",
+    message: `Please complete the backer survey for "${projectTitle}"`,
+    actionUrl: `/dashboard/pledges/${pledge.id}/survey`,
+    projectId,
+  }));
+
+  if (notifications.length > 0) {
+    await db.notification.createMany({ data: notifications });
+  }
+}
+
+/**
+ * Notify backers with a survey reminder
+ */
+export async function notifySurveyReminder(projectId: string, projectTitle: string) {
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: {
+      slug: true,
+      pledges: {
+        where: { status: "COMPLETED", surveyCompleted: false },
+        select: { userId: true, id: true },
+      },
+    },
+  });
+
+  if (!project) return;
+
+  const notifications = project.pledges.map((pledge: { userId: string; id: string }) => ({
+    userId: pledge.userId,
+    type: "SURVEY_REMINDER" as NotificationType,
+    title: "Survey Reminder",
+    message: `Don't forget to complete the backer survey for "${projectTitle}"`,
+    actionUrl: `/dashboard/pledges/${pledge.id}/survey`,
+    projectId,
+  }));
+
+  if (notifications.length > 0) {
+    await db.notification.createMany({ data: notifications });
+  }
+}
+
+/**
+ * Notify backers when their project ends
+ */
+export async function notifyProjectEnded(projectId: string) {
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: {
+      title: true,
+      slug: true,
+      creatorId: true,
+      currentAmount: true,
+      goalAmount: true,
+      pledges: {
+        select: { userId: true },
+        distinct: ["userId"],
+      },
+    },
+  });
+
+  if (!project) return;
+
+  const funded = project.currentAmount >= project.goalAmount;
+  const message = funded
+    ? `"${project.title}" has successfully ended! Thanks for your support.`
+    : `"${project.title}" has ended. Unfortunately, it did not reach its funding goal.`;
+
+  const notifications = project.pledges.map((pledge: { userId: string }) => ({
+    userId: pledge.userId,
+    type: "PROJECT_ENDED" as NotificationType,
+    title: funded ? "Campaign Successful!" : "Campaign Ended",
+    message,
+    actionUrl: `/projects/${project.slug}`,
+    projectId,
+  }));
+
+  if (notifications.length > 0) {
+    await db.notification.createMany({ data: notifications });
+  }
+
+  // Notify creator
+  await createNotification({
+    userId: project.creatorId,
+    type: "PROJECT_ENDED",
+    title: funded ? "Your Campaign Succeeded!" : "Your Campaign Has Ended",
+    message: funded
+      ? `"${project.title}" reached its goal!`
+      : `"${project.title}" ended without reaching its goal.`,
+    actionUrl: `/projects/${project.slug}`,
+    projectId,
+  });
+}
+
+/**
+ * Notify backer when their pledge is shipped
+ */
+export async function notifyPledgeShipped(
+  pledgeId: string,
+  projectTitle: string,
+  projectSlug: string,
+  trackingNumber?: string
+) {
+  const pledge = await db.pledge.findUnique({
+    where: { id: pledgeId },
+    select: { userId: true, projectId: true },
+  });
+
+  if (!pledge) return;
+
+  await createNotification({
+    userId: pledge.userId,
+    type: "PLEDGE_SHIPPED",
+    title: "Your Pledge Has Shipped!",
+    message: trackingNumber
+      ? `Your rewards from "${projectTitle}" have shipped! Tracking: ${trackingNumber}`
+      : `Your rewards from "${projectTitle}" have shipped!`,
+    actionUrl: `/projects/${projectSlug}`,
+    projectId: pledge.projectId,
+  });
+}
+
+/**
+ * Notify backer when their pledge is delivered
+ */
+export async function notifyPledgeDelivered(
+  pledgeId: string,
+  projectTitle: string,
+  projectSlug: string
+) {
+  const pledge = await db.pledge.findUnique({
+    where: { id: pledgeId },
+    select: { userId: true, projectId: true },
+  });
+
+  if (!pledge) return;
+
+  await createNotification({
+    userId: pledge.userId,
+    type: "PLEDGE_DELIVERED",
+    title: "Your Pledge Delivered!",
+    message: `Your rewards from "${projectTitle}" have been delivered!`,
+    actionUrl: `/projects/${projectSlug}`,
+    projectId: pledge.projectId,
+  });
+}
+
+/**
+ * Notify user when someone comments on their project
+ */
+export async function notifyNewComment(
+  creatorId: string,
+  commenterName: string,
+  projectId: string,
+  projectTitle: string,
+  projectSlug: string,
+  commenterId: string
+) {
+  await createNotification({
+    userId: creatorId,
+    type: "COMMENT_NEW",
+    title: "New Comment",
+    message: `${commenterName} commented on "${projectTitle}"`,
+    actionUrl: `/projects/${projectSlug}#comments`,
+    projectId,
+    senderId: commenterId,
+  });
+}
+
+/**
+ * Notify followers when a project they follow launches
+ */
+export async function notifyFollowedProjectLaunched(projectId: string) {
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: {
+      title: true,
+      slug: true,
+      creatorId: true,
+      followers: {
+        select: { userId: true },
+        where: { userId: { not: null } },
+      },
+    },
+  });
+
+  if (!project) return;
+
+  const notifications = project.followers
+    .filter((f: { userId: string | null }) => f.userId && f.userId !== project.creatorId)
+    .map((follower: { userId: string | null }) => ({
+      userId: follower.userId!,
+      type: "FOLLOWED_PROJECT_LAUNCHED" as NotificationType,
+      title: "Project You Follow Is Live!",
+      message: `"${project.title}" just launched!`,
+      actionUrl: `/projects/${project.slug}`,
+      projectId,
+    }));
+
+  if (notifications.length > 0) {
+    await db.notification.createMany({ data: notifications });
+  }
 }

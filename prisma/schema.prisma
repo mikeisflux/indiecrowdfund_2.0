@@ -763,38 +763,172 @@ enum EmailType {
 }
 
 // ============================================
-// SURVEYS
+// BACKER SURVEYS
 // ============================================
 
 model Survey {
-  id          String         @id @default(cuid())
-  projectId   String         @unique
-  title       String?
-  description String?        @db.Text
-  questions   Json
-  isActive    Boolean        @default(false)
-  lockedAt    DateTime?
+  id                String           @id @default(cuid())
+  projectId         String           @unique
 
-  responses   SurveyResponse[]
+  // Survey intro
+  introTitle        String?
+  introMessage      String?          @db.Text
 
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  // Status
+  status            SurveyStatus     @default(DRAFT)
+  sentAt            DateTime?
+  lockedAt          DateTime?
+
+  // Address settings
+  collectAddresses  Boolean          @default(true)
+  addressesLocked   Boolean          @default(false)
+
+  // Relations
+  itemQuestions     SurveyItemQuestion[]
+  backerQuestions   SurveyBackerQuestion[]
+  responses         SurveyResponse[]
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([projectId])
+  @@index([status])
+}
+
+enum SurveyStatus {
+  DRAFT
+  SENT
+  LOCKED
+}
+
+// Item questions - for reward-specific variants (size, color, etc.)
+model SurveyItemQuestion {
+  id              String               @id @default(cuid())
+  surveyId        String
+  rewardId        String               // Which reward this applies to
+
+  // Item details
+  itemName        String               // e.g., "T-Shirt", "Art Print"
+  itemDescription String?              @db.Text
+  imageUrl        String?
+
+  // Question ordering
+  sortOrder       Int                  @default(0)
+
+  // Relations
+  survey          Survey               @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  variants        SurveyItemVariant[]
+  customQuestions SurveyItemCustomQuestion[]
+
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([surveyId])
+  @@index([rewardId])
+}
+
+// Variant options for items (e.g., Size: S/M/L/XL, Color: Red/Blue/Green)
+model SurveyItemVariant {
+  id              String             @id @default(cuid())
+  itemQuestionId  String
+
+  variantType     String             // e.g., "Size", "Color", "Style"
+  options         String[]           // e.g., ["S", "M", "L", "XL"]
+
+  // Auto-generated SKU prefix
+  skuPrefix       String?
+
+  sortOrder       Int                @default(0)
+
+  itemQuestion    SurveyItemQuestion @relation(fields: [itemQuestionId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime           @default(now())
+
+  @@index([itemQuestionId])
+}
+
+// Custom questions for specific items (beyond variants)
+model SurveyItemCustomQuestion {
+  id              String             @id @default(cuid())
+  itemQuestionId  String
+
+  question        String
+  description     String?
+  questionType    SurveyQuestionType @default(OPEN_TEXT)
+  options         String[]           // For multiple/single selection
+  isRequired      Boolean            @default(false)
+
+  sortOrder       Int                @default(0)
+
+  itemQuestion    SurveyItemQuestion @relation(fields: [itemQuestionId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime           @default(now())
+
+  @@index([itemQuestionId])
+}
+
+// Backer questions - general questions for all or specific backers
+model SurveyBackerQuestion {
+  id              String             @id @default(cuid())
+  surveyId        String
+
+  question        String
+  description     String?            @db.Text
+  questionType    SurveyQuestionType @default(OPEN_TEXT)
+  options         String[]           // For multiple/single selection
+
+  // Targeting
+  targetType      SurveyTargetType   @default(ALL_BACKERS)
+  targetRewardIds String[]           // If targeting specific rewards
+
+  isRequired      Boolean            @default(false)
+  sortOrder       Int                @default(0)
+
+  survey          Survey             @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([surveyId])
+}
+
+enum SurveyQuestionType {
+  OPEN_TEXT
+  SINGLE_SELECT
+  MULTIPLE_SELECT
+}
+
+enum SurveyTargetType {
+  ALL_BACKERS
+  SPECIFIC_REWARDS
 }
 
 model SurveyResponse {
-  id          String   @id @default(cuid())
-  surveyId    String
-  pledgeId    String   @unique
-  responses   Json
+  id              String   @id @default(cuid())
+  surveyId        String
+  pledgeId        String   @unique
 
-  survey      Survey   @relation(fields: [surveyId], references: [id])
+  // Item responses (variant selections + custom question answers)
+  itemResponses   Json?    // { itemQuestionId: { variants: { variantType: selectedOption }, customAnswers: { questionId: answer } } }
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // Backer question responses
+  backerResponses Json?    // { questionId: answer }
+
+  // Shipping address
+  shippingAddress Json?    // { name, line1, line2, city, state, postalCode, country, phone }
+  addressLocked   Boolean  @default(false)
+
+  // Status
+  isComplete      Boolean  @default(false)
+  completedAt     DateTime?
+
+  survey          Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([surveyId])
+  @@index([isComplete])
 }
 
 // ============================================
@@ -1572,9 +1706,16 @@ enum NotificationType {
   PROJECT_UPDATE
   PROJECT_FUNDED
   PROJECT_LAUNCHED
+  PROJECT_ENDED
   PLEDGE_RECEIVED
   PLEDGE_FAILED
+  PLEDGE_SHIPPED
+  PLEDGE_DELIVERED
   COMMENT_REPLY
+  COMMENT_NEW
   MESSAGE_RECEIVED
+  SURVEY_SENT
+  SURVEY_REMINDER
+  FOLLOWED_PROJECT_LAUNCHED
   SYSTEM
 }

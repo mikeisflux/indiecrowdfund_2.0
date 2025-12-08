@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import bcrypt from "bcryptjs";
+import { sendPasswordResetEmail } from "@/lib/email";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -181,6 +183,66 @@ export async function PATCH(req: NextRequest) {
       case "VERIFY_EMAIL":
         updateData.emailVerified = new Date();
         break;
+
+      case "SET_PASSWORD":
+        // Only SUPER_ADMIN can set passwords directly
+        if (authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Only super admins can set passwords directly" },
+            { status: 403 }
+          );
+        }
+        if (!data?.password || data.password.length < 8) {
+          return NextResponse.json(
+            { error: "Password must be at least 8 characters" },
+            { status: 400 }
+          );
+        }
+        updateData.password = await bcrypt.hash(data.password, 12);
+        break;
+
+      case "SEND_RESET_EMAIL":
+        // Send a password reset email to the user
+        try {
+          // Delete any existing tokens for this email
+          await db.passwordResetToken.deleteMany({
+            where: { email: user.email },
+          });
+
+          // Generate a secure token
+          const token = crypto.randomUUID();
+          const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+          // Create the reset token
+          await db.passwordResetToken.create({
+            data: {
+              email: user.email,
+              token,
+              expires,
+            },
+          });
+
+          // Send the reset email
+          const emailResult = await sendPasswordResetEmail(user.email, token);
+
+          if (!emailResult.success) {
+            return NextResponse.json(
+              { error: "Failed to send reset email. Email may not be configured." },
+              { status: 500 }
+            );
+          }
+
+          return NextResponse.json({
+            success: true,
+            message: `Password reset email sent to ${user.email}`,
+          });
+        } catch (error) {
+          console.error("Error sending reset email:", error);
+          return NextResponse.json(
+            { error: "Failed to send reset email" },
+            { status: 500 }
+          );
+        }
 
       default:
         return NextResponse.json(

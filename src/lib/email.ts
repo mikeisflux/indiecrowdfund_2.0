@@ -14,7 +14,9 @@ interface SendEmailOptions {
 // Get email settings from database
 async function getEmailSettings() {
   try {
-    const settings = await db.siteSettings.findFirst();
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+    });
     return settings;
   } catch {
     return null;
