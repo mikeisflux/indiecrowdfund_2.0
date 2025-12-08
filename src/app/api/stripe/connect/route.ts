@@ -34,6 +34,7 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Stripe Connect error:", error);
+    console.error("Stripe Connect error message:", (error as Error).message);
 
     // Extract Stripe error message if available
     const stripeError = error as { message?: string; type?: string; code?: string };
@@ -41,7 +42,7 @@ export async function POST() {
 
     return NextResponse.json(
       { error: errorMessage, type: stripeError.type, code: stripeError.code },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }
