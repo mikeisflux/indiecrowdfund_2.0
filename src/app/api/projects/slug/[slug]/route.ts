@@ -142,8 +142,8 @@ export async function GET(
     }));
 
     // Separate tiers and addons
-    const tiers = formattedRewards.filter((r) => r.type === "TIER");
-    const addons = formattedRewards.filter((r) => r.type === "ADDON");
+    const tiers = formattedRewards.filter((r: { type: string }) => r.type === "TIER");
+    const addons = formattedRewards.filter((r: { type: string }) => r.type === "ADDON");
 
     return NextResponse.json({
       project: formattedProject,
