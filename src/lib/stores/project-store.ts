@@ -1,5 +1,5 @@
-import { create, StateCreator } from "zustand";
-import { persist, PersistOptions } from "zustand/middleware";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import {
   ProjectBasicsData,
   RewardData,
