@@ -811,8 +811,8 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
                 <ImageUpload
                   value={currentReward.imageUrl}
                   onChange={(url) => setCurrentReward({ ...currentReward, imageUrl: url })}
-                  aspectRatio="aspect-[3/2]"
-                  recommendedSize="348 x 232 px (3:2 ratio)"
+                  aspectRatio="aspect-[933/621]"
+                  recommendedSize="933 x 621 px (required size)"
                   maxSizeMB={10}
                 />
               </CardContent>
@@ -1837,9 +1837,9 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               <ImageUpload
                 value={currentItem.imageUrl}
                 onChange={(url) => setCurrentItem({ ...currentItem, imageUrl: url })}
-                aspectRatio="aspect-square"
-                recommendedSize="400 x 400 px"
-                maxSizeMB={5}
+                aspectRatio="aspect-[933/621]"
+                recommendedSize="933 x 621 px (required size)"
+                maxSizeMB={10}
               />
             </div>
           </div>
