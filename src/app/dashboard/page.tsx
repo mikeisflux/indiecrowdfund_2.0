@@ -253,7 +253,6 @@ export default function CreatorDashboard() {
               <Settings className="h-5 w-5" />
             </Button>
             <Avatar>
-              <AvatarImage src="/avatar.jpg" />
               <AvatarFallback>CR</AvatarFallback>
             </Avatar>
           </div>

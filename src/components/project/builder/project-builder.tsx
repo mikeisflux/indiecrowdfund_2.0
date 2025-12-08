@@ -24,6 +24,11 @@ export function ProjectBuilder() {
     prevStep,
     basics,
     story,
+    rewards,
+    items,
+    people,
+    payment,
+    promotion,
     projectId,
     setProjectId,
     reset,
@@ -52,20 +57,73 @@ export function ProjectBuilder() {
         return false;
       }
 
+      // Transform rewards to include items from the items store
+      const transformedRewards = rewards.map((reward) => ({
+        id: reward.id,
+        type: reward.type || "TIER",
+        title: reward.title,
+        description: reward.description || "",
+        amount: reward.amount,
+        imageUrl: reward.imageUrl,
+        estimatedDelivery: reward.estimatedDelivery
+          ? new Date(reward.estimatedDelivery).toISOString()
+          : null,
+        shippingType: reward.shippingType || "NO_SHIPPING",
+        shippingCountries: reward.shippingCountries || [],
+        shippingCost: reward.shippingCost || 0,
+        quantityAvailable: reward.quantityAvailable,
+        isEnded: reward.isEnded || false,
+        items: reward.items?.map((item) => {
+          // Find the full item details from the items store
+          const fullItem = items.find((i) => i.id === item.id);
+          return {
+            id: item.id,
+            title: fullItem?.title || item.title || "Item",
+            description: fullItem?.description,
+            imageUrl: fullItem?.imageUrl,
+          };
+        }) || [],
+      }));
+
       const projectData = {
+        // Basics
         title: basics.title,
         subtitle: basics.subtitle,
         category: basics.category,
+        subcategory: basics.subcategory,
         location: basics.location,
         imageUrl: basics.imageUrl,
         videoUrl: basics.videoUrl,
         goalAmount: basics.goalAmount || 10000,
         durationType: basics.durationType || "FIXED_DAYS",
         durationDays: basics.durationDays,
-        endDate: basics.endDate?.toISOString(),
-        launchDate: basics.launchDate?.toISOString(),
-        description: story.description,
-        risks: story.risks,
+        endDate: basics.endDate instanceof Date ? basics.endDate.toISOString() : basics.endDate,
+        launchDate: basics.launchDate instanceof Date ? basics.launchDate.toISOString() : basics.launchDate,
+
+        // Story
+        description: story.description || "",
+        risks: story.risks || "",
+        usesAI: story.usesAI || false,
+        faqs: story.faqs || [],
+
+        // Payment
+        projectType: payment.projectType || "INDIVIDUAL",
+        hasAdultContent: payment.hasAdultContent || false,
+        hasRiskyContent: payment.hasRiskyContent || false,
+        promoContentSfw: payment.promoContentSfw !== false,
+        allowRetailerPledges: payment.allowRetailerPledges || false,
+        retailerDiscount: payment.retailerDiscount || 50,
+        retailerMinQuantity: payment.retailerMinQuantity || 5,
+
+        // Promotion
+        prelaunchActive: promotion.prelaunchActive || false,
+        prelaunchDescription: promotion.prelaunchDescription,
+        customReferralTags: promotion.customReferralTags || [],
+        googleAnalyticsId: promotion.googleAnalyticsId,
+        metaPixelId: promotion.metaPixelId,
+
+        // Rewards
+        rewards: transformedRewards,
       };
 
       let response;
@@ -78,7 +136,7 @@ export function ProjectBuilder() {
           body: JSON.stringify(projectData),
         });
       } else {
-        // Create new project
+        // Create new project (POST doesn't handle rewards yet, will need a subsequent PATCH)
         response = await fetch("/api/projects", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -95,6 +153,19 @@ export function ProjectBuilder() {
 
       if (!projectId && result.project?.id) {
         setProjectId(result.project.id);
+
+        // For new projects, we need to save rewards with a PATCH since POST doesn't handle them
+        if (transformedRewards.length > 0) {
+          const rewardsResponse = await fetch(`/api/projects/${result.project.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rewards: transformedRewards }),
+          });
+
+          if (!rewardsResponse.ok) {
+            console.error("Failed to save rewards");
+          }
+        }
       }
 
       toast.success("Project saved successfully");

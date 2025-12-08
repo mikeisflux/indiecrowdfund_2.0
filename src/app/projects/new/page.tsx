@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { ProjectBuilder } from "@/components/project/builder/project-builder";
+import { NewProjectWrapper } from "@/components/project/builder/new-project-wrapper";
 
 export const metadata: Metadata = {
   title: "Create Project | IndieCrowdfund",
@@ -15,5 +15,5 @@ export default async function NewProjectPage() {
     redirect("/login?callbackUrl=/projects/new");
   }
 
-  return <ProjectBuilder />;
+  return <NewProjectWrapper />;
 }

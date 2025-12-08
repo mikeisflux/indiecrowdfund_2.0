@@ -333,7 +333,6 @@ export default function BackerDashboard() {
               <Settings className="h-5 w-5" />
             </Button>
             <Avatar className="ring-2 ring-primary/20">
-              <AvatarImage src="/avatar.jpg" />
               <AvatarFallback className="bg-gradient-to-br from-primary to-purple-500 text-white">U</AvatarFallback>
             </Avatar>
           </div>

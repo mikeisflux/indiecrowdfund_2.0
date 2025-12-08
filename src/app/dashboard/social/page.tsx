@@ -318,7 +318,6 @@ export default function SocialHubPage() {
               <Settings className="h-5 w-5" />
             </Button>
             <Avatar>
-              <AvatarImage src="/avatar.jpg" />
               <AvatarFallback>GT</AvatarFallback>
             </Avatar>
           </div>

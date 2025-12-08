@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
   ChevronRight,
   ChevronDown,
   Pin,
+  Loader2,
 } from "lucide-react";
 
 // Social share icons as simple SVGs
@@ -58,28 +60,105 @@ const LinkIcon = () => (
   </svg>
 );
 
-// TODO: Refactor to fetch real project data from /api/projects/[id] by slug
-// This page should use useParams() to get the slug and fetch from API
-// Demo data commented out - uncomment for testing:
-/*
-const mockProjectDemo = {
-  id: "1",
-  title: "Tributes: HR GIGER | A Collective Art Book",
-  subtitle: "In official collaboration with the HR Giger Estate",
-  slug: "hr-giger-tribute",
-  category: "Art Books",
-  subcategory: "Art",
-  location: "Strasbourg, France",
-  imageUrl: "/placeholder-1.jpg",
-  goalAmount: 28991,
-  currentAmount: 114258,
-  backerCount: 861,
-  daysRemaining: 12,
-};
-*/
+// TypeScript interfaces for project data
+interface ProjectCreator {
+  id: string;
+  name: string;
+  image: string;
+  bio: string;
+  location: string;
+  projectsCreated: number;
+  projectsBacked: number;
+}
 
-// Default empty project structure - will be populated from API
-const mockProject = {
+interface ProjectUpdate {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string | Date;
+}
+
+interface ProjectData {
+  id: string;
+  title: string;
+  subtitle: string;
+  slug: string;
+  category: string;
+  subcategory: string;
+  location: string;
+  imageUrl: string;
+  videoUrl: string;
+  isProjectWeLove: boolean;
+  description: string;
+  risks: string;
+  goalAmount: number;
+  currentAmount: number;
+  backerCount: number;
+  daysRemaining: number;
+  endDate: string | Date;
+  launchedAt: string | Date | null;
+  creator: ProjectCreator;
+  usesAI: boolean;
+  faqs: { question: string; answer: string }[];
+  updates: ProjectUpdate[];
+  comments: number;
+}
+
+interface RewardItem {
+  id: string;
+  title: string;
+  quantity: number;
+}
+
+interface RewardData {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  amount: number;
+  estimatedDelivery: string | Date | null;
+  shippingType: string;
+  shippingLocation: string;
+  shippingCost: number;
+  quantityAvailable: number | null;
+  quantityClaimed: number;
+  imageUrl: string;
+  items: RewardItem[];
+  isEnded: boolean;
+  endedAt: string | Date | null;
+}
+
+interface AddonData {
+  id: string;
+  title: string;
+  description: string;
+  amount: number;
+  imageUrl: string;
+}
+
+interface SimilarProject {
+  id: string;
+  title: string;
+  creator: string;
+  imageUrl: string;
+  daysLeft: number;
+  fundedPercent: number;
+  isProjectWeLove: boolean;
+}
+
+interface CommentData {
+  id: string;
+  author: string;
+  avatarUrl: string;
+  isCreator: boolean;
+  isSuperbacker: boolean;
+  isPinned: boolean;
+  createdAt: Date;
+  content: string;
+}
+
+// Initial empty state for project
+const initialProject: ProjectData = {
   id: "",
   title: "Loading...",
   subtitle: "",
@@ -108,23 +187,10 @@ const mockProject = {
     projectsBacked: 0,
   },
   usesAI: false,
-  faqs: [] as { question: string; answer: string }[],
-  updates: [] as { id: string; title: string; content: string; createdAt: Date }[],
+  faqs: [],
+  updates: [],
   comments: 0,
 };
-
-// TODO: Fetch rewards from API with project data
-// Empty state - will be populated from API
-const mockRewards: { id: string; type: string; title: string; description: string; amount: number; estimatedDelivery: Date; shippingType: string; shippingLocation: string; shippingCost: number; quantityAvailable: number | null; quantityClaimed: number; imageUrl: string; items: { title: string; quantity: number }[] }[] = [];
-
-// TODO: Fetch addons from API with project data
-const mockAddons: { id: string; title: string; description: string; amount: number; imageUrl: string }[] = [];
-
-// TODO: Fetch similar/recommended projects from API
-const mockSimilarProjects: { id: string; title: string; creator: string; imageUrl: string; daysLeft: number; fundedPercent: number; isProjectWeLove: boolean }[] = [];
-
-// TODO: Fetch comments from API
-const mockComments: { id: string; author: string; avatarUrl: string; isCreator: boolean; isSuperbacker: boolean; isPinned: boolean; createdAt: Date; content: string }[] = [];
 
 // Story navigation items (table of contents)
 const storyNavItems = [
@@ -146,11 +212,22 @@ const storyNavItems = [
 type TabValue = "campaign" | "rewards" | "creator" | "faq" | "updates" | "comments" | "community";
 
 export default function ProjectPage() {
+  const params = useParams();
+  const slug = params.slug as string;
+
+  // Data states
+  const [project, setProject] = useState<ProjectData>(initialProject);
+  const [rewards, setRewards] = useState<RewardData[]>([]);
+  const [addons, setAddons] = useState<AddonData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // UI states
   const [isReminded, setIsReminded] = useState(false);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [pledgeAmount, setPledgeAmount] = useState("1");
   const [activeTab, setActiveTab] = useState<TabValue>("campaign");
-  const [selectedRewardId, setSelectedRewardId] = useState<string>("r1");
+  const [selectedRewardId, setSelectedRewardId] = useState<string>("");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [expandedFaqs, setExpandedFaqs] = useState<number[]>([]);
 
@@ -158,9 +235,46 @@ export default function ProjectPage() {
   const contentSectionRef = useRef<HTMLDivElement>(null);
   const tabsSectionRef = useRef<HTMLDivElement>(null);
 
-  const project = mockProject;
-  const rewards = mockRewards;
-  const addons = mockAddons;
+  // Fetch project data
+  useEffect(() => {
+    async function fetchProject() {
+      if (!slug) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(`/api/projects/slug/${slug}`);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError("Project not found");
+          } else {
+            setError("Failed to load project");
+          }
+          return;
+        }
+
+        const data = await response.json();
+        setProject(data.project);
+        setRewards(data.rewards || []);
+        setAddons(data.addons || []);
+
+        // Set default selected reward if available
+        if (data.rewards && data.rewards.length > 0) {
+          setSelectedRewardId(data.rewards[0].id);
+        }
+      } catch (err) {
+        console.error("Error fetching project:", err);
+        setError("Failed to load project");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProject();
+  }, [slug]);
+
   const tiers = rewards.filter((r) => r.type === "TIER");
   const availableRewards = tiers.filter((r) => r.quantityAvailable === null || r.quantityClaimed < r.quantityAvailable);
   const soldOutRewards = tiers.filter((r) => r.quantityAvailable !== null && r.quantityClaimed >= r.quantityAvailable);
@@ -214,8 +328,9 @@ export default function ProjectPage() {
     }).format(amount);
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
+  const formatDate = (date: Date | string) => {
+    const d = typeof date === "string" ? new Date(date) : date;
+    return d.toLocaleDateString("en-US", {
       weekday: "short",
       month: "long",
       day: "numeric",
@@ -247,18 +362,56 @@ export default function ProjectPage() {
     );
   };
 
-  const similarProjects = mockSimilarProjects;
-  const comments = mockComments;
+  // TODO: Fetch similar projects from API
+  const similarProjects: SimilarProject[] = [];
+  // TODO: Fetch comments from API
+  const comments: CommentData[] = [];
 
-  const formatRelativeTime = (date: Date) => {
+  const formatRelativeTime = (date: Date | string) => {
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const d = typeof date === "string" ? new Date(date) : date;
+    const diffMs = now.getTime() - d.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) return "today";
     if (diffDays === 1) return "1 day ago";
     return `${diffDays} days ago`;
   };
+
+  // Helper for formatting delivery dates
+  const formatDeliveryDate = (date: Date | string | null) => {
+    if (!date) return "TBD";
+    const d = typeof date === "string" ? new Date(date) : date;
+    return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading project...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+          <h1 className="text-2xl font-bold">{error}</h1>
+          <p className="text-muted-foreground">The project you&apos;re looking for could not be found.</p>
+          <Link href="/discover">
+            <Button>Browse Projects</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -641,7 +794,7 @@ export default function ProjectPage() {
                       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-4">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          Est. delivery {reward.estimatedDelivery.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                          Est. delivery {formatDeliveryDate(reward.estimatedDelivery)}
                         </div>
                         {reward.shippingType !== "NO_SHIPPING" && (
                           <div>Ships worldwide</div>
@@ -813,7 +966,7 @@ export default function ProjectPage() {
                             <div className="mb-6">
                               <p className="text-xs text-muted-foreground uppercase mb-1">Estimated delivery</p>
                               <p className="text-sm">
-                                {reward.estimatedDelivery.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                                {formatDeliveryDate(reward.estimatedDelivery)}
                               </p>
                             </div>
 
@@ -1029,7 +1182,7 @@ export default function ProjectPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                     <Clock className="h-4 w-4" />
-                    {update.createdAt.toLocaleDateString()}
+                    {formatDate(update.createdAt)}
                   </div>
                   <h3 className="font-semibold mb-2">{update.title}</h3>
                   <p className="text-muted-foreground">{update.content}</p>
