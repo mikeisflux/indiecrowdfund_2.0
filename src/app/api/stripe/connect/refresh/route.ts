@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { stripe } from "@/lib/payments/stripe";
+import { getStripeInstance } from "@/lib/payments/stripe";
 
 export async function POST() {
   try {
@@ -22,8 +22,11 @@ export async function POST() {
       );
     }
 
+    // Get Stripe instance with database settings
+    const stripeClient = await getStripeInstance();
+
     // Create a new account link for re-onboarding
-    const accountLink = await stripe.accountLinks.create({
+    const accountLink = await stripeClient.accountLinks.create({
       account: config.stripeAccountId,
       refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/payment/stripe/refresh`,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/payment/stripe/complete`,

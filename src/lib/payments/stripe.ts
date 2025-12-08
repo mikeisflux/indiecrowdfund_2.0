@@ -2,24 +2,106 @@ import Stripe from "stripe";
 import { db } from "@/lib/db";
 
 let stripeInstance: Stripe | null = null;
+let cachedSecretKey: string | null = null;
 
+// Get Stripe secret key from database settings or fall back to env var
+async function getStripeSecretKey(): Promise<string> {
+  // Try to get from database settings first
+  try {
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { stripeSecretKey: true, stripeEnabled: true },
+    });
+
+    if (settings?.stripeSecretKey && settings.stripeEnabled) {
+      return settings.stripeSecretKey;
+    }
+  } catch (error) {
+    console.warn("Could not fetch Stripe settings from database:", error);
+  }
+
+  // Fall back to environment variable
+  if (process.env.STRIPE_SECRET_KEY) {
+    return process.env.STRIPE_SECRET_KEY;
+  }
+
+  throw new Error("Stripe secret key not configured. Please set it in Admin Settings > Payments or via STRIPE_SECRET_KEY environment variable.");
+}
+
+// Get Stripe publishable key from database settings or fall back to env var
+export async function getStripePublishableKey(): Promise<string | null> {
+  try {
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { stripePublishableKey: true, stripeEnabled: true },
+    });
+
+    if (settings?.stripePublishableKey && settings.stripeEnabled) {
+      return settings.stripePublishableKey;
+    }
+  } catch (error) {
+    console.warn("Could not fetch Stripe settings from database:", error);
+  }
+
+  return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || null;
+}
+
+// Get Stripe webhook secret from database settings or fall back to env var
+export async function getStripeWebhookSecret(): Promise<string | null> {
+  try {
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { stripeWebhookSecret: true, stripeEnabled: true },
+    });
+
+    if (settings?.stripeWebhookSecret && settings.stripeEnabled) {
+      return settings.stripeWebhookSecret;
+    }
+  } catch (error) {
+    console.warn("Could not fetch Stripe settings from database:", error);
+  }
+
+  return process.env.STRIPE_WEBHOOK_SECRET || null;
+}
+
+// Initialize or get cached Stripe instance
+async function getStripeInstance(): Promise<Stripe> {
+  const secretKey = await getStripeSecretKey();
+
+  // Re-create instance if key changed or doesn't exist
+  if (!stripeInstance || cachedSecretKey !== secretKey) {
+    stripeInstance = new Stripe(secretKey, {
+      apiVersion: "2025-11-17.clover",
+    });
+    cachedSecretKey = secretKey;
+  }
+
+  return stripeInstance;
+}
+
+// Synchronous getter that throws if not initialized - for backwards compatibility
 function getStripe(): Stripe {
   if (!stripeInstance) {
+    // Try to use env var for synchronous access
     if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error("STRIPE_SECRET_KEY environment variable is not set");
+      throw new Error("Stripe not initialized. Call getStripeInstance() first or set STRIPE_SECRET_KEY environment variable.");
     }
     stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: "2025-11-17.clover",
     });
+    cachedSecretKey = process.env.STRIPE_SECRET_KEY;
   }
   return stripeInstance;
 }
 
+// Proxy for backwards compatibility - prefers async initialization
 const stripe = new Proxy({} as Stripe, {
   get(_, prop) {
     return getStripe()[prop as keyof Stripe];
   },
 });
+
+export { getStripeInstance };
 
 interface CreatePaymentParams {
   projectId: string;
@@ -38,8 +120,11 @@ export async function createStripeConnectAccount({
   userId,
   email,
 }: StripeConnectParams) {
+  // Get Stripe instance with database settings
+  const stripeClient = await getStripeInstance();
+
   // Create Express account
-  const account = await stripe.accounts.create({
+  const account = await stripeClient.accounts.create({
     type: "express",
     country: "US",
     email,
@@ -65,7 +150,7 @@ export async function createStripeConnectAccount({
   });
 
   // Create account link for onboarding
-  const accountLink = await stripe.accountLinks.create({
+  const accountLink = await stripeClient.accountLinks.create({
     account: account.id,
     refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/payment/stripe/refresh`,
     return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/payment/stripe/complete`,
@@ -85,6 +170,9 @@ export async function createStripePayment({
   amount,
   userId,
 }: CreatePaymentParams) {
+  // Get Stripe instance with database settings
+  const stripeClient = await getStripeInstance();
+
   // Get project and creator's Stripe account
   const project = await db.project.findUnique({
     where: { id: projectId },
@@ -145,7 +233,7 @@ export async function createStripePayment({
   const amountInCents = Math.round(amount * 100);
 
   // Create Payment Intent
-  const paymentIntent = await stripe.paymentIntents.create({
+  const paymentIntent = await stripeClient.paymentIntents.create({
     amount: amountInCents,
     currency: "usd",
     application_fee_amount: platformFee,

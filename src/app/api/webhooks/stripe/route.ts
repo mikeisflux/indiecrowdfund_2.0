@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { stripe, handleStripeWebhook } from "@/lib/payments/stripe";
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+import { getStripeInstance, getStripeWebhookSecret, handleStripeWebhook } from "@/lib/payments/stripe";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,10 +14,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Get webhook secret from database settings or env var
+    const webhookSecret = await getStripeWebhookSecret();
+    if (!webhookSecret) {
+      console.error("Stripe webhook secret not configured");
+      return NextResponse.json(
+        { error: "Webhook secret not configured" },
+        { status: 500 }
+      );
+    }
+
+    // Get Stripe instance with database settings
+    const stripeClient = await getStripeInstance();
+
     let event: Stripe.Event;
 
     try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      event = stripeClient.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
       console.error("Webhook signature verification failed:", err);
       return NextResponse.json(
