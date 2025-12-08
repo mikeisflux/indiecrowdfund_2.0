@@ -121,3 +121,57 @@ export async function sendPasswordResetEmail(email: string, token: string) {
     html,
   });
 }
+
+export async function sendCollaboratorInviteEmail(
+  email: string,
+  inviterName: string,
+  projectTitle: string,
+  projectUrl: string
+) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>You've Been Invited to Collaborate</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+          <h2 style="margin-top: 0; color: #333;">You've Been Invited to Collaborate!</h2>
+          <p><strong>${inviterName}</strong> has invited you to collaborate on the project:</p>
+
+          <div style="background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
+            <h3 style="margin: 0 0 10px 0; color: #333;">${projectTitle}</h3>
+          </div>
+
+          <p>As a collaborator, you'll be able to help manage this project based on the permissions granted to you.</p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${projectUrl}" style="display: inline-block; background: #028858; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+              View Project
+            </a>
+          </div>
+
+          <p style="color: #666; font-size: 14px; margin-bottom: 0;">
+            Log in to your ${APP_NAME} account to accept this invitation and start collaborating.
+          </p>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `${inviterName} invited you to collaborate on "${projectTitle}"`,
+    html,
+  });
+}

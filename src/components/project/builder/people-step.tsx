@@ -72,7 +72,7 @@ export function PeopleStep() {
       canConfigurePledgeManager: false,
     });
     setIsCollaboratorDialogOpen(false);
-    toast.success("Collaborator invitation will be sent when you launch");
+    toast.success("Collaborator added! They will be notified via email.");
   };
 
   const removeCollaborator = (index: number) => {

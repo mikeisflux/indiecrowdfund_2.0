@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { sendCollaboratorInviteEmail } from "@/lib/email";
 
 // Schema for reward items
 const rewardItemSchema = z.object({
@@ -154,9 +155,40 @@ async function handleCollaborators(
           senderId: creatorId,
         },
       });
+
+      // Send email notification
+      const projectUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/projects/${project.slug}`;
+      await sendCollaboratorInviteEmail(
+        collab.email,
+        creatorName,
+        project.title,
+        projectUrl
+      );
+    } else {
+      // User doesn't exist yet - still create a pending collaborator entry
+      // They'll be linked when they sign up with this email
+      await db.projectCollaborator.create({
+        data: {
+          projectId,
+          email: collab.email,
+          title: collab.title || null,
+          canEditProject: collab.canEditProject || false,
+          canManageCommunity: collab.canManageCommunity || false,
+          canCoordinateFulfillment: collab.canCoordinateFulfillment || false,
+          canConfigurePledgeManager: collab.canConfigurePledgeManager || false,
+          status: "PENDING",
+        },
+      });
+
+      // Send invite email even if user doesn't exist
+      const projectUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/projects/${project.slug}`;
+      await sendCollaboratorInviteEmail(
+        collab.email,
+        creatorName,
+        project.title,
+        projectUrl
+      );
     }
-    // If user doesn't exist, they'll need to sign up first
-    // The invitation will be sent via email when they register
   }
 }
 
