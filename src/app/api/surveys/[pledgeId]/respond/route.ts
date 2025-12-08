@@ -254,7 +254,7 @@ export async function POST(
 
     // Validate required fields if submitting
     if (data.submit) {
-      const addonIds = pledge.addons.map((a) => a.addonId);
+      const addonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
 
       // Check required backer questions
       for (const question of survey.backerQuestions) {
@@ -263,7 +263,7 @@ export async function POST(
           question.targetType === "ALL_BACKERS" ||
           (question.targetType === "SPECIFIC_REWARDS" &&
             (question.targetRewardIds.includes(pledge.rewardId) ||
-              question.targetRewardIds.some((id) => addonIds.includes(id))));
+              question.targetRewardIds.some((id: string) => addonIds.includes(id))));
 
         if (applies && question.isRequired) {
           const answer = data.backerResponses?.[question.id];
