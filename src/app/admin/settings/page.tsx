@@ -515,11 +515,6 @@ export default function SettingsPage() {
             stripePublishableKey: currentPaymentSettings.stripePublicKey,
             stripeSecretKey: currentPaymentSettings.stripeSecretKey,
             stripeWebhookSecret: currentPaymentSettings.stripeWebhookSecret,
-            ccbillEnabled: currentPaymentSettings.ccbillEnabled,
-            ccbillClientAccountNo: currentPaymentSettings.ccbillClientAccountNo,
-            ccbillSubaccount: currentPaymentSettings.ccbillSubAccount,
-            ccbillFormName: currentPaymentSettings.ccbillFlexId,
-            ccbillSalt: currentPaymentSettings.ccbillSalt,
           };
           break;
         case "email":

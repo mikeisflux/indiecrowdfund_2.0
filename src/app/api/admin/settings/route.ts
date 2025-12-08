@@ -156,7 +156,7 @@ export async function PATCH(req: NextRequest) {
     // Filter out masked values and empty strings for secret fields (don't update if user hasn't changed them)
     const secretFields = [
       'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret',
-      'ccbillSalt', 'smtpPassword', 'sendgridApiKey', 'mailgunApiKey',
+      'smtpPassword', 'sendgridApiKey', 'mailgunApiKey',
       'openaiApiKey', 'anthropicApiKey', 'googlePlacesApiKey',
       'facebookAppSecret', 'facebookPageAccessToken',
       'youtubeClientSecret', 'youtubeApiKey',
@@ -185,8 +185,7 @@ export async function PATCH(req: NextRequest) {
         "logoUrl", "faviconUrl"
       ],
       payments: [
-        "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret",
-        "ccbillEnabled", "ccbillClientAccountNo", "ccbillSubaccount", "ccbillFormName", "ccbillSalt"
+        "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret"
       ],
       email: [
         "emailProvider", "smtpHost", "smtpPort", "smtpUser", "smtpPassword",
