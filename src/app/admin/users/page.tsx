@@ -131,6 +131,14 @@ export default function UsersPage() {
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | "request_info" | null>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
 
+  // User edit/action states
+  const [showEditUserDialog, setShowEditUserDialog] = useState(false);
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editUserData, setEditUserData] = useState({ name: "", email: "" });
+  const [selectedRole, setSelectedRole] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+
   // API data state
   const [users, setUsers] = useState<User[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({ total: 0, users: 0, admins: 0, superAdmins: 0 });
@@ -286,13 +294,154 @@ export default function UsersPage() {
   };
 
   const getRoleBadge = (role: string) => {
-    switch (role) {
-      case "admin":
+    switch (role.toUpperCase()) {
+      case "ADMIN":
         return <Badge className="bg-violet-100 text-violet-700"><Crown className="h-3 w-3 mr-1" /> Admin</Badge>;
-      case "creator":
-        return <Badge className="bg-blue-100 text-blue-700"><Star className="h-3 w-3 mr-1" /> Creator</Badge>;
+      case "SUPER_ADMIN":
+        return <Badge className="bg-amber-100 text-amber-700"><Crown className="h-3 w-3 mr-1" /> Super Admin</Badge>;
       default:
-        return <Badge variant="outline">Backer</Badge>;
+        return <Badge variant="outline">User</Badge>;
+    }
+  };
+
+  // Handle opening edit user dialog
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setEditUserData({ name: user.name || "", email: user.email });
+    setShowEditUserDialog(true);
+  };
+
+  // Handle opening change role dialog
+  const handleChangeRole = (user: User) => {
+    setSelectedUser(user);
+    setSelectedRole(user.role);
+    setShowRoleDialog(true);
+  };
+
+  // Handle opening delete confirmation dialog
+  const handleDeleteUser = (user: User) => {
+    setSelectedUser(user);
+    setShowDeleteDialog(true);
+  };
+
+  // Submit edit user changes
+  const submitEditUser = async () => {
+    if (!selectedUser) return;
+    setIsUpdating(true);
+
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          action: "UPDATE_INFO",
+          data: {
+            name: editUserData.name,
+            email: editUserData.email,
+          },
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        setShowEditUserDialog(false);
+        setSelectedUser(null);
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to update user");
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      alert("Failed to update user");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Submit role change
+  const submitRoleChange = async () => {
+    if (!selectedUser) return;
+    setIsUpdating(true);
+
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          action: "UPDATE_ROLE",
+          data: { role: selectedRole },
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        setShowRoleDialog(false);
+        setSelectedUser(null);
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to change role");
+      }
+    } catch (error) {
+      console.error("Error changing role:", error);
+      alert("Failed to change role");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Submit delete user
+  const submitDeleteUser = async () => {
+    if (!selectedUser) return;
+    setIsUpdating(true);
+
+    try {
+      const response = await fetch(`/api/admin/users?userId=${selectedUser.id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        setShowDeleteDialog(false);
+        setSelectedUser(null);
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to delete user");
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("Failed to delete user");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle send email (opens mail client)
+  const handleSendEmail = (user: User) => {
+    window.location.href = `mailto:${user.email}`;
+  };
+
+  // Handle verify email
+  const handleVerifyEmail = async (user: User) => {
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          action: "VERIFY_EMAIL",
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to verify email");
+      }
+    } catch (error) {
+      console.error("Error verifying email:", error);
     }
   };
 
@@ -467,21 +616,30 @@ export default function UsersPage() {
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit User
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleSendEmail(user)}>
                             <Mail className="mr-2 h-4 w-4" />
                             Send Email
                           </DropdownMenuItem>
+                          {!user.emailVerified && (
+                            <DropdownMenuItem onClick={() => handleVerifyEmail(user)}>
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Verify Email
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleChangeRole(user)}>
                             <Shield className="mr-2 h-4 w-4" />
                             Change Role
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteUser(user)}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete User
                           </DropdownMenuItem>
@@ -770,7 +928,10 @@ export default function UsersPage() {
             <Button variant="outline" onClick={() => setShowUserDialog(false)}>
               Close
             </Button>
-            <Button>Edit User</Button>
+            <Button onClick={() => {
+              setShowUserDialog(false);
+              if (selectedUser) handleEditUser(selectedUser);
+            }}>Edit User</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1003,6 +1164,146 @@ export default function UsersPage() {
               {approvalAction === "approve" && "Approve Retailer"}
               {approvalAction === "reject" && "Reject Application"}
               {approvalAction === "request_info" && "Send Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editUserData.name}
+                  onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
+                  placeholder="Enter user name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editUserData.email}
+                  onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+                  placeholder="Enter user email"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditUserDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitEditUser} disabled={isUpdating}>
+              {isUpdating ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Role Dialog */}
+      <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change User Role</DialogTitle>
+            <DialogDescription>
+              Update the role for {selectedUser?.name || selectedUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="py-4 space-y-4">
+              <div className="flex items-center gap-3 mb-4 p-3 bg-zinc-50 rounded-lg">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-200 font-medium text-zinc-600">
+                  {selectedUser.name?.charAt(0) || selectedUser.email.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-medium">{selectedUser.name || "No name"}</p>
+                  <p className="text-sm text-zinc-500">{selectedUser.email}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="role-select">Role</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USER">User</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-zinc-500">
+                  {selectedRole === "USER" && "Regular user with standard access."}
+                  {selectedRole === "ADMIN" && "Admin users can manage projects and users."}
+                  {selectedRole === "SUPER_ADMIN" && "Super admins have full platform access including role changes."}
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitRoleChange} disabled={isUpdating}>
+              {isUpdating ? "Updating..." : "Update Role"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this user? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="py-4">
+              <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 font-medium text-red-600">
+                  {selectedUser.name?.charAt(0) || selectedUser.email.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-medium text-red-800">{selectedUser.name || "No name"}</p>
+                  <p className="text-sm text-red-600">{selectedUser.email}</p>
+                </div>
+              </div>
+              <p className="mt-4 text-sm text-zinc-600">
+                This will permanently delete the user account and all associated data including:
+              </p>
+              <ul className="mt-2 text-sm text-zinc-600 list-disc list-inside space-y-1">
+                <li>{selectedUser.projectCount} created projects</li>
+                <li>{selectedUser.pledgeCount} pledges made</li>
+                <li>All account settings and preferences</li>
+              </ul>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={submitDeleteUser}
+              disabled={isUpdating}
+            >
+              {isUpdating ? "Deleting..." : "Delete User"}
             </Button>
           </DialogFooter>
         </DialogContent>
