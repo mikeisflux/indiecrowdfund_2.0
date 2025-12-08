@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { create, StateCreator } from "zustand";
+import { persist, PersistOptions } from "zustand/middleware";
 import {
   ProjectBasicsData,
   RewardData,
@@ -182,6 +182,61 @@ export const useProjectStore = create<ProjectBuilderState>()(
     }),
     {
       name: "project-builder-storage",
+      // Custom storage that handles quota errors gracefully
+      storage: {
+        getItem: (name) => {
+          try {
+            const str = localStorage.getItem(name);
+            return str ? JSON.parse(str) : null;
+          } catch {
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, JSON.stringify(value));
+          } catch (e) {
+            // Handle quota exceeded error - clear old data and try again
+            if (e instanceof Error && e.name === "QuotaExceededError") {
+              console.warn("localStorage quota exceeded, clearing project storage");
+              try {
+                localStorage.removeItem(name);
+                localStorage.setItem(name, JSON.stringify(value));
+              } catch {
+                // If still fails, just continue without persistence
+                console.error("Failed to save to localStorage even after clearing");
+              }
+            }
+          }
+        },
+        removeItem: (name) => {
+          try {
+            localStorage.removeItem(name);
+          } catch {
+            // Ignore errors
+          }
+        },
+      },
+      // Don't persist the story description content (can be very large with images)
+      // Only persist metadata and smaller fields
+      partialize: (state) => ({
+        currentStep: state.currentStep,
+        basics: state.basics,
+        items: state.items,
+        rewards: state.rewards,
+        // For story, don't persist the full description if it's too large
+        story: {
+          ...state.story,
+          description: state.story.description && state.story.description.length > 50000
+            ? undefined // Don't persist if over 50KB
+            : state.story.description,
+        },
+        people: state.people,
+        payment: state.payment,
+        promotion: state.promotion,
+        projectId: state.projectId,
+        projectStatus: state.projectStatus,
+      }),
     }
   )
 );

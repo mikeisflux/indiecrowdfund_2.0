@@ -54,7 +54,7 @@ export function RichTextEditor({
         HTMLAttributes: {
           class: "max-w-full h-auto rounded-lg my-4 block",
         },
-        allowBase64: true,
+        allowBase64: false, // Don't allow base64 images - they bloat localStorage
       }),
       Link.configure({
         openOnClick: false,
@@ -79,47 +79,28 @@ export function RichTextEditor({
         class:
           "prose prose-sm sm:prose lg:prose-lg dark:prose-invert max-w-none min-h-[400px] focus:outline-none px-4 py-3",
       },
-      // Handle paste to preserve formatting and images
+      // Handle paste - preserve formatting but convert base64 images to placeholder
       handlePaste: (view, event) => {
         const clipboardData = event.clipboardData;
         if (!clipboardData) return false;
 
-        // Check for images first
+        // Check for direct image paste (screenshot, etc) - skip these
         const items = clipboardData.items;
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
-          if (item.type.startsWith("image/")) {
-            const file = item.getAsFile();
-            if (file) {
-              event.preventDefault();
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                const base64 = e.target?.result as string;
-                if (base64) {
-                  view.dispatch(
-                    view.state.tr.replaceSelectionWith(
-                      view.state.schema.nodes.image.create({ src: base64 })
-                    )
-                  );
-                }
-              };
-              reader.readAsDataURL(file);
-              return true;
-            }
+          if (item.type.startsWith("image/") && !clipboardData.getData("text/html")) {
+            // Direct image paste without HTML - alert user
+            event.preventDefault();
+            alert("Please use the image button to add images via URL, or upload images through the media section.");
+            return true;
           }
         }
 
-        // Check for HTML content (preserves formatting from websites)
-        const html = clipboardData.getData("text/html");
-        if (html) {
-          // Let TipTap handle HTML paste natively - it preserves formatting
-          // TipTap will automatically convert it to its internal format
-          return false;
-        }
-
+        // For HTML paste, let TipTap handle it - it preserves formatting
+        // TipTap will automatically filter out problematic content
         return false;
       },
-      // Handle drop for images
+      // Handle drop - don't allow direct image drops
       handleDrop: (view, event) => {
         const files = event.dataTransfer?.files;
         if (files && files.length > 0) {
@@ -127,25 +108,7 @@ export function RichTextEditor({
             const file = files[i];
             if (file.type.startsWith("image/")) {
               event.preventDefault();
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                const base64 = e.target?.result as string;
-                if (base64) {
-                  const pos = view.posAtCoords({
-                    left: event.clientX,
-                    top: event.clientY,
-                  });
-                  if (pos) {
-                    view.dispatch(
-                      view.state.tr.insert(
-                        pos.pos,
-                        view.state.schema.nodes.image.create({ src: base64 })
-                      )
-                    );
-                  }
-                }
-              };
-              reader.readAsDataURL(file);
+              alert("Please use the image button to add images via URL, or upload images through the media section.");
               return true;
             }
           }
@@ -414,8 +377,8 @@ export function RichTextEditor({
 
       {/* Footer hint */}
       <div className="px-4 py-2 border-t bg-muted/20 text-xs text-muted-foreground flex items-center justify-between">
-        <span>Paste content from any website - formatting, images, and links are preserved</span>
-        <span>Drag & drop images supported</span>
+        <span>Paste content from any website - formatting and links are preserved</span>
+        <span>Use image button to add images via URL</span>
       </div>
     </div>
   );
