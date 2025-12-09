@@ -11,8 +11,19 @@ import { PaymentStep } from "./payment-step";
 import { PromotionStep } from "./promotion-step";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Check, ChevronLeft, ChevronRight, Loader2, Save } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2, Save, Rocket, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export function ProjectBuilder() {
@@ -31,12 +42,21 @@ export function ProjectBuilder() {
     promotion,
     projectId,
     setProjectId,
+    projectStatus,
+    setProjectStatus,
     reset,
   } = useProjectStore();
 
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(false);
   const [isSubFormOpen, setIsSubFormOpen] = useState(false);
+  const [showReReviewWarning, setShowReReviewWarning] = useState(false);
+
+  const isApproved = projectStatus === "APPROVED";
+  const isLive = projectStatus === "LIVE";
+  const isSubmitted = projectStatus === "SUBMITTED";
+  const isDraft = projectStatus === "DRAFT" || !projectStatus;
 
   const progress = ((currentStep + 1) / BUILDER_STEPS.length) * 100;
 
@@ -231,6 +251,7 @@ export function ProjectBuilder() {
       }
 
       toast.success("Project submitted for review!");
+      setProjectStatus("SUBMITTED");
       reset();
       router.push("/dashboard");
     } catch (error) {
@@ -238,6 +259,52 @@ export function ProjectBuilder() {
       toast.error(error instanceof Error ? error.message : "Failed to submit");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleLaunchNow = async () => {
+    if (!projectId) {
+      toast.error("Project ID is required");
+      return;
+    }
+
+    setIsLaunching(true);
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/launch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to launch project");
+      }
+
+      toast.success("Your project is now live!");
+      setProjectStatus("LIVE");
+      reset();
+      router.push(`/projects/${basics.title?.toLowerCase().replace(/\s+/g, "-")}`);
+    } catch (error) {
+      console.error("Launch project error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to launch");
+    } finally {
+      setIsLaunching(false);
+    }
+  };
+
+  const handleSaveApprovedProject = async () => {
+    // For approved projects, saving will trigger re-review
+    setShowReReviewWarning(true);
+  };
+
+  const confirmSaveAndResubmit = async () => {
+    setShowReReviewWarning(false);
+    const saved = await saveProject();
+    if (saved) {
+      // Resubmit for review after saving
+      await handleSubmitForReview();
     }
   };
 
@@ -260,31 +327,93 @@ export function ProjectBuilder() {
     }
   };
 
+  const getStatusBadge = () => {
+    switch (projectStatus) {
+      case "APPROVED":
+        return <Badge className="bg-green-600 hover:bg-green-600">Approved - Ready to Launch</Badge>;
+      case "SUBMITTED":
+        return <Badge variant="secondary">Under Review</Badge>;
+      case "LIVE":
+        return <Badge className="bg-blue-600 hover:bg-blue-600">Live</Badge>;
+      case "FUNDED":
+        return <Badge className="bg-emerald-600 hover:bg-emerald-600">Funded</Badge>;
+      default:
+        return <Badge variant="outline">Draft</Badge>;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-muted/30">
+      {/* Re-review Warning Dialog */}
+      <AlertDialog open={showReReviewWarning} onOpenChange={setShowReReviewWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Changes Require Re-Review
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Your project has already been approved. Making changes will require the project to be re-reviewed by our team before you can launch. This may take 1-3 business days.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSaveAndResubmit}>
+              Save & Resubmit for Review
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Header */}
       <div className="border-b bg-background">
         <div className="container py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold">Create Your Project</h1>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSaveAndExit}
-              disabled={isSaving || isSubmitting}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save & Exit
-                </>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold">
+                {projectId ? "Edit Project" : "Create Your Project"}
+              </h1>
+              {projectId && getStatusBadge()}
+            </div>
+            <div className="flex items-center gap-2">
+              {isApproved && (
+                <Button
+                  onClick={handleLaunchNow}
+                  disabled={isLaunching}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isLaunching ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Launching...
+                    </>
+                  ) : (
+                    <>
+                      <Rocket className="mr-2 h-4 w-4" />
+                      Launch Now
+                    </>
+                  )}
+                </Button>
               )}
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={isApproved ? handleSaveApprovedProject : handleSaveAndExit}
+                disabled={isSaving || isSubmitting || isLaunching}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save & Exit
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
           <Progress value={progress} className="mt-4 h-2" />
         </div>
@@ -351,6 +480,45 @@ export function ProjectBuilder() {
                 <Button onClick={nextStep}>
                   Next
                   <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : isApproved ? (
+                <Button
+                  onClick={handleLaunchNow}
+                  disabled={isLaunching}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isLaunching ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Launching...
+                    </>
+                  ) : (
+                    <>
+                      <Rocket className="mr-2 h-4 w-4" />
+                      Launch Now
+                    </>
+                  )}
+                </Button>
+              ) : isSubmitted ? (
+                <Button disabled variant="secondary">
+                  Under Review
+                </Button>
+              ) : isLive ? (
+                <Button
+                  onClick={saveProject}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
                 </Button>
               ) : (
                 <Button
