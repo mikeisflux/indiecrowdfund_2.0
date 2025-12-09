@@ -56,7 +56,6 @@ export function ProjectBuilder() {
   const isApproved = projectStatus === "APPROVED";
   const isLive = projectStatus === "LIVE";
   const isSubmitted = projectStatus === "SUBMITTED";
-  const isDraft = projectStatus === "DRAFT" || !projectStatus;
 
   const progress = ((currentStep + 1) / BUILDER_STEPS.length) * 100;
 
