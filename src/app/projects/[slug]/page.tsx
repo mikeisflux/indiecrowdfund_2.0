@@ -665,9 +665,12 @@ export default function ProjectPage() {
 
             {/* Main Content */}
             <div className="lg:col-span-6">
-              <div className="prose prose-sm max-w-none dark:prose-invert">
+              <div className="prose prose-sm sm:prose lg:prose-lg max-w-none dark:prose-invert prose-headings:font-serif prose-img:rounded-lg prose-img:my-4 prose-a:text-primary prose-a:underline">
                 <h2 className="text-2xl font-serif">Story</h2>
-                <div dangerouslySetInnerHTML={{ __html: project.description }} />
+                <div
+                  className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                  dangerouslySetInnerHTML={{ __html: project.description }}
+                />
 
                 <Separator className="my-8" />
 
