@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
     const projectId = searchParams.get("projectId");
     const days = parseInt(searchParams.get("days") || "30");
 
-    // Get user's projects
-    const projects = await db.project.findMany({
+    // Get user's own projects
+    const ownProjects = await db.project.findMany({
       where: {
         creatorId: session.user.id,
       },
@@ -38,6 +38,46 @@ export async function GET(req: NextRequest) {
         launchedAt: true,
         createdAt: true,
       },
+    });
+
+    // Get projects user is collaborating on
+    const collaborations = await db.projectCollaborator.findMany({
+      where: {
+        userId: session.user.id,
+        status: "ACCEPTED",
+      },
+      select: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            status: true,
+            imageUrl: true,
+            goalAmount: true,
+            currentAmount: true,
+            backerCount: true,
+            endDate: true,
+            launchDate: true,
+            launchedAt: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    // Combine own projects and collaborated projects (avoiding duplicates)
+    const ownProjectIds = new Set(ownProjects.map(p => p.id));
+    const collaboratedProjects = collaborations
+      .map(c => c.project)
+      .filter(p => !ownProjectIds.has(p.id));
+
+    const projects = [...ownProjects, ...collaboratedProjects].sort((a, b) => {
+      // LIVE projects first, then by createdAt desc
+      if (a.status !== b.status) {
+        return a.status === "LIVE" ? -1 : b.status === "LIVE" ? 1 : 0;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
     // If no projects, return empty dashboard

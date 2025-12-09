@@ -128,7 +128,7 @@ async function handleCollaborators(
     });
 
     if (user) {
-      // Create collaborator entry
+      // Create collaborator entry - auto-accept since creator is adding them
       await db.projectCollaborator.create({
         data: {
           projectId,
@@ -139,7 +139,8 @@ async function handleCollaborators(
           canManageCommunity: collab.canManageCommunity || false,
           canCoordinateFulfillment: collab.canCoordinateFulfillment || false,
           canConfigurePledgeManager: collab.canConfigurePledgeManager || false,
-          status: "PENDING",
+          status: "ACCEPTED",
+          acceptedAt: new Date(),
         },
       });
 
