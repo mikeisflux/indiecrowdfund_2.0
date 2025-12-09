@@ -126,8 +126,10 @@ export async function sendCollaboratorInviteEmail(
   email: string,
   inviterName: string,
   projectTitle: string,
-  projectUrl: string
+  collaboratorId: string
 ) {
+  const respondUrl = `${APP_URL}/collaborate/${collaboratorId}`;
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -152,13 +154,16 @@ export async function sendCollaboratorInviteEmail(
           <p>As a collaborator, you'll be able to help manage this project based on the permissions granted to you.</p>
 
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${projectUrl}" style="display: inline-block; background: #028858; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-              View Project
+            <a href="${respondUrl}" style="display: inline-block; background: #028858; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500; margin-right: 10px;">
+              Accept Invitation
+            </a>
+            <a href="${respondUrl}" style="display: inline-block; background: #fff; color: #666; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500; border: 1px solid #ddd;">
+              View Details
             </a>
           </div>
 
           <p style="color: #666; font-size: 14px; margin-bottom: 0;">
-            Log in to your ${APP_NAME} account to accept this invitation and start collaborating.
+            You'll need to log in to your ${APP_NAME} account to accept or decline this invitation.
           </p>
         </div>
 

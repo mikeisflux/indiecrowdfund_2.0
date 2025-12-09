@@ -128,8 +128,8 @@ async function handleCollaborators(
     });
 
     if (user) {
-      // Create collaborator entry - auto-accept since creator is adding them
-      await db.projectCollaborator.create({
+      // Create collaborator entry with PENDING status - user must accept
+      const collaboratorRecord = await db.projectCollaborator.create({
         data: {
           projectId,
           userId: user.id,
@@ -139,8 +139,7 @@ async function handleCollaborators(
           canManageCommunity: collab.canManageCommunity || false,
           canCoordinateFulfillment: collab.canCoordinateFulfillment || false,
           canConfigurePledgeManager: collab.canConfigurePledgeManager || false,
-          status: "ACCEPTED",
-          acceptedAt: new Date(),
+          status: "PENDING",
         },
       });
 
@@ -151,24 +150,23 @@ async function handleCollaborators(
           type: "COLLABORATOR_INVITE",
           title: "You've been invited to collaborate",
           message: `${creatorName} has invited you to collaborate on "${project.title}"`,
-          actionUrl: `/projects/${project.slug}`,
+          actionUrl: `/collaborate/${collaboratorRecord.id}`,
           projectId,
           senderId: creatorId,
         },
       });
 
-      // Send email notification
-      const projectUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/projects/${project.slug}`;
+      // Send email notification with accept/decline link
       await sendCollaboratorInviteEmail(
         collab.email,
         creatorName,
         project.title,
-        projectUrl
+        collaboratorRecord.id
       );
     } else {
-      // User doesn't exist yet - still create a pending collaborator entry
+      // User doesn't exist yet - create a pending collaborator entry without userId
       // They'll be linked when they sign up with this email
-      await db.projectCollaborator.create({
+      const collaboratorRecord = await db.projectCollaborator.create({
         data: {
           projectId,
           email: collab.email,
@@ -181,13 +179,12 @@ async function handleCollaborators(
         },
       });
 
-      // Send invite email even if user doesn't exist
-      const projectUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/projects/${project.slug}`;
+      // Send invite email - they'll need to sign up first
       await sendCollaboratorInviteEmail(
         collab.email,
         creatorName,
         project.title,
-        projectUrl
+        collaboratorRecord.id
       );
     }
   }

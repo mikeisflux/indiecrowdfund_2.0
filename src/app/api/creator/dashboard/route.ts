@@ -68,9 +68,10 @@ export async function GET(req: NextRequest) {
 
     // Combine own projects and collaborated projects (avoiding duplicates)
     const ownProjectIds = new Set(ownProjects.map(p => p.id));
+    type ProjectType = typeof ownProjects[number];
     const collaboratedProjects = collaborations
-      .map(c => c.project)
-      .filter(p => !ownProjectIds.has(p.id));
+      .map((c: { project: ProjectType }) => c.project)
+      .filter((p: ProjectType) => !ownProjectIds.has(p.id));
 
     const projects = [...ownProjects, ...collaboratedProjects].sort((a, b) => {
       // LIVE projects first, then by createdAt desc
