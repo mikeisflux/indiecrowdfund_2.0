@@ -134,9 +134,6 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     endReward,
   } = useProjectStore();
 
-  // Debug: Log projectId on mount and changes
-  console.log("[RewardsStep] projectId from store:", projectId);
-
   // Check if campaign is live (can't edit rewards with backers)
   const isLive = projectStatus === "LIVE" || projectStatus === "FUNDED";
 
@@ -206,14 +203,11 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       return;
     }
 
-    console.log("[Item Save] projectId:", projectId, "editingItemId:", editingItemId);
-
     // If project exists, save to database immediately
     if (projectId) {
       setIsSaving(true);
       try {
         const method = editingItemId ? "PATCH" : "POST";
-        console.log("[Item Save] Making API call:", method, `/api/projects/${projectId}/items`);
         const response = await fetch(`/api/projects/${projectId}/items`, {
           method,
           headers: { "Content-Type": "application/json" },
@@ -250,7 +244,6 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       setIsSaving(false);
     } else {
       // For new projects without ID, just add to local state
-      console.log("[Item Save] No projectId - saving to local state only");
       if (editingItemId) {
         updateItem(editingItemId, currentItem);
         toast.success("Item updated (save project to persist)");
