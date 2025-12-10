@@ -13,7 +13,7 @@ const rewardSchema = z.object({
   estimatedDelivery: z.string().optional().nullable(),
   shippingType: z.enum(["NO_SHIPPING", "WORLDWIDE", "SELECTED_COUNTRIES"]),
   shippingCountries: z.array(z.string()).optional().default([]),
-  shippingCost: z.record(z.number()).optional().default({}),
+  shippingCost: z.record(z.string(), z.number()).optional().default({}),
   quantityAvailable: z.number().optional().nullable(),
   visibility: z.enum(["PUBLIC", "SECRET"]).optional().default("PUBLIC"),
   isEnded: z.boolean().optional().default(false),
