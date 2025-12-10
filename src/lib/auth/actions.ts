@@ -143,15 +143,16 @@ export async function login(formData: FormData, callbackUrl?: string) {
   await createSession(user.id);
 
   // Determine redirect destination based on role
-  let redirectTo = callbackUrl || "/dashboard";
+  let redirectTo = callbackUrl || "/choose-role";
 
   // SUPER_ADMIN goes to admin panel by default
   if (user.role === "SUPER_ADMIN" && !callbackUrl) {
     redirectTo = "/admin";
   }
 
-  // Redirect after successful login
-  redirect(redirectTo);
+  // Return success with redirect URL - let client handle navigation
+  // This ensures the Set-Cookie header is properly sent before redirect
+  return { success: true, redirectTo };
 }
 
 export async function logout() {

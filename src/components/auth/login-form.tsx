@@ -36,7 +36,12 @@ export function LoginForm() {
     try {
       const result = await login(formData, callbackUrl);
 
-      // If we get here without redirect, there was an error
+      if (result?.success && result?.redirectTo) {
+        // Use hard navigation to ensure cookie is sent with request
+        window.location.href = result.redirectTo;
+        return;
+      }
+
       if (result?.error) {
         const errorObj = result.error as Record<string, string[] | undefined>;
         if (errorObj._form) {
@@ -50,9 +55,8 @@ export function LoginForm() {
         }
       }
     } catch {
-      // Server action redirected - this is success
-      // The redirect will happen automatically
-      return;
+      // Unexpected error
+      setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
