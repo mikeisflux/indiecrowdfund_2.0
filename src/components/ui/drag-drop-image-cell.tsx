@@ -108,7 +108,7 @@ export function DragDropImageCell({
   return (
     <div
       className={cn(
-        "w-16 h-16 rounded overflow-hidden cursor-pointer transition-all relative",
+        "w-24 aspect-video rounded overflow-hidden cursor-pointer transition-all relative",
         isDragging ? "ring-2 ring-primary ring-offset-2 scale-105" : "",
         isUploading ? "opacity-70" : "hover:ring-2 hover:ring-muted-foreground/30",
         className
@@ -123,8 +123,8 @@ export function DragDropImageCell({
         <Image
           src={imageUrl}
           alt={alt}
-          width={64}
-          height={64}
+          width={96}
+          height={54}
           className="w-full h-full object-cover"
         />
       ) : (
