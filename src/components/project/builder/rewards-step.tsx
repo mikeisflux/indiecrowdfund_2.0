@@ -908,8 +908,9 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
-          <Button onClick={handleSaveReward}>
-            Save reward
+          <Button onClick={handleSaveReward} disabled={isSaving}>
+            {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isSaving ? "Saving..." : "Save reward"}
           </Button>
         </div>
 
@@ -2074,11 +2075,12 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsItemDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsItemDialogOpen(false)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleSaveItem}>
-              {editingItemId ? "Save changes" : "Create item"}
+            <Button onClick={handleSaveItem} disabled={isSaving}>
+              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isSaving ? "Saving..." : (editingItemId ? "Save changes" : "Create item")}
             </Button>
           </DialogFooter>
         </DialogContent>
