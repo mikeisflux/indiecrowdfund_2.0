@@ -300,10 +300,14 @@ export async function PATCH(
     }
 
     const body = await req.json();
+    console.log("[API Debug] Received body - rewards count:", body.rewards?.length || 0);
+    console.log("[API Debug] Rewards received:", JSON.stringify(body.rewards || []).substring(0, 500));
+
     const data = updateProjectSchema.parse(body);
 
     // Extract rewards and collaborators for separate handling
     const { rewards, collaborators, ...projectData } = data;
+    console.log("[API Debug] After validation - rewards count:", rewards?.length || 0);
 
     // Prepare project update data
     const updateData: Record<string, unknown> = {};
@@ -350,7 +354,9 @@ export async function PATCH(
     if (projectData.status !== undefined) updateData.status = projectData.status;
 
     // Update project using transaction if we have rewards to handle
+    console.log("[API Debug] Processing rewards - count:", rewards?.length || 0, "condition:", rewards && rewards.length > 0);
     if (rewards && rewards.length > 0) {
+      console.log("[API Debug] Entering rewards transaction");
       // Use transaction to update project and rewards together
       const updated = await db.$transaction(async (tx) => {
         // Update project
@@ -378,6 +384,7 @@ export async function PATCH(
 
         // Upsert rewards
         for (const reward of rewards) {
+          console.log("[API Debug] Processing reward:", reward.id || "NEW", reward.title, "items:", reward.items?.length || 0);
           const rewardData = {
             projectId: params.id,
             type: reward.type,

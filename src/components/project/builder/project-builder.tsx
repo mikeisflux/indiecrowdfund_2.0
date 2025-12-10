@@ -77,6 +77,8 @@ export function ProjectBuilder() {
       }
 
       // Transform rewards to include items from the items store
+      console.log("[Save Debug] Items in store:", items.length, items);
+      console.log("[Save Debug] Rewards in store:", rewards.length, rewards);
       const transformedRewards = rewards.map((reward) => ({
         id: reward.id,
         type: reward.type || "TIER",
@@ -149,6 +151,9 @@ export function ProjectBuilder() {
         // Collaborators
         collaborators: people.collaborators || [],
       };
+
+      console.log("[Save Debug] Transformed rewards being sent:", transformedRewards.length, transformedRewards);
+      console.log("[Save Debug] Project data being sent:", JSON.stringify(projectData).length, "bytes");
 
       let response;
 
