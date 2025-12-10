@@ -181,6 +181,7 @@ model Project {
 
   // Relations
   creator               User          @relation("ProjectCreator", fields: [creatorId], references: [id])
+  projectItems          ProjectItem[]
   rewards               Reward[]
   pledges               Pledge[]
   updates               Update[]
@@ -249,6 +250,25 @@ enum PaymentProcessor {
 }
 
 // ============================================
+// PROJECT ITEMS (independent of rewards)
+// ============================================
+
+model ProjectItem {
+  id          String  @id @default(cuid())
+  projectId   String
+  title       String
+  description String? @db.Text
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rewardItems RewardItem[]
+
+  @@index([projectId])
+}
+
+// ============================================
 // REWARDS & ADD-ONS
 // ============================================
 
@@ -313,15 +333,18 @@ enum Visibility {
 }
 
 model RewardItem {
-  id          String  @id @default(cuid())
-  rewardId    String
-  title       String
-  description String? @db.Text
-  imageUrl    String?
+  id            String  @id @default(cuid())
+  rewardId      String
+  projectItemId String?  // Optional reference to project-level item
+  title         String
+  description   String? @db.Text
+  imageUrl      String?
 
-  reward      Reward  @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  reward        Reward       @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  projectItem   ProjectItem? @relation(fields: [projectItemId], references: [id])
 
   @@index([rewardId])
+  @@index([projectItemId])
 }
 
 // ============================================

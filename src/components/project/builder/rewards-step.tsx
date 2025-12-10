@@ -50,6 +50,7 @@ import {
   Users,
   Upload,
   FileSpreadsheet,
+  Loader2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -129,6 +130,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     updateReward,
     removeReward,
     projectStatus,
+    projectId,
     endReward,
   } = useProjectStore();
 
@@ -136,6 +138,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const isLive = projectStatus === "LIVE" || projectStatus === "FUNDED";
 
   const [activeTab, setActiveTab] = useState<"items" | "tiers" | "addons">("items");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Item dialog state
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
@@ -194,25 +197,87 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     setIsItemDialogOpen(true);
   };
 
-  const handleSaveItem = () => {
+  const handleSaveItem = async () => {
     if (!currentItem.title.trim()) {
       toast.error("Please enter an item title");
       return;
     }
 
-    if (editingItemId) {
-      updateItem(editingItemId, currentItem);
-      toast.success("Item updated");
+    // If project exists, save to database immediately
+    if (projectId) {
+      setIsSaving(true);
+      try {
+        const method = editingItemId ? "PATCH" : "POST";
+        const response = await fetch(`/api/projects/${projectId}/items`, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingItemId || undefined,
+            title: currentItem.title,
+            description: currentItem.description,
+            imageUrl: currentItem.imageUrl,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          toast.error(result.error || "Failed to save item");
+          setIsSaving(false);
+          return;
+        }
+
+        // Update local store with the server response (includes generated ID)
+        if (editingItemId) {
+          updateItem(editingItemId, { ...currentItem, id: result.item.id });
+          toast.success("Item saved");
+        } else {
+          addItem({ ...currentItem, id: result.item.id });
+          toast.success("Item saved");
+        }
+      } catch (error) {
+        console.error("Save item error:", error);
+        toast.error("Failed to save item");
+        setIsSaving(false);
+        return;
+      }
+      setIsSaving(false);
     } else {
-      addItem(currentItem);
-      toast.success("Item created");
+      // For new projects without ID, just add to local state
+      if (editingItemId) {
+        updateItem(editingItemId, currentItem);
+        toast.success("Item updated");
+      } else {
+        addItem(currentItem);
+        toast.success("Item created");
+      }
     }
 
     setIsItemDialogOpen(false);
     setCurrentItem(defaultItem);
   };
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
+    // If project exists, delete from database immediately
+    if (projectId) {
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/items?itemId=${id}`,
+          { method: "DELETE" }
+        );
+
+        if (!response.ok) {
+          const result = await response.json();
+          toast.error(result.error || "Failed to delete item");
+          return;
+        }
+      } catch (error) {
+        console.error("Delete item error:", error);
+        toast.error("Failed to delete item");
+        return;
+      }
+    }
+
     removeItem(id);
     toast.success("Item deleted");
   };
@@ -251,7 +316,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     onFormOpenChange?.(true);
   };
 
-  const handleSaveReward = () => {
+  const handleSaveReward = async () => {
     if (!currentReward.title.trim()) {
       toast.error("Please enter a title");
       return;
@@ -288,12 +353,72 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       estimatedDelivery,
     };
 
-    if (editingRewardIndex !== null) {
-      updateReward(editingRewardIndex, rewardToSave);
-      toast.success("Reward updated");
+    // If project exists, save to database immediately
+    if (projectId) {
+      setIsSaving(true);
+      try {
+        const isEditing = editingRewardIndex !== null && currentReward.id;
+        const method = isEditing ? "PATCH" : "POST";
+
+        const response = await fetch(`/api/projects/${projectId}/rewards`, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: isEditing ? currentReward.id : undefined,
+            type: rewardToSave.type,
+            title: rewardToSave.title,
+            description: rewardToSave.description,
+            amount: rewardToSave.amount,
+            imageUrl: rewardToSave.imageUrl,
+            estimatedDelivery: rewardToSave.estimatedDelivery?.toISOString(),
+            shippingType: rewardToSave.shippingType,
+            shippingCountries: rewardToSave.shippingCountries,
+            shippingCost: rewardToSave.shippingCost,
+            quantityAvailable: rewardToSave.quantityAvailable,
+            visibility: rewardToSave.visibility,
+            isEnded: rewardToSave.isEnded,
+            items: selectedItems.map(item => ({
+              projectItemId: item.id, // Link to ProjectItem
+              title: item.title,
+              description: item.description,
+              imageUrl: item.imageUrl,
+            })),
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          toast.error(result.error || "Failed to save reward");
+          setIsSaving(false);
+          return;
+        }
+
+        // Update local store with the server response (includes generated ID)
+        const savedReward = { ...rewardToSave, id: result.reward.id };
+        if (editingRewardIndex !== null) {
+          updateReward(editingRewardIndex, savedReward);
+          toast.success("Reward saved");
+        } else {
+          addReward(savedReward);
+          toast.success("Reward saved");
+        }
+      } catch (error) {
+        console.error("Save reward error:", error);
+        toast.error("Failed to save reward");
+        setIsSaving(false);
+        return;
+      }
+      setIsSaving(false);
     } else {
-      addReward(rewardToSave);
-      toast.success("Reward created");
+      // For new projects without ID, just add to local state
+      if (editingRewardIndex !== null) {
+        updateReward(editingRewardIndex, rewardToSave);
+        toast.success("Reward updated");
+      } else {
+        addReward(rewardToSave);
+        toast.success("Reward created");
+      }
     }
 
     // Navigate back to the correct tab based on reward type
@@ -313,13 +438,34 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     setSelectedItemIds([]);
   };
 
-  const handleDeleteReward = (index: number) => {
+  const handleDeleteReward = async (index: number) => {
     const reward = rewards[index];
     // If reward has backers, show error
     if (reward.backerCount && reward.backerCount > 0) {
       toast.error("Cannot delete reward with backers. End the reward instead.");
       return;
     }
+
+    // If project exists and reward has an ID, delete from database
+    if (projectId && reward.id) {
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/rewards?rewardId=${reward.id}`,
+          { method: "DELETE" }
+        );
+
+        if (!response.ok) {
+          const result = await response.json();
+          toast.error(result.error || "Failed to delete reward");
+          return;
+        }
+      } catch (error) {
+        console.error("Delete reward error:", error);
+        toast.error("Failed to delete reward");
+        return;
+      }
+    }
+
     removeReward(index);
     toast.success("Reward deleted");
   };

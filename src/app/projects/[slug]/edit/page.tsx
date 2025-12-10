@@ -18,6 +18,7 @@ export default function EditProjectPage() {
     setProjectStatus,
     updateBasics,
     updateStory,
+    updatePeople,
     updatePayment,
     updatePromotion,
     addReward,
@@ -100,6 +101,37 @@ export default function EditProjectPage() {
           metaPixelId: project.metaPixelId || "",
         });
 
+        // Load collaborators
+        try {
+          const collabResponse = await fetch(`/api/projects/${project.id}/collaborators`);
+          if (collabResponse.ok) {
+            const collabData = await collabResponse.json();
+            const collaborators = (collabData.collaborators || []).map((c: {
+              id: string;
+              email: string;
+              title?: string;
+              status: string;
+              canEditProject: boolean;
+              canManageCommunity: boolean;
+              canCoordinateFulfillment: boolean;
+              canConfigurePledgeManager: boolean;
+              user?: { name?: string; image?: string };
+            }) => ({
+              id: c.id,
+              email: c.email,
+              title: c.title || "",
+              canEditProject: c.canEditProject,
+              canManageCommunity: c.canManageCommunity,
+              canCoordinateFulfillment: c.canCoordinateFulfillment,
+              canConfigurePledgeManager: c.canConfigurePledgeManager,
+            }));
+            updatePeople({ collaborators });
+          }
+        } catch (collabError) {
+          console.error("Failed to load collaborators:", collabError);
+          // Non-fatal - continue loading the project
+        }
+
         // Load rewards (tiers and addons)
         const allRewards = [...rewards, ...addons];
         for (const reward of allRewards) {
@@ -152,7 +184,7 @@ export default function EditProjectPage() {
     if (slug) {
       loadProject();
     }
-  }, [slug, router, reset, setProjectId, setProjectStatus, updateBasics, updateStory, updatePayment, updatePromotion, addReward, addItem]);
+  }, [slug, router, reset, setProjectId, setProjectStatus, updateBasics, updateStory, updatePeople, updatePayment, updatePromotion, addReward, addItem]);
 
   if (loading) {
     return (
