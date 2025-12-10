@@ -18,15 +18,16 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Link, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Link, ExternalLink, Loader2 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ui/image-upload";
 
 export function PeopleStep() {
-  const { people, updatePeople } = useProjectStore();
+  const { people, updatePeople, projectId } = useProjectStore();
   const [isCollaboratorDialogOpen, setIsCollaboratorDialogOpen] = useState(false);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [newWebsite, setNewWebsite] = useState("");
   const [newCollaborator, setNewCollaborator] = useState<CollaboratorData>({
     email: "",
@@ -54,15 +55,62 @@ export function PeopleStep() {
     });
   };
 
-  const addCollaborator = () => {
+  const addCollaborator = async () => {
     if (!newCollaborator.email) {
       toast.error("Please enter an email address");
       return;
     }
 
-    updatePeople({
-      collaborators: [...collaborators, newCollaborator],
-    });
+    // Check for duplicate email
+    if (collaborators.some(c => c.email.toLowerCase() === newCollaborator.email.toLowerCase())) {
+      toast.error("This collaborator has already been added");
+      return;
+    }
+
+    // If project exists, send invite via API immediately
+    if (projectId) {
+      setIsSendingInvite(true);
+      try {
+        const response = await fetch(`/api/projects/${projectId}/collaborators`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newCollaborator),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          toast.error(result.error || "Failed to send invitation");
+          setIsSendingInvite(false);
+          return;
+        }
+
+        // Add to local state with the ID from the server
+        updatePeople({
+          collaborators: [...collaborators, { ...newCollaborator, id: result.collaborator?.id }],
+        });
+
+        if (result.emailSent) {
+          toast.success("Invitation sent! They will receive an email shortly.");
+        } else {
+          toast.success("Collaborator added! Email notification could not be sent - check email settings.");
+        }
+      } catch (error) {
+        console.error("Failed to add collaborator:", error);
+        toast.error("Failed to send invitation. Please try again.");
+        setIsSendingInvite(false);
+        return;
+      }
+      setIsSendingInvite(false);
+    } else {
+      // For new projects without ID, just add to local state
+      // They'll be invited when the project is first saved
+      updatePeople({
+        collaborators: [...collaborators, newCollaborator],
+      });
+      toast.success("Collaborator added! They will be notified via email when you save the project.");
+    }
+
     setNewCollaborator({
       email: "",
       title: "",
@@ -72,10 +120,31 @@ export function PeopleStep() {
       canConfigurePledgeManager: false,
     });
     setIsCollaboratorDialogOpen(false);
-    toast.success("Collaborator added! They will be notified via email.");
   };
 
-  const removeCollaborator = (index: number) => {
+  const removeCollaborator = async (index: number) => {
+    const collaborator = collaborators[index];
+
+    // If project exists and collaborator has an ID, remove via API
+    if (projectId && collaborator.id) {
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/collaborators?collaboratorId=${collaborator.id}`,
+          { method: "DELETE" }
+        );
+
+        if (!response.ok) {
+          const result = await response.json();
+          toast.error(result.error || "Failed to remove collaborator");
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to remove collaborator:", error);
+        toast.error("Failed to remove collaborator. Please try again.");
+        return;
+      }
+    }
+
     updatePeople({
       collaborators: collaborators.filter((_, i) => i !== index),
     });
@@ -467,11 +536,23 @@ export function PeopleStep() {
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               onClick={addCollaborator}
+              disabled={isSendingInvite}
               className="bg-[#028858] hover:bg-[#026844] text-white"
             >
-              Send invitation
+              {isSendingInvite ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send invitation"
+              )}
             </Button>
-            <Button variant="outline" onClick={() => setIsCollaboratorDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsCollaboratorDialogOpen(false)}
+              disabled={isSendingInvite}
+            >
               Cancel
             </Button>
           </DialogFooter>

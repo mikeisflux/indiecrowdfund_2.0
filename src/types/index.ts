@@ -410,6 +410,7 @@ export interface ProjectPeopleData {
 }
 
 export interface CollaboratorData {
+  id?: string;
   email: string;
   title?: string;
   canEditProject: boolean;
