@@ -83,6 +83,7 @@ export default function EditProjectPage() {
 
         // Load payment settings
         updatePayment({
+          contactEmail: project.contactEmail || "",
           projectType: project.projectType || "INDIVIDUAL",
           hasAdultContent: project.hasAdultContent || false,
           hasRiskyContent: project.hasRiskyContent || false,

@@ -128,6 +128,7 @@ export function ProjectBuilder() {
         faqs: story.faqs || [],
 
         // Payment
+        contactEmail: payment.contactEmail,
         projectType: payment.projectType || "INDIVIDUAL",
         hasAdultContent: payment.hasAdultContent || false,
         hasRiskyContent: payment.hasRiskyContent || false,

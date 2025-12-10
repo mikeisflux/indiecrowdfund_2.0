@@ -67,6 +67,7 @@ const updateProjectSchema = z.object({
   })).optional(),
 
   // Payment
+  contactEmail: z.string().email().optional(),
   projectType: z.enum(["INDIVIDUAL", "BUSINESS", "NONPROFIT"]).optional(),
   hasAdultContent: z.boolean().optional(),
   hasRiskyContent: z.boolean().optional(),
@@ -335,6 +336,7 @@ export async function PATCH(
     if (projectData.faqs !== undefined) updateData.faqs = projectData.faqs;
 
     // Payment fields
+    if (projectData.contactEmail !== undefined) updateData.contactEmail = projectData.contactEmail;
     if (projectData.projectType !== undefined) updateData.projectType = projectData.projectType;
     if (projectData.hasAdultContent !== undefined) updateData.hasAdultContent = projectData.hasAdultContent;
     if (projectData.hasRiskyContent !== undefined) updateData.hasRiskyContent = projectData.hasRiskyContent;
