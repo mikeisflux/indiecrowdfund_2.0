@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,62 +31,45 @@ import {
   CheckCircle,
   ChevronRight,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 
-// TODO: Fetch project and reward data from API based on project slug and reward ID
-// Demo data commented out - page should fetch from /api/projects/[id] and /api/rewards
-// Uncomment for testing:
-/*
-const mockProjectDemo = {
-  id: "1",
-  title: "Revolutionary Solar-Powered Backpack",
-  slug: "solar-powered-backpack",
-  imageUrl: "/placeholder-project.jpg",
-  paymentProcessor: "STRIPE" as const,
-  hasAdultContent: false,
-  estimatedDelivery: "Mar 2025",
-  creator: { name: "Green Tech Labs", location: "San Francisco, CA" },
-};
-*/
+// Types for project and reward data
+interface ProjectData {
+  id: string;
+  title: string;
+  slug: string;
+  imageUrl: string;
+  paymentProcessor: "STRIPE" | "CCBILL";
+  hasAdultContent: boolean;
+  estimatedDelivery: string;
+  creator: { name: string; location: string };
+}
 
-// Default empty project structure - will be populated from API
-const mockProject = {
-  id: "",
-  title: "Loading...",
-  slug: "",
-  imageUrl: "/placeholder-project.jpg",
-  paymentProcessor: "STRIPE" as const,
-  hasAdultContent: false,
-  estimatedDelivery: "",
-  creator: { name: "", location: "" },
-};
+interface RewardData {
+  id: string;
+  title: string;
+  amount: number;
+  shippingCost: Record<string, number>;
+  shippingType: "NO_SHIPPING" | "WORLDWIDE" | "SELECTED_COUNTRIES";
+  shippingCountries: string[];
+  estimatedDelivery: string;
+  items: { title: string; quantity: number }[];
+}
 
-// Default empty reward - will be populated from API
-const mockSelectedReward = {
-  id: "",
-  title: "Loading...",
-  amount: 0,
-  shippingCost: {} as Record<string, number>,  // Per-country rates: { "US": 5, "CA": 8, "WORLDWIDE": 10 }
-  shippingType: "NO_SHIPPING" as "NO_SHIPPING" | "WORLDWIDE" | "SELECTED_COUNTRIES",
-  shippingCountries: [] as string[],
-  estimatedDelivery: "",
-  items: [] as { title: string; quantity: number }[],
-};
-
-// Empty addons - will be populated from API
-const mockAddons: {
+interface AddonData {
   id: string;
   title: string;
   description: string;
   amount: number;
-  shippingCost: Record<string, number>;  // Per-country rates
+  shippingCost: Record<string, number>;
   shippingType: "NO_SHIPPING" | "WORLDWIDE" | "SELECTED_COUNTRIES";
   shippingCountries: string[];
   imageUrl: string | null;
   estimatedDelivery: string;
   limitedQuantity: number | null;
   includes: string[];
-}[] = [];
+}
 
 const COUNTRIES = [
   { code: "US", name: "United States", currency: "USD" },
@@ -128,10 +111,19 @@ const FAQ_ITEMS = [
 type Step = "addons" | "shipping" | "payment" | "success";
 
 export default function PledgePage() {
-  // searchParams would be used to get the selected reward ID from the URL
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const params = useParams();
   const searchParams = useSearchParams();
+  const slug = params.slug as string;
+  const rewardId = searchParams.get("reward");
 
+  // Data state - loaded from API
+  const [project, setProject] = useState<ProjectData | null>(null);
+  const [selectedReward, setSelectedReward] = useState<RewardData | null>(null);
+  const [addons, setAddons] = useState<AddonData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // UI state
   const [step, setStep] = useState<Step>("addons");
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
   const [bonusSupport, setBonusSupport] = useState<number>(0);
@@ -148,9 +140,108 @@ export default function PledgePage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const project = mockProject;
-  const selectedReward = mockSelectedReward;
-  const addons = mockAddons;
+  // Fetch project and reward data from API
+  const fetchData = useCallback(async () => {
+    if (!slug) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Fetch project by slug
+      const projectRes = await fetch(`/api/projects/slug/${slug}`);
+      if (!projectRes.ok) {
+        throw new Error("Project not found");
+      }
+      const projectData = await projectRes.json();
+
+      // Format project data
+      const formattedProject: ProjectData = {
+        id: projectData.id,
+        title: projectData.title,
+        slug: projectData.slug,
+        imageUrl: projectData.imageUrl || "",
+        paymentProcessor: projectData.paymentProcessor || "STRIPE",
+        hasAdultContent: projectData.hasAdultContent || false,
+        estimatedDelivery: projectData.estimatedDelivery || "",
+        creator: {
+          name: projectData.creator?.name || "Creator",
+          location: projectData.location || "",
+        },
+      };
+      setProject(formattedProject);
+
+      // Fetch rewards for this project
+      const rewardsRes = await fetch(`/api/projects/${projectData.id}/rewards`);
+      if (rewardsRes.ok) {
+        const rewardsData = await rewardsRes.json();
+        const rewards = rewardsData.rewards || [];
+
+        // Find the selected reward
+        if (rewardId) {
+          const reward = rewards.find((r: { id: string }) => r.id === rewardId);
+          if (reward) {
+            const formattedReward: RewardData = {
+              id: reward.id,
+              title: reward.title,
+              amount: reward.amount,
+              shippingCost: reward.shippingCost || {},
+              shippingType: reward.shippingType || "NO_SHIPPING",
+              shippingCountries: reward.shippingCountries || [],
+              estimatedDelivery: reward.estimatedDelivery
+                ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+                : "",
+              items: (reward.items || []).map((item: { title: string }) => ({
+                title: item.title,
+                quantity: 1,
+              })),
+            };
+            setSelectedReward(formattedReward);
+          }
+        }
+
+        // Get addons
+        const addonRewards = rewards.filter((r: { type: string }) => r.type === "ADDON");
+        const formattedAddons: AddonData[] = addonRewards.map((addon: {
+          id: string;
+          title: string;
+          description?: string;
+          amount: number;
+          shippingCost?: Record<string, number>;
+          shippingType?: string;
+          shippingCountries?: string[];
+          imageUrl?: string;
+          estimatedDelivery?: string;
+          quantityAvailable?: number;
+          items?: { title: string }[];
+        }) => ({
+          id: addon.id,
+          title: addon.title,
+          description: addon.description || "",
+          amount: addon.amount,
+          shippingCost: addon.shippingCost || {},
+          shippingType: (addon.shippingType as AddonData["shippingType"]) || "NO_SHIPPING",
+          shippingCountries: addon.shippingCountries || [],
+          imageUrl: addon.imageUrl || null,
+          estimatedDelivery: addon.estimatedDelivery
+            ? new Date(addon.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+            : "",
+          limitedQuantity: addon.quantityAvailable || null,
+          includes: (addon.items || []).map((item: { title: string }) => item.title),
+        }));
+        setAddons(formattedAddons);
+      }
+    } catch (err) {
+      console.error("Failed to fetch pledge data:", err);
+      setError(err instanceof Error ? err.message : "Failed to load project data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [slug, rewardId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Helper function to get shipping cost for a country
   const getShippingCostForCountry = (
@@ -167,12 +258,14 @@ export default function PledgePage() {
   };
 
   // Calculate totals
-  const rewardAmount = selectedReward.amount;
-  const rewardShipping = getShippingCostForCountry(
-    selectedReward.shippingCost,
-    selectedReward.shippingType,
-    shippingCountry
-  );
+  const rewardAmount = selectedReward?.amount || 0;
+  const rewardShipping = selectedReward
+    ? getShippingCostForCountry(
+        selectedReward.shippingCost,
+        selectedReward.shippingType,
+        shippingCountry
+      )
+    : 0;
 
   const addonsTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
     const addon = addons.find((a) => a.id === id);
@@ -234,7 +327,7 @@ export default function PledgePage() {
   const Breadcrumb = () => (
     <div className="flex items-center gap-2 text-sm">
       <Link
-        href={`/projects/${project.slug}`}
+        href={`/projects/${project?.slug || slug}`}
         className="text-muted-foreground hover:text-foreground"
       >
         Rewards
@@ -253,6 +346,72 @@ export default function PledgePage() {
       </span>
     </div>
   );
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading pledge details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !project) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+          <div className="container flex h-14 items-center">
+            <Link href="/" className="text-xl font-bold">
+              IndieCrowdfund
+            </Link>
+          </div>
+        </header>
+        <div className="container py-16">
+          <div className="mx-auto max-w-lg text-center">
+            <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h2 className="mb-2 text-2xl font-bold">Unable to load project</h2>
+            <p className="mb-8 text-muted-foreground">
+              {error || "The project you're looking for could not be found."}
+            </p>
+            <Link href="/discover">
+              <Button>Discover Projects</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No reward selected state
+  if (!selectedReward) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+          <div className="container flex h-14 items-center">
+            <Link href="/" className="text-xl font-bold">
+              IndieCrowdfund
+            </Link>
+          </div>
+        </header>
+        <div className="container py-16">
+          <div className="mx-auto max-w-lg text-center">
+            <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+            <h2 className="mb-2 text-2xl font-bold">No reward selected</h2>
+            <p className="mb-8 text-muted-foreground">
+              Please select a reward tier from the project page to continue with your pledge.
+            </p>
+            <Link href={`/projects/${project.slug}`}>
+              <Button>View Rewards</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "success") {
     return (

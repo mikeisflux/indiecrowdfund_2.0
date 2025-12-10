@@ -169,7 +169,7 @@ const initialProject: ProjectData = {
   category: "",
   subcategory: "",
   location: "",
-  imageUrl: "/placeholder-1.jpg",
+  imageUrl: "",
   videoUrl: "",
   isProjectWeLove: false,
   description: "",

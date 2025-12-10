@@ -117,9 +117,6 @@ export default function RetailerProjectsPage() {
       setProjects(data.projects);
       setTotalPages(data.pagination?.totalPages || 1);
     } catch {
-      // TODO: Enable demo data for testing when needed
-      // Demo data removed - page uses real data from /api/retailers/projects
-      // Empty state will show when no projects are available
       console.error("Failed to fetch retailer projects");
       setProjects([]);
       setTotalPages(1);

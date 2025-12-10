@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
         subtitle: project.subtitle || "",
         slug: project.slug,
         category: project.category,
-        imageUrl: project.imageUrl || "/placeholder-1.jpg",
+        imageUrl: project.imageUrl || "",
         creator: {
           id: project.creator.id,
           name: project.creator.name || "Creator",

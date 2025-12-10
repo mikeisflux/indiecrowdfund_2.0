@@ -70,7 +70,7 @@ export async function GET(
       secondarySubcategory: project.secondarySubcategory || "",
       // Location & Media
       location: project.location || "",
-      imageUrl: project.imageUrl || "/placeholder-1.jpg",
+      imageUrl: project.imageUrl || "",
       videoUrl: project.videoUrl || "",
       isProjectWeLove: false,
       // Story

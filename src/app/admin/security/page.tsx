@@ -93,24 +93,7 @@ export default function SecurityPage() {
         }
       }
 
-      // TODO: Implement security logs API endpoint when audit logging is set up
-      // Demo data removed - will show empty state until security events API is built
-      // Uncomment to show demo events for testing:
-      /*
-      setSecurityEvents([
-        { id: "1", type: "login_success", user: "admin@example.com", ip: "192.168.1.1", timestamp: new Date(Date.now() - 1000 * 60 * 5) },
-        { id: "2", type: "login_failed", user: "test@example.com", ip: "10.0.0.50", timestamp: new Date(Date.now() - 1000 * 60 * 15), details: "Invalid password" },
-        { id: "3", type: "password_changed", user: "user@example.com", ip: "172.16.0.100", timestamp: new Date(Date.now() - 1000 * 60 * 60) },
-      ]);
-      setStats({
-        activeUsers: 847,
-        blockedIPs: 12,
-        failedLogins24h: 23,
-        users2FAEnabled: 156,
-      });
-      */
-
-      // Empty state - no events until security logging is implemented
+      // Security events will be populated when security logging API is implemented
       setSecurityEvents([]);
       setStats({
         activeUsers: 0,

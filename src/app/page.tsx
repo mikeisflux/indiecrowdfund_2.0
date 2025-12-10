@@ -68,7 +68,7 @@ async function getFeaturedProjects() {
       title: project.title,
       subtitle: project.subtitle || "",
       category: project.category,
-      imageUrl: project.imageUrl || "/placeholder-1.jpg",
+      imageUrl: project.imageUrl || "",
       creator: project.creator.name || "Creator",
       goalAmount: project.goalAmount,
       currentAmount: project.currentAmount,

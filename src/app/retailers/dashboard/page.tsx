@@ -89,48 +89,6 @@ export default function RetailerDashboardPage() {
     fetchData();
   }, [router]);
 
-  // TODO: Enable demo data for testing when needed
-  // Demo data removed - dashboard uses real data from /api/retailers/me
-  // Uncomment the block below to show demo data when retailerData is null:
-  /*
-  useEffect(() => {
-    if (!retailerData && !isLoading) {
-      setRetailerData({
-        businessName: "Demo Comic Shop",
-        status: "APPROVED",
-        totalOrders: 47,
-        totalSavings: 12450,
-        pendingOrders: 3,
-        activeProjects: 12,
-      });
-      setRecentOrders([
-        {
-          id: "1",
-          projectTitle: "Cosmic Warriors Vol. 3",
-          projectImage: "/api/placeholder/100/100",
-          quantity: 25,
-          totalAmount: 312.50,
-          originalAmount: 625,
-          status: "PAID",
-          createdAt: "2024-01-15",
-          fulfillmentStatus: "PROCESSING",
-        },
-      ]);
-      setFeaturedProjects([
-        {
-          id: "1",
-          title: "Mystic Realms Graphic Novel",
-          imageUrl: "/api/placeholder/300/200",
-          category: "Comics",
-          daysLeft: 15,
-          fundingPercent: 78,
-          retailerDiscount: 50,
-        },
-      ]);
-    }
-  }, [retailerData, isLoading]);
-  */
-
   const handleLogout = async () => {
     await fetch("/api/retailers/logout", { method: "POST" });
     // Use window.location.href for full navigation to ensure session is cleared

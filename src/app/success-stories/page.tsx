@@ -47,7 +47,7 @@ async function getSuccessfulProjects() {
     raised: project.currentAmount,
     goal: project.goalAmount,
     backers: project.backerCount,
-    image: project.imageUrl || "/placeholder-project-1.jpg",
+    image: project.imageUrl || "",
     highlight: `${Math.round((project.currentAmount / project.goalAmount) * 100)}% funded`,
   }));
 }
@@ -187,7 +187,7 @@ export default async function SuccessStoriesPage() {
                 >
                   <div className={index % 2 === 1 ? "lg:col-start-2" : ""}>
                     <div className="relative aspect-video overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800">
-                      {story.image && story.image !== "/placeholder-project-1.jpg" ? (
+                      {story.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={story.image} alt={story.title} className="object-cover w-full h-full" />
                       ) : (

@@ -93,8 +93,6 @@ export default function RetailerProjectDetailPage() {
       const data = await response.json();
       setProject(data.project);
     } catch {
-      // TODO: Enable demo data for testing when needed
-      // Demo data removed - page uses real data from /api/retailers/projects/[id]
       console.error("Failed to fetch project");
       router.push("/retailers/projects");
     } finally {

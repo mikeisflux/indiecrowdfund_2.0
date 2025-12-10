@@ -87,38 +87,15 @@ const CONTENT_TEMPLATES = [
   { id: "behindscenes", name: "Behind the Scenes", icon: Eye, description: "Share your creative process" },
 ];
 
-// TODO: Implement social posts API when social media integration is set up
-// Demo data commented out - will show empty state until social posts API is built
-// Uncomment to show demo posts for testing:
-/*
-const mockScheduledPosts = [
-  {
-    id: "1",
-    content: "We just hit 50% of our funding goal! Thank you to all our amazing backers.",
-    platforms: ["twitter", "facebook"],
-    scheduledFor: new Date(Date.now() + 1000 * 60 * 60 * 2),
-    status: "scheduled",
-    imageUrl: "/placeholder-1.jpg",
-  },
-];
-
-const mockPostAnalytics = [
-  {
-    id: "1",
-    content: "We're live! Check out our campaign...",
-    platform: "twitter",
-    postedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    impressions: 12500,
-    engagements: 847,
-    clicks: 234,
-    shares: 45,
-  },
-];
-*/
-
-// Empty state - no posts until social media integration is implemented
-const mockScheduledPosts: { id: string; content: string; platforms: string[]; scheduledFor: Date; status: string; imageUrl?: string }[] = [];
-const mockPostAnalytics: { id: string; content: string; platform: string; postedAt: Date; impressions: number; engagements: number; clicks: number; shares: number }[] = [];
+// Types for scheduled posts
+interface ScheduledPost {
+  id: string;
+  content: string;
+  platforms: string[];
+  scheduledFor: Date;
+  status: string;
+  imageUrl?: string;
+}
 
 export default function SocialHubPage() {
   const searchParams = useSearchParams();
@@ -130,7 +107,7 @@ export default function SocialHubPage() {
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
   const [scheduleTime, setScheduleTime] = useState("12:00");
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
-  const [scheduledPosts, setScheduledPosts] = useState(mockScheduledPosts);
+  const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
   const [connections, setConnections] = useState<Record<string, ConnectionStatus>>({});
   const [isLoadingConnections, setIsLoadingConnections] = useState(true);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
@@ -614,7 +591,7 @@ export default function SocialHubPage() {
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
-            {/* Summary Stats */}
+            {/* Summary Stats - will be populated when social analytics API is available */}
             <div className="grid gap-4 md:grid-cols-4">
               <Card>
                 <CardHeader className="pb-2">
@@ -623,8 +600,8 @@ export default function SocialHubPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">24.5K</div>
-                  <p className="text-xs text-green-600">+12% from last week</p>
+                  <div className="text-2xl font-bold">0</div>
+                  <p className="text-xs text-muted-foreground">Connect accounts to track</p>
                 </CardContent>
               </Card>
               <Card>
@@ -634,8 +611,8 @@ export default function SocialHubPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">1,847</div>
-                  <p className="text-xs text-green-600">+8% from last week</p>
+                  <div className="text-2xl font-bold">0</div>
+                  <p className="text-xs text-muted-foreground">Connect accounts to track</p>
                 </CardContent>
               </Card>
               <Card>
@@ -645,8 +622,8 @@ export default function SocialHubPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">456</div>
-                  <p className="text-xs text-green-600">+23% from last week</p>
+                  <div className="text-2xl font-bold">0</div>
+                  <p className="text-xs text-muted-foreground">Connect accounts to track</p>
                 </CardContent>
               </Card>
               <Card>
@@ -656,8 +633,8 @@ export default function SocialHubPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">234</div>
-                  <p className="text-xs text-green-600">+5% from last week</p>
+                  <div className="text-2xl font-bold">0</div>
+                  <p className="text-xs text-muted-foreground">Connect accounts to track</p>
                 </CardContent>
               </Card>
             </div>
@@ -668,61 +645,15 @@ export default function SocialHubPage() {
                 <CardTitle>Recent Post Performance</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockPostAnalytics.map((post) => {
-                    const platform = SOCIAL_PLATFORMS.find((p) => p.id === post.platform);
-                    return (
-                      <div
-                        key={post.id}
-                        className="flex items-start justify-between rounded-lg border p-4"
-                      >
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-2">
-                            {platform && (
-                              <div
-                                className={cn(
-                                  "flex h-6 w-6 items-center justify-center rounded text-white",
-                                  platform.color
-                                )}
-                              >
-                                <platform.icon className="h-3 w-3" />
-                              </div>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              {format(post.postedAt, "MMM d, yyyy")}
-                            </span>
-                          </div>
-                          <p className="text-sm">{post.content}</p>
-                        </div>
-                        <div className="flex items-center gap-6 text-sm">
-                          <div className="text-center">
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Eye className="h-3 w-3" />
-                            </div>
-                            <p className="font-medium">{post.impressions.toLocaleString()}</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Heart className="h-3 w-3" />
-                            </div>
-                            <p className="font-medium">{post.engagements}</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Link2 className="h-3 w-3" />
-                            </div>
-                            <p className="font-medium">{post.clicks}</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Share2 className="h-3 w-3" />
-                            </div>
-                            <p className="font-medium">{post.shares}</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <BarChart3 className="mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="mb-2 font-semibold">No analytics data yet</h3>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    Post to your connected social accounts to start tracking performance
+                  </p>
+                  <Button onClick={() => setActiveTab("create")}>
+                    Create Post
+                  </Button>
                 </div>
               </CardContent>
             </Card>

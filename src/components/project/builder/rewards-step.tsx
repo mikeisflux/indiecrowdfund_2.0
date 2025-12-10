@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { RewardData, RewardItemData, RewardType, ShippingType, SHIPPING_COUNTRIES } from "@/types";
@@ -86,25 +86,12 @@ const defaultReward: RewardData = {
   items: [],
 };
 
-// Mock previous projects for import feature
-const mockPreviousProjects = [
-  {
-    id: "1",
-    title: "Comics project",
-    rewards: [
-      { title: "Digital Copy", amount: 10, description: "Digital download" },
-      { title: "Physical Copy", amount: 25, description: "Printed edition" },
-    ],
-  },
-  {
-    id: "2",
-    title: "Art Book Campaign",
-    rewards: [
-      { title: "PDF Edition", amount: 15, description: "High-res PDF" },
-      { title: "Hardcover", amount: 50, description: "Limited hardcover" },
-    ],
-  },
-];
+// Previous projects type for import feature
+interface PreviousProjectForImport {
+  id: string;
+  title: string;
+  rewards: { title: string; amount: number; description: string }[];
+}
 
 // Generate month options
 const MONTHS = [
@@ -166,6 +153,51 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const [importType, setImportType] = useState<"items" | "rewards" | "addons" | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+
+  // Previous projects for import feature (fetched from API)
+  const [previousProjects, setPreviousProjects] = useState<PreviousProjectForImport[]>([]);
+  const [isLoadingPreviousProjects, setIsLoadingPreviousProjects] = useState(false);
+
+  // Fetch previous projects when import dialog opens
+  const fetchPreviousProjects = useCallback(async () => {
+    if (previousProjects.length > 0) return; // Already fetched
+
+    setIsLoadingPreviousProjects(true);
+    try {
+      const response = await fetch("/api/projects?limit=20&status=any");
+      if (response.ok) {
+        const data = await response.json();
+        // Transform projects to import format
+        const formattedProjects: PreviousProjectForImport[] = await Promise.all(
+          data.projects
+            .filter((p: { id: string }) => p.id !== projectId) // Exclude current project
+            .map(async (p: { id: string; title: string }) => {
+              // Fetch rewards for each project
+              const rewardsRes = await fetch(`/api/projects/${p.id}/rewards`);
+              let projectRewards: { title: string; amount: number; description: string }[] = [];
+              if (rewardsRes.ok) {
+                const rewardsData = await rewardsRes.json();
+                projectRewards = (rewardsData.rewards || []).map((r: { title: string; amount: number; description?: string }) => ({
+                  title: r.title,
+                  amount: r.amount,
+                  description: r.description || "",
+                }));
+              }
+              return {
+                id: p.id,
+                title: p.title,
+                rewards: projectRewards,
+              };
+            })
+        );
+        setPreviousProjects(formattedProjects.filter(p => p.rewards.length > 0));
+      }
+    } catch (error) {
+      console.error("Failed to fetch previous projects:", error);
+    } finally {
+      setIsLoadingPreviousProjects(false);
+    }
+  }, [previousProjects.length, projectId]);
 
   const tiers = rewards.filter((r) => r.type === "TIER");
   const addons = rewards.filter((r) => r.type === "ADDON");
@@ -592,8 +624,8 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     );
   };
 
-  const handleImportReward = (projectId: string, rewardIndex: number) => {
-    const project = mockPreviousProjects.find((p) => p.id === projectId);
+  const handleImportReward = (sourceProjectId: string, rewardIndex: number) => {
+    const project = previousProjects.find((p) => p.id === sourceProjectId);
     if (!project) return;
 
     const reward = project.rewards[rewardIndex];
@@ -2154,7 +2186,10 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       </Dialog>
 
       {/* Import Reward Dialog */}
-      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+      <Dialog open={isImportDialogOpen} onOpenChange={(open) => {
+        setIsImportDialogOpen(open);
+        if (open) fetchPreviousProjects();
+      }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
@@ -2209,45 +2244,50 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               )}
 
               {/* Previous Projects */}
-              {mockPreviousProjects.map((project) => (
-                <Collapsible
-                  key={project.id}
-                  open={expandedProject === project.id}
-                  onOpenChange={(open) => setExpandedProject(open ? project.id : null)}
-                >
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border rounded-lg hover:bg-muted/50">
-                    <span className="font-medium">{project.title}</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 transition-transform",
-                        expandedProject === project.id && "rotate-180"
-                      )}
-                    />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 ml-4 space-y-2">
-                    {project.rewards.map((reward, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleImportReward(project.id, idx)}
-                      >
-                        <div>
-                          <p className="font-medium">{reward.title}</p>
-                          <p className="text-sm text-muted-foreground">${reward.amount}</p>
+              {isLoadingPreviousProjects ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Loading projects...</span>
+                </div>
+              ) : previousProjects.length > 0 ? (
+                previousProjects.map((project) => (
+                  <Collapsible
+                    key={project.id}
+                    open={expandedProject === project.id}
+                    onOpenChange={(open) => setExpandedProject(open ? project.id : null)}
+                  >
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border rounded-lg hover:bg-muted/50">
+                      <span className="font-medium">{project.title}</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          expandedProject === project.id && "rotate-180"
+                        )}
+                      />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2 ml-4 space-y-2">
+                      {project.rewards.map((reward, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleImportReward(project.id, idx)}
+                        >
+                          <div>
+                            <p className="font-medium">{reward.title}</p>
+                            <p className="text-sm text-muted-foreground">${reward.amount}</p>
+                          </div>
+                          <Copy className="h-4 w-4 text-muted-foreground" />
                         </div>
-                        <Copy className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    ))}
-                  </CollapsibleContent>
-                </Collapsible>
-              ))}
-
-              {mockPreviousProjects.length === 0 && activeTab !== "addons" && (
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))
+              ) : activeTab !== "addons" ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p>No previous projects found.</p>
+                  <p>No previous projects with rewards found.</p>
                   <p className="text-sm">Create rewards in other projects first to import them here.</p>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
