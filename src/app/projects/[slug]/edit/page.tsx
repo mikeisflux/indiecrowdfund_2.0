@@ -132,20 +132,29 @@ export default function EditProjectPage() {
           // Non-fatal - continue loading the project
         }
 
+        // Load project items from database
+        try {
+          const itemsResponse = await fetch(`/api/projects/${project.id}/items`);
+          if (itemsResponse.ok) {
+            const itemsData = await itemsResponse.json();
+            for (const item of itemsData.items || []) {
+              addItem({
+                id: item.id,
+                title: item.title,
+                description: item.description || "",
+                imageUrl: item.imageUrl || "",
+              });
+            }
+          }
+        } catch (itemsError) {
+          console.error("Failed to load items:", itemsError);
+          // Non-fatal - continue loading the project
+        }
+
         // Load rewards (tiers and addons)
         const allRewards = [...rewards, ...addons];
         for (const reward of allRewards) {
-          // First add any items that are part of this reward
-          for (const item of reward.items || []) {
-            addItem({
-              id: item.id,
-              title: item.title,
-              description: item.description || "",
-              imageUrl: item.imageUrl || "",
-            });
-          }
-
-          // Then add the reward
+          // Add the reward
           addReward({
             id: reward.id,
             type: reward.type,
