@@ -55,7 +55,7 @@ export function LocationAutocomplete({
       // Get API key from environment or window config
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
       if (!apiKey) {
-        console.warn("Google Places API key not configured. Location autocomplete disabled.");
+        // Silently disable - UI shows fallback message when autocomplete isn't available
         return;
       }
 
