@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,6 @@ import {
 } from "lucide-react";
 
 export default function RetailerLoginPage() {
-  const router = useRouter();
   const [loginMethod, setLoginMethod] = useState<"credentials" | "accessCode">("credentials");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -45,7 +43,8 @@ export default function RetailerLoginPage() {
       });
 
       if (response.ok) {
-        router.push("/retailers/dashboard");
+        // Use window.location.href for full navigation to ensure session is properly set
+        window.location.href = "/retailers/dashboard";
       } else {
         const data = await response.json();
         setError(data.error || "Invalid credentials");

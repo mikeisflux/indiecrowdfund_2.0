@@ -130,7 +130,8 @@ export default function RetailerProjectsPage() {
 
   const handleLogout = async () => {
     await fetch("/api/retailers/logout", { method: "POST" });
-    router.push("/retailers/login");
+    // Use window.location.href for full navigation to ensure session is cleared
+    window.location.href = "/retailers/login";
   };
 
   const getFundingPercent = (current: number, goal: number) => {
