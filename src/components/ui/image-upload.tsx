@@ -11,7 +11,7 @@ interface ImageUploadProps {
   value?: string;
   onChange: (url: string | undefined) => void;
   projectId?: string;
-  uploadType?: "project" | "item" | "reward";
+  uploadType?: "project" | "item" | "reward" | "misc";
   className?: string;
   aspectRatio?: string;
   maxSizeMB?: number;
