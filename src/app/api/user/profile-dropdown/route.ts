@@ -83,7 +83,7 @@ export async function GET() {
     });
 
     // Debug: Log what was found
-    console.log("[Profile Dropdown] Found collaborations:", collaborations.length, collaborations.map(c => ({ id: c.id, email: c.email, status: c.status, userId: c.userId, projectTitle: c.project.title })));
+    console.log("[Profile Dropdown] Found collaborations:", collaborations.length, collaborations.map((c: { id: string; email: string | null; status: string; userId: string | null; project: { title: string } }) => ({ id: c.id, email: c.email, status: c.status, userId: c.userId, projectTitle: c.project.title })));
 
     // Link userId if not set (for collaborators found by email)
     for (const collab of collaborations) {
