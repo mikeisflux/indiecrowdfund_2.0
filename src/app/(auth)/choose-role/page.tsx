@@ -1,16 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Search, Rocket, ArrowRight, Sparkles, Heart, TrendingUp } from "lucide-react";
 
 export default function ChooseRolePage() {
-  const router = useRouter();
-
   const handleChoice = (role: "backer" | "creator") => {
+    // Use window.location.href for full page navigation to ensure session is properly maintained
     if (role === "backer") {
-      router.push("/dashboard/backer");
+      window.location.href = "/dashboard/backer";
     } else {
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     }
   };
 
