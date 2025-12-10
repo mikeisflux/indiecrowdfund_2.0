@@ -6,13 +6,18 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
   },
-  // Allow local images from /uploads directory
+  // Allow images from API uploads endpoint
   images: {
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'indiecrowdfund.com',
-        pathname: '/uploads/**',
+        pathname: '/api/uploads/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        pathname: '/api/uploads/**',
       },
     ],
   },

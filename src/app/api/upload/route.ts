@@ -52,11 +52,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create directory structure: /public/uploads/projects/{projectId}/{type}/
+    // Create directory structure: /uploads/projects/{projectId}/{type}/
     const uploadType = type || "misc";
     const uploadDir = path.join(
       process.cwd(),
-      "public",
       "uploads",
       "projects",
       projectId,
@@ -77,8 +76,8 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
     await writeFile(filePath, buffer);
 
-    // Return the public URL
-    const url = `/uploads/projects/${projectId}/${uploadType}/${filename}`;
+    // Return the API URL for serving the image
+    const url = `/api/uploads/projects/${projectId}/${uploadType}/${filename}`;
 
     return NextResponse.json({
       success: true,
