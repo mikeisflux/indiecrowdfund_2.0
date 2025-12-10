@@ -26,6 +26,13 @@ import { cn } from "@/lib/utils";
 import { Check, ChevronLeft, ChevronRight, Loader2, Save, Rocket, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
+// Helper to strip base64 images from URLs - only send actual URLs, not large data URIs
+const stripBase64 = (url?: string | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('data:')) return undefined;
+  return url;
+};
+
 export function ProjectBuilder() {
   const router = useRouter();
   const {
@@ -85,7 +92,7 @@ export function ProjectBuilder() {
         title: reward.title,
         description: reward.description || "",
         amount: reward.amount,
-        imageUrl: reward.imageUrl,
+        imageUrl: stripBase64(reward.imageUrl), // Strip base64 images to reduce payload size
         estimatedDelivery: reward.estimatedDelivery
           ? new Date(reward.estimatedDelivery).toISOString()
           : null,
@@ -101,7 +108,7 @@ export function ProjectBuilder() {
             id: item.id,
             title: fullItem?.title || item.title || "Item",
             description: fullItem?.description,
-            imageUrl: fullItem?.imageUrl,
+            imageUrl: stripBase64(fullItem?.imageUrl), // Strip base64 images
           };
         }) || [],
       }));
@@ -115,7 +122,7 @@ export function ProjectBuilder() {
         secondaryCategory: basics.secondaryCategory,
         secondarySubcategory: basics.secondarySubcategory,
         location: basics.location,
-        imageUrl: basics.imageUrl,
+        imageUrl: stripBase64(basics.imageUrl), // Strip base64 images to reduce payload size
         videoUrl: basics.videoUrl,
         goalAmount: basics.goalAmount || 10000,
         durationType: basics.durationType || "FIXED_DAYS",
