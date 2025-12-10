@@ -41,10 +41,12 @@ export async function createSession(userId: string): Promise<string> {
   });
 
   // Set the cookie
+  // Use secure cookies only if explicitly enabled or if we detect HTTPS
+  const useSecureCookies = process.env.SECURE_COOKIES === "true";
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies,
     sameSite: "lax",
     expires,
     path: "/",
@@ -96,10 +98,11 @@ export const validateSession = cache(async (): Promise<Session | null> => {
       data: { expires: newExpires },
     });
 
+    const useSecureCookies = process.env.SECURE_COOKIES === "true";
     const cookieStore = await cookies();
     cookieStore.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: useSecureCookies,
       sameSite: "lax",
       expires: newExpires,
       path: "/",
