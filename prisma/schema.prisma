@@ -466,8 +466,8 @@ enum PayoutStatus {
 model ProjectCollaborator {
   id                        String             @id @default(cuid())
   projectId                 String
-  userId                    String
-  email                     String?
+  userId                    String?            // Optional - linked when user accepts invite
+  email                     String             // Required - used to identify the collaborator
   title                     String?
 
   // Permissions
@@ -479,14 +479,15 @@ model ProjectCollaborator {
   status                    CollaboratorStatus @default(PENDING)
 
   project                   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user                      User               @relation(fields: [userId], references: [id])
+  user                      User?              @relation(fields: [userId], references: [id])
 
   invitedAt                 DateTime           @default(now())
   acceptedAt                DateTime?
 
-  @@unique([projectId, userId])
+  @@unique([projectId, email])
   @@index([projectId])
   @@index([userId])
+  @@index([email])
 }
 
 enum CollaboratorStatus {

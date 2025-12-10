@@ -49,7 +49,7 @@ export async function GET() {
       take: 10,
     });
 
-    // Fetch collaborating projects
+    // Fetch collaborating projects (accepted)
     const collaborations = await db.projectCollaborator.findMany({
       where: {
         userId,
@@ -70,10 +70,39 @@ export async function GET() {
       take: 5,
     });
 
+    // Fetch pending invitations (by email since userId might not be set yet)
+    const userEmail = session.user.email?.toLowerCase();
+    const pendingInvites = userEmail ? await db.projectCollaborator.findMany({
+      where: {
+        OR: [
+          { userId, status: "PENDING" },
+          { email: { equals: userEmail, mode: "insensitive" }, status: "PENDING" },
+        ],
+      },
+      select: {
+        id: true,
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            imageUrl: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { invitedAt: "desc" },
+      take: 5,
+    }) : [];
+
     return NextResponse.json({
       backedProjects: backedPledges.map((p: { project: { id: string; title: string; slug: string; imageUrl: string | null; status: string } }) => p.project),
       createdProjects,
       collaboratingProjects: collaborations.map((c: { project: { id: string; title: string; slug: string; imageUrl: string | null; status: string } }) => c.project),
+      pendingInvites: pendingInvites.map((c: { id: string; project: { id: string; title: string; slug: string; imageUrl: string | null; status: string } }) => ({
+        inviteId: c.id,
+        ...c.project,
+      })),
     });
   } catch (error) {
     console.error("Profile dropdown error:", error);

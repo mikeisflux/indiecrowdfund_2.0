@@ -40,11 +40,14 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Get projects user is collaborating on
+    // Get projects user is collaborating on (by userId or email)
+    const userEmail = session.user.email?.toLowerCase();
     const collaborations = await db.projectCollaborator.findMany({
       where: {
-        userId: session.user.id,
-        status: "ACCEPTED",
+        OR: [
+          { userId: session.user.id, status: "ACCEPTED" },
+          ...(userEmail ? [{ email: { equals: userEmail, mode: "insensitive" as const }, status: "ACCEPTED" as const }] : []),
+        ],
       },
       select: {
         project: {
