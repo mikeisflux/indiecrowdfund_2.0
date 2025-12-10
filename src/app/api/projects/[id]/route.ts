@@ -337,7 +337,7 @@ export async function PATCH(
 
     // Payment fields
     if (projectData.contactEmail !== undefined) {
-      updateData.contactEmail = projectData.contactEmail || null; // Convert empty string to null
+      updateData.contactEmail = projectData.contactEmail; // Keep as-is (empty string is valid)
     }
     if (projectData.projectType !== undefined) updateData.projectType = projectData.projectType;
     if (projectData.hasAdultContent !== undefined) updateData.hasAdultContent = projectData.hasAdultContent;
