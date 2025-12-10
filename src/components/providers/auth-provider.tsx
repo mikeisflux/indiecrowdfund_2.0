@@ -35,26 +35,24 @@ export function AuthProvider({ children, session: initialSession }: AuthProvider
     initialSession ? "authenticated" : "loading"
   );
 
-  // Fetch session on mount if not provided
+  // Always verify session on mount to handle SSR/client mismatches
   useEffect(() => {
-    if (!initialSession) {
-      fetch("/api/auth/session")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.user) {
-            setSession(data);
-            setStatus("authenticated");
-          } else {
-            setSession(null);
-            setStatus("unauthenticated");
-          }
-        })
-        .catch(() => {
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          setSession(data);
+          setStatus("authenticated");
+        } else {
           setSession(null);
           setStatus("unauthenticated");
-        });
-    }
-  }, [initialSession]);
+        }
+      })
+      .catch(() => {
+        setSession(null);
+        setStatus("unauthenticated");
+      });
+  }, []);
 
   const refreshSession = async () => {
     try {

@@ -55,8 +55,8 @@ export function UserProfileDropdown() {
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/");
-      router.refresh();
+      // Force a hard navigation to clear all cached state
+      window.location.href = "/";
     } catch (error) {
       console.error("Logout failed:", error);
     }
