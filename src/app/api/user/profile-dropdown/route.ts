@@ -51,6 +51,10 @@ export async function GET() {
 
     // Fetch collaborating projects (accepted) - lookup by userId OR email
     const userEmail = session.user.email?.toLowerCase();
+
+    // Debug: Log the lookup criteria
+    console.log("[Profile Dropdown] Looking for collaborations for userId:", userId, "email:", userEmail);
+
     const collaborations = await db.projectCollaborator.findMany({
       where: {
         status: "ACCEPTED",
@@ -62,6 +66,8 @@ export async function GET() {
       select: {
         id: true,
         userId: true,
+        email: true,
+        status: true,
         project: {
           select: {
             id: true,
@@ -75,6 +81,9 @@ export async function GET() {
       orderBy: { acceptedAt: "desc" },
       take: 5,
     });
+
+    // Debug: Log what was found
+    console.log("[Profile Dropdown] Found collaborations:", collaborations.length, collaborations.map(c => ({ id: c.id, email: c.email, status: c.status, userId: c.userId, projectTitle: c.project.title })));
 
     // Link userId if not set (for collaborators found by email)
     for (const collab of collaborations) {
