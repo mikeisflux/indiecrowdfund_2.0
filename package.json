@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "build:staging": "./scripts/build-staging.sh",
+    "deploy": "./scripts/deploy.sh",
+    "rollback": "./scripts/rollback.sh",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate"
