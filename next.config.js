@@ -6,6 +6,16 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
   },
+  // Allow local images from /uploads directory
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'indiecrowdfund.com',
+        pathname: '/uploads/**',
+      },
+    ],
+  },
 };
 
 module.exports = nextConfig;
