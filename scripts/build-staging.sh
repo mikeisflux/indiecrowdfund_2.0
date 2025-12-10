@@ -2,6 +2,9 @@
 
 # Build to staging directory without affecting the live site
 # Usage: ./scripts/build-staging.sh
+#
+# This script builds in a temp directory to avoid affecting the live .next folder,
+# then copies the successful build to .next-staging for deployment.
 
 set -e
 
@@ -12,53 +15,49 @@ cd "$PROJECT_DIR"
 
 echo "🔨 Building to staging directory..."
 
-# Backup the original config
-cp next.config.js next.config.js.bak
+# Remove any previous staging build
+if [ -d ".next-staging" ]; then
+  echo "🗑️  Removing previous staging build..."
+  rm -rf .next-staging
+fi
 
-# Create staging config with different distDir
-cat > next.config.js << 'EOF'
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  distDir: '.next-staging',
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '10mb',
-    },
-  },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'indiecrowdfund.com',
-        pathname: '/api/uploads/**',
-      },
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        pathname: '/api/uploads/**',
-      },
-    ],
-  },
-};
+# Create a temporary build directory
+BUILD_DIR=$(mktemp -d)
+echo "📁 Using temp build directory: $BUILD_DIR"
 
-module.exports = nextConfig;
-EOF
+cleanup() {
+  echo "🧹 Cleaning up temp directory..."
+  rm -rf "$BUILD_DIR"
+}
+trap cleanup EXIT
 
-# Generate Prisma client
+# Copy necessary files to temp directory (excluding large/unnecessary dirs)
+echo "📋 Copying project files..."
+rsync -a \
+  --exclude='.next' \
+  --exclude='.next-staging' \
+  --exclude='.next-old' \
+  --exclude='node_modules' \
+  --exclude='.git' \
+  --exclude='uploads' \
+  . "$BUILD_DIR/"
+
+# Copy node_modules (faster than reinstalling)
+echo "📦 Copying node_modules..."
+cp -r node_modules "$BUILD_DIR/"
+
+# Build in the temp directory
+cd "$BUILD_DIR"
+
 echo "📦 Generating Prisma client..."
 npx prisma generate
 
-# Build using the staging config
 echo "🏗️  Running Next.js build..."
-BUILD_SUCCESS=false
-if npx next build; then
-  BUILD_SUCCESS=true
-fi
+if npm run build; then
+  echo "📋 Copying build output to staging..."
+  cp -r "$BUILD_DIR/.next" "$PROJECT_DIR/.next-staging"
 
-# Restore original config
-mv next.config.js.bak next.config.js
-
-if [ "$BUILD_SUCCESS" = true ]; then
+  cd "$PROJECT_DIR"
   echo ""
   echo "✅ Build successful! Staged in .next-staging"
   echo ""
@@ -66,7 +65,8 @@ if [ "$BUILD_SUCCESS" = true ]; then
   echo "Or manually: ./scripts/deploy.sh"
   exit 0
 else
+  cd "$PROJECT_DIR"
   echo ""
-  echo "❌ Build failed! Original config restored."
+  echo "❌ Build failed!"
   exit 1
 fi
