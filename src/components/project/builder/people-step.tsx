@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -307,6 +308,9 @@ export function PeopleStep() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edit your profile</DialogTitle>
+            <DialogDescription>
+              Update your creator profile that will be displayed on your project page.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
@@ -431,6 +435,9 @@ export function PeopleStep() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>New collaborator</DialogTitle>
+            <DialogDescription>
+              Invite someone to help manage your project. They will receive an email invitation.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">

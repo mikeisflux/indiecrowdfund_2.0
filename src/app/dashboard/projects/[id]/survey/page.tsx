@@ -947,6 +947,9 @@ function BackerQuestionDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{question?.id ? "Edit" : "Add"} Question</DialogTitle>
+          <DialogDescription>
+            Create a custom question to gather additional information from backers.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">

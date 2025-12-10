@@ -956,6 +956,9 @@ export default function UsersPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              View and manage user account information and activity.
+            </DialogDescription>
           </DialogHeader>
           {selectedUser && (
             <div className="py-4">

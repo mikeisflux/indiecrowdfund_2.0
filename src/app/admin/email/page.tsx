@@ -868,6 +868,10 @@ function ComposeEmailDialog({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="sr-only">Email Sent Successfully</DialogTitle>
+            <DialogDescription className="sr-only">Your email has been sent.</DialogDescription>
+          </DialogHeader>
           <div className="flex flex-col items-center justify-center py-8">
             <CheckCircle className="h-12 w-12 text-emerald-500 mb-4" />
             <h3 className="font-medium text-lg">Email Sent!</h3>
@@ -885,6 +889,12 @@ function ComposeEmailDialog({
           <DialogTitle>
             {mode === "reply" ? "Reply" : mode === "replyAll" ? "Reply All" : mode === "forward" ? "Forward" : "Compose Email"}
           </DialogTitle>
+          <DialogDescription>
+            {mode === "reply" ? "Send a reply to the original sender." :
+             mode === "replyAll" ? "Send a reply to all recipients." :
+             mode === "forward" ? "Forward this email to another recipient." :
+             "Compose and send a new email message."}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {error && (
@@ -1059,6 +1069,9 @@ function MailboxDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{mailbox ? "Edit Mailbox" : "Create Mailbox"}</DialogTitle>
+          <DialogDescription>
+            {mailbox ? "Update mailbox settings and configuration." : "Create a new mailbox for receiving and sending emails."}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {error && (

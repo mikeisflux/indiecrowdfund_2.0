@@ -505,6 +505,9 @@ export default function SurveyResponsesPage() {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Response Details</DialogTitle>
+            <DialogDescription>
+              View complete survey response and shipping information for this backer.
+            </DialogDescription>
           </DialogHeader>
           {selectedResponse && (
             <div className="space-y-6">

@@ -1884,6 +1884,9 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             <DialogTitle>
               {editingItemId ? "Edit item" : "Create new item"}
             </DialogTitle>
+            <DialogDescription>
+              Items can be included in rewards or add-ons. Define the item details below.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">

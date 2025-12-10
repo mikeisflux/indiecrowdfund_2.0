@@ -506,6 +506,9 @@ export default function ModerationPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Review Report</DialogTitle>
+            <DialogDescription>
+              Review the reported content and take appropriate moderation action.
+            </DialogDescription>
           </DialogHeader>
           {selectedReport && (
             <div className="py-4 space-y-4">

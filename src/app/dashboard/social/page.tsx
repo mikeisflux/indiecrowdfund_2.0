@@ -861,6 +861,9 @@ export default function SocialHubPage() {
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>Schedule Post</DialogTitle>
+            <DialogDescription>
+              Choose when to publish your post to connected social accounts.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
