@@ -49,13 +49,19 @@ export async function GET() {
       take: 10,
     });
 
-    // Fetch collaborating projects (accepted)
+    // Fetch collaborating projects (accepted) - lookup by userId OR email
+    const userEmail = session.user.email?.toLowerCase();
     const collaborations = await db.projectCollaborator.findMany({
       where: {
-        userId,
         status: "ACCEPTED",
+        OR: [
+          { userId },
+          ...(userEmail ? [{ email: { equals: userEmail, mode: "insensitive" as const } }] : []),
+        ],
       },
       select: {
+        id: true,
+        userId: true,
         project: {
           select: {
             id: true,
@@ -70,8 +76,17 @@ export async function GET() {
       take: 5,
     });
 
+    // Link userId if not set (for collaborators found by email)
+    for (const collab of collaborations) {
+      if (!collab.userId && userEmail) {
+        await db.projectCollaborator.update({
+          where: { id: collab.id },
+          data: { userId },
+        });
+      }
+    }
+
     // Fetch pending invitations (by email since userId might not be set yet)
-    const userEmail = session.user.email?.toLowerCase();
     const pendingInvites = userEmail ? await db.projectCollaborator.findMany({
       where: {
         OR: [
