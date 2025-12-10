@@ -264,8 +264,9 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Can only edit draft/submitted projects
-    if (!["DRAFT", "SUBMITTED"].includes(project.status)) {
+    // Can only edit draft/submitted/approved projects
+    // LIVE/FUNDED projects can only be edited via specific endpoints (e.g., end reward)
+    if (!["DRAFT", "SUBMITTED", "APPROVED"].includes(project.status)) {
       return NextResponse.json(
         { error: "Cannot edit launched project" },
         { status: 400 }

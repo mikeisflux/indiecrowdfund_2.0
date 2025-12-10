@@ -217,26 +217,52 @@ export const useProjectStore = create<ProjectBuilderState>()(
           }
         },
       },
-      // Don't persist the story description content (can be very large with images)
-      // Only persist metadata and smaller fields
-      partialize: (state) => ({
-        currentStep: state.currentStep,
-        basics: state.basics,
-        items: state.items,
-        rewards: state.rewards,
-        // For story, don't persist the full description if it's too large
-        story: {
-          ...state.story,
-          description: state.story.description && state.story.description.length > 50000
-            ? undefined // Don't persist if over 50KB
-            : state.story.description,
-        },
-        people: state.people,
-        payment: state.payment,
-        promotion: state.promotion,
-        projectId: state.projectId,
-        projectStatus: state.projectStatus,
-      }) as ProjectBuilderState,
+      // Don't persist large data that can exceed localStorage quota (~5MB limit)
+      // Strip base64 images but keep URL-based images and all other data
+      partialize: (state) => {
+        // Helper to strip base64 images
+        const stripBase64 = (url?: string | null) =>
+          url?.startsWith('data:') ? undefined : url;
+
+        return {
+          currentStep: state.currentStep,
+          // For basics, exclude imageUrl if it's a base64 string (very large)
+          basics: {
+            ...state.basics,
+            imageUrl: stripBase64(state.basics.imageUrl),
+          },
+          // Persist items but strip base64 images
+          items: state.items.map(item => ({
+            ...item,
+            imageUrl: stripBase64(item.imageUrl),
+          })),
+          // Persist rewards but strip base64 images
+          rewards: state.rewards.map(reward => ({
+            ...reward,
+            imageUrl: stripBase64(reward.imageUrl),
+            items: reward.items.map(item => ({
+              ...item,
+              imageUrl: stripBase64(item.imageUrl),
+            })),
+          })),
+          // For story, don't persist the full description if it's too large
+          story: {
+            ...state.story,
+            description: state.story.description && state.story.description.length > 50000
+              ? undefined // Don't persist if over 50KB
+              : state.story.description,
+          },
+          people: {
+            ...state.people,
+            // Don't persist creator image if it's base64
+            creatorImageUrl: stripBase64(state.people.creatorImageUrl),
+          },
+          payment: state.payment,
+          promotion: state.promotion,
+          projectId: state.projectId,
+          projectStatus: state.projectStatus,
+        } as ProjectBuilderState;
+      },
     }
   )
 );
