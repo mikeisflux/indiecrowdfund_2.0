@@ -99,13 +99,18 @@ async function handleCollaborators(
   creatorId: string,
   creatorName: string
 ) {
+  console.log(`Processing ${collaborators.length} collaborators for project ${projectId}`);
+
   // Get project title for notification
   const project = await db.project.findUnique({
     where: { id: projectId },
     select: { title: true, slug: true },
   });
 
-  if (!project) return;
+  if (!project) {
+    console.error("Project not found when processing collaborators");
+    return;
+  }
 
   // Get existing collaborators
   const existingCollaborators = await db.projectCollaborator.findMany({
@@ -114,80 +119,101 @@ async function handleCollaborators(
   });
 
   const existingEmails = new Set(existingCollaborators.map((c: { email: string | null }) => c.email?.toLowerCase()));
+  console.log(`Existing collaborator emails: ${Array.from(existingEmails).join(", ")}`);
 
   for (const collab of collaborators) {
     const emailLower = collab.email.toLowerCase();
 
     // Skip if already a collaborator
-    if (existingEmails.has(emailLower)) continue;
+    if (existingEmails.has(emailLower)) {
+      console.log(`Skipping ${emailLower} - already a collaborator`);
+      continue;
+    }
 
-    // Find user by email
-    const user = await db.user.findUnique({
-      where: { email: emailLower },
-      select: { id: true },
-    });
+    console.log(`Processing new collaborator: ${emailLower}`);
 
-    if (user) {
-      // Create collaborator entry with PENDING status - user must accept
-      const collaboratorRecord = await db.projectCollaborator.create({
-        data: {
-          projectId,
-          userId: user.id,
-          email: collab.email,
-          title: collab.title || null,
-          canEditProject: collab.canEditProject || false,
-          canManageCommunity: collab.canManageCommunity || false,
-          canCoordinateFulfillment: collab.canCoordinateFulfillment || false,
-          canConfigurePledgeManager: collab.canConfigurePledgeManager || false,
-          status: "PENDING",
-        },
+    try {
+      // Find user by email
+      const user = await db.user.findUnique({
+        where: { email: emailLower },
+        select: { id: true },
       });
 
-      // Create notification for the user
-      await db.notification.create({
-        data: {
-          userId: user.id,
-          type: "COLLABORATOR_INVITE",
-          title: "You've been invited to collaborate",
-          message: `${creatorName} has invited you to collaborate on "${project.title}"`,
-          actionUrl: `/collaborate/${collaboratorRecord.id}`,
-          projectId,
-          senderId: creatorId,
-        },
-      });
+      if (user) {
+        console.log(`User found for ${emailLower}, creating collaborator record`);
 
-      // Send email notification with accept/decline link
-      await sendCollaboratorInviteEmail(
-        collab.email,
-        creatorName,
-        project.title,
-        collaboratorRecord.id
-      );
-    } else {
-      // User doesn't exist yet - create a pending collaborator entry without userId
-      // They'll be linked when they sign up with this email
-      const collaboratorRecord = await db.projectCollaborator.create({
-        data: {
-          projectId,
-          email: collab.email,
-          title: collab.title || null,
-          canEditProject: collab.canEditProject || false,
-          canManageCommunity: collab.canManageCommunity || false,
-          canCoordinateFulfillment: collab.canCoordinateFulfillment || false,
-          canConfigurePledgeManager: collab.canConfigurePledgeManager || false,
-          status: "PENDING",
-        },
-      });
+        // Create collaborator entry with PENDING status - user must accept
+        const collaboratorRecord = await db.projectCollaborator.create({
+          data: {
+            projectId,
+            userId: user.id,
+            email: collab.email,
+            title: collab.title || null,
+            canEditProject: collab.canEditProject || false,
+            canManageCommunity: collab.canManageCommunity || false,
+            canCoordinateFulfillment: collab.canCoordinateFulfillment || false,
+            canConfigurePledgeManager: collab.canConfigurePledgeManager || false,
+            status: "PENDING",
+          },
+        });
 
-      // Send invite email - they'll need to sign up first
-      await sendCollaboratorInviteEmail(
-        collab.email,
-        creatorName,
-        project.title,
-        collaboratorRecord.id
-      );
+        // Create notification for the user
+        await db.notification.create({
+          data: {
+            userId: user.id,
+            type: "COLLABORATOR_INVITE",
+            title: "You've been invited to collaborate",
+            message: `${creatorName} has invited you to collaborate on "${project.title}"`,
+            actionUrl: `/collaborate/${collaboratorRecord.id}`,
+            projectId,
+            senderId: creatorId,
+          },
+        });
+
+        // Send email notification with accept/decline link
+        console.log(`Sending collaborator invite email to ${collab.email}`);
+        const emailResult = await sendCollaboratorInviteEmail(
+          collab.email,
+          creatorName,
+          project.title,
+          collaboratorRecord.id
+        );
+        console.log(`Email result for ${collab.email}:`, emailResult);
+      } else {
+        console.log(`User not found for ${emailLower}, creating pending collaborator`);
+
+        // User doesn't exist yet - create a pending collaborator entry without userId
+        // They'll be linked when they sign up with this email
+        const collaboratorRecord = await db.projectCollaborator.create({
+          data: {
+            projectId,
+            email: collab.email,
+            title: collab.title || null,
+            canEditProject: collab.canEditProject || false,
+            canManageCommunity: collab.canManageCommunity || false,
+            canCoordinateFulfillment: collab.canCoordinateFulfillment || false,
+            canConfigurePledgeManager: collab.canConfigurePledgeManager || false,
+            status: "PENDING",
+          },
+        });
+
+        // Send invite email - they'll need to sign up first
+        console.log(`Sending collaborator invite email to ${collab.email} (new user)`);
+        const emailResult = await sendCollaboratorInviteEmail(
+          collab.email,
+          creatorName,
+          project.title,
+          collaboratorRecord.id
+        );
+        console.log(`Email result for ${collab.email}:`, emailResult);
+      }
+    } catch (error) {
+      console.error(`Error processing collaborator ${emailLower}:`, error);
+      // Continue processing other collaborators even if one fails
     }
   }
+
+  console.log("Finished processing collaborators");
 }
 
 export async function GET(
