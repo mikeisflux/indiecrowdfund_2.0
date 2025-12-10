@@ -56,10 +56,6 @@ export async function POST(
     const body = await req.json();
     const reward = rewardSchema.parse(body);
 
-    // Strip base64 images
-    const stripBase64 = (url?: string | null) =>
-      url?.startsWith('data:') ? null : url;
-
     // Create reward with items (linking to ProjectItem via projectItemId)
     const created = await db.reward.create({
       data: {
@@ -68,7 +64,7 @@ export async function POST(
         title: reward.title,
         description: reward.description || "",
         amount: reward.amount,
-        imageUrl: stripBase64(reward.imageUrl),
+        imageUrl: reward.imageUrl || null,
         estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
         shippingType: reward.shippingType,
         shippingCountries: reward.shippingCountries,
@@ -81,7 +77,7 @@ export async function POST(
             projectItemId: item.projectItemId || null, // Link to ProjectItem
             title: item.title,
             description: item.description || null,
-            imageUrl: stripBase64(item.imageUrl),
+            imageUrl: item.imageUrl || null,
           })),
         },
       },
@@ -140,10 +136,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Reward ID required for update" }, { status: 400 });
     }
 
-    // Strip base64 images
-    const stripBase64 = (url?: string | null) =>
-      url?.startsWith('data:') ? null : url;
-
     // Update reward and replace items
     const updated = await db.$transaction(async (tx) => {
       // Delete existing items
@@ -159,7 +151,7 @@ export async function PATCH(
           title: reward.title,
           description: reward.description || "",
           amount: reward.amount,
-          imageUrl: stripBase64(reward.imageUrl),
+          imageUrl: reward.imageUrl || null,
           estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
           shippingType: reward.shippingType,
           shippingCountries: reward.shippingCountries,
@@ -172,7 +164,7 @@ export async function PATCH(
               projectItemId: item.projectItemId || null, // Link to ProjectItem
               title: item.title,
               description: item.description || null,
-              imageUrl: stripBase64(item.imageUrl),
+              imageUrl: item.imageUrl || null,
             })),
           },
         },

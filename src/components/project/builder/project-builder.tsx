@@ -26,13 +26,6 @@ import { cn } from "@/lib/utils";
 import { Check, ChevronLeft, ChevronRight, Loader2, Save, Rocket, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
-// Helper to strip base64 images from URLs - only send actual URLs, not large data URIs
-const stripBase64 = (url?: string | null): string | undefined => {
-  if (!url) return undefined;
-  if (url.startsWith('data:')) return undefined;
-  return url;
-};
-
 export function ProjectBuilder() {
   const router = useRouter();
   const {
@@ -84,15 +77,13 @@ export function ProjectBuilder() {
       }
 
       // Transform rewards to include items from the items store
-      console.log("[Save Debug] Items in store:", items.length, items);
-      console.log("[Save Debug] Rewards in store:", rewards.length, rewards);
       const transformedRewards = rewards.map((reward) => ({
         id: reward.id,
         type: reward.type || "TIER",
         title: reward.title,
         description: reward.description || "",
         amount: reward.amount,
-        imageUrl: stripBase64(reward.imageUrl), // Strip base64 images to reduce payload size
+        imageUrl: reward.imageUrl || undefined,
         estimatedDelivery: reward.estimatedDelivery
           ? new Date(reward.estimatedDelivery).toISOString()
           : null,
@@ -108,7 +99,7 @@ export function ProjectBuilder() {
             id: item.id,
             title: fullItem?.title || item.title || "Item",
             description: fullItem?.description,
-            imageUrl: stripBase64(fullItem?.imageUrl), // Strip base64 images
+            imageUrl: fullItem?.imageUrl || undefined,
           };
         }) || [],
       }));
@@ -122,7 +113,7 @@ export function ProjectBuilder() {
         secondaryCategory: basics.secondaryCategory,
         secondarySubcategory: basics.secondarySubcategory,
         location: basics.location,
-        imageUrl: stripBase64(basics.imageUrl), // Strip base64 images to reduce payload size
+        imageUrl: basics.imageUrl || undefined,
         videoUrl: basics.videoUrl,
         goalAmount: basics.goalAmount || 10000,
         durationType: basics.durationType || "FIXED_DAYS",
@@ -158,9 +149,6 @@ export function ProjectBuilder() {
         // Collaborators
         collaborators: people.collaborators || [],
       };
-
-      console.log("[Save Debug] Transformed rewards being sent:", transformedRewards.length, transformedRewards);
-      console.log("[Save Debug] Project data being sent:", JSON.stringify(projectData).length, "bytes");
 
       let response;
 

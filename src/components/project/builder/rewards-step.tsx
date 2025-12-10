@@ -975,6 +975,8 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
                 <ImageUpload
                   value={currentReward.imageUrl}
                   onChange={(url) => setCurrentReward({ ...currentReward, imageUrl: url })}
+                  projectId={projectId || undefined}
+                  uploadType="reward"
                   aspectRatio="aspect-[933/621]"
                   recommendedSize="933 x 621 px (required size)"
                   maxSizeMB={10}
@@ -2067,6 +2069,8 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               <ImageUpload
                 value={currentItem.imageUrl}
                 onChange={(url) => setCurrentItem({ ...currentItem, imageUrl: url })}
+                projectId={projectId || undefined}
+                uploadType="item"
                 aspectRatio="aspect-[933/621]"
                 recommendedSize="933 x 621 px (required size)"
                 maxSizeMB={10}

@@ -10,10 +10,6 @@ const itemSchema = z.object({
   imageUrl: z.string().optional().nullable(),
 });
 
-// Helper to strip base64 images
-const stripBase64 = (url?: string | null) =>
-  url?.startsWith('data:') ? null : url;
-
 // Create a new project item
 export async function POST(
   req: NextRequest,
@@ -49,7 +45,7 @@ export async function POST(
         projectId,
         title: item.title,
         description: item.description || null,
-        imageUrl: stripBase64(item.imageUrl),
+        imageUrl: item.imageUrl || null,
       },
     });
 
@@ -108,7 +104,7 @@ export async function PATCH(
       data: {
         title: item.title,
         description: item.description || null,
-        imageUrl: stripBase64(item.imageUrl),
+        imageUrl: item.imageUrl || null,
       },
     });
 

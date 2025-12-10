@@ -320,6 +320,8 @@ export function PeopleStep() {
               <ImageUpload
                 value={people.creatorImageUrl}
                 onChange={(url) => updatePeople({ creatorImageUrl: url })}
+                projectId={projectId || undefined}
+                uploadType="project"
                 aspectRatio="aspect-square"
                 recommendedSize="400 x 400 px"
                 maxSizeMB={5}

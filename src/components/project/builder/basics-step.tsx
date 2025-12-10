@@ -42,7 +42,7 @@ function getVideoEmbedUrl(url: string): string | null {
 }
 
 export function BasicsStep() {
-  const { basics, updateBasics } = useProjectStore();
+  const { basics, updateBasics, projectId } = useProjectStore();
 
   // Get video embed URL
   const videoEmbedUrl = useMemo(() => {
@@ -237,6 +237,8 @@ export function BasicsStep() {
         <ImageUpload
           value={basics.imageUrl}
           onChange={(url) => updateBasics({ imageUrl: url })}
+          projectId={projectId || undefined}
+          uploadType="project"
           aspectRatio="aspect-video"
           recommendedSize="1024 x 576 px (16:9 ratio)"
           maxSizeMB={10}

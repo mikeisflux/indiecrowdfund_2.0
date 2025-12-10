@@ -10,6 +10,8 @@ import { toast } from "sonner";
 interface ImageUploadProps {
   value?: string;
   onChange: (url: string | undefined) => void;
+  projectId?: string;
+  uploadType?: "project" | "item" | "reward";
   className?: string;
   aspectRatio?: string;
   maxSizeMB?: number;
@@ -20,9 +22,11 @@ interface ImageUploadProps {
 export function ImageUpload({
   value,
   onChange,
+  projectId,
+  uploadType = "misc",
   className,
   aspectRatio = "aspect-video",
-  maxSizeMB = 5,
+  maxSizeMB = 10,
   recommendedSize = "1024 x 576 px",
   accept = "image/jpeg,image/png,image/gif,image/webp",
 }: ImageUploadProps) {
@@ -31,6 +35,39 @@ export function ImageUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+  const uploadToServer = useCallback(
+    async (file: File): Promise<string | null> => {
+      if (!projectId) {
+        // If no projectId, fall back to base64 (for new projects not yet saved)
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Failed to read file"));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("projectId", projectId);
+      formData.append("type", uploadType);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Upload failed");
+      }
+
+      const data = await response.json();
+      return data.url;
+    },
+    [projectId, uploadType]
+  );
 
   const processFile = useCallback(
     async (file: File) => {
@@ -49,26 +86,18 @@ export function ImageUpload({
       setIsLoading(true);
 
       try {
-        // Convert to base64 data URL for preview/storage
-        // In production, you'd upload to cloud storage here
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          onChange(result);
-          setIsLoading(false);
-        };
-        reader.onerror = () => {
-          toast.error("Failed to read file");
-          setIsLoading(false);
-        };
-        reader.readAsDataURL(file);
+        const url = await uploadToServer(file);
+        if (url) {
+          onChange(url);
+        }
       } catch (error) {
-        console.error("File processing error:", error);
-        toast.error("Failed to process image");
+        console.error("File upload error:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to upload image");
+      } finally {
         setIsLoading(false);
       }
     },
-    [maxSizeBytes, maxSizeMB, onChange]
+    [maxSizeBytes, maxSizeMB, onChange, uploadToServer]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -163,7 +192,7 @@ export function ImageUpload({
         {isLoading ? (
           <>
             <Loader2 className="h-10 w-10 text-muted-foreground animate-spin mb-3" />
-            <p className="text-sm text-muted-foreground">Processing...</p>
+            <p className="text-sm text-muted-foreground">Uploading...</p>
           </>
         ) : (
           <>
