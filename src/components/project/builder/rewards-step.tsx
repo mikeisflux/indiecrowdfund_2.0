@@ -134,6 +134,9 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     endReward,
   } = useProjectStore();
 
+  // Debug: Log projectId on mount and changes
+  console.log("[RewardsStep] projectId from store:", projectId);
+
   // Check if campaign is live (can't edit rewards with backers)
   const isLive = projectStatus === "LIVE" || projectStatus === "FUNDED";
 
