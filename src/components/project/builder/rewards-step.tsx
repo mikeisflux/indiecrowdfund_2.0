@@ -65,6 +65,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { DragDropImageCell } from "@/components/ui/drag-drop-image-cell";
 import { cn } from "@/lib/utils";
 
 const defaultItem: RewardItemData = {
@@ -280,6 +281,86 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
     removeItem(id);
     toast.success("Item deleted");
+  };
+
+  // Auto-save image handlers for drag-drop in list view
+  const handleItemImageChange = async (itemId: string, imageUrl: string) => {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Update local state immediately
+    updateItem(itemId, { ...item, imageUrl });
+
+    // Save to database if project exists
+    if (projectId) {
+      try {
+        const response = await fetch(`/api/projects/${projectId}/items`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: itemId,
+            title: item.title,
+            description: item.description,
+            imageUrl,
+          }),
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || "Failed to save");
+        }
+      } catch (error) {
+        console.error("Save item image error:", error);
+        throw error; // Re-throw to let DragDropImageCell show error
+      }
+    }
+  };
+
+  const handleRewardImageChange = async (rewardIndex: number, imageUrl: string) => {
+    const reward = rewards[rewardIndex];
+    if (!reward) return;
+
+    // Update local state immediately
+    updateReward(rewardIndex, { ...reward, imageUrl });
+
+    // Save to database if project exists and reward has ID
+    if (projectId && reward.id) {
+      try {
+        const response = await fetch(`/api/projects/${projectId}/rewards`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: reward.id,
+            type: reward.type,
+            title: reward.title,
+            description: reward.description,
+            amount: reward.amount,
+            imageUrl,
+            estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery).toISOString() : undefined,
+            shippingType: reward.shippingType,
+            shippingCountries: reward.shippingCountries,
+            shippingCost: reward.shippingCost,
+            quantityAvailable: reward.quantityAvailable,
+            visibility: reward.visibility,
+            isEnded: reward.isEnded,
+            items: reward.items.map(item => ({
+              projectItemId: item.id,
+              title: item.title,
+              description: item.description,
+              imageUrl: item.imageUrl,
+            })),
+          }),
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || "Failed to save");
+        }
+      } catch (error) {
+        console.error("Save reward image error:", error);
+        throw error;
+      }
+    }
   };
 
   // Reward handlers
@@ -1571,21 +1652,15 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
                         )}
                       </div>
 
-                      {/* Image */}
+                      {/* Image - Drag-drop enabled */}
                       <div className="col-span-3">
-                        {item.imageUrl ? (
-                          <Image
-                            src={item.imageUrl}
-                            alt={item.title}
-                            width={64}
-                            height={64}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
-                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                        )}
+                        <DragDropImageCell
+                          imageUrl={item.imageUrl}
+                          alt={item.title}
+                          projectId={projectId || undefined}
+                          uploadType="item"
+                          onImageChange={(url) => handleItemImageChange(item.id || "", url)}
+                        />
                       </div>
                     </div>
 
@@ -1697,21 +1772,15 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
                         )}
                       </div>
 
-                      {/* Image */}
+                      {/* Image - Drag-drop enabled */}
                       <div className="col-span-3">
-                        {tier.imageUrl ? (
-                          <Image
-                            src={tier.imageUrl}
-                            alt={tier.title}
-                            width={64}
-                            height={64}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
-                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                        )}
+                        <DragDropImageCell
+                          imageUrl={tier.imageUrl}
+                          alt={tier.title}
+                          projectId={projectId || undefined}
+                          uploadType="reward"
+                          onImageChange={(url) => handleRewardImageChange(rewardIndex, url)}
+                        />
                       </div>
                     </div>
 
@@ -1891,21 +1960,15 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
                         )}
                       </div>
 
-                      {/* Image */}
+                      {/* Image - Drag-drop enabled */}
                       <div className="col-span-3">
-                        {addon.imageUrl ? (
-                          <Image
-                            src={addon.imageUrl}
-                            alt={addon.title}
-                            width={64}
-                            height={64}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
-                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                        )}
+                        <DragDropImageCell
+                          imageUrl={addon.imageUrl}
+                          alt={addon.title}
+                          projectId={projectId || undefined}
+                          uploadType="reward"
+                          onImageChange={(url) => handleRewardImageChange(rewardIndex, url)}
+                        />
                       </div>
                     </div>
 
