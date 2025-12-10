@@ -73,7 +73,7 @@ export default function StripeCompletePage() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/projects/new/basics">
+              <Link href="/projects/new">
                 <Button variant="outline" className="w-full">
                   Create a Project
                 </Button>

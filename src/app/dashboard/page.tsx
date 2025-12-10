@@ -213,7 +213,7 @@ export default function CreatorDashboard() {
               Start bringing your creative vision to life. Create a crowdfunding campaign
               and connect with backers who believe in your project.
             </p>
-            <Link href="/projects/new/basics">
+            <Link href="/projects/new">
               <Button size="lg">
                 <Plus className="mr-2 h-5 w-5" />
                 Create Project
