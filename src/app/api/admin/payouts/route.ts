@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { project: { title: { contains: search, mode: "insensitive" } } },
-        { project: { user: { name: { contains: search, mode: "insensitive" } } } },
+        { project: { creator: { name: { contains: search, mode: "insensitive" } } } },
         { payoutId: { contains: search, mode: "insensitive" } },
       ];
     }
@@ -77,10 +77,10 @@ export async function GET(request: NextRequest) {
               id: true,
               title: true,
               slug: true,
-              thumbnailUrl: true,
-              fundingGoal: true,
-              currentFunding: true,
-              user: {
+              imageUrl: true,
+              goalAmount: true,
+              currentAmount: true,
+              creator: {
                 select: {
                   id: true,
                   name: true,
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
         project: {
           select: {
             title: true,
-            user: {
+            creator: {
               select: { name: true, email: true },
             },
           },
@@ -264,7 +264,7 @@ export async function PATCH(request: NextRequest) {
         project: {
           select: {
             title: true,
-            user: { select: { name: true, email: true } },
+            creator: { select: { name: true, email: true } },
           },
         },
       },
@@ -350,7 +350,7 @@ export async function PATCH(request: NextRequest) {
           select: {
             id: true,
             title: true,
-            user: { select: { name: true, email: true } },
+            creator: { select: { name: true, email: true } },
           },
         },
       },
