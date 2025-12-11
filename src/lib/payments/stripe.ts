@@ -679,7 +679,7 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
 }
 
 async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
-  const pledgeId = setupIntent.metadata.pledgeId;
+  const pledgeId = setupIntent.metadata?.pledgeId;
 
   if (!pledgeId) return;
 
