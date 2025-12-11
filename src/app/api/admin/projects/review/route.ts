@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
           console.log("No email addresses found for project creator");
         } else {
           // Send to each unique email address
-          for (const email of emailAddresses) {
+          for (const email of Array.from(emailAddresses)) {
             let emailResult: { success: boolean; error?: string } = { success: false };
 
             switch (reviewAction) {
