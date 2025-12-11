@@ -155,7 +155,7 @@ export async function notifyProjectFunded(projectId: string) {
       select: { email: true },
     });
 
-    const uniqueEmails = [...new Set(backers.map((b) => b.email))];
+    const uniqueEmails = Array.from(new Set(backers.map((b) => b.email)));
 
     // Send emails in batches
     const batchSize = 10;
@@ -309,7 +309,7 @@ export async function notifyProjectLaunched(projectId: string) {
   });
 
   // Send emails to all followers (deduplicated)
-  const uniqueEmails = [...new Set(emailsToSend)];
+  const uniqueEmails = Array.from(new Set(emailsToSend));
   const creatorName = project.creator?.name || "Creator";
 
   // Send emails in parallel (but not all at once to avoid rate limits)
@@ -507,7 +507,7 @@ export async function notifyProjectUpdate(
       if (f.email) emailsToSend.push(f.email);
     });
 
-  const uniqueEmails = [...new Set(emailsToSend)];
+  const uniqueEmails = Array.from(new Set(emailsToSend));
   const creatorName = project.creator?.name || "Creator";
 
   // Send emails in batches
