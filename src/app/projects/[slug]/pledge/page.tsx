@@ -23,7 +23,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
-  Lock,
   CheckCircle,
   ChevronRight,
   AlertTriangle,
@@ -793,39 +792,87 @@ export default function PledgePage() {
             )}
 
             {step === "payment" && (
-              <div className="space-y-6">
+              <div className="space-y-8">
+                {/* Confirm payment method heading */}
                 <div>
-                  <h2 className="text-xl font-semibold mb-1">Payment</h2>
-                  <p className="text-muted-foreground text-sm">
-                    Complete your pledge securely
+                  <h2 className="text-xl font-semibold mb-3">Confirm your payment method</h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    We won&apos;t charge you at this time. If the project reaches its funding goal, your payment method will
+                    be charged when the campaign ends. You&apos;ll receive a confirmation email when your pledge is successfully processed.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                    Any shipping costs and applicable taxes will be charged separately, when the creator is ready to
+                    begin fulfillment.
                   </p>
                 </div>
 
+                {/* Collection plan */}
                 <Card>
-                  <CardContent className="p-6">
-                    <div className="rounded-lg border bg-muted/50 p-4">
-                      <p className="text-sm text-muted-foreground">
-                        You&apos;ll be redirected to Stripe to complete your payment
-                        securely. We accept all major credit and debit cards.
-                      </p>
+                  <CardContent className="p-0">
+                    <h3 className="font-medium px-5 pt-5 pb-3">Collection plan</h3>
+
+                    {/* Pledge in full option */}
+                    <div className="border-t px-5 py-4">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <div className="mt-0.5">
+                          <div className="w-5 h-5 rounded-full border-2 border-foreground flex items-center justify-center">
+                            <div className="w-2.5 h-2.5 rounded-full bg-foreground" />
+                          </div>
+                        </div>
+                        <span className="font-medium">Pledge in full</span>
+                      </label>
+                    </div>
+
+                    {/* Pledge over time option */}
+                    <div className="border-t px-5 py-4 bg-muted/30">
+                      <label className="flex items-start gap-3 cursor-not-allowed opacity-60">
+                        <div className="mt-0.5">
+                          <div className="w-5 h-5 rounded-full border-2 border-muted-foreground" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-muted-foreground">Pledge Over Time</span>
+                            <span className="text-xs text-muted-foreground">Available for pledges over $125</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            You will be charged for your pledge over three payments, at no extra cost.
+                          </p>
+                        </div>
+                      </label>
                     </div>
                   </CardContent>
                 </Card>
 
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="terms"
-                    checked={agreedToTerms}
-                    onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
-                  />
-                  <Label htmlFor="terms" className="text-sm leading-relaxed">
-                    I agree to the{" "}
-                    <Link href="/terms" className="underline hover:text-primary">
-                      Terms of Service
-                    </Link>{" "}
-                    and understand that my card will only be charged if this campaign reaches its funding goal.
-                  </Label>
-                </div>
+                {/* Payment method */}
+                <Card>
+                  <CardContent className="p-0">
+                    <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                      <h3 className="font-medium">Payment</h3>
+                      <button className="text-sm text-muted-foreground hover:text-foreground">Manage</button>
+                    </div>
+
+                    {/* New payment method */}
+                    <div className="border-t px-5 py-4">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <div className="w-5 h-5 rounded-full border-2 border-foreground flex items-center justify-center">
+                          <div className="w-2.5 h-2.5 rounded-full bg-foreground" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-5 bg-gradient-to-r from-red-500 via-yellow-500 to-red-600 rounded" />
+                          <span>Credit or Debit Card</span>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Add new payment */}
+                    <div className="border-t px-5 py-4">
+                      <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                        <span className="text-lg">+</span>
+                        <span>New payment method</span>
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </div>
@@ -833,8 +880,8 @@ export default function PledgePage() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-6 space-y-6">
-              {/* Order Summary - only show after reward selection */}
-              {(selectedReward || pledgeWithoutReward) && (
+              {/* Order Summary for Add-ons step */}
+              {step === "addons" && (selectedReward || pledgeWithoutReward) && (
                 <Card>
                   <CardContent className="p-5">
                     {/* Selected reward */}
@@ -911,32 +958,100 @@ export default function PledgePage() {
 
                     {/* Continue button */}
                     <div className="mt-4">
-                      {step === "addons" && (
-                        <Button
-                          className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
-                          size="lg"
-                          onClick={() => setStep("payment")}
-                        >
-                          Continue
-                        </Button>
-                      )}
-                      {step === "payment" && (
-                        <Button
-                          className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
-                          size="lg"
-                          onClick={handleSubmitPledge}
-                          disabled={!agreedToTerms || isProcessing}
-                        >
-                          {isProcessing ? (
-                            "Processing..."
-                          ) : (
-                            <>
-                              <Lock className="mr-2 h-4 w-4" />
-                              Pledge ${total}
-                            </>
-                          )}
-                        </Button>
-                      )}
+                      <Button
+                        className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
+                        size="lg"
+                        onClick={() => setStep("payment")}
+                      >
+                        Continue
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Payment step sidebar - simpler layout */}
+              {step === "payment" && (selectedReward || pledgeWithoutReward) && (
+                <Card>
+                  <CardContent className="p-5">
+                    {/* Reward */}
+                    <div className="pb-4 border-b">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Reward</p>
+                      <div className="flex justify-between">
+                        <span className="font-medium uppercase text-sm">
+                          {pledgeWithoutReward ? "No reward" : selectedReward?.title}
+                        </span>
+                        <span className="font-semibold">${pledgeWithoutReward ? customPledgeAmount : selectedReward?.amount}.00</span>
+                      </div>
+                    </div>
+
+                    {/* Add-ons on payment page */}
+                    {Object.keys(selectedAddons).length > 0 && (
+                      <div className="py-4 border-b">
+                        {Object.entries(selectedAddons).map(([id, qty]) => {
+                          const addon = addons.find(a => a.id === id);
+                          if (!addon) return null;
+                          return (
+                            <div key={id} className="flex justify-between text-sm">
+                              <span>{addon.title} x{qty}</span>
+                              <span>${addon.amount * qty}.00</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Shipping */}
+                    <div className="py-4 border-b">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Shipping</p>
+                      <div className="flex justify-between text-sm">
+                        <span>{currentCountry?.name}</span>
+                        <span>${totalShipping}.00</span>
+                      </div>
+                    </div>
+
+                    {/* Total amount */}
+                    <div className="py-4 border-b">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total amount</span>
+                        <span className="text-xl font-bold">${total}.00</span>
+                      </div>
+                    </div>
+
+                    {/* Disclaimer */}
+                    <div className="py-4">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Backing means supporting a creative project, regardless of the outcome.
+                      </p>
+
+                      <div className="flex items-start gap-3 mb-4">
+                        <Checkbox
+                          id="terms"
+                          checked={agreedToTerms}
+                          onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                        />
+                        <Label htmlFor="terms" className="text-xs leading-relaxed text-muted-foreground">
+                          I understand that rewards or reimbursements aren&apos;t guaranteed by either IndieCrowdfund or the creator.
+                        </Label>
+                      </div>
+
+                      {/* Pledge button */}
+                      <Button
+                        className="w-full bg-zinc-300 hover:bg-[#028858] text-zinc-600 hover:text-white font-medium disabled:bg-zinc-300 disabled:text-zinc-500"
+                        size="lg"
+                        onClick={handleSubmitPledge}
+                        disabled={!agreedToTerms || isProcessing}
+                      >
+                        {isProcessing ? "Processing..." : "Pledge"}
+                      </Button>
+
+                      <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
+                        By submitting your pledge, you agree to IndieCrowdfund&apos;s{" "}
+                        <Link href="/terms" className="underline">Terms of Use</Link>
+                        , and{" "}
+                        <Link href="/privacy" className="underline">Privacy Policy</Link>
+                        , and for our payment processor, Stripe, to charge your payment method.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
