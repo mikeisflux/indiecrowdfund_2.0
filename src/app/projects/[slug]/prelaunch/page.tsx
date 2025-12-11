@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/components/providers/auth-provider";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
