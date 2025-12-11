@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -103,17 +103,13 @@ export function PromotionStep() {
         {promotion.prelaunchActive && (
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="prelaunch-description">
-                More About This Project
-              </Label>
-              <Textarea
-                id="prelaunch-description"
-                placeholder="Give potential backers a sneak peek of what you're creating..."
-                rows={4}
+              <Label>More About This Project</Label>
+              <RichTextEditor
                 value={promotion.prelaunchDescription || ""}
-                onChange={(e) =>
-                  updatePromotion({ prelaunchDescription: e.target.value })
+                onChange={(value) =>
+                  updatePromotion({ prelaunchDescription: value })
                 }
+                placeholder="Give potential backers a sneak peek of what you're creating..."
               />
             </div>
             <p className="text-sm text-muted-foreground">
