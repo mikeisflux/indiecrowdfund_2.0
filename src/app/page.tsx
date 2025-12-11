@@ -275,48 +275,59 @@ export default async function HomePage() {
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {featuredProjects.map((project) => (
-              <Card key={project.id} className="overflow-hidden">
-                <div className="aspect-video bg-muted relative">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Play className="h-12 w-12 text-muted-foreground/50" />
+              <Link key={project.id} href={`/projects/${project.slug}`}>
+                <Card className="overflow-hidden h-full transition-all hover:shadow-lg">
+                  <div className="aspect-video bg-muted relative">
+                    {project.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={project.imageUrl}
+                        alt={project.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Play className="h-12 w-12 text-muted-foreground/50" />
+                      </div>
+                    )}
+                    <Badge className="absolute left-3 top-3">{project.category}</Badge>
                   </div>
-                  <Badge className="absolute left-3 top-3">{project.category}</Badge>
-                </div>
-                <CardContent className="pt-4">
-                  <h3 className="mb-1 font-semibold line-clamp-1">{project.title}</h3>
-                  <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
-                    {project.subtitle}
-                  </p>
-                  <p className="text-xs text-muted-foreground">by {project.creator}</p>
-                </CardContent>
-                <CardFooter className="flex-col items-start gap-3 border-t pt-4">
-                  <Progress
-                    value={(project.currentAmount / project.goalAmount) * 100}
-                    className="h-2"
-                  />
-                  <div className="flex w-full items-center justify-between text-sm">
-                    <div>
-                      <span className="font-semibold text-primary">
-                        ${project.currentAmount.toLocaleString()}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {" "}
-                        / ${project.goalAmount.toLocaleString()}
-                      </span>
+                  <CardContent className="pt-4">
+                    <h3 className="mb-1 font-semibold line-clamp-1">{project.title}</h3>
+                    <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+                      {project.subtitle}
+                    </p>
+                    <p className="text-xs text-muted-foreground">by {project.creator}</p>
+                  </CardContent>
+                  <CardFooter className="flex-col items-start gap-3 border-t pt-4">
+                    <Progress
+                      value={(project.currentAmount / project.goalAmount) * 100}
+                      className="h-2"
+                    />
+                    <div className="flex w-full items-center justify-between text-sm">
+                      <div>
+                        <span className="font-semibold text-primary">
+                          ${project.currentAmount.toLocaleString()}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          / ${project.goalAmount.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {project.backerCount}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {project.daysRemaining}d
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {project.backerCount}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {project.daysRemaining}d
-                      </span>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
+                  </CardFooter>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>
