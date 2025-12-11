@@ -63,7 +63,17 @@ export async function GET(req: NextRequest) {
         where,
         orderBy: { createdAt: "desc" },
         skip,
-        take: limit
+        take: limit,
+        include: {
+          uploader: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true
+            }
+          }
+        }
       }),
       db.mediaFile.count({ where }),
       Promise.all([
@@ -156,7 +166,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH - Update media file
+// PATCH - Update media file(s)
 export async function PATCH(req: NextRequest) {
   try {
     const authResult = await requireAdmin();
@@ -165,8 +175,18 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { fileId, folder, tags, altText } = body;
+    const { fileId, fileIds, folder, tags, altText, originalName } = body;
 
+    // Bulk move operation
+    if (fileIds && Array.isArray(fileIds) && folder) {
+      await db.mediaFile.updateMany({
+        where: { id: { in: fileIds } },
+        data: { folder }
+      });
+      return NextResponse.json({ success: true, movedCount: fileIds.length });
+    }
+
+    // Single file update
     if (!fileId) {
       return NextResponse.json(
         { error: "File ID is required" },
@@ -178,10 +198,21 @@ export async function PATCH(req: NextRequest) {
     if (folder !== undefined) updateData.folder = folder;
     if (tags !== undefined) updateData.tags = tags;
     if (altText !== undefined) updateData.altText = altText;
+    if (originalName !== undefined) updateData.originalName = originalName;
 
     const file = await db.mediaFile.update({
       where: { id: fileId },
-      data: updateData
+      data: updateData,
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
+        }
+      }
     });
 
     return NextResponse.json({ success: true, file });

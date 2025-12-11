@@ -52,6 +52,7 @@ model User {
   idVerifications   IDVerification[]
   notifications     Notification[]
   bugReports        BugReport[]
+  mediaFiles        MediaFile[]
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -1449,6 +1450,7 @@ enum ReportAction {
 model MediaFile {
   id            String     @id @default(cuid())
   uploaderId    String?
+  uploader      User?      @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
 
   filename      String
   originalName  String

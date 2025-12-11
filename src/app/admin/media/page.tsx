@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -24,7 +25,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Image as ImageIcon,
   Upload,
@@ -43,6 +53,19 @@ import {
   Video,
   FileText,
   Loader2,
+  Plus,
+  ChevronRight,
+  ChevronDown,
+  Folder,
+  FolderPlus,
+  Edit3,
+  Move,
+  User,
+  Calendar,
+  Eye,
+  MoreVertical,
+  GripVertical,
+  X,
 } from "lucide-react";
 
 interface MediaFile {
@@ -60,6 +83,12 @@ interface MediaFile {
   tags: string[];
   altText: string | null;
   createdAt: string;
+  uploader: {
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+  } | null;
 }
 
 interface MediaStats {
@@ -70,7 +99,7 @@ interface MediaStats {
   documents: number;
 }
 
-interface Folder {
+interface FolderInfo {
   name: string;
   count: number;
 }
@@ -82,21 +111,51 @@ interface Pagination {
   totalPages: number;
 }
 
+// Default folder structure
+const DEFAULT_FOLDERS = [
+  "uploads",
+  "projects",
+  "profiles",
+  "branding",
+  "rewards",
+  "campaigns",
+];
+
 export default function MediaPage() {
   const [activeTab, setActiveTab] = useState("library");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [folderFilter, setFolderFilter] = useState("all");
+  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [editingFile, setEditingFile] = useState<MediaFile | null>(null);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [stats, setStats] = useState<MediaStats | null>(null);
-  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folders, setFolders] = useState<FolderInfo[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // New folder state
+  const [newFolderName, setNewFolderName] = useState("");
+
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    originalName: "",
+    altText: "",
+    folder: "",
+    tags: "",
+  });
+
+  // Drag state
+  const [draggedFile, setDraggedFile] = useState<MediaFile | null>(null);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
 
   const [optimizationSettings, setOptimizationSettings] = useState({
     autoOptimize: true,
@@ -189,8 +248,8 @@ export default function MediaPage() {
       setLoading(true);
       const params = new URLSearchParams({
         page: String(page),
-        limit: "24",
-        ...(folderFilter !== "all" && { folder: folderFilter }),
+        limit: "48",
+        ...(currentFolder && { folder: currentFolder }),
         ...(typeFilter !== "all" && { mimeType: typeFilter }),
         ...(searchQuery && { search: searchQuery }),
       });
@@ -208,11 +267,18 @@ export default function MediaPage() {
     } finally {
       setLoading(false);
     }
-  }, [folderFilter, typeFilter, searchQuery]);
+  }, [currentFolder, typeFilter, searchQuery]);
 
   useEffect(() => {
     fetchMedia();
   }, [fetchMedia]);
+
+  // Set upload folder to current folder when opening dialog
+  useEffect(() => {
+    if (showUploadDialog && currentFolder) {
+      setUploadFolder(currentFolder);
+    }
+  }, [showUploadDialog, currentFolder]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B";
@@ -273,209 +339,369 @@ export default function MediaPage() {
     return <FileText className="h-5 w-5 text-zinc-400" />;
   };
 
+  // Open edit dialog
+  const openEditDialog = (file: MediaFile) => {
+    setEditingFile(file);
+    setEditForm({
+      originalName: file.originalName,
+      altText: file.altText || "",
+      folder: file.folder,
+      tags: file.tags.join(", "),
+    });
+    setShowEditDialog(true);
+  };
+
+  // Save file edits
+  const saveFileEdits = async () => {
+    if (!editingFile) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch("/api/admin/media", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileId: editingFile.id,
+          originalName: editForm.originalName,
+          altText: editForm.altText || null,
+          folder: editForm.folder,
+          tags: editForm.tags.split(",").map(t => t.trim()).filter(Boolean),
+        }),
+      });
+
+      if (response.ok) {
+        setShowEditDialog(false);
+        setEditingFile(null);
+        fetchMedia();
+      }
+    } catch (error) {
+      console.error("Error saving file:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Move files to folder
+  const moveFilesToFolder = async (targetFolder: string, fileIds?: string[]) => {
+    const idsToMove = fileIds || selectedFiles;
+    if (idsToMove.length === 0) return;
+
+    try {
+      const response = await fetch("/api/admin/media", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileIds: idsToMove,
+          folder: targetFolder,
+        }),
+      });
+
+      if (response.ok) {
+        setSelectedFiles([]);
+        setShowMoveDialog(false);
+        fetchMedia();
+      }
+    } catch (error) {
+      console.error("Error moving files:", error);
+    }
+  };
+
+  // Handle file drag start
+  const handleFileDragStart = (e: React.DragEvent, file: MediaFile) => {
+    setDraggedFile(file);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  // Handle folder drag over
+  const handleFolderDragOver = (e: React.DragEvent, folderName: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverFolder(folderName);
+  };
+
+  // Handle folder drag leave
+  const handleFolderDragLeave = () => {
+    setDragOverFolder(null);
+  };
+
+  // Handle drop on folder
+  const handleFolderDrop = async (e: React.DragEvent, folderName: string) => {
+    e.preventDefault();
+    setDragOverFolder(null);
+
+    if (draggedFile) {
+      // Move single dragged file
+      await moveFilesToFolder(folderName, [draggedFile.id]);
+      setDraggedFile(null);
+    } else if (selectedFiles.length > 0) {
+      // Move selected files
+      await moveFilesToFolder(folderName);
+    }
+  };
+
+  // Create new folder
+  const createNewFolder = async () => {
+    if (!newFolderName.trim()) return;
+
+    // Folders are created implicitly when uploading
+    // For now, we'll just add it to the upload folder list
+    setUploadFolder(newFolderName.toLowerCase().replace(/\s+/g, "-"));
+    setNewFolderName("");
+    setShowNewFolderDialog(false);
+    setShowUploadDialog(true);
+  };
+
+  // Get all unique folders (from API + defaults)
+  const allFolders = [...new Set([...DEFAULT_FOLDERS, ...folders.map(f => f.name)])];
+
+  // Get folder count
+  const getFolderCount = (folderName: string) => {
+    const folder = folders.find(f => f.name === folderName);
+    return folder?.count || 0;
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Media Library</h1>
-          <p className="text-zinc-500">Manage and organize your media files</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => fetchMedia()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          <Button onClick={() => setShowUploadDialog(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Upload
+    <div className="flex h-[calc(100vh-8rem)] gap-6">
+      {/* Folder Sidebar */}
+      <div className="w-64 shrink-0 rounded-lg border bg-white dark:bg-zinc-900">
+        <div className="flex items-center justify-between border-b p-3">
+          <h3 className="font-semibold text-sm">Folders</h3>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setShowNewFolderDialog(true)}
+          >
+            <FolderPlus className="h-4 w-4" />
           </Button>
         </div>
+        <ScrollArea className="h-[calc(100%-3.5rem)]">
+          <div className="p-2 space-y-1">
+            {/* All Files */}
+            <button
+              onClick={() => setCurrentFolder(null)}
+              onDragOver={(e) => handleFolderDragOver(e, "uploads")}
+              onDragLeave={handleFolderDragLeave}
+              onDrop={(e) => handleFolderDrop(e, "uploads")}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                currentFolder === null
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                  : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              }`}
+            >
+              <FolderOpen className="h-4 w-4" />
+              <span className="flex-1 text-left">All Files</span>
+              <Badge variant="secondary" className="text-[10px]">
+                {stats?.totalFiles || 0}
+              </Badge>
+            </button>
+
+            {/* Folder list */}
+            {allFolders.map((folderName) => (
+              <button
+                key={folderName}
+                onClick={() => setCurrentFolder(folderName)}
+                onDragOver={(e) => handleFolderDragOver(e, folderName)}
+                onDragLeave={handleFolderDragLeave}
+                onDrop={(e) => handleFolderDrop(e, folderName)}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  dragOverFolder === folderName
+                    ? "bg-emerald-100 ring-2 ring-emerald-500 dark:bg-emerald-900"
+                    : currentFolder === folderName
+                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                }`}
+              >
+                <Folder className="h-4 w-4" />
+                <span className="flex-1 text-left capitalize">{folderName}</span>
+                {getFolderCount(folderName) > 0 && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    {getFolderCount(folderName)}
+                  </Badge>
+                )}
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
-                <ImageIcon className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.totalFiles || 0}</p>
-                <p className="text-xs text-zinc-500">Total Files</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-emerald-100 p-2 dark:bg-emerald-900/30">
-                <FileImage className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.images || 0}</p>
-                <p className="text-xs text-zinc-500">Images</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-violet-100 p-2 dark:bg-violet-900/30">
-                <Video className="h-5 w-5 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.videos || 0}</p>
-                <p className="text-xs text-zinc-500">Videos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-amber-100 p-2 dark:bg-amber-900/30">
-                <FileText className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.documents || 0}</p>
-                <p className="text-xs text-zinc-500">Documents</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-rose-100 p-2 dark:bg-rose-900/30">
-                <HardDrive className="h-5 w-5 text-rose-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{formatFileSize(stats?.totalSize || 0)}</p>
-                <p className="text-xs text-zinc-500">Total Size</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="library">
-            <FolderOpen className="mr-2 h-4 w-4" />
-            Media Library
-          </TabsTrigger>
-          <TabsTrigger value="settings">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Media Library Tab */}
-        <TabsContent value="library" className="mt-6 space-y-4">
-          {/* Toolbar */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                <Input
-                  placeholder="Search files..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-64"
-                />
-              </div>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="image">Images</SelectItem>
-                  <SelectItem value="video">Videos</SelectItem>
-                  <SelectItem value="application/pdf">Documents</SelectItem>
-                </SelectContent>
-              </Select>
-              {folders.length > 0 && (
-                <Select value={folderFilter} onValueChange={setFolderFilter}>
-                  <SelectTrigger className="w-[140px]">
-                    <FolderOpen className="mr-2 h-4 w-4" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Folders</SelectItem>
-                    {folders.map((folder) => (
-                      <SelectItem key={folder.name} value={folder.name}>
-                        {folder.name} ({folder.count})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
+              {currentFolder ? (
+                <span className="capitalize">{currentFolder}</span>
+              ) : (
+                "All Media"
               )}
-            </div>
+            </h1>
+            <p className="text-zinc-500">
+              {stats?.totalFiles || 0} files • {formatFileSize(stats?.totalSize || 0)}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={() => fetchMedia()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button onClick={() => setShowUploadDialog(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Upload
+            </Button>
+          </div>
+        </div>
 
+        {/* Stats Row */}
+        <div className="grid gap-3 md:grid-cols-5 mb-4">
+          <Card className="p-3">
             <div className="flex items-center gap-2">
-              {selectedFiles.length > 0 && (
-                <div className="flex items-center gap-2 mr-4">
-                  <span className="text-sm text-zinc-500">
-                    {selectedFiles.length} selected
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-red-500"
-                    onClick={deleteSelectedFiles}
-                    disabled={deleting}
-                  >
-                    {deleting ? (
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4 mr-1" />
-                    )}
-                    Delete
-                  </Button>
-                </div>
-              )}
-              <div className="flex items-center rounded-lg border p-1">
-                <Button
-                  variant={viewMode === "grid" ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <Grid3x3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
+              <div className="rounded-full bg-blue-100 p-1.5 dark:bg-blue-900/30">
+                <ImageIcon className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{stats?.totalFiles || 0}</p>
+                <p className="text-[10px] text-zinc-500">Total</p>
               </div>
             </div>
+          </Card>
+          <Card className="p-3">
+            <div className="flex items-center gap-2">
+              <div className="rounded-full bg-emerald-100 p-1.5 dark:bg-emerald-900/30">
+                <FileImage className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{stats?.images || 0}</p>
+                <p className="text-[10px] text-zinc-500">Images</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-3">
+            <div className="flex items-center gap-2">
+              <div className="rounded-full bg-violet-100 p-1.5 dark:bg-violet-900/30">
+                <Video className="h-4 w-4 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{stats?.videos || 0}</p>
+                <p className="text-[10px] text-zinc-500">Videos</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-3">
+            <div className="flex items-center gap-2">
+              <div className="rounded-full bg-amber-100 p-1.5 dark:bg-amber-900/30">
+                <FileText className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{stats?.documents || 0}</p>
+                <p className="text-[10px] text-zinc-500">Docs</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-3">
+            <div className="flex items-center gap-2">
+              <div className="rounded-full bg-rose-100 p-1.5 dark:bg-rose-900/30">
+                <HardDrive className="h-4 w-4 text-rose-600" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{formatFileSize(stats?.totalSize || 0)}</p>
+                <p className="text-[10px] text-zinc-500">Size</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Toolbar */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Input
+                placeholder="Search files..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-64"
+              />
+            </div>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[140px]">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="image">Images</SelectItem>
+                <SelectItem value="video">Videos</SelectItem>
+                <SelectItem value="application/pdf">Documents</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Select all */}
-          {files.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={selectedFiles.length === files.length && files.length > 0}
-                onCheckedChange={selectAll}
-              />
-              <span className="text-sm text-zinc-500">Select all</span>
+          <div className="flex items-center gap-2">
+            {selectedFiles.length > 0 && (
+              <div className="flex items-center gap-2 mr-4">
+                <span className="text-sm text-zinc-500">
+                  {selectedFiles.length} selected
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMoveDialog(true)}
+                >
+                  <Move className="h-4 w-4 mr-1" />
+                  Move
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-500"
+                  onClick={deleteSelectedFiles}
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-1" />
+                  )}
+                  Delete
+                </Button>
+              </div>
+            )}
+            <div className="flex items-center rounded-lg border p-1">
+              <Button
+                variant={viewMode === "grid" ? "secondary" : "ghost"}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid3x3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
             </div>
-          )}
+          </div>
+        </div>
 
+        {/* Select all */}
+        {files.length > 0 && (
+          <div className="flex items-center gap-2 mb-3">
+            <Checkbox
+              checked={selectedFiles.length === files.length && files.length > 0}
+              onCheckedChange={selectAll}
+            />
+            <span className="text-sm text-zinc-500">Select all</span>
+          </div>
+        )}
+
+        {/* Files Area */}
+        <div className="flex-1 overflow-auto rounded-lg border bg-white dark:bg-zinc-900 p-4">
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-12">
@@ -491,7 +717,7 @@ export default function MediaPage() {
                 No media files found
               </h3>
               <p className="text-zinc-500 mb-4">
-                {searchQuery || typeFilter !== "all" || folderFilter !== "all"
+                {searchQuery || typeFilter !== "all" || currentFolder
                   ? "Try adjusting your filters"
                   : "Upload some files to get started"}
               </p>
@@ -504,28 +730,40 @@ export default function MediaPage() {
 
           {/* Files Grid */}
           {!loading && files.length > 0 && viewMode === "grid" && (
-            <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-6">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
               {files.map((file) => (
                 <div
                   key={file.id}
-                  className={`group relative rounded-lg border bg-white p-2 transition-all hover:shadow-md dark:bg-zinc-900 ${
+                  draggable
+                  onDragStart={(e) => handleFileDragStart(e, file)}
+                  onDragEnd={() => setDraggedFile(null)}
+                  className={`group relative rounded-lg border bg-white p-2 transition-all hover:shadow-md cursor-grab active:cursor-grabbing dark:bg-zinc-800 ${
                     selectedFiles.includes(file.id) ? "ring-2 ring-emerald-500" : ""
-                  }`}
+                  } ${draggedFile?.id === file.id ? "opacity-50" : ""}`}
                 >
-                  <div className="absolute left-3 top-3 z-10">
+                  <div className="absolute left-2 top-2 z-10">
                     <Checkbox
                       checked={selectedFiles.includes(file.id)}
                       onCheckedChange={() => toggleFileSelection(file.id)}
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </div>
 
-                  <div className="absolute right-2 top-2 z-10">
-                    <Badge variant="secondary" className="text-[10px]">
-                      {file.folder}
-                    </Badge>
+                  <div className="absolute right-2 top-2 z-10 flex gap-1">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => openEditDialog(file)}
+                    >
+                      <Edit3 className="h-3 w-3" />
+                    </Button>
                   </div>
 
-                  <div className="aspect-square rounded bg-zinc-100 mb-2 flex items-center justify-center dark:bg-zinc-800 overflow-hidden relative">
+                  <div
+                    className="aspect-square rounded bg-zinc-100 mb-2 flex items-center justify-center dark:bg-zinc-700 overflow-hidden relative cursor-pointer"
+                    onClick={() => openEditDialog(file)}
+                  >
                     {file.thumbnailUrl || (file.mimeType.startsWith("image") && file.url) ? (
                       <Image
                         src={file.thumbnailUrl || file.url}
@@ -541,18 +779,40 @@ export default function MediaPage() {
                   <p className="text-xs font-medium truncate" title={file.originalName}>
                     {file.originalName}
                   </p>
-                  <p className="text-[10px] text-zinc-500">
-                    {formatFileSize(file.size)}
-                    {file.width && file.height && ` • ${file.width}x${file.height}`}
-                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Badge variant="outline" className="text-[9px] px-1">
+                      {file.folder}
+                    </Badge>
+                    <span className="text-[10px] text-zinc-500">
+                      {formatFileSize(file.size)}
+                    </span>
+                  </div>
 
-                  {/* Hover actions */}
-                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                  {/* Uploader info */}
+                  {file.uploader && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Avatar className="h-4 w-4">
+                        <AvatarImage src={file.uploader.image || undefined} />
+                        <AvatarFallback className="text-[8px]">
+                          {file.uploader.name?.[0] || file.uploader.email[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-[10px] text-zinc-500 truncate">
+                        {file.uploader.name || file.uploader.email}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Hover actions overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg pointer-events-none group-hover:pointer-events-auto">
                     <Button
                       variant="secondary"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => window.open(file.url, "_blank")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(file.url, "_blank");
+                      }}
                     >
                       <ExternalLink className="h-4 w-4" />
                     </Button>
@@ -560,7 +820,10 @@ export default function MediaPage() {
                       variant="secondary"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => copyUrl(file.url)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyUrl(file.url);
+                      }}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -568,7 +831,10 @@ export default function MediaPage() {
                       variant="secondary"
                       size="icon"
                       className="h-8 w-8 text-red-500"
-                      onClick={() => deleteFile(file.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteFile(file.id);
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -580,7 +846,7 @@ export default function MediaPage() {
 
           {/* Files List */}
           {!loading && files.length > 0 && viewMode === "list" && (
-            <div className="rounded-lg border">
+            <div className="rounded-lg border overflow-hidden">
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-zinc-50 dark:bg-zinc-800">
@@ -591,17 +857,25 @@ export default function MediaPage() {
                       />
                     </th>
                     <th className="p-3 text-left text-sm font-medium">Name</th>
+                    <th className="p-3 text-left text-sm font-medium">Uploader</th>
                     <th className="p-3 text-left text-sm font-medium">Type</th>
                     <th className="p-3 text-left text-sm font-medium">Size</th>
-                    <th className="p-3 text-left text-sm font-medium">Dimensions</th>
                     <th className="p-3 text-left text-sm font-medium">Folder</th>
                     <th className="p-3 text-left text-sm font-medium">Date</th>
-                    <th className="p-3 text-left text-sm font-medium w-24">Actions</th>
+                    <th className="p-3 text-left text-sm font-medium w-28">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {files.map((file) => (
-                    <tr key={file.id} className="border-b hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                    <tr
+                      key={file.id}
+                      draggable
+                      onDragStart={(e) => handleFileDragStart(e, file)}
+                      onDragEnd={() => setDraggedFile(null)}
+                      className={`border-b hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-grab ${
+                        draggedFile?.id === file.id ? "opacity-50" : ""
+                      }`}
+                    >
                       <td className="p-3">
                         <Checkbox
                           checked={selectedFiles.includes(file.id)}
@@ -610,7 +884,7 @@ export default function MediaPage() {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded bg-zinc-100 flex items-center justify-center dark:bg-zinc-700 overflow-hidden relative">
+                          <div className="h-8 w-8 rounded bg-zinc-100 flex items-center justify-center dark:bg-zinc-700 overflow-hidden relative shrink-0">
                             {file.thumbnailUrl || (file.mimeType.startsWith("image") && file.url) ? (
                               <Image
                                 src={file.thumbnailUrl || file.url}
@@ -625,19 +899,41 @@ export default function MediaPage() {
                           <span className="text-sm font-medium truncate max-w-[200px]">{file.originalName}</span>
                         </div>
                       </td>
-                      <td className="p-3 text-sm text-zinc-500">{file.mimeType}</td>
-                      <td className="p-3 text-sm text-zinc-500">{formatFileSize(file.size)}</td>
-                      <td className="p-3 text-sm text-zinc-500">
-                        {file.width && file.height ? `${file.width}x${file.height}` : "-"}
-                      </td>
                       <td className="p-3">
-                        <Badge variant="secondary">{file.folder}</Badge>
+                        {file.uploader ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={file.uploader.image || undefined} />
+                              <AvatarFallback className="text-[10px]">
+                                {file.uploader.name?.[0] || file.uploader.email[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm text-zinc-600 dark:text-zinc-400 truncate max-w-[120px]">
+                              {file.uploader.name || file.uploader.email}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-zinc-400">-</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-sm text-zinc-500">{file.mimeType.split("/")[1]}</td>
+                      <td className="p-3 text-sm text-zinc-500">{formatFileSize(file.size)}</td>
+                      <td className="p-3">
+                        <Badge variant="secondary" className="text-xs">{file.folder}</Badge>
                       </td>
                       <td className="p-3 text-sm text-zinc-500">
                         {new Date(file.createdAt).toLocaleDateString()}
                       </td>
                       <td className="p-3">
                         <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openEditDialog(file)}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -662,180 +958,246 @@ export default function MediaPage() {
               </table>
             </div>
           )}
+        </div>
 
-          {/* Pagination */}
-          {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-zinc-500">
-                Showing {((pagination.page - 1) * pagination.limit) + 1} to{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
-                {pagination.total} files
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pagination.page === 1}
-                  onClick={() => fetchMedia(pagination.page - 1)}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pagination.page === pagination.totalPages}
-                  onClick={() => fetchMedia(pagination.page + 1)}
-                >
-                  Next
-                </Button>
-              </div>
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-zinc-500">
+              Showing {((pagination.page - 1) * pagination.limit) + 1} to{" "}
+              {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
+              {pagination.total} files
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pagination.page === 1}
+                onClick={() => fetchMedia(pagination.page - 1)}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pagination.page === pagination.totalPages}
+                onClick={() => fetchMedia(pagination.page + 1)}
+              >
+                Next
+              </Button>
             </div>
-          )}
-        </TabsContent>
+          </div>
+        )}
+      </div>
 
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="mt-6 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload Settings</CardTitle>
-              <CardDescription>Configure how uploaded files are processed</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Auto-Optimize on Upload</Label>
-                  <p className="text-sm text-zinc-500">Automatically optimize images when uploaded</p>
+      {/* Edit File Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit File</DialogTitle>
+            <DialogDescription>Update file details and metadata</DialogDescription>
+          </DialogHeader>
+          {editingFile && (
+            <div className="grid gap-6 py-4 md:grid-cols-2">
+              {/* Preview */}
+              <div>
+                <div className="aspect-square rounded-lg bg-zinc-100 dark:bg-zinc-800 overflow-hidden relative mb-4">
+                  {editingFile.thumbnailUrl || (editingFile.mimeType.startsWith("image") && editingFile.url) ? (
+                    <Image
+                      src={editingFile.thumbnailUrl || editingFile.url}
+                      alt={editingFile.altText || editingFile.originalName}
+                      fill
+                      className="object-contain"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      {getFileIcon(editingFile.mimeType)}
+                    </div>
+                  )}
                 </div>
-                <Switch
-                  checked={optimizationSettings.autoOptimize}
-                  onCheckedChange={(checked) =>
-                    setOptimizationSettings({ ...optimizationSettings, autoOptimize: checked })
-                  }
-                />
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Size:</span>
+                    <span>{formatFileSize(editingFile.size)}</span>
+                  </div>
+                  {editingFile.width && editingFile.height && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Dimensions:</span>
+                      <span>{editingFile.width} x {editingFile.height}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Type:</span>
+                    <span>{editingFile.mimeType}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Uploaded:</span>
+                    <span>{new Date(editingFile.createdAt).toLocaleString()}</span>
+                  </div>
+                  {editingFile.uploader && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-500">By:</span>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={editingFile.uploader.image || undefined} />
+                          <AvatarFallback className="text-[10px]">
+                            {editingFile.uploader.name?.[0] || editingFile.uploader.email[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{editingFile.uploader.name || editingFile.uploader.email}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => window.open(editingFile.url, "_blank")}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => copyUrl(editingFile.url)}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy URL
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Auto-Convert to WebP</Label>
-                  <p className="text-sm text-zinc-500">Automatically create WebP versions</p>
-                </div>
-                <Switch
-                  checked={optimizationSettings.autoWebp}
-                  onCheckedChange={(checked) =>
-                    setOptimizationSettings({ ...optimizationSettings, autoWebp: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Preserve Original Files</Label>
-                  <p className="text-sm text-zinc-500">Keep original files after optimization</p>
-                </div>
-                <Switch
-                  checked={optimizationSettings.preserveOriginal}
-                  onCheckedChange={(checked) =>
-                    setOptimizationSettings({ ...optimizationSettings, preserveOriginal: checked })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
+              {/* Form */}
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Quality ({optimizationSettings.quality}%)</Label>
+                  <Label>File Name</Label>
                   <Input
-                    type="range"
-                    min="50"
-                    max="100"
-                    value={optimizationSettings.quality}
-                    onChange={(e) =>
-                      setOptimizationSettings({ ...optimizationSettings, quality: parseInt(e.target.value) })
-                    }
-                    className="w-full"
+                    value={editForm.originalName}
+                    onChange={(e) => setEditForm({ ...editForm, originalName: e.target.value })}
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <Label>Max Width (px)</Label>
-                  <Input
-                    type="number"
-                    value={optimizationSettings.maxWidth}
-                    onChange={(e) =>
-                      setOptimizationSettings({ ...optimizationSettings, maxWidth: parseInt(e.target.value) })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Max Height (px)</Label>
-                  <Input
-                    type="number"
-                    value={optimizationSettings.maxHeight}
-                    onChange={(e) =>
-                      setOptimizationSettings({ ...optimizationSettings, maxHeight: parseInt(e.target.value) })
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Cleanup Settings</CardTitle>
-              <CardDescription>Configure automatic file cleanup</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Nightly Cleanup</Label>
-                  <p className="text-sm text-zinc-500">Automatically remove orphaned files</p>
-                </div>
-                <Switch
-                  checked={optimizationSettings.nightlyCleanup}
-                  onCheckedChange={(checked) =>
-                    setOptimizationSettings({ ...optimizationSettings, nightlyCleanup: checked })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Cleanup Time</Label>
-                  <Input
-                    type="time"
-                    value={optimizationSettings.cleanupTime}
-                    onChange={(e) =>
-                      setOptimizationSettings({ ...optimizationSettings, cleanupTime: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Retention Period</Label>
+                  <Label>Folder</Label>
                   <Select
-                    value={String(optimizationSettings.retentionDays)}
-                    onValueChange={(v) =>
-                      setOptimizationSettings({ ...optimizationSettings, retentionDays: parseInt(v) })
-                    }
+                    value={editForm.folder}
+                    onValueChange={(v) => setEditForm({ ...editForm, folder: v })}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="7">7 days</SelectItem>
-                      <SelectItem value="14">14 days</SelectItem>
-                      <SelectItem value="30">30 days</SelectItem>
-                      <SelectItem value="60">60 days</SelectItem>
-                      <SelectItem value="90">90 days</SelectItem>
+                      {allFolders.map((folder) => (
+                        <SelectItem key={folder} value={folder}>
+                          <span className="capitalize">{folder}</span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Alt Text</Label>
+                  <Textarea
+                    placeholder="Describe this image for accessibility..."
+                    value={editForm.altText}
+                    onChange={(e) => setEditForm({ ...editForm, altText: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tags (comma separated)</Label>
+                  <Input
+                    placeholder="tag1, tag2, tag3"
+                    value={editForm.tags}
+                    onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                  />
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveFileEdits} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move Files Dialog */}
+      <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move Files</DialogTitle>
+            <DialogDescription>
+              Select a folder to move {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} to
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            {allFolders.map((folder) => (
+              <button
+                key={folder}
+                onClick={() => moveFilesToFolder(folder)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                <Folder className="h-5 w-5 text-zinc-400" />
+                <span className="capitalize">{folder}</span>
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMoveDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Folder Dialog */}
+      <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+            <DialogDescription>
+              Enter a name for the new folder
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-2">
+              <Label>Folder Name</Label>
+              <Input
+                placeholder="my-folder"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+              />
+              <p className="text-xs text-zinc-500">
+                Folder will be created when you upload files to it
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={createNewFolder} disabled={!newFolderName.trim()}>
+              <FolderPlus className="mr-2 h-4 w-4" />
+              Create & Upload
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Upload Dialog */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
@@ -853,10 +1215,11 @@ export default function MediaPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="uploads">General Uploads</SelectItem>
-                  <SelectItem value="projects">Project Media</SelectItem>
-                  <SelectItem value="profiles">Profile Images</SelectItem>
-                  <SelectItem value="branding">Branding Assets</SelectItem>
+                  {allFolders.map((folder) => (
+                    <SelectItem key={folder} value={folder}>
+                      <span className="capitalize">{folder}</span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -918,7 +1281,7 @@ export default function MediaPage() {
                         onClick={() => removeUploadFile(index)}
                         className="h-6 w-6 p-0"
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <X className="h-3 w-3" />
                       </Button>
                     )}
                   </div>
