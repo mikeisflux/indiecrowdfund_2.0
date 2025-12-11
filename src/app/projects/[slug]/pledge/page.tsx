@@ -259,7 +259,7 @@ export default function PledgePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: project.id,
-          rewardId: selectedReward?.id || "no-reward",
+          rewardId: selectedReward?.id || null,
           addonIds,
           amount: total,
         }),

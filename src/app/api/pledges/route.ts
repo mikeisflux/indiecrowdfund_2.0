@@ -6,7 +6,7 @@ import { createStripePayment } from "@/lib/payments/stripe";
 
 const createPledgeSchema = z.object({
   projectId: z.string(),
-  rewardId: z.string(),
+  rewardId: z.string().nullable().optional(), // Optional for "pledge without reward"
   addonIds: z.array(z.string()).default([]),
   amount: z.number().positive(),
   shippingAddress: z.object({
@@ -54,18 +54,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check reward availability
-    const reward = await db.reward.findUnique({
-      where: { id: data.rewardId },
-    });
+    // Check reward availability (skip if pledging without reward)
+    let reward = null;
+    if (data.rewardId && data.rewardId !== "no-reward") {
+      reward = await db.reward.findUnique({
+        where: { id: data.rewardId },
+      });
 
-    if (!reward || reward.projectId !== data.projectId) {
-      return NextResponse.json({ error: "Invalid reward" }, { status: 400 });
-    }
+      if (!reward || reward.projectId !== data.projectId) {
+        return NextResponse.json({ error: "Invalid reward" }, { status: 400 });
+      }
 
-    if (reward.quantityAvailable !== null &&
-        reward.quantityClaimed >= reward.quantityAvailable) {
-      return NextResponse.json({ error: "Reward sold out" }, { status: 400 });
+      if (reward.quantityAvailable !== null &&
+          reward.quantityClaimed >= reward.quantityAvailable) {
+        return NextResponse.json({ error: "Reward sold out" }, { status: 400 });
+      }
     }
 
     // Create payment via Stripe

@@ -114,7 +114,7 @@ export { getStripeInstance };
 
 interface CreatePaymentParams {
   projectId: string;
-  rewardId: string;
+  rewardId: string | null | undefined; // Optional for "pledge without reward"
   addonIds: string[];
   amount: number;
   userId: string;
@@ -263,7 +263,7 @@ export async function createStripePayment({
     data: {
       userId,
       projectId,
-      rewardId,
+      rewardId: rewardId && rewardId !== "no-reward" ? rewardId : null,
       amount,
       rewardAmount: amount,
       paymentProcessor: "STRIPE",
