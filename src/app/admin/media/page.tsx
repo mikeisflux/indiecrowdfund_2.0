@@ -421,7 +421,7 @@ export default function MediaPage() {
   };
 
   // Get all unique folders (from API + defaults)
-  const allFolders = [...new Set([...DEFAULT_FOLDERS, ...folders.map(f => f.name)])];
+  const allFolders = Array.from(new Set([...DEFAULT_FOLDERS, ...folders.map(f => f.name)]));
 
   // Get folder count
   const getFolderCount = (folderName: string) => {
