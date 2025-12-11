@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -63,6 +64,7 @@ interface User {
   name: string | null;
   image: string | null;
   role: string;
+  retailerAccess: boolean;
   createdAt: string;
   emailVerified: string | null;
   projectCount: number;
@@ -138,7 +140,7 @@ export default function UsersPage() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [editUserData, setEditUserData] = useState({ name: "", email: "" });
-  const [newUserData, setNewUserData] = useState({ name: "", email: "", password: "", confirmPassword: "", role: "USER" });
+  const [newUserData, setNewUserData] = useState({ name: "", email: "", password: "", confirmPassword: "", role: "USER", retailerAccess: false });
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
@@ -324,6 +326,31 @@ export default function UsersPage() {
     setSelectedUser(user);
     setSelectedRole(user.role);
     setShowRoleDialog(true);
+  };
+
+  // Handle toggling retailer access
+  const handleToggleRetailerAccess = async (user: User) => {
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          action: "TOGGLE_RETAILER_ACCESS",
+          data: { retailerAccess: !user.retailerAccess }
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to update retailer access");
+      }
+    } catch (error) {
+      console.error("Error toggling retailer access:", error);
+      alert("Failed to update retailer access");
+    }
   };
 
   // Handle opening delete confirmation dialog
@@ -555,13 +582,14 @@ export default function UsersPage() {
           name: newUserData.name || null,
           password: newUserData.password,
           role: newUserData.role,
+          retailerAccess: newUserData.retailerAccess,
         }),
       });
 
       if (response.ok) {
         fetchUsers();
         setShowAddUserDialog(false);
-        setNewUserData({ name: "", email: "", password: "", confirmPassword: "", role: "USER" });
+        setNewUserData({ name: "", email: "", password: "", confirmPassword: "", role: "USER", retailerAccess: false });
         alert("User created successfully");
       } else {
         const error = await response.json();
@@ -776,7 +804,14 @@ export default function UsersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4">{getRoleBadge(user.role)}</td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        {getRoleBadge(user.role)}
+                        {user.retailerAccess && (
+                          <Badge className="bg-emerald-100 text-emerald-700"><Store className="h-3 w-3 mr-1" /> Retailer</Badge>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-4">{user.projectCount}</td>
                     <td className="p-4">{user.pledgeCount}</td>
                     <td className="p-4 text-sm text-zinc-500">
@@ -815,6 +850,10 @@ export default function UsersPage() {
                           <DropdownMenuItem onClick={() => handleChangeRole(user)}>
                             <Shield className="mr-2 h-4 w-4" />
                             Change Role
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleRetailerAccess(user)}>
+                            <Store className="mr-2 h-4 w-4" />
+                            {user.retailerAccess ? "Disable" : "Enable"} Retailer Access
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => handleSendResetEmail(user)}>
@@ -1650,15 +1689,22 @@ export default function UsersPage() {
               </p>
             </div>
 
-            <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
-              <p className="font-medium">Note about Retailer Access:</p>
-              <p className="text-xs mt-1">Retailer accounts are managed separately via the &quot;Retailer Applications&quot; tab. Users apply through the retailer portal and must be approved.</p>
+            <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+              <div>
+                <Label htmlFor="add-user-retailer" className="font-medium">Retailer Access</Label>
+                <p className="text-xs text-zinc-500 mt-1">Enable access to retailer portal and wholesale pricing</p>
+              </div>
+              <Switch
+                id="add-user-retailer"
+                checked={newUserData.retailerAccess}
+                onCheckedChange={(checked) => setNewUserData({ ...newUserData, retailerAccess: checked })}
+              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setShowAddUserDialog(false);
-              setNewUserData({ name: "", email: "", password: "", confirmPassword: "", role: "USER" });
+              setNewUserData({ name: "", email: "", password: "", confirmPassword: "", role: "USER", retailerAccess: false });
             }}>
               Cancel
             </Button>

@@ -71,6 +71,7 @@ export async function GET(req: NextRequest) {
           name: true,
           image: true,
           role: true,
+          retailerAccess: true,
           createdAt: true,
           emailVerified: true,
           _count: {
@@ -96,6 +97,7 @@ export async function GET(req: NextRequest) {
       name: user.name,
       image: user.image,
       role: user.role,
+      retailerAccess: user.retailerAccess,
       createdAt: user.createdAt,
       emailVerified: user.emailVerified,
       projectCount: user._count.createdProjects,
@@ -180,6 +182,10 @@ export async function PATCH(req: NextRequest) {
         if (data?.email !== undefined) updateData.email = data.email;
         break;
 
+      case "TOGGLE_RETAILER_ACCESS":
+        updateData.retailerAccess = data?.retailerAccess === true;
+        break;
+
       case "VERIFY_EMAIL":
         updateData.emailVerified = new Date();
         break;
@@ -259,6 +265,7 @@ export async function PATCH(req: NextRequest) {
         email: true,
         name: true,
         role: true,
+        retailerAccess: true,
         emailVerified: true
       }
     });
@@ -285,7 +292,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { email, name, password, role } = body;
+    const { email, name, password, role, retailerAccess } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -335,6 +342,7 @@ export async function POST(req: NextRequest) {
         name: name || null,
         password: hashedPassword,
         role: userRole,
+        retailerAccess: retailerAccess === true,
         emailVerified: new Date(), // Admin-created users are pre-verified
       },
       select: {
@@ -342,6 +350,7 @@ export async function POST(req: NextRequest) {
         email: true,
         name: true,
         role: true,
+        retailerAccess: true,
         createdAt: true,
         emailVerified: true,
       }

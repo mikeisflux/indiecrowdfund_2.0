@@ -25,6 +25,7 @@ model User {
   websites          String[]
   showNameOnly      Boolean   @default(false)
   role              UserRole  @default(USER)
+  retailerAccess    Boolean   @default(false)
 
   // ID Verification
   idVerified        Boolean   @default(false)
