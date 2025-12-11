@@ -55,6 +55,50 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
     });
 
     console.log("Email sent successfully, status:", response[0]?.statusCode);
+
+    // Save a copy to admin email system (sent folder)
+    try {
+      // Find or create the mailbox for the sender
+      let mailbox = await db.mailbox.findFirst({
+        where: { email: fromEmail },
+      });
+
+      if (!mailbox) {
+        // Create the mailbox if it doesn't exist
+        mailbox = await db.mailbox.create({
+          data: {
+            name: fromName,
+            email: fromEmail,
+            description: "System outgoing emails",
+            isDefault: true,
+            isActive: true,
+          },
+        });
+        console.log(`Created mailbox for ${fromEmail}`);
+      }
+
+      // Save the email to the sent folder
+      await db.adminEmail.create({
+        data: {
+          mailboxId: mailbox.id,
+          fromEmail: fromEmail,
+          fromName: fromName,
+          toEmail: to,
+          subject: subject,
+          bodyHtml: html,
+          bodyText: text || html.replace(/<[^>]*>/g, ""),
+          folder: "SENT",
+          status: "SENT",
+          isRead: true,
+          sentAt: new Date(),
+        },
+      });
+      console.log(`Saved outgoing email to admin sent folder`);
+    } catch (saveError) {
+      // Don't fail the email send if saving to admin fails
+      console.error("Failed to save email to admin sent folder:", saveError);
+    }
+
     return { success: true };
   } catch (error: unknown) {
     console.error("Error sending email via SendGrid:");
