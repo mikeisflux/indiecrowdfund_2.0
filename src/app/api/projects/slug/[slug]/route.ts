@@ -133,6 +133,7 @@ export async function GET(
         createdAt: u.publishedAt || u.createdAt,
       })),
       comments: project._count.comments,
+      followers: project._count.followers,
     };
 
     // Transform rewards - include ALL fields needed for editing

@@ -15,20 +15,21 @@ import { Plus, Trash2, Copy, Link2, BarChart3, Share2, Rocket, Loader2, CheckCir
 import { toast } from "sonner";
 
 export function PromotionStep() {
-  const { promotion, updatePromotion, basics, projectId, setProjectId, items, rewards, story, payment, people } = useProjectStore();
+  const { promotion, updatePromotion, basics, projectId, setProjectId, projectSlug, setProjectSlug, items, rewards, story, payment, people } = useProjectStore();
   const [newTag, setNewTag] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
   const [justPublished, setJustPublished] = useState(false);
-  const [savedSlug, setSavedSlug] = useState<string | null>(null);
 
   const customTags = promotion.customReferralTags || [];
 
-  // Generate project URL - use saved slug if available, otherwise generate from title
-  const projectSlug = savedSlug || (basics.title
+  // Use actual project slug from store, or generate a preview slug from title
+  const displaySlug = projectSlug || (basics.title
     ? basics.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50)
     : "your-project");
-  const projectUrl = `/projects/${projectSlug}`;
+  const projectUrl = `/projects/${displaySlug}`;
   const prelaunchUrl = `${projectUrl}/prelaunch`;
+  const hasActualSlug = !!projectSlug;
 
   // Get full URL for sharing (window.location.origin for current domain)
   const getFullUrl = (path: string) => {
@@ -142,7 +143,7 @@ export function PromotionStep() {
         setProjectId(result.project.id);
       }
       if (result.project?.slug) {
-        setSavedSlug(result.project.slug);
+        setProjectSlug(result.project.slug);
       }
 
       updatePromotion({ prelaunchActive: true });
@@ -153,6 +154,37 @@ export function PromotionStep() {
       toast.error(error instanceof Error ? error.message : "Failed to publish");
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  const deactivatePrelaunchPage = async () => {
+    if (!projectId) {
+      toast.error("No project to deactivate");
+      return;
+    }
+
+    setIsDeactivating(true);
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prelaunchActive: false }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to deactivate pre-launch page");
+      }
+
+      updatePromotion({ prelaunchActive: false });
+      setJustPublished(false);
+      toast.success("Pre-launch page deactivated");
+    } catch (error) {
+      console.error("Deactivate pre-launch error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to deactivate");
+    } finally {
+      setIsDeactivating(false);
     }
   };
 
@@ -250,41 +282,49 @@ export function PromotionStep() {
 
             <Separator />
 
+            {/* URL Preview */}
+            {hasActualSlug && (
+              <div className="rounded-md border bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground mb-2">Pre-launch page URL:</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 rounded-md border bg-white dark:bg-zinc-900 px-3 py-2">
+                    <span className="text-sm">{getFullUrl(prelaunchUrl)}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      navigator.clipboard.writeText(getFullUrl(prelaunchUrl));
+                      toast.success("URL copied!");
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => window.open(prelaunchUrl, "_blank")}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {!hasActualSlug && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Note: The final URL will be generated when you publish. It may include a unique suffix.
+              </p>
+            )}
+
             {/* Publish Button and Success State */}
             {justPublished ? (
               <Alert className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20">
                 <CheckCircle className="h-4 w-4 text-emerald-600" />
                 <AlertDescription className="ml-2">
-                  <div className="space-y-3">
-                    <p className="font-medium text-emerald-800 dark:text-emerald-200">
-                      Your pre-launch page is live!
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 rounded-md border bg-white dark:bg-zinc-900 px-3 py-2">
-                        <span className="text-sm">{getFullUrl(prelaunchUrl)}</span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          navigator.clipboard.writeText(getFullUrl(prelaunchUrl));
-                          toast.success("URL copied!");
-                        }}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => window.open(prelaunchUrl, "_blank")}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                      Share this link to start building your audience before launch!
-                    </p>
-                  </div>
+                  <p className="font-medium text-emerald-800 dark:text-emerald-200">
+                    Your pre-launch page is live! Share the URL above to start building your audience.
+                  </p>
                 </AlertDescription>
               </Alert>
             ) : (
@@ -302,14 +342,35 @@ export function PromotionStep() {
                   ) : (
                     <>
                       <Rocket className="mr-2 h-4 w-4" />
-                      Publish Pre-launch Page
+                      {hasActualSlug ? "Update Pre-launch Page" : "Publish Pre-launch Page"}
                     </>
                   )}
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
-                  Publishing will save your project and make the pre-launch page visible to the public.
+                  {hasActualSlug
+                    ? "Update the pre-launch page with your latest changes."
+                    : "Publishing will save your project and make the pre-launch page visible to the public."}
                 </p>
               </div>
+            )}
+
+            {/* Deactivate Button */}
+            {projectId && (
+              <Button
+                onClick={deactivatePrelaunchPage}
+                disabled={isDeactivating}
+                variant="destructive"
+                className="w-full"
+              >
+                {isDeactivating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deactivating...
+                  </>
+                ) : (
+                  "Deactivate Pre-launch Page"
+                )}
+              </Button>
             )}
           </CardContent>
         )}

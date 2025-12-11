@@ -68,6 +68,7 @@ interface ProjectData {
   creator: ProjectCreator;
   goalAmount: number;
   launchDate: string | Date | null;
+  followers: number;
 }
 
 export default function PrelaunchPage() {
@@ -80,7 +81,7 @@ export default function PrelaunchPage() {
   const [email, setEmail] = useState("");
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [followerCount, setFollowerCount] = useState(0);
+  const [followerCount, setFollowerCount] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -109,8 +110,7 @@ export default function PrelaunchPage() {
         }
 
         setProject(data.project);
-        // Simulate some followers for demo
-        setFollowerCount(Math.floor(Math.random() * 50) + 5);
+        setFollowerCount(data.project.followers || 0);
       } catch (err) {
         console.error("Error fetching project:", err);
         setError("Failed to load project");
@@ -270,12 +270,14 @@ export default function PrelaunchPage() {
           </div>
 
           {/* Follower Count */}
-          <div className="flex justify-center mb-8">
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-              <Users className="h-4 w-4 text-white" />
-              <span className="text-white font-medium">{followerCount} people following</span>
+          {followerCount !== null && followerCount > 0 && (
+            <div className="flex justify-center mb-8">
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
+                <Users className="h-4 w-4 text-white" />
+                <span className="text-white font-medium">{followerCount} {followerCount === 1 ? 'person' : 'people'} following</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

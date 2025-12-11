@@ -51,6 +51,10 @@ interface ProjectBuilderState {
   projectId: string | null;
   setProjectId: (id: string | null) => void;
 
+  // Project slug for URL generation
+  projectSlug: string | null;
+  setProjectSlug: (slug: string | null) => void;
+
   // Project status for live campaigns
   projectStatus: string | null;
   setProjectStatus: (status: string | null) => void;
@@ -92,6 +96,7 @@ const initialState = {
     customReferralTags: [],
   },
   projectId: null,
+  projectSlug: null,
   projectStatus: null,
 };
 
@@ -170,6 +175,8 @@ export const useProjectStore = create<ProjectBuilderState>()(
       reset: () => set(initialState),
 
       setProjectId: (id) => set({ projectId: id }),
+
+      setProjectSlug: (slug) => set({ projectSlug: slug }),
 
       setProjectStatus: (status) => set({ projectStatus: status }),
 
@@ -260,6 +267,7 @@ export const useProjectStore = create<ProjectBuilderState>()(
           payment: state.payment,
           promotion: state.promotion,
           projectId: state.projectId,
+          projectSlug: state.projectSlug,
           projectStatus: state.projectStatus,
         } as ProjectBuilderState;
       },

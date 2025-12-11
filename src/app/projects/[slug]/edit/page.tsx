@@ -15,6 +15,7 @@ export default function EditProjectPage() {
 
   const {
     setProjectId,
+    setProjectSlug,
     setProjectStatus,
     updateBasics,
     updateStory,
@@ -51,8 +52,9 @@ export default function EditProjectPage() {
         // Reset store before loading new data
         reset();
 
-        // Set project ID and status
+        // Set project ID, slug, and status
         setProjectId(project.id);
+        setProjectSlug(project.slug);
         setProjectStatus(project.status);
 
         // Load basics
@@ -194,7 +196,7 @@ export default function EditProjectPage() {
     if (slug) {
       loadProject();
     }
-  }, [slug, router, reset, setProjectId, setProjectStatus, updateBasics, updateStory, updatePeople, updatePayment, updatePromotion, addReward, addItem]);
+  }, [slug, router, reset, setProjectId, setProjectSlug, setProjectStatus, updateBasics, updateStory, updatePeople, updatePayment, updatePromotion, addReward, addItem]);
 
   if (loading) {
     return (
