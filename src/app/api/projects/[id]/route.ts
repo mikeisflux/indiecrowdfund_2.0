@@ -17,7 +17,7 @@ const rewardSchema = z.object({
   id: z.string().optional(),
   type: z.enum(["TIER", "ADDON"]),
   title: z.string(),
-  description: z.string(),
+  description: z.string().optional().nullable(),
   amount: z.number(),
   imageUrl: z.string().optional().nullable(),
   estimatedDelivery: z.string().optional().nullable(),
