@@ -4,14 +4,29 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get projects the user is following
+    // Check if this is a request to check if following a specific project
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get("projectId");
+
+    if (projectId) {
+      // Check if user is following this specific project
+      const follow = await db.projectFollower.findFirst({
+        where: {
+          projectId,
+          userId: session.user.id,
+        },
+      });
+      return NextResponse.json({ isFollowing: !!follow });
+    }
+
+    // Get all projects the user is following
     const followedProjects = await db.projectFollower.findMany({
       where: {
         userId: session.user.id,
@@ -115,7 +130,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { projectId, email, type } = body;
+    const { projectId, type } = body;
 
     if (!projectId) {
       return NextResponse.json(
@@ -141,21 +156,13 @@ export async function POST(request: Request) {
     const session = await auth();
     const userId = session?.user?.id;
 
-    // For prelaunch follows, either userId OR email is required
-    // For regular follows, userId is required
+    // Following requires authentication
     const isPrelaunch = type === "prelaunch";
 
-    if (!isPrelaunch && !userId) {
+    if (!userId) {
       return NextResponse.json(
         { error: "You must be logged in to follow projects" },
         { status: 401 }
-      );
-    }
-
-    if (isPrelaunch && !userId && !email) {
-      return NextResponse.json(
-        { error: "Email is required for prelaunch notifications" },
-        { status: 400 }
       );
     }
 
@@ -163,10 +170,7 @@ export async function POST(request: Request) {
     const existingFollow = await db.projectFollower.findFirst({
       where: {
         projectId,
-        OR: [
-          ...(userId ? [{ userId }] : []),
-          ...(email && !userId ? [{ email }] : []),
-        ],
+        userId,
       },
     });
 
@@ -177,12 +181,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get user's email for notifications
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
     // Create the follower record
     const follower = await db.projectFollower.create({
       data: {
         projectId,
-        userId: userId || null,
-        email: email || null,
+        userId,
+        email: user?.email || null,
         isPrelaunch,
       },
     });
@@ -200,10 +210,9 @@ export async function POST(request: Request) {
       data: {
         projectId,
         eventType: "PROJECT_FOLLOW",
-        userId: userId || undefined,
+        userId,
         metadata: {
           isPrelaunch,
-          hasEmail: !!email,
         },
       },
     });

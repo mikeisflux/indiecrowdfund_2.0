@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   Bell,
@@ -74,11 +74,11 @@ interface ProjectData {
 export default function PrelaunchPage() {
   const params = useParams();
   const slug = params.slug as string;
+  const { data: session, status: sessionStatus } = useSession();
 
   const [project, setProject] = useState<ProjectData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [followerCount, setFollowerCount] = useState<number | null>(null);
@@ -111,6 +111,19 @@ export default function PrelaunchPage() {
 
         setProject(data.project);
         setFollowerCount(data.project.followers || 0);
+
+        // Check if user is already following
+        if (session?.user?.id && data.project.id) {
+          try {
+            const followResponse = await fetch(`/api/user/following?projectId=${data.project.id}`);
+            if (followResponse.ok) {
+              const followData = await followResponse.json();
+              setIsSubscribed(followData.isFollowing);
+            }
+          } catch {
+            // Ignore follow check errors
+          }
+        }
       } catch (err) {
         console.error("Error fetching project:", err);
         setError("Failed to load project");
@@ -120,43 +133,38 @@ export default function PrelaunchPage() {
     };
 
     fetchProject();
-  }, [slug]);
+  }, [slug, session?.user?.id]);
 
   const handleSubscribe = async () => {
-    if (!email || !email.includes("@")) {
-      toast.error("Please enter a valid email address");
+    if (!session?.user) {
+      // Redirect to sign in page with return URL
+      const returnUrl = encodeURIComponent(window.location.pathname);
+      window.location.href = `/auth/signin?callbackUrl=${returnUrl}`;
       return;
     }
 
     setIsSubscribing(true);
 
     try {
-      // In production, this would call an API to subscribe the user
       const response = await fetch("/api/user/following", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: project?.id,
-          email,
           type: "prelaunch",
         }),
       });
 
       if (response.ok) {
         setIsSubscribed(true);
-        setFollowerCount((prev) => (prev ?? 0) + 1);
+        setFollowerCount((prev: number | null) => (prev ?? 0) + 1);
         toast.success("You'll be notified when this project launches!");
       } else {
-        // Still show success for demo purposes
-        setIsSubscribed(true);
-        setFollowerCount((prev) => (prev ?? 0) + 1);
-        toast.success("You'll be notified when this project launches!");
+        const data = await response.json();
+        toast.error(data.error || "Failed to follow project");
       }
     } catch {
-      // Still show success for demo purposes
-      setIsSubscribed(true);
-      setFollowerCount((prev) => (prev ?? 0) + 1);
-      toast.success("You'll be notified when this project launches!");
+      toast.error("Failed to follow project. Please try again.");
     } finally {
       setIsSubscribing(false);
     }
@@ -269,22 +277,41 @@ export default function PrelaunchPage() {
             )}
           </div>
 
-          {/* Follower Count */}
-          {followerCount !== null && followerCount > 0 && (
-            <div className="flex justify-center mb-8">
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-                <Users className="h-4 w-4 text-white" />
-                <span className="text-white font-medium">{followerCount} {followerCount === 1 ? 'person' : 'people'} following</span>
-              </div>
+          {/* Follower Count & Follow Button */}
+          <div className="flex justify-center gap-3 mb-8">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
+              <Users className="h-4 w-4 text-white" />
+              <span className="text-white font-medium">
+                {followerCount ?? 0} {(followerCount ?? 0) === 1 ? 'follower' : 'followers'}
+              </span>
             </div>
-          )}
+            {!isSubscribed && (
+              <Button
+                onClick={() => {
+                  // Scroll to the notify card
+                  document.getElementById("notify-card")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                variant="secondary"
+                className="rounded-full bg-white/20 hover:bg-white/30 text-white border-0"
+              >
+                <Bell className="mr-2 h-4 w-4" />
+                Follow Project
+              </Button>
+            )}
+            {isSubscribed && (
+              <div className="flex items-center gap-2 bg-emerald-500/20 backdrop-blur-sm rounded-full px-4 py-2">
+                <Check className="h-4 w-4 text-emerald-300" />
+                <span className="text-emerald-200 font-medium">Following</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="mx-auto max-w-4xl px-4 pb-16 -mt-4">
         {/* Notify Card */}
-        <Card className="mb-8 border-2 border-emerald-200 dark:border-emerald-800 shadow-lg">
+        <Card id="notify-card" className="mb-8 border-2 border-emerald-200 dark:border-emerald-800 shadow-lg">
           <CardContent className="p-6">
             <div className="text-center mb-6">
               <Bell className="h-10 w-10 text-emerald-600 mx-auto mb-3" />
@@ -298,35 +325,32 @@ export default function PrelaunchPage() {
               <div className="text-center py-4">
                 <div className="flex items-center justify-center gap-2 text-emerald-600 mb-2">
                   <Check className="h-5 w-5" />
-                  <span className="font-medium">You&apos;re on the list!</span>
+                  <span className="font-medium">You&apos;re following this project!</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  We&apos;ll send you an email when this project launches.
+                  We&apos;ll notify you when this project launches.
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1"
-                />
+              <div className="text-center">
                 <Button
                   onClick={handleSubscribe}
-                  disabled={isSubscribing}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  disabled={isSubscribing || sessionStatus === "loading"}
+                  size="lg"
+                  className="bg-emerald-600 hover:bg-emerald-700 px-8"
                 >
                   {isSubscribing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <>
-                      <Bell className="mr-2 h-4 w-4" />
-                      Notify Me
-                    </>
+                    <Bell className="mr-2 h-4 w-4" />
                   )}
+                  {session?.user ? "Follow Project" : "Sign In to Follow"}
                 </Button>
+                {!session?.user && (
+                  <p className="text-sm text-muted-foreground mt-3">
+                    Sign in with your account to follow this project and get notified at launch.
+                  </p>
+                )}
               </div>
             )}
 
