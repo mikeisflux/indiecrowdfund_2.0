@@ -235,6 +235,51 @@ export default function PledgePage() {
     initStripe();
   }, []);
 
+  // Auto-create pledge when entering payment step to load Stripe form
+  useEffect(() => {
+    if (step === "payment" && !clientSecret && !isProcessing && project && (selectedReward || pledgeWithoutReward)) {
+      createPledgeForPayment();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, project, selectedReward, pledgeWithoutReward]);
+
+  // Create pledge and get Stripe client secret (called automatically when entering payment step)
+  const createPledgeForPayment = async () => {
+    if (!project || (!selectedReward && !pledgeWithoutReward)) return;
+    if (clientSecret) return; // Already have a client secret
+
+    setIsProcessing(true);
+    setPaymentError(null);
+
+    try {
+      const addonIds = Object.keys(selectedAddons);
+
+      const response = await fetch("/api/pledges", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: project.id,
+          rewardId: selectedReward?.id || "no-reward",
+          addonIds,
+          amount: total,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create pledge");
+      }
+
+      // Set the client secret to show Stripe Elements
+      setClientSecret(data.clientSecret);
+      setIsProcessing(false);
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Failed to create pledge");
+      setIsProcessing(false);
+    }
+  };
+
   // Fetch project and reward data from API
   const fetchData = useCallback(async () => {
     if (!slug) return;
@@ -430,41 +475,6 @@ export default function PledgePage() {
     setPledgeWithoutReward(true);
     setSelectedReward(null);
     setStep("addons");
-  };
-
-  // Create pledge and get Stripe client secret
-  const createPledge = async () => {
-    if (!project || (!selectedReward && !pledgeWithoutReward)) return;
-
-    setIsProcessing(true);
-    setPaymentError(null);
-
-    try {
-      const addonIds = Object.keys(selectedAddons);
-
-      const response = await fetch("/api/pledges", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: project.id,
-          rewardId: selectedReward?.id || "no-reward",
-          addonIds,
-          amount: total,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create pledge");
-      }
-
-      // Set the client secret to show Stripe Elements
-      setClientSecret(data.clientSecret);
-    } catch (err) {
-      setPaymentError(err instanceof Error ? err.message : "Failed to create pledge");
-      setIsProcessing(false);
-    }
   };
 
   // Called when payment is successful
@@ -956,24 +966,6 @@ export default function PledgePage() {
                         <span className="font-medium">Pledge in full</span>
                       </label>
                     </div>
-
-                    {/* Pledge over time option */}
-                    <div className="border-t px-5 py-4 bg-muted/30">
-                      <label className="flex items-start gap-3 cursor-not-allowed opacity-60">
-                        <div className="mt-0.5">
-                          <div className="w-5 h-5 rounded-full border-2 border-muted-foreground" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-muted-foreground">Pledge Over Time</span>
-                            <span className="text-xs text-muted-foreground">Available for pledges over $125</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            You will be charged for your pledge over three payments, at no extra cost.
-                          </p>
-                        </div>
-                      </label>
-                    </div>
                   </CardContent>
                 </Card>
 
@@ -1013,27 +1005,12 @@ export default function PledgePage() {
                         />
                       </Elements>
                     ) : (
-                      /* Show button to initiate payment */
+                      /* Loading state while creating pledge and loading Stripe */
                       <div className="space-y-4">
-                        <div className="p-4 border rounded-lg bg-muted/30">
-                          <div className="flex items-center gap-3">
-                            <div className="flex gap-1">
-                              <div className="w-10 h-6 bg-[#1A1F71] rounded flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">VISA</span>
-                              </div>
-                              <div className="w-10 h-6 bg-gradient-to-r from-red-500 to-yellow-500 rounded flex items-center justify-center">
-                                <div className="w-4 h-4 bg-red-600 rounded-full opacity-80" />
-                              </div>
-                              <div className="w-10 h-6 bg-[#006FCF] rounded flex items-center justify-center">
-                                <span className="text-white text-[8px] font-bold">AMEX</span>
-                              </div>
-                            </div>
-                            <span className="text-sm text-muted-foreground">Credit or Debit Card</span>
-                          </div>
+                        <div className="flex flex-col items-center justify-center py-8">
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                          <p className="text-sm text-muted-foreground">Loading payment form...</p>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Click &quot;Continue to Payment&quot; in the sidebar to enter your card details securely via Stripe.
-                        </p>
                       </div>
                     )}
                   </CardContent>
@@ -1200,23 +1177,12 @@ export default function PledgePage() {
                         </Label>
                       </div>
 
-                      {/* Continue to Payment / Pledge button */}
+                      {/* Status message */}
                       {!clientSecret ? (
-                        <Button
-                          className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium disabled:bg-zinc-300 disabled:text-zinc-500"
-                          size="lg"
-                          onClick={createPledge}
-                          disabled={!agreedToTerms || isProcessing}
-                        >
-                          {isProcessing ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Setting up payment...
-                            </>
-                          ) : (
-                            "Continue to Payment"
-                          )}
-                        </Button>
+                        <div className="flex items-center justify-center gap-2 py-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Setting up payment...</span>
+                        </div>
                       ) : (
                         <p className="text-xs text-center text-muted-foreground">
                           Enter your card details above to complete your pledge.
