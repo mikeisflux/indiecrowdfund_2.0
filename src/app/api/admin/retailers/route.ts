@@ -151,6 +151,9 @@ export async function PATCH(req: NextRequest) {
       verificationNotes: notes || null,
     };
 
+    // Track if we need to update user's retailerAccess
+    let updateUserRetailerAccess: boolean | null = null;
+
     switch (action) {
       case "APPROVE":
         updateData.status = "APPROVED";
@@ -160,10 +163,14 @@ export async function PATCH(req: NextRequest) {
         if (!retailer.accessCode) {
           updateData.accessCode = generateAccessCode();
         }
+        // Enable retailer access for linked user
+        updateUserRetailerAccess = true;
         break;
 
       case "REJECT":
         updateData.status = "REJECTED";
+        // Disable retailer access for linked user
+        updateUserRetailerAccess = false;
         break;
 
       case "REQUEST_INFO":
@@ -172,10 +179,14 @@ export async function PATCH(req: NextRequest) {
 
       case "SUSPEND":
         updateData.status = "SUSPENDED";
+        // Disable retailer access for linked user
+        updateUserRetailerAccess = false;
         break;
 
       case "REACTIVATE":
         updateData.status = "APPROVED";
+        // Re-enable retailer access for linked user
+        updateUserRetailerAccess = true;
         break;
 
       default:
@@ -189,6 +200,14 @@ export async function PATCH(req: NextRequest) {
       where: { id: retailerId },
       data: updateData,
     });
+
+    // Update linked user's retailerAccess if applicable
+    if (updateUserRetailerAccess !== null && retailer.userId) {
+      await db.user.update({
+        where: { id: retailer.userId },
+        data: { retailerAccess: updateUserRetailerAccess },
+      });
+    }
 
     // In production: Send notification email based on action
     // if (action === "APPROVE") {
