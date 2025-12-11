@@ -332,15 +332,6 @@ async function reconcileProject(
 
   // Compare with database
   const dbPledges = project.pledges;
-  const dbCompletedAmount = dbPledges
-    .filter((p) => p.status === "COMPLETED" || (p.status === "PENDING" && p.stripePaymentMethodId))
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const dbBackerCount = new Set(
-    dbPledges
-      .filter((p) => p.status === "COMPLETED" || (p.status === "PENDING" && p.stripePaymentMethodId))
-      .map((p) => p.userId)
-  ).size;
 
   // Check for pledges in Stripe but not properly recorded in DB
   Array.from(stripePledgeStatus.entries()).forEach(([pledgeId, stripeData]) => {
