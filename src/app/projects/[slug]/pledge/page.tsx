@@ -185,95 +185,92 @@ export default function PledgePage() {
       // Use rewards and addons from the API response (already fetched with project)
       const rewards = responseData.rewards || [];
       const addonsFromApi = responseData.addons || [];
-      if (rewards.length > 0 || addonsFromApi.length > 0) {
-        const allRewards = [...rewards, ...addonsFromApi];
 
-        // Get tier rewards (not addons) for the selection step
-        // Include rewards where type is TIER or not set (legacy rewards)
-        const tierRewards = rewards.filter((r: { type?: string }) => r.type === "TIER" || !r.type);
-        const formattedTiers: RewardData[] = tierRewards.map((reward: {
-          id: string;
-          title: string;
-          description?: string;
-          amount: number;
-          shippingCost?: Record<string, number>;
-          shippingType?: string;
-          shippingCountries?: string[];
-          imageUrl?: string;
-          estimatedDelivery?: string;
-          quantityAvailable?: number;
-          quantityClaimed?: number;
-          items?: { title: string }[];
-        }) => ({
-          id: reward.id,
-          title: reward.title,
-          amount: reward.amount,
-          shippingCost: reward.shippingCost || {},
-          shippingType: reward.shippingType || "NO_SHIPPING",
-          shippingCountries: reward.shippingCountries || [],
-          estimatedDelivery: reward.estimatedDelivery
-            ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
-            : "",
-          items: (reward.items || []).map((item: { title: string }) => ({
-            title: item.title,
-            quantity: 1,
-          })),
-        }));
-        setAllRewards(formattedTiers);
+      // Get tier rewards (not addons) for the selection step
+      // Include rewards where type is TIER or not set (legacy rewards)
+      const tierRewards = rewards.filter((r: { type?: string }) => r.type === "TIER" || !r.type);
+      const formattedTiers: RewardData[] = tierRewards.map((reward: {
+        id: string;
+        title: string;
+        description?: string;
+        amount: number;
+        shippingCost?: Record<string, number>;
+        shippingType?: string;
+        shippingCountries?: string[];
+        imageUrl?: string;
+        estimatedDelivery?: string;
+        quantityAvailable?: number;
+        quantityClaimed?: number;
+        items?: { title: string }[];
+      }) => ({
+        id: reward.id,
+        title: reward.title,
+        amount: reward.amount,
+        shippingCost: reward.shippingCost || {},
+        shippingType: reward.shippingType || "NO_SHIPPING",
+        shippingCountries: reward.shippingCountries || [],
+        estimatedDelivery: reward.estimatedDelivery
+          ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+          : "",
+        items: (reward.items || []).map((item: { title: string }) => ({
+          title: item.title,
+          quantity: 1,
+        })),
+      }));
+      setAllRewards(formattedTiers);
 
-        // Find the selected reward if rewardId is provided
-        if (rewardId) {
-          const reward = rewards.find((r: { id: string }) => r.id === rewardId);
-          if (reward) {
-            const formattedReward: RewardData = {
-              id: reward.id,
-              title: reward.title,
-              amount: reward.amount,
-              shippingCost: reward.shippingCost || {},
-              shippingType: reward.shippingType || "NO_SHIPPING",
-              shippingCountries: reward.shippingCountries || [],
-              estimatedDelivery: reward.estimatedDelivery
-                ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
-                : "",
-              items: (reward.items || []).map((item: { title: string }) => ({
-                title: item.title,
-                quantity: 1,
-              })),
-            };
-            setSelectedReward(formattedReward);
-          }
+      // Find the selected reward if rewardId is provided
+      if (rewardId) {
+        const reward = rewards.find((r: { id: string }) => r.id === rewardId);
+        if (reward) {
+          const formattedReward: RewardData = {
+            id: reward.id,
+            title: reward.title,
+            amount: reward.amount,
+            shippingCost: reward.shippingCost || {},
+            shippingType: reward.shippingType || "NO_SHIPPING",
+            shippingCountries: reward.shippingCountries || [],
+            estimatedDelivery: reward.estimatedDelivery
+              ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+              : "",
+            items: (reward.items || []).map((item: { title: string }) => ({
+              title: item.title,
+              quantity: 1,
+            })),
+          };
+          setSelectedReward(formattedReward);
         }
-
-        // Get addons (use addonsFromApi which is already separated by the API)
-        const formattedAddons: AddonData[] = addonsFromApi.map((addon: {
-          id: string;
-          title: string;
-          description?: string;
-          amount: number;
-          shippingCost?: Record<string, number>;
-          shippingType?: string;
-          shippingCountries?: string[];
-          imageUrl?: string;
-          estimatedDelivery?: string;
-          quantityAvailable?: number;
-          items?: { title: string }[];
-        }) => ({
-          id: addon.id,
-          title: addon.title,
-          description: addon.description || "",
-          amount: addon.amount,
-          shippingCost: addon.shippingCost || {},
-          shippingType: (addon.shippingType as AddonData["shippingType"]) || "NO_SHIPPING",
-          shippingCountries: addon.shippingCountries || [],
-          imageUrl: addon.imageUrl || null,
-          estimatedDelivery: addon.estimatedDelivery
-            ? new Date(addon.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
-            : "",
-          limitedQuantity: addon.quantityAvailable || null,
-          includes: (addon.items || []).map((item: { title: string }) => item.title),
-        }));
-        setAddons(formattedAddons);
       }
+
+      // Get addons (use addonsFromApi which is already separated by the API)
+      const formattedAddons: AddonData[] = addonsFromApi.map((addon: {
+        id: string;
+        title: string;
+        description?: string;
+        amount: number;
+        shippingCost?: Record<string, number>;
+        shippingType?: string;
+        shippingCountries?: string[];
+        imageUrl?: string;
+        estimatedDelivery?: string;
+        quantityAvailable?: number;
+        items?: { title: string }[];
+      }) => ({
+        id: addon.id,
+        title: addon.title,
+        description: addon.description || "",
+        amount: addon.amount,
+        shippingCost: addon.shippingCost || {},
+        shippingType: (addon.shippingType as AddonData["shippingType"]) || "NO_SHIPPING",
+        shippingCountries: addon.shippingCountries || [],
+        imageUrl: addon.imageUrl || null,
+        estimatedDelivery: addon.estimatedDelivery
+          ? new Date(addon.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+          : "",
+        limitedQuantity: addon.quantityAvailable || null,
+        includes: (addon.items || []).map((item: { title: string }) => item.title),
+      }));
+      setAddons(formattedAddons);
     } catch (err) {
       console.error("Failed to fetch pledge data:", err);
       setError(err instanceof Error ? err.message : "Failed to load project data");
