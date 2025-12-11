@@ -26,6 +26,7 @@ model User {
   showNameOnly      Boolean   @default(false)
   role              UserRole  @default(USER)
   retailerAccess    Boolean   @default(false)
+  stripeCustomerId  String?   @unique  // Stripe Customer ID for payment methods
 
   // ID Verification
   idVerified        Boolean   @default(false)
@@ -371,6 +372,15 @@ model Pledge {
 
   // Stripe fields
   stripePaymentIntentId String?      @unique
+  stripeSetupIntentId   String?      @unique
+  stripePaymentMethodId String?
+  stripeCustomerId      String?
+
+  // Payment retry tracking
+  retryCount            Int          @default(0)
+  nextRetryAt           DateTime?
+  lastFailureReason     String?
+  chargedImmediately    Boolean      @default(false)  // True if campaign was already funded when pledge was made
 
   // Survey
   surveyCompleted       Boolean      @default(false)
@@ -392,6 +402,7 @@ model Pledge {
   @@index([projectId, status])
   @@index([userId])
   @@index([rewardId])
+  @@index([status, nextRetryAt])  // For retry job queries
 }
 
 model PledgeAddon {

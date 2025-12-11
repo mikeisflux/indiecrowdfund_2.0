@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { clientSecret, pledgeId } = await createStripePayment({
+    const result = await createStripePayment({
       projectId: data.projectId,
       rewardId: data.rewardId,
       addonIds: data.addonIds,
@@ -87,8 +87,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       paymentMethod: "STRIPE",
-      clientSecret,
-      pledgeId,
+      type: result.type, // "payment_intent" or "setup_intent"
+      clientSecret: result.clientSecret,
+      pledgeId: result.pledgeId,
+      chargedImmediately: result.chargedImmediately,
     });
   } catch (error) {
     console.error("Create pledge error:", error);

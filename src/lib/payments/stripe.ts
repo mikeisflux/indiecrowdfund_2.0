@@ -9,6 +9,10 @@ import {
 let stripeInstance: Stripe | null = null;
 let cachedSecretKey: string | null = null;
 
+// Retry configuration: 3 attempts, every 3 days
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_INTERVAL_DAYS = 3;
+
 // Get Stripe secret key from database settings or fall back to env var
 async function getStripeSecretKey(): Promise<string> {
   // Try to get from database settings first
@@ -168,6 +172,47 @@ export async function createStripeConnectAccount({
   };
 }
 
+/**
+ * Create or get a Stripe Customer for the user
+ */
+async function getOrCreateStripeCustomer(
+  stripeClient: Stripe,
+  userId: string,
+  email: string
+): Promise<string> {
+  // Check if user already has a Stripe customer ID
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { stripeCustomerId: true, email: true, name: true },
+  });
+
+  if (user?.stripeCustomerId) {
+    return user.stripeCustomerId;
+  }
+
+  // Create new Stripe customer
+  const customer = await stripeClient.customers.create({
+    email: email || user?.email || undefined,
+    name: user?.name || undefined,
+    metadata: {
+      userId,
+    },
+  });
+
+  // Save customer ID to user record
+  await db.user.update({
+    where: { id: userId },
+    data: { stripeCustomerId: customer.id },
+  });
+
+  return customer.id;
+}
+
+/**
+ * Main payment creation function
+ * - If campaign is NOT funded: Creates SetupIntent to save card (charge later when funded)
+ * - If campaign IS funded: Creates PaymentIntent with immediate capture
+ */
 export async function createStripePayment({
   projectId,
   rewardId,
@@ -175,7 +220,6 @@ export async function createStripePayment({
   amount,
   userId,
 }: CreatePaymentParams) {
-  // Get Stripe instance with database settings
   const stripeClient = await getStripeInstance();
 
   // Get project and creator's Stripe account
@@ -198,6 +242,22 @@ export async function createStripePayment({
     throw new Error("Creator has not connected Stripe");
   }
 
+  // Get user email for Stripe customer
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+
+  // Check if campaign is already funded
+  const isCampaignFunded = project.currentAmount >= project.goalAmount;
+
+  // Get or create Stripe customer
+  const customerId = await getOrCreateStripeCustomer(
+    stripeClient,
+    userId,
+    user?.email || ""
+  );
+
   // Create pending pledge
   const pledge = await db.pledge.create({
     data: {
@@ -205,15 +265,16 @@ export async function createStripePayment({
       projectId,
       rewardId,
       amount,
-      rewardAmount: amount, // Simplified - would calculate separately in production
+      rewardAmount: amount,
       paymentProcessor: "STRIPE",
       status: "PENDING",
+      stripeCustomerId: customerId,
+      chargedImmediately: isCampaignFunded,
     },
   });
 
   // Create addon records if any
   if (addonIds.length > 0) {
-    // Fetch addon details to get their amounts
     const addons = await db.reward.findMany({
       where: {
         id: { in: addonIds },
@@ -222,7 +283,6 @@ export async function createStripePayment({
       select: { id: true, amount: true },
     });
 
-    // Create PledgeAddon records
     await db.pledgeAddon.createMany({
       data: addons.map((addon) => ({
         pledgeId: pledge.id,
@@ -233,29 +293,288 @@ export async function createStripePayment({
     });
   }
 
-  // Calculate platform fee (3%)
-  const platformFee = Math.round(amount * 0.03 * 100); // In cents
   const amountInCents = Math.round(amount * 100);
+  const platformFee = Math.round(amount * 0.03 * 100); // 3% platform fee
 
-  // Create Payment Intent
-  const paymentIntent = await stripeClient.paymentIntents.create({
-    amount: amountInCents,
-    currency: "usd",
-    application_fee_amount: platformFee,
-    transfer_data: {
-      destination: project.creator.stripeConfig.stripeAccountId,
-    },
-    metadata: {
+  if (isCampaignFunded) {
+    // Campaign already funded - charge immediately
+    const paymentIntent = await stripeClient.paymentIntents.create({
+      amount: amountInCents,
+      currency: "usd",
+      customer: customerId,
+      application_fee_amount: platformFee,
+      transfer_data: {
+        destination: project.creator.stripeConfig.stripeAccountId,
+      },
+      metadata: {
+        pledgeId: pledge.id,
+        projectId,
+        userId,
+        chargeType: "immediate",
+      },
+      // Save the payment method for potential retries
+      setup_future_usage: "off_session",
+    });
+
+    // Update pledge with payment intent ID
+    await db.pledge.update({
+      where: { id: pledge.id },
+      data: { stripePaymentIntentId: paymentIntent.id },
+    });
+
+    return {
+      type: "payment_intent" as const,
+      clientSecret: paymentIntent.client_secret,
       pledgeId: pledge.id,
-      projectId,
-      userId,
+      chargedImmediately: true,
+    };
+  } else {
+    // Campaign not yet funded - save card for later using SetupIntent
+    const setupIntent = await stripeClient.setupIntents.create({
+      customer: customerId,
+      payment_method_types: ["card"],
+      metadata: {
+        pledgeId: pledge.id,
+        projectId,
+        userId,
+        amount: amountInCents.toString(),
+        platformFee: platformFee.toString(),
+        connectedAccountId: project.creator.stripeConfig.stripeAccountId,
+      },
+    });
+
+    // Update pledge with setup intent ID
+    await db.pledge.update({
+      where: { id: pledge.id },
+      data: { stripeSetupIntentId: setupIntent.id },
+    });
+
+    return {
+      type: "setup_intent" as const,
+      clientSecret: setupIntent.client_secret,
+      pledgeId: pledge.id,
+      chargedImmediately: false,
+    };
+  }
+}
+
+/**
+ * Charge a pledge that was saved via SetupIntent
+ * Called when campaign reaches its funding goal
+ */
+export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
+  const stripeClient = await getStripeInstance();
+
+  const pledge = await db.pledge.findUnique({
+    where: { id: pledgeId },
+    include: {
+      project: {
+        include: {
+          creator: {
+            include: {
+              stripeConfig: true,
+            },
+          },
+        },
+      },
     },
   });
 
-  return {
-    clientSecret: paymentIntent.client_secret,
-    pledgeId: pledge.id,
+  if (!pledge) {
+    throw new Error("Pledge not found");
+  }
+
+  if (pledge.status !== "PENDING") {
+    return false; // Already processed
+  }
+
+  if (!pledge.stripePaymentMethodId || !pledge.stripeCustomerId) {
+    // No saved payment method - mark as failed
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: {
+        status: "FAILED",
+        lastFailureReason: "No saved payment method",
+      },
+    });
+    return false;
+  }
+
+  const connectedAccountId = pledge.project.creator.stripeConfig?.stripeAccountId;
+  if (!connectedAccountId) {
+    throw new Error("Creator has not connected Stripe");
+  }
+
+  const amountInCents = Math.round(pledge.amount * 100);
+  const platformFee = Math.round(pledge.amount * 0.03 * 100);
+
+  try {
+    // Create PaymentIntent with saved payment method (off-session)
+    const paymentIntent = await stripeClient.paymentIntents.create({
+      amount: amountInCents,
+      currency: "usd",
+      customer: pledge.stripeCustomerId,
+      payment_method: pledge.stripePaymentMethodId,
+      off_session: true,
+      confirm: true,
+      application_fee_amount: platformFee,
+      transfer_data: {
+        destination: connectedAccountId,
+      },
+      metadata: {
+        pledgeId: pledge.id,
+        projectId: pledge.projectId,
+        userId: pledge.userId,
+        chargeType: "campaign_funded",
+      },
+    });
+
+    // Update pledge with payment intent ID
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: {
+        stripePaymentIntentId: paymentIntent.id,
+        // Status will be updated by webhook
+      },
+    });
+
+    return true;
+  } catch (error) {
+    // Payment failed - schedule retry
+    const stripeError = error as Stripe.errors.StripeError;
+    await schedulePaymentRetry(pledgeId, stripeError.message || "Payment failed");
+    return false;
+  }
+}
+
+/**
+ * Schedule a payment retry
+ */
+async function schedulePaymentRetry(pledgeId: string, failureReason: string) {
+  const pledge = await db.pledge.findUnique({
+    where: { id: pledgeId },
+  });
+
+  if (!pledge) return;
+
+  const newRetryCount = pledge.retryCount + 1;
+
+  if (newRetryCount > MAX_RETRY_ATTEMPTS) {
+    // Max retries reached - mark as permanently failed
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: {
+        status: "FAILED",
+        retryCount: newRetryCount,
+        lastFailureReason: failureReason,
+        nextRetryAt: null,
+      },
+    });
+
+    // Notify backer of final failure
+    const pledgeWithProject = await db.pledge.findUnique({
+      where: { id: pledgeId },
+      include: {
+        project: { select: { title: true, slug: true } },
+      },
+    });
+
+    if (pledgeWithProject) {
+      await notifyPledgeFailed(
+        pledgeWithProject.projectId,
+        pledgeWithProject.userId,
+        pledgeWithProject.project.title,
+        pledgeWithProject.project.slug
+      );
+    }
+  } else {
+    // Schedule next retry (3 days from now)
+    const nextRetryAt = new Date();
+    nextRetryAt.setDate(nextRetryAt.getDate() + RETRY_INTERVAL_DAYS);
+
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: {
+        retryCount: newRetryCount,
+        lastFailureReason: failureReason,
+        nextRetryAt,
+      },
+    });
+  }
+}
+
+/**
+ * Process all pending pledges when a campaign reaches its goal
+ */
+export async function processPendingPledgesForProject(projectId: string) {
+  const pendingPledges = await db.pledge.findMany({
+    where: {
+      projectId,
+      status: "PENDING",
+      chargedImmediately: false,
+      stripePaymentMethodId: { not: null },
+    },
+  });
+
+  const results = {
+    total: pendingPledges.length,
+    successful: 0,
+    failed: 0,
   };
+
+  for (const pledge of pendingPledges) {
+    try {
+      const success = await chargeSavedPledge(pledge.id);
+      if (success) {
+        results.successful++;
+      } else {
+        results.failed++;
+      }
+    } catch {
+      results.failed++;
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Process payment retries - called by cron job
+ */
+export async function processPaymentRetries() {
+  const now = new Date();
+
+  // Find pledges due for retry
+  const pledgesToRetry = await db.pledge.findMany({
+    where: {
+      status: "PENDING",
+      retryCount: { gt: 0, lte: MAX_RETRY_ATTEMPTS },
+      nextRetryAt: { lte: now },
+      stripePaymentMethodId: { not: null },
+    },
+    take: 100, // Process in batches
+  });
+
+  const results = {
+    total: pledgesToRetry.length,
+    successful: 0,
+    failed: 0,
+  };
+
+  for (const pledge of pledgesToRetry) {
+    try {
+      const success = await chargeSavedPledge(pledge.id);
+      if (success) {
+        results.successful++;
+      } else {
+        results.failed++;
+      }
+    } catch {
+      results.failed++;
+    }
+  }
+
+  return results;
 }
 
 export async function handleStripeWebhook(
@@ -270,6 +589,10 @@ export async function handleStripeWebhook(
       await handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
       break;
 
+    case "setup_intent.succeeded":
+      await handleSetupIntentSuccess(event.data.object as Stripe.SetupIntent);
+      break;
+
     case "account.updated":
       await handleAccountUpdate(event.data.object as Stripe.Account);
       break;
@@ -281,11 +604,20 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 
   if (!pledgeId) return;
 
+  // Save the payment method for potential future use
+  const paymentMethodId = typeof paymentIntent.payment_method === "string"
+    ? paymentIntent.payment_method
+    : paymentIntent.payment_method?.id;
+
   const pledge = await db.pledge.update({
     where: { id: pledgeId },
     data: {
       status: "COMPLETED",
       stripePaymentIntentId: paymentIntent.id,
+      stripePaymentMethodId: paymentMethodId,
+      retryCount: 0,
+      nextRetryAt: null,
+      lastFailureReason: null,
     },
     include: {
       project: {
@@ -329,6 +661,9 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   ) {
     // Project just reached its goal!
     await notifyProjectFunded(pledge.projectId);
+
+    // Process all pending pledges for this project
+    await processPendingPledgesForProject(pledge.projectId);
   }
 }
 
@@ -337,28 +672,31 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
 
   if (!pledgeId) return;
 
-  const pledge = await db.pledge.update({
+  const failureMessage = paymentIntent.last_payment_error?.message || "Payment failed";
+
+  // Schedule retry instead of immediately failing
+  await schedulePaymentRetry(pledgeId, failureMessage);
+}
+
+async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
+  const pledgeId = setupIntent.metadata.pledgeId;
+
+  if (!pledgeId) return;
+
+  // Get the payment method ID
+  const paymentMethodId = typeof setupIntent.payment_method === "string"
+    ? setupIntent.payment_method
+    : setupIntent.payment_method?.id;
+
+  if (!paymentMethodId) return;
+
+  // Save the payment method to the pledge
+  await db.pledge.update({
     where: { id: pledgeId },
     data: {
-      status: "FAILED",
-    },
-    include: {
-      project: {
-        select: {
-          title: true,
-          slug: true,
-        },
-      },
+      stripePaymentMethodId: paymentMethodId,
     },
   });
-
-  // Notify backer of failed pledge
-  await notifyPledgeFailed(
-    pledge.projectId,
-    pledge.userId,
-    pledge.project.title,
-    pledge.project.slug
-  );
 }
 
 async function handleAccountUpdate(account: Stripe.Account) {
