@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, notFound } from "next/navigation";
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import {
   Users,
   Sparkles,
   Copy,
-  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
