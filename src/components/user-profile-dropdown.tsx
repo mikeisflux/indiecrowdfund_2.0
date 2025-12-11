@@ -133,8 +133,10 @@ export function UserProfileDropdown() {
 
           {/* Column 2: Backed Projects */}
           <div className="p-5">
-            <Link href="/dashboard/backer" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 hover:text-primary transition-colors">
-              Backed Projects
+            <Link href="/dashboard/backer">
+              <Button variant="outline" size="sm" className="w-full mb-4 text-xs font-semibold uppercase tracking-wider">
+                Backer Dashboard
+              </Button>
             </Link>
             {loading ? (
               <div className="space-y-3">
@@ -177,8 +179,10 @@ export function UserProfileDropdown() {
 
           {/* Column 3: Created Projects */}
           <div className="p-5">
-            <Link href="/dashboard" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 hover:text-primary transition-colors">
-              Created Projects
+            <Link href="/dashboard">
+              <Button variant="outline" size="sm" className="w-full mb-4 text-xs font-semibold uppercase tracking-wider">
+                Creator Dashboard
+              </Button>
             </Link>
             {loading ? (
               <div className="space-y-3">
@@ -194,11 +198,9 @@ export function UserProfileDropdown() {
                 {profileData?.createdProjects && profileData.createdProjects.length > 0 ? (
                   <div className="space-y-2">
                     {profileData.createdProjects.slice(0, 4).map((project) => {
-                      // Draft/submitted projects go to edit page, live+ go to public page
+                      // Always link to edit page for created projects
+                      const href = `/projects/${project.slug}/edit`;
                       const isDraft = project.status === "DRAFT" || project.status === "SUBMITTED";
-                      const href = isDraft
-                        ? `/projects/${project.slug}/edit`
-                        : `/projects/${project.slug}`;
                       return (
                         <Link
                           key={project.id}
@@ -235,10 +237,9 @@ export function UserProfileDropdown() {
                   <div className="mt-3 pt-3 border-t space-y-2">
                     <span className="text-xs text-muted-foreground">Collaborating</span>
                     {profileData.collaboratingProjects.slice(0, 3).map((project) => {
+                      // Always link to edit page for collaborating projects
+                      const href = `/projects/${project.slug}/edit`;
                       const isDraft = project.status === "DRAFT" || project.status === "SUBMITTED";
-                      const href = isDraft
-                        ? `/projects/${project.slug}/edit`
-                        : `/projects/${project.slug}`;
                       return (
                         <Link
                           key={project.id}
