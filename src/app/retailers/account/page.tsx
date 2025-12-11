@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Mail, Phone, MapPin, Globe, Save, Loader2, Store, Bell, Settings, LogOut } from "lucide-react";
@@ -27,7 +26,6 @@ interface RetailerAccount {
   country: string;
   website: string;
   taxId: string;
-  description: string;
   status: string;
   createdAt: string;
 }
@@ -264,16 +262,6 @@ export default function RetailerAccountPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Business Description</Label>
-                    <Textarea
-                      id="description"
-                      value={account.description}
-                      onChange={(e) => setAccount({ ...account, description: e.target.value })}
-                      rows={3}
-                      placeholder="Tell us about your business..."
-                    />
-                  </div>
                 </CardContent>
               </Card>
 
