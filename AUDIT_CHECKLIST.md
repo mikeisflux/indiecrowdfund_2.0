@@ -496,6 +496,142 @@ Before deploying, verify these critical flows:
 
 ---
 
+## DETAILED AUDIT: Excessive Logging, Disconnected Code & Unused Files
+
+### Excessive Console Logging (451 Total Statements)
+
+**Files with Most Console Statements (Top Priority for Cleanup):**
+
+| File | Count | Priority |
+|------|-------|----------|
+| `src/app/api/projects/[id]/route.ts` | 22 | HIGH |
+| `src/lib/email.ts` | 12 | HIGH |
+| `src/app/api/admin/settings/route.ts` | 12 | MEDIUM |
+| `src/app/admin/users/page.tsx` | 12 | MEDIUM |
+| `src/app/admin/email/page.tsx` | 12 | MEDIUM |
+| `src/app/admin/settings/page.tsx` | 11 | MEDIUM |
+| `src/app/dashboard/projects/[id]/survey/page.tsx` | 9 | MEDIUM |
+| `src/components/project/builder/rewards-step.tsx` | 8 | MEDIUM |
+| `src/app/api/webhooks/email/inbound/route.ts` | 8 | HIGH |
+| `src/lib/ai/settings-integration.ts` | 7 | MEDIUM |
+| `src/components/id-verification-gate.tsx` | 7 | LOW |
+| `src/app/api/webhooks/email/events/route.ts` | 7 | HIGH |
+| `src/app/api/admin/projects/review/route.ts` | 7 | HIGH |
+| `src/app/admin/media/page.tsx` | 7 | LOW |
+| `src/app/admin/ai-marketing/page.tsx` | 7 | LOW |
+
+**Critical Payment/Webhook Paths to Clean:**
+- [ ] `src/lib/payments/stripe.ts` - 3 console.warn for settings fetch failures
+- [ ] `src/app/api/webhooks/stripe/route.ts` - Error logging
+- [ ] `src/app/api/pledges/route.ts` - 2 error logs
+
+**Recommended Action:** Replace with proper logging service (e.g., Pino, Winston) or remove entirely in production.
+
+---
+
+### Disconnected Features (Backend Exists, UX Not Wired)
+
+| Feature | Backend Location | Status | Issue |
+|---------|-----------------|--------|-------|
+| **Admin Notifications API** | `/api/admin/notifications` | DISCONNECTED | Admin page uses hardcoded mock data instead of calling API |
+| **ID Verification Gate** | `src/components/id-verification-gate.tsx` | UNUSED | Component exported but never imported |
+| **Notifications Dropdown** | `src/components/notifications/notifications-dropdown.tsx` | UNUSED | Component exists but not in any layout |
+| **Project Tracking Hook** | `src/components/tracking-provider.tsx` | UNUSED | `useProjectTracking` exported but never called |
+| **Search Tracking Hook** | `src/components/tracking-provider.tsx` | UNUSED | `useSearchTracking` documented but not implemented |
+
+---
+
+### Unused Custom Hooks
+
+| Hook | Location | Lines | Notes |
+|------|----------|-------|-------|
+| `useTracking` | `src/hooks/use-tracking.ts:42-186` | 144 | Comprehensive tracking hook with 12+ methods, never imported |
+| `useScrollTracking` | `src/hooks/use-tracking.ts:191-214` | 23 | Scroll depth tracking, never used |
+| `useTimeOnPage` | `src/hooks/use-tracking.ts:219-234` | 15 | Time tracking, never used |
+
+**Total Unused Hook Code:** ~220+ lines
+
+---
+
+### Orphaned/Duplicate Files
+
+| File | Issue | Action |
+|------|-------|--------|
+| `/src/app/about/page.tsx` | 44-line stub; `/about-us/page.tsx` (730 lines) is the actual page | DELETE |
+| `/next.config.mjs` | Empty duplicate of `/next.config.js` | DELETE |
+| `/postcss.config.mjs` | Duplicate of `/postcss.config.js` | DELETE |
+| `/src/app/success-stories/page.tsx` | Not linked from any navigation | VERIFY/DELETE |
+
+---
+
+### Commented Out Code Blocks
+
+| Location | Lines | Pattern |
+|----------|-------|---------|
+| `src/app/api/admin/projects/status/route.ts:18` | ~5 | Commented user lookup |
+| `src/app/api/admin/projects/history/route.ts:17` | ~5 | Commented user lookup |
+| `src/app/api/admin/projects/review/route.ts:23` | ~5 | Commented user lookup |
+| `src/app/api/admin/retailers/route.ts:32` | ~5 | Commented user lookup |
+| `src/types/index.ts:119-340` | ~220 | Disabled category definitions (Food, Journalism, etc.) |
+
+**Total Commented Code:** ~240+ lines to review/remove
+
+---
+
+### Incomplete Features (TODO Comments)
+
+| File | Line | TODO |
+|------|------|------|
+| `src/types/index.ts` | 119, 202, 234, 269, 305, 327 | "Reactivate [X] category in the future" - 6 disabled categories |
+| `src/lib/ai/marketing-services.ts` | 835 | Implement fetching test from DB |
+| `src/app/projects/[slug]/page.tsx` | 451, 453 | Fetch similar projects & comments from API |
+| `src/app/api/user/settings/email/route.ts` | 106 | Send verification email to new address |
+| `src/app/api/admin/projects/status/route.ts` | 133 | Send email notification if sendEmail is true |
+
+---
+
+### API Endpoints Potentially Not Called
+
+| Endpoint | Location | Evidence |
+|----------|----------|----------|
+| `/api/admin/notifications` | `src/app/api/admin/notifications/route.ts` | Admin page uses mock data |
+| `/api/admin/email` | `src/app/api/admin/email/route.ts` | No frontend calls found |
+| `/api/health` | `src/app/api/health/route.ts` | Only referenced in middleware |
+
+---
+
+### Test Coverage
+
+**Status:** ⚠️ CRITICAL - **ZERO TEST FILES**
+
+No test files found (searched: `*.test.ts`, `*.test.tsx`, `*.spec.ts`, `*.spec.tsx`)
+
+**Recommended:** Add tests for critical paths:
+- Authentication flow
+- Payment processing
+- Webhook handlers
+- API endpoints
+
+---
+
+### Cleanup Commands
+
+```bash
+# Find all console statements
+grep -r "console\." --include="*.ts" --include="*.tsx" src/ | wc -l
+
+# Find unused exports (requires ts-prune)
+npx ts-prune | head -50
+
+# Find unused dependencies
+npx depcheck
+
+# Remove unused imports (ESLint fix)
+npm run lint -- --fix
+```
+
+---
+
 ## Notes
 
 - Priority should be given to Critical and High items
