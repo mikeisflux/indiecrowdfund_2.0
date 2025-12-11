@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { CollaboratorData } from "@/types";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,57 @@ export function PeopleStep() {
   const [isCollaboratorDialogOpen, setIsCollaboratorDialogOpen] = useState(false);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [newWebsite, setNewWebsite] = useState("");
+
+  // Load user profile data on mount
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        const response = await fetch("/api/user/settings");
+        if (response.ok) {
+          const userData = await response.json();
+          updatePeople({
+            creatorName: userData.name || "",
+            creatorImageUrl: userData.image || "",
+            creatorBio: userData.bio || "",
+            creatorLocation: userData.location || "",
+            creatorWebsites: userData.websites || [],
+            showNameOnly: userData.showNameOnly || false,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load user profile:", error);
+      }
+    }
+    loadUserProfile();
+  }, [updatePeople]);
+
+  // Save profile to database
+  const saveProfileToDatabase = useCallback(async (profileData: {
+    name?: string;
+    image?: string;
+    bio?: string;
+    location?: string;
+    websites?: string[];
+    showNameOnly?: boolean;
+  }) => {
+    try {
+      const response = await fetch("/api/user/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profileData),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to save profile");
+      }
+      return true;
+    } catch (error) {
+      console.error("Failed to save profile:", error);
+      toast.error("Failed to save profile. Please try again.");
+      return false;
+    }
+  }, []);
   const [newCollaborator, setNewCollaborator] = useState<CollaboratorData>({
     email: "",
     title: "",
@@ -42,18 +92,24 @@ export function PeopleStep() {
   const collaborators = people.collaborators || [];
   const websites = people.creatorWebsites || [];
 
-  const addWebsite = () => {
+  const addWebsite = async () => {
     if (!newWebsite.trim()) return;
+    const newWebsites = [...websites, newWebsite];
     updatePeople({
-      creatorWebsites: [...websites, newWebsite],
+      creatorWebsites: newWebsites,
     });
     setNewWebsite("");
+    // Save to database
+    await saveProfileToDatabase({ websites: newWebsites });
   };
 
-  const removeWebsite = (index: number) => {
+  const removeWebsite = async (index: number) => {
+    const newWebsites = websites.filter((_, i) => i !== index);
     updatePeople({
-      creatorWebsites: websites.filter((_, i) => i !== index),
+      creatorWebsites: newWebsites,
     });
+    // Save to database
+    await saveProfileToDatabase({ websites: newWebsites });
   };
 
   const addCollaborator = async () => {
@@ -319,7 +375,11 @@ export function PeopleStep() {
               <Label>Profile Photo</Label>
               <ImageUpload
                 value={people.creatorImageUrl}
-                onChange={(url) => updatePeople({ creatorImageUrl: url })}
+                onChange={async (url) => {
+                  updatePeople({ creatorImageUrl: url });
+                  // Save to database immediately
+                  await saveProfileToDatabase({ image: url });
+                }}
                 projectId={projectId || undefined}
                 uploadType="project"
                 aspectRatio="aspect-square"
@@ -425,8 +485,33 @@ export function PeopleStep() {
           </div>
 
           <DialogFooter>
-            <Button onClick={() => setIsProfileDialogOpen(false)}>
-              Done
+            <Button
+              onClick={async () => {
+                setIsSavingProfile(true);
+                const success = await saveProfileToDatabase({
+                  name: people.creatorName,
+                  image: people.creatorImageUrl,
+                  bio: people.creatorBio,
+                  location: people.creatorLocation,
+                  websites: people.creatorWebsites,
+                  showNameOnly: people.showNameOnly,
+                });
+                setIsSavingProfile(false);
+                if (success) {
+                  toast.success("Profile saved successfully");
+                  setIsProfileDialogOpen(false);
+                }
+              }}
+              disabled={isSavingProfile}
+            >
+              {isSavingProfile ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Profile"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

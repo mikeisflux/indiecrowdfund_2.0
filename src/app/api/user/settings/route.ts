@@ -77,6 +77,7 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const {
       name,
+      image,
       bio,
       location,
       timezone,
@@ -107,6 +108,7 @@ export async function PATCH(request: Request) {
       where: { id: session.user.id },
       data: {
         name,
+        image,
         bio,
         location,
         timezone,
@@ -117,6 +119,7 @@ export async function PATCH(request: Request) {
       select: {
         id: true,
         name: true,
+        image: true,
         bio: true,
         location: true,
         timezone: true,
