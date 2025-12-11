@@ -108,6 +108,9 @@ export async function GET() {
           id: true,
           title: true,
           status: true,
+          category: true,
+          goalAmount: true,
+          currentAmount: true,
           createdAt: true,
           creator: {
             select: { name: true, email: true }
@@ -125,12 +128,16 @@ export async function GET() {
         }
       }),
       db.project.findMany({
-        where: { status: "SUBMITTED" },
+        where: { status: { in: ["SUBMITTED", "APPROVED"] } },
         take: 10,
         orderBy: { createdAt: "asc" },
         select: {
           id: true,
           title: true,
+          status: true,
+          category: true,
+          goalAmount: true,
+          currentAmount: true,
           createdAt: true,
           creator: {
             select: { name: true, email: true }
@@ -192,14 +199,21 @@ export async function GET() {
         pendingReports,
       },
       projectsByStatus: statusBreakdown,
+      // Projects requiring action (SUBMITTED or APPROVED needing launch)
       recentActivity: {
-        projects: recentProjects.map(p => ({
+        projects: pendingReviews.map(p => ({
           id: p.id,
           type: "project",
-          title: `New project: ${p.title}`,
-          user: p.creator.name || p.creator.email,
+          title: p.title,
           status: p.status,
-          timestamp: p.createdAt
+          category: p.category,
+          goalAmount: p.goalAmount,
+          currentAmount: p.currentAmount,
+          createdAt: p.createdAt,
+          creator: {
+            name: p.creator.name,
+            email: p.creator.email
+          }
         })),
         users: recentUsers.map(u => ({
           id: u.id,

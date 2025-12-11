@@ -391,7 +391,7 @@ export default function AdminDashboard() {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Link href={`/admin/projects/${project.id}`}>
+                      <Link href="/admin/projects?tab=pending">
                         <Button variant="outline" size="sm">Review</Button>
                       </Link>
                       <Button variant="ghost" size="icon">
