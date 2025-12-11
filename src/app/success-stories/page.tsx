@@ -57,7 +57,7 @@ async function getCategoryStats() {
   const categoryStats = await db.project.groupBy({
     by: ["category"],
     where: {
-      status: { in: ["LIVE", "FUNDED", "SUCCESSFUL"] },
+      status: { in: ["LIVE", "FUNDED"] },
     },
     _sum: {
       currentAmount: true,
