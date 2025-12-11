@@ -27,27 +27,66 @@ async function getRetailerFromToken() {
   }
 }
 
-// Helper to check if user is a super admin
-async function isSuperAdmin() {
+// Helper to check user's access level and get linked retailer
+async function checkUserAccess() {
   const session = await auth();
-  if (!session?.user?.id) return false;
+  if (!session?.user?.id) return { hasAccess: false };
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true }
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      retailerAccess: true
+    }
   });
 
-  return user?.role === "SUPER_ADMIN";
+  if (!user) return { hasAccess: false };
+
+  // Super admins can access in preview mode
+  if (user.role === "SUPER_ADMIN") {
+    return { hasAccess: true, isSuperAdmin: true, user };
+  }
+
+  // Check if user has retailerAccess enabled
+  if (user.retailerAccess) {
+    // Find linked retailer
+    let retailer = await db.retailer.findFirst({
+      where: { userId: user.id }
+    });
+
+    // If no linked retailer, try to find by email
+    if (!retailer && user.email) {
+      retailer = await db.retailer.findUnique({
+        where: { email: user.email }
+      });
+
+      // Link the retailer to the user
+      if (retailer) {
+        await db.retailer.update({
+          where: { id: retailer.id },
+          data: { userId: user.id }
+        });
+      }
+    }
+
+    if (retailer && retailer.status === "APPROVED") {
+      return { hasAccess: true, hasRetailerAccess: true, retailerId: retailer.id, user };
+    }
+  }
+
+  return { hasAccess: false, user };
 }
 
 // GET - Get current retailer data
 export async function GET() {
   try {
     const tokenData = await getRetailerFromToken();
-    const isAdmin = await isSuperAdmin();
+    const userAccess = await checkUserAccess();
 
-    // If not a retailer and not a super admin, unauthorized
-    if (!tokenData && !isAdmin) {
+    // If not a retailer token, not a super admin, and doesn't have retailerAccess, unauthorized
+    if (!tokenData && !userAccess.hasAccess) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -55,7 +94,7 @@ export async function GET() {
     }
 
     // If super admin viewing retailer dashboard, show admin preview with all retailers' aggregate data
-    if (isAdmin && !tokenData) {
+    if (userAccess.isSuperAdmin && !tokenData) {
       // Get aggregate stats for admin view
       const [totalRetailers, activeRetailers, totalOrders, pendingOrders, activeProjects] = await Promise.all([
         db.retailer.count(),
@@ -134,16 +173,23 @@ export async function GET() {
       });
     }
 
-    // At this point, tokenData is not null (admin preview returned earlier if null)
-    if (!tokenData) {
+    // Get retailer ID from token or from user's retailerAccess
+    let retailerId: string | null = tokenData?.retailerId || null;
+
+    // If no token but user has retailerAccess, use their linked retailer
+    if (!retailerId && userAccess.hasRetailerAccess && userAccess.retailerId) {
+      retailerId = userAccess.retailerId;
+    }
+
+    if (!retailerId) {
       return NextResponse.json(
-        { error: "No retailer token found" },
+        { error: "No retailer found" },
         { status: 401 }
       );
     }
 
     const retailer = await db.retailer.findUnique({
-      where: { id: tokenData.retailerId },
+      where: { id: retailerId },
       select: {
         id: true,
         businessName: true,

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,12 +15,57 @@ import {
   Loader2,
   AlertCircle,
   Key,
+  CheckCircle,
 } from "lucide-react";
 
 export default function RetailerLoginPage() {
+  const router = useRouter();
   const [loginMethod, setLoginMethod] = useState<"credentials" | "accessCode">("credentials");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [error, setError] = useState("");
+  const [sessionMessage, setSessionMessage] = useState("");
+
+  // Check if user is already logged in via NextAuth with retailerAccess
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        // First check if user has retailer access via their session
+        const checkResponse = await fetch("/api/retailers/session-auth");
+        const checkData = await checkResponse.json();
+
+        if (checkData.hasAccess) {
+          setSessionMessage("You have retailer access. Redirecting...");
+
+          // Try to auto-authenticate
+          const authResponse = await fetch("/api/retailers/session-auth", {
+            method: "POST"
+          });
+
+          if (authResponse.ok) {
+            const authData = await authResponse.json();
+            if (authData.success || authData.isAdmin) {
+              window.location.href = "/retailers/dashboard";
+              return;
+            }
+          } else {
+            const authData = await authResponse.json();
+            // If there's an error (like pending application), show it
+            if (authData.error) {
+              setError(authData.error);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Session check error:", err);
+      } finally {
+        setIsCheckingSession(false);
+        setSessionMessage("");
+      }
+    };
+
+    checkSession();
+  }, [router]);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -55,6 +101,20 @@ export default function RetailerLoginPage() {
       setIsLoading(false);
     }
   };
+
+  // Show loading spinner while checking session
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">
+            {sessionMessage || "Checking your session..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 flex items-center justify-center p-4">
