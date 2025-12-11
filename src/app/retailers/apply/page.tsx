@@ -135,8 +135,8 @@ export default function RetailerApplyPage() {
       if (response.ok) {
         setIsSubmitted(true);
       } else {
-        const error = await response.json();
-        alert(error.message || "Failed to submit application");
+        const data = await response.json();
+        alert(data.error || data.message || "Failed to submit application");
       }
     } catch (error) {
       console.error("Error submitting application:", error);
@@ -166,12 +166,12 @@ export default function RetailerApplyPage() {
                 A confirmation email has been sent to <strong>{formData.email}</strong>
               </p>
               <div className="mt-8 flex flex-col gap-3">
-                <Link href="/retailers">
-                  <Button className="w-full">Return to Retailer Info</Button>
-                </Link>
-                <Link href="/">
-                  <Button variant="outline" className="w-full">Go to Homepage</Button>
-                </Link>
+                <Button asChild className="w-full">
+                  <Link href="/retailers">Return to Retailer Info</Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/">Go to Homepage</Link>
+                </Button>
               </div>
             </div>
           </CardContent>

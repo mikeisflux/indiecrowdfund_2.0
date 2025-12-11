@@ -157,17 +157,17 @@ export default async function RetailersPage() {
               at wholesale pricing. Stock your store with the next big thing.
             </p>
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Link href="/retailers/apply">
-                <Button size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50">
+              <Button asChild size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50">
+                <Link href="/retailers/apply">
                   Apply Now
                   <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/retailers/login">
-                <Button size="lg" className="bg-white/10 text-white border-2 border-white hover:bg-white/20">
+                </Link>
+              </Button>
+              <Button asChild size="lg" className="bg-white/10 text-white border-2 border-white hover:bg-white/20">
+                <Link href="/retailers/login">
                   Retailer Login
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -303,12 +303,12 @@ export default async function RetailersPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/retailers/apply">
-                <Button className="mt-8 w-full bg-white text-emerald-700 hover:bg-emerald-50">
+              <Button asChild className="mt-8 w-full bg-white text-emerald-700 hover:bg-emerald-50">
+                <Link href="/retailers/apply">
                   Start Your Application
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -376,12 +376,12 @@ export default async function RetailersPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-4 md:items-end">
-                <Link href="/retailers/apply">
-                  <Button size="lg" className="w-full md:w-auto">
+                <Button asChild size="lg" className="w-full md:w-auto">
+                  <Link href="/retailers/apply">
                     Apply for Retailer Access
                     <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
                 <p className="text-sm text-zinc-500">
                   Questions? Email us at{" "}
                   <a href="mailto:retailers@indiecrowdfund.com" className="text-emerald-400 hover:underline">
@@ -402,12 +402,12 @@ export default async function RetailersPage() {
             Check out our retailer FAQ or contact our support team for more information about the program.
           </p>
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <Link href="/retailers/faq">
-              <Button variant="outline">View FAQ</Button>
-            </Link>
-            <Link href="/contact">
-              <Button variant="outline">Contact Support</Button>
-            </Link>
+            <Button asChild variant="outline">
+              <Link href="/retailers/faq">View FAQ</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/contact">Contact Support</Link>
+            </Button>
           </div>
         </div>
       </section>
