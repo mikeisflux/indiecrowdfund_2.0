@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
@@ -25,13 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,7 +36,6 @@ import {
   List,
   RefreshCw,
   HardDrive,
-  Settings,
   FolderOpen,
   FileImage,
   Copy,
@@ -53,18 +43,10 @@ import {
   Video,
   FileText,
   Loader2,
-  Plus,
-  ChevronRight,
-  ChevronDown,
   Folder,
   FolderPlus,
   Edit3,
   Move,
-  User,
-  Calendar,
-  Eye,
-  MoreVertical,
-  GripVertical,
   X,
 } from "lucide-react";
 
@@ -122,7 +104,6 @@ const DEFAULT_FOLDERS = [
 ];
 
 export default function MediaPage() {
-  const [activeTab, setActiveTab] = useState("library");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -156,18 +137,6 @@ export default function MediaPage() {
   // Drag state
   const [draggedFile, setDraggedFile] = useState<MediaFile | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
-
-  const [optimizationSettings, setOptimizationSettings] = useState({
-    autoOptimize: true,
-    autoWebp: true,
-    quality: 85,
-    maxWidth: 2400,
-    maxHeight: 2400,
-    preserveOriginal: true,
-    nightlyCleanup: true,
-    cleanupTime: "02:00",
-    retentionDays: 30,
-  });
 
   // Upload state
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
