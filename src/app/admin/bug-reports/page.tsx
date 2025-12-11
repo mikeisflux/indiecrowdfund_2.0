@@ -88,13 +88,6 @@ const categoryLabels: Record<string, string> = {
   OTHER: "Other",
 };
 
-const severityLabels: Record<string, string> = {
-  LOW: "Low",
-  MEDIUM: "Medium",
-  HIGH: "High",
-  CRITICAL: "Critical",
-};
-
 const statusLabels: Record<string, string> = {
   NEW: "New",
   ACKNOWLEDGED: "Acknowledged",

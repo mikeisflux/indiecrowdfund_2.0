@@ -190,7 +190,6 @@ export async function sendProjectApprovedEmail(
   notes?: string
 ) {
   const dashboardUrl = `${APP_URL}/dashboard/projects`;
-  const projectUrl = `${APP_URL}/projects/${projectSlug}`;
 
   const html = `
     <!DOCTYPE html>
