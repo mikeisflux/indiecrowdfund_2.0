@@ -108,6 +108,7 @@ export function ProjectBuilder() {
         // Basics
         title: basics.title,
         subtitle: basics.subtitle,
+        slug: basics.slug || undefined,
         category: basics.category,
         subcategory: basics.subcategory,
         secondaryCategory: basics.secondaryCategory,
