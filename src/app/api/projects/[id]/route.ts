@@ -44,6 +44,7 @@ const updateProjectSchema = z.object({
   // Basics
   title: z.string().optional(),
   subtitle: z.string().optional(),
+  slug: z.string().min(3).max(100).regex(/^[a-z0-9-]+$/).optional(),
   category: z.string().optional(),
   subcategory: z.string().optional().nullable(),
   secondaryCategory: z.string().optional().nullable(),
@@ -333,6 +334,26 @@ export async function PATCH(
     // Add basic fields
     if (projectData.title !== undefined) updateData.title = projectData.title;
     if (projectData.subtitle !== undefined) updateData.subtitle = projectData.subtitle;
+
+    // Handle slug update - check if new slug is already taken
+    if (projectData.slug !== undefined) {
+      const existingProject = await db.project.findFirst({
+        where: {
+          slug: projectData.slug,
+          id: { not: params.id } // Exclude current project
+        },
+        select: { id: true },
+      });
+
+      if (existingProject) {
+        return NextResponse.json(
+          { error: "This URL is already taken. Please choose a different one." },
+          { status: 400 }
+        );
+      }
+      updateData.slug = projectData.slug;
+    }
+
     if (projectData.category !== undefined) updateData.category = projectData.category;
     if (projectData.subcategory !== undefined) updateData.subcategory = projectData.subcategory;
     if (projectData.secondaryCategory !== undefined) updateData.secondaryCategory = projectData.secondaryCategory;
