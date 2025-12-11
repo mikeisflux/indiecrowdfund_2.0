@@ -167,7 +167,7 @@ export default function AnalyticsPage() {
 
   const exportToCSV = () => {
     let csvContent = "";
-    let filename = `analytics-${activeTab}-${timeRange}-${new Date().toISOString().split('T')[0]}.csv`;
+    const filename = `analytics-${activeTab}-${timeRange}-${new Date().toISOString().split('T')[0]}.csv`;
 
     switch (activeTab) {
       case "overview":
