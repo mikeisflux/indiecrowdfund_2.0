@@ -17,10 +17,10 @@ export async function POST(request: Request) {
     // Verify admin status
     const user = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { isAdmin: true },
+      select: { role: true },
     });
 
-    if (!user?.isAdmin) {
+    if (user?.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -109,9 +109,13 @@ export async function POST(request: Request) {
       data: {
         projectId: projectId,
         reviewerId: session.user.id,
+        reviewerEmail: session.user.email,
         action: action,
+        previousStatus: project.status,
+        newStatus: newStatus,
         notes: reason || notes || actionDescription,
         internalNotes: `Admin action: ${action}`,
+        flagsRaised: [],
       },
     });
 
