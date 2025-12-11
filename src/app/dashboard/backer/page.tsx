@@ -89,6 +89,9 @@ interface DashboardAnalytics {
 }
 
 interface DashboardData {
+  user: {
+    name: string | null;
+  };
   backedProjects: BackedProject[];
   savedProjects: SavedProject[];
   stats: DashboardStats;
@@ -346,7 +349,7 @@ export default function BackerDashboard() {
           <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold mb-2">
-                Welcome back!
+                Welcome back{data?.user?.name ? `, ${data.user.name}` : ""}!
               </h1>
               <p className="text-muted-foreground text-lg">
                 Discover new projects and track your backed campaigns
