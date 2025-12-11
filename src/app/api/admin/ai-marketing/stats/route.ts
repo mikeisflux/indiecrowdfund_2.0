@@ -286,9 +286,9 @@ export async function GET() {
     }
 
     // Calculate email stats from campaigns
-    const totalSent = emailCampaigns.reduce((sum: number, c) => sum + (c.sentCount || 0), 0);
-    const totalOpens = emailCampaigns.reduce((sum: number, c) => sum + (c.openCount || 0), 0);
-    const totalClicks = emailCampaigns.reduce((sum: number, c) => sum + (c.clickCount || 0), 0);
+    const totalSent = emailCampaigns.reduce((sum: number, c: { sentCount: number | null }) => sum + (c.sentCount || 0), 0);
+    const totalOpens = emailCampaigns.reduce((sum: number, c: { openCount: number | null }) => sum + (c.openCount || 0), 0);
+    const totalClicks = emailCampaigns.reduce((sum: number, c: { clickCount: number | null }) => sum + (c.clickCount || 0), 0);
     const avgOpenRate = totalSent > 0 ? ((totalOpens / totalSent) * 100).toFixed(1) : "0";
     const avgClickRate = totalSent > 0 ? ((totalClicks / totalSent) * 100).toFixed(1) : "0";
 
