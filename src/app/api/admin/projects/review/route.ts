@@ -19,11 +19,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // In production, check if user is admin
-    // const user = await db.user.findUnique({ where: { id: session.user.id } });
-    // if (user?.role !== "ADMIN") {
-    //   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    // }
+    // Verify user is admin
+    const user = await db.user.findUnique({ where: { id: session.user.id } });
+    if (user?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const body = await req.json();
     const {

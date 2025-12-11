@@ -28,11 +28,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // In production, verify admin role
-    // const user = await db.user.findUnique({ where: { id: session.user.id } });
-    // if (user?.role !== "ADMIN") {
-    //   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    // }
+    // Verify user is admin
+    const user = await db.user.findUnique({ where: { id: session.user.id } });
+    if (user?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status") || "PENDING";

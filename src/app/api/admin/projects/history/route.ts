@@ -13,14 +13,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // In production, check if user is admin
-    // const user = await db.user.findUnique({
-    //   where: { id: session.user.id },
-    //   select: { role: true },
-    // });
-    // if (user?.role !== "ADMIN") {
-    //   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    // }
+    // Verify user is admin
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    if (user?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");

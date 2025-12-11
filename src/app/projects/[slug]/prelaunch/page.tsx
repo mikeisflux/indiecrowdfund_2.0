@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
 import Image from "next/image";
 import Link from "next/link";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -382,7 +383,7 @@ export default function PrelaunchPage() {
               <h3 className="text-xl font-semibold mb-4">About This Project</h3>
               <div
                 className="prose prose-zinc dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: project.prelaunchDescription }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(project.prelaunchDescription) }}
               />
             </CardContent>
           </Card>

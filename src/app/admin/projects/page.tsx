@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -734,7 +735,7 @@ export default function ProjectsPage() {
                               <p className="text-xs text-zinc-500 mb-1">Description Preview</p>
                               <div
                                 className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 prose prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: selectedProject.description }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedProject.description) }}
                               />
                             </div>
                           )}
@@ -744,7 +745,7 @@ export default function ProjectsPage() {
                               <p className="text-xs text-zinc-500 mb-1">Risks & Challenges</p>
                               <div
                                 className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 prose prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: selectedProject.risks }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedProject.risks) }}
                               />
                             </div>
                           )}

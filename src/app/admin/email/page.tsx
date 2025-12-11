@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { sanitizeEmailHtml } from "@/lib/utils/sanitize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,27 +102,6 @@ const FOLDER_ICONS: Record<string, typeof Inbox> = {
   TRASH: Trash2,
   ARCHIVE: Archive,
 };
-
-// Sanitize email HTML to remove tracking pixels and fix Mixed Content issues
-function sanitizeEmailHtml(html: string): string {
-  if (!html) return html;
-
-  // Remove SendGrid tracking pixels (1x1 images with tracking URLs)
-  // These cause ERR_CERT_COMMON_NAME_INVALID and Mixed Content errors
-  let sanitized = html;
-
-  // Remove img tags with tracking domains (url*.indiecrowdfund.com, sendgrid.net tracking)
-  sanitized = sanitized.replace(/<img[^>]*src=["'][^"']*url\d+\.indiecrowdfund\.com[^"']*["'][^>]*>/gi, '');
-  sanitized = sanitized.replace(/<img[^>]*src=["'][^"']*sendgrid\.net[^"']*["'][^>]*>/gi, '');
-
-  // Remove tracking pixels (typically 1x1 or very small images)
-  sanitized = sanitized.replace(/<img[^>]*(?:width=["']?1["']?|height=["']?1["']?)[^>]*>/gi, '');
-
-  // Fix any remaining HTTP URLs that should be HTTPS to prevent Mixed Content warnings
-  sanitized = sanitized.replace(/http:\/\/(?!localhost)/gi, 'https://');
-
-  return sanitized;
-}
 
 const FOLDER_LABELS: Record<string, string> = {
   INBOX: "Inbox",

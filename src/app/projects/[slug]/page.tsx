@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -216,11 +217,14 @@ function generateHeadingId(text: string, index: number): string {
 // Helper function to extract headings from HTML and add IDs
 function processStoryHtml(html: string): { processedHtml: string; navItems: StoryNavItem[] } {
   if (!html || typeof window === "undefined") {
-    return { processedHtml: html, navItems: [] };
+    return { processedHtml: sanitizeHtml(html || ""), navItems: [] };
   }
 
+  // Sanitize HTML to prevent XSS attacks
+  const sanitizedHtml = sanitizeHtml(html);
+
   const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
+  const doc = parser.parseFromString(sanitizedHtml, "text/html");
   const headings = doc.querySelectorAll("h1, h2, h3, h4, h5, h6");
   const navItems: StoryNavItem[] = [];
 
