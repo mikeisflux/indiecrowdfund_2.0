@@ -29,6 +29,13 @@ import {
   Loader2,
   Info,
 } from "lucide-react";
+import { loadStripe, Stripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
 
 // Types for project and reward data
 interface ProjectData {
@@ -114,12 +121,73 @@ const FAQ_ITEMS = [
 
 type Step = "rewards" | "addons" | "payment" | "success";
 
+// Stripe Payment Form Component
+function StripePaymentForm({
+  onSuccess,
+  onError,
+  agreedToTerms,
+  isProcessing,
+  setIsProcessing,
+  total,
+}: {
+  onSuccess: () => void;
+  onError: (message: string) => void;
+  agreedToTerms: boolean;
+  isProcessing: boolean;
+  setIsProcessing: (val: boolean) => void;
+  total: number;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const handleSubmit = async () => {
+    if (!stripe || !elements || !agreedToTerms) return;
+
+    setIsProcessing(true);
+
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/projects/${window.location.pathname.split("/")[2]}/pledge?success=true`,
+        },
+        redirect: "if_required",
+      });
+
+      if (error) {
+        onError(error.message || "Payment failed");
+        setIsProcessing(false);
+      } else {
+        onSuccess();
+      }
+    } catch {
+      onError("An unexpected error occurred");
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <PaymentElement />
+      <Button
+        className="w-full bg-zinc-300 hover:bg-[#028858] text-zinc-600 hover:text-white font-medium disabled:bg-zinc-300 disabled:text-zinc-500"
+        size="lg"
+        onClick={handleSubmit}
+        disabled={!stripe || !elements || !agreedToTerms || isProcessing}
+      >
+        {isProcessing ? "Processing..." : `Pledge $${total}`}
+      </Button>
+    </div>
+  );
+}
+
 export default function PledgePage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const slug = params.slug as string;
   const rewardId = searchParams.get("reward");
   const amountParam = searchParams.get("amount");
+  const successParam = searchParams.get("success");
 
   // Data state - loaded from API
   const [project, setProject] = useState<ProjectData | null>(null);
@@ -138,6 +206,34 @@ export default function PledgePage() {
   const [shippingCountry, setShippingCountry] = useState("US");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Stripe state
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  // Handle success redirect
+  useEffect(() => {
+    if (successParam === "true") {
+      setStep("success");
+    }
+  }, [successParam]);
+
+  // Initialize Stripe
+  useEffect(() => {
+    async function initStripe() {
+      try {
+        const res = await fetch("/api/stripe/config");
+        const data = await res.json();
+        if (data.publishableKey) {
+          setStripePromise(loadStripe(data.publishableKey));
+        }
+      } catch (err) {
+        console.error("Failed to load Stripe config:", err);
+      }
+    }
+    initStripe();
+  }, []);
 
   // Fetch project and reward data from API
   const fetchData = useCallback(async () => {
@@ -336,12 +432,50 @@ export default function PledgePage() {
     setStep("addons");
   };
 
-  const handleSubmitPledge = async () => {
+  // Create pledge and get Stripe client secret
+  const createPledge = async () => {
+    if (!project || (!selectedReward && !pledgeWithoutReward)) return;
+
     setIsProcessing(true);
-    setTimeout(() => {
-      setStep("success");
+    setPaymentError(null);
+
+    try {
+      const addonIds = Object.keys(selectedAddons);
+
+      const response = await fetch("/api/pledges", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: project.id,
+          rewardId: selectedReward?.id || "no-reward",
+          addonIds,
+          amount: total,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create pledge");
+      }
+
+      // Set the client secret to show Stripe Elements
+      setClientSecret(data.clientSecret);
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Failed to create pledge");
       setIsProcessing(false);
-    }, 2000);
+    }
+  };
+
+  // Called when payment is successful
+  const handlePaymentSuccess = () => {
+    setStep("success");
+    setIsProcessing(false);
+  };
+
+  // Called when payment fails
+  const handlePaymentError = (message: string) => {
+    setPaymentError(message);
   };
 
   const currentCountry = COUNTRIES.find((c) => c.code === shippingCountry);
@@ -845,32 +979,63 @@ export default function PledgePage() {
 
                 {/* Payment method */}
                 <Card>
-                  <CardContent className="p-0">
-                    <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                      <h3 className="font-medium">Payment</h3>
-                      <button className="text-sm text-muted-foreground hover:text-foreground">Manage</button>
-                    </div>
+                  <CardContent className="p-5">
+                    <h3 className="font-medium mb-4">Payment</h3>
 
-                    {/* New payment method */}
-                    <div className="border-t px-5 py-4">
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <div className="w-5 h-5 rounded-full border-2 border-foreground flex items-center justify-center">
-                          <div className="w-2.5 h-2.5 rounded-full bg-foreground" />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-5 bg-gradient-to-r from-red-500 via-yellow-500 to-red-600 rounded" />
-                          <span>Credit or Debit Card</span>
-                        </div>
-                      </label>
-                    </div>
+                    {/* Show error if any */}
+                    {paymentError && (
+                      <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+                      </div>
+                    )}
 
-                    {/* Add new payment */}
-                    <div className="border-t px-5 py-4">
-                      <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-                        <span className="text-lg">+</span>
-                        <span>New payment method</span>
-                      </button>
-                    </div>
+                    {/* Stripe Elements - show after creating pledge */}
+                    {clientSecret && stripePromise ? (
+                      <Elements
+                        stripe={stripePromise}
+                        options={{
+                          clientSecret,
+                          appearance: {
+                            theme: "stripe",
+                            variables: {
+                              colorPrimary: "#028858",
+                            },
+                          },
+                        }}
+                      >
+                        <StripePaymentForm
+                          onSuccess={handlePaymentSuccess}
+                          onError={handlePaymentError}
+                          agreedToTerms={agreedToTerms}
+                          isProcessing={isProcessing}
+                          setIsProcessing={setIsProcessing}
+                          total={total}
+                        />
+                      </Elements>
+                    ) : (
+                      /* Show button to initiate payment */
+                      <div className="space-y-4">
+                        <div className="p-4 border rounded-lg bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <div className="flex gap-1">
+                              <div className="w-10 h-6 bg-[#1A1F71] rounded flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">VISA</span>
+                              </div>
+                              <div className="w-10 h-6 bg-gradient-to-r from-red-500 to-yellow-500 rounded flex items-center justify-center">
+                                <div className="w-4 h-4 bg-red-600 rounded-full opacity-80" />
+                              </div>
+                              <div className="w-10 h-6 bg-[#006FCF] rounded flex items-center justify-center">
+                                <span className="text-white text-[8px] font-bold">AMEX</span>
+                              </div>
+                            </div>
+                            <span className="text-sm text-muted-foreground">Credit or Debit Card</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Click &quot;Continue to Payment&quot; in the sidebar to enter your card details securely via Stripe.
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -1035,15 +1200,28 @@ export default function PledgePage() {
                         </Label>
                       </div>
 
-                      {/* Pledge button */}
-                      <Button
-                        className="w-full bg-zinc-300 hover:bg-[#028858] text-zinc-600 hover:text-white font-medium disabled:bg-zinc-300 disabled:text-zinc-500"
-                        size="lg"
-                        onClick={handleSubmitPledge}
-                        disabled={!agreedToTerms || isProcessing}
-                      >
-                        {isProcessing ? "Processing..." : "Pledge"}
-                      </Button>
+                      {/* Continue to Payment / Pledge button */}
+                      {!clientSecret ? (
+                        <Button
+                          className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium disabled:bg-zinc-300 disabled:text-zinc-500"
+                          size="lg"
+                          onClick={createPledge}
+                          disabled={!agreedToTerms || isProcessing}
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Setting up payment...
+                            </>
+                          ) : (
+                            "Continue to Payment"
+                          )}
+                        </Button>
+                      ) : (
+                        <p className="text-xs text-center text-muted-foreground">
+                          Enter your card details above to complete your pledge.
+                        </p>
+                      )}
 
                       <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
                         By submitting your pledge, you agree to IndieCrowdfund&apos;s{" "}
