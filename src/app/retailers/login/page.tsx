@@ -15,7 +15,6 @@ import {
   Loader2,
   AlertCircle,
   Key,
-  CheckCircle,
 } from "lucide-react";
 
 export default function RetailerLoginPage() {
