@@ -182,19 +182,36 @@ export default function ProjectsPage() {
 
   const fetchActiveProjects = useCallback(async () => {
     try {
-      const params = new URLSearchParams({
+      // Fetch both LIVE and APPROVED projects
+      const liveParams = new URLSearchParams({
         status: "LIVE",
         ...(categoryFilter !== "all" && { category: categoryFilter }),
       });
-      const response = await fetch(`/api/admin/projects/review?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setActiveProjects(data.projects || []);
-        setStats((prev) => ({
-          ...prev,
-          activeCampaigns: data.projects?.length || 0,
-        }));
+      const approvedParams = new URLSearchParams({
+        status: "APPROVED",
+        ...(categoryFilter !== "all" && { category: categoryFilter }),
+      });
+
+      const [liveResponse, approvedResponse] = await Promise.all([
+        fetch(`/api/admin/projects/review?${liveParams}`),
+        fetch(`/api/admin/projects/review?${approvedParams}`),
+      ]);
+
+      const allProjects: Project[] = [];
+      if (liveResponse.ok) {
+        const liveData = await liveResponse.json();
+        allProjects.push(...(liveData.projects || []));
       }
+      if (approvedResponse.ok) {
+        const approvedData = await approvedResponse.json();
+        allProjects.push(...(approvedData.projects || []));
+      }
+
+      setActiveProjects(allProjects);
+      setStats((prev) => ({
+        ...prev,
+        activeCampaigns: allProjects.length,
+      }));
     } catch (error) {
       console.error("Error fetching active projects:", error);
     }
