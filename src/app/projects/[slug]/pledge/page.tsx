@@ -163,7 +163,8 @@ export default function PledgePage() {
       if (!projectRes.ok) {
         throw new Error("Project not found");
       }
-      const projectData = await projectRes.json();
+      const responseData = await projectRes.json();
+      const projectData = responseData.project;
 
       // Format project data
       const formattedProject: ProjectData = {
@@ -181,11 +182,11 @@ export default function PledgePage() {
       };
       setProject(formattedProject);
 
-      // Fetch rewards for this project
-      const rewardsRes = await fetch(`/api/projects/${projectData.id}/rewards`);
-      if (rewardsRes.ok) {
-        const rewardsData = await rewardsRes.json();
-        const rewards = rewardsData.rewards || [];
+      // Use rewards and addons from the API response (already fetched with project)
+      const rewards = responseData.rewards || [];
+      const addonsFromApi = responseData.addons || [];
+      if (rewards.length > 0 || addonsFromApi.length > 0) {
+        const allRewards = [...rewards, ...addonsFromApi];
 
         // Get tier rewards (not addons) for the selection step
         // Include rewards where type is TIER or not set (legacy rewards)
@@ -243,9 +244,8 @@ export default function PledgePage() {
           }
         }
 
-        // Get addons
-        const addonRewards = rewards.filter((r: { type: string }) => r.type === "ADDON");
-        const formattedAddons: AddonData[] = addonRewards.map((addon: {
+        // Get addons (use addonsFromApi which is already separated by the API)
+        const formattedAddons: AddonData[] = addonsFromApi.map((addon: {
           id: string;
           title: string;
           description?: string;
