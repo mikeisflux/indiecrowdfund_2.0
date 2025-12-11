@@ -88,11 +88,15 @@ const FAQ_ITEMS = [
   },
   {
     question: "When is my card charged?",
-    answer: "Your payment method will be charged immediately when you complete your pledge. If the project doesn't reach its funding goal, you'll receive a full refund.",
+    answer: "Your card is only charged when the campaign reaches its funding goal. If you pledge before the goal is met, your payment is held and will only be processed once the campaign successfully funds. If the campaign doesn't reach its goal, you won't be charged at all.",
   },
   {
     question: "So I'm only charged if funding succeeds?",
-    answer: "For all-or-nothing campaigns, yes! If the project doesn't reach its funding goal by the deadline, all pledges will be refunded in full. Some projects may use flexible funding where you're charged regardless of outcome.",
+    answer: "Exactly! Your payment is held until the campaign reaches its funding goal. If the project doesn't reach its goal by the deadline, your payment method is never charged. This protects you and ensures creators only receive funds when they can deliver on their promises.",
+  },
+  {
+    question: "What if the campaign is already funded?",
+    answer: "If you pledge after a campaign has already reached its funding goal, your payment will be processed immediately since the project is guaranteed to move forward.",
   },
   {
     question: "What can others see about my pledge?",
@@ -826,8 +830,7 @@ export default function PledgePage() {
                     <Link href="/terms" className="underline hover:text-primary">
                       Terms of Service
                     </Link>{" "}
-                    and understand that I&apos;m supporting a crowdfunding campaign,
-                    not purchasing a finished product. Rewards are not guaranteed.
+                    and understand that my card will only be charged if this campaign reaches its funding goal. I&apos;m supporting a crowdfunding campaign, not purchasing a finished product. Rewards are not guaranteed.
                   </Label>
                 </div>
               </div>
@@ -1008,7 +1011,7 @@ export default function PledgePage() {
               <div>
                 <h3 className="font-medium mb-3">Frequently Asked Questions</h3>
                 <Accordion type="single" collapsible className="space-y-0">
-                  {FAQ_ITEMS.slice(0, 5).map((item, idx) => (
+                  {FAQ_ITEMS.slice(0, 6).map((item, idx) => (
                     <AccordionItem key={idx} value={`sidebar-faq-${idx}`} className="border-b py-0">
                       <AccordionTrigger className="py-3 text-sm hover:no-underline">
                         {item.question}
