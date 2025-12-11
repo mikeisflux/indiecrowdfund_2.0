@@ -572,9 +572,18 @@ function ProjectCard({ project }: { project: Project }) {
     <Link href={`/projects/${project.slug}`}>
       <Card className="h-full overflow-hidden transition-all hover:shadow-lg">
         <div className="aspect-video bg-muted relative">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Play className="h-12 w-12 text-muted-foreground/50" />
-          </div>
+          {project.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={project.imageUrl}
+              alt={project.title}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Play className="h-12 w-12 text-muted-foreground/50" />
+            </div>
+          )}
           <Badge className="absolute left-3 top-3">
             {PROJECT_CATEGORIES.find((c) => c.value === project.category)?.label ||
               project.category}
@@ -632,9 +641,18 @@ function ProjectListItem({ project }: { project: Project }) {
       <Card className="overflow-hidden transition-all hover:shadow-lg">
         <div className="flex">
           <div className="aspect-video w-48 flex-shrink-0 bg-muted relative">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Play className="h-8 w-8 text-muted-foreground/50" />
-            </div>
+            {project.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={project.imageUrl}
+                alt={project.title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Play className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+            )}
           </div>
           <div className="flex flex-1 flex-col p-4">
             <div className="mb-2 flex items-start justify-between gap-4">
