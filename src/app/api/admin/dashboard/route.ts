@@ -58,7 +58,6 @@ export async function GET() {
       pledgesPrevMonth,
 
       // Recent activity
-      recentProjects,
       recentUsers,
       pendingReviews,
 
@@ -101,22 +100,6 @@ export async function GET() {
       }),
 
       // Recent activity
-      db.project.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          category: true,
-          goalAmount: true,
-          currentAmount: true,
-          createdAt: true,
-          creator: {
-            select: { name: true, email: true }
-          }
-        }
-      }),
       db.user.findMany({
         take: 5,
         orderBy: { createdAt: "desc" },
