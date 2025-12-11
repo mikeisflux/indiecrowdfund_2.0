@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { canUserEditProject } from "@/lib/project-auth";
 
 const createRewardSchema = z.object({
   projectId: z.string(),
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createRewardSchema.parse(body);
 
-    // Verify project ownership
+    // Verify project ownership or collaborator with edit permission
     const project = await db.project.findUnique({
       where: { id: data.projectId },
       select: { creatorId: true, status: true },
@@ -57,7 +58,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    const canEdit = await canUserEditProject(data.projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -113,7 +115,7 @@ export async function PATCH(req: NextRequest) {
     const reward = await db.reward.findUnique({
       where: { id: data.rewardId },
       include: {
-        project: { select: { creatorId: true, status: true } },
+        project: { select: { id: true, creatorId: true, status: true } },
         _count: { select: { pledges: true } },
       },
     });
@@ -122,7 +124,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Reward not found" }, { status: 404 });
     }
 
-    if (reward.project.creatorId !== session.user.id) {
+    const canEdit = await canUserEditProject(reward.project.id, session.user.id, reward.project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -194,7 +197,7 @@ export async function DELETE(req: NextRequest) {
     const reward = await db.reward.findUnique({
       where: { id: rewardId },
       include: {
-        project: { select: { creatorId: true, status: true } },
+        project: { select: { id: true, creatorId: true, status: true } },
         _count: { select: { pledges: true } },
       },
     });
@@ -203,7 +206,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Reward not found" }, { status: 404 });
     }
 
-    if (reward.project.creatorId !== session.user.id) {
+    const canEdit = await canUserEditProject(reward.project.id, session.user.id, reward.project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

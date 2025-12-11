@@ -39,7 +39,7 @@ export async function POST(
 
     const { id: projectId } = await params;
 
-    // Verify project ownership
+    // Verify project ownership or collaborator with edit permission
     const project = await db.project.findUnique({
       where: { id: projectId },
       select: { creatorId: true, status: true },
@@ -49,7 +49,23 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    // Check if user is creator or an accepted collaborator with edit permission
+    const isCreator = project.creatorId === session.user.id;
+    let canEdit = isCreator;
+
+    if (!isCreator) {
+      const collaborator = await db.projectCollaborator.findFirst({
+        where: {
+          projectId,
+          userId: session.user.id,
+          status: "ACCEPTED",
+          canEditProject: true,
+        },
+      });
+      canEdit = !!collaborator;
+    }
+
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -115,7 +131,7 @@ export async function PATCH(
 
     const { id: projectId } = await params;
 
-    // Verify project ownership
+    // Verify project ownership or collaborator with edit permission
     const project = await db.project.findUnique({
       where: { id: projectId },
       select: { creatorId: true },
@@ -125,7 +141,23 @@ export async function PATCH(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    // Check if user is creator or an accepted collaborator with edit permission
+    const isCreator = project.creatorId === session.user.id;
+    let canEdit = isCreator;
+
+    if (!isCreator) {
+      const collaborator = await db.projectCollaborator.findFirst({
+        where: {
+          projectId,
+          userId: session.user.id,
+          status: "ACCEPTED",
+          canEditProject: true,
+        },
+      });
+      canEdit = !!collaborator;
+    }
+
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -209,7 +241,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Reward ID required" }, { status: 400 });
     }
 
-    // Verify project ownership
+    // Verify project ownership or collaborator with edit permission
     const project = await db.project.findUnique({
       where: { id: projectId },
       select: { creatorId: true },
@@ -219,7 +251,23 @@ export async function DELETE(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    // Check if user is creator or an accepted collaborator with edit permission
+    const isCreator = project.creatorId === session.user.id;
+    let canEdit = isCreator;
+
+    if (!isCreator) {
+      const collaborator = await db.projectCollaborator.findFirst({
+        where: {
+          projectId,
+          userId: session.user.id,
+          status: "ACCEPTED",
+          canEditProject: true,
+        },
+      });
+      canEdit = !!collaborator;
+    }
+
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

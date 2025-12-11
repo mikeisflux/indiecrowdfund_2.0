@@ -287,7 +287,24 @@ export async function PATCH(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    // Check if user is creator or an accepted collaborator with edit permission
+    const isCreator = project.creatorId === session.user.id;
+    let canEdit = isCreator;
+
+    if (!isCreator) {
+      // Check if user is a collaborator with edit permission
+      const collaborator = await db.projectCollaborator.findFirst({
+        where: {
+          projectId: params.id,
+          userId: session.user.id,
+          status: "ACCEPTED",
+          canEditProject: true,
+        },
+      });
+      canEdit = !!collaborator;
+    }
+
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

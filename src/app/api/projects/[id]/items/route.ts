@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { canUserEditProject } from "@/lib/project-auth";
 
 const itemSchema = z.object({
   id: z.string().optional(),
@@ -23,7 +24,7 @@ export async function POST(
 
     const { id: projectId } = await params;
 
-    // Verify project ownership
+    // Verify project ownership or collaborator with edit permission
     const project = await db.project.findUnique({
       where: { id: projectId },
       select: { creatorId: true },
@@ -33,7 +34,8 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -78,7 +80,7 @@ export async function PATCH(
 
     const { id: projectId } = await params;
 
-    // Verify project ownership
+    // Verify project ownership or collaborator with edit permission
     const project = await db.project.findUnique({
       where: { id: projectId },
       select: { creatorId: true },
@@ -88,7 +90,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -143,7 +146,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Item ID required" }, { status: 400 });
     }
 
-    // Verify project ownership
+    // Verify project ownership or collaborator with edit permission
     const project = await db.project.findUnique({
       where: { id: projectId },
       select: { creatorId: true },
@@ -153,7 +156,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -185,7 +189,7 @@ export async function GET(
 
     const { id: projectId } = await params;
 
-    // Verify project access
+    // Verify project access (creator or any accepted collaborator)
     const project = await db.project.findUnique({
       where: { id: projectId },
       select: { creatorId: true },
@@ -195,7 +199,9 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    // For GET, allow any collaborator (not just those with edit permission)
+    const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
