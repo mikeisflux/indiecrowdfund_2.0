@@ -1522,6 +1522,17 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
                 )}
               </CardContent>
             </Card>
+
+            {/* Bottom Save/Cancel Buttons */}
+            <div className="flex items-center justify-end gap-4 pt-6 border-t mt-6">
+              <Button variant="outline" onClick={handleCancelRewardForm} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveReward} disabled={isSaving}>
+                {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {isSaving ? "Saving..." : "Save reward"}
+              </Button>
+            </div>
           </div>
 
           {/* Preview Sidebar */}
