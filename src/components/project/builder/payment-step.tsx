@@ -152,15 +152,30 @@ export function PaymentStep() {
         <Label htmlFor="contactEmail">
           Contact Email <span className="text-destructive">*</span>
         </Label>
-        <Input
-          id="contactEmail"
-          type="email"
-          placeholder="your@email.com"
-          value={payment.contactEmail || ""}
-          onChange={(e) => updatePayment({ contactEmail: e.target.value })}
-        />
+        <div className="flex items-center gap-3">
+          <Input
+            id="contactEmail"
+            type="email"
+            placeholder="your@email.com"
+            value={payment.contactEmail || ""}
+            onChange={(e) => updatePayment({ contactEmail: e.target.value })}
+            className="flex-1"
+          />
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="contactEmailConfirmed"
+              checked={payment.contactEmailConfirmed || false}
+              onCheckedChange={(checked) =>
+                updatePayment({ contactEmailConfirmed: checked as boolean })
+              }
+            />
+            <Label htmlFor="contactEmailConfirmed" className="text-sm font-normal cursor-pointer whitespace-nowrap">
+              Confirm email
+            </Label>
+          </div>
+        </div>
         <p className="text-xs text-muted-foreground">
-          This email will be verified before launch
+          This email will be verified before launch. Check the box to confirm this is correct.
         </p>
       </div>
 

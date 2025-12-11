@@ -422,6 +422,7 @@ export interface CollaboratorData {
 
 export interface ProjectPaymentData {
   contactEmail?: string;
+  contactEmailConfirmed?: boolean;
   projectType: ProjectType;
   paymentProcessor: PaymentProcessor;
   hasAdultContent: boolean;
