@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Image as ImageIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -25,6 +25,7 @@ export function DragDropImageCell({
 }: DragDropImageCellProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const dragCounter = useRef(0);
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -67,26 +68,41 @@ export function DragDropImageCell({
     }
   }, [projectId, uploadType, onImageChange]);
 
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  }, []);
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    // Set dropEffect to copy to show the correct cursor
+    e.dataTransfer.dropEffect = "copy";
   }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+    dragCounter.current = 0;
 
-    const file = e.dataTransfer.files[0];
-    if (file) {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
       handleFile(file);
+      e.dataTransfer.clearData();
     }
   }, [handleFile]);
 
@@ -113,6 +129,7 @@ export function DragDropImageCell({
         isUploading ? "opacity-70" : "hover:ring-2 hover:ring-muted-foreground/30",
         className
       )}
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -125,22 +142,22 @@ export function DragDropImageCell({
           alt={alt}
           width={96}
           height={54}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover pointer-events-none"
         />
       ) : (
-        <div className="w-full h-full bg-muted flex items-center justify-center">
+        <div className="w-full h-full bg-muted flex items-center justify-center pointer-events-none">
           <ImageIcon className="h-6 w-6 text-muted-foreground" />
         </div>
       )}
 
       {isUploading && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center pointer-events-none">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
         </div>
       )}
 
       {isDragging && (
-        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center pointer-events-none">
           <div className="w-8 h-8 rounded-full bg-primary/30 animate-pulse" />
         </div>
       )}
