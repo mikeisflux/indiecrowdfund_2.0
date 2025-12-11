@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate amounts
     const grossAmount = project.pledges.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0);
-    const platformFeeRate = 0.05; // 5% platform fee
+    const platformFeeRate = 0.03; // 3% platform fee
     const processorFeeRate = 0.029 + 0.30; // 2.9% + $0.30 per transaction (Stripe standard)
 
     const platformFees = grossAmount * platformFeeRate;

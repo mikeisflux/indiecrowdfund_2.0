@@ -233,8 +233,8 @@ export async function createStripePayment({
     });
   }
 
-  // Calculate platform fee (5%)
-  const platformFee = Math.round(amount * 0.05 * 100); // In cents
+  // Calculate platform fee (3%)
+  const platformFee = Math.round(amount * 0.03 * 100); // In cents
   const amountInCents = Math.round(amount * 100);
 
   // Create Payment Intent
