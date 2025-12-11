@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       data: {
         projectId: projectId,
         reviewerId: session.user.id,
-        reviewerEmail: session.user.email,
+        reviewerEmail: session.user.email || "admin@indiecrowdfund.com",
         action: action,
         previousStatus: project.status,
         newStatus: newStatus,
