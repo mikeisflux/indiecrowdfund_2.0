@@ -40,7 +40,7 @@ interface ProjectData {
   title: string;
   slug: string;
   imageUrl: string;
-  paymentProcessor: "STRIPE" | "CCBILL";
+  paymentProcessor: "STRIPE";
   hasAdultContent: boolean;
   estimatedDelivery: string;
   creator: { name: string; location: string };
@@ -323,7 +323,7 @@ export default function PledgePage() {
   const handleSubmitPledge = async () => {
     setIsProcessing(true);
     // Would call API to create pledge and get payment intent
-    // Then redirect to Stripe checkout or CCBill
+    // Then redirect to Stripe checkout
     setTimeout(() => {
       setStep("success");
       setIsProcessing(false);

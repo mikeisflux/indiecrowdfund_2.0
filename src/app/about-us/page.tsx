@@ -95,9 +95,9 @@ const platformFeatures = [
     color: "bg-green-100 text-green-600",
     features: [
       {
-        title: "Dual Payment Processors",
+        title: "Secure Payment Processing",
         description:
-          "Choose Stripe for low fees and fast payouts, or CCBill for adult/high-risk content with specialized chargeback protection.",
+          "All payments processed securely through Stripe with industry-leading fraud protection and chargeback prevention.",
         icon: CreditCard,
       },
       {
@@ -121,7 +121,7 @@ const platformFeatures = [
       {
         title: "Transparent Fee Structure",
         description:
-          "Clear 5% platform fee plus payment processing. No hidden charges. See exactly what you'll receive with our fee calculator.",
+          "Clear 3% platform fee plus payment processing. No hidden charges. See exactly what you'll receive with our fee calculator.",
         icon: DollarSign,
       },
       {
@@ -131,9 +131,9 @@ const platformFeatures = [
         icon: TrendingUp,
       },
       {
-        title: "NSFW-Friendly Billing",
+        title: "All-or-Nothing Protection",
         description:
-          "We use NSFW-friendly billing and hosting providers. No unexpected payment issues or account shutdowns for adult content creators.",
+          "Backers are only charged when campaigns reach their goal. Failed payment retries happen automatically up to 3 times over 9 days.",
         icon: Shield,
       },
     ],

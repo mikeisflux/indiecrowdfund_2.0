@@ -271,6 +271,24 @@ const peopleFields: FieldInfo[] = [
 
 const paymentFields: FieldInfo[] = [
   {
+    name: 'How Payments Work',
+    required: false,
+    description: 'Backers are NOT charged when they pledge. Their payment is only processed when your campaign successfully reaches its funding goal. If your campaign doesn\'t fund, backers are never charged.',
+    tips: 'All-or-nothing funding protects both you and your backers. You only receive funds if you hit your goal.',
+  },
+  {
+    name: 'Post-Funding Pledges',
+    required: false,
+    description: 'Once your campaign has already reached its goal, any new pledges are charged immediately since the campaign is guaranteed to fund.',
+    tips: 'This allows you to keep accepting backers after hitting your goal without waiting for campaign end.',
+  },
+  {
+    name: 'Payment Retries',
+    required: false,
+    description: 'If a backer\'s payment fails when the campaign funds, we automatically retry up to 3 times over 9 days (once every 3 days) before marking the pledge as failed.',
+    tips: 'Most payment failures are due to expired cards or insufficient funds. The retry system recovers many of these pledges.',
+  },
+  {
     name: 'Contact Email',
     required: true,
     description: 'Your verified email address for important communications about your project and payments.',
@@ -297,8 +315,8 @@ const paymentFields: FieldInfo[] = [
   {
     name: 'Stripe Connect',
     required: true,
-    description: 'Complete identity verification through Stripe, link your bank account, set payout schedule, and provide tax information.',
-    tips: 'Stripe fees are 2.9% + $0.30 per transaction. Payouts typically arrive within 2 business days.',
+    description: 'Complete identity verification through Stripe, link your bank account, set payout schedule, and provide tax information. All payments are securely processed through Stripe.',
+    tips: 'Platform fee is 3% + Stripe fees (2.9% + $0.30 per transaction). Payouts typically arrive within 14 business days after campaign ends.',
   },
   {
     name: 'Bank Account',

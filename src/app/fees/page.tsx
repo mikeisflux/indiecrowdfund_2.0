@@ -1,7 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import {
   DollarSign,
   Percent,
@@ -18,7 +22,7 @@ import {
 const feeBreakdown = [
   {
     title: "Platform Fee",
-    rate: "5%",
+    rate: "3%",
     description: "Charged on successfully funded campaigns only",
     details: "Our platform fee covers hosting, tools, customer support, and payment processing infrastructure.",
   },
@@ -31,7 +35,7 @@ const feeBreakdown = [
 ];
 
 const comparisonData = [
-  { platform: "IndieCrowdfund", platformFee: "5%", paymentFee: "2.9% + $0.30", total: "~8%" },
+  { platform: "IndieCrowdfund", platformFee: "3%", paymentFee: "2.9% + $0.30", total: "~6%" },
   { platform: "Kickstarter", platformFee: "5%", paymentFee: "3% + $0.20", total: "~8%" },
   { platform: "Indiegogo", platformFee: "5%", paymentFee: "2.9% + $0.30", total: "~8%" },
   { platform: "GoFundMe", platformFee: "0%", paymentFee: "2.9% + $0.30", total: "~3%" },
@@ -60,13 +64,39 @@ const features = [
   },
 ];
 
-const examples = [
-  { raised: 10000, platformFee: 500, processingFee: 320, youReceive: 9180 },
-  { raised: 50000, platformFee: 2500, processingFee: 1480, youReceive: 46020 },
-  { raised: 100000, platformFee: 5000, processingFee: 2930, youReceive: 92070 },
-];
+// Calculate fees for a given amount
+function calculateFees(amount: number, averagePledge: number = 50) {
+  const platformFee = amount * 0.03; // 3% platform fee
+  const numTransactions = Math.ceil(amount / averagePledge);
+  const processingFee = (amount * 0.029) + (numTransactions * 0.30); // 2.9% + $0.30 per transaction
+  const totalFees = platformFee + processingFee;
+  const youReceive = amount - totalFees;
+  const feePercentage = (totalFees / amount) * 100;
+
+  return {
+    platformFee,
+    processingFee,
+    totalFees,
+    youReceive,
+    feePercentage,
+  };
+}
+
+// Format large numbers with K or M suffix
+function formatAmount(amount: number): string {
+  if (amount >= 1000000) {
+    return `$${(amount / 1000000).toFixed(1)}M`;
+  } else if (amount >= 1000) {
+    return `$${(amount / 1000).toFixed(0)}K`;
+  }
+  return `$${amount.toLocaleString()}`;
+}
 
 export default function FeesPage() {
+  const [sliderValue, setSliderValue] = useState([50000]); // Default to $50,000
+  const amount = sliderValue[0];
+  const fees = calculateFees(amount);
+
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       {/* Hero Section */}
@@ -124,51 +154,122 @@ export default function FeesPage() {
             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 dark:bg-emerald-900/20 px-6 py-3">
               <Calculator className="h-5 w-5 text-emerald-600" />
               <span className="font-medium text-emerald-700 dark:text-emerald-400">
-                Total fees: approximately 8% of funds raised
+                Total fees: approximately 6% of funds raised
               </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Calculator Section */}
+      {/* Interactive Calculator Section */}
       <section className="py-20 bg-zinc-50 dark:bg-zinc-900">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
-              See What You&apos;ll Receive
+              Estimate Your Earnings
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
-              Here&apos;s what creators take home at different funding levels
+              Use the slider to see how much you&apos;ll take home at different funding levels
             </p>
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {examples.map((example) => (
-              <Card key={example.raised} className="text-center">
-                <CardHeader>
-                  <CardDescription>If you raise</CardDescription>
-                  <CardTitle className="text-3xl text-zinc-900 dark:text-white">
-                    ${example.raised.toLocaleString()}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500">Platform fee (5%)</span>
-                    <span className="text-red-500">-${example.platformFee.toLocaleString()}</span>
+          <Card className="mt-12">
+            <CardContent className="p-8">
+              {/* Slider */}
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-sm text-zinc-500">$1,000</span>
+                  <span className="text-2xl font-bold text-zinc-900 dark:text-white">
+                    ${amount.toLocaleString()}
+                  </span>
+                  <span className="text-sm text-zinc-500">$500,000</span>
+                </div>
+                <Slider
+                  value={sliderValue}
+                  onValueChange={setSliderValue}
+                  min={1000}
+                  max={500000}
+                  step={1000}
+                  className="w-full"
+                />
+                <div className="flex justify-between mt-2 text-xs text-zinc-400">
+                  <span>Small Campaign</span>
+                  <span>Medium Campaign</span>
+                  <span>Large Campaign</span>
+                </div>
+              </div>
+
+              {/* Results */}
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* Fee Breakdown */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-zinc-900 dark:text-white mb-4">Fee Breakdown</h3>
+
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-zinc-600 dark:text-zinc-400">Campaign raised</span>
+                    <span className="font-medium">${amount.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500">Processing fees</span>
-                    <span className="text-red-500">-${example.processingFee.toLocaleString()}</span>
+
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-zinc-600 dark:text-zinc-400">Platform fee (3%)</span>
+                    <span className="text-red-500">-${fees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
-                  <div className="border-t pt-3 flex justify-between font-bold">
-                    <span>You receive</span>
-                    <span className="text-emerald-600">${example.youReceive.toLocaleString()}</span>
+
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-zinc-600 dark:text-zinc-400">Payment processing</span>
+                    <span className="text-red-500">-${fees.processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-zinc-600 dark:text-zinc-400">Total fees</span>
+                    <span className="text-red-500">-${fees.totalFees.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({fees.feePercentage.toFixed(1)}%)</span>
+                  </div>
+                </div>
+
+                {/* You Receive */}
+                <div className="flex flex-col justify-center items-center bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-8">
+                  <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium mb-2">
+                    You receive
+                  </span>
+                  <span className="text-5xl font-bold text-emerald-600 dark:text-emerald-400">
+                    ${fees.youReceive.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                  <span className="text-sm text-emerald-600/70 dark:text-emerald-400/70 mt-2">
+                    {((fees.youReceive / amount) * 100).toFixed(1)}% of funds raised
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick comparison */}
+              <div className="mt-8 pt-8 border-t">
+                <h4 className="text-sm font-medium text-zinc-500 mb-4">Compare with other platforms at ${amount.toLocaleString()}</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                    <div className="text-xs text-zinc-500 mb-1">IndieCrowdfund</div>
+                    <div className="font-bold text-emerald-600">${fees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                  </div>
+                  <div className="text-center p-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                    <div className="text-xs text-zinc-500 mb-1">Kickstarter</div>
+                    <div className="font-bold text-zinc-600 dark:text-zinc-400">
+                      ${(amount * 0.92).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                  <div className="text-center p-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                    <div className="text-xs text-zinc-500 mb-1">Indiegogo</div>
+                    <div className="font-bold text-zinc-600 dark:text-zinc-400">
+                      ${(amount * 0.92).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <div className="text-xs text-zinc-500 mb-1">Your savings</div>
+                    <div className="font-bold text-green-600">
+                      +${(fees.youReceive - (amount * 0.92)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
@@ -206,7 +307,7 @@ export default function FeesPage() {
               How We Compare
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
-              Our fees are competitive with other major crowdfunding platforms
+              Our fees are lower than other major crowdfunding platforms
             </p>
           </div>
 
@@ -226,7 +327,7 @@ export default function FeesPage() {
                     <td className="px-6 py-4 text-sm font-medium text-zinc-900 dark:text-white">
                       {row.platform}
                       {index === 0 && (
-                        <Badge className="ml-2 bg-emerald-500">You are here</Badge>
+                        <Badge className="ml-2 bg-emerald-500">Lowest fees</Badge>
                       )}
                     </td>
                     <td className="px-6 py-4 text-center text-sm text-zinc-600 dark:text-zinc-400">{row.platformFee}</td>
