@@ -179,7 +179,47 @@ export async function PATCH(req: NextRequest) {
 
       case "UPDATE_INFO":
         if (data?.name !== undefined) updateData.name = data.name;
-        if (data?.email !== undefined) updateData.email = data.email;
+        if (data?.email !== undefined) {
+          const newEmail = data.email.toLowerCase().trim();
+          const oldEmail = user.email.toLowerCase();
+
+          // Check if new email is already taken by another user
+          if (newEmail !== oldEmail) {
+            const existingUser = await db.user.findUnique({
+              where: { email: newEmail }
+            });
+            if (existingUser) {
+              return NextResponse.json(
+                { error: "This email is already in use by another account" },
+                { status: 400 }
+              );
+            }
+
+            // Update email in related tables and clean up old references
+            await db.$transaction(async (tx) => {
+              // Update collaborator records that use the old email
+              await tx.projectCollaborator.updateMany({
+                where: { email: oldEmail },
+                data: { email: newEmail }
+              });
+
+              // Delete any password reset tokens for the old email
+              await tx.passwordResetToken.deleteMany({
+                where: { email: oldEmail }
+              });
+
+              // Update project followers that used the old email (if any)
+              await tx.projectFollower.updateMany({
+                where: { email: oldEmail },
+                data: { email: newEmail }
+              });
+            });
+
+            console.log(`Updated email from ${oldEmail} to ${newEmail} and cleaned up related records`);
+          }
+
+          updateData.email = newEmail;
+        }
         break;
 
       case "TOGGLE_RETAILER_ACCESS":
