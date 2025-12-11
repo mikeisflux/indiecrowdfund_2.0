@@ -87,24 +87,28 @@ const FAQ_ITEMS = [
     answer: "Select your reward tier, add any optional add-ons, enter your shipping information, and complete your payment. You'll receive a confirmation email once your pledge is processed.",
   },
   {
-    question: "When will I be charged?",
+    question: "When is my card charged?",
     answer: "Your payment method will be charged immediately when you complete your pledge. If the project doesn't reach its funding goal, you'll receive a full refund.",
   },
   {
-    question: "Can I change or cancel my pledge?",
-    answer: "You can modify or cancel your pledge at any time before the campaign ends. After the campaign successfully funds, changes may be limited based on the creator's policy.",
+    question: "So I'm only charged if funding succeeds?",
+    answer: "For all-or-nothing campaigns, yes! If the project doesn't reach its funding goal by the deadline, all pledges will be refunded in full. Some projects may use flexible funding where you're charged regardless of outcome.",
   },
   {
-    question: "When will I get my reward?",
-    answer: "Estimated delivery dates are shown for each reward. These are estimates provided by the creator and actual delivery may vary. You'll receive updates from the creator throughout the fulfillment process.",
+    question: "What can others see about my pledge?",
+    answer: "Creators can see your name, email, and pledge amount. Other backers can only see your public profile name. Your payment details are never shared with creators.",
   },
   {
-    question: "What if the project doesn't reach its goal?",
-    answer: "This is an all-or-nothing campaign. If the project doesn't reach its funding goal by the deadline, all pledges will be refunded in full.",
+    question: "What if I want to change my pledge?",
+    answer: "You can modify or cancel your pledge at any time before the campaign ends. After the campaign successfully funds, you may be able to update your reward selection or shipping address through the pledge manager.",
   },
   {
-    question: "Is my payment secure?",
-    answer: "Yes, all payments are processed through secure, encrypted connections. We use industry-standard security measures to protect your payment information.",
+    question: "If this project is funded, how do I get my reward?",
+    answer: "After successful funding, the creator will begin production. Estimated delivery dates are shown for each reward. You'll receive updates from the creator and they'll reach out when it's time to confirm your shipping details.",
+  },
+  {
+    question: "Will I be charged more later?",
+    answer: "You may be charged shipping costs later if they weren't included in your pledge amount. The creator will notify you of any additional charges through the pledge manager before shipping.",
   },
 ];
 
@@ -139,6 +143,7 @@ export default function PledgePage() {
   });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
 
   // Fetch project and reward data from API
   const fetchData = useCallback(async () => {
@@ -484,122 +489,151 @@ export default function PledgePage() {
               <>
                 {/* Add-ons Section */}
                 <div>
-                  <h1 className="text-2xl font-bold mb-2">Add-ons</h1>
+                  <h1 className="text-2xl font-bold mb-2">Select optional add-ons</h1>
                   <p className="text-muted-foreground mb-6">
-                    Enhance your pledge with these optional add-ons. You can skip this step if you don&apos;t want any extras.
+                    Here are some items that are available to add to your pledge.
                   </p>
 
                   <div className="space-y-4">
                     {addons.map((addon) => {
                       const isSelected = selectedAddons[addon.id] > 0;
-                      const qty = selectedAddons[addon.id] || 0;
+                      const addonShipping = getShippingCostForCountry(
+                        addon.shippingCost,
+                        addon.shippingType,
+                        shippingCountry
+                      );
+                      const isExpanded = expandedDescriptions[addon.id] || false;
+                      const descriptionLimit = 200;
+                      const shouldTruncate = addon.description.length > descriptionLimit;
 
                       return (
                         <Card
                           key={addon.id}
-                          className={`overflow-hidden transition-all ${
-                            isSelected ? "ring-2 ring-primary" : ""
+                          className={`overflow-hidden transition-all border ${
+                            isSelected ? "ring-2 ring-green-600 border-green-600" : "border-zinc-200"
                           }`}
                         >
                           <CardContent className="p-0">
                             <div className="flex">
-                              {/* Image */}
-                              <div className="w-48 h-48 bg-muted flex-shrink-0 relative">
-                                {addon.imageUrl ? (
-                                  <Image
-                                    src={addon.imageUrl}
-                                    alt={addon.title}
-                                    fill
-                                    className="object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20 flex items-center justify-center">
-                                    <span className="text-4xl text-muted-foreground/50">+</span>
+                              {/* Content - Left side */}
+                              <div className="flex-1 p-5">
+                                {/* Title */}
+                                <h3 className="font-semibold text-lg mb-1">{addon.title}</h3>
+
+                                {/* Price with shipping */}
+                                <div className="flex items-center gap-1 mb-2">
+                                  <span className="font-semibold">${addon.amount}</span>
+                                  <span className="text-muted-foreground text-sm">
+                                    +${addonShipping} shipping
+                                  </span>
+                                  <button
+                                    className="text-muted-foreground hover:text-foreground"
+                                    title="Shipping cost may vary based on location"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <circle cx="12" cy="12" r="10"/>
+                                      <path d="M12 16v-4"/>
+                                      <path d="M12 8h.01"/>
+                                    </svg>
+                                  </button>
+                                </div>
+
+                                {/* Availability */}
+                                {addon.limitedQuantity && (
+                                  <p className="text-amber-600 text-sm font-medium mb-3">
+                                    {addon.limitedQuantity} available
+                                  </p>
+                                )}
+
+                                {/* Description with Read more */}
+                                <div className="text-sm text-muted-foreground mb-3">
+                                  {shouldTruncate && !isExpanded ? (
+                                    <>
+                                      {addon.description.substring(0, descriptionLimit)}...{" "}
+                                      <button
+                                        onClick={() => setExpandedDescriptions(prev => ({ ...prev, [addon.id]: true }))}
+                                        className="text-foreground underline hover:no-underline"
+                                      >
+                                        Read more
+                                      </button>
+                                    </>
+                                  ) : (
+                                    addon.description
+                                  )}
+                                </div>
+
+                                {/* Shipping info */}
+                                <div className="text-sm text-muted-foreground mb-1">
+                                  Ships to {addon.shippingType === "WORLDWIDE" ? "Anywhere in the world" : currentCountry?.name || "your location"}
+                                </div>
+
+                                {/* Estimated delivery */}
+                                <div className="text-sm text-muted-foreground mb-4">
+                                  Estimated delivery {addon.estimatedDelivery}
+                                </div>
+
+                                {/* Includes section */}
+                                {addon.includes.length > 0 && (
+                                  <div className="border-t pt-3">
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                                      Includes
+                                    </p>
+                                    <ul className="text-sm space-y-1">
+                                      {addon.includes.map((item, idx) => (
+                                        <li key={idx} className="flex items-center gap-2">
+                                          <span className="w-5 h-5 rounded border border-zinc-300 flex items-center justify-center text-xs text-muted-foreground">
+                                            1
+                                          </span>
+                                          {item}
+                                        </li>
+                                      ))}
+                                    </ul>
                                   </div>
                                 )}
                               </div>
 
-                              {/* Content */}
-                              <div className="flex-1 p-5">
-                                <div className="flex items-start justify-between mb-3">
-                                  <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h3 className="font-semibold text-lg">{addon.title}</h3>
-                                      {addon.limitedQuantity && (
-                                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">
-                                          Limited ({addon.limitedQuantity} left)
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                      <span className="font-semibold text-foreground text-base">
-                                        ${addon.amount}
-                                      </span>
-                                      <span>
-                                        Estimated Shipping: ${getShippingCostForCountry(
-                                          addon.shippingCost,
-                                          addon.shippingType,
-                                          shippingCountry
-                                        )}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {/* Add/Quantity buttons */}
-                                  {!isSelected ? (
-                                    <Button
-                                      variant="outline"
-                                      onClick={() => handleAddonToggle(addon.id)}
-                                      className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                                    >
-                                      <Plus className="h-4 w-4 mr-1" />
-                                      Add
-                                    </Button>
+                              {/* Image and Add button - Right side */}
+                              <div className="w-36 flex-shrink-0 flex flex-col">
+                                {/* Image with price badge */}
+                                <div className="relative bg-zinc-800 aspect-square">
+                                  {addon.imageUrl ? (
+                                    <Image
+                                      src={addon.imageUrl}
+                                      alt={addon.title}
+                                      fill
+                                      className="object-cover"
+                                    />
                                   ) : (
-                                    <div className="flex items-center gap-2 bg-muted rounded-md p-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => handleAddonQuantity(addon.id, -1)}
-                                      >
-                                        <Minus className="h-4 w-4" />
-                                      </Button>
-                                      <span className="w-8 text-center font-medium">{qty}</span>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => handleAddonQuantity(addon.id, 1)}
-                                      >
-                                        <Plus className="h-4 w-4" />
-                                      </Button>
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <span className="text-zinc-500 text-sm uppercase tracking-wider font-medium text-center px-2">
+                                        {addon.title.split(" ").slice(0, 2).join(" ")}
+                                      </span>
                                     </div>
                                   )}
+                                  {/* Price badge */}
+                                  <div className="absolute bottom-2 left-2 bg-green-600 text-white text-sm font-semibold px-2 py-1 rounded">
+                                    ${addon.amount}
+                                  </div>
                                 </div>
 
-                                <p className="text-sm text-muted-foreground mb-3">
-                                  {addon.description}
-                                </p>
-
-                                <div className="text-sm text-muted-foreground mb-2">
-                                  Estimated delivery: <span className="text-foreground">{addon.estimatedDelivery}</span>
-                                </div>
-
-                                {/* Includes section */}
-                                <div>
-                                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                                    Includes:
-                                  </p>
-                                  <ul className="text-sm space-y-0.5">
-                                    {addon.includes.map((item, idx) => (
-                                      <li key={idx} className="flex items-center gap-2">
-                                        <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
-                                        {item}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
+                                {/* Add button */}
+                                <Button
+                                  onClick={() => handleAddonToggle(addon.id)}
+                                  className={`rounded-none h-12 ${
+                                    isSelected
+                                      ? "bg-green-600 hover:bg-green-700 text-white"
+                                      : "bg-zinc-900 hover:bg-zinc-800 text-white"
+                                  }`}
+                                >
+                                  {isSelected ? (
+                                    <>
+                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                      Added
+                                    </>
+                                  ) : (
+                                    "Add"
+                                  )}
+                                </Button>
                               </div>
                             </div>
                           </CardContent>
@@ -609,38 +643,6 @@ export default function PledgePage() {
                   </div>
                 </div>
 
-                {/* Rewards Warning */}
-                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-4">
-                  <div className="flex gap-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-amber-800 dark:text-amber-200 mb-1">
-                        Rewards aren&apos;t guaranteed.
-                      </p>
-                      <p className="text-sm text-amber-700 dark:text-amber-300">
-                        Your pledge supports the creation of this project. Rewards are offered as a thank you,
-                        but delivery dates and specifications may change. Crowdfunding is not shopping.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* FAQ Accordion */}
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Frequently asked questions</h2>
-                  <Accordion type="single" collapsible className="border rounded-lg">
-                    {FAQ_ITEMS.map((item, idx) => (
-                      <AccordionItem key={idx} value={`item-${idx}`} className="border-b last:border-b-0">
-                        <AccordionTrigger className="px-4 hover:no-underline hover:bg-muted/50">
-                          {item.question}
-                        </AccordionTrigger>
-                        <AccordionContent className="px-4 pb-4 text-muted-foreground">
-                          {item.answer}
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </div>
               </>
             )}
 
@@ -865,97 +867,69 @@ export default function PledgePage() {
 
                   {/* Selected reward */}
                   <div className="p-4 border-b">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                      Your Reward
+                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                      Reward
                     </p>
                     <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{selectedReward.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Est. delivery: {selectedReward.estimatedDelivery}
-                        </p>
-                      </div>
+                      <span className="font-medium">{selectedReward.title}</span>
                       <span className="font-semibold">${selectedReward.amount}</span>
                     </div>
-                    <ul className="mt-2 space-y-0.5">
-                      {selectedReward.items.map((item, idx) => (
-                        <li key={idx} className="text-xs text-muted-foreground flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3 text-green-500" />
-                          {item.quantity}x {item.title}
-                        </li>
-                      ))}
-                    </ul>
                   </div>
-
-                  {/* Selected add-ons */}
-                  {Object.keys(selectedAddons).length > 0 && (
-                    <div className="p-4 border-b">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                        Add-ons
-                      </p>
-                      <div className="space-y-2">
-                        {Object.entries(selectedAddons).map(([id, qty]) => {
-                          const addon = addons.find((a) => a.id === id);
-                          if (!addon) return null;
-                          return (
-                            <div key={id} className="flex justify-between text-sm">
-                              <span>{addon.title} x{qty}</span>
-                              <span>${addon.amount * qty}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Bonus support */}
                   <div className="p-4 border-b">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                      Bonus Support
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Show extra love for this project
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">$</span>
+                    <div className="flex items-center gap-1 mb-3">
+                      <p className="text-sm font-medium">
+                        Bonus support
+                      </p>
+                      <button
+                        className="text-muted-foreground hover:text-foreground"
+                        title="Add an extra amount to show your support for this creator"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/>
+                          <path d="M12 16v-4"/>
+                          <path d="M12 8h.01"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="flex items-center border rounded-md">
+                      <span className="px-3 text-muted-foreground">$</span>
                       <Input
                         type="number"
                         min={0}
                         value={bonusSupport || ""}
                         onChange={(e) => setBonusSupport(Number(e.target.value) || 0)}
-                        className="w-24 h-9"
+                        className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                         placeholder="0"
                       />
                     </div>
                   </div>
 
-                  {/* Totals */}
-                  <div className="p-4 space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>${subtotal.toFixed(2)}</span>
+                  {/* Shipping */}
+                  <div className="p-4 border-b">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                      Shipping
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">{currentCountry?.name || "United States"}</span>
+                      <span className="font-semibold">${totalShipping.toFixed(0)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span>${totalShipping.toFixed(2)}</span>
+                  </div>
+
+                  {/* Total */}
+                  <div className="p-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold">Total amount</span>
+                      <span className="text-xl font-bold">${total.toFixed(0)}</span>
                     </div>
-                    <Separator />
-                    <div className="flex justify-between font-semibold">
-                      <span>Total</span>
-                      <span className="text-lg">${total.toFixed(2)} {currentCountry?.currency}</span>
-                    </div>
-                    {currentCountry?.currency !== "USD" && (
-                      <p className="text-xs text-muted-foreground">
-                        Approximately ${total.toFixed(2)} USD. Currency conversion fees may apply.
-                      </p>
-                    )}
                   </div>
 
                   {/* Continue button */}
                   <div className="p-4 pt-0">
                     {step === "addons" && (
                       <Button
-                        className="w-full bg-green-600 hover:bg-green-700 text-white"
+                        className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
                         size="lg"
                         onClick={() => setStep("shipping")}
                       >
@@ -965,7 +939,7 @@ export default function PledgePage() {
                     {step === "shipping" && (
                       <div className="space-y-2">
                         <Button
-                          className="w-full bg-green-600 hover:bg-green-700 text-white"
+                          className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
                           size="lg"
                           onClick={() => setStep("payment")}
                           disabled={
@@ -989,7 +963,7 @@ export default function PledgePage() {
                     {step === "payment" && (
                       <div className="space-y-2">
                         <Button
-                          className="w-full bg-green-600 hover:bg-green-700 text-white"
+                          className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
                           size="lg"
                           onClick={handleSubmitPledge}
                           disabled={!agreedToTerms || isProcessing}
@@ -999,7 +973,7 @@ export default function PledgePage() {
                           ) : (
                             <>
                               <Lock className="mr-2 h-4 w-4" />
-                              Pledge ${total.toFixed(2)}
+                              Pledge ${total.toFixed(0)}
                             </>
                           )}
                         </Button>
@@ -1016,20 +990,36 @@ export default function PledgePage() {
                 </CardContent>
               </Card>
 
-              {/* Estimated shipping info */}
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                    Estimated Shipping
+              {/* Rewards Warning in sidebar */}
+              <div className="flex gap-3 text-sm">
+                <AlertTriangle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <p className="font-medium mb-1">Rewards aren&apos;t guaranteed.</p>
+                  <p className="text-muted-foreground text-xs">
+                    You&apos;re supporting an ambitious creative project that has yet to be developed. It&apos;s important to consider that, despite a creator&apos;s efforts, there&apos;s a risk that your reward may not be fulfilled. We urge you to consider this risk prior to pledging. IndieCrowdfund is not responsible for reward fulfillment or refunds.
                   </p>
-                  <p className="text-sm">
-                    Ships to {currentCountry?.name || "your location"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Delivery estimate: {project.estimatedDelivery}
-                  </p>
-                </CardContent>
-              </Card>
+                  <Link href="/trust-safety" className="text-xs underline hover:no-underline mt-1 inline-block">
+                    Learn more about accountability
+                  </Link>
+                </div>
+              </div>
+
+              {/* Sidebar FAQ */}
+              <div>
+                <h3 className="font-medium mb-3">Frequently Asked Questions</h3>
+                <Accordion type="single" collapsible className="space-y-0">
+                  {FAQ_ITEMS.slice(0, 5).map((item, idx) => (
+                    <AccordionItem key={idx} value={`sidebar-faq-${idx}`} className="border-b py-0">
+                      <AccordionTrigger className="py-3 text-sm hover:no-underline">
+                        {item.question}
+                      </AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground pb-3">
+                        {item.answer}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
             </div>
           </div>
         </div>
