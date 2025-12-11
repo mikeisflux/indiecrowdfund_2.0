@@ -43,7 +43,7 @@ function getVideoEmbedUrl(url: string): string | null {
 }
 
 export function BasicsStep() {
-  const { basics, updateBasics, projectId, projectSlug } = useProjectStore();
+  const { basics, updateBasics, projectId } = useProjectStore();
   const [slugInput, setSlugInput] = useState(basics.slug || "");
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [slugMessage, setSlugMessage] = useState("");

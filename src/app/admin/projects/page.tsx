@@ -52,7 +52,6 @@ import {
   RotateCcw,
   Loader2,
   Zap,
-  Pause,
   Send,
   Power,
 } from "lucide-react";
