@@ -362,7 +362,7 @@ model Pledge {
   id                    String       @id @default(cuid())
   userId                String
   projectId             String
-  rewardId              String
+  rewardId              String?      // Optional - null for "pledge without reward"
 
   // Amounts
   amount                Float
@@ -397,7 +397,7 @@ model Pledge {
   // Relations
   user                  User         @relation(fields: [userId], references: [id])
   project               Project      @relation(fields: [projectId], references: [id])
-  reward                Reward       @relation(fields: [rewardId], references: [id])
+  reward                Reward?      @relation(fields: [rewardId], references: [id])
   addons                PledgeAddon[]
 
   createdAt             DateTime     @default(now())

@@ -656,13 +656,15 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     },
   });
 
-  // Update reward quantity if limited
-  await db.reward.update({
-    where: { id: pledge.rewardId },
-    data: {
-      quantityClaimed: { increment: 1 },
-    },
-  });
+  // Update reward quantity if limited (only if pledge has a reward)
+  if (pledge.rewardId) {
+    await db.reward.update({
+      where: { id: pledge.rewardId },
+      data: {
+        quantityClaimed: { increment: 1 },
+      },
+    });
+  }
 
   // Notify creator of new pledge
   await notifyPledgeReceived(
