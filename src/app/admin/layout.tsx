@@ -208,7 +208,7 @@ export default function AdminLayout({
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-zinc-200 px-4 dark:border-zinc-800">
-          <Link href="/admin" className="flex items-center gap-2">
+          <Link href="/admin" prefetch={false} className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
               <Zap className="h-5 w-5 text-white" />
             </div>
