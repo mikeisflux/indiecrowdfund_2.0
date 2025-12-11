@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Mail, Phone, MapPin, Globe, Save, Loader2, Store, Bell, Settings, LogOut } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import Link from "next/link";
 
 interface RetailerAccount {
@@ -37,8 +37,6 @@ export default function RetailerAccountPage() {
   const [account, setAccount] = useState<RetailerAccount | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
-
   useEffect(() => {
     async function fetchAccount() {
       try {
@@ -77,20 +75,13 @@ export default function RetailerAccountPage() {
       });
 
       if (response.ok) {
-        toast({
-          title: "Account updated",
-          description: "Your account information has been saved.",
-        });
+        toast.success("Account updated successfully");
       } else {
         throw new Error("Failed to save");
       }
     } catch (error) {
       console.error("Failed to save account:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save account information.",
-        variant: "destructive",
-      });
+      toast.error("Failed to save account information");
     } finally {
       setSaving(false);
     }
