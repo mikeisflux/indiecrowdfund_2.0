@@ -24,7 +24,6 @@ interface HealthResponse {
 
 // Simple health check endpoint for maintenance page and admin dashboard
 export async function GET() {
-  const startTime = Date.now();
   const checks: HealthCheck[] = [];
   let overallStatus: "healthy" | "degraded" | "unhealthy" = "healthy";
 
