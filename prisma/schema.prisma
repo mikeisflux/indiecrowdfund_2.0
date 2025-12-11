@@ -244,6 +244,7 @@ enum ProjectStatus {
   SUBMITTED
   APPROVED
   LIVE
+  PAUSED
   FUNDED
   FAILED
   CANCELLED
