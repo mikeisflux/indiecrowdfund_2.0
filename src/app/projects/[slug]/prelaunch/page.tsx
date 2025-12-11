@@ -144,18 +144,18 @@ export default function PrelaunchPage() {
 
       if (response.ok) {
         setIsSubscribed(true);
-        setFollowerCount((prev) => prev + 1);
+        setFollowerCount((prev) => (prev ?? 0) + 1);
         toast.success("You'll be notified when this project launches!");
       } else {
         // Still show success for demo purposes
         setIsSubscribed(true);
-        setFollowerCount((prev) => prev + 1);
+        setFollowerCount((prev) => (prev ?? 0) + 1);
         toast.success("You'll be notified when this project launches!");
       }
     } catch {
       // Still show success for demo purposes
       setIsSubscribed(true);
-      setFollowerCount((prev) => prev + 1);
+      setFollowerCount((prev) => (prev ?? 0) + 1);
       toast.success("You'll be notified when this project launches!");
     } finally {
       setIsSubscribing(false);
