@@ -23,12 +23,12 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
-  ArrowLeft,
   Lock,
   CheckCircle,
   ChevronRight,
   AlertTriangle,
   Loader2,
+  Info,
 } from "lucide-react";
 
 // Types for project and reward data
@@ -40,17 +40,20 @@ interface ProjectData {
   paymentProcessor: "STRIPE";
   hasAdultContent: boolean;
   estimatedDelivery: string;
-  creator: { name: string; location: string };
+  creator: { id: string; name: string; location: string; image: string };
 }
 
 interface RewardData {
   id: string;
   title: string;
+  description: string;
   amount: number;
-  shippingCost: Record<string, number>;
+  shippingCost: Record<string, number> | number;
   shippingType: "NO_SHIPPING" | "WORLDWIDE" | "SELECTED_COUNTRIES";
   shippingCountries: string[];
   estimatedDelivery: string;
+  quantityClaimed: number;
+  imageUrl: string;
   items: { title: string; quantity: number }[];
 }
 
@@ -59,12 +62,13 @@ interface AddonData {
   title: string;
   description: string;
   amount: number;
-  shippingCost: Record<string, number>;
+  shippingCost: Record<string, number> | number;
   shippingType: "NO_SHIPPING" | "WORLDWIDE" | "SELECTED_COUNTRIES";
   shippingCountries: string[];
   imageUrl: string | null;
   estimatedDelivery: string;
   limitedQuantity: number | null;
+  quantityClaimed: number;
   includes: string[];
 }
 
@@ -85,15 +89,11 @@ const FAQ_ITEMS = [
   },
   {
     question: "When is my card charged?",
-    answer: "Your card is only charged when the campaign reaches its funding goal. If you pledge before the goal is met, your payment is held and will only be processed once the campaign successfully funds. If the campaign doesn't reach its goal, you won't be charged at all. If your payment fails when the campaign funds, we'll automatically retry up to 3 times over the following 9 days (once every 3 days).",
+    answer: "Your card is only charged when the campaign reaches its funding goal. If you pledge before the goal is met, your payment is held and will only be processed once the campaign successfully funds. If the campaign doesn't reach its goal, you won't be charged at all.",
   },
   {
     question: "So I'm only charged if funding succeeds?",
-    answer: "Exactly! Your payment is held until the campaign reaches its funding goal. If the project doesn't reach its goal by the deadline, your payment method is never charged. This protects you and ensures creators only receive funds when they can deliver on their promises.",
-  },
-  {
-    question: "What if the campaign is already funded?",
-    answer: "If you pledge after a campaign has already reached its funding goal, your payment will be processed immediately since the project is guaranteed to move forward.",
+    answer: "Exactly! Your payment is held until the campaign reaches its funding goal. If the project doesn't reach its goal by the deadline, your payment method is never charged.",
   },
   {
     question: "What can others see about my pledge?",
@@ -113,7 +113,7 @@ const FAQ_ITEMS = [
   },
 ];
 
-type Step = "rewards" | "addons" | "shipping" | "payment" | "success";
+type Step = "rewards" | "addons" | "payment" | "success";
 
 export default function PledgePage() {
   const params = useParams();
@@ -130,25 +130,15 @@ export default function PledgePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pledgeWithoutReward, setPledgeWithoutReward] = useState(false);
-  const [customPledgeAmount, setCustomPledgeAmount] = useState(amountParam ? parseInt(amountParam) : 1);
+  const [customPledgeAmount, setCustomPledgeAmount] = useState(amountParam ? parseInt(amountParam) : 10);
 
-  // UI state - start at rewards step if no reward pre-selected
+  // UI state
   const [step, setStep] = useState<Step>(rewardId ? "addons" : "rewards");
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
   const [bonusSupport, setBonusSupport] = useState<number>(0);
   const [shippingCountry, setShippingCountry] = useState("US");
-  const [shippingAddress, setShippingAddress] = useState({
-    name: "",
-    address1: "",
-    address2: "",
-    city: "",
-    state: "",
-    zip: "",
-    phone: "",
-  });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
 
   // Fetch project and reward data from API
   const fetchData = useCallback(async () => {
@@ -158,7 +148,6 @@ export default function PledgePage() {
     setError(null);
 
     try {
-      // Fetch project by slug
       const projectRes = await fetch(`/api/projects/slug/${slug}`);
       if (!projectRes.ok) {
         throw new Error("Project not found");
@@ -166,7 +155,6 @@ export default function PledgePage() {
       const responseData = await projectRes.json();
       const projectData = responseData.project;
 
-      // Format project data
       const formattedProject: ProjectData = {
         id: projectData.id,
         title: projectData.title,
@@ -176,42 +164,44 @@ export default function PledgePage() {
         hasAdultContent: projectData.hasAdultContent || false,
         estimatedDelivery: projectData.estimatedDelivery || "",
         creator: {
+          id: projectData.creator?.id || "",
           name: projectData.creator?.name || "Creator",
           location: projectData.location || "",
+          image: projectData.creator?.image || "",
         },
       };
       setProject(formattedProject);
 
-      // Use rewards and addons from the API response (already fetched with project)
       const rewards = responseData.rewards || [];
       const addonsFromApi = responseData.addons || [];
 
-      // Get tier rewards (not addons) for the selection step
-      // Include rewards where type is TIER or not set (legacy rewards)
+      // Get tier rewards
       const tierRewards = rewards.filter((r: { type?: string }) => r.type === "TIER" || !r.type);
       const formattedTiers: RewardData[] = tierRewards.map((reward: {
         id: string;
         title: string;
         description?: string;
         amount: number;
-        shippingCost?: Record<string, number>;
+        shippingCost?: Record<string, number> | number;
         shippingType?: string;
         shippingCountries?: string[];
         imageUrl?: string;
         estimatedDelivery?: string;
-        quantityAvailable?: number;
         quantityClaimed?: number;
         items?: { title: string }[];
       }) => ({
         id: reward.id,
         title: reward.title,
+        description: reward.description || "",
         amount: reward.amount,
         shippingCost: reward.shippingCost || {},
         shippingType: reward.shippingType || "NO_SHIPPING",
         shippingCountries: reward.shippingCountries || [],
+        imageUrl: reward.imageUrl || "",
         estimatedDelivery: reward.estimatedDelivery
-          ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+          ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "long", year: "numeric" })
           : "",
+        quantityClaimed: reward.quantityClaimed || 0,
         items: (reward.items || []).map((item: { title: string }) => ({
           title: item.title,
           quantity: 1,
@@ -226,13 +216,16 @@ export default function PledgePage() {
           const formattedReward: RewardData = {
             id: reward.id,
             title: reward.title,
+            description: reward.description || "",
             amount: reward.amount,
             shippingCost: reward.shippingCost || {},
             shippingType: reward.shippingType || "NO_SHIPPING",
             shippingCountries: reward.shippingCountries || [],
+            imageUrl: reward.imageUrl || "",
             estimatedDelivery: reward.estimatedDelivery
-              ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+              ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "long", year: "numeric" })
               : "",
+            quantityClaimed: reward.quantityClaimed || 0,
             items: (reward.items || []).map((item: { title: string }) => ({
               title: item.title,
               quantity: 1,
@@ -242,18 +235,19 @@ export default function PledgePage() {
         }
       }
 
-      // Get addons (use addonsFromApi which is already separated by the API)
+      // Get addons
       const formattedAddons: AddonData[] = addonsFromApi.map((addon: {
         id: string;
         title: string;
         description?: string;
         amount: number;
-        shippingCost?: Record<string, number>;
+        shippingCost?: Record<string, number> | number;
         shippingType?: string;
         shippingCountries?: string[];
         imageUrl?: string;
         estimatedDelivery?: string;
         quantityAvailable?: number;
+        quantityClaimed?: number;
         items?: { title: string }[];
       }) => ({
         id: addon.id,
@@ -265,9 +259,10 @@ export default function PledgePage() {
         shippingCountries: addon.shippingCountries || [],
         imageUrl: addon.imageUrl || null,
         estimatedDelivery: addon.estimatedDelivery
-          ? new Date(addon.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+          ? new Date(addon.estimatedDelivery).toLocaleDateString("en-US", { month: "long", year: "numeric" })
           : "",
         limitedQuantity: addon.quantityAvailable || null,
+        quantityClaimed: addon.quantityClaimed || 0,
         includes: (addon.items || []).map((item: { title: string }) => item.title),
       }));
       setAddons(formattedAddons);
@@ -284,27 +279,23 @@ export default function PledgePage() {
   }, [fetchData]);
 
   // Helper function to get shipping cost for a country
-  const getShippingCostForCountry = (
-    shippingCost: Record<string, number>,
+  const getShippingCost = (
+    shippingCost: Record<string, number> | number,
     shippingType: string,
     country: string
   ): number => {
     if (shippingType === "NO_SHIPPING") return 0;
+    if (typeof shippingCost === "number") return shippingCost;
     if (shippingType === "WORLDWIDE") {
       return shippingCost["WORLDWIDE"] || 0;
     }
-    // For selected countries, look up the specific country rate
     return shippingCost[country] || 0;
   };
 
   // Calculate totals
   const rewardAmount = pledgeWithoutReward ? customPledgeAmount : (selectedReward?.amount || 0);
   const rewardShipping = selectedReward
-    ? getShippingCostForCountry(
-        selectedReward.shippingCost,
-        selectedReward.shippingType,
-        shippingCountry
-      )
+    ? getShippingCost(selectedReward.shippingCost, selectedReward.shippingType, shippingCountry)
     : 0;
 
   const addonsTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
@@ -315,11 +306,7 @@ export default function PledgePage() {
   const addonsShipping = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
     const addon = addons.find((a) => a.id === id);
     if (!addon) return sum;
-    const addonShipping = getShippingCostForCountry(
-      addon.shippingCost,
-      addon.shippingType,
-      shippingCountry
-    );
+    const addonShipping = getShippingCost(addon.shippingCost, addon.shippingType, shippingCountry);
     return sum + addonShipping * qty;
   }, 0);
 
@@ -338,10 +325,20 @@ export default function PledgePage() {
     });
   };
 
+  const handleSelectReward = (reward: RewardData) => {
+    setSelectedReward(reward);
+    setPledgeWithoutReward(false);
+    setStep("addons");
+  };
+
+  const handlePledgeWithoutReward = () => {
+    setPledgeWithoutReward(true);
+    setSelectedReward(null);
+    setStep("addons");
+  };
+
   const handleSubmitPledge = async () => {
     setIsProcessing(true);
-    // Would call API to create pledge and get payment intent
-    // Then redirect to Stripe checkout
     setTimeout(() => {
       setStep("success");
       setIsProcessing(false);
@@ -355,30 +352,26 @@ export default function PledgePage() {
     <div className="flex items-center gap-2 text-sm">
       <button
         onClick={() => setStep("rewards")}
-        className={step === "rewards" ? "font-medium" : "text-muted-foreground hover:text-foreground"}
+        className={step === "rewards" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}
       >
         Rewards
       </button>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
       <button
         onClick={() => (selectedReward || pledgeWithoutReward) && setStep("addons")}
-        className={step === "addons" ? "font-medium" : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"}
+        className={step === "addons" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"}
         disabled={!selectedReward && !pledgeWithoutReward}
       >
         Add-ons
       </button>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
       <button
-        onClick={() => (selectedReward || pledgeWithoutReward) && setStep("shipping")}
-        className={step === "shipping" ? "font-medium" : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"}
+        onClick={() => (selectedReward || pledgeWithoutReward) && setStep("payment")}
+        className={step === "payment" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"}
         disabled={!selectedReward && !pledgeWithoutReward}
       >
-        Shipping
-      </button>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-      <span className={step === "payment" ? "font-medium" : "text-muted-foreground"}>
         Payment
-      </span>
+      </button>
     </div>
   );
 
@@ -460,17 +453,27 @@ export default function PledgePage() {
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-white dark:bg-background">
-        <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/" className="text-xl font-bold">
-              IndieCrowdfund
-            </Link>
-            <Breadcrumb />
+      <header className="border-b bg-white dark:bg-background">
+        <div className="container py-6">
+          {/* Project title and creator - centered */}
+          <div className="text-center mb-4">
+            <h1 className="text-2xl font-bold mb-2">{project.title}</h1>
+            <div className="flex items-center justify-center gap-2">
+              {project.creator.image && (
+                <Image
+                  src={project.creator.image}
+                  alt={project.creator.name}
+                  width={24}
+                  height={24}
+                  className="rounded-full"
+                />
+              )}
+              <span className="text-sm text-muted-foreground">{project.creator.name}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Lock className="h-4 w-4" />
-            Secure checkout
+          {/* Breadcrumb - centered */}
+          <div className="flex justify-center">
+            <Breadcrumb />
           </div>
         </div>
       </header>
@@ -478,132 +481,170 @@ export default function PledgePage() {
       <div className="container py-8">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-3">
           {/* Main Content - 2 columns */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Back link */}
-            <Link
-              href={`/projects/${project.slug}`}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to project
-            </Link>
-
+          <div className="lg:col-span-2 space-y-6">
             {step === "rewards" && (
-              <div className="space-y-6">
+              <>
+                {/* Page heading */}
                 <div>
-                  <h1 className="text-2xl font-bold mb-2">Select your reward</h1>
-                  <p className="text-muted-foreground">
-                    Choose a reward tier to support this project.
+                  <h2 className="text-xl font-semibold mb-1">Select your reward</h2>
+                  <p className="text-muted-foreground text-sm">
+                    Pick which reward you&apos;d like to pledge for
                   </p>
                 </div>
 
-                {/* Pledge without reward option */}
-                <Card
-                  className={`cursor-pointer transition-all ${
-                    pledgeWithoutReward ? "ring-2 ring-green-600 border-green-600" : "border-zinc-200 hover:border-zinc-400"
-                  }`}
-                  onClick={() => {
-                    setPledgeWithoutReward(true);
-                    setSelectedReward(null);
-                  }}
-                >
+                {/* Pledge without reward */}
+                <Card className="border-zinc-200">
                   <CardContent className="p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        pledgeWithoutReward ? "border-green-600 bg-green-600" : "border-zinc-300"
-                      }`}>
-                        {pledgeWithoutReward && <CheckCircle className="h-3 w-3 text-white" />}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold mb-1">Pledge without a reward</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Support the project for no reward, just because it speaks to you.
+                        </p>
                       </div>
-                      <h3 className="font-semibold text-lg">Pledge without a reward</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4 ml-8">
-                      Support this project because you believe in it. You won&apos;t receive a reward, just the satisfaction of helping make this happen.
-                    </p>
-                    {pledgeWithoutReward && (
-                      <div className="ml-8">
-                        <Label htmlFor="customAmount" className="text-sm">Pledge amount</Label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-lg">$</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center border rounded-md">
+                          <span className="px-3 text-muted-foreground">$</span>
                           <Input
-                            id="customAmount"
                             type="number"
-                            min="1"
+                            min={1}
                             value={customPledgeAmount}
                             onChange={(e) => setCustomPledgeAmount(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-32"
+                            className="w-20 border-0 focus-visible:ring-0"
                           />
                         </div>
+                        <Button
+                          onClick={handlePledgeWithoutReward}
+                          className="bg-[#028858] hover:bg-[#026d47] text-white"
+                        >
+                          Pledge ${customPledgeAmount}
+                        </Button>
                       </div>
-                    )}
+                    </div>
                   </CardContent>
                 </Card>
 
-                {/* Reward tiers */}
-                {allRewards.length > 0 && (
+                {/* Available rewards header */}
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Available rewards</h3>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Ships to</span>
+                    <Select value={shippingCountry} onValueChange={setShippingCountry}>
+                      <SelectTrigger className="w-40 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES.map((country) => (
+                          <SelectItem key={country.code} value={country.code}>
+                            {country.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Reward cards */}
+                {allRewards.length > 0 ? (
                   <div className="space-y-4">
-                    <h2 className="font-semibold text-lg">Reward tiers</h2>
                     {allRewards.map((reward) => {
-                      const isSelected = selectedReward?.id === reward.id && !pledgeWithoutReward;
-                      const rewardShippingCost = getShippingCostForCountry(
-                        reward.shippingCost,
-                        reward.shippingType,
-                        shippingCountry
-                      );
+                      const shipping = getShippingCost(reward.shippingCost, reward.shippingType, shippingCountry);
 
                       return (
-                        <Card
-                          key={reward.id}
-                          className={`cursor-pointer transition-all ${
-                            isSelected ? "ring-2 ring-green-600 border-green-600" : "border-zinc-200 hover:border-zinc-400"
-                          }`}
-                          onClick={() => {
-                            setSelectedReward(reward);
-                            setPledgeWithoutReward(false);
-                          }}
-                        >
-                          <CardContent className="p-5">
-                            <div className="flex items-start gap-3">
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
-                                isSelected ? "border-green-600 bg-green-600" : "border-zinc-300"
-                              }`}>
-                                {isSelected && <CheckCircle className="h-3 w-3 text-white" />}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-start justify-between gap-4">
-                                  <div>
-                                    <h3 className="font-semibold text-lg">{reward.title}</h3>
-                                    <p className="text-xl font-bold text-green-600 mt-1">
-                                      ${reward.amount}
-                                      {rewardShippingCost > 0 && (
-                                        <span className="text-sm font-normal text-muted-foreground ml-2">
-                                          + ${rewardShippingCost} shipping
-                                        </span>
-                                      )}
-                                    </p>
-                                  </div>
+                        <Card key={reward.id} className="border-zinc-200 overflow-hidden">
+                          <CardContent className="p-0">
+                            <div className="flex">
+                              {/* Left side - Content */}
+                              <div className="flex-1 p-5">
+                                {/* Title */}
+                                <h4 className="font-semibold text-lg uppercase tracking-wide mb-1">
+                                  {reward.title}
+                                </h4>
+
+                                {/* Price and shipping */}
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="font-semibold">${reward.amount}</span>
+                                  {shipping > 0 && (
+                                    <>
+                                      <span className="text-muted-foreground text-sm">+${shipping} shipping</span>
+                                      <button className="text-muted-foreground hover:text-foreground">
+                                        <Info className="h-4 w-4" />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
 
-                                {/* Items included */}
-                                {reward.items.length > 0 && (
-                                  <div className="mt-3 pt-3 border-t">
-                                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Includes:</p>
-                                    <ul className="space-y-1">
-                                      {reward.items.map((item, idx) => (
-                                        <li key={idx} className="flex items-center gap-2 text-sm">
-                                          <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
-                                          {item.title}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
+                                {/* Backer count */}
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  {reward.quantityClaimed} backer{reward.quantityClaimed !== 1 ? "s" : ""}
+                                </p>
+
+                                {/* Description */}
+                                {reward.description && (
+                                  <p className="text-sm mb-4">{reward.description}</p>
+                                )}
+
+                                {/* Shipping info */}
+                                {reward.shippingType !== "NO_SHIPPING" && (
+                                  <p className="text-sm text-muted-foreground mb-1">
+                                    Ships to {reward.shippingType === "WORLDWIDE" ? "Anywhere in the world" : currentCountry?.name}
+                                  </p>
                                 )}
 
                                 {/* Estimated delivery */}
                                 {reward.estimatedDelivery && (
-                                  <p className="text-xs text-muted-foreground mt-3">
-                                    Estimated delivery: {reward.estimatedDelivery}
+                                  <p className="text-sm text-muted-foreground mb-4">
+                                    Estimated delivery {reward.estimatedDelivery}
                                   </p>
                                 )}
+
+                                {/* Includes */}
+                                {reward.items.length > 0 && (
+                                  <div className="border-t pt-3">
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                                      Includes
+                                    </p>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                      {reward.items.map((item, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 text-sm">
+                                          <span className="w-5 h-5 rounded border border-zinc-300 flex items-center justify-center text-xs text-muted-foreground">
+                                            {item.quantity}
+                                          </span>
+                                          {item.title}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Right side - Image and button */}
+                              <div className="w-44 flex-shrink-0 flex flex-col border-l">
+                                {/* Image */}
+                                <div className="relative aspect-square bg-zinc-100">
+                                  {reward.imageUrl ? (
+                                    <Image
+                                      src={reward.imageUrl}
+                                      alt={reward.title}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <span className="text-zinc-400 text-xs uppercase tracking-wider text-center px-2">
+                                        {reward.title.split(" ").slice(0, 2).join(" ")}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Pledge button */}
+                                <Button
+                                  onClick={() => handleSelectReward(reward)}
+                                  className="rounded-none h-12 bg-[#028858] hover:bg-[#026d47] text-white font-medium"
+                                >
+                                  Pledge ${reward.amount}
+                                </Button>
                               </div>
                             </div>
                           </CardContent>
@@ -611,130 +652,96 @@ export default function PledgePage() {
                       );
                     })}
                   </div>
-                )}
-
-                {allRewards.length === 0 && !pledgeWithoutReward && (
+                ) : (
                   <Card className="border-dashed">
                     <CardContent className="p-6 text-center">
                       <p className="text-muted-foreground">No reward tiers available for this project.</p>
-                      <p className="text-sm text-muted-foreground mt-2">You can still support this project by pledging without a reward.</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        You can still support by pledging without a reward.
+                      </p>
                     </CardContent>
                   </Card>
                 )}
-              </div>
+              </>
             )}
 
             {step === "addons" && (
               <>
-                {/* Add-ons Section */}
                 <div>
-                  <h1 className="text-2xl font-bold mb-2">Select optional add-ons</h1>
-                  <p className="text-muted-foreground mb-6">
-                    Here are some items that are available to add to your pledge.
+                  <h2 className="text-xl font-semibold mb-1">Add-ons</h2>
+                  <p className="text-muted-foreground text-sm">
+                    Extras available to add to your pledge
                   </p>
+                </div>
 
+                {addons.length > 0 ? (
                   <div className="space-y-4">
                     {addons.map((addon) => {
                       const isSelected = selectedAddons[addon.id] > 0;
-                      const addonShipping = getShippingCostForCountry(
-                        addon.shippingCost,
-                        addon.shippingType,
-                        shippingCountry
-                      );
-                      const isExpanded = expandedDescriptions[addon.id] || false;
-                      const descriptionLimit = 200;
-                      const shouldTruncate = addon.description.length > descriptionLimit;
+                      const shipping = getShippingCost(addon.shippingCost, addon.shippingType, shippingCountry);
 
                       return (
                         <Card
                           key={addon.id}
-                          className={`overflow-hidden transition-all border ${
-                            isSelected ? "ring-2 ring-green-600 border-green-600" : "border-zinc-200"
+                          className={`overflow-hidden transition-all ${
+                            isSelected ? "ring-2 ring-[#028858] border-[#028858]" : "border-zinc-200"
                           }`}
                         >
                           <CardContent className="p-0">
                             <div className="flex">
-                              {/* Content - Left side */}
+                              {/* Left side - Content */}
                               <div className="flex-1 p-5">
-                                {/* Title */}
-                                <h3 className="font-semibold text-lg mb-1">{addon.title}</h3>
+                                <h4 className="font-semibold text-lg uppercase tracking-wide mb-1">
+                                  {addon.title}
+                                </h4>
 
-                                {/* Price with shipping */}
-                                <div className="flex items-center gap-1 mb-2">
+                                <div className="flex items-center gap-2 mb-2">
                                   <span className="font-semibold">${addon.amount}</span>
-                                  <span className="text-muted-foreground text-sm">
-                                    +${addonShipping} shipping
-                                  </span>
-                                  <button
-                                    className="text-muted-foreground hover:text-foreground"
-                                    title="Shipping cost may vary based on location"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <circle cx="12" cy="12" r="10"/>
-                                      <path d="M12 16v-4"/>
-                                      <path d="M12 8h.01"/>
-                                    </svg>
-                                  </button>
-                                </div>
-
-                                {/* Availability */}
-                                {addon.limitedQuantity && (
-                                  <p className="text-amber-600 text-sm font-medium mb-3">
-                                    {addon.limitedQuantity} available
-                                  </p>
-                                )}
-
-                                {/* Description with Read more */}
-                                <div className="text-sm text-muted-foreground mb-3">
-                                  {shouldTruncate && !isExpanded ? (
-                                    <>
-                                      {addon.description.substring(0, descriptionLimit)}...{" "}
-                                      <button
-                                        onClick={() => setExpandedDescriptions(prev => ({ ...prev, [addon.id]: true }))}
-                                        className="text-foreground underline hover:no-underline"
-                                      >
-                                        Read more
-                                      </button>
-                                    </>
-                                  ) : (
-                                    addon.description
+                                  {shipping > 0 && (
+                                    <span className="text-muted-foreground text-sm">+${shipping} shipping</span>
                                   )}
                                 </div>
 
-                                {/* Shipping info */}
-                                <div className="text-sm text-muted-foreground mb-1">
-                                  Ships to {addon.shippingType === "WORLDWIDE" ? "Anywhere in the world" : currentCountry?.name || "your location"}
-                                </div>
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  {addon.quantityClaimed} backer{addon.quantityClaimed !== 1 ? "s" : ""}
+                                </p>
 
-                                {/* Estimated delivery */}
-                                <div className="text-sm text-muted-foreground mb-4">
-                                  Estimated delivery {addon.estimatedDelivery}
-                                </div>
+                                {addon.description && (
+                                  <p className="text-sm mb-4">{addon.description}</p>
+                                )}
 
-                                {/* Includes section */}
+                                {addon.shippingType !== "NO_SHIPPING" && (
+                                  <p className="text-sm text-muted-foreground mb-1">
+                                    Ships to {addon.shippingType === "WORLDWIDE" ? "Anywhere in the world" : currentCountry?.name}
+                                  </p>
+                                )}
+
+                                {addon.estimatedDelivery && (
+                                  <p className="text-sm text-muted-foreground mb-4">
+                                    Estimated delivery {addon.estimatedDelivery}
+                                  </p>
+                                )}
+
                                 {addon.includes.length > 0 && (
                                   <div className="border-t pt-3">
-                                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                                      Includes
-                                    </p>
-                                    <ul className="text-sm space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">Includes</p>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1">
                                       {addon.includes.map((item, idx) => (
-                                        <li key={idx} className="flex items-center gap-2">
+                                        <div key={idx} className="flex items-center gap-2 text-sm">
                                           <span className="w-5 h-5 rounded border border-zinc-300 flex items-center justify-center text-xs text-muted-foreground">
                                             1
                                           </span>
                                           {item}
-                                        </li>
+                                        </div>
                                       ))}
-                                    </ul>
+                                    </div>
                                   </div>
                                 )}
                               </div>
 
-                              {/* Image and Add button - Right side */}
-                              <div className="w-36 flex-shrink-0 flex flex-col">
-                                {/* Image with price badge */}
-                                <div className="relative bg-zinc-800 aspect-square">
+                              {/* Right side - Image and button */}
+                              <div className="w-44 flex-shrink-0 flex flex-col border-l">
+                                <div className="relative aspect-square bg-zinc-100">
                                   {addon.imageUrl ? (
                                     <Image
                                       src={addon.imageUrl}
@@ -744,29 +751,24 @@ export default function PledgePage() {
                                     />
                                   ) : (
                                     <div className="w-full h-full flex items-center justify-center">
-                                      <span className="text-zinc-500 text-sm uppercase tracking-wider font-medium text-center px-2">
+                                      <span className="text-zinc-400 text-xs uppercase tracking-wider text-center px-2">
                                         {addon.title.split(" ").slice(0, 2).join(" ")}
                                       </span>
                                     </div>
                                   )}
-                                  {/* Price badge */}
-                                  <div className="absolute bottom-2 left-2 bg-green-600 text-white text-sm font-semibold px-2 py-1 rounded">
-                                    ${addon.amount}
-                                  </div>
                                 </div>
 
-                                {/* Add button */}
                                 <Button
                                   onClick={() => handleAddonToggle(addon.id)}
-                                  className={`rounded-none h-12 ${
+                                  className={`rounded-none h-12 font-medium ${
                                     isSelected
-                                      ? "bg-green-600 hover:bg-green-700 text-white"
+                                      ? "bg-[#028858] hover:bg-[#026d47] text-white"
                                       : "bg-zinc-900 hover:bg-zinc-800 text-white"
                                   }`}
                                 >
                                   {isSelected ? (
                                     <>
-                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                      <CheckCircle className="h-4 w-4 mr-2" />
                                       Added
                                     </>
                                   ) : (
@@ -780,162 +782,21 @@ export default function PledgePage() {
                       );
                     })}
                   </div>
-                </div>
-
+                ) : (
+                  <Card className="border-dashed">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-muted-foreground">No add-ons available for this project.</p>
+                    </CardContent>
+                  </Card>
+                )}
               </>
-            )}
-
-            {step === "shipping" && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="text-2xl font-bold mb-2">Shipping address</h1>
-                  <p className="text-muted-foreground">
-                    Where should we deliver your rewards?
-                  </p>
-                </div>
-
-                <Card>
-                  <CardContent className="p-6 space-y-4">
-                    <div>
-                      <Label htmlFor="country">Country</Label>
-                      <Select
-                        value={shippingCountry}
-                        onValueChange={setShippingCountry}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {COUNTRIES.map((country) => (
-                            <SelectItem key={country.code} value={country.code}>
-                              {country.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="name">Full name</Label>
-                      <Input
-                        id="name"
-                        className="mt-1"
-                        value={shippingAddress.name}
-                        onChange={(e) =>
-                          setShippingAddress((p) => ({ ...p, name: e.target.value }))
-                        }
-                        placeholder="John Doe"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="address1">Address line 1</Label>
-                      <Input
-                        id="address1"
-                        className="mt-1"
-                        value={shippingAddress.address1}
-                        onChange={(e) =>
-                          setShippingAddress((p) => ({
-                            ...p,
-                            address1: e.target.value,
-                          }))
-                        }
-                        placeholder="123 Main St"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="address2">
-                        Address line 2{" "}
-                        <span className="text-muted-foreground">(optional)</span>
-                      </Label>
-                      <Input
-                        id="address2"
-                        className="mt-1"
-                        value={shippingAddress.address2}
-                        onChange={(e) =>
-                          setShippingAddress((p) => ({
-                            ...p,
-                            address2: e.target.value,
-                          }))
-                        }
-                        placeholder="Apt, suite, etc."
-                      />
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <div>
-                        <Label htmlFor="city">City</Label>
-                        <Input
-                          id="city"
-                          className="mt-1"
-                          value={shippingAddress.city}
-                          onChange={(e) =>
-                            setShippingAddress((p) => ({
-                              ...p,
-                              city: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="state">State/Province</Label>
-                        <Input
-                          id="state"
-                          className="mt-1"
-                          value={shippingAddress.state}
-                          onChange={(e) =>
-                            setShippingAddress((p) => ({
-                              ...p,
-                              state: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="zip">ZIP/Postal code</Label>
-                        <Input
-                          id="zip"
-                          className="mt-1"
-                          value={shippingAddress.zip}
-                          onChange={(e) =>
-                            setShippingAddress((p) => ({
-                              ...p,
-                              zip: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="phone">
-                        Phone number{" "}
-                        <span className="text-muted-foreground">(for delivery)</span>
-                      </Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        className="mt-1"
-                        value={shippingAddress.phone}
-                        onChange={(e) =>
-                          setShippingAddress((p) => ({
-                            ...p,
-                            phone: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
             )}
 
             {step === "payment" && (
               <div className="space-y-6">
                 <div>
-                  <h1 className="text-2xl font-bold mb-2">Payment</h1>
-                  <p className="text-muted-foreground">
+                  <h2 className="text-xl font-semibold mb-1">Payment</h2>
+                  <p className="text-muted-foreground text-sm">
                     Complete your pledge securely
                   </p>
                 </div>
@@ -951,183 +812,115 @@ export default function PledgePage() {
                   </CardContent>
                 </Card>
 
-                {/* Terms */}
                 <div className="flex items-start gap-3">
                   <Checkbox
                     id="terms"
                     checked={agreedToTerms}
-                    onCheckedChange={(checked) =>
-                      setAgreedToTerms(checked === true)
-                    }
+                    onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
                   />
                   <Label htmlFor="terms" className="text-sm leading-relaxed">
                     I agree to the{" "}
                     <Link href="/terms" className="underline hover:text-primary">
                       Terms of Service
                     </Link>{" "}
-                    and understand that my card will only be charged if this campaign reaches its funding goal. I&apos;m supporting a crowdfunding campaign, not purchasing a finished product. Rewards are not guaranteed.
+                    and understand that my card will only be charged if this campaign reaches its funding goal.
                   </Label>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Sidebar - Order Summary */}
+          {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="sticky top-20 space-y-4">
-              {/* Order Summary Card */}
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  {/* Project header */}
-                  <div className="p-4 border-b bg-muted/30">
-                    <div className="flex gap-3">
-                      <div className="w-16 h-16 bg-muted rounded overflow-hidden flex-shrink-0">
-                        {project.imageUrl ? (
-                          <Image
-                            src={project.imageUrl}
-                            alt={project.title}
-                            width={64}
-                            height={64}
-                            className="object-cover w-full h-full"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-medium text-sm line-clamp-2">{project.title}</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          by {project.creator.name}
-                        </p>
-                      </div>
+            <div className="sticky top-6 space-y-6">
+              {/* Order Summary - only show after reward selection */}
+              {(selectedReward || pledgeWithoutReward) && (
+                <Card>
+                  <CardContent className="p-5">
+                    {/* Selected reward */}
+                    <div className="pb-4 border-b">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Your pledge</p>
+                      {pledgeWithoutReward ? (
+                        <div className="flex justify-between">
+                          <span className="font-medium">No reward</span>
+                          <span className="font-semibold">${customPledgeAmount}</span>
+                        </div>
+                      ) : selectedReward && (
+                        <div className="flex justify-between">
+                          <span className="font-medium">{selectedReward.title}</span>
+                          <span className="font-semibold">${selectedReward.amount}</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Selected reward */}
-                  <div className="p-4 border-b">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                      Reward
-                    </p>
-                    {pledgeWithoutReward ? (
-                      <div className="flex justify-between items-start">
-                        <span className="font-medium">Pledge without reward</span>
-                        <span className="font-semibold">${customPledgeAmount}</span>
-                      </div>
-                    ) : selectedReward ? (
-                      <div className="flex justify-between items-start">
-                        <span className="font-medium">{selectedReward.title}</span>
-                        <span className="font-semibold">${selectedReward.amount}</span>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">No reward selected</p>
-                    )}
-                  </div>
-
-                  {/* Bonus support */}
-                  <div className="p-4 border-b">
-                    <div className="flex items-center gap-1 mb-3">
-                      <p className="text-sm font-medium">
-                        Bonus support
-                      </p>
-                      <button
-                        className="text-muted-foreground hover:text-foreground"
-                        title="Add an extra amount to show your support for this creator"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10"/>
-                          <path d="M12 16v-4"/>
-                          <path d="M12 8h.01"/>
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="flex items-center border rounded-md">
-                      <span className="px-3 text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={bonusSupport || ""}
-                        onChange={(e) => setBonusSupport(Number(e.target.value) || 0)}
-                        className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Shipping */}
-                  <div className="p-4 border-b">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                      Shipping
-                    </p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">{currentCountry?.name || "United States"}</span>
-                      <span className="font-semibold">${totalShipping.toFixed(0)}</span>
-                    </div>
-                  </div>
-
-                  {/* Total */}
-                  <div className="p-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold">Total amount</span>
-                      <span className="text-xl font-bold">${total.toFixed(0)}</span>
-                    </div>
-                  </div>
-
-                  {/* Continue button */}
-                  <div className="p-4 pt-0">
-                    {step === "rewards" && (
-                      <Button
-                        className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
-                        size="lg"
-                        onClick={() => setStep("addons")}
-                        disabled={!selectedReward && !pledgeWithoutReward}
-                      >
-                        Continue
-                      </Button>
-                    )}
-                    {step === "addons" && (
-                      <div className="space-y-2">
-                        <Button
-                          className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
-                          size="lg"
-                          onClick={() => setStep("shipping")}
-                        >
-                          Continue
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="w-full"
-                          onClick={() => setStep("rewards")}
-                        >
-                          Back
-                        </Button>
+                    {/* Add-ons */}
+                    {Object.keys(selectedAddons).length > 0 && (
+                      <div className="py-4 border-b">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Add-ons</p>
+                        {Object.entries(selectedAddons).map(([id, qty]) => {
+                          const addon = addons.find(a => a.id === id);
+                          if (!addon) return null;
+                          return (
+                            <div key={id} className="flex justify-between text-sm">
+                              <span>{addon.title} x{qty}</span>
+                              <span>${addon.amount * qty}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
-                    {step === "shipping" && (
-                      <div className="space-y-2">
+
+                    {/* Bonus support */}
+                    <div className="py-4 border-b">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium">Bonus support</p>
+                        <button className="text-muted-foreground hover:text-foreground">
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center border rounded-md">
+                        <span className="px-3 text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={bonusSupport || ""}
+                          onChange={(e) => setBonusSupport(Number(e.target.value) || 0)}
+                          className="border-0 focus-visible:ring-0"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Shipping */}
+                    {totalShipping > 0 && (
+                      <div className="py-4 border-b">
+                        <div className="flex justify-between text-sm">
+                          <span>Shipping to {currentCountry?.name}</span>
+                          <span>${totalShipping}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="pt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total</span>
+                        <span className="text-xl font-bold">${total}</span>
+                      </div>
+                    </div>
+
+                    {/* Continue button */}
+                    <div className="mt-4">
+                      {step === "addons" && (
                         <Button
                           className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
                           size="lg"
                           onClick={() => setStep("payment")}
-                          disabled={
-                            !shippingAddress.name ||
-                            !shippingAddress.address1 ||
-                            !shippingAddress.city ||
-                            !shippingAddress.zip
-                          }
                         >
-                          Continue to payment
+                          Continue
                         </Button>
-                        <Button
-                          variant="ghost"
-                          className="w-full"
-                          onClick={() => setStep("addons")}
-                        >
-                          Back
-                        </Button>
-                      </div>
-                    )}
-                    {step === "payment" && (
-                      <div className="space-y-2">
+                      )}
+                      {step === "payment" && (
                         <Button
                           className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
                           size="lg"
@@ -1139,44 +932,40 @@ export default function PledgePage() {
                           ) : (
                             <>
                               <Lock className="mr-2 h-4 w-4" />
-                              Pledge ${total.toFixed(0)}
+                              Pledge ${total}
                             </>
                           )}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          className="w-full"
-                          onClick={() => setStep("shipping")}
-                        >
-                          Back
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
-              {/* Rewards Warning in sidebar */}
+              {/* Rewards Warning */}
               <div className="flex gap-3 text-sm">
                 <AlertTriangle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                 <div>
                   <p className="font-medium mb-1">Rewards aren&apos;t guaranteed.</p>
-                  <p className="text-muted-foreground text-xs">
-                    You&apos;re supporting an ambitious creative project that has yet to be developed. It&apos;s important to consider that, despite a creator&apos;s efforts, there&apos;s a risk that your reward may not be fulfilled. We urge you to consider this risk prior to pledging. IndieCrowdfund is not responsible for reward fulfillment or refunds.
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    You&apos;re supporting an ambitious creative project that has yet to be developed.
+                    It&apos;s important to consider that, despite a creator&apos;s efforts, there&apos;s a risk
+                    that your reward may not be fulfilled. IndieCrowdfund is not responsible for
+                    reward fulfillment or refunds.
                   </p>
-                  <Link href="/trust-safety" className="text-xs underline hover:no-underline mt-1 inline-block">
+                  <Link href="/trust-safety" className="text-xs underline hover:no-underline mt-2 inline-block">
                     Learn more about accountability
                   </Link>
                 </div>
               </div>
 
-              {/* Sidebar FAQ */}
+              {/* FAQ */}
               <div>
                 <h3 className="font-medium mb-3">Frequently Asked Questions</h3>
-                <Accordion type="single" collapsible className="space-y-0">
-                  {FAQ_ITEMS.slice(0, 6).map((item, idx) => (
-                    <AccordionItem key={idx} value={`sidebar-faq-${idx}`} className="border-b py-0">
-                      <AccordionTrigger className="py-3 text-sm hover:no-underline">
+                <Accordion type="single" collapsible>
+                  {FAQ_ITEMS.map((item, idx) => (
+                    <AccordionItem key={idx} value={`faq-${idx}`} className="border-b">
+                      <AccordionTrigger className="py-3 text-sm hover:no-underline text-left">
                         {item.question}
                       </AccordionTrigger>
                       <AccordionContent className="text-sm text-muted-foreground pb-3">
