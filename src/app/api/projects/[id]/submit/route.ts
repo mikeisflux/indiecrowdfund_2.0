@@ -78,12 +78,12 @@ export async function POST(
       validationErrors.push("At least one reward tier is required");
     }
 
-    // Check rewards have required fields
+    // Check rewards have required fields (title and price required, description optional)
     const invalidRewards = project.rewards.filter(
-      (r: { title: string | null; description: string | null; amount: number }) => !r.title || !r.description || r.amount <= 0
+      (r: { title: string | null; description: string | null; amount: number }) => !r.title || r.amount <= 0
     );
     if (invalidRewards.length > 0) {
-      validationErrors.push("All reward tiers must have a title, description, and price");
+      validationErrors.push("All reward tiers must have a title and price");
     }
 
     if (!project.contactEmail) {
