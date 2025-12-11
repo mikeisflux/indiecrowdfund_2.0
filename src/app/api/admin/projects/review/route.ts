@@ -122,10 +122,11 @@ export async function POST(req: NextRequest) {
     if (sendEmail && project.creator.email) {
       try {
         const creatorName = project.creator.name || "Creator";
+        let emailResult: { success: boolean; error?: string } = { success: false };
 
         switch (reviewAction) {
           case "APPROVED":
-            await sendProjectApprovedEmail(
+            emailResult = await sendProjectApprovedEmail(
               project.creator.email,
               creatorName,
               project.title,
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
             );
             break;
           case "REJECTED":
-            await sendProjectRejectedEmail(
+            emailResult = await sendProjectRejectedEmail(
               project.creator.email,
               creatorName,
               project.title,
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest) {
             );
             break;
           case "REQUESTED_CHANGES":
-            await sendProjectChangesRequestedEmail(
+            emailResult = await sendProjectChangesRequestedEmail(
               project.creator.email,
               creatorName,
               project.title,
@@ -151,11 +152,18 @@ export async function POST(req: NextRequest) {
             );
             break;
         }
-        console.log(`Review email sent to ${project.creator.email} for action: ${reviewAction}`);
+
+        if (emailResult.success) {
+          console.log(`Review email sent successfully to ${project.creator.email} for action: ${reviewAction}`);
+        } else {
+          console.error(`Failed to send review email to ${project.creator.email}: ${emailResult.error}`);
+        }
       } catch (emailError) {
         console.error("Failed to send review email:", emailError);
         // Continue with the response even if email fails
       }
+    } else {
+      console.log(`Email notification skipped - sendEmail: ${sendEmail}, creator email: ${project.creator.email}`);
     }
 
     return NextResponse.json({
