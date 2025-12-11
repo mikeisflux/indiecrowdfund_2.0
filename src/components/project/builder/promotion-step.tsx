@@ -15,20 +15,29 @@ import { Plus, Trash2, Copy, Link2, BarChart3, Share2, Rocket, Loader2, CheckCir
 import { toast } from "sonner";
 
 export function PromotionStep() {
-  const { promotion, updatePromotion, basics, projectId, items, rewards, story, payment, people } = useProjectStore();
+  const { promotion, updatePromotion, basics, projectId, setProjectId, items, rewards, story, payment, people } = useProjectStore();
   const [newTag, setNewTag] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
   // If project exists and prelaunch is active, it's already published
   const [isPublished, setIsPublished] = useState(!!projectId && !!promotion.prelaunchActive);
+  const [savedSlug, setSavedSlug] = useState<string | null>(null);
 
   const customTags = promotion.customReferralTags || [];
 
-  // Generate project URL
-  const projectSlug = basics.title
-    ? basics.title.toLowerCase().replace(/\s+/g, "-").slice(0, 50)
-    : "your-project";
-  const projectUrl = `https://indiecrowdfund.com/projects/${projectSlug}`;
+  // Generate project URL - use saved slug if available, otherwise generate from title
+  const projectSlug = savedSlug || (basics.title
+    ? basics.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50)
+    : "your-project");
+  const projectUrl = `/projects/${projectSlug}`;
   const prelaunchUrl = `${projectUrl}/prelaunch`;
+
+  // Get full URL for sharing (window.location.origin for current domain)
+  const getFullUrl = (path: string) => {
+    if (typeof window !== "undefined") {
+      return `${window.location.origin}${path}`;
+    }
+    return path;
+  };
 
   const publishPrelaunchPage = async () => {
     if (!basics.title || basics.title.trim().length < 3) {
@@ -127,6 +136,16 @@ export function PromotionStep() {
         throw new Error(error.error || "Failed to publish pre-launch page");
       }
 
+      const result = await response.json();
+
+      // If this was a new project, save the project ID and slug
+      if (!projectId && result.project?.id) {
+        setProjectId(result.project.id);
+      }
+      if (result.project?.slug) {
+        setSavedSlug(result.project.slug);
+      }
+
       updatePromotion({ prelaunchActive: true });
       setIsPublished(true);
       toast.success("Pre-launch page published!");
@@ -159,7 +178,7 @@ export function PromotionStep() {
   };
 
   const copyTagUrl = (tag: string) => {
-    navigator.clipboard.writeText(`${projectUrl}?ref=${tag}`);
+    navigator.clipboard.writeText(getFullUrl(`${projectUrl}?ref=${tag}`));
     toast.success("URL copied to clipboard");
   };
 
@@ -171,14 +190,14 @@ export function PromotionStep() {
         <div className="flex items-center gap-2">
           <div className="flex-1 rounded-md border bg-muted px-3 py-2">
             <span className="text-sm text-muted-foreground">
-              {projectUrl}
+              {getFullUrl(projectUrl)}
             </span>
           </div>
           <Button
             variant="outline"
             size="icon"
             onClick={() => {
-              navigator.clipboard.writeText(projectUrl);
+              navigator.clipboard.writeText(getFullUrl(projectUrl));
               toast.success("URL copied");
             }}
           >
@@ -243,13 +262,13 @@ export function PromotionStep() {
                     </p>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 rounded-md border bg-white dark:bg-zinc-900 px-3 py-2">
-                        <span className="text-sm">{prelaunchUrl}</span>
+                        <span className="text-sm">{getFullUrl(prelaunchUrl)}</span>
                       </div>
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={() => {
-                          navigator.clipboard.writeText(prelaunchUrl);
+                          navigator.clipboard.writeText(getFullUrl(prelaunchUrl));
                           toast.success("URL copied!");
                         }}
                       >
