@@ -167,7 +167,7 @@ export async function GET(
     // 2. User is an admin/superadmin
     // 3. User has the secret token
     const isCreator = userId === project.creator.id;
-    const isAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+    const isAdmin = userRole === "ADMIN" || userRole === "SUPER_ADMIN";
 
     const visibleRewards = project.rewards.filter((r: Reward) => {
       // Always show PUBLIC rewards
