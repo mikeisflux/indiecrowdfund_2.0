@@ -3,6 +3,35 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
+// GET - Fetch all rewards for a project
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: projectId } = await params;
+
+    // Fetch rewards for this project
+    const rewards = await db.reward.findMany({
+      where: { projectId },
+      include: {
+        items: true,
+      },
+      orderBy: { amount: "asc" },
+    });
+
+    return NextResponse.json({
+      rewards,
+    });
+  } catch (error) {
+    console.error("Fetch rewards error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch rewards" },
+      { status: 500 }
+    );
+  }
+}
+
 const rewardSchema = z.object({
   id: z.string().optional(),
   type: z.enum(["TIER", "ADDON"]),
