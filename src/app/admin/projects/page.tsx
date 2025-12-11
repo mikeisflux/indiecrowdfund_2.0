@@ -147,7 +147,6 @@ export default function ProjectsPage() {
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
-  const [showSendToReviewDialog, setShowSendToReviewDialog] = useState(false);
   const [reviewAction, setReviewAction] = useState<"approve" | "reject" | "changes" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -159,7 +158,6 @@ export default function ProjectsPage() {
   const [internalNotes, setInternalNotes] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
-  const [deactivateReason, setDeactivateReason] = useState("");
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -296,13 +294,7 @@ export default function ProjectsPage() {
   };
 
   const handleDeactivate = () => {
-    setDeactivateReason("");
     setShowDeactivateDialog(true);
-  };
-
-  const handleSendToReview = () => {
-    setReviewNotes("");
-    setShowSendToReviewDialog(true);
   };
 
   const submitDeactivate = async () => {
@@ -316,42 +308,8 @@ export default function ProjectsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: selectedProject.id,
-          action: "DEACTIVATE",
-          reason: deactivateReason,
-          sendEmail,
-        }),
-      });
-
-      if (response.ok) {
-        await fetchActiveProjects();
-        setShowDeactivateDialog(false);
-        setSelectedProject(null);
-        setDeactivateReason("");
-      } else {
-        const data = await response.json();
-        alert(data.error || "Failed to deactivate project");
-      }
-    } catch (error) {
-      console.error("Error deactivating project:", error);
-      alert("Failed to deactivate project");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const submitSendToReview = async () => {
-    if (!selectedProject) return;
-
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/admin/projects/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: selectedProject.id,
           action: "SEND_TO_REVIEW",
-          notes: reviewNotes,
+          notes: "Campaign deactivated by admin",
           sendEmail,
         }),
       });
@@ -359,16 +317,15 @@ export default function ProjectsPage() {
       if (response.ok) {
         await fetchActiveProjects();
         await fetchProjects();
-        setShowSendToReviewDialog(false);
+        setShowDeactivateDialog(false);
         setSelectedProject(null);
-        setReviewNotes("");
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to send project to review");
+        alert(data.error || "Failed to deactivate project");
       }
     } catch (error) {
-      console.error("Error sending project to review:", error);
-      alert("Failed to send project to review");
+      console.error("Error deactivating project:", error);
+      alert("Failed to deactivate project");
     } finally {
       setIsSubmitting(false);
     }
@@ -987,7 +944,7 @@ export default function ProjectsPage() {
               </div>
 
               {/* Active Project Detail Panel */}
-              {selectedProject && selectedProject.status === "LIVE" ? (
+              {selectedProject && (selectedProject.status === "LIVE" || selectedProject.status === "APPROVED") ? (
                 <Card className="h-fit sticky top-6">
                   <CardHeader className="border-b">
                     <div className="flex items-center justify-between">
@@ -1068,14 +1025,6 @@ export default function ProjectsPage() {
 
                       <div className="flex items-center gap-2">
                         <Button
-                          variant="outline"
-                          onClick={handleSendToReview}
-                          className="flex-1"
-                        >
-                          <Send className="mr-2 h-4 w-4" />
-                          Send to Review
-                        </Button>
-                        <Button
                           variant="destructive"
                           onClick={handleDeactivate}
                           className="flex-1"
@@ -1084,9 +1033,6 @@ export default function ProjectsPage() {
                           Deactivate
                         </Button>
                       </div>
-                      <p className="text-xs text-zinc-500 mt-3 text-center">
-                        Warning: Deactivating will pause the campaign. Sending to review will unpublish it.
-                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -1427,46 +1373,18 @@ export default function ProjectsPage() {
 
       {/* Deactivate Campaign Dialog */}
       <Dialog open={showDeactivateDialog} onOpenChange={setShowDeactivateDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-red-600">Deactivate Campaign</DialogTitle>
+            <DialogTitle>Deactivate Campaign</DialogTitle>
             <DialogDescription>
-              This will pause the campaign and prevent it from receiving new pledges.
-              The campaign can be reactivated later.
+              This will send the project back to review.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
-              <p className="font-medium">Warning:</p>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>The campaign will be hidden from public view</li>
-                <li>No new pledges can be made</li>
-                <li>Existing backers will be notified</li>
-                <li>The campaign can be reactivated by admin</li>
-              </ul>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Reason for Deactivation *</Label>
-              <Textarea
-                placeholder="Explain why the campaign is being deactivated..."
-                value={deactivateReason}
-                onChange={(e) => setDeactivateReason(e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="sendEmailDeactivate"
-                checked={sendEmail}
-                onCheckedChange={(checked) => setSendEmail(checked === true)}
-              />
-              <Label htmlFor="sendEmailDeactivate" className="text-sm">
-                Send notification email to creator
-              </Label>
-            </div>
+          <div className="py-4">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Are you sure you want to deactivate this campaign? The campaign will be unpublished and sent back to the review queue.
+            </p>
           </div>
 
           <DialogFooter>
@@ -1476,7 +1394,7 @@ export default function ProjectsPage() {
             <Button
               variant="destructive"
               onClick={submitDeactivate}
-              disabled={isSubmitting || !deactivateReason}
+              disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <>
@@ -1486,75 +1404,7 @@ export default function ProjectsPage() {
               ) : (
                 <>
                   <Power className="mr-2 h-4 w-4" />
-                  Deactivate Campaign
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Send to Review Dialog */}
-      <Dialog open={showSendToReviewDialog} onOpenChange={setShowSendToReviewDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Send Campaign to Review</DialogTitle>
-            <DialogDescription>
-              This will unpublish the campaign and send it back for review.
-              The campaign will need to be re-approved before going live again.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-800">
-              <p className="font-medium">What happens next:</p>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>The campaign will be unpublished immediately</li>
-                <li>Status will change to &quot;Submitted&quot;</li>
-                <li>It will appear in the pending review queue</li>
-                <li>Creator can make changes while in review</li>
-              </ul>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Notes for Review Team</Label>
-              <Textarea
-                placeholder="Add notes about why this campaign needs review..."
-                value={reviewNotes}
-                onChange={(e) => setReviewNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="sendEmailReview"
-                checked={sendEmail}
-                onCheckedChange={(checked) => setSendEmail(checked === true)}
-              />
-              <Label htmlFor="sendEmailReview" className="text-sm">
-                Send notification email to creator
-              </Label>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSendToReviewDialog(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button
-              onClick={submitSendToReview}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Send to Review
+                  Deactivate
                 </>
               )}
             </Button>
