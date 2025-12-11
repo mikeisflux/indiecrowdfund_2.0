@@ -69,14 +69,15 @@ interface Project {
   id: string;
   title: string;
   subtitle: string | null;
+  slug: string;
   description: string | null;
   category: string;
   goalAmount: number;
   currentAmount: number;
   currency: string;
-  duration: number;
+  durationDays: number | null;
   videoUrl: string | null;
-  coverImage: string | null;
+  imageUrl: string | null;
   risks: string | null;
   status: string;
   createdAt: string;
@@ -463,8 +464,8 @@ export default function ProjectsPage() {
                         <div className="flex items-start gap-4">
                           {/* Project Image */}
                           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
-                            {project.coverImage ? (
-                              <Image src={project.coverImage} alt="" fill className="object-cover" />
+                            {project.imageUrl ? (
+                              <Image src={project.imageUrl} alt="" fill className="object-cover" />
                             ) : (
                               <FolderKanban className="h-6 w-6 text-zinc-400" />
                             )}
@@ -531,7 +532,7 @@ export default function ProjectsPage() {
                             </div>
                             <div className="rounded-lg border p-3">
                               <p className="text-xs text-zinc-500">Duration</p>
-                              <p className="font-semibold">{selectedProject.duration} days</p>
+                              <p className="font-semibold">{selectedProject.durationDays || 30} days</p>
                             </div>
                             <div className="rounded-lg border p-3">
                               <p className="text-xs text-zinc-500">Category</p>
@@ -553,7 +554,7 @@ export default function ProjectsPage() {
                                 <Video className="mr-1 h-3 w-3" /> No Video
                               </Badge>
                             )}
-                            {selectedProject.coverImage && (
+                            {selectedProject.imageUrl && (
                               <Badge variant="outline">
                                 <ImageIcon className="mr-1 h-3 w-3" /> Has Cover
                               </Badge>
@@ -563,14 +564,20 @@ export default function ProjectsPage() {
                           {selectedProject.description && (
                             <div className="mt-4">
                               <p className="text-xs text-zinc-500 mb-1">Description Preview</p>
-                              <p className="text-sm text-zinc-600 line-clamp-3">{selectedProject.description}</p>
+                              <div
+                                className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 prose prose-sm max-w-none"
+                                dangerouslySetInnerHTML={{ __html: selectedProject.description }}
+                              />
                             </div>
                           )}
 
                           {selectedProject.risks && (
                             <div className="mt-4">
                               <p className="text-xs text-zinc-500 mb-1">Risks & Challenges</p>
-                              <p className="text-sm text-zinc-600 line-clamp-2">{selectedProject.risks}</p>
+                              <div
+                                className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 prose prose-sm max-w-none"
+                                dangerouslySetInnerHTML={{ __html: selectedProject.risks }}
+                              />
                             </div>
                           )}
                         </AccordionContent>
@@ -641,9 +648,9 @@ export default function ProjectsPage() {
                     <div className="p-4 border-t bg-zinc-50 dark:bg-zinc-800/50">
                       <div className="flex items-center gap-2 mb-4">
                         <Button variant="outline" className="flex-1" asChild>
-                          <a href={`/projects/${selectedProject.id}`} target="_blank">
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            Preview
+                          <a href={`/projects/${selectedProject.slug}`} target="_blank" rel="noopener noreferrer">
+                            <Eye className="mr-2 h-4 w-4" />
+                            Preview Project
                           </a>
                         </Button>
                       </div>
@@ -710,8 +717,8 @@ export default function ProjectsPage() {
                     return (
                       <div key={project.id} className="flex items-center gap-4 rounded-lg border border-red-200 bg-red-50/50 p-4 dark:bg-red-950/10">
                         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 relative overflow-hidden">
-                          {project.coverImage ? (
-                            <Image src={project.coverImage} alt="" fill className="object-cover" />
+                          {project.imageUrl ? (
+                            <Image src={project.imageUrl} alt="" fill className="object-cover" />
                           ) : (
                             <FolderKanban className="h-6 w-6 text-zinc-400" />
                           )}

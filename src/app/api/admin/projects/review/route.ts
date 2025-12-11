@@ -167,7 +167,22 @@ export async function GET(req: NextRequest) {
     const [projects, total] = await Promise.all([
       db.project.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          subtitle: true,
+          slug: true,
+          description: true,
+          category: true,
+          goalAmount: true,
+          currentAmount: true,
+          currency: true,
+          durationDays: true,
+          videoUrl: true,
+          imageUrl: true,
+          risks: true,
+          status: true,
+          createdAt: true,
           creator: {
             select: {
               id: true,
