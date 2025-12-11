@@ -301,6 +301,8 @@ export default function UsersPage() {
 
   const getRoleBadge = (role: string) => {
     switch (role.toUpperCase()) {
+      case "COOL_KIDS":
+        return <Badge className="bg-pink-100 text-pink-700"><Star className="h-3 w-3 mr-1" /> Cool Kids</Badge>;
       case "ADMIN":
         return <Badge className="bg-violet-100 text-violet-700"><Crown className="h-3 w-3 mr-1" /> Admin</Badge>;
       case "SUPER_ADMIN":
@@ -1432,12 +1434,14 @@ export default function UsersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="USER">User</SelectItem>
+                    <SelectItem value="COOL_KIDS">Cool Kids</SelectItem>
                     <SelectItem value="ADMIN">Admin</SelectItem>
                     <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-zinc-500">
                   {selectedRole === "USER" && "Regular user with standard access."}
+                  {selectedRole === "COOL_KIDS" && "Cool Kids users have enhanced campaign limits."}
                   {selectedRole === "ADMIN" && "Admin users can manage projects and users."}
                   {selectedRole === "SUPER_ADMIN" && "Super admins have full platform access including role changes."}
                 </p>
@@ -1633,15 +1637,22 @@ export default function UsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="USER">User</SelectItem>
+                  <SelectItem value="COOL_KIDS">Cool Kids</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
                   <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-zinc-500">
                 {newUserData.role === "USER" && "Regular user with standard access."}
+                {newUserData.role === "COOL_KIDS" && "Cool Kids users have enhanced campaign limits."}
                 {newUserData.role === "ADMIN" && "Admin users can manage projects and users."}
                 {newUserData.role === "SUPER_ADMIN" && "Super admins have full platform access."}
               </p>
+            </div>
+
+            <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
+              <p className="font-medium">Note about Retailer Access:</p>
+              <p className="text-xs mt-1">Retailer accounts are managed separately via the &quot;Retailer Applications&quot; tab. Users apply through the retailer portal and must be approved.</p>
             </div>
           </div>
           <DialogFooter>

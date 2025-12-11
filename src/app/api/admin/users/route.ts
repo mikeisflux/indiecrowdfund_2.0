@@ -166,7 +166,7 @@ export async function PATCH(req: NextRequest) {
             { status: 403 }
           );
         }
-        if (!data?.role || !["USER", "ADMIN", "SUPER_ADMIN"].includes(data.role)) {
+        if (!data?.role || !["USER", "COOL_KIDS", "ADMIN", "SUPER_ADMIN"].includes(data.role)) {
           return NextResponse.json(
             { error: "Invalid role" },
             { status: 400 }
@@ -314,7 +314,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate role if provided
-    const validRoles = ["USER", "ADMIN", "SUPER_ADMIN"];
+    const validRoles = ["USER", "COOL_KIDS", "ADMIN", "SUPER_ADMIN"];
     const userRole = role && validRoles.includes(role) ? role : "USER";
 
     // Only SUPER_ADMIN can create admin users
