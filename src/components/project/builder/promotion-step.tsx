@@ -18,8 +18,7 @@ export function PromotionStep() {
   const { promotion, updatePromotion, basics, projectId, setProjectId, items, rewards, story, payment, people } = useProjectStore();
   const [newTag, setNewTag] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
-  // If project exists and prelaunch is active, it's already published
-  const [isPublished, setIsPublished] = useState(!!projectId && !!promotion.prelaunchActive);
+  const [justPublished, setJustPublished] = useState(false);
   const [savedSlug, setSavedSlug] = useState<string | null>(null);
 
   const customTags = promotion.customReferralTags || [];
@@ -147,7 +146,7 @@ export function PromotionStep() {
       }
 
       updatePromotion({ prelaunchActive: true });
-      setIsPublished(true);
+      setJustPublished(true);
       toast.success("Pre-launch page published!");
     } catch (error) {
       console.error("Publish pre-launch error:", error);
@@ -252,7 +251,7 @@ export function PromotionStep() {
             <Separator />
 
             {/* Publish Button and Success State */}
-            {isPublished ? (
+            {justPublished ? (
               <Alert className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20">
                 <CheckCircle className="h-4 w-4 text-emerald-600" />
                 <AlertDescription className="ml-2">
