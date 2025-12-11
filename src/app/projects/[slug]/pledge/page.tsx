@@ -129,6 +129,7 @@ function StripePaymentForm({
   isProcessing,
   setIsProcessing,
   total,
+  intentType,
 }: {
   onSuccess: () => void;
   onError: (message: string) => void;
@@ -136,6 +137,7 @@ function StripePaymentForm({
   isProcessing: boolean;
   setIsProcessing: (val: boolean) => void;
   total: number;
+  intentType: "payment_intent" | "setup_intent";
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -146,13 +148,32 @@ function StripePaymentForm({
     setIsProcessing(true);
 
     try {
-      const { error } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/projects/${window.location.pathname.split("/")[2]}/pledge?success=true`,
-        },
-        redirect: "if_required",
-      });
+      const return_url = `${window.location.origin}/projects/${window.location.pathname.split("/")[2]}/pledge?success=true`;
+
+      // Use the correct confirmation method based on intent type
+      // SetupIntent is used for campaigns that haven't reached their goal yet (card is saved but not charged)
+      // PaymentIntent is used when the campaign is already funded (card is charged immediately)
+      let error;
+
+      if (intentType === "setup_intent") {
+        const result = await stripe.confirmSetup({
+          elements,
+          confirmParams: {
+            return_url,
+          },
+          redirect: "if_required",
+        });
+        error = result.error;
+      } else {
+        const result = await stripe.confirmPayment({
+          elements,
+          confirmParams: {
+            return_url,
+          },
+          redirect: "if_required",
+        });
+        error = result.error;
+      }
 
       if (error) {
         onError(error.message || "Payment failed");
@@ -210,6 +231,7 @@ export default function PledgePage() {
   // Stripe state
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [intentType, setIntentType] = useState<"payment_intent" | "setup_intent">("setup_intent");
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Handle success redirect
@@ -237,11 +259,11 @@ export default function PledgePage() {
 
   // Auto-create pledge when entering payment step to load Stripe form
   useEffect(() => {
-    if (step === "payment" && !clientSecret && !isProcessing && project && (selectedReward || pledgeWithoutReward)) {
+    if (step === "payment" && !clientSecret && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) {
       createPledgeForPayment();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, project, selectedReward, pledgeWithoutReward]);
+  }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, isProcessing, paymentError]);
 
   // Create pledge and get Stripe client secret (called automatically when entering payment step)
   const createPledgeForPayment = async () => {
@@ -271,8 +293,14 @@ export default function PledgePage() {
         throw new Error(data.error || "Failed to create pledge");
       }
 
-      // Set the client secret to show Stripe Elements
+      // Validate response has required fields
+      if (!data.clientSecret) {
+        throw new Error("Invalid payment response - missing client secret");
+      }
+
+      // Set the client secret and intent type to show Stripe Elements
       setClientSecret(data.clientSecret);
+      setIntentType(data.type || "setup_intent");
       setIsProcessing(false);
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create pledge");
@@ -977,7 +1005,19 @@ export default function PledgePage() {
                     {/* Show error if any */}
                     {paymentError && (
                       <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                        <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+                        <p className="text-sm text-red-600 dark:text-red-400 mb-2">{paymentError}</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setPaymentError(null);
+                            setClientSecret(null);
+                            setIsProcessing(false);
+                            // This will trigger the useEffect to create a new pledge
+                          }}
+                        >
+                          Try Again
+                        </Button>
                       </div>
                     )}
 
@@ -1002,6 +1042,7 @@ export default function PledgePage() {
                           isProcessing={isProcessing}
                           setIsProcessing={setIsProcessing}
                           total={total}
+                          intentType={intentType}
                         />
                       </Elements>
                     ) : (
