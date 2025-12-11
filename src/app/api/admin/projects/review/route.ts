@@ -45,7 +45,12 @@ export async function POST(req: NextRequest) {
     // Get the current project
     const project = await db.project.findUnique({
       where: { id: projectId },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        contactEmail: true, // Email from payment settings
         creator: {
           select: { id: true, email: true, name: true },
         },
@@ -119,51 +124,68 @@ export async function POST(req: NextRequest) {
     ]);
 
     // Send email notification if enabled
-    if (sendEmail && project.creator.email) {
+    if (sendEmail) {
       try {
         const creatorName = project.creator.name || "Creator";
-        let emailResult: { success: boolean; error?: string } = { success: false };
 
-        switch (reviewAction) {
-          case "APPROVED":
-            emailResult = await sendProjectApprovedEmail(
-              project.creator.email,
-              creatorName,
-              project.title,
-              project.slug,
-              notes
-            );
-            break;
-          case "REJECTED":
-            emailResult = await sendProjectRejectedEmail(
-              project.creator.email,
-              creatorName,
-              project.title,
-              rejectionReason,
-              notes
-            );
-            break;
-          case "REQUESTED_CHANGES":
-            emailResult = await sendProjectChangesRequestedEmail(
-              project.creator.email,
-              creatorName,
-              project.title,
-              notes || "Please review your project and make necessary updates."
-            );
-            break;
+        // Collect unique email addresses to send to
+        const emailAddresses = new Set<string>();
+        if (project.contactEmail) {
+          emailAddresses.add(project.contactEmail.toLowerCase());
+        }
+        if (project.creator.email) {
+          emailAddresses.add(project.creator.email.toLowerCase());
         }
 
-        if (emailResult.success) {
-          console.log(`Review email sent successfully to ${project.creator.email} for action: ${reviewAction}`);
+        if (emailAddresses.size === 0) {
+          console.log("No email addresses found for project creator");
         } else {
-          console.error(`Failed to send review email to ${project.creator.email}: ${emailResult.error}`);
+          // Send to each unique email address
+          for (const email of emailAddresses) {
+            let emailResult: { success: boolean; error?: string } = { success: false };
+
+            switch (reviewAction) {
+              case "APPROVED":
+                emailResult = await sendProjectApprovedEmail(
+                  email,
+                  creatorName,
+                  project.title,
+                  project.slug,
+                  notes
+                );
+                break;
+              case "REJECTED":
+                emailResult = await sendProjectRejectedEmail(
+                  email,
+                  creatorName,
+                  project.title,
+                  rejectionReason,
+                  notes
+                );
+                break;
+              case "REQUESTED_CHANGES":
+                emailResult = await sendProjectChangesRequestedEmail(
+                  email,
+                  creatorName,
+                  project.title,
+                  notes || "Please review your project and make necessary updates."
+                );
+                break;
+            }
+
+            if (emailResult.success) {
+              console.log(`Review email sent successfully to ${email} for action: ${reviewAction}`);
+            } else {
+              console.error(`Failed to send review email to ${email}: ${emailResult.error}`);
+            }
+          }
         }
       } catch (emailError) {
         console.error("Failed to send review email:", emailError);
         // Continue with the response even if email fails
       }
     } else {
-      console.log(`Email notification skipped - sendEmail: ${sendEmail}, creator email: ${project.creator.email}`);
+      console.log(`Email notification skipped - sendEmail: ${sendEmail}`);
     }
 
     return NextResponse.json({
