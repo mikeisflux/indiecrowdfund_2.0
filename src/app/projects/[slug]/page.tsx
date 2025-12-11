@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -195,22 +195,50 @@ const initialProject: ProjectData = {
   comments: 0,
 };
 
-// Story navigation items (table of contents)
-const storyNavItems = [
-  "Welcome to TRIBUTES: HR GIGER",
-  "The Book",
-  "Original art by Nikolay Georgiev",
-  "HR GIGER",
-  "The HR GIGER Museum",
-  "Contributors",
-  "The Swag",
-  "Stretch Goals",
-  "The Artbook Team",
-  "Payment",
-  "Shipping",
-  "Past campaigns",
-  "Risks",
-];
+// Interface for story navigation items
+interface StoryNavItem {
+  id: string;
+  text: string;
+  level: number;
+}
+
+// Helper function to generate a slug from heading text
+function generateHeadingId(text: string, index: number): string {
+  const slug = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .trim();
+  return `story-heading-${index}-${slug || "section"}`;
+}
+
+// Helper function to extract headings from HTML and add IDs
+function processStoryHtml(html: string): { processedHtml: string; navItems: StoryNavItem[] } {
+  if (!html || typeof window === "undefined") {
+    return { processedHtml: html, navItems: [] };
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const headings = doc.querySelectorAll("h1, h2, h3, h4, h5, h6");
+  const navItems: StoryNavItem[] = [];
+
+  headings.forEach((heading, index) => {
+    const text = heading.textContent?.trim() || "";
+    if (text) {
+      const id = generateHeadingId(text, index);
+      heading.setAttribute("id", id);
+      const level = parseInt(heading.tagName.charAt(1), 10);
+      navItems.push({ id, text, level });
+    }
+  });
+
+  return {
+    processedHtml: doc.body.innerHTML,
+    navItems,
+  };
+}
 
 type TabValue = "campaign" | "rewards" | "creator" | "faq" | "updates" | "comments" | "community";
 
@@ -233,10 +261,65 @@ export default function ProjectPage() {
   const [selectedRewardId, setSelectedRewardId] = useState<string>("");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [expandedFaqs, setExpandedFaqs] = useState<number[]>([]);
+  const [activeStorySection, setActiveStorySection] = useState<string>("");
 
   // Refs for tab content sections
   const contentSectionRef = useRef<HTMLDivElement>(null);
   const tabsSectionRef = useRef<HTMLDivElement>(null);
+  const storyContentRef = useRef<HTMLDivElement>(null);
+
+  // Process the story HTML to extract headings and add IDs
+  const { processedDescription, storyNavItems } = useMemo(() => {
+    if (!project.description) {
+      return { processedDescription: "", storyNavItems: [] };
+    }
+    // Only process on client-side
+    if (typeof window === "undefined") {
+      return { processedDescription: project.description, storyNavItems: [] };
+    }
+    const { processedHtml, navItems } = processStoryHtml(project.description);
+    return { processedDescription: processedHtml, storyNavItems: navItems };
+  }, [project.description]);
+
+  // Scroll to story section when nav item is clicked
+  const scrollToStorySection = useCallback((sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const yOffset = -100; // Account for sticky header
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+      setActiveStorySection(sectionId);
+    }
+  }, []);
+
+  // Track which story section is currently in view
+  useEffect(() => {
+    if (activeTab !== "campaign" || storyNavItems.length === 0) return;
+
+    const observerCallback: IntersectionObserverCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveStorySection(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, {
+      root: null,
+      rootMargin: "-20% 0px -60% 0px",
+      threshold: 0,
+    });
+
+    // Observe all story headings
+    storyNavItems.forEach((item) => {
+      const element = document.getElementById(item.id);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [activeTab, storyNavItems]);
 
   // Fetch project data
   useEffect(() => {
@@ -651,13 +734,19 @@ export default function ProjectPage() {
           <div className="grid gap-8 lg:grid-cols-12">
             {/* Left Sidebar - Story Navigation */}
             <div className="hidden lg:block lg:col-span-2">
-              <nav className="sticky top-20 space-y-2">
-                {storyNavItems.map((item, index) => (
+              <nav className="sticky top-20 space-y-1">
+                {storyNavItems.map((item) => (
                   <button
-                    key={index}
-                    className="block text-left text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                    key={item.id}
+                    onClick={() => scrollToStorySection(item.id)}
+                    className={`block text-left text-sm transition-colors py-1 ${
+                      activeStorySection === item.id
+                        ? "text-foreground font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    style={{ paddingLeft: `${(item.level - 1) * 8}px` }}
                   >
-                    {item}
+                    {item.text}
                   </button>
                 ))}
               </nav>
@@ -668,8 +757,9 @@ export default function ProjectPage() {
               <div className="prose prose-sm sm:prose lg:prose-lg max-w-none dark:prose-invert prose-headings:font-serif prose-img:rounded-lg prose-img:my-4 prose-a:text-primary prose-a:underline">
                 <h2 className="text-2xl font-serif">Story</h2>
                 <div
+                  ref={storyContentRef}
                   className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
-                  dangerouslySetInnerHTML={{ __html: project.description }}
+                  dangerouslySetInnerHTML={{ __html: processedDescription }}
                 />
 
                 <Separator className="my-8" />
