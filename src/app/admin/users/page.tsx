@@ -136,11 +136,14 @@ export default function UsersPage() {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [editUserData, setEditUserData] = useState({ name: "", email: "" });
+  const [newUserData, setNewUserData] = useState({ name: "", email: "", password: "", confirmPassword: "", role: "USER" });
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // API data state
   const [users, setUsers] = useState<User[]>([]);
@@ -525,6 +528,102 @@ export default function UsersPage() {
     }
   };
 
+  // Create new user
+  const submitCreateUser = async () => {
+    if (!newUserData.email) {
+      alert("Email is required");
+      return;
+    }
+    if (!newUserData.password || newUserData.password.length < 8) {
+      alert("Password must be at least 8 characters");
+      return;
+    }
+    if (newUserData.password !== newUserData.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: newUserData.email,
+          name: newUserData.name || null,
+          password: newUserData.password,
+          role: newUserData.role,
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        setShowAddUserDialog(false);
+        setNewUserData({ name: "", email: "", password: "", confirmPassword: "", role: "USER" });
+        alert("User created successfully");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to create user");
+      }
+    } catch (error) {
+      console.error("Error creating user:", error);
+      alert("Failed to create user");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // Export users to CSV
+  const exportUsers = async () => {
+    try {
+      // Fetch all users (without pagination limit for export)
+      const response = await fetch("/api/admin/users?limit=10000");
+      if (!response.ok) {
+        alert("Failed to fetch users for export");
+        return;
+      }
+
+      const data = await response.json();
+      const exportedUsers = data.users || [];
+
+      if (exportedUsers.length === 0) {
+        alert("No users to export");
+        return;
+      }
+
+      // Build CSV
+      const csv = [
+        ["ID", "Name", "Email", "Role", "Email Verified", "Projects", "Pledges", "Created At"].join(","),
+        ...exportedUsers.map((user: User) =>
+          [
+            user.id,
+            `"${(user.name || "").replace(/"/g, '""')}"`,
+            `"${user.email}"`,
+            user.role,
+            user.emailVerified ? "Yes" : "No",
+            user.projectCount,
+            user.pledgeCount,
+            new Date(user.createdAt).toISOString(),
+          ].join(",")
+        ),
+      ].join("\n");
+
+      // Download CSV
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `users-export-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting users:", error);
+      alert("Failed to export users");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -534,11 +633,11 @@ export default function UsersPage() {
           <p className="text-zinc-500">Manage platform users and retailer applications</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={exportUsers}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button>
+          <Button onClick={() => setShowAddUserDialog(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
             Add User
           </Button>
@@ -1463,6 +1562,100 @@ export default function UsersPage() {
               disabled={isUpdating || !newPassword || newPassword !== confirmPassword || newPassword.length < 8}
             >
               {isUpdating ? "Setting..." : "Set Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add User Dialog */}
+      <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account. The user will be automatically verified.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-user-name">Name</Label>
+              <Input
+                id="add-user-name"
+                value={newUserData.name}
+                onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+                placeholder="Enter user name (optional)"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-user-email">Email *</Label>
+              <Input
+                id="add-user-email"
+                type="email"
+                value={newUserData.email}
+                onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                placeholder="Enter user email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-user-password">Password *</Label>
+              <Input
+                id="add-user-password"
+                type="password"
+                value={newUserData.password}
+                onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                placeholder="Enter password"
+              />
+              <p className="text-xs text-zinc-500">Password must be at least 8 characters</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-user-confirm-password">Confirm Password *</Label>
+              <Input
+                id="add-user-confirm-password"
+                type="password"
+                value={newUserData.confirmPassword}
+                onChange={(e) => setNewUserData({ ...newUserData, confirmPassword: e.target.value })}
+                placeholder="Confirm password"
+              />
+            </div>
+
+            {newUserData.password && newUserData.confirmPassword && newUserData.password !== newUserData.confirmPassword && (
+              <p className="text-sm text-red-500">Passwords do not match</p>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="add-user-role">Role</Label>
+              <Select value={newUserData.role} onValueChange={(value) => setNewUserData({ ...newUserData, role: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USER">User</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-zinc-500">
+                {newUserData.role === "USER" && "Regular user with standard access."}
+                {newUserData.role === "ADMIN" && "Admin users can manage projects and users."}
+                {newUserData.role === "SUPER_ADMIN" && "Super admins have full platform access."}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowAddUserDialog(false);
+              setNewUserData({ name: "", email: "", password: "", confirmPassword: "", role: "USER" });
+            }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={submitCreateUser}
+              disabled={isCreating || !newUserData.email || !newUserData.password || newUserData.password !== newUserData.confirmPassword || newUserData.password.length < 8}
+            >
+              {isCreating ? "Creating..." : "Create User"}
             </Button>
           </DialogFooter>
         </DialogContent>

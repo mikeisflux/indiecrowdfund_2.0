@@ -276,6 +276,91 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
+// POST - Create new user
+export async function POST(req: NextRequest) {
+  try {
+    const authResult = await requireAdmin();
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
+    const body = await req.json();
+    const { email, name, password, role } = body;
+
+    if (!email) {
+      return NextResponse.json(
+        { error: "Email is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!password || password.length < 8) {
+      return NextResponse.json(
+        { error: "Password must be at least 8 characters" },
+        { status: 400 }
+      );
+    }
+
+    // Check if user already exists
+    const existingUser = await db.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "A user with this email already exists" },
+        { status: 400 }
+      );
+    }
+
+    // Validate role if provided
+    const validRoles = ["USER", "ADMIN", "SUPER_ADMIN"];
+    const userRole = role && validRoles.includes(role) ? role : "USER";
+
+    // Only SUPER_ADMIN can create admin users
+    if ((userRole === "ADMIN" || userRole === "SUPER_ADMIN") && authResult.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Only super admins can create admin users" },
+        { status: 403 }
+      );
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create user
+    const newUser = await db.user.create({
+      data: {
+        email,
+        name: name || null,
+        password: hashedPassword,
+        role: userRole,
+        emailVerified: new Date(), // Admin-created users are pre-verified
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        emailVerified: true,
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      user: newUser,
+      message: "User created successfully"
+    });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    return NextResponse.json(
+      { error: "Failed to create user" },
+      { status: 500 }
+    );
+  }
+}
+
 // DELETE - Delete user
 export async function DELETE(req: NextRequest) {
   try {
