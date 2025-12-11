@@ -295,6 +295,7 @@ model Reward {
   quantityAvailable Int?
   quantityClaimed   Int          @default(0)
   visibility        Visibility   @default(PUBLIC)
+  secretToken       String?      @unique  // For secret rewards - only accessible via this token
   availableFrom     DateTime?
   availableUntil    DateTime?
 

@@ -51,6 +51,8 @@ import {
   Upload,
   FileSpreadsheet,
   Loader2,
+  Link2,
+  Check,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -143,6 +145,8 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const [timeLimitType, setTimeLimitType] = useState<"none" | "specified">("none");
   const [deliveryMonth, setDeliveryMonth] = useState<string>("");
   const [deliveryYear, setDeliveryYear] = useState<string>("");
+  const [secretToken, setSecretToken] = useState<string>("");
+  const [isCopied, setIsCopied] = useState(false);
 
   // Import reward dialog state
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -402,6 +406,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     setEditingRewardIndex(null);
     setQuantityType("unlimited");
     setAudienceType("all");
+    setSecretToken("");
     setTimeLimitType("none");
     setDeliveryMonth("");
     setDeliveryYear("");
@@ -416,6 +421,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     setEditingRewardIndex(index);
     setQuantityType(reward.quantityAvailable ? "limited" : "unlimited");
     setAudienceType(reward.visibility === "SECRET" ? "secret" : "all");
+    setSecretToken(reward.secretToken || "");
     setTimeLimitType("none"); // Time limit not stored yet
     if (reward.estimatedDelivery) {
       const date = new Date(reward.estimatedDelivery);
@@ -463,6 +469,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       items: selectedItems,
       quantityAvailable: quantityType === "limited" ? currentReward.quantityAvailable : undefined,
       visibility: audienceType === "secret" ? "SECRET" : "PUBLIC",
+      secretToken: audienceType === "secret" ? (secretToken || currentReward.secretToken) : undefined,
       estimatedDelivery,
     };
 
@@ -489,6 +496,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             shippingCost: rewardToSave.shippingCost,
             quantityAvailable: rewardToSave.quantityAvailable,
             visibility: rewardToSave.visibility,
+            secretToken: rewardToSave.secretToken,
             isEnded: rewardToSave.isEnded,
             items: selectedItems.map(item => ({
               projectItemId: item.id, // Link to ProjectItem
@@ -507,8 +515,12 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           return;
         }
 
-        // Update local store with the server response (includes generated ID)
-        const savedReward = { ...rewardToSave, id: result.reward.id };
+        // Update local store with the server response (includes generated ID and secretToken)
+        const savedReward = {
+          ...rewardToSave,
+          id: result.reward.id,
+          secretToken: result.reward.secretToken,
+        };
         if (editingRewardIndex !== null) {
           updateReward(editingRewardIndex, savedReward);
           toast.success("Reward saved");
@@ -1197,7 +1209,14 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
                   </p>
                   <RadioGroup
                     value={audienceType}
-                    onValueChange={(v) => setAudienceType(v as "all" | "secret")}
+                    onValueChange={(v) => {
+                      setAudienceType(v as "all" | "secret");
+                      // Generate secret token if switching to secret and no token exists
+                      if (v === "secret" && !secretToken && !currentReward.secretToken) {
+                        const newToken = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+                        setSecretToken(newToken);
+                      }
+                    }}
                     className="space-y-2"
                   >
                     <div className="flex items-start space-x-3 rounded-lg border p-4">
@@ -1213,13 +1232,55 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
                     </div>
                     <div className="flex items-start space-x-3 rounded-lg border p-4">
                       <RadioGroupItem value="secret" id="secret-reward" className="mt-0.5" />
-                      <div>
+                      <div className="flex-1">
                         <Label htmlFor="secret-reward" className="cursor-pointer font-normal">
                           Select backers only (Secret Reward)
                         </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Only people with the secret link can view and pledge to this reward.
+                        </p>
                       </div>
                     </div>
                   </RadioGroup>
+
+                  {/* Secret Link Display */}
+                  {audienceType === "secret" && (
+                    <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-dashed">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Link2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Secret Reward Link</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Share this link with select backers to give them access to this reward.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 bg-background border rounded px-3 py-2 text-sm font-mono overflow-x-auto">
+                          {typeof window !== "undefined"
+                            ? `${window.location.origin}/projects/${projectId}/pledge?secret=${secretToken || currentReward.secretToken || "generating..."}`
+                            : `[your-domain]/projects/${projectId}/pledge?secret=${secretToken || currentReward.secretToken || "generating..."}`
+                          }
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => {
+                            const token = secretToken || currentReward.secretToken;
+                            if (token && typeof window !== "undefined") {
+                              const url = `${window.location.origin}/projects/${projectId}/pledge?secret=${token}`;
+                              navigator.clipboard.writeText(url);
+                              setIsCopied(true);
+                              toast.success("Link copied to clipboard!");
+                              setTimeout(() => setIsCopied(false), 2000);
+                            }
+                          }}
+                        >
+                          {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Time limit */}

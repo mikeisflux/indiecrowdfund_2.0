@@ -375,6 +375,7 @@ export interface RewardData {
   quantityAvailable?: number;
   quantityClaimed?: number;
   visibility: Visibility;
+  secretToken?: string;  // For secret rewards - only accessible via this token
   availableFrom?: Date;
   availableUntil?: Date;
   items: RewardItemData[];

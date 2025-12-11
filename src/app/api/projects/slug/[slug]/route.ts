@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { slug: string } }
 ) {
   try {
+    // Get current user session (optional - for showing secret rewards to creators/admins)
+    const session = await auth();
+    const userId = session?.user?.id;
+    const userRole = session?.user?.role;
+
+    // Get secret token from query params (for accessing secret rewards)
+    const { searchParams } = new URL(req.url);
+    const secretToken = searchParams.get("secret");
+
     const project = await db.project.findUnique({
       where: { slug: params.slug },
       include: {
@@ -145,12 +155,35 @@ export async function GET(
       quantityAvailable: number | null;
       quantityClaimed: number;
       visibility: string;
+      secretToken: string | null;
       imageUrl: string | null;
       items: RewardItem[];
       isEnded: boolean;
       endedAt: Date | null;
     }
-    const formattedRewards = project.rewards.map((r: Reward) => ({
+
+    // Filter secret rewards - only show if:
+    // 1. User is the creator
+    // 2. User is an admin/superadmin
+    // 3. User has the secret token
+    const isCreator = userId === project.creator.id;
+    const isAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+
+    const visibleRewards = project.rewards.filter((r: Reward) => {
+      // Always show PUBLIC rewards
+      if (r.visibility === "PUBLIC") return true;
+
+      // Show SECRET rewards only if user is creator, admin, or has the token
+      if (r.visibility === "SECRET") {
+        if (isCreator || isAdmin) return true;
+        if (secretToken && r.secretToken === secretToken) return true;
+        return false;
+      }
+
+      return true;
+    });
+
+    const formattedRewards = visibleRewards.map((r: Reward) => ({
       id: r.id,
       type: r.type,
       title: r.title,
@@ -164,6 +197,8 @@ export async function GET(
       quantityAvailable: r.quantityAvailable,
       quantityClaimed: r.quantityClaimed || 0,
       visibility: r.visibility || "PUBLIC",
+      // Only include secretToken for creators/admins (so they can share the link)
+      secretToken: (isCreator || isAdmin) ? r.secretToken : undefined,
       imageUrl: r.imageUrl || "",
       items: r.items.map((i: RewardItem) => ({
         id: i.id,

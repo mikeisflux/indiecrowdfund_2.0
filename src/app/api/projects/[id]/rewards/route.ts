@@ -16,6 +16,7 @@ const rewardSchema = z.object({
   shippingCost: z.record(z.string(), z.number()).optional().default({}),
   quantityAvailable: z.number().optional().nullable(),
   visibility: z.enum(["PUBLIC", "SECRET"]).optional().default("PUBLIC"),
+  secretToken: z.string().optional().nullable(),
   isEnded: z.boolean().optional().default(false),
   items: z.array(z.object({
     id: z.string().optional(),
@@ -72,6 +73,16 @@ export async function POST(
     const body = await req.json();
     const reward = rewardSchema.parse(body);
 
+    // Generate secret token for SECRET visibility if not provided
+    let secretToken = reward.secretToken || null;
+    if (reward.visibility === "SECRET" && !secretToken) {
+      secretToken = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    }
+    // Clear secret token if visibility is not SECRET
+    if (reward.visibility !== "SECRET") {
+      secretToken = null;
+    }
+
     // Create reward with items (linking to ProjectItem via projectItemId)
     const created = await db.reward.create({
       data: {
@@ -87,6 +98,7 @@ export async function POST(
         shippingCost: reward.shippingCost,
         quantityAvailable: reward.quantityAvailable,
         visibility: reward.visibility,
+        secretToken,
         isEnded: reward.isEnded,
         items: {
           create: reward.items.map(item => ({
@@ -168,6 +180,22 @@ export async function PATCH(
       return NextResponse.json({ error: "Reward ID required for update" }, { status: 400 });
     }
 
+    // Get existing reward to check for existing secretToken
+    const existingReward = await db.reward.findUnique({
+      where: { id: reward.id },
+      select: { secretToken: true },
+    });
+
+    // Handle secret token for SECRET visibility
+    let secretToken = reward.secretToken || existingReward?.secretToken || null;
+    if (reward.visibility === "SECRET" && !secretToken) {
+      secretToken = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    }
+    // Clear secret token if visibility is not SECRET
+    if (reward.visibility !== "SECRET") {
+      secretToken = null;
+    }
+
     // Update reward and replace items
     const updated = await db.$transaction(async (tx) => {
       // Delete existing items
@@ -190,6 +218,7 @@ export async function PATCH(
           shippingCost: reward.shippingCost,
           quantityAvailable: reward.quantityAvailable,
           visibility: reward.visibility,
+          secretToken,
           isEnded: reward.isEnded,
           items: {
             create: reward.items.map(item => ({
