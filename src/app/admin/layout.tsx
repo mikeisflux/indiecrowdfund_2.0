@@ -42,6 +42,7 @@ import {
   Lock,
   Loader2,
   Brain,
+  Bug,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -53,6 +54,7 @@ interface SidebarStats {
   payouts: number;
   notifications: number;
   media: string;
+  bugReports: number;
 }
 
 // Navigation item type
@@ -87,6 +89,7 @@ const navigation: NavSection[] = [
       { name: "Projects", href: "/admin/projects", icon: FolderKanban, badgeKey: "projects" },
       { name: "Payouts", href: "/admin/payouts", icon: DollarSign, badgeKey: "payouts" },
       { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "moderation" },
+      { name: "Bug Reports", href: "/admin/bug-reports", icon: Bug, badgeKey: "bugReports" },
     ],
   },
   {

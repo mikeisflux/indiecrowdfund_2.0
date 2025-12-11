@@ -136,6 +136,9 @@ export default async function HomePage() {
               <Link href="/faq" className="text-sm font-medium hover:text-primary">
                 FAQ
               </Link>
+              <Link href="/bug-report" className="text-sm font-medium hover:text-primary">
+                Bug Report
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -176,6 +179,9 @@ export default async function HomePage() {
                   </Link>
                   <Link href="/faq" className="text-sm font-medium hover:text-primary py-2">
                     FAQ
+                  </Link>
+                  <Link href="/bug-report" className="text-sm font-medium hover:text-primary py-2">
+                    Bug Report
                   </Link>
                   <div className="border-t pt-4 mt-2">
                     <UserProfileDropdown />

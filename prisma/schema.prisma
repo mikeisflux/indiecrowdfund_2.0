@@ -51,6 +51,7 @@ model User {
   stripeConfig      StripeConfig?
   idVerifications   IDVerification[]
   notifications     Notification[]
+  bugReports        BugReport[]
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -1756,4 +1757,85 @@ enum NotificationType {
   SURVEY_REMINDER
   FOLLOWED_PROJECT_LAUNCHED
   SYSTEM
+}
+
+// ============================================
+// BUG REPORTS
+// ============================================
+
+model BugReport {
+  id            String           @id @default(cuid())
+
+  // Reporter info
+  userId        String?          // Optional - can be anonymous
+  name          String?
+  email         String
+
+  // Bug details
+  title         String
+  description   String           @db.Text
+  category      BugCategory      @default(OTHER)
+  severity      BugSeverity      @default(MEDIUM)
+  pageUrl       String?          // URL where bug occurred
+  browser       String?          // Browser info
+  device        String?          // Device info
+  steps         String?          @db.Text // Steps to reproduce
+  expectedBehavior String?       @db.Text
+  actualBehavior   String?       @db.Text
+  screenshot    String?          // URL to screenshot
+
+  // Status tracking
+  status        BugStatus        @default(NEW)
+  priority      BugPriority      @default(MEDIUM)
+  assignedTo    String?          // Admin user ID
+  resolution    String?          @db.Text
+
+  // Timestamps
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  resolvedAt    DateTime?
+
+  // Relations
+  user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+enum BugCategory {
+  UI_VISUAL
+  FUNCTIONALITY
+  PERFORMANCE
+  SECURITY
+  PAYMENT
+  ACCOUNT
+  PROJECT
+  REWARDS
+  OTHER
+}
+
+enum BugSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BugStatus {
+  NEW
+  ACKNOWLEDGED
+  IN_PROGRESS
+  NEEDS_INFO
+  RESOLVED
+  CLOSED
+  WONT_FIX
+}
+
+enum BugPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
