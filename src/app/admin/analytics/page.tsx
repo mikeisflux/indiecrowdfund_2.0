@@ -165,6 +165,117 @@ export default function AnalyticsPage() {
     );
   };
 
+  const exportToCSV = () => {
+    let csvContent = "";
+    let filename = `analytics-${activeTab}-${timeRange}-${new Date().toISOString().split('T')[0]}.csv`;
+
+    switch (activeTab) {
+      case "overview":
+        if (overviewData) {
+          csvContent = "Metric,Current,Previous,Growth\n";
+          csvContent += `Revenue,$${overviewData.revenue.current},$${overviewData.revenue.previous},${overviewData.revenue.growth}%\n`;
+          csvContent += `Users,${overviewData.users.current},${overviewData.users.previous},${overviewData.users.growth}%\n`;
+          csvContent += `Page Views,${overviewData.visits.current},${overviewData.visits.previous},${overviewData.visits.growth}%\n`;
+          csvContent += `Conversion Rate,${overviewData.conversionRate}%,,\n`;
+          csvContent += `Total Pledges,${overviewData.revenue.count},,\n`;
+
+          if (categoryData.length > 0) {
+            csvContent += "\nCategory,Project Count,Total Funding\n";
+            categoryData.forEach(cat => {
+              csvContent += `${cat.category},${cat.count},$${cat.totalFunding}\n`;
+            });
+          }
+        }
+        break;
+
+      case "revenue":
+        if (revenueData) {
+          csvContent = "Date,Total Revenue,Pledge Count\n";
+          revenueData.byDay.forEach(day => {
+            csvContent += `${day.date},$${day.total},${day.count}\n`;
+          });
+
+          csvContent += "\nTop Projects\nRank,Title,Current Amount,Goal Amount,Backers\n";
+          revenueData.topProjects.forEach((project, i) => {
+            csvContent += `${i + 1},"${project.title.replace(/"/g, '""')}",$${project.currentAmount},$${project.goalAmount},${project.backerCount}\n`;
+          });
+
+          csvContent += "\nPledges by Status\nStatus,Count,Total\n";
+          revenueData.byStatus.forEach(status => {
+            csvContent += `${status.status},${status.count},$${status.total}\n`;
+          });
+        }
+        break;
+
+      case "traffic":
+        if (trafficData) {
+          csvContent = "Device Type,Count\n";
+          csvContent += `Desktop,${trafficData.devices.desktop}\n`;
+          csvContent += `Mobile,${trafficData.devices.mobile}\n`;
+          csvContent += `Tablet,${trafficData.devices.tablet}\n`;
+
+          csvContent += "\nTop Referrers\nReferrer,Visits\n";
+          trafficData.topReferrers.forEach(ref => {
+            csvContent += `"${ref.referrer.replace(/"/g, '""')}",${ref.visits}\n`;
+          });
+
+          csvContent += "\nTop Pages\nPath,Views\n";
+          trafficData.topPages.forEach(page => {
+            csvContent += `"${page.path.replace(/"/g, '""')}",${page.views}\n`;
+          });
+        }
+        break;
+
+      case "projects":
+        if (projectsData) {
+          csvContent = "Status,Count\n";
+          projectsData.byStatus.forEach(status => {
+            csvContent += `${status.status},${status.count}\n`;
+          });
+
+          csvContent += "\nFunding Distribution\nRange,Count\n";
+          Object.entries(projectsData.fundingDistribution).forEach(([range, count]) => {
+            csvContent += `${range},${count}\n`;
+          });
+
+          csvContent += "\nRecent Projects\nTitle,Status,Category,Current Amount,Goal Amount,Backers,Created\n";
+          projectsData.recent.forEach(project => {
+            csvContent += `"${project.title.replace(/"/g, '""')}",${project.status},${project.category},$${project.currentAmount},$${project.goalAmount},${project.backerCount},${project.createdAt}\n`;
+          });
+        }
+        break;
+
+      case "geography":
+        if (geographyData) {
+          csvContent = "Country,Visitors\n";
+          geographyData.countries.forEach(country => {
+            csvContent += `"${country.country.replace(/"/g, '""')}",${country.visits}\n`;
+          });
+
+          if (geographyData.cities.length > 0) {
+            csvContent += "\nProject Locations\nLocation,Project Count\n";
+            geographyData.cities.forEach(city => {
+              csvContent += `"${(city.location || "Unknown").replace(/"/g, '""')}",${city.projectCount}\n`;
+            });
+          }
+        }
+        break;
+    }
+
+    if (!csvContent) {
+      alert("No data available to export");
+      return;
+    }
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -186,7 +297,7 @@ export default function AnalyticsPage() {
               <SelectItem value="1y">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" disabled>
+          <Button variant="outline" onClick={exportToCSV}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
