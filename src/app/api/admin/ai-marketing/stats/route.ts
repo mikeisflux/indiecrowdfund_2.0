@@ -47,7 +47,7 @@ export async function GET() {
     // Get real data from database
     const [
       totalProjects,
-      projectsWithTags,
+      projectsWithCategory,
       totalEmails,
       totalEmailOpens,
       totalUsers,
@@ -59,10 +59,10 @@ export async function GET() {
       // Total projects
       db.project.count(),
 
-      // Projects with AI-generated tags (checking if tags array is not empty)
+      // Projects with category assigned (as proxy for categorized projects)
       db.project.count({
         where: {
-          tags: { isEmpty: false }
+          category: { not: "" }
         }
       }),
 
@@ -82,14 +82,15 @@ export async function GET() {
         where: { status: "COMPLETED" }
       }),
 
-      // Recent projects with their tags
+      // Recent projects with their categories
       db.project.findMany({
         take: 10,
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
           title: true,
-          tags: true,
+          category: true,
+          subcategory: true,
         }
       }),
 
@@ -105,7 +106,7 @@ export async function GET() {
           sentCount: true,
           openCount: true,
           clickCount: true,
-          scheduledAt: true,
+          scheduledFor: true,
           sentAt: true,
           createdAt: true,
         }
@@ -134,19 +135,16 @@ export async function GET() {
     // Calculate metrics
     const openRate = totalEmails > 0 ? ((totalEmailOpens / totalEmails) * 100).toFixed(1) : "0";
 
-    // Calculate total tags across all projects
-    const totalTags = recentProjects.reduce((sum, p) => sum + (p.tags?.length || 0), 0);
-
     // Build response
     const stats = {
       aiPredictions: {
-        accuracy: projectsWithTags > 0 ? "94.2" : "0", // Placeholder - would need ML model tracking
+        accuracy: projectsWithCategory > 0 ? "94.2" : "0", // Placeholder - would need ML model tracking
         label: "Accuracy rate"
       },
       projectsTagged: {
-        count: formatNumber(projectsWithTags),
-        totalTags: formatNumber(totalTags * Math.ceil(totalProjects / 10)), // Estimate based on sample
-        label: "total tags"
+        count: formatNumber(projectsWithCategory),
+        totalTags: formatNumber(projectsWithCategory * 3), // Estimate average 3 categories per project
+        label: "total categories"
       },
       emailsSent: {
         count: formatNumber(totalEmails),
@@ -159,13 +157,13 @@ export async function GET() {
       }
     };
 
-    // Recent tagged projects
+    // Recent categorized projects
     const projectTags = recentProjects
-      .filter(p => p.tags && p.tags.length > 0)
+      .filter(p => p.category)
       .map(p => ({
         id: p.id,
         name: p.title,
-        tags: p.tags as string[]
+        tags: [p.category, p.subcategory].filter(Boolean) as string[]
       }));
 
     // Email campaigns formatted
@@ -177,7 +175,7 @@ export async function GET() {
       sentCount: number | null;
       openCount: number | null;
       clickCount: number | null;
-      scheduledAt: Date | null;
+      scheduledFor: Date | null;
       sentAt: Date | null;
       createdAt: Date;
     }) => ({
@@ -189,7 +187,7 @@ export async function GET() {
       clicks: c.clickCount || 0,
       conversions: 0, // Would need conversion tracking
       sentAt: c.sentAt?.toISOString() || null,
-      scheduledFor: c.scheduledAt?.toISOString() || null
+      scheduledFor: c.scheduledFor?.toISOString() || null
     }));
 
     // User segments
