@@ -10,12 +10,16 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Copy, Link2, BarChart3, Share2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Plus, Trash2, Copy, Link2, BarChart3, Share2, Rocket, Loader2, CheckCircle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 export function PromotionStep() {
-  const { promotion, updatePromotion, basics } = useProjectStore();
+  const { promotion, updatePromotion, basics, projectId, items, rewards, story, payment, people } = useProjectStore();
   const [newTag, setNewTag] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+  // If project exists and prelaunch is active, it's already published
+  const [isPublished, setIsPublished] = useState(!!projectId && !!promotion.prelaunchActive);
 
   const customTags = promotion.customReferralTags || [];
 
@@ -24,6 +28,115 @@ export function PromotionStep() {
     ? basics.title.toLowerCase().replace(/\s+/g, "-").slice(0, 50)
     : "your-project";
   const projectUrl = `https://indiecrowdfund.com/projects/${projectSlug}`;
+  const prelaunchUrl = `${projectUrl}/prelaunch`;
+
+  const publishPrelaunchPage = async () => {
+    if (!basics.title || basics.title.trim().length < 3) {
+      toast.error("Please enter a project title first (in the Basics step)");
+      return;
+    }
+
+    if (!basics.category) {
+      toast.error("Please select a project category first (in the Basics step)");
+      return;
+    }
+
+    setIsPublishing(true);
+
+    try {
+      // Transform rewards to include items from the items store
+      const transformedRewards = rewards.map((reward) => ({
+        id: reward.id,
+        type: reward.type || "TIER",
+        title: reward.title,
+        description: reward.description || "",
+        amount: reward.amount,
+        imageUrl: reward.imageUrl || undefined,
+        estimatedDelivery: reward.estimatedDelivery
+          ? new Date(reward.estimatedDelivery).toISOString()
+          : null,
+        shippingType: reward.shippingType || "NO_SHIPPING",
+        shippingCountries: reward.shippingCountries || [],
+        shippingCost: reward.shippingCost || {},
+        quantityAvailable: reward.quantityAvailable,
+        isEnded: reward.isEnded || false,
+        items: reward.items?.map((item) => {
+          const fullItem = items.find((i) => i.id === item.id);
+          return {
+            id: item.id,
+            title: fullItem?.title || item.title || "Item",
+            description: fullItem?.description,
+            imageUrl: fullItem?.imageUrl || undefined,
+          };
+        }) || [],
+      }));
+
+      const projectData = {
+        title: basics.title,
+        subtitle: basics.subtitle,
+        category: basics.category,
+        subcategory: basics.subcategory,
+        secondaryCategory: basics.secondaryCategory,
+        secondarySubcategory: basics.secondarySubcategory,
+        location: basics.location,
+        imageUrl: basics.imageUrl || undefined,
+        videoUrl: basics.videoUrl,
+        goalAmount: basics.goalAmount || 10000,
+        durationType: basics.durationType || "FIXED_DAYS",
+        durationDays: basics.durationDays,
+        endDate: basics.endDate instanceof Date ? basics.endDate.toISOString() : basics.endDate,
+        launchDate: basics.launchDate instanceof Date ? basics.launchDate.toISOString() : basics.launchDate,
+        description: story.description || "",
+        risks: story.risks || "",
+        usesAI: story.usesAI || false,
+        faqs: story.faqs || [],
+        contactEmail: payment.contactEmail,
+        projectType: payment.projectType || "INDIVIDUAL",
+        hasAdultContent: payment.hasAdultContent || false,
+        hasRiskyContent: payment.hasRiskyContent || false,
+        promoContentSfw: payment.promoContentSfw !== false,
+        allowRetailerPledges: payment.allowRetailerPledges || false,
+        retailerDiscount: payment.retailerDiscount || 50,
+        retailerMinQuantity: payment.retailerMinQuantity || 5,
+        prelaunchActive: true,
+        prelaunchDescription: promotion.prelaunchDescription,
+        customReferralTags: promotion.customReferralTags || [],
+        googleAnalyticsId: promotion.googleAnalyticsId,
+        metaPixelId: promotion.metaPixelId,
+        rewards: transformedRewards,
+        collaborators: people.collaborators || [],
+      };
+
+      let response;
+      if (projectId) {
+        response = await fetch(`/api/projects/${projectId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(projectData),
+        });
+      } else {
+        response = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(projectData),
+        });
+      }
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to publish pre-launch page");
+      }
+
+      updatePromotion({ prelaunchActive: true });
+      setIsPublished(true);
+      toast.success("Pre-launch page published!");
+    } catch (error) {
+      console.error("Publish pre-launch error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to publish");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   const addReferralTag = () => {
     if (!newTag.trim()) return;
@@ -116,6 +229,70 @@ export function PromotionStep() {
               Your project title, subtitle, and image from the Basics step will
               automatically appear on your pre-launch page.
             </p>
+
+            <Separator />
+
+            {/* Publish Button and Success State */}
+            {isPublished ? (
+              <Alert className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+                <AlertDescription className="ml-2">
+                  <div className="space-y-3">
+                    <p className="font-medium text-emerald-800 dark:text-emerald-200">
+                      Your pre-launch page is live!
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 rounded-md border bg-white dark:bg-zinc-900 px-3 py-2">
+                        <span className="text-sm">{prelaunchUrl}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText(prelaunchUrl);
+                          toast.success("URL copied!");
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => window.open(prelaunchUrl, "_blank")}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                      Share this link to start building your audience before launch!
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="space-y-3">
+                <Button
+                  onClick={publishPrelaunchPage}
+                  disabled={isPublishing}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {isPublishing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Publishing...
+                    </>
+                  ) : (
+                    <>
+                      <Rocket className="mr-2 h-4 w-4" />
+                      Publish Pre-launch Page
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Publishing will save your project and make the pre-launch page visible to the public.
+                </p>
+              </div>
+            )}
           </CardContent>
         )}
       </Card>
