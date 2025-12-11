@@ -40,7 +40,6 @@ import {
   Eye,
   ThumbsUp,
   ThumbsDown,
-  ExternalLink,
   History,
   User,
   Calendar,
