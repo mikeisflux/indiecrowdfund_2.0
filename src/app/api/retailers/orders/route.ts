@@ -1,28 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.RETAILER_JWT_SECRET || "retailer-secret-key-change-in-production"
-);
-
-// Helper to verify retailer authentication
-async function verifyRetailer() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("retailer_token")?.value;
-
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as { retailerId: string; email: string };
-  } catch {
-    return null;
-  }
-}
+import { authenticateRetailerRequest } from "@/lib/retailer-auth";
 
 // Generate invoice number
 function generateInvoiceNumber(): string {
@@ -35,11 +13,11 @@ function generateInvoiceNumber(): string {
 // GET - Get retailer's orders
 export async function GET(req: NextRequest) {
   try {
-    const retailerData = await verifyRetailer();
+    const authResult = await authenticateRetailerRequest();
 
-    if (!retailerData) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: authResult.error || "Unauthorized" },
         { status: 401 }
       );
     }
@@ -50,9 +28,12 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const skip = (page - 1) * limit;
 
-    const where: Record<string, unknown> = {
-      retailerId: retailerData.retailerId,
-    };
+    const where: Record<string, unknown> = {};
+
+    // Super admins see all orders, regular retailers see only their own
+    if (!authResult.isSuperAdmin && authResult.retailerId) {
+      where.retailerId = authResult.retailerId;
+    }
 
     if (status && status !== "all") {
       where.status = status;
@@ -150,12 +131,20 @@ export async function GET(req: NextRequest) {
 // POST - Create a new wholesale order
 export async function POST(req: NextRequest) {
   try {
-    const retailerData = await verifyRetailer();
+    const authResult = await authenticateRetailerRequest();
 
-    if (!retailerData) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: authResult.error || "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    // Super admins cannot create orders
+    if (authResult.isSuperAdmin) {
+      return NextResponse.json(
+        { error: "Admins cannot create orders in preview mode" },
+        { status: 403 }
       );
     }
 
@@ -171,7 +160,7 @@ export async function POST(req: NextRequest) {
 
     // Get the retailer
     const retailer = await db.retailer.findUnique({
-      where: { id: retailerData.retailerId },
+      where: { id: authResult.retailerId },
     });
 
     if (!retailer || retailer.status !== "APPROVED") {

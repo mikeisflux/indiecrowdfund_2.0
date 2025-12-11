@@ -1,45 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
+import { authenticateRetailerRequest } from "@/lib/retailer-auth";
 
 export const dynamic = "force-dynamic";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.RETAILER_JWT_SECRET || "retailer-secret-key-change-in-production"
-);
-
-// Helper to verify retailer authentication
-async function verifyRetailer() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("retailer_token")?.value;
-
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as { retailerId: string; email: string };
-  } catch {
-    return null;
-  }
-}
 
 // GET - Get retailer account details
 export async function GET() {
   try {
-    const retailerData = await verifyRetailer();
+    const authResult = await authenticateRetailerRequest();
 
-    if (!retailerData) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: authResult.error || "Unauthorized" },
         { status: 401 }
       );
     }
 
+    // Super admins get a preview account
+    if (authResult.isSuperAdmin) {
+      return NextResponse.json({
+        account: {
+          id: "admin-preview",
+          businessName: "Admin Preview",
+          businessType: "ADMIN",
+          contactName: "Super Admin",
+          email: "admin@preview.com",
+          phone: "",
+          address: "",
+          city: "",
+          state: "",
+          zipCode: "",
+          country: "",
+          website: "",
+          taxId: "",
+          description: "",
+          status: "APPROVED",
+          createdAt: new Date().toISOString(),
+          verifiedAt: new Date().toISOString(),
+          isAdminPreview: true,
+        },
+      });
+    }
+
     const retailer = await db.retailer.findUnique({
-      where: { id: retailerData.retailerId },
+      where: { id: authResult.retailerId },
       select: {
         id: true,
         businessName: true,
@@ -100,12 +104,20 @@ export async function GET() {
 // PATCH - Update retailer account details
 export async function PATCH(req: NextRequest) {
   try {
-    const retailerData = await verifyRetailer();
+    const authResult = await authenticateRetailerRequest();
 
-    if (!retailerData) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: authResult.error || "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    // Super admins cannot update in preview mode
+    if (authResult.isSuperAdmin) {
+      return NextResponse.json(
+        { error: "Cannot update account in preview mode" },
+        { status: 403 }
       );
     }
 
@@ -124,12 +136,18 @@ export async function PATCH(req: NextRequest) {
       taxId,
     } = body;
 
+    // Get current retailer to check email
+    const currentRetailer = await db.retailer.findUnique({
+      where: { id: authResult.retailerId },
+      select: { email: true },
+    });
+
     // Validate email if provided
-    if (email && email !== retailerData.email) {
+    if (email && currentRetailer && email !== currentRetailer.email) {
       const existingRetailer = await db.retailer.findFirst({
         where: {
           email,
-          NOT: { id: retailerData.retailerId },
+          NOT: { id: authResult.retailerId },
         },
       });
 
@@ -142,7 +160,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const updatedRetailer = await db.retailer.update({
-      where: { id: retailerData.retailerId },
+      where: { id: authResult.retailerId },
       data: {
         businessName: businessName || undefined,
         contactName: contactName || undefined,

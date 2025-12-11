@@ -1,39 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
+import { authenticateRetailerRequest } from "@/lib/retailer-auth";
 
 export const dynamic = "force-dynamic";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.RETAILER_JWT_SECRET || "retailer-secret-key-change-in-production"
-);
-
-// Helper to verify retailer authentication
-async function verifyRetailer() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("retailer_token")?.value;
-
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as { retailerId: string; email: string };
-  } catch {
-    return null;
-  }
-}
 
 // GET - Get retailer's invoices (derived from orders with invoice numbers)
 export async function GET(req: NextRequest) {
   try {
-    const retailerData = await verifyRetailer();
+    const authResult = await authenticateRetailerRequest();
 
-    if (!retailerData) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: authResult.error || "Unauthorized" },
         { status: 401 }
       );
     }
@@ -46,9 +24,13 @@ export async function GET(req: NextRequest) {
 
     // Build where clause
     const where: Record<string, unknown> = {
-      retailerId: retailerData.retailerId,
       invoiceNumber: { not: null },
     };
+
+    // Super admins see all invoices, regular retailers see only their own
+    if (!authResult.isSuperAdmin && authResult.retailerId) {
+      where.retailerId = authResult.retailerId;
+    }
 
     // Map invoice status to order status
     if (status && status !== "all") {
