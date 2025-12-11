@@ -26,15 +26,15 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const projectId = formData.get("projectId") as string | null;
-    const type = formData.get("type") as string | null; // 'project', 'item', 'reward'
+    // Accept both "type" and "uploadType" for compatibility
+    const type = (formData.get("type") || formData.get("uploadType")) as string | null;
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    if (!projectId) {
-      return NextResponse.json({ error: "Project ID required" }, { status: 400 });
-    }
+    // Use "temp" folder if no projectId yet (new unsaved projects)
+    const effectiveProjectId = projectId || "temp";
 
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       process.cwd(),
       "uploads",
       "projects",
-      projectId,
+      effectiveProjectId,
       uploadType
     );
 
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     await writeFile(filePath, buffer);
 
     // Return the API URL for serving the image
-    const url = `/api/uploads/projects/${projectId}/${uploadType}/${filename}`;
+    const url = `/api/uploads/projects/${effectiveProjectId}/${uploadType}/${filename}`;
 
     return NextResponse.json({
       success: true,
