@@ -98,7 +98,6 @@ export async function POST(request: NextRequest) {
           formFields[key] = `[File: ${value.name}]`;
         }
       });
-      console.log("SendGrid Inbound Parse fields received:", JSON.stringify(formFields, null, 2));
 
       const toRaw = formData.get("to") as string || "";
       const fromRaw = formData.get("from") as string || "";
@@ -111,8 +110,6 @@ export async function POST(request: NextRequest) {
       const htmlBody = (formData.get("html") as string) ||
                        (formData.get("body-html") as string) ||
                        (formData.get("stripped-html") as string) || "";
-
-      console.log("Email body - text length:", textBody?.length || 0, "html length:", htmlBody?.length || 0);
 
       let envelope: EmailEnvelope | undefined;
       try {
@@ -175,8 +172,6 @@ export async function POST(request: NextRequest) {
     const finalBodyHtml = emailData.html || (emailData.text ? emailData.text.replace(/\n/g, "<br>") : "");
     const finalBodyText = emailData.text || null;
 
-    console.log("Saving email with body - html length:", finalBodyHtml.length, "text length:", finalBodyText?.length || 0);
-
     // Store the email
     const email = await db.adminEmail.create({
       data: {
@@ -199,9 +194,6 @@ export async function POST(request: NextRequest) {
         attachments: emailData.attachments ? { count: emailData.attachments } : null,
       },
     });
-
-    console.log(`Inbound email received and stored: ${email.id} -> ${mailbox.name} (${mailbox.email})`);
-    console.log(`Stored email body - html: ${email.bodyHtml?.length || 0} chars, text: ${email.bodyText?.length || 0} chars`);
 
     return NextResponse.json({
       success: true,

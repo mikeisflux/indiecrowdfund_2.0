@@ -279,9 +279,6 @@ export default function EmailPage() {
       const response = await fetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`);
       if (response.ok) {
         const data = await response.json();
-        console.log("Fetched email data:", data.email);
-        console.log("bodyHtml length:", data.email?.bodyHtml?.length || 0);
-        console.log("bodyText length:", data.email?.bodyText?.length || 0);
         setSelectedEmail(data.email);
         // Update read status in list
         setEmails(emails.map(e => e.id === email.id ? { ...e, isRead: true } : e));

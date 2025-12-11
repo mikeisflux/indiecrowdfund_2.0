@@ -37,6 +37,9 @@ import {
   Shield,
   Settings,
   Bell,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -87,12 +90,45 @@ interface ActivityItem {
   timestamp: string;
 }
 
+interface HealthCheck {
+  name: string;
+  status: "healthy" | "degraded" | "unhealthy";
+  responseTime?: number;
+  error?: string;
+}
+
+interface HealthData {
+  status: "healthy" | "degraded" | "unhealthy";
+  uptime: number;
+  timestamp: string;
+  checks: HealthCheck[];
+}
+
 export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState("7d");
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
+  const [healthData, setHealthData] = useState<HealthData | null>(null);
+
+  const fetchHealthData = useCallback(async () => {
+    try {
+      const response = await fetch("/api/health");
+      if (response.ok) {
+        const data = await response.json();
+        setHealthData(data);
+      }
+    } catch {
+      // Health check failed
+      setHealthData({
+        status: "unhealthy",
+        uptime: 0,
+        timestamp: new Date().toISOString(),
+        checks: [{ name: "api", status: "unhealthy", error: "Failed to fetch health status" }],
+      });
+    }
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
@@ -118,7 +154,12 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchHealthData();
+
+    // Refresh health data every 30 seconds
+    const healthInterval = setInterval(fetchHealthData, 30000);
+    return () => clearInterval(healthInterval);
+  }, [fetchDashboardData, fetchHealthData]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -183,6 +224,30 @@ export default function AdminDashboard() {
       icon: AlertTriangle,
     },
   ] : [];
+
+  // Get health status display info
+  const getHealthDisplay = () => {
+    if (!healthData) {
+      return { text: "Loading...", percentage: "—", color: "zinc", icon: Loader2 };
+    }
+
+    const healthyChecks = healthData.checks.filter((c) => c.status === "healthy").length;
+    const totalChecks = healthData.checks.length;
+    const percentage = totalChecks > 0 ? Math.round((healthyChecks / totalChecks) * 100) : 0;
+
+    switch (healthData.status) {
+      case "healthy":
+        return { text: "All Systems Operational", percentage: "100%", color: "emerald", icon: CheckCircle2 };
+      case "degraded":
+        return { text: "Partial Outage", percentage: `${percentage}%`, color: "amber", icon: AlertCircle };
+      case "unhealthy":
+        return { text: "System Issues", percentage: `${percentage}%`, color: "red", icon: XCircle };
+      default:
+        return { text: "Unknown", percentage: "—", color: "zinc", icon: AlertCircle };
+    }
+  };
+
+  const healthDisplay = getHealthDisplay();
 
   // Format relative time
   const formatRelativeTime = (dateStr: string) => {
@@ -486,17 +551,41 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+        <Card className={`bg-gradient-to-br text-white ${
+          healthDisplay.color === "emerald" ? "from-emerald-500 to-teal-600" :
+          healthDisplay.color === "amber" ? "from-amber-500 to-orange-600" :
+          healthDisplay.color === "red" ? "from-red-500 to-rose-600" :
+          "from-blue-500 to-indigo-600"
+        }`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-white/80">System Health</p>
-                <p className="mt-1 text-2xl font-bold">99.9%</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <healthDisplay.icon className={`h-5 w-5 ${healthDisplay.color === "zinc" ? "animate-spin" : ""}`} />
+                  <span className="text-2xl font-bold">{healthDisplay.percentage}</span>
+                </div>
+                <p className="mt-1 text-xs text-white/70">{healthDisplay.text}</p>
               </div>
               <Link href="/admin/settings">
-                <Button size="sm" variant="secondary">Status</Button>
+                <Button size="sm" variant="secondary">Details</Button>
               </Link>
             </div>
+            {healthData && healthData.checks.some(c => c.status !== "healthy") && (
+              <div className="mt-3 pt-3 border-t border-white/20">
+                <div className="flex flex-wrap gap-2">
+                  {healthData.checks.filter(c => c.status !== "healthy").map((check) => (
+                    <Badge
+                      key={check.name}
+                      variant="secondary"
+                      className="bg-white/20 text-white text-xs"
+                    >
+                      {check.name}: {check.status}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

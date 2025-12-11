@@ -71,8 +71,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    console.log(`Processing ${events.length} SendGrid events (signature verified)`);
-
     const results = await Promise.allSettled(
       events.map(async (event) => {
         try {
@@ -92,7 +90,6 @@ export async function POST(request: NextRequest) {
           });
 
           if (recentEmails.length === 0) {
-            console.log(`No matching email found for event: ${event.event} to ${event.email}`);
             return { success: false, reason: "No matching email" };
           }
 
@@ -155,7 +152,6 @@ export async function POST(request: NextRequest) {
               data: updateData,
             });
 
-            console.log(`Updated email ${email.id} with event: ${event.event}`);
             return { success: true, emailId: email.id, event: event.event };
           }
 

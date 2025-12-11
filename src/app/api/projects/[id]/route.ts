@@ -101,8 +101,6 @@ async function handleCollaborators(
   creatorId: string,
   creatorName: string
 ) {
-  console.log(`Processing ${collaborators.length} collaborators for project ${projectId}`);
-
   // Get project title for notification
   const project = await db.project.findUnique({
     where: { id: projectId },
@@ -121,18 +119,14 @@ async function handleCollaborators(
   });
 
   const existingEmails = new Set(existingCollaborators.map((c: { email: string | null }) => c.email?.toLowerCase()));
-  console.log(`Existing collaborator emails: ${Array.from(existingEmails).join(", ")}`);
 
   for (const collab of collaborators) {
     const emailLower = collab.email.toLowerCase();
 
     // Skip if already a collaborator
     if (existingEmails.has(emailLower)) {
-      console.log(`Skipping ${emailLower} - already a collaborator`);
       continue;
     }
-
-    console.log(`Processing new collaborator: ${emailLower}`);
 
     try {
       // Find user by email
@@ -142,8 +136,6 @@ async function handleCollaborators(
       });
 
       if (user) {
-        console.log(`User found for ${emailLower}, creating collaborator record`);
-
         // Create collaborator entry with PENDING status - user must accept
         const collaboratorRecord = await db.projectCollaborator.create({
           data: {
@@ -173,16 +165,13 @@ async function handleCollaborators(
         });
 
         // Send email notification with accept/decline link
-        console.log(`Sending collaborator invite email to ${collab.email}`);
-        const emailResult = await sendCollaboratorInviteEmail(
+        await sendCollaboratorInviteEmail(
           collab.email,
           creatorName,
           project.title,
           collaboratorRecord.id
         );
-        console.log(`Email result for ${collab.email}:`, emailResult);
       } else {
-        console.log(`User not found for ${emailLower}, creating pending collaborator`);
 
         // User doesn't exist yet - create a pending collaborator entry without userId
         // They'll be linked when they sign up with this email
@@ -200,22 +189,18 @@ async function handleCollaborators(
         });
 
         // Send invite email - they'll need to sign up first
-        console.log(`Sending collaborator invite email to ${collab.email} (new user)`);
-        const emailResult = await sendCollaboratorInviteEmail(
+        await sendCollaboratorInviteEmail(
           collab.email,
           creatorName,
           project.title,
           collaboratorRecord.id
         );
-        console.log(`Email result for ${collab.email}:`, emailResult);
       }
     } catch (error) {
       console.error(`Error processing collaborator ${emailLower}:`, error);
       // Continue processing other collaborators even if one fails
     }
   }
-
-  console.log("Finished processing collaborators");
 }
 
 export async function GET(
@@ -319,14 +304,11 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    console.log("[API Debug] Received body - rewards count:", body.rewards?.length || 0);
-    console.log("[API Debug] Rewards received:", JSON.stringify(body.rewards || []).substring(0, 500));
 
     const data = updateProjectSchema.parse(body);
 
     // Extract rewards and collaborators for separate handling
     const { rewards, collaborators, ...projectData } = data;
-    console.log("[API Debug] After validation - rewards count:", rewards?.length || 0);
 
     // Prepare project update data
     const updateData: Record<string, unknown> = {};
@@ -396,9 +378,7 @@ export async function PATCH(
     if (projectData.status !== undefined) updateData.status = projectData.status;
 
     // Update project using transaction if we have rewards to handle
-    console.log("[API Debug] Processing rewards - count:", rewards?.length || 0, "condition:", rewards && rewards.length > 0);
     if (rewards && rewards.length > 0) {
-      console.log("[API Debug] Entering rewards transaction");
       // Use transaction to update project and rewards together
       const updated = await db.$transaction(async (tx) => {
         // Update project
@@ -426,7 +406,6 @@ export async function PATCH(
 
         // Upsert rewards
         for (const reward of rewards) {
-          console.log("[API Debug] Processing reward:", reward.id || "NEW", reward.title, "items:", reward.items?.length || 0);
           const rewardData = {
             projectId: params.id,
             type: reward.type,

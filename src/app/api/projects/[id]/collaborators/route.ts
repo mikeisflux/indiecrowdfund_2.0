@@ -104,14 +104,12 @@ export async function POST(
     }
 
     // Send email notification
-    console.log(`Sending collaborator invite email to ${collab.email}`);
     const emailResult = await sendCollaboratorInviteEmail(
       collab.email,
       creatorName,
       project.title,
       collaboratorRecord.id
     );
-    console.log(`Email result for ${collab.email}:`, emailResult);
 
     return NextResponse.json({
       success: true,

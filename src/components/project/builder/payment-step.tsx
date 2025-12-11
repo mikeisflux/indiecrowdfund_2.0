@@ -38,7 +38,6 @@ export function PaymentStep() {
       try {
         const response = await fetch("/api/stripe/connect");
         const data = await response.json();
-        console.log("Stripe status response:", data);
 
         if (!response.ok) {
           setStripeStatus({
@@ -92,7 +91,6 @@ export function PaymentStep() {
       });
 
       const data = await response.json();
-      console.log("Stripe connect response:", data);
 
       if (!response.ok) {
         setConnectError(data.error || "Failed to connect Stripe");
@@ -123,7 +121,6 @@ export function PaymentStep() {
       });
 
       const data = await response.json();
-      console.log("Stripe reset response:", data);
 
       if (!response.ok) {
         setConnectError(data.error || "Failed to reset Stripe");
