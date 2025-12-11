@@ -502,7 +502,8 @@ export default function PledgePage() {
   const handlePledgeWithoutReward = () => {
     setPledgeWithoutReward(true);
     setSelectedReward(null);
-    setStep("addons");
+    setSelectedAddons({}); // Clear any previously selected addons
+    setStep("payment"); // Skip addons step - go directly to payment
   };
 
   // Called when payment is successful
@@ -527,14 +528,18 @@ export default function PledgePage() {
       >
         Rewards
       </button>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-      <button
-        onClick={() => (selectedReward || pledgeWithoutReward) && setStep("addons")}
-        className={step === "addons" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"}
-        disabled={!selectedReward && !pledgeWithoutReward}
-      >
-        Add-ons
-      </button>
+      {/* Only show Add-ons step when there's a selected reward (not for pledge without reward) */}
+      {selectedReward && (
+        <>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <button
+            onClick={() => setStep("addons")}
+            className={step === "addons" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}
+          >
+            Add-ons
+          </button>
+        </>
+      )}
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
       <button
         onClick={() => (selectedReward || pledgeWithoutReward) && setStep("payment")}
