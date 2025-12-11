@@ -165,19 +165,19 @@ export async function GET(req: NextRequest) {
 
     if (tab === "revenue") {
       // Get revenue breakdown
-      const [pledgesByDay, topProjects, pledgesByStatus] = await Promise.all([
-        // Revenue by day
-        db.$queryRaw`
-          SELECT
-            DATE(created_at) as date,
-            SUM(amount) as total,
-            COUNT(*) as count
-          FROM "Pledge"
-          WHERE status = 'COMPLETED'
-          AND created_at >= ${startDate}
-          GROUP BY DATE(created_at)
-          ORDER BY date ASC
-        ` as Promise<Array<{ date: Date; total: number; count: bigint }>>,
+      const [completedPledges, topProjects, pledgesByStatus] = await Promise.all([
+        // Get all completed pledges in the period for grouping by day
+        db.pledge.findMany({
+          where: {
+            status: "COMPLETED",
+            createdAt: { gte: startDate }
+          },
+          select: {
+            amount: true,
+            createdAt: true
+          },
+          orderBy: { createdAt: "asc" }
+        }),
         // Top projects by revenue
         db.project.findMany({
           where: {
@@ -201,13 +201,27 @@ export async function GET(req: NextRequest) {
         })
       ]);
 
+      // Group pledges by day manually
+      const pledgesByDay = new Map<string, { total: number; count: number }>();
+      completedPledges.forEach(pledge => {
+        const dateKey = pledge.createdAt.toISOString().split('T')[0];
+        const existing = pledgesByDay.get(dateKey) || { total: 0, count: 0 };
+        existing.total += pledge.amount;
+        existing.count += 1;
+        pledgesByDay.set(dateKey, existing);
+      });
+
+      const byDay = Array.from(pledgesByDay.entries())
+        .map(([date, data]) => ({
+          date,
+          total: data.total,
+          count: data.count
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
       return NextResponse.json({
         revenue: {
-          byDay: pledgesByDay.map(d => ({
-            date: d.date,
-            total: d.total,
-            count: Number(d.count)
-          })),
+          byDay,
           topProjects,
           byStatus: pledgesByStatus.map(p => ({
             status: p.status,
