@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { RewardData, RewardItemData, RewardType, ShippingType, SHIPPING_COUNTRIES } from "@/types";
