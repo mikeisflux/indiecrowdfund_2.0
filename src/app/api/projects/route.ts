@@ -7,6 +7,7 @@ import { generateProjectSlug } from "@/lib/utils";
 const createProjectSchema = z.object({
   title: z.string().min(1).max(200),
   subtitle: z.string().max(500).optional(),
+  slug: z.string().min(3).max(100).regex(/^[a-z0-9-]+$/).optional(),
   category: z.string().min(1),
   subcategory: z.string().optional().nullable(),
   secondaryCategory: z.string().optional().nullable(),
@@ -166,7 +167,42 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validatedData = createProjectSchema.parse(body);
 
-    const slug = generateProjectSlug(validatedData.title);
+    // Use custom slug if provided and available, otherwise generate one
+    let slug = validatedData.slug;
+
+    if (slug) {
+      // Check if the custom slug is already taken
+      const existingProject = await db.project.findUnique({
+        where: { slug },
+        select: { id: true },
+      });
+
+      if (existingProject) {
+        return NextResponse.json(
+          { error: "This URL is already taken. Please choose a different one." },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Generate slug from title without random suffix first
+      slug = validatedData.title
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+      // Check if the base slug is taken and add suffix if needed
+      const existingProject = await db.project.findUnique({
+        where: { slug },
+        select: { id: true },
+      });
+
+      if (existingProject) {
+        // Add a random suffix only if base slug is taken
+        slug = generateProjectSlug(validatedData.title);
+      }
+    }
 
     const project = await db.project.create({
       data: {

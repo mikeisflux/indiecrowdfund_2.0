@@ -347,6 +347,7 @@ export type ProjectSubcategory = typeof PROJECT_CATEGORIES[number]["subcategorie
 export interface ProjectBasicsData {
   title: string;
   subtitle?: string;
+  slug?: string;
   category: string;
   subcategory?: string;
   secondaryCategory?: string;

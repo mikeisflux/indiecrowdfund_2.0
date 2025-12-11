@@ -21,6 +21,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Settings,
   User,
   Mail,
@@ -35,6 +43,7 @@ import {
   Plus,
   X,
   ExternalLink,
+  Pencil,
 } from "lucide-react";
 import { useSession } from "@/components/providers/auth-provider";
 
@@ -62,6 +71,15 @@ interface UserSettings {
   };
 }
 
+interface EmailChangeState {
+  newEmail: string;
+  confirmEmail: string;
+  password: string;
+  isChanging: boolean;
+  error: string | null;
+  success: boolean;
+}
+
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (ET)" },
   { value: "America/Chicago", label: "Central Time (CT)" },
@@ -86,6 +104,15 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [newWebsite, setNewWebsite] = useState("");
+  const [showEmailChangeDialog, setShowEmailChangeDialog] = useState(false);
+  const [emailChange, setEmailChange] = useState<EmailChangeState>({
+    newEmail: "",
+    confirmEmail: "",
+    password: "",
+    isChanging: false,
+    error: null,
+    success: false,
+  });
 
   useEffect(() => {
     async function fetchSettings() {
@@ -163,6 +190,82 @@ export default function SettingsPage() {
       setSettings({
         ...settings,
         websites: settings.websites.filter((_, i) => i !== index),
+      });
+    }
+  };
+
+  const handleEmailChange = async () => {
+    // Validate
+    if (!emailChange.newEmail) {
+      setEmailChange({ ...emailChange, error: "New email is required" });
+      return;
+    }
+    if (emailChange.newEmail !== emailChange.confirmEmail) {
+      setEmailChange({ ...emailChange, error: "Email addresses do not match" });
+      return;
+    }
+    if (emailChange.newEmail === settings?.email) {
+      setEmailChange({ ...emailChange, error: "New email must be different from current email" });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailChange.newEmail)) {
+      setEmailChange({ ...emailChange, error: "Please enter a valid email address" });
+      return;
+    }
+
+    setEmailChange({ ...emailChange, isChanging: true, error: null });
+
+    try {
+      const res = await fetch("/api/user/settings/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          newEmail: emailChange.newEmail,
+          password: emailChange.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to change email");
+      }
+
+      // Success
+      setEmailChange({
+        newEmail: "",
+        confirmEmail: "",
+        password: "",
+        isChanging: false,
+        error: null,
+        success: true,
+      });
+
+      // Update the settings with the new email
+      if (settings) {
+        setSettings({ ...settings, email: emailChange.newEmail, emailVerified: null });
+      }
+
+      // Close the dialog after a short delay
+      setTimeout(() => {
+        setShowEmailChangeDialog(false);
+        setEmailChange({
+          newEmail: "",
+          confirmEmail: "",
+          password: "",
+          isChanging: false,
+          error: null,
+          success: false,
+        });
+      }, 2000);
+    } catch (err) {
+      setEmailChange({
+        ...emailChange,
+        isChanging: false,
+        error: err instanceof Error ? err.message : "Failed to change email",
       });
     }
   };
@@ -450,16 +553,26 @@ export default function SettingsPage() {
                     {settings.emailVerified ? "Email verified" : "Email not verified"}
                   </p>
                 </div>
-                {settings.emailVerified ? (
-                  <Badge className="bg-green-500/10 text-green-500 border-green-500/30">
-                    <Check className="mr-1 h-3 w-3" />
-                    Verified
-                  </Badge>
-                ) : (
-                  <Button variant="outline" size="sm">
-                    Verify Email
+                <div className="flex items-center gap-2">
+                  {settings.emailVerified ? (
+                    <Badge className="bg-green-500/10 text-green-500 border-green-500/30">
+                      <Check className="mr-1 h-3 w-3" />
+                      Verified
+                    </Badge>
+                  ) : (
+                    <Button variant="outline" size="sm">
+                      Verify Email
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEmailChangeDialog(true)}
+                  >
+                    <Pencil className="mr-1 h-3 w-3" />
+                    Change
                   </Button>
-                )}
+                </div>
               </div>
 
               <div className="text-sm text-muted-foreground">
@@ -616,6 +729,113 @@ export default function SettingsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Email Change Dialog */}
+      <Dialog open={showEmailChangeDialog} onOpenChange={setShowEmailChangeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change Email Address</DialogTitle>
+            <DialogDescription>
+              Enter your new email address. You&apos;ll need to verify it before the change takes effect.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {emailChange.error && (
+              <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-2 text-destructive text-sm">
+                <AlertCircle className="h-4 w-4" />
+                {emailChange.error}
+              </div>
+            )}
+
+            {emailChange.success && (
+              <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2 text-green-600 text-sm">
+                <Check className="h-4 w-4" />
+                Email changed successfully! Please verify your new email.
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="currentEmail">Current Email</Label>
+              <Input
+                id="currentEmail"
+                value={settings?.email || ""}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newEmail">New Email Address</Label>
+              <Input
+                id="newEmail"
+                type="email"
+                value={emailChange.newEmail}
+                onChange={(e) => setEmailChange({ ...emailChange, newEmail: e.target.value, error: null })}
+                placeholder="Enter new email address"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmEmail">Confirm New Email</Label>
+              <Input
+                id="confirmEmail"
+                type="email"
+                value={emailChange.confirmEmail}
+                onChange={(e) => setEmailChange({ ...emailChange, confirmEmail: e.target.value, error: null })}
+                placeholder="Confirm new email address"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password (optional)</Label>
+              <Input
+                id="password"
+                type="password"
+                value={emailChange.password}
+                onChange={(e) => setEmailChange({ ...emailChange, password: e.target.value })}
+                placeholder="Enter your password to confirm"
+              />
+              <p className="text-xs text-muted-foreground">
+                If you signed up via social login, you can leave this empty.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEmailChangeDialog(false);
+                setEmailChange({
+                  newEmail: "",
+                  confirmEmail: "",
+                  password: "",
+                  isChanging: false,
+                  error: null,
+                  success: false,
+                });
+              }}
+              disabled={emailChange.isChanging}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEmailChange}
+              disabled={emailChange.isChanging || emailChange.success}
+            >
+              {emailChange.isChanging ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Changing...
+                </>
+              ) : (
+                "Change Email"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

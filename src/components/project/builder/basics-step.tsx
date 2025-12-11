@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { PROJECT_CATEGORIES } from "@/types";
 import { Input } from "@/components/ui/input";
@@ -16,9 +16,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Calendar, Lightbulb, Upload, Trash2, Video } from "lucide-react";
+import { Calendar, Lightbulb, Upload, Trash2, Video, Link, Check, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { slugify } from "@/lib/utils";
 
 // Helper to extract video embed URL from YouTube or Vimeo links
 function getVideoEmbedUrl(url: string): string | null {
@@ -42,7 +43,69 @@ function getVideoEmbedUrl(url: string): string | null {
 }
 
 export function BasicsStep() {
-  const { basics, updateBasics, projectId } = useProjectStore();
+  const { basics, updateBasics, projectId, projectSlug } = useProjectStore();
+  const [slugInput, setSlugInput] = useState(basics.slug || "");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [slugMessage, setSlugMessage] = useState("");
+
+  // Auto-generate slug from title when title changes (only if slug is empty)
+  useEffect(() => {
+    if (basics.title && !basics.slug && !slugInput) {
+      const generatedSlug = slugify(basics.title);
+      setSlugInput(generatedSlug);
+    }
+  }, [basics.title, basics.slug, slugInput]);
+
+  // Debounced slug availability check
+  const checkSlugAvailability = useCallback(async (slug: string) => {
+    if (!slug || slug.length < 3) {
+      setSlugStatus("invalid");
+      setSlugMessage("Slug must be at least 3 characters");
+      return;
+    }
+
+    // Validate slug format
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      setSlugStatus("invalid");
+      setSlugMessage("Only lowercase letters, numbers, and hyphens allowed");
+      return;
+    }
+
+    setSlugStatus("checking");
+    setSlugMessage("Checking availability...");
+
+    try {
+      const res = await fetch(`/api/projects/slug/${slug}/check${projectId ? `?projectId=${projectId}` : ""}`);
+      const data = await res.json();
+
+      if (data.available) {
+        setSlugStatus("available");
+        setSlugMessage("This URL is available!");
+        updateBasics({ slug });
+      } else {
+        setSlugStatus("taken");
+        setSlugMessage("This URL is already taken");
+      }
+    } catch {
+      setSlugStatus("idle");
+      setSlugMessage("");
+    }
+  }, [projectId, updateBasics]);
+
+  // Debounce the slug check
+  useEffect(() => {
+    if (!slugInput) {
+      setSlugStatus("idle");
+      setSlugMessage("");
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      checkSlugAvailability(slugInput);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [slugInput, checkSlugAvailability]);
 
   // Get video embed URL
   const videoEmbedUrl = useMemo(() => {
@@ -101,6 +164,52 @@ export function BasicsStep() {
           onChange={(e) => updateBasics({ subtitle: e.target.value })}
           rows={2}
         />
+      </div>
+
+      {/* Project URL / Slug */}
+      <div className="space-y-2">
+        <Label htmlFor="slug">
+          <div className="flex items-center gap-2">
+            <Link className="h-4 w-4" />
+            Project URL
+          </div>
+        </Label>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">indiecrowdfund.com/projects/</span>
+          <div className="relative flex-1">
+            <Input
+              id="slug"
+              placeholder="my-awesome-project"
+              value={slugInput}
+              onChange={(e) => {
+                const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                setSlugInput(value);
+              }}
+              className={`pr-10 ${
+                slugStatus === "available" ? "border-green-500 focus-visible:ring-green-500" :
+                slugStatus === "taken" || slugStatus === "invalid" ? "border-red-500 focus-visible:ring-red-500" :
+                ""
+              }`}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              {slugStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              {slugStatus === "available" && <Check className="h-4 w-4 text-green-500" />}
+              {(slugStatus === "taken" || slugStatus === "invalid") && <X className="h-4 w-4 text-red-500" />}
+            </div>
+          </div>
+        </div>
+        {slugMessage && (
+          <p className={`text-xs ${
+            slugStatus === "available" ? "text-green-600" :
+            slugStatus === "taken" || slugStatus === "invalid" ? "text-red-600" :
+            "text-muted-foreground"
+          }`}>
+            {slugMessage}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          This will be your project&apos;s permanent URL. Choose something memorable and relevant.
+        </p>
       </div>
 
       {/* Tip Banner */}

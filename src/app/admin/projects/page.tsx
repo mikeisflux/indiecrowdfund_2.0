@@ -51,6 +51,10 @@ import {
   AlertCircle,
   RotateCcw,
   Loader2,
+  Zap,
+  Pause,
+  Send,
+  Power,
 } from "lucide-react";
 
 interface Creator {
@@ -105,6 +109,7 @@ interface Stats {
   pending: number;
   approvedToday: number;
   rejectedToday: number;
+  activeCampaigns?: number;
 }
 
 const rejectionReasons = [
@@ -122,11 +127,14 @@ const rejectionReasons = [
 export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState("pending");
   const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProjects, setActiveProjects] = useState<Project[]>([]);
   const [reviewHistory, setReviewHistory] = useState<ReviewHistory[]>([]);
-  const [stats, setStats] = useState<Stats>({ pending: 0, approvedToday: 0, rejectedToday: 0 });
+  const [stats, setStats] = useState<Stats>({ pending: 0, approvedToday: 0, rejectedToday: 0, activeCampaigns: 0 });
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
+  const [showSendToReviewDialog, setShowSendToReviewDialog] = useState(false);
   const [reviewAction, setReviewAction] = useState<"approve" | "reject" | "changes" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -138,6 +146,7 @@ export default function ProjectsPage() {
   const [internalNotes, setInternalNotes] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
+  const [deactivateReason, setDeactivateReason] = useState("");
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -158,6 +167,26 @@ export default function ProjectsPage() {
     }
   }, [categoryFilter]);
 
+  const fetchActiveProjects = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({
+        status: "LIVE",
+        ...(categoryFilter !== "all" && { category: categoryFilter }),
+      });
+      const response = await fetch(`/api/admin/projects/review?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setActiveProjects(data.projects || []);
+        setStats((prev) => ({
+          ...prev,
+          activeCampaigns: data.projects?.length || 0,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching active projects:", error);
+    }
+  }, [categoryFilter]);
+
   const fetchReviewHistory = useCallback(async () => {
     try {
       // For now, we'll show recent reviews from the projects API
@@ -175,8 +204,9 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects();
+    fetchActiveProjects();
     fetchReviewHistory();
-  }, [fetchProjects, fetchReviewHistory]);
+  }, [fetchProjects, fetchActiveProjects, fetchReviewHistory]);
 
   const getFlags = (project: Project): string[] => {
     const flags: string[] = [];
@@ -223,6 +253,85 @@ export default function ProjectsPage() {
   const handleRequestChanges = () => {
     setReviewAction("changes");
     setShowReviewDialog(true);
+  };
+
+  const handleDeactivate = () => {
+    setDeactivateReason("");
+    setShowDeactivateDialog(true);
+  };
+
+  const handleSendToReview = () => {
+    setReviewNotes("");
+    setShowSendToReviewDialog(true);
+  };
+
+  const submitDeactivate = async () => {
+    if (!selectedProject) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/admin/projects/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: selectedProject.id,
+          action: "DEACTIVATE",
+          reason: deactivateReason,
+          sendEmail,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchActiveProjects();
+        setShowDeactivateDialog(false);
+        setSelectedProject(null);
+        setDeactivateReason("");
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to deactivate project");
+      }
+    } catch (error) {
+      console.error("Error deactivating project:", error);
+      alert("Failed to deactivate project");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitSendToReview = async () => {
+    if (!selectedProject) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/admin/projects/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: selectedProject.id,
+          action: "SEND_TO_REVIEW",
+          notes: reviewNotes,
+          sendEmail,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchActiveProjects();
+        await fetchProjects();
+        setShowSendToReviewDialog(false);
+        setSelectedProject(null);
+        setReviewNotes("");
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to send project to review");
+      }
+    } catch (error) {
+      console.error("Error sending project to review:", error);
+      alert("Failed to send project to review");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const submitReview = async () => {
@@ -407,6 +516,13 @@ export default function ProjectsPage() {
             Pending Review
             {filteredProjects.length > 0 && (
               <Badge variant="destructive" className="ml-2">{filteredProjects.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="active">
+            <Zap className="mr-2 h-4 w-4" />
+            Active Campaigns
+            {activeProjects.length > 0 && (
+              <Badge variant="default" className="ml-2 bg-emerald-600">{activeProjects.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="flagged">
@@ -713,6 +829,240 @@ export default function ProjectsPage() {
           )}
         </TabsContent>
 
+        {/* Active Campaigns Tab */}
+        <TabsContent value="active" className="mt-6 space-y-4">
+          {/* Filters */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Input
+                placeholder="Search active campaigns..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Technology">Technology</SelectItem>
+                <SelectItem value="Film & Video">Film & Video</SelectItem>
+                <SelectItem value="Games">Games</SelectItem>
+                <SelectItem value="Design">Design</SelectItem>
+                <SelectItem value="Food & Drink">Food & Drink</SelectItem>
+                <SelectItem value="Music">Music</SelectItem>
+                <SelectItem value="Art">Art</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {activeProjects.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Zap className="h-12 w-12 text-zinc-300 mb-4" />
+                <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No active campaigns</h3>
+                <p className="text-sm text-zinc-500 max-w-sm">
+                  There are no live campaigns currently running.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Active Projects List */}
+              <div className="space-y-4">
+                {activeProjects
+                  .filter((project) => {
+                    if (!searchQuery) return true;
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      project.title.toLowerCase().includes(query) ||
+                      project.creator.name?.toLowerCase().includes(query) ||
+                      project.creator.email.toLowerCase().includes(query)
+                    );
+                  })
+                  .map((project) => (
+                    <Card
+                      key={project.id}
+                      className={`cursor-pointer transition-all hover:shadow-md ${
+                        selectedProject?.id === project.id ? "ring-2 ring-emerald-500" : ""
+                      }`}
+                      onClick={() => setSelectedProject(project)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
+                            {project.imageUrl ? (
+                              <Image src={project.imageUrl} alt="" fill className="object-cover" />
+                            ) : (
+                              <FolderKanban className="h-6 w-6 text-zinc-400" />
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-semibold truncate">{project.title}</h4>
+                                  <Badge className="bg-emerald-600">LIVE</Badge>
+                                </div>
+                                <p className="text-sm text-zinc-500 truncate">{project.subtitle || "No subtitle"}</p>
+                              </div>
+                              <Badge variant="outline">{project.category}</Badge>
+                            </div>
+
+                            <div className="mt-2 flex items-center gap-4 text-xs text-zinc-500">
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {project.creator.name || project.creator.email}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                ${project.currentAmount.toLocaleString()} / ${project.goalAmount.toLocaleString()}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {project._count.pledges} backers
+                              </span>
+                            </div>
+
+                            <div className="mt-2">
+                              <div className="h-2 bg-zinc-200 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-emerald-600 rounded-full"
+                                  style={{ width: `${Math.min(100, (project.currentAmount / project.goalAmount) * 100)}%` }}
+                                />
+                              </div>
+                              <p className="text-xs text-zinc-500 mt-1">
+                                {Math.round((project.currentAmount / project.goalAmount) * 100)}% funded
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+
+              {/* Active Project Detail Panel */}
+              {selectedProject && selectedProject.status === "LIVE" ? (
+                <Card className="h-fit sticky top-6">
+                  <CardHeader className="border-b">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CardTitle>{selectedProject.title}</CardTitle>
+                          <Badge className="bg-emerald-600">LIVE</Badge>
+                        </div>
+                        <CardDescription>{selectedProject.subtitle || "No subtitle"}</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Accordion type="multiple" defaultValue={["overview", "funding"]} className="w-full">
+                      {/* Overview */}
+                      <AccordionItem value="overview">
+                        <AccordionTrigger className="px-4">Campaign Overview</AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="rounded-lg border p-3">
+                              <p className="text-xs text-zinc-500">Goal</p>
+                              <p className="font-semibold">${selectedProject.goalAmount.toLocaleString()} {selectedProject.currency}</p>
+                            </div>
+                            <div className="rounded-lg border p-3">
+                              <p className="text-xs text-zinc-500">Raised</p>
+                              <p className="font-semibold text-emerald-600">${selectedProject.currentAmount.toLocaleString()}</p>
+                            </div>
+                            <div className="rounded-lg border p-3">
+                              <p className="text-xs text-zinc-500">Backers</p>
+                              <p className="font-semibold">{selectedProject._count.pledges}</p>
+                            </div>
+                            <div className="rounded-lg border p-3">
+                              <p className="text-xs text-zinc-500">Duration</p>
+                              <p className="font-semibold">{formatDuration(selectedProject)}</p>
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+
+                      {/* Creator Info */}
+                      <AccordionItem value="creator">
+                        <AccordionTrigger className="px-4">Creator Information</AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 font-semibold text-zinc-600">
+                              {(selectedProject.creator.name || selectedProject.creator.email).charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold">{selectedProject.creator.name || "No name"}</p>
+                                {selectedProject.creator.emailVerified ? (
+                                  <Badge className="bg-blue-100 text-blue-700">
+                                    <CheckCircle className="mr-1 h-3 w-3" /> Verified
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive">
+                                    <AlertCircle className="mr-1 h-3 w-3" /> Unverified
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-zinc-500">{selectedProject.creator.email}</p>
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+
+                    {/* Action Buttons for Active Campaigns */}
+                    <div className="p-4 border-t bg-zinc-50 dark:bg-zinc-800/50">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Button variant="outline" className="flex-1" asChild>
+                          <a href={`/projects/${selectedProject.slug}`} target="_blank" rel="noopener noreferrer">
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Campaign
+                          </a>
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={handleSendToReview}
+                          className="flex-1"
+                        >
+                          <Send className="mr-2 h-4 w-4" />
+                          Send to Review
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={handleDeactivate}
+                          className="flex-1"
+                        >
+                          <Power className="mr-2 h-4 w-4" />
+                          Deactivate
+                        </Button>
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-3 text-center">
+                        Warning: Deactivating will pause the campaign. Sending to review will unpublish it.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="h-[400px] flex items-center justify-center">
+                  <div className="text-center text-zinc-500">
+                    <Zap className="h-12 w-12 mx-auto mb-3 text-zinc-300" />
+                    <p className="font-medium">Select a campaign to manage</p>
+                    <p className="text-sm">Click on a campaign to see details and actions</p>
+                  </div>
+                </Card>
+              )}
+            </div>
+          )}
+        </TabsContent>
+
         {/* Flagged Tab */}
         <TabsContent value="flagged" className="mt-6">
           <Card>
@@ -991,6 +1341,143 @@ export default function ProjectsPage() {
                 <>
                   <XCircle className="mr-2 h-4 w-4" />
                   Reject Project
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deactivate Campaign Dialog */}
+      <Dialog open={showDeactivateDialog} onOpenChange={setShowDeactivateDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Deactivate Campaign</DialogTitle>
+            <DialogDescription>
+              This will pause the campaign and prevent it from receiving new pledges.
+              The campaign can be reactivated later.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+              <p className="font-medium">Warning:</p>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>The campaign will be hidden from public view</li>
+                <li>No new pledges can be made</li>
+                <li>Existing backers will be notified</li>
+                <li>The campaign can be reactivated by admin</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Reason for Deactivation *</Label>
+              <Textarea
+                placeholder="Explain why the campaign is being deactivated..."
+                value={deactivateReason}
+                onChange={(e) => setDeactivateReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="sendEmailDeactivate"
+                checked={sendEmail}
+                onCheckedChange={(checked) => setSendEmail(checked === true)}
+              />
+              <Label htmlFor="sendEmailDeactivate" className="text-sm">
+                Send notification email to creator
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeactivateDialog(false)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={submitDeactivate}
+              disabled={isSubmitting || !deactivateReason}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deactivating...
+                </>
+              ) : (
+                <>
+                  <Power className="mr-2 h-4 w-4" />
+                  Deactivate Campaign
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send to Review Dialog */}
+      <Dialog open={showSendToReviewDialog} onOpenChange={setShowSendToReviewDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Send Campaign to Review</DialogTitle>
+            <DialogDescription>
+              This will unpublish the campaign and send it back for review.
+              The campaign will need to be re-approved before going live again.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-800">
+              <p className="font-medium">What happens next:</p>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>The campaign will be unpublished immediately</li>
+                <li>Status will change to &quot;Submitted&quot;</li>
+                <li>It will appear in the pending review queue</li>
+                <li>Creator can make changes while in review</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notes for Review Team</Label>
+              <Textarea
+                placeholder="Add notes about why this campaign needs review..."
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="sendEmailReview"
+                checked={sendEmail}
+                onCheckedChange={(checked) => setSendEmail(checked === true)}
+              />
+              <Label htmlFor="sendEmailReview" className="text-sm">
+                Send notification email to creator
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSendToReviewDialog(false)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={submitSendToReview}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send to Review
                 </>
               )}
             </Button>

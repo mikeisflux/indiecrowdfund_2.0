@@ -561,9 +561,57 @@ export default function ProjectPage() {
             {/* Media - Takes 3 columns */}
             <div className="lg:col-span-3">
               <div className="aspect-video overflow-hidden rounded-lg bg-muted relative">
-                <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                  <Play className="h-16 w-16 text-white/50" />
-                </div>
+                {project.videoUrl ? (
+                  (() => {
+                    // Extract embed URL for YouTube or Vimeo
+                    const youtubeMatch = project.videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                    const vimeoMatch = project.videoUrl.match(/(?:vimeo\.com\/)(\d+)/);
+
+                    if (youtubeMatch) {
+                      return (
+                        <iframe
+                          src={`https://www.youtube.com/embed/${youtubeMatch[1]}?rel=0`}
+                          className="absolute inset-0 w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          title={project.title}
+                        />
+                      );
+                    } else if (vimeoMatch) {
+                      return (
+                        <iframe
+                          src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
+                          className="absolute inset-0 w-full h-full"
+                          allow="autoplay; fullscreen; picture-in-picture"
+                          allowFullScreen
+                          title={project.title}
+                        />
+                      );
+                    } else {
+                      // For other video URLs, show image with play button overlay
+                      return (
+                        <a href={project.videoUrl} target="_blank" rel="noopener noreferrer" className="block h-full">
+                          {project.imageUrl ? (
+                            <Image src={project.imageUrl} alt={project.title} fill className="object-cover" />
+                          ) : (
+                            <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900" />
+                          )}
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors">
+                            <div className="h-16 w-16 rounded-full bg-white/90 flex items-center justify-center">
+                              <Play className="h-8 w-8 text-gray-900 ml-1" />
+                            </div>
+                          </div>
+                        </a>
+                      );
+                    }
+                  })()
+                ) : project.imageUrl ? (
+                  <Image src={project.imageUrl} alt={project.title} fill className="object-cover" />
+                ) : (
+                  <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                    <Play className="h-16 w-16 text-white/50" />
+                  </div>
+                )}
               </div>
 
               {/* Project badges below image */}
