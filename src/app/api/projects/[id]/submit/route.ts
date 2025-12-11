@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { moderateContent, analyzeFraud } from "@/lib/ai/anthropic";
+import { canUserEditProject } from "@/lib/project-auth";
 
 // POST - Submit project for review
 export async function POST(
@@ -32,8 +33,9 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Verify ownership
-    if (project.creatorId !== session.user.id) {
+    // Verify ownership or collaborator with edit permission
+    const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
