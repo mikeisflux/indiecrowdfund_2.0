@@ -201,8 +201,14 @@ export default function AIControlPage() {
       ]);
 
       const data = await statusRes.json();
-      if (data.success) {
-        setStats(data.stats);
+      if (data.success && data.stats) {
+        setStats(prev => ({
+          ...prev,
+          totalUsers: data.stats.totalUsers ?? prev.totalUsers,
+          totalProjects: data.stats.totalProjects ?? prev.totalProjects,
+          behaviorEvents: data.stats.behaviorEvents ?? prev.behaviorEvents,
+          emailsSent: data.stats.emailsSent ?? prev.emailsSent,
+        }));
         // Update service enabled states from settings
         setServices((prev) =>
           prev.map((s) => ({
@@ -416,7 +422,7 @@ export default function AIControlPage() {
                 <Users className="h-5 w-5 text-violet-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{(stats.totalUsers ?? 0).toLocaleString()}</p>
                 <p className="text-xs text-zinc-500">Total Users</p>
               </div>
             </div>
@@ -429,7 +435,7 @@ export default function AIControlPage() {
                 <Target className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.totalProjects.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{(stats.totalProjects ?? 0).toLocaleString()}</p>
                 <p className="text-xs text-zinc-500">Total Projects</p>
               </div>
             </div>
@@ -442,7 +448,7 @@ export default function AIControlPage() {
                 <BarChart3 className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.behaviorEvents.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{(stats.behaviorEvents ?? 0).toLocaleString()}</p>
                 <p className="text-xs text-zinc-500">Events (30 days)</p>
               </div>
             </div>
@@ -455,7 +461,7 @@ export default function AIControlPage() {
                 <Mail className="h-5 w-5 text-pink-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.emailsSent.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{(stats.emailsSent ?? 0).toLocaleString()}</p>
                 <p className="text-xs text-zinc-500">Emails (7 days)</p>
               </div>
             </div>

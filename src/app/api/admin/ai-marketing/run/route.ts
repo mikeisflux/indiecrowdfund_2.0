@@ -283,8 +283,8 @@ export async function POST(request: Request) {
           stats: {
             totalUsers: userCount,
             totalProjects: projectCount,
-            behaviorEventsLast30Days: behaviorCount,
-            emailsSentLast7Days: emailCount,
+            behaviorEvents: behaviorCount,
+            emailsSent: emailCount,
           },
         };
         break;
