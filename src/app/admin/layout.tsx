@@ -43,6 +43,7 @@ import {
   Loader2,
   Brain,
   Bug,
+  RefreshCw,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -111,6 +112,7 @@ const navigation: NavSection[] = [
     title: "System",
     items: [
       { name: "Settings", href: "/admin/settings", icon: Settings },
+      { name: "Stripe Reconcile", href: "/admin/reconcile", icon: RefreshCw },
       { name: "Security", href: "/admin/security", icon: Lock },
     ],
   },
