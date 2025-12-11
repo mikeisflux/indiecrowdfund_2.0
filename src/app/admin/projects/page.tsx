@@ -74,7 +74,9 @@ interface Project {
   goalAmount: number;
   currentAmount: number;
   currency: string;
+  durationType: "FIXED_DAYS" | "END_DATE" | null;
   durationDays: number | null;
+  endDate: string | null;
   videoUrl: string | null;
   imageUrl: string | null;
   risks: string | null;
@@ -276,6 +278,22 @@ export default function ProjectsPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const formatDuration = (project: Project) => {
+    if (project.durationType === "END_DATE" && project.endDate) {
+      const endDate = new Date(project.endDate);
+      return `Ends ${endDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    } else if (project.durationDays) {
+      return `${project.durationDays} days`;
+    }
+    return "30 days";
   };
 
   const filteredProjects = projects.filter((project) => {
@@ -531,7 +549,7 @@ export default function ProjectsPage() {
                             </div>
                             <div className="rounded-lg border p-3">
                               <p className="text-xs text-zinc-500">Duration</p>
-                              <p className="font-semibold">{selectedProject.durationDays || 30} days</p>
+                              <p className="font-semibold">{formatDuration(selectedProject)}</p>
                             </div>
                             <div className="rounded-lg border p-3">
                               <p className="text-xs text-zinc-500">Category</p>
