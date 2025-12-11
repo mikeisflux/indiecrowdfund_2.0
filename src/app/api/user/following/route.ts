@@ -111,6 +111,117 @@ export async function GET() {
   }
 }
 
+// Follow a project
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { projectId, email, type } = body;
+
+    if (!projectId) {
+      return NextResponse.json(
+        { error: "Project ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify the project exists
+    const project = await db.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, title: true, prelaunchActive: true, status: true },
+    });
+
+    if (!project) {
+      return NextResponse.json(
+        { error: "Project not found" },
+        { status: 404 }
+      );
+    }
+
+    // Get session for logged-in users
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    // For prelaunch follows, either userId OR email is required
+    // For regular follows, userId is required
+    const isPrelaunch = type === "prelaunch";
+
+    if (!isPrelaunch && !userId) {
+      return NextResponse.json(
+        { error: "You must be logged in to follow projects" },
+        { status: 401 }
+      );
+    }
+
+    if (isPrelaunch && !userId && !email) {
+      return NextResponse.json(
+        { error: "Email is required for prelaunch notifications" },
+        { status: 400 }
+      );
+    }
+
+    // Check for existing follow
+    const existingFollow = await db.projectFollower.findFirst({
+      where: {
+        projectId,
+        OR: [
+          ...(userId ? [{ userId }] : []),
+          ...(email && !userId ? [{ email }] : []),
+        ],
+      },
+    });
+
+    if (existingFollow) {
+      return NextResponse.json(
+        { message: "Already following this project", alreadyFollowing: true },
+        { status: 200 }
+      );
+    }
+
+    // Create the follower record
+    const follower = await db.projectFollower.create({
+      data: {
+        projectId,
+        userId: userId || null,
+        email: email || null,
+        isPrelaunch,
+      },
+    });
+
+    // Update follower count on the project
+    await db.project.update({
+      where: { id: projectId },
+      data: {
+        followerCount: { increment: 1 },
+      },
+    });
+
+    // Record analytics event
+    await db.analyticsEvent.create({
+      data: {
+        projectId,
+        eventType: "PROJECT_FOLLOW",
+        userId: userId || undefined,
+        metadata: {
+          isPrelaunch,
+          hasEmail: !!email,
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      followerId: follower.id,
+      message: "Successfully followed project",
+    });
+  } catch (error) {
+    console.error("Follow project error:", error);
+    return NextResponse.json(
+      { error: "Failed to follow project" },
+      { status: 500 }
+    );
+  }
+}
+
 // Unfollow a project
 export async function DELETE(request: Request) {
   try {

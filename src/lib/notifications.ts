@@ -1,4 +1,8 @@
 import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
+
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 type NotificationType =
   | "COLLABORATOR_INVITE"
@@ -48,6 +52,69 @@ export async function createNotification(params: CreateNotificationParams) {
 }
 
 /**
+ * Send project funded email
+ */
+async function sendProjectFundedEmail(
+  email: string,
+  projectTitle: string,
+  projectSlug: string,
+  imageUrl?: string | null
+) {
+  const projectUrl = `${APP_URL}/projects/${projectSlug}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Project Funded!</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #028858 0%, #10b981 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <h2 style="margin-top: 0; color: white; text-align: center;">Project Funded!</h2>
+
+          ${imageUrl ? `<img src="${imageUrl}" alt="${projectTitle}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""}
+
+          <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
+            <h3 style="margin: 0 0 10px 0; color: white;">${projectTitle}</h3>
+            <p style="margin: 0; color: rgba(255,255,255,0.9);">has reached its funding goal!</p>
+          </div>
+
+          <p style="text-align: center;">Thanks to you and other backers, this project is now fully funded and will become a reality!</p>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 15px 0;"><strong>What happens next?</strong></p>
+          <p style="margin: 0; color: #666;">The creator will start working on bringing the project to life. You'll receive updates as the project progresses, and we'll send you a survey to collect your delivery details closer to the estimated delivery date.</p>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${projectUrl}" style="display: inline-block; background: #028858; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            View Project Updates
+          </a>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>You received this email because you backed this project.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `"${projectTitle}" has been funded!`,
+    html,
+  });
+}
+
+/**
  * Notify backers when a project is funded
  */
 export async function notifyProjectFunded(projectId: string) {
@@ -56,6 +123,7 @@ export async function notifyProjectFunded(projectId: string) {
     select: {
       title: true,
       slug: true,
+      imageUrl: true,
       pledges: {
         select: { userId: true },
         distinct: ["userId"],
@@ -78,6 +146,95 @@ export async function notifyProjectFunded(projectId: string) {
   if (notifications.length > 0) {
     await db.notification.createMany({ data: notifications });
   }
+
+  // Get backer emails and send email notifications
+  const backerIds = project.pledges.map((p: { userId: string }) => p.userId);
+  if (backerIds.length > 0) {
+    const backers = await db.user.findMany({
+      where: { id: { in: backerIds } },
+      select: { email: true },
+    });
+
+    const uniqueEmails = [...new Set(backers.map((b) => b.email))];
+
+    // Send emails in batches
+    const batchSize = 10;
+    for (let i = 0; i < uniqueEmails.length; i += batchSize) {
+      const batch = uniqueEmails.slice(i, i + batchSize);
+      await Promise.all(
+        batch.map((email) =>
+          sendProjectFundedEmail(email, project.title, project.slug, project.imageUrl)
+        )
+      );
+    }
+
+    if (uniqueEmails.length > 0) {
+      console.log(`Sent project funded emails to ${uniqueEmails.length} backers for project: ${project.title}`);
+    }
+  }
+}
+
+/**
+ * Send project launch email
+ */
+async function sendProjectLaunchEmail(
+  email: string,
+  projectTitle: string,
+  projectSlug: string,
+  creatorName: string,
+  imageUrl?: string | null
+) {
+  const projectUrl = `${APP_URL}/projects/${projectSlug}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Project You Follow Is Live!</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+          <h2 style="margin-top: 0; color: #333;">A Project You Follow Is Now Live!</h2>
+
+          ${imageUrl ? `<img src="${imageUrl}" alt="${projectTitle}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin-bottom: 20px;">` : ""}
+
+          <div style="background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 20px; margin: 20px 0;">
+            <h3 style="margin: 0 0 10px 0; color: #333;">${projectTitle}</h3>
+            <p style="margin: 0; color: #666;">by ${creatorName}</p>
+          </div>
+
+          <p>The project you signed up to be notified about has just launched! Be one of the first backers and help bring this project to life.</p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${projectUrl}" style="display: inline-block; background: #028858; color: #fff; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+              View Project & Back Now
+            </a>
+          </div>
+
+          <p style="color: #666; font-size: 14px; margin-bottom: 0; text-align: center;">
+            Early backers often get the best rewards!
+          </p>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>You received this email because you signed up for launch notifications for this project.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `"${projectTitle}" is now live on ${APP_NAME}!`,
+    html,
+  });
 }
 
 /**
@@ -89,20 +246,47 @@ export async function notifyProjectLaunched(projectId: string) {
     select: {
       title: true,
       slug: true,
+      imageUrl: true,
       creatorId: true,
+      creator: {
+        select: { name: true },
+      },
       followers: {
-        select: { userId: true },
+        select: { userId: true, email: true },
       },
     },
   });
 
   if (!project) return;
 
-  // Notify all followers (except the creator)
+  // Collect emails to send - both from user accounts and direct email followers
+  const emailsToSend: string[] = [];
+
+  // Get user emails for logged-in followers
+  const userIds = project.followers
+    .filter((f: { userId: string | null }) => f.userId && f.userId !== project.creatorId)
+    .map((f: { userId: string | null }) => f.userId as string);
+
+  if (userIds.length > 0) {
+    const users = await db.user.findMany({
+      where: { id: { in: userIds } },
+      select: { email: true },
+    });
+    users.forEach((u) => emailsToSend.push(u.email));
+  }
+
+  // Add email-only followers (prelaunch sign-ups without accounts)
+  project.followers
+    .filter((f: { userId: string | null; email: string | null }) => !f.userId && f.email)
+    .forEach((f: { email: string | null }) => {
+      if (f.email) emailsToSend.push(f.email);
+    });
+
+  // Notify all followers (except the creator) - in-app notifications
   const notifications = project.followers
-    .filter((f: { userId: string }) => f.userId !== project.creatorId)
-    .map((follower: { userId: string }) => ({
-      userId: follower.userId,
+    .filter((f: { userId: string | null }) => f.userId && f.userId !== project.creatorId)
+    .map((follower: { userId: string | null }) => ({
+      userId: follower.userId!,
       type: "PROJECT_LAUNCHED" as NotificationType,
       title: "Project Launched!",
       message: `"${project.title}" is now live!`,
@@ -123,6 +307,32 @@ export async function notifyProjectLaunched(projectId: string) {
     actionUrl: `/projects/${project.slug}`,
     projectId,
   });
+
+  // Send emails to all followers (deduplicated)
+  const uniqueEmails = [...new Set(emailsToSend)];
+  const creatorName = project.creator?.name || "Creator";
+
+  // Send emails in parallel (but not all at once to avoid rate limits)
+  const batchSize = 10;
+  for (let i = 0; i < uniqueEmails.length; i += batchSize) {
+    const batch = uniqueEmails.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map((email) =>
+        sendProjectLaunchEmail(
+          email,
+          project.title,
+          project.slug,
+          creatorName,
+          project.imageUrl
+        )
+      )
+    );
+  }
+
+  // Log the email sends
+  if (uniqueEmails.length > 0) {
+    console.log(`Sent project launch emails to ${uniqueEmails.length} followers for project: ${project.title}`);
+  }
 }
 
 /**
@@ -171,6 +381,63 @@ export async function notifyPledgeFailed(
 }
 
 /**
+ * Send project update email
+ */
+async function sendProjectUpdateEmail(
+  email: string,
+  projectTitle: string,
+  projectSlug: string,
+  updateTitle: string,
+  creatorName: string
+) {
+  const projectUrl = `${APP_URL}/projects/${projectSlug}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Project Update</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+          <h2 style="margin-top: 0; color: #333;">New Update from ${creatorName}</h2>
+
+          <div style="background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">${projectTitle}</p>
+            <h3 style="margin: 0; color: #333;">${updateTitle}</h3>
+          </div>
+
+          <p>The creator has posted a new update for this project. Click below to read the full update.</p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${projectUrl}" style="display: inline-block; background: #000; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+              Read Update
+            </a>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>You received this email because you're following or have backed this project.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `New update for "${projectTitle}": ${updateTitle}`,
+    html,
+  });
+}
+
+/**
  * Notify backers when a project update is posted
  */
 export async function notifyProjectUpdate(
@@ -183,12 +450,15 @@ export async function notifyProjectUpdate(
       title: true,
       slug: true,
       creatorId: true,
+      creator: {
+        select: { name: true },
+      },
       pledges: {
         select: { userId: true },
         distinct: ["userId"],
       },
       followers: {
-        select: { userId: true },
+        select: { userId: true, email: true },
       },
     },
   });
@@ -198,7 +468,9 @@ export async function notifyProjectUpdate(
   // Combine backers and followers (unique users except creator)
   const userIds = new Set<string>();
   project.pledges.forEach((p: { userId: string }) => userIds.add(p.userId));
-  project.followers.forEach((f: { userId: string }) => userIds.add(f.userId));
+  project.followers.forEach((f: { userId: string | null }) => {
+    if (f.userId) userIds.add(f.userId);
+  });
   userIds.delete(project.creatorId);
 
   const notifications = Array.from(userIds).map((userId) => ({
@@ -213,6 +485,50 @@ export async function notifyProjectUpdate(
 
   if (notifications.length > 0) {
     await db.notification.createMany({ data: notifications });
+  }
+
+  // Send emails to all users (backers + followers with userId) and email-only followers
+  const emailsToSend: string[] = [];
+
+  // Get emails for user-based followers and backers
+  const allUserIds = Array.from(userIds);
+  if (allUserIds.length > 0) {
+    const users = await db.user.findMany({
+      where: { id: { in: allUserIds } },
+      select: { email: true },
+    });
+    users.forEach((u) => emailsToSend.push(u.email));
+  }
+
+  // Add email-only followers
+  project.followers
+    .filter((f: { userId: string | null; email: string | null }) => !f.userId && f.email)
+    .forEach((f: { email: string | null }) => {
+      if (f.email) emailsToSend.push(f.email);
+    });
+
+  const uniqueEmails = [...new Set(emailsToSend)];
+  const creatorName = project.creator?.name || "Creator";
+
+  // Send emails in batches
+  const batchSize = 10;
+  for (let i = 0; i < uniqueEmails.length; i += batchSize) {
+    const batch = uniqueEmails.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map((email) =>
+        sendProjectUpdateEmail(
+          email,
+          project.title,
+          project.slug,
+          updateTitle,
+          creatorName
+        )
+      )
+    );
+  }
+
+  if (uniqueEmails.length > 0) {
+    console.log(`Sent project update emails to ${uniqueEmails.length} users for project: ${project.title}`);
   }
 }
 
@@ -509,35 +825,11 @@ export async function notifyNewComment(
 
 /**
  * Notify followers when a project they follow launches
+ * Note: This is an alias for notifyProjectLaunched which now handles both
+ * in-app notifications and email notifications for all followers
  */
 export async function notifyFollowedProjectLaunched(projectId: string) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    select: {
-      title: true,
-      slug: true,
-      creatorId: true,
-      followers: {
-        select: { userId: true },
-        where: { userId: { not: null } },
-      },
-    },
-  });
-
-  if (!project) return;
-
-  const notifications = project.followers
-    .filter((f: { userId: string | null }) => f.userId && f.userId !== project.creatorId)
-    .map((follower: { userId: string | null }) => ({
-      userId: follower.userId!,
-      type: "FOLLOWED_PROJECT_LAUNCHED" as NotificationType,
-      title: "Project You Follow Is Live!",
-      message: `"${project.title}" just launched!`,
-      actionUrl: `/projects/${project.slug}`,
-      projectId,
-    }));
-
-  if (notifications.length > 0) {
-    await db.notification.createMany({ data: notifications });
-  }
+  // The main notifyProjectLaunched function now handles everything
+  // including email notifications for both logged-in and email-only followers
+  await notifyProjectLaunched(projectId);
 }
