@@ -147,6 +147,7 @@ export default function ProjectsPage() {
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
+  const [showMakeLiveDialog, setShowMakeLiveDialog] = useState(false);
   const [reviewAction, setReviewAction] = useState<"approve" | "reject" | "changes" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -295,6 +296,43 @@ export default function ProjectsPage() {
 
   const handleDeactivate = () => {
     setShowDeactivateDialog(true);
+  };
+
+  const handleMakeLive = () => {
+    setShowMakeLiveDialog(true);
+  };
+
+  const submitMakeLive = async () => {
+    if (!selectedProject) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/admin/projects/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: selectedProject.id,
+          action: "MAKE_LIVE",
+          notes: "Campaign made live by admin",
+          sendEmail,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchActiveProjects();
+        setShowMakeLiveDialog(false);
+        setSelectedProject(null);
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to make project live");
+      }
+    } catch (error) {
+      console.error("Error making project live:", error);
+      alert("Failed to make project live");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const submitDeactivate = async () => {
@@ -903,7 +941,9 @@ export default function ProjectsPage() {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-semibold truncate">{project.title}</h4>
-                                  <Badge className="bg-emerald-600">LIVE</Badge>
+                                  <Badge className={project.status === "LIVE" ? "bg-emerald-600" : "bg-amber-600"}>
+                                    {project.status}
+                                  </Badge>
                                 </div>
                                 <p className="text-sm text-zinc-500 truncate">{project.subtitle || "No subtitle"}</p>
                               </div>
@@ -951,7 +991,9 @@ export default function ProjectsPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <CardTitle>{selectedProject.title}</CardTitle>
-                          <Badge className="bg-emerald-600">LIVE</Badge>
+                          <Badge className={selectedProject.status === "LIVE" ? "bg-emerald-600" : "bg-amber-600"}>
+                            {selectedProject.status}
+                          </Badge>
                         </div>
                         <CardDescription>{selectedProject.subtitle || "No subtitle"}</CardDescription>
                       </div>
@@ -1024,14 +1066,24 @@ export default function ProjectsPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="destructive"
-                          onClick={handleDeactivate}
-                          className="flex-1"
-                        >
-                          <Power className="mr-2 h-4 w-4" />
-                          Deactivate
-                        </Button>
+                        {selectedProject.status === "APPROVED" ? (
+                          <Button
+                            onClick={handleMakeLive}
+                            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                          >
+                            <Zap className="mr-2 h-4 w-4" />
+                            Make Live
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="destructive"
+                            onClick={handleDeactivate}
+                            className="flex-1"
+                          >
+                            <Power className="mr-2 h-4 w-4" />
+                            Deactivate
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -1405,6 +1457,57 @@ export default function ProjectsPage() {
                 <>
                   <Power className="mr-2 h-4 w-4" />
                   Deactivate
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Make Live Dialog */}
+      <Dialog open={showMakeLiveDialog} onOpenChange={setShowMakeLiveDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Make Campaign Live</DialogTitle>
+            <DialogDescription>
+              This will make the campaign live and accepting pledges.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Are you sure you want to make this campaign live? The campaign will be published and start accepting pledges immediately.
+            </p>
+            <div className="flex items-center gap-2 mt-4">
+              <Checkbox
+                id="sendEmailMakeLive"
+                checked={sendEmail}
+                onCheckedChange={(checked) => setSendEmail(checked === true)}
+              />
+              <Label htmlFor="sendEmailMakeLive" className="text-sm">
+                Send notification email to creator
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMakeLiveDialog(false)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={submitMakeLive}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Making Live...
+                </>
+              ) : (
+                <>
+                  <Zap className="mr-2 h-4 w-4" />
+                  Make Live
                 </>
               )}
             </Button>

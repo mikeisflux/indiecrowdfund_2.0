@@ -88,6 +88,18 @@ export async function POST(request: Request) {
         actionDescription = "Campaign reactivated";
         break;
 
+      case "MAKE_LIVE":
+        // Allow admin to directly make an approved project live
+        if (project.status !== "APPROVED" && project.status !== "PAUSED") {
+          return NextResponse.json(
+            { error: "Only approved or paused campaigns can be made live" },
+            { status: 400 }
+          );
+        }
+        newStatus = "LIVE";
+        actionDescription = "Campaign set to live by admin";
+        break;
+
       default:
         return NextResponse.json(
           { error: "Invalid action" },
