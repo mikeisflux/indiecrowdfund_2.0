@@ -41,7 +41,7 @@ export async function getAISettings(): Promise<AISettings> {
     return settingsCache;
   }
 
-  const settings = await db.siteSettings.findFirst();
+  const settings = await db.platformSettings.findFirst();
 
   const aiSettings: AISettings = {
     emailPersonalization: settings?.aiEmailPersonalization ?? false,

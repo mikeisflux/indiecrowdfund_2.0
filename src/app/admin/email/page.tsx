@@ -102,6 +102,27 @@ const FOLDER_ICONS: Record<string, typeof Inbox> = {
   ARCHIVE: Archive,
 };
 
+// Sanitize email HTML to remove tracking pixels and fix Mixed Content issues
+function sanitizeEmailHtml(html: string): string {
+  if (!html) return html;
+
+  // Remove SendGrid tracking pixels (1x1 images with tracking URLs)
+  // These cause ERR_CERT_COMMON_NAME_INVALID and Mixed Content errors
+  let sanitized = html;
+
+  // Remove img tags with tracking domains (url*.indiecrowdfund.com, sendgrid.net tracking)
+  sanitized = sanitized.replace(/<img[^>]*src=["'][^"']*url\d+\.indiecrowdfund\.com[^"']*["'][^>]*>/gi, '');
+  sanitized = sanitized.replace(/<img[^>]*src=["'][^"']*sendgrid\.net[^"']*["'][^>]*>/gi, '');
+
+  // Remove tracking pixels (typically 1x1 or very small images)
+  sanitized = sanitized.replace(/<img[^>]*(?:width=["']?1["']?|height=["']?1["']?)[^>]*>/gi, '');
+
+  // Fix any remaining HTTP URLs that should be HTTPS to prevent Mixed Content warnings
+  sanitized = sanitized.replace(/http:\/\/(?!localhost)/gi, 'https://');
+
+  return sanitized;
+}
+
 const FOLDER_LABELS: Record<string, string> = {
   INBOX: "Inbox",
   SENT: "Sent",
@@ -714,7 +735,7 @@ export default function EmailPage() {
                 {selectedEmail.bodyHtml ? (
                   <div
                     className="prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: selectedEmail.bodyHtml }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedEmail.bodyHtml) }}
                   />
                 ) : selectedEmail.bodyText ? (
                   <p className="text-sm whitespace-pre-wrap">{selectedEmail.bodyText}</p>
