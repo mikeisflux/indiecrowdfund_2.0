@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -26,8 +25,6 @@ import {
 import {
   ArrowLeft,
   Lock,
-  Plus,
-  Minus,
   CheckCircle,
   ChevronRight,
   AlertTriangle,
@@ -304,19 +301,6 @@ export default function PledgePage() {
         return rest;
       }
       return { ...prev, [addonId]: 1 };
-    });
-  };
-
-  const handleAddonQuantity = (addonId: string, delta: number) => {
-    setSelectedAddons((prev) => {
-      const current = prev[addonId] || 0;
-      const newQty = Math.max(0, current + delta);
-      if (newQty === 0) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { [addonId]: _removed, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [addonId]: newQty };
     });
   };
 

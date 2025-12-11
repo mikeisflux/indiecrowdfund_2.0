@@ -82,16 +82,6 @@ function calculateFees(amount: number, averagePledge: number = 50) {
   };
 }
 
-// Format large numbers with K or M suffix
-function formatAmount(amount: number): string {
-  if (amount >= 1000000) {
-    return `$${(amount / 1000000).toFixed(1)}M`;
-  } else if (amount >= 1000) {
-    return `$${(amount / 1000).toFixed(0)}K`;
-  }
-  return `$${amount.toLocaleString()}`;
-}
-
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]); // Default to $50,000
   const amount = sliderValue[0];
