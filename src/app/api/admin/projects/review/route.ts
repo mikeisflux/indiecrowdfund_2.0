@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  sendProjectApprovedEmail,
+  sendProjectRejectedEmail,
+  sendProjectChangesRequestedEmail,
+} from "@/lib/email";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -115,15 +120,42 @@ export async function POST(req: NextRequest) {
 
     // Send email notification if enabled
     if (sendEmail && project.creator.email) {
-      // In production, integrate with SendGrid
-      // await sendReviewEmail({
-      //   to: project.creator.email,
-      //   action: reviewAction,
-      //   projectTitle: project.title,
-      //   notes,
-      //   rejectionReason,
-      // });
-      console.log(`Email notification would be sent to ${project.creator.email}`);
+      try {
+        const creatorName = project.creator.name || "Creator";
+
+        switch (reviewAction) {
+          case "APPROVED":
+            await sendProjectApprovedEmail(
+              project.creator.email,
+              creatorName,
+              project.title,
+              project.slug,
+              notes
+            );
+            break;
+          case "REJECTED":
+            await sendProjectRejectedEmail(
+              project.creator.email,
+              creatorName,
+              project.title,
+              rejectionReason,
+              notes
+            );
+            break;
+          case "REQUESTED_CHANGES":
+            await sendProjectChangesRequestedEmail(
+              project.creator.email,
+              creatorName,
+              project.title,
+              notes || "Please review your project and make necessary updates."
+            );
+            break;
+        }
+        console.log(`Review email sent to ${project.creator.email} for action: ${reviewAction}`);
+      } catch (emailError) {
+        console.error("Failed to send review email:", emailError);
+        // Continue with the response even if email fails
+      }
     }
 
     return NextResponse.json({
