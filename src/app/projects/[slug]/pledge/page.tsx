@@ -88,7 +88,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "When is my card charged?",
-    answer: "Your card is only charged when the campaign reaches its funding goal. If you pledge before the goal is met, your payment is held and will only be processed once the campaign successfully funds. If the campaign doesn't reach its goal, you won't be charged at all.",
+    answer: "Your card is only charged when the campaign reaches its funding goal. If you pledge before the goal is met, your payment is held and will only be processed once the campaign successfully funds. If the campaign doesn't reach its goal, you won't be charged at all. If your payment fails when the campaign funds, we'll automatically retry up to 3 times over the following 9 days (once every 3 days).",
   },
   {
     question: "So I'm only charged if funding succeeds?",
