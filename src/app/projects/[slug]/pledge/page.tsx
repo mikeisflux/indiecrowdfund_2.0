@@ -188,7 +188,8 @@ export default function PledgePage() {
         const rewards = rewardsData.rewards || [];
 
         // Get tier rewards (not addons) for the selection step
-        const tierRewards = rewards.filter((r: { type: string }) => r.type === "TIER");
+        // Include rewards where type is TIER or not set (legacy rewards)
+        const tierRewards = rewards.filter((r: { type?: string }) => r.type === "TIER" || !r.type);
         const formattedTiers: RewardData[] = tierRewards.map((reward: {
           id: string;
           title: string;
