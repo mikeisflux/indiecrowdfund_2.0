@@ -1059,6 +1059,9 @@ enum ReviewAction {
   RESUBMITTED
   FLAGGED
   UNFLAGGED
+  DEACTIVATE
+  REACTIVATE
+  SEND_TO_REVIEW
 }
 
 enum ReviewRejectionReason {
