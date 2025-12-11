@@ -174,8 +174,9 @@ export default function EditProjectPage() {
             quantityAvailable: reward.quantityAvailable,
             quantityClaimed: reward.quantityClaimed || 0,
             visibility: reward.visibility || "PUBLIC",
-            items: (reward.items || []).map((item: { id: string; title: string; imageUrl?: string; quantity?: number }) => ({
-              id: item.id,
+            items: (reward.items || []).map((item: { id: string; projectItemId?: string; title: string; imageUrl?: string; quantity?: number }) => ({
+              id: item.projectItemId || item.id, // Use projectItemId to match global items, fallback to id
+              projectItemId: item.projectItemId, // Preserve projectItemId for future reference
               title: item.title,
               imageUrl: item.imageUrl || "",
               quantity: item.quantity || 1,

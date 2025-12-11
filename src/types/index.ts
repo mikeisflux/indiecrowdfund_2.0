@@ -388,6 +388,7 @@ export interface RewardData {
 
 export interface RewardItemData {
   id?: string;
+  projectItemId?: string; // Reference to ProjectItem for matching with global items list
   title: string;
   description?: string;
   imageUrl?: string;

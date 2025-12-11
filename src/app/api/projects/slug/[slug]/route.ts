@@ -139,6 +139,7 @@ export async function GET(
     // Transform rewards - include ALL fields needed for editing
     interface RewardItem {
       id: string;
+      projectItemId: string | null;
       title: string;
       description: string | null;
       imageUrl: string | null;
@@ -203,6 +204,7 @@ export async function GET(
       imageUrl: r.imageUrl || "",
       items: r.items.map((i: RewardItem) => ({
         id: i.id,
+        projectItemId: i.projectItemId, // Include reference to ProjectItem for checkbox matching
         title: i.title,
         description: i.description || "",
         imageUrl: i.imageUrl || "",

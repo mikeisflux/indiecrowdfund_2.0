@@ -417,7 +417,9 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const openEditRewardForm = (index: number) => {
     const reward = rewards[index];
     setCurrentReward(reward);
-    setSelectedItemIds(reward.items.map((i) => i.id || "").filter(Boolean));
+    // Use projectItemId if available (from API), otherwise fall back to id (for local state)
+    // This ensures checkboxes match against the global items list which uses ProjectItem.id
+    setSelectedItemIds(reward.items.map((i) => i.projectItemId || i.id || "").filter(Boolean));
     setEditingRewardIndex(index);
     setQuantityType(reward.quantityAvailable ? "limited" : "unlimited");
     setAudienceType(reward.visibility === "SECRET" ? "secret" : "all");
