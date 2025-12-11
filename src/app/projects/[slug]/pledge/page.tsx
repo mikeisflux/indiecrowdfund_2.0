@@ -113,23 +113,27 @@ const FAQ_ITEMS = [
   },
 ];
 
-type Step = "addons" | "shipping" | "payment" | "success";
+type Step = "rewards" | "addons" | "shipping" | "payment" | "success";
 
 export default function PledgePage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const slug = params.slug as string;
   const rewardId = searchParams.get("reward");
+  const amountParam = searchParams.get("amount");
 
   // Data state - loaded from API
   const [project, setProject] = useState<ProjectData | null>(null);
+  const [allRewards, setAllRewards] = useState<RewardData[]>([]);
   const [selectedReward, setSelectedReward] = useState<RewardData | null>(null);
   const [addons, setAddons] = useState<AddonData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pledgeWithoutReward, setPledgeWithoutReward] = useState(false);
+  const [customPledgeAmount, setCustomPledgeAmount] = useState(amountParam ? parseInt(amountParam) : 1);
 
-  // UI state
-  const [step, setStep] = useState<Step>("addons");
+  // UI state - start at rewards step if no reward pre-selected
+  const [step, setStep] = useState<Step>(rewardId ? "addons" : "rewards");
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
   const [bonusSupport, setBonusSupport] = useState<number>(0);
   const [shippingCountry, setShippingCountry] = useState("US");
@@ -183,7 +187,39 @@ export default function PledgePage() {
         const rewardsData = await rewardsRes.json();
         const rewards = rewardsData.rewards || [];
 
-        // Find the selected reward
+        // Get tier rewards (not addons) for the selection step
+        const tierRewards = rewards.filter((r: { type: string }) => r.type === "TIER");
+        const formattedTiers: RewardData[] = tierRewards.map((reward: {
+          id: string;
+          title: string;
+          description?: string;
+          amount: number;
+          shippingCost?: Record<string, number>;
+          shippingType?: string;
+          shippingCountries?: string[];
+          imageUrl?: string;
+          estimatedDelivery?: string;
+          quantityAvailable?: number;
+          quantityClaimed?: number;
+          items?: { title: string }[];
+        }) => ({
+          id: reward.id,
+          title: reward.title,
+          amount: reward.amount,
+          shippingCost: reward.shippingCost || {},
+          shippingType: reward.shippingType || "NO_SHIPPING",
+          shippingCountries: reward.shippingCountries || [],
+          estimatedDelivery: reward.estimatedDelivery
+            ? new Date(reward.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+            : "",
+          items: (reward.items || []).map((item: { title: string }) => ({
+            title: item.title,
+            quantity: 1,
+          })),
+        }));
+        setAllRewards(formattedTiers);
+
+        // Find the selected reward if rewardId is provided
         if (rewardId) {
           const reward = rewards.find((r: { id: string }) => r.id === rewardId);
           if (reward) {
@@ -264,7 +300,7 @@ export default function PledgePage() {
   };
 
   // Calculate totals
-  const rewardAmount = selectedReward?.amount || 0;
+  const rewardAmount = pledgeWithoutReward ? customPledgeAmount : (selectedReward?.amount || 0);
   const rewardShipping = selectedReward
     ? getShippingCostForCountry(
         selectedReward.shippingCost,
@@ -319,20 +355,28 @@ export default function PledgePage() {
   // Breadcrumb navigation
   const Breadcrumb = () => (
     <div className="flex items-center gap-2 text-sm">
-      <Link
-        href={`/projects/${project?.slug || slug}`}
-        className="text-muted-foreground hover:text-foreground"
+      <button
+        onClick={() => setStep("rewards")}
+        className={step === "rewards" ? "font-medium" : "text-muted-foreground hover:text-foreground"}
       >
         Rewards
-      </Link>
+      </button>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
-      <span className={step === "addons" ? "font-medium" : "text-muted-foreground"}>
+      <button
+        onClick={() => (selectedReward || pledgeWithoutReward) && setStep("addons")}
+        className={step === "addons" ? "font-medium" : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"}
+        disabled={!selectedReward && !pledgeWithoutReward}
+      >
         Add-ons
-      </span>
+      </button>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
-      <span className={step === "shipping" ? "font-medium" : "text-muted-foreground"}>
+      <button
+        onClick={() => (selectedReward || pledgeWithoutReward) && setStep("shipping")}
+        className={step === "shipping" ? "font-medium" : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"}
+        disabled={!selectedReward && !pledgeWithoutReward}
+      >
         Shipping
-      </span>
+      </button>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
       <span className={step === "payment" ? "font-medium" : "text-muted-foreground"}>
         Payment
@@ -372,33 +416,6 @@ export default function PledgePage() {
             </p>
             <Link href="/discover">
               <Button>Discover Projects</Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // No reward selected state
-  if (!selectedReward) {
-    return (
-      <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-          <div className="container flex h-14 items-center">
-            <Link href="/" className="text-xl font-bold">
-              IndieCrowdfund
-            </Link>
-          </div>
-        </header>
-        <div className="container py-16">
-          <div className="mx-auto max-w-lg text-center">
-            <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-            <h2 className="mb-2 text-2xl font-bold">No reward selected</h2>
-            <p className="mb-8 text-muted-foreground">
-              Please select a reward tier from the project page to continue with your pledge.
-            </p>
-            <Link href={`/projects/${project.slug}`}>
-              <Button>View Rewards</Button>
             </Link>
           </div>
         </div>
@@ -472,6 +489,142 @@ export default function PledgePage() {
               <ArrowLeft className="h-4 w-4" />
               Back to project
             </Link>
+
+            {step === "rewards" && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-bold mb-2">Select your reward</h1>
+                  <p className="text-muted-foreground">
+                    Choose a reward tier to support this project.
+                  </p>
+                </div>
+
+                {/* Pledge without reward option */}
+                <Card
+                  className={`cursor-pointer transition-all ${
+                    pledgeWithoutReward ? "ring-2 ring-green-600 border-green-600" : "border-zinc-200 hover:border-zinc-400"
+                  }`}
+                  onClick={() => {
+                    setPledgeWithoutReward(true);
+                    setSelectedReward(null);
+                  }}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        pledgeWithoutReward ? "border-green-600 bg-green-600" : "border-zinc-300"
+                      }`}>
+                        {pledgeWithoutReward && <CheckCircle className="h-3 w-3 text-white" />}
+                      </div>
+                      <h3 className="font-semibold text-lg">Pledge without a reward</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4 ml-8">
+                      Support this project because you believe in it. You won&apos;t receive a reward, just the satisfaction of helping make this happen.
+                    </p>
+                    {pledgeWithoutReward && (
+                      <div className="ml-8">
+                        <Label htmlFor="customAmount" className="text-sm">Pledge amount</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-lg">$</span>
+                          <Input
+                            id="customAmount"
+                            type="number"
+                            min="1"
+                            value={customPledgeAmount}
+                            onChange={(e) => setCustomPledgeAmount(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-32"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Reward tiers */}
+                {allRewards.length > 0 && (
+                  <div className="space-y-4">
+                    <h2 className="font-semibold text-lg">Reward tiers</h2>
+                    {allRewards.map((reward) => {
+                      const isSelected = selectedReward?.id === reward.id && !pledgeWithoutReward;
+                      const rewardShippingCost = getShippingCostForCountry(
+                        reward.shippingCost,
+                        reward.shippingType,
+                        shippingCountry
+                      );
+
+                      return (
+                        <Card
+                          key={reward.id}
+                          className={`cursor-pointer transition-all ${
+                            isSelected ? "ring-2 ring-green-600 border-green-600" : "border-zinc-200 hover:border-zinc-400"
+                          }`}
+                          onClick={() => {
+                            setSelectedReward(reward);
+                            setPledgeWithoutReward(false);
+                          }}
+                        >
+                          <CardContent className="p-5">
+                            <div className="flex items-start gap-3">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
+                                isSelected ? "border-green-600 bg-green-600" : "border-zinc-300"
+                              }`}>
+                                {isSelected && <CheckCircle className="h-3 w-3 text-white" />}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between gap-4">
+                                  <div>
+                                    <h3 className="font-semibold text-lg">{reward.title}</h3>
+                                    <p className="text-xl font-bold text-green-600 mt-1">
+                                      ${reward.amount}
+                                      {rewardShippingCost > 0 && (
+                                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                                          + ${rewardShippingCost} shipping
+                                        </span>
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Items included */}
+                                {reward.items.length > 0 && (
+                                  <div className="mt-3 pt-3 border-t">
+                                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Includes:</p>
+                                    <ul className="space-y-1">
+                                      {reward.items.map((item, idx) => (
+                                        <li key={idx} className="flex items-center gap-2 text-sm">
+                                          <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
+                                          {item.title}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Estimated delivery */}
+                                {reward.estimatedDelivery && (
+                                  <p className="text-xs text-muted-foreground mt-3">
+                                    Estimated delivery: {reward.estimatedDelivery}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {allRewards.length === 0 && !pledgeWithoutReward && (
+                  <Card className="border-dashed">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-muted-foreground">No reward tiers available for this project.</p>
+                      <p className="text-sm text-muted-foreground mt-2">You can still support this project by pledging without a reward.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
 
             {step === "addons" && (
               <>
@@ -857,10 +1010,19 @@ export default function PledgePage() {
                     <p className="text-xs font-medium text-muted-foreground mb-2">
                       Reward
                     </p>
-                    <div className="flex justify-between items-start">
-                      <span className="font-medium">{selectedReward.title}</span>
-                      <span className="font-semibold">${selectedReward.amount}</span>
-                    </div>
+                    {pledgeWithoutReward ? (
+                      <div className="flex justify-between items-start">
+                        <span className="font-medium">Pledge without reward</span>
+                        <span className="font-semibold">${customPledgeAmount}</span>
+                      </div>
+                    ) : selectedReward ? (
+                      <div className="flex justify-between items-start">
+                        <span className="font-medium">{selectedReward.title}</span>
+                        <span className="font-semibold">${selectedReward.amount}</span>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">No reward selected</p>
+                    )}
                   </div>
 
                   {/* Bonus support */}
@@ -914,14 +1076,33 @@ export default function PledgePage() {
 
                   {/* Continue button */}
                   <div className="p-4 pt-0">
-                    {step === "addons" && (
+                    {step === "rewards" && (
                       <Button
                         className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
                         size="lg"
-                        onClick={() => setStep("shipping")}
+                        onClick={() => setStep("addons")}
+                        disabled={!selectedReward && !pledgeWithoutReward}
                       >
                         Continue
                       </Button>
+                    )}
+                    {step === "addons" && (
+                      <div className="space-y-2">
+                        <Button
+                          className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
+                          size="lg"
+                          onClick={() => setStep("shipping")}
+                        >
+                          Continue
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full"
+                          onClick={() => setStep("rewards")}
+                        >
+                          Back
+                        </Button>
+                      </div>
                     )}
                     {step === "shipping" && (
                       <div className="space-y-2">
