@@ -13,6 +13,22 @@ let cachedSecretKey: string | null = null;
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_INTERVAL_DAYS = 3;
 
+/**
+ * Get app URL with HTTPS enforced for live mode Stripe
+ * Stripe live mode requires all redirect URLs to use HTTPS
+ */
+export function getSecureAppUrl(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  // In production or when using live Stripe keys, ensure HTTPS
+  if (process.env.NODE_ENV === "production" ||
+      (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.startsWith("sk_test_"))) {
+    return appUrl.replace(/^http:\/\//i, "https://");
+  }
+
+  return appUrl;
+}
+
 // Get Stripe secret key from database settings or fall back to env var
 async function getStripeSecretKey(): Promise<string> {
   // Try to get from database settings first
@@ -159,10 +175,12 @@ export async function createStripeConnectAccount({
   });
 
   // Create account link for onboarding
+  // Use secure URL helper to ensure HTTPS for live mode
+  const baseUrl = getSecureAppUrl();
   const accountLink = await stripeClient.accountLinks.create({
     account: account.id,
-    refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/payment/stripe/refresh`,
-    return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/payment/stripe/complete`,
+    refresh_url: `${baseUrl}/settings/payment/stripe/refresh`,
+    return_url: `${baseUrl}/settings/payment/stripe/complete`,
     type: "account_onboarding",
   });
 

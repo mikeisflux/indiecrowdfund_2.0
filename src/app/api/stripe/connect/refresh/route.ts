@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getStripeInstance } from "@/lib/payments/stripe";
+import { getStripeInstance, getSecureAppUrl } from "@/lib/payments/stripe";
 
 export async function POST() {
   try {
@@ -26,10 +26,12 @@ export async function POST() {
     const stripeClient = await getStripeInstance();
 
     // Create a new account link for re-onboarding
+    // Use secure URL helper to ensure HTTPS for live mode
+    const baseUrl = getSecureAppUrl();
     const accountLink = await stripeClient.accountLinks.create({
       account: config.stripeAccountId,
-      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/payment/stripe/refresh`,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/payment/stripe/complete`,
+      refresh_url: `${baseUrl}/settings/payment/stripe/refresh`,
+      return_url: `${baseUrl}/settings/payment/stripe/complete`,
       type: "account_onboarding",
     });
 
