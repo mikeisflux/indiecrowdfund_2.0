@@ -235,6 +235,8 @@ export default function AIMarketingPage() {
   const [emailCampaigns, setEmailCampaigns] = useState<EmailCampaign[]>([]);
   const [behaviorEvents, setBehaviorEvents] = useState<BehaviorEvent[]>([]);
   const [userSegments, setUserSegments] = useState<UserSegment[]>([]);
+  const [recommendations, setRecommendations] = useState<Array<{ type: "success" | "warning" | "info"; message: string }>>([]);
+  const [emailStats, setEmailStats] = useState<{ totalSent: number; avgOpenRate: string; avgClickRate: string; totalOpens: number; totalClicks: number } | null>(null);
   const [liveEvents, setLiveEvents] = useState<Array<{
     id: string;
     sessionId: string;
@@ -355,6 +357,8 @@ export default function AIMarketingPage() {
         setEmailCampaigns(statsData.emailCampaigns || []);
         setBehaviorEvents(statsData.behaviorEvents || []);
         setUserSegments(statsData.userSegments || []);
+        setRecommendations(statsData.recommendations || []);
+        setEmailStats(statsData.emailStats || null);
       }
 
       // Load behavior data
@@ -843,25 +847,32 @@ export default function AIMarketingPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-violet-900 dark:text-violet-100">AI Recommendations</h3>
                   <ul className="mt-2 space-y-2 text-sm text-violet-700 dark:text-violet-300">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4" />
-                      <span>23 projects have high engagement but low pledge conversion - consider targeted email campaigns</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4" />
-                      <span>Tech category showing 45% increase in interest - recommend featuring more tech projects</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Target className="h-4 w-4" />
-                      <span>4,567 users match high-value backer profile - activate personalized outreach</span>
-                    </li>
+                    {recommendations.length > 0 ? (
+                      recommendations.map((rec, index) => (
+                        <li key={index} className="flex items-center gap-2">
+                          {rec.type === "success" ? (
+                            <CheckCircle className="h-4 w-4 text-emerald-600" />
+                          ) : rec.type === "warning" ? (
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                          ) : (
+                            <Target className="h-4 w-4 text-blue-600" />
+                          )}
+                          <span>{rec.message}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Loading recommendations...</span>
+                      </li>
+                    )}
                   </ul>
                 </div>
                 <Button
                   variant="outline"
                   className="bg-white"
                   onClick={handleApplyRecommendations}
-                  disabled={isApplyingRecommendations}
+                  disabled={isApplyingRecommendations || recommendations.length === 0}
                 >
                   {isApplyingRecommendations ? (
                     <>
@@ -1128,29 +1139,29 @@ export default function AIMarketingPage() {
             <Card>
               <CardContent className="p-6">
                 <p className="text-sm text-zinc-500">Total Sent</p>
-                <p className="mt-1 text-2xl font-bold">156,892</p>
-                <p className="text-xs text-emerald-600">This month</p>
+                <p className="mt-1 text-2xl font-bold">{(emailStats?.totalSent || 0).toLocaleString()}</p>
+                <p className="text-xs text-zinc-500">All campaigns</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6">
                 <p className="text-sm text-zinc-500">Avg Open Rate</p>
-                <p className="mt-1 text-2xl font-bold">36.2%</p>
-                <p className="text-xs text-emerald-600">+4.5% vs industry</p>
+                <p className="mt-1 text-2xl font-bold">{emailStats?.avgOpenRate || "0"}%</p>
+                <p className="text-xs text-zinc-500">{(emailStats?.totalOpens || 0).toLocaleString()} total opens</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6">
                 <p className="text-sm text-zinc-500">Avg Click Rate</p>
-                <p className="mt-1 text-2xl font-bold">8.7%</p>
-                <p className="text-xs text-emerald-600">+2.1% vs industry</p>
+                <p className="mt-1 text-2xl font-bold">{emailStats?.avgClickRate || "0"}%</p>
+                <p className="text-xs text-zinc-500">{(emailStats?.totalClicks || 0).toLocaleString()} total clicks</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6">
-                <p className="text-sm text-zinc-500">Revenue Generated</p>
-                <p className="mt-1 text-2xl font-bold">$234K</p>
-                <p className="text-xs text-emerald-600">From email campaigns</p>
+                <p className="text-sm text-zinc-500">Active Campaigns</p>
+                <p className="mt-1 text-2xl font-bold">{emailCampaigns.length}</p>
+                <p className="text-xs text-zinc-500">Total campaigns</p>
               </CardContent>
             </Card>
           </div>
