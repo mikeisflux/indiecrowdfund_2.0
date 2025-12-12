@@ -187,8 +187,7 @@ export async function PATCH(
         where: { id: pledgeId },
         data: {
           status: "CANCELLED",
-          cancelledAt: new Date(),
-          cancelReason: reason || "Cancelled by admin",
+          lastFailureReason: reason || "Cancelled by admin",
         },
       });
 
@@ -247,8 +246,7 @@ export async function PATCH(
         where: { id: pledgeId },
         data: {
           status: "REFUNDED",
-          refundedAt: new Date(),
-          cancelReason: reason || "Refunded by admin",
+          lastFailureReason: reason || "Refunded by admin",
         },
       });
 

@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const search = searchParams.get("q");
     const sort = searchParams.get("sort") || "trending";
-    const staffPicks = searchParams.get("staffPicks") === "true";
+    // const staffPicks = searchParams.get("staffPicks") === "true"; // Not implemented yet
     const limit = parseInt(searchParams.get("limit") || "12");
     const offset = parseInt(searchParams.get("offset") || "0");
 
@@ -55,9 +55,10 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    if (staffPicks) {
-      where.isStaffPick = true;
-    }
+    // Note: isStaffPick feature not implemented yet
+    // if (staffPicks) {
+    //   where.isStaffPick = true;
+    // }
 
     // Build orderBy based on sort param
     let orderBy: Record<string, string> | Record<string, string>[];
@@ -130,7 +131,6 @@ export async function GET(req: NextRequest) {
         currentAmount: project.currentAmount,
         backerCount: project.backerCount,
         daysRemaining,
-        isStaffPick: project.isStaffPick,
       };
     });
 
