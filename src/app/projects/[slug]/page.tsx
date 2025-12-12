@@ -13,6 +13,13 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
   Bookmark,
   MapPin,
   CheckCircle,
@@ -28,7 +35,9 @@ import {
   ChevronDown,
   Pin,
   Loader2,
+  Menu,
 } from "lucide-react";
+import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 
 // Social share icons as simple SVGs
 const FacebookIcon = () => (
@@ -596,6 +605,45 @@ export default function ProjectPage() {
             <Link href="/discover?category=technology" className="hover:text-primary">Technology</Link>
             <Link href="/discover" className="text-primary font-medium">Discover</Link>
           </nav>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:block">
+              <UserProfileDropdown />
+            </div>
+            {/* Mobile Menu */}
+            <Sheet>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px]">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col gap-4 mt-6">
+                  <Link href="/discover" className="text-sm font-medium hover:text-primary py-2">
+                    Discover
+                  </Link>
+                  <Link href="/projects/new" className="text-sm font-medium hover:text-primary py-2">
+                    Start a Project
+                  </Link>
+                  <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2">
+                    Retailers
+                  </Link>
+                  <Link href="/about-us" className="text-sm font-medium hover:text-primary py-2">
+                    About Us
+                  </Link>
+                  <Link href="/faq" className="text-sm font-medium hover:text-primary py-2">
+                    FAQ
+                  </Link>
+                  <div className="border-t pt-4 mt-2">
+                    <UserProfileDropdown />
+                  </div>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 

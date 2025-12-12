@@ -262,9 +262,9 @@ export default function CreatorDashboard() {
 
       {/* Sub Navigation */}
       <div className="border-b bg-background">
-        <div className="container flex h-12 items-center gap-4">
+        <div className="container flex flex-wrap items-center gap-2 py-3 md:h-12 md:py-0 md:gap-4">
           <Select value={selectedProjectId} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-[280px]">
+            <SelectTrigger className="w-full sm:w-[280px]">
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>
@@ -282,24 +282,27 @@ export default function CreatorDashboard() {
               {project.status}
             </Badge>
           )}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
             {project && (
               <>
-                <Link href={`/projects/${project.slug}`}>
-                  <Button variant="outline" size="sm">
+                <Link href={`/projects/${project.slug}`} className="flex-1 sm:flex-initial">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
                     <Eye className="mr-2 h-4 w-4" />
-                    View Project
+                    <span className="hidden xs:inline">View</span>
+                    <span className="xs:hidden">View</span>
                   </Button>
                 </Link>
-                <Link href={`/projects/${project.slug}/edit`}>
-                  <Button variant="outline" size="sm">
+                <Link href={`/projects/${project.slug}/edit`} className="flex-1 sm:flex-initial">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
                     <Settings className="mr-2 h-4 w-4" />
-                    Edit
+                    <span className="hidden xs:inline">Edit</span>
+                    <span className="xs:hidden">Edit</span>
                   </Button>
                 </Link>
-                <Button size="sm">
+                <Button size="sm" className="flex-1 sm:flex-initial">
                   <Share2 className="mr-2 h-4 w-4" />
-                  Share
+                  <span className="hidden xs:inline">Share</span>
+                  <span className="xs:hidden">Share</span>
                 </Button>
               </>
             )}
@@ -394,36 +397,38 @@ export default function CreatorDashboard() {
 
             {/* Main Content */}
             <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList>
-                <TabsTrigger value="overview">
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="backers">
-                  <Users className="mr-2 h-4 w-4" />
-                  Backers
-                </TabsTrigger>
-                <TabsTrigger value="rewards">
-                  <Package className="mr-2 h-4 w-4" />
-                  Rewards
-                </TabsTrigger>
-                <TabsTrigger value="messages">
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Messages
-                </TabsTrigger>
-                <TabsTrigger value="fulfillment">
-                  <Truck className="mr-2 h-4 w-4" />
-                  Fulfillment
-                </TabsTrigger>
-                <Link href="/dashboard/social">
-                  <TabsTrigger value="social" asChild>
-                    <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-foreground">
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Social Hub
-                    </div>
+              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+                <TabsList className="inline-flex w-max md:w-auto">
+                  <TabsTrigger value="overview">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Overview
                   </TabsTrigger>
-                </Link>
-              </TabsList>
+                  <TabsTrigger value="backers">
+                    <Users className="mr-2 h-4 w-4" />
+                    Backers
+                  </TabsTrigger>
+                  <TabsTrigger value="rewards">
+                    <Package className="mr-2 h-4 w-4" />
+                    Rewards
+                  </TabsTrigger>
+                  <TabsTrigger value="messages">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Messages
+                  </TabsTrigger>
+                  <TabsTrigger value="fulfillment">
+                    <Truck className="mr-2 h-4 w-4" />
+                    Fulfillment
+                  </TabsTrigger>
+                  <Link href="/dashboard/social">
+                    <TabsTrigger value="social" asChild>
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-foreground">
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Social Hub
+                      </div>
+                    </TabsTrigger>
+                  </Link>
+                </TabsList>
+              </div>
 
               <TabsContent value="overview" className="space-y-6">
                 <div className="grid gap-6 lg:grid-cols-3">
