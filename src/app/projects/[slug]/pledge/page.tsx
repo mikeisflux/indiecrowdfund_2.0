@@ -569,7 +569,7 @@ export default function PledgePage() {
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
           <div className="container flex h-14 items-center">
-            <Link href="/" className="text-xl font-bold">
+            <Link href="/" className="text-xl font-bold text-primary">
               IndieCrowdfund
             </Link>
           </div>
@@ -595,7 +595,7 @@ export default function PledgePage() {
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
           <div className="container flex h-14 items-center">
-            <Link href="/" className="text-xl font-bold">
+            <Link href="/" className="text-xl font-bold text-primary">
               IndieCrowdfund
             </Link>
           </div>

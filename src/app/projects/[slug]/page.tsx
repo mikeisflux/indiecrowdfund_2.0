@@ -508,7 +508,7 @@ export default function ProjectPage() {
       {/* Main Navigation */}
       <header className="border-b bg-background">
         <div className="container flex h-14 items-center justify-between">
-          <Link href="/" className="text-xl font-bold">
+          <Link href="/" className="text-xl font-bold text-primary">
             IndieCrowdfund
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm">
