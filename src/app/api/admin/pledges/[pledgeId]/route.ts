@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import Stripe from "stripe";
+import { getStripeInstance } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-11-17.clover",
-});
 
 // Helper to check admin status
 async function isAdmin(userId: string): Promise<boolean> {
@@ -167,6 +163,7 @@ export async function PATCH(
       }
 
       // Cancel any Stripe intents
+      const stripe = await getStripeInstance();
       if (pledge.stripeSetupIntentId) {
         try {
           await stripe.setupIntents.cancel(pledge.stripeSetupIntentId);
@@ -224,7 +221,8 @@ export async function PATCH(
 
       // Process refund via Stripe
       try {
-        await stripe.refunds.create({
+        const stripeClient = await getStripeInstance();
+        await stripeClient.refunds.create({
           payment_intent: pledge.stripePaymentIntentId,
           reason: "requested_by_customer",
           metadata: {
@@ -310,16 +308,17 @@ export async function DELETE(
 
     // Cancel any Stripe intents for PENDING pledges
     if (pledge.status === "PENDING") {
+      const stripeClient = await getStripeInstance();
       if (pledge.stripeSetupIntentId) {
         try {
-          await stripe.setupIntents.cancel(pledge.stripeSetupIntentId);
+          await stripeClient.setupIntents.cancel(pledge.stripeSetupIntentId);
         } catch (e) {
           console.log("Could not cancel setup intent:", e);
         }
       }
       if (pledge.stripePaymentIntentId) {
         try {
-          await stripe.paymentIntents.cancel(pledge.stripePaymentIntentId);
+          await stripeClient.paymentIntents.cancel(pledge.stripePaymentIntentId);
         } catch (e) {
           console.log("Could not cancel payment intent:", e);
         }

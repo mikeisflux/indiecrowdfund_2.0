@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import Stripe from "stripe";
+import { getStripeInstance } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-11-17.clover",
-});
 
 // Helper to check if user owns the project that the pledge belongs to
 async function isProjectOwnerOrCollaborator(userId: string, pledgeId: string): Promise<{ allowed: boolean; pledge: unknown }> {
@@ -152,6 +148,7 @@ export async function PATCH(
       }
 
       // Cancel any Stripe intents
+      const stripe = await getStripeInstance();
       if (typedPledge.stripeSetupIntentId) {
         try {
           await stripe.setupIntents.cancel(typedPledge.stripeSetupIntentId);
@@ -209,7 +206,8 @@ export async function PATCH(
 
       // Process refund via Stripe
       try {
-        await stripe.refunds.create({
+        const stripeClient = await getStripeInstance();
+        await stripeClient.refunds.create({
           payment_intent: typedPledge.stripePaymentIntentId,
           reason: "requested_by_customer",
           metadata: {
