@@ -1006,7 +1006,7 @@ export default function ProjectPage() {
                     >
                       <p className="font-medium text-sm">{reward.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        €{reward.amount} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
+                        {formatMoney(reward.amount)} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
                       </p>
                     </button>
                   ))}
@@ -1036,7 +1036,7 @@ export default function ProjectPage() {
                         >
                           <p className="font-medium text-sm">{reward.title}</p>
                           <p className="text-sm text-muted-foreground">
-                            €{reward.amount} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
+                            {formatMoney(reward.amount)} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
                           </p>
                         </button>
                       ))}
@@ -1083,8 +1083,7 @@ export default function ProjectPage() {
                             <div className="flex items-start justify-between mb-6">
                               <h2 className="text-xl font-semibold">{reward.title}</h2>
                               <div className="text-right">
-                                <p className="text-xl font-bold">€{reward.amount}</p>
-                                <p className="text-xs text-muted-foreground uppercase">About ${Math.round(reward.amount * 1.08)}</p>
+                                <p className="text-xl font-bold">{formatMoney(reward.amount)}</p>
                               </div>
                             </div>
 
@@ -1126,7 +1125,7 @@ export default function ProjectPage() {
                             ) : (
                               <Link href={`/projects/${project.slug}/pledge?reward=${reward.id}`}>
                                 <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white font-medium">
-                                  Pledge €{reward.amount}
+                                  Pledge {formatMoney(reward.amount)}
                                 </Button>
                               </Link>
                             )}
