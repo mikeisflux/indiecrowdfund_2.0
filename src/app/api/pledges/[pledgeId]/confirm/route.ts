@@ -71,9 +71,18 @@ export async function POST(
       });
     }
 
+    // Ensure user has an email address
+    if (!pledge.user.email) {
+      return NextResponse.json({
+        success: true,
+        emailSent: false,
+        message: "Pledge confirmed but user has no email address",
+      });
+    }
+
     // Send the confirmation email
     const emailResult = await sendPledgeConfirmationEmail(
-      pledge.user.email!,
+      pledge.user.email,
       pledge.user.name || "Backer",
       pledge.project.title,
       pledge.project.slug,
