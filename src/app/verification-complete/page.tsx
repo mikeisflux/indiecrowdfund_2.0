@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 /**
@@ -42,7 +42,7 @@ function getSafeReturnUrl(url: string | null): string {
   }
 }
 
-export default function VerificationCompletePage() {
+function VerificationCompleteContent() {
   const searchParams = useSearchParams();
   const [countdown, setCountdown] = useState(3);
   const [isPopup, setIsPopup] = useState(false);
@@ -120,5 +120,30 @@ export default function VerificationCompletePage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="max-w-md w-full">
+        <CardContent className="pt-8 pb-8 text-center">
+          <div className="flex justify-center mb-6">
+            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+              <Loader2 className="h-10 w-10 text-muted-foreground animate-spin" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Loading...</h1>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function VerificationCompletePage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <VerificationCompleteContent />
+    </Suspense>
   );
 }

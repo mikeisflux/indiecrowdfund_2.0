@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, XCircle, Loader2, Mail } from "lucide-react";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -119,5 +119,33 @@ export default function VerifyEmailPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 text-primary animate-spin" />
+            </div>
+          </div>
+          <CardTitle>Loading...</CardTitle>
+          <CardDescription className="mt-2">
+            Please wait...
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
