@@ -282,6 +282,7 @@ export default function UsersPage() {
     if (showUserDialog && selectedUser && userDetailTab === "pledges") {
       fetchUserPledges(selectedUser.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showUserDialog, selectedUser?.id, userDetailTab]);
 
   // Fetch user emails when switching to the emails tab
@@ -289,6 +290,7 @@ export default function UsersPage() {
     if (showUserDialog && selectedUser && userDetailTab === "emails") {
       fetchUserEmails(selectedUser.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showUserDialog, selectedUser?.id, userDetailTab]);
 
   // Debounce search

@@ -631,7 +631,7 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
       });
       return false;
     }
-  } catch (pmError) {
+  } catch {
     console.log(`[ChargePledge] Could not retrieve payment method ${pledge.stripePaymentMethodId} - marking as cancelled`);
     await db.pledge.update({
       where: { id: pledgeId },
