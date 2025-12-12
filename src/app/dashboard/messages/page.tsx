@@ -47,25 +47,25 @@ export default function MessagesPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/" className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
               IndieCrowdfund
             </Link>
-            <Badge variant="outline" className="border-primary/30 text-primary">
+            <Badge variant="outline" className="border-primary/30 text-primary hidden sm:flex">
               <MessageSquare className="w-3 h-3 mr-1" />
               Messages
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
+            <Button variant="ghost" size="icon" className="relative hidden sm:flex">
               <Bell className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hidden sm:flex">
               <Settings className="h-5 w-5" />
             </Button>
-            <Avatar className="ring-2 ring-primary/20">
+            <Avatar className="ring-2 ring-primary/20 h-8 w-8 sm:h-10 sm:w-10">
               <AvatarImage src={session.user.image || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-purple-500 text-white">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-purple-500 text-white text-sm sm:text-base">
                 {session.user.name?.[0]?.toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
@@ -76,10 +76,15 @@ export default function MessagesPage() {
       <div className="container relative py-6">
         {/* Back button */}
         <div className="mb-6">
-          <Link href="/dashboard/backer">
+          <Link href="/dashboard/backer" className="hidden sm:inline-block">
             <Button variant="ghost" className="gap-2">
               <ArrowLeft className="h-4 w-4" />
               Back to Dashboard
+            </Button>
+          </Link>
+          <Link href="/dashboard/backer" className="sm:hidden">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
         </div>
