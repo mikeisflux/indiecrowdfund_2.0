@@ -504,7 +504,7 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Main Navigation */}
       <header className="border-b bg-background">
         <div className="container flex h-14 items-center justify-between">
@@ -750,9 +750,9 @@ export default function ProjectPage() {
       </section>
 
       {/* Tabs Navigation */}
-      <section ref={tabsSectionRef} className="border-b sticky top-0 z-40 bg-background">
+      <section ref={tabsSectionRef} className="border-b sticky top-0 z-40 bg-background overflow-hidden">
         <div className="container">
-          <div className="flex h-14 items-center gap-0">
+          <div className="flex h-14 items-center gap-0 overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
             {[
               { value: "campaign" as TabValue, label: "Campaign" },
               { value: "rewards" as TabValue, label: "Rewards" },
