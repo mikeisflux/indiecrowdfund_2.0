@@ -26,6 +26,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Footer } from "@/components/footer";
 
 const contactCategories = [
   { value: "general", label: "General Inquiry", icon: MessageSquare },
@@ -282,6 +283,8 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }

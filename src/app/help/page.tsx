@@ -23,6 +23,7 @@ import {
   CheckCircle,
   Store,
 } from "lucide-react";
+import { Footer } from "@/components/footer";
 
 const categories = [
   {
@@ -363,6 +364,8 @@ export default function HelpPage() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }

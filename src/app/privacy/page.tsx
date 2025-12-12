@@ -17,6 +17,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Footer } from "@/components/footer";
 
 const sections = [
   {
@@ -441,6 +442,8 @@ export default function PrivacyPage() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }

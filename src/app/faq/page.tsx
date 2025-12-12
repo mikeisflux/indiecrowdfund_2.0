@@ -20,6 +20,7 @@ import {
   HelpCircle,
   ArrowLeft,
 } from "lucide-react";
+import { Footer } from "@/components/footer";
 
 const categories = [
   { id: "backers", label: "For Backers", icon: Users, description: "Information for project backers" },
@@ -175,6 +176,8 @@ export default function FAQPage() {
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }

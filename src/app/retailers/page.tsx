@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { getRetailerStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
+import { Footer } from "@/components/footer";
 
 const features = [
   {
@@ -411,6 +412,8 @@ export default async function RetailersPage() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }

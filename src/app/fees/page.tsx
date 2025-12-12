@@ -18,6 +18,7 @@ import {
   Gift,
   Globe,
 } from "lucide-react";
+import { Footer } from "@/components/footer";
 
 const feeBreakdown = [
   {
@@ -393,6 +394,8 @@ export default function FeesPage() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }

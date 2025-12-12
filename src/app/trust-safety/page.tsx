@@ -23,6 +23,7 @@ import {
   Ban,
   Mail,
 } from "lucide-react";
+import { Footer } from "@/components/footer";
 
 const trustPillars = [
   {
@@ -467,6 +468,8 @@ export default function TrustSafetyPage() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Info,
 } from 'lucide-react';
+import { Footer } from "@/components/footer";
 
 const tabs = [
   { id: 'basics', label: 'Basics', icon: Lightbulb },
@@ -573,6 +574,8 @@ export default function CreatorHandbookPage() {
           )}
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }

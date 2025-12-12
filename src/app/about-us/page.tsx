@@ -45,6 +45,7 @@ import {
   Lightbulb,
   ArrowRight,
 } from "lucide-react";
+import { Footer } from "@/components/footer";
 
 const platformFeatures = [
   {
@@ -790,6 +791,8 @@ export default function AboutUsPage() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }
