@@ -143,12 +143,12 @@ export default function RetailerDashboardPage() {
                 <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
                   <Store className="h-5 w-5 text-white" />
                 </div>
-                <span className="font-bold text-lg">Retailer Portal</span>
+                <span className="font-bold text-lg hidden sm:inline">Retailer Portal</span>
               </Link>
             </div>
 
-            <div className="flex-1 max-w-md mx-8">
-              <div className="relative">
+            <div className="hidden md:flex flex-1 max-w-md mx-8">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                 <Input
                   placeholder="Search projects..."
@@ -157,17 +157,17 @@ export default function RetailerDashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="relative">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="ghost" size="icon" className="relative hidden sm:flex">
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
               </Button>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="hidden sm:flex">
                 <Settings className="h-5 w-5" />
               </Button>
-              <div className="h-8 w-px bg-zinc-200"></div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
+              <div className="h-8 w-px bg-zinc-200 hidden sm:block"></div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="text-right hidden sm:block">
                   <p className="text-sm font-medium">{retailerData?.businessName}</p>
                   <p className="text-xs text-zinc-500">Certified Retailer</p>
                 </div>
@@ -183,34 +183,34 @@ export default function RetailerDashboardPage() {
       {/* Navigation Tabs */}
       <nav className="bg-white border-b border-zinc-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-8">
+          <div className="flex gap-4 sm:gap-8 overflow-x-auto">
             <Link
               href="/retailers/dashboard"
-              className="py-4 px-1 border-b-2 border-emerald-600 text-emerald-600 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-emerald-600 text-emerald-600 font-medium text-sm whitespace-nowrap"
             >
               Dashboard
             </Link>
             <Link
               href="/retailers/projects"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               Browse Projects
             </Link>
             <Link
               href="/retailers/orders"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               My Orders
             </Link>
             <Link
               href="/retailers/invoices"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               Invoices
             </Link>
             <Link
               href="/retailers/account"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               Account
             </Link>
