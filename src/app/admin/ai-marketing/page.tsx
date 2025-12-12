@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
@@ -37,14 +36,12 @@ import {
 } from "@/components/ui/dialog";
 import {
   Brain,
-  Target,
   Mail,
   Users,
   Tag,
   Sparkles,
   TrendingUp,
   Settings,
-  Play,
   RefreshCw,
   AlertCircle,
   CheckCircle,
@@ -52,20 +49,13 @@ import {
   Eye,
   BarChart3,
   Activity,
-  Filter,
-  Layers,
   Wand2,
   History,
-  ArrowRight,
   UserCheck,
-  ShoppingCart,
-  MousePointer,
-  Timer,
   ChevronUp,
   ChevronDown,
   Clock,
   AlertTriangle,
-  Maximize2,
   Download,
 } from "lucide-react";
 
