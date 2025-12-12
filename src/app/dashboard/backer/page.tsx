@@ -332,9 +332,11 @@ export default function BackerDashboard() {
                 <MessageSquare className="h-5 w-5" />
               </Button>
             </Link>
-            <Button variant="ghost" size="icon">
-              <Settings className="h-5 w-5" />
-            </Button>
+            <Link href="/dashboard/settings">
+              <Button variant="ghost" size="icon">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </Link>
             <Avatar className="ring-2 ring-primary/20">
               <AvatarFallback className="bg-gradient-to-br from-primary to-purple-500 text-white">U</AvatarFallback>
             </Avatar>

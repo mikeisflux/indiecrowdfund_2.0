@@ -95,9 +95,9 @@ export function UserProfileDropdown() {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[580px] p-0" align="end" forceMount>
-        {/* Three column layout like Kickstarter */}
-        <div className="grid grid-cols-3 divide-x">
+      <DropdownMenuContent className="w-[90vw] max-w-[580px] p-0" align="end" forceMount>
+        {/* Responsive layout - stack on mobile, 3 columns on desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x max-h-[80vh] overflow-y-auto">
           {/* Column 1: Your Account */}
           <div className="p-5">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
@@ -168,7 +168,7 @@ export function UserProfileDropdown() {
                         <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
                       )}
                     </div>
-                    <span className="text-sm truncate max-w-[120px]">{project.title}</span>
+                    <span className="text-sm truncate max-w-[200px] md:max-w-[120px]">{project.title}</span>
                   </Link>
                 ))}
               </div>
@@ -221,7 +221,7 @@ export function UserProfileDropdown() {
                             )}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm truncate max-w-[120px]">{project.title}</span>
+                            <span className="text-sm truncate max-w-[200px] md:max-w-[120px]">{project.title}</span>
                             {isDraft && (
                               <span className="text-xs text-muted-foreground">{project.status}</span>
                             )}
@@ -260,7 +260,7 @@ export function UserProfileDropdown() {
                             )}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm truncate max-w-[120px]">{project.title}</span>
+                            <span className="text-sm truncate max-w-[200px] md:max-w-[120px]">{project.title}</span>
                             {isDraft && (
                               <span className="text-xs text-muted-foreground">{project.status}</span>
                             )}
