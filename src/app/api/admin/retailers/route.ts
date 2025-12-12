@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
     // Verify user is admin
     const user = await db.user.findUnique({ where: { id: session.user.id } });
-    if (user?.role !== "ADMIN") {
+    if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
