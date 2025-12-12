@@ -253,7 +253,7 @@ export default function RetailerProjectDetailPage() {
 
             {/* Campaign Stats */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-emerald-600">
                     ${project.currentAmount.toLocaleString()}
