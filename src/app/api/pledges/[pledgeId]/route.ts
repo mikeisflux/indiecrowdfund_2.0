@@ -73,7 +73,7 @@ export async function GET(
         createdAt: pledge.createdAt,
         project: pledge.project,
         reward: pledge.reward,
-        addons: pledge.addons.map(a => ({
+        addons: pledge.addons.map((a: { addon: { id: string; title: string; amount: number }; quantity: number }) => ({
           id: a.addon.id,
           title: a.addon.title,
           amount: a.addon.amount,

@@ -174,17 +174,18 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Notifications</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Notifications</h1>
           <p className="text-zinc-500">
             {unreadCount > 0 ? `${unreadCount} unread notifications` : "All caught up!"}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={markAllAsRead} disabled={unreadCount === 0}>
+          <Button variant="outline" onClick={markAllAsRead} disabled={unreadCount === 0} className="w-full sm:w-auto">
             <CheckCheck className="mr-2 h-4 w-4" />
-            Mark all as read
+            <span className="hidden sm:inline">Mark all as read</span>
+            <span className="sm:hidden">Mark read</span>
           </Button>
         </div>
       </div>
@@ -195,8 +196,8 @@ export default function NotificationsPage() {
           <Card>
             <CardHeader className="pb-3">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList>
-                  <TabsTrigger value="all">
+                <TabsList className="flex w-full overflow-x-auto">
+                  <TabsTrigger value="all" className="whitespace-nowrap">
                     All
                     {notifications.length > 0 && (
                       <Badge variant="secondary" className="ml-2">
@@ -204,7 +205,7 @@ export default function NotificationsPage() {
                       </Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="unread">
+                  <TabsTrigger value="unread" className="whitespace-nowrap">
                     Unread
                     {unreadCount > 0 && (
                       <Badge variant="default" className="ml-2">
@@ -212,9 +213,9 @@ export default function NotificationsPage() {
                       </Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="project">Projects</TabsTrigger>
-                  <TabsTrigger value="user">Users</TabsTrigger>
-                  <TabsTrigger value="alert">Alerts</TabsTrigger>
+                  <TabsTrigger value="project" className="whitespace-nowrap">Projects</TabsTrigger>
+                  <TabsTrigger value="user" className="whitespace-nowrap">Users</TabsTrigger>
+                  <TabsTrigger value="alert" className="whitespace-nowrap">Alerts</TabsTrigger>
                 </TabsList>
               </Tabs>
             </CardHeader>

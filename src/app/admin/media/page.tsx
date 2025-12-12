@@ -430,9 +430,9 @@ export default function MediaPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-6">
+    <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-8rem)] gap-6">
       {/* Folder Sidebar */}
-      <div className="w-64 shrink-0 rounded-lg border bg-white dark:bg-zinc-900">
+      <div className="hidden lg:block w-64 shrink-0 rounded-lg border bg-white dark:bg-zinc-900">
         <div className="flex items-center justify-between border-b p-3">
           <h3 className="font-semibold text-sm">Folders</h3>
           <Button
@@ -497,9 +497,9 @@ export default function MediaPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
               {currentFolder ? (
                 <span className="capitalize">{currentFolder}</span>
               ) : (
@@ -510,20 +510,20 @@ export default function MediaPage() {
               {stats?.totalFiles || 0} files • {formatFileSize(stats?.totalSize || 0)}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={() => fetchMedia()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => fetchMedia()} className="flex-1 sm:flex-none">
+              <RefreshCw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
-            <Button onClick={() => setShowUploadDialog(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload
+            <Button onClick={() => setShowUploadDialog(true)} className="flex-1 sm:flex-none">
+              <Upload className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Upload</span>
             </Button>
           </div>
         </div>
 
         {/* Stats Row */}
-        <div className="grid gap-3 md:grid-cols-5 mb-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 mb-4">
           <Card className="p-3">
             <div className="flex items-center gap-2">
               <div className="rounded-full bg-blue-100 p-1.5 dark:bg-blue-900/30">
@@ -582,19 +582,19 @@ export default function MediaPage() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
               <Input
                 placeholder="Search files..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 w-64"
+                className="pl-9 w-full sm:w-64"
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-full sm:w-[140px]">
                 <Filter className="mr-2 h-4 w-4" />
                 <SelectValue />
               </SelectTrigger>

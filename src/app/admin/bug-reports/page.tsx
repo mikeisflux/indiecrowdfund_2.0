@@ -285,13 +285,13 @@ export default function BugReportsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Bug Reports</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Bug Reports</h1>
           <p className="text-zinc-500">Track and resolve user-reported issues</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => fetchBugReports()}>
+          <Button variant="outline" onClick={() => fetchBugReports()} className="w-full sm:w-auto">
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
@@ -377,8 +377,8 @@ export default function BugReportsPage() {
         </TabsList>
 
         {/* Filters */}
-        <div className="flex items-center gap-4 mt-6">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center mt-6">
+          <div className="relative flex-1 max-w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <Input
               placeholder="Search bug reports..."
@@ -387,47 +387,49 @@ export default function BugReportsPage() {
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="NEW">New</SelectItem>
-              <SelectItem value="ACKNOWLEDGED">Acknowledged</SelectItem>
-              <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-              <SelectItem value="NEEDS_INFO">Needs Info</SelectItem>
-              <SelectItem value="RESOLVED">Resolved</SelectItem>
-              <SelectItem value="CLOSED">Closed</SelectItem>
-              <SelectItem value="WONT_FIX">Won&apos;t Fix</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {Object.entries(categoryLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priority</SelectItem>
-              <SelectItem value="URGENT">Urgent</SelectItem>
-              <SelectItem value="HIGH">High</SelectItem>
-              <SelectItem value="MEDIUM">Medium</SelectItem>
-              <SelectItem value="LOW">Low</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon" onClick={() => toggleSort("createdAt")}>
-            <ArrowUpDown className="h-4 w-4" />
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[130px] sm:w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="NEW">New</SelectItem>
+                <SelectItem value="ACKNOWLEDGED">Acknowledged</SelectItem>
+                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                <SelectItem value="NEEDS_INFO">Needs Info</SelectItem>
+                <SelectItem value="RESOLVED">Resolved</SelectItem>
+                <SelectItem value="CLOSED">Closed</SelectItem>
+                <SelectItem value="WONT_FIX">Won&apos;t Fix</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[130px] sm:w-[150px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {Object.entries(categoryLabels).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="w-[130px] sm:w-[150px]">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priority</SelectItem>
+                <SelectItem value="URGENT">Urgent</SelectItem>
+                <SelectItem value="HIGH">High</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="LOW">Low</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="icon" onClick={() => toggleSort("createdAt")}>
+              <ArrowUpDown className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Open Reports Tab */}

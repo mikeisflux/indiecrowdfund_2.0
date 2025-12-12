@@ -380,15 +380,15 @@ export default function AIControlPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Brain className="h-7 w-7 text-violet-600" />
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Brain className="h-6 w-6 sm:h-7 sm:w-7 text-violet-600" />
             AI Control Center
           </h1>
           <p className="text-zinc-500">Manage and trigger AI services</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Badge
             className={
               aiStatus === "operational"
@@ -399,22 +399,22 @@ export default function AIControlPage() {
             }
           >
             {aiStatus === "operational" ? (
-              <><CheckCircle className="h-3 w-3 mr-1" /> All Systems Operational</>
+              <><CheckCircle className="h-3 w-3 mr-1" /> <span className="hidden sm:inline">All Systems </span>Operational</>
             ) : aiStatus === "degraded" ? (
-              <><AlertTriangle className="h-3 w-3 mr-1" /> Degraded Performance</>
+              <><AlertTriangle className="h-3 w-3 mr-1" /> Degraded</>
             ) : (
               <><AlertTriangle className="h-3 w-3 mr-1" /> Offline</>
             )}
           </Badge>
           <Button onClick={loadStatus} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">

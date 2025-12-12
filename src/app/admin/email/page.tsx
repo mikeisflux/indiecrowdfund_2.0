@@ -366,25 +366,25 @@ export default function EmailPage() {
   return (
     <div className="h-[calc(100vh-120px)] flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Email Center</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Email Center</h1>
           <p className="text-zinc-500">Manage mailboxes and send emails</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" asChild>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button variant="outline" size="sm" asChild className="flex-1 sm:flex-none">
             <a href="/admin/settings">
-              <Settings className="mr-2 h-4 w-4" />
-              Email Settings
+              <Settings className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Email Settings</span>
             </a>
           </Button>
           <Button
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-emerald-600 hover:bg-emerald-700 flex-1 sm:flex-none"
             onClick={handleNewCompose}
             disabled={!isConfigured || mailboxes.length === 0}
           >
-            <Send className="mr-2 h-4 w-4" />
-            Compose
+            <Send className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Compose</span>
           </Button>
         </div>
       </div>
@@ -493,10 +493,10 @@ export default function EmailPage() {
       </Card>
 
       {/* Main Content */}
-      <div className="flex-1 flex gap-4 min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
         {/* Folders */}
         {selectedMailbox && (
-          <div className="w-40 flex-shrink-0">
+          <div className="hidden lg:block w-40 flex-shrink-0">
             <Card className="h-full">
               <CardHeader className="pb-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Folders</h3>
@@ -533,7 +533,7 @@ export default function EmailPage() {
         )}
 
         {/* Email List */}
-        <div className="w-80 flex-shrink-0">
+        <div className="w-full lg:w-80 flex-shrink-0">
           <Card className="h-full flex flex-col">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between gap-4">
