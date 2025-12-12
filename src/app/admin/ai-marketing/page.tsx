@@ -713,12 +713,12 @@ export default function AIMarketingPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">AI Marketing & Analytics</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">AI Marketing & Analytics</h1>
           <p className="text-zinc-500">Intelligent automation for personalized user experiences</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {saveMessage && (
             <span className={`text-sm ${saveMessage.includes("Failed") ? "text-red-600" : "text-emerald-600"}`}>
               {saveMessage}
@@ -728,20 +728,20 @@ export default function AIMarketingPage() {
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             AI Active
           </Badge>
-          <Button variant="outline" onClick={loadActivityLogs}>
-            <History className="mr-2 h-4 w-4" />
-            Activity Log
+          <Button variant="outline" onClick={loadActivityLogs} className="flex-1 sm:flex-none">
+            <History className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Activity Log</span>
           </Button>
-          <Button onClick={saveSettings} disabled={isSaving}>
+          <Button onClick={saveSettings} disabled={isSaving} className="flex-1 sm:flex-none">
             {isSaving ? (
               <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                <RefreshCw className="h-4 w-4 sm:mr-2 animate-spin" />
+                <span className="hidden sm:inline">Saving...</span>
               </>
             ) : (
               <>
-                <Settings className="mr-2 h-4 w-4" />
-                Save Settings
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Save Settings</span>
               </>
             )}
           </Button>
@@ -749,7 +749,7 @@ export default function AIMarketingPage() {
       </div>
 
       {/* Quick stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">

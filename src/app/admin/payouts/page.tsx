@@ -243,21 +243,21 @@ export default function PayoutsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Payouts</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">Payouts</h1>
           <p className="text-zinc-600 dark:text-zinc-400 mt-1">
             Manage creator payouts and fund transfers
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={fetchPayouts}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
+          <Button variant="outline" onClick={fetchPayouts} className="flex-1 sm:flex-none">
+            <RefreshCw className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button variant="outline" onClick={exportPayouts}>
-            <Download className="w-4 h-4 mr-2" />
-            Export
+          <Button variant="outline" onClick={exportPayouts} className="flex-1 sm:flex-none">
+            <Download className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Export</span>
           </Button>
         </div>
       </div>

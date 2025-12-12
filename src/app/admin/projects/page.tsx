@@ -469,25 +469,25 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Project Review Center</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Project Review Center</h1>
           <p className="text-zinc-500">Review and approve project submissions</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => setActiveTab("history")}>
-            <History className="mr-2 h-4 w-4" />
-            Review History
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button variant="outline" onClick={() => setActiveTab("history")} className="flex-1 sm:flex-none">
+            <History className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Review History</span>
           </Button>
-          <Button variant="outline" onClick={() => fetchProjects()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+          <Button variant="outline" onClick={() => fetchProjects()} className="flex-1 sm:flex-none">
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">

@@ -243,35 +243,35 @@ export default function ThemesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Themes & Styling</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Themes & Styling</h1>
           <p className="text-zinc-500">Customize your platform&apos;s visual appearance</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {saveMessage && (
             <span className={`text-sm ${saveMessage.includes("Failed") ? "text-red-600" : "text-emerald-600"}`}>
               {saveMessage}
             </span>
           )}
-          <Button variant="outline" onClick={loadSettings}>
-            <Undo2 className="mr-2 h-4 w-4" />
-            Reset
+          <Button variant="outline" onClick={loadSettings} className="flex-1 sm:flex-none">
+            <Undo2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Reset</span>
           </Button>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export
+          <Button variant="outline" className="flex-1 sm:flex-none">
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Export</span>
           </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving} className="flex-1 sm:flex-none">
             {isSaving ? (
               <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                <RefreshCw className="h-4 w-4 sm:mr-2 animate-spin" />
+                <span className="hidden sm:inline">Saving...</span>
               </>
             ) : (
               <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
+                <Save className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Save Changes</span>
               </>
             )}
           </Button>
@@ -282,22 +282,22 @@ export default function ThemesPage() {
         {/* Editor Panel */}
         <div className="lg:col-span-2 space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="colors">
+            <TabsList className="flex w-full overflow-x-auto lg:grid lg:grid-cols-4">
+              <TabsTrigger value="colors" className="whitespace-nowrap">
                 <Palette className="mr-2 h-4 w-4" />
-                Colors
+                <span className="hidden sm:inline">Colors</span>
               </TabsTrigger>
-              <TabsTrigger value="typography">
+              <TabsTrigger value="typography" className="whitespace-nowrap">
                 <Type className="mr-2 h-4 w-4" />
-                Typography
+                <span className="hidden sm:inline">Typography</span>
               </TabsTrigger>
-              <TabsTrigger value="spacing">
+              <TabsTrigger value="spacing" className="whitespace-nowrap">
                 <Layout className="mr-2 h-4 w-4" />
-                Spacing
+                <span className="hidden sm:inline">Spacing</span>
               </TabsTrigger>
-              <TabsTrigger value="appearance">
+              <TabsTrigger value="appearance" className="whitespace-nowrap">
                 <Layers className="mr-2 h-4 w-4" />
-                Appearance
+                <span className="hidden sm:inline">Appearance</span>
               </TabsTrigger>
             </TabsList>
 

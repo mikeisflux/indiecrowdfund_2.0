@@ -791,23 +791,23 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">User Management</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">User Management</h1>
           <p className="text-zinc-500">Manage platform users and retailer applications</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => { fetchUsers(); if (activeTab === "retailers") fetchRetailers(); }} disabled={isLoading || isLoadingRetailers}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading || isLoadingRetailers ? "animate-spin" : ""}`} />
-            Refresh
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Button variant="outline" onClick={() => { fetchUsers(); if (activeTab === "retailers") fetchRetailers(); }} disabled={isLoading || isLoadingRetailers} className="flex-1 sm:flex-none">
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${isLoading || isLoadingRetailers ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button variant="outline" onClick={exportUsers}>
-            <Download className="mr-2 h-4 w-4" />
-            Export
+          <Button variant="outline" onClick={exportUsers} className="flex-1 sm:flex-none">
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Export</span>
           </Button>
-          <Button onClick={() => setShowAddUserDialog(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add User
+          <Button onClick={() => setShowAddUserDialog(true)} className="flex-1 sm:flex-none">
+            <UserPlus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Add User</span>
           </Button>
         </div>
       </div>
@@ -864,8 +864,8 @@ export default function UsersPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="relative flex-1 max-w-full sm:max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <Input
             placeholder="Search users by name or email..."
@@ -874,28 +874,30 @@ export default function UsersPage() {
             className="pl-9"
           />
         </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="creator">Creator</SelectItem>
-            <SelectItem value="backer">Backer</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-[120px] sm:w-[140px]">
+              <SelectValue placeholder="Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="creator">Creator</SelectItem>
+              <SelectItem value="backer">Backer</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[120px] sm:w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Users Table */}

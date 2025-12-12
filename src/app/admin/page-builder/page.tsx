@@ -369,9 +369,9 @@ export default function PageBuilderPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-120px)] gap-6">
+    <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-120px)] gap-6">
       {/* Left Sidebar - Components */}
-      <div className="w-64 flex-shrink-0 overflow-y-auto rounded-lg border bg-white dark:bg-zinc-900">
+      <div className="hidden lg:block w-64 flex-shrink-0 overflow-y-auto rounded-lg border bg-white dark:bg-zinc-900">
         <div className="p-4 border-b">
           <h3 className="font-semibold">Components</h3>
           <p className="text-xs text-zinc-500">Drag and drop to add</p>
