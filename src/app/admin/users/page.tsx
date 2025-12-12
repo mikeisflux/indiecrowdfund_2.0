@@ -277,6 +277,20 @@ export default function UsersPage() {
     }
   }, [activeTab, fetchRetailers]);
 
+  // Fetch user pledges when switching to the pledges tab
+  useEffect(() => {
+    if (showUserDialog && selectedUser && userDetailTab === "pledges") {
+      fetchUserPledges(selectedUser.id);
+    }
+  }, [showUserDialog, selectedUser?.id, userDetailTab]);
+
+  // Fetch user emails when switching to the emails tab
+  useEffect(() => {
+    if (showUserDialog && selectedUser && userDetailTab === "emails") {
+      fetchUserEmails(selectedUser.id);
+    }
+  }, [showUserDialog, selectedUser?.id, userDetailTab]);
+
   // Debounce search
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -1331,14 +1345,7 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           {selectedUser && (
-            <Tabs value={userDetailTab} onValueChange={(value) => {
-              setUserDetailTab(value);
-              if (value === "pledges" && userPledges.length === 0) {
-                fetchUserPledges(selectedUser.id);
-              } else if (value === "emails" && userEmails.length === 0) {
-                fetchUserEmails(selectedUser.id);
-              }
-            }}>
+            <Tabs value={userDetailTab} onValueChange={setUserDetailTab}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="pledges">Backer History ({selectedUser.pledgeCount})</TabsTrigger>
