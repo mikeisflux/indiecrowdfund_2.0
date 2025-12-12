@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getStripeInstance } from "@/lib/payments/stripe";
+import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -147,21 +147,13 @@ export async function PATCH(
         );
       }
 
-      // Cancel any Stripe intents
+      // Cancel any Stripe intents (safely checks status first)
       const stripe = await getStripeInstance();
       if (typedPledge.stripeSetupIntentId) {
-        try {
-          await stripe.setupIntents.cancel(typedPledge.stripeSetupIntentId);
-        } catch (e) {
-          console.log("Could not cancel setup intent:", e);
-        }
+        await safeCancelSetupIntent(stripe, typedPledge.stripeSetupIntentId);
       }
       if (typedPledge.stripePaymentIntentId) {
-        try {
-          await stripe.paymentIntents.cancel(typedPledge.stripePaymentIntentId);
-        } catch (e) {
-          console.log("Could not cancel payment intent:", e);
-        }
+        await safeCancelPaymentIntent(stripe, typedPledge.stripePaymentIntentId);
       }
 
       // Update pledge status

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getStripeInstance } from "@/lib/payments/stripe";
+import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
 import { sendPledgeConfirmationEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -218,21 +218,13 @@ export async function PATCH(
         );
       }
 
-      // Cancel any Stripe intents
+      // Cancel any Stripe intents (safely checks status first)
       const stripe = await getStripeInstance();
       if (pledge.stripeSetupIntentId) {
-        try {
-          await stripe.setupIntents.cancel(pledge.stripeSetupIntentId);
-        } catch (e) {
-          console.log("Could not cancel setup intent:", e);
-        }
+        await safeCancelSetupIntent(stripe, pledge.stripeSetupIntentId);
       }
       if (pledge.stripePaymentIntentId) {
-        try {
-          await stripe.paymentIntents.cancel(pledge.stripePaymentIntentId);
-        } catch (e) {
-          console.log("Could not cancel payment intent:", e);
-        }
+        await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
       }
 
       // Update pledge status
@@ -362,22 +354,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    // Cancel any Stripe intents for PENDING pledges
+    // Cancel any Stripe intents for PENDING pledges (safely checks status first)
     if (pledge.status === "PENDING") {
       const stripeClient = await getStripeInstance();
       if (pledge.stripeSetupIntentId) {
-        try {
-          await stripeClient.setupIntents.cancel(pledge.stripeSetupIntentId);
-        } catch (e) {
-          console.log("Could not cancel setup intent:", e);
-        }
+        await safeCancelSetupIntent(stripeClient, pledge.stripeSetupIntentId);
       }
       if (pledge.stripePaymentIntentId) {
-        try {
-          await stripeClient.paymentIntents.cancel(pledge.stripePaymentIntentId);
-        } catch (e) {
-          console.log("Could not cancel payment intent:", e);
-        }
+        await safeCancelPaymentIntent(stripeClient, pledge.stripePaymentIntentId);
       }
     }
 
