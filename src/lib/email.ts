@@ -379,14 +379,21 @@ export async function sendPledgeConfirmationEmail(
   amount: number,
   rewardTitle: string | null,
   chargedImmediately: boolean,
-  imageUrl?: string | null
+  imageUrl?: string | null,
+  currency: string = "USD"
 ) {
   const projectUrl = `${APP_URL}/projects/${projectSlug}`;
   const dashboardUrl = `${APP_URL}/dashboard`;
 
+  // Format amount with the project's currency
+  const formattedAmount = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+  }).format(amount);
+
   const chargeMessage = chargedImmediately
-    ? `Your payment of <strong>$${amount.toFixed(2)}</strong> has been processed successfully.`
-    : `Your card has been saved and will be charged <strong>$${amount.toFixed(2)}</strong> when the campaign reaches its funding goal.`;
+    ? `Your payment of <strong>${formattedAmount}</strong> has been processed successfully.`
+    : `Your card has been saved and will be charged <strong>${formattedAmount}</strong> when the campaign reaches its funding goal.`;
 
   const html = `
     <!DOCTYPE html>
@@ -420,7 +427,7 @@ export async function sendPledgeConfirmationEmail(
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Amount</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 600;">$${amount.toFixed(2)}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 600;">${formattedAmount}</td>
             </tr>
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Reward</td>

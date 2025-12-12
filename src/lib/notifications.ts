@@ -707,7 +707,7 @@ export async function notifyBackerPledgeConfirmed(
     where: { id: pledgeId },
     include: {
       project: {
-        select: { id: true, title: true, slug: true, imageUrl: true },
+        select: { id: true, title: true, slug: true, imageUrl: true, currency: true },
       },
       reward: {
         select: { title: true },
@@ -735,7 +735,8 @@ export async function notifyBackerPledgeConfirmed(
       pledge.amount,
       pledge.reward?.title || null,
       chargedImmediately,
-      pledge.project.imageUrl
+      pledge.project.imageUrl,
+      pledge.project.currency
     );
 
     if (result.success) {
@@ -920,7 +921,7 @@ export async function processUnsentConfirmationEmails() {
     },
     include: {
       project: {
-        select: { id: true, title: true, slug: true, imageUrl: true },
+        select: { id: true, title: true, slug: true, imageUrl: true, currency: true },
       },
       reward: {
         select: { title: true },
@@ -942,7 +943,7 @@ export async function processUnsentConfirmationEmails() {
     },
     include: {
       project: {
-        select: { id: true, title: true, slug: true, imageUrl: true },
+        select: { id: true, title: true, slug: true, imageUrl: true, currency: true },
       },
       reward: {
         select: { title: true },
@@ -977,7 +978,8 @@ export async function processUnsentConfirmationEmails() {
         pledge.amount,
         pledge.reward?.title || null,
         pledge.chargedImmediately,
-        pledge.project.imageUrl
+        pledge.project.imageUrl,
+        pledge.project.currency
       );
 
       if (emailResult.success) {

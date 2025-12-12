@@ -54,6 +54,10 @@ import {
   MapPin,
   Bell,
   RefreshCw,
+  FileText,
+  Send,
+  ExternalLink,
+  DollarSign,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -83,6 +87,50 @@ interface Pagination {
   limit: number;
   total: number;
   totalPages: number;
+}
+
+// User pledge interface for backer history
+interface UserPledge {
+  id: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  chargedImmediately: boolean;
+  confirmationEmailSent: boolean;
+  stripePaymentMethodId: string | null;
+  project: {
+    id: string;
+    title: string;
+    slug: string;
+    imageUrl: string | null;
+    status: string;
+  };
+  reward: {
+    id: string;
+    title: string;
+    amount: number;
+  } | null;
+}
+
+// Email log interface for email history
+interface EmailLogEntry {
+  id: string;
+  type: string;
+  subject: string | null;
+  recipientEmail: string;
+  sentAt: string;
+  htmlContent: string | null;
+  project: {
+    id: string;
+    title: string;
+    slug: string;
+  } | null;
+  pledge: {
+    id: string;
+    amount: number;
+    status: string;
+  } | null;
 }
 
 // Retailer interface
@@ -146,6 +194,16 @@ export default function UsersPage() {
   const [selectedRole, setSelectedRole] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+
+  // User details tabs state
+  const [userDetailTab, setUserDetailTab] = useState("overview");
+  const [userPledges, setUserPledges] = useState<UserPledge[]>([]);
+  const [userEmails, setUserEmails] = useState<EmailLogEntry[]>([]);
+  const [loadingPledges, setLoadingPledges] = useState(false);
+  const [loadingEmails, setLoadingEmails] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [viewingEmail, setViewingEmail] = useState<EmailLogEntry | null>(null);
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
 
   // API data state
   const [users, setUsers] = useState<User[]>([]);
@@ -312,6 +370,84 @@ export default function UsersPage() {
       default:
         return <Badge variant="outline">User</Badge>;
     }
+  };
+
+  // Fetch user pledges for backer history
+  const fetchUserPledges = async (userId: string) => {
+    setLoadingPledges(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/pledges`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserPledges(data.pledges || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch user pledges:", error);
+    } finally {
+      setLoadingPledges(false);
+    }
+  };
+
+  // Fetch user email logs
+  const fetchUserEmails = async (userId: string) => {
+    setLoadingEmails(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/emails`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserEmails(data.emailLogs || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch user emails:", error);
+    } finally {
+      setLoadingEmails(false);
+    }
+  };
+
+  // Send/resend confirmation email for a pledge
+  const handleSendConfirmationEmail = async (userId: string, pledgeId: string, forceResend: boolean = false) => {
+    setSendingEmail(pledgeId);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/emails`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pledgeId, forceResend }),
+      });
+      if (response.ok) {
+        // Refresh pledges and emails after sending
+        await Promise.all([
+          fetchUserPledges(userId),
+          fetchUserEmails(userId),
+        ]);
+      } else {
+        const error = await response.json();
+        console.error("Failed to send email:", error);
+      }
+    } catch (error) {
+      console.error("Failed to send confirmation email:", error);
+    } finally {
+      setSendingEmail(null);
+    }
+  };
+
+  // View email content in preview
+  const handleViewEmail = (email: EmailLogEntry) => {
+    setViewingEmail(email);
+    setShowEmailPreview(true);
+  };
+
+  // Download email as HTML file
+  const handleDownloadEmail = async (emailId: string) => {
+    window.open(`/api/admin/emails/${emailId}?download=true`, "_blank");
+  };
+
+  // Handle opening user details and fetching related data
+  const handleViewUser = (user: User) => {
+    setSelectedUser(user);
+    setShowUserDialog(true);
+    setUserDetailTab("overview");
+    setUserPledges([]);
+    setUserEmails([]);
   };
 
   // Handle opening edit user dialog
@@ -1093,68 +1229,211 @@ export default function UsersPage() {
 
       {/* User Details Dialog */}
       <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
             <DialogDescription>
-              View and manage user account information and activity.
+              View and manage user account information, backer history, and emails.
             </DialogDescription>
           </DialogHeader>
           {selectedUser && (
-            <div className="py-4">
-              <div className="flex items-start gap-6">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold text-zinc-600">
-                  {selectedUser.name?.charAt(0) || selectedUser.email.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-semibold">{selectedUser.name || "No name"}</h3>
-                    {getRoleBadge(selectedUser.role)}
-                    {selectedUser.emailVerified && (
-                      <Badge className="bg-emerald-100 text-emerald-700">
-                        <CheckCircle className="h-3 w-3 mr-1" /> Verified
-                      </Badge>
-                    )}
+            <Tabs value={userDetailTab} onValueChange={(value) => {
+              setUserDetailTab(value);
+              if (value === "pledges" && userPledges.length === 0) {
+                fetchUserPledges(selectedUser.id);
+              } else if (value === "emails" && userEmails.length === 0) {
+                fetchUserEmails(selectedUser.id);
+              }
+            }}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="pledges">Backer History ({selectedUser.pledgeCount})</TabsTrigger>
+                <TabsTrigger value="emails">Email History</TabsTrigger>
+              </TabsList>
+
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="py-4">
+                <div className="flex items-start gap-6">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold text-zinc-600">
+                    {selectedUser.name?.charAt(0) || selectedUser.email.charAt(0).toUpperCase()}
                   </div>
-                  <p className="text-zinc-500">{selectedUser.email}</p>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Member since {selectedUser.createdAt ? formatDistanceToNow(new Date(selectedUser.createdAt), { addSuffix: true }) : "N/A"}
-                  </p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-semibold">{selectedUser.name || "No name"}</h3>
+                      {getRoleBadge(selectedUser.role)}
+                      {selectedUser.emailVerified && (
+                        <Badge className="bg-emerald-100 text-emerald-700">
+                          <CheckCircle className="h-3 w-3 mr-1" /> Verified
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-zinc-500">{selectedUser.email}</p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Member since {selectedUser.createdAt ? formatDistanceToNow(new Date(selectedUser.createdAt), { addSuffix: true }) : "N/A"}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <Star className="h-6 w-6 mx-auto text-blue-500 mb-2" />
-                    <p className="text-2xl font-bold">{selectedUser.pledgeCount}</p>
-                    <p className="text-xs text-zinc-500">Pledges Made</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <Crown className="h-6 w-6 mx-auto text-violet-500 mb-2" />
-                    <p className="text-2xl font-bold">{selectedUser.projectCount}</p>
-                    <p className="text-xs text-zinc-500">Projects Created</p>
-                  </CardContent>
-                </Card>
-              </div>
+                <div className="mt-6 grid gap-4 md:grid-cols-2">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Star className="h-6 w-6 mx-auto text-blue-500 mb-2" />
+                      <p className="text-2xl font-bold">{selectedUser.pledgeCount}</p>
+                      <p className="text-xs text-zinc-500">Pledges Made</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Crown className="h-6 w-6 mx-auto text-violet-500 mb-2" />
+                      <p className="text-2xl font-bold">{selectedUser.projectCount}</p>
+                      <p className="text-xs text-zinc-500">Projects Created</p>
+                    </CardContent>
+                  </Card>
+                </div>
 
-              <div className="mt-6 flex gap-3">
-                <Button variant="outline" className="flex-1">
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send Email
-                </Button>
-                <Button variant="outline" className="flex-1">
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Activity
-                </Button>
-                <Button variant="outline" className="flex-1">
-                  <ArrowUpRight className="mr-2 h-4 w-4" />
-                  View Profile
-                </Button>
-              </div>
-            </div>
+                <div className="mt-6 flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setUserDetailTab("emails")}>
+                    <Mail className="mr-2 h-4 w-4" />
+                    View Emails
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setUserDetailTab("pledges")}>
+                    <Star className="mr-2 h-4 w-4" />
+                    View Pledges
+                  </Button>
+                  <Button variant="outline" className="flex-1" asChild>
+                    <a href={`/u/${selectedUser.id}`} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      View Profile
+                    </a>
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Backer History Tab */}
+              <TabsContent value="pledges" className="py-4">
+                {loadingPledges ? (
+                  <div className="text-center py-8 text-zinc-500">Loading pledges...</div>
+                ) : userPledges.length === 0 ? (
+                  <div className="text-center py-8 text-zinc-500">No pledges found</div>
+                ) : (
+                  <div className="space-y-4">
+                    {userPledges.map((pledge) => (
+                      <Card key={pledge.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={`/projects/${pledge.project.slug}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium hover:underline"
+                                >
+                                  {pledge.project.title}
+                                </a>
+                                <Badge variant={pledge.status === "COMPLETED" ? "default" : "secondary"}>
+                                  {pledge.status}
+                                </Badge>
+                                {pledge.confirmationEmailSent && (
+                                  <Badge variant="outline" className="text-green-600">
+                                    <CheckCircle className="h-3 w-3 mr-1" /> Email Sent
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-zinc-500 mt-1">
+                                {pledge.reward?.title || "No reward"} • {new Date(pledge.createdAt).toLocaleDateString()}
+                              </p>
+                              <p className="text-lg font-semibold mt-2">
+                                <DollarSign className="inline h-4 w-4" />
+                                {pledge.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              {!pledge.confirmationEmailSent && (pledge.status === "COMPLETED" || pledge.stripePaymentMethodId) && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSendConfirmationEmail(selectedUser.id, pledge.id)}
+                                  disabled={sendingEmail === pledge.id}
+                                >
+                                  <Send className="h-3 w-3 mr-1" />
+                                  {sendingEmail === pledge.id ? "Sending..." : "Send Receipt"}
+                                </Button>
+                              )}
+                              {pledge.confirmationEmailSent && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleSendConfirmationEmail(selectedUser.id, pledge.id, true)}
+                                  disabled={sendingEmail === pledge.id}
+                                >
+                                  <RefreshCw className="h-3 w-3 mr-1" />
+                                  {sendingEmail === pledge.id ? "Sending..." : "Resend"}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Email History Tab */}
+              <TabsContent value="emails" className="py-4">
+                {loadingEmails ? (
+                  <div className="text-center py-8 text-zinc-500">Loading emails...</div>
+                ) : userEmails.length === 0 ? (
+                  <div className="text-center py-8 text-zinc-500">No emails found</div>
+                ) : (
+                  <div className="space-y-4">
+                    {userEmails.map((email) => (
+                      <Card key={email.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline">{email.type.replace(/_/g, " ")}</Badge>
+                                <span className="text-sm text-zinc-500">
+                                  {new Date(email.sentAt).toLocaleString()}
+                                </span>
+                              </div>
+                              <p className="font-medium mt-2">{email.subject || "No subject"}</p>
+                              <p className="text-sm text-zinc-500">To: {email.recipientEmail}</p>
+                              {email.project && (
+                                <p className="text-sm text-zinc-500">Project: {email.project.title}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              {email.htmlContent && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleViewEmail(email)}
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    View
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDownloadEmail(email.id)}
+                                  >
+                                    <Download className="h-3 w-3 mr-1" />
+                                    Download
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowUserDialog(false)}>
@@ -1164,6 +1443,38 @@ export default function UsersPage() {
               setShowUserDialog(false);
               if (selectedUser) handleEditUser(selectedUser);
             }}>Edit User</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Preview Dialog */}
+      <Dialog open={showEmailPreview} onOpenChange={setShowEmailPreview}>
+        <DialogContent className="max-w-4xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle>Email Preview</DialogTitle>
+            <DialogDescription>
+              {viewingEmail?.subject || "Email content"}
+            </DialogDescription>
+          </DialogHeader>
+          {viewingEmail?.htmlContent && (
+            <div className="border rounded-lg overflow-auto max-h-[60vh] bg-white">
+              <iframe
+                srcDoc={viewingEmail.htmlContent}
+                className="w-full h-[500px] border-0"
+                title="Email Preview"
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEmailPreview(false)}>
+              Close
+            </Button>
+            {viewingEmail && (
+              <Button onClick={() => handleDownloadEmail(viewingEmail.id)}>
+                <Download className="h-4 w-4 mr-2" />
+                Download HTML
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
