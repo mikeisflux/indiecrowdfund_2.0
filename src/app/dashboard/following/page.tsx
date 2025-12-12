@@ -24,6 +24,7 @@ import {
   Target,
   Clock,
   Rocket,
+  ArrowLeft,
 } from "lucide-react";
 import { useSession } from "@/components/providers/auth-provider";
 
@@ -242,19 +243,24 @@ export default function FollowingPage() {
             <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
               IndieCrowdfund
             </Link>
-            <Badge variant="outline" className="border-primary/30 text-primary">
+            <Badge variant="outline" className="border-primary/30 text-primary hidden sm:flex">
               <Sparkles className="w-3 h-3 mr-1" />
               Following
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/dashboard">
+            <Link href="/dashboard" className="hidden sm:block">
               <Button variant="ghost" size="sm">Back to Dashboard</Button>
             </Link>
+            <Link href="/dashboard" className="sm:hidden">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
             <Link href="/discover">
-              <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
-                <Search className="mr-2 h-4 w-4" />
-                Discover
+              <Button size="sm" className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
+                <Search className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Discover</span>
               </Button>
             </Link>
           </div>

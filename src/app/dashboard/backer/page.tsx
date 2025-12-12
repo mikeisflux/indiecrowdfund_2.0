@@ -314,13 +314,13 @@ export default function BackerDashboard() {
             <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
               IndieCrowdfund
             </Link>
-            <Badge variant="outline" className="border-primary/30 text-primary">
+            <Badge variant="outline" className="border-primary/30 text-primary hidden sm:flex">
               <Sparkles className="w-3 h-3 mr-1" />
               Backer Dashboard
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
+            <Button variant="ghost" size="icon" className="relative hidden sm:flex">
               <Bell className="h-5 w-5" />
               {stats.pendingSurveys > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full text-[10px] flex items-center justify-center text-primary-foreground font-bold">
@@ -328,12 +328,12 @@ export default function BackerDashboard() {
                 </span>
               )}
             </Button>
-            <Link href="/dashboard/messages">
+            <Link href="/dashboard/messages" className="hidden sm:block">
               <Button variant="ghost" size="icon">
                 <MessageSquare className="h-5 w-5" />
               </Button>
             </Link>
-            <Link href="/dashboard/settings">
+            <Link href="/dashboard/settings" className="hidden sm:block">
               <Button variant="ghost" size="icon">
                 <Settings className="h-5 w-5" />
               </Button>
@@ -581,14 +581,14 @@ export default function BackerDashboard() {
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="flex items-center gap-2 mt-4">
+                            <div className="flex flex-wrap items-center gap-2 mt-4">
                               <Link href={`/projects/${project.slug}`}>
                                 <Button variant="outline" size="sm" className="hover:border-primary/50">
                                   <ExternalLink className="mr-2 h-3 w-3" />
                                   View Project
                                 </Button>
                               </Link>
-                              <Link href="/dashboard/messages">
+                              <Link href="/dashboard/messages" className="hidden sm:block">
                                 <Button variant="outline" size="sm" className="hover:border-primary/50">
                                   <MessageSquare className="mr-2 h-3 w-3" />
                                   Message Creator

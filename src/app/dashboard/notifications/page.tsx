@@ -153,24 +153,24 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Notifications</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             {unreadCount > 0
               ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
               : "You're all caught up!"}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={fetchNotifications} disabled={isLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
+          <Button variant="outline" size="sm" onClick={fetchNotifications} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
           {unreadCount > 0 && (
-            <Button variant="outline" onClick={markAllAsRead}>
-              <CheckCheck className="mr-2 h-4 w-4" />
-              Mark all as read
+            <Button variant="outline" size="sm" onClick={markAllAsRead}>
+              <CheckCheck className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Mark all as read</span>
             </Button>
           )}
         </div>

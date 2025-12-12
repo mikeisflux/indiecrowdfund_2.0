@@ -371,9 +371,9 @@ export function ProjectBuilder() {
       {/* Header */}
       <div className="border-b bg-background">
         <div className="container py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold">
+              <h1 className="text-lg sm:text-xl font-semibold">
                 {projectId ? "Edit Project" : "Create Your Project"}
               </h1>
               {projectId && getStatusBadge()}
@@ -383,17 +383,18 @@ export function ProjectBuilder() {
                 <Button
                   onClick={handleLaunchNow}
                   disabled={isLaunching}
+                  size="sm"
                   className="bg-green-600 hover:bg-green-700"
                 >
                   {isLaunching ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Launching...
+                      <span className="hidden sm:inline">Launching...</span>
                     </>
                   ) : (
                     <>
-                      <Rocket className="mr-2 h-4 w-4" />
-                      Launch Now
+                      <Rocket className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Launch Now</span>
                     </>
                   )}
                 </Button>
@@ -406,13 +407,13 @@ export function ProjectBuilder() {
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+                    <span className="hidden sm:inline">Saving...</span>
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save & Exit
+                    <Save className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Save & Exit</span>
                   </>
                 )}
               </Button>
