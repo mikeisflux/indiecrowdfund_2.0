@@ -221,17 +221,17 @@ export default function RetailerDashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Banner */}
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-6 mb-8 text-white">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold mb-2">
+              <h1 className="text-xl sm:text-2xl font-bold mb-2">
                 Welcome back, {retailerData?.businessName}!
               </h1>
-              <p className="text-emerald-100">
+              <p className="text-emerald-100 text-sm sm:text-base">
                 You have {retailerData?.pendingOrders} pending orders and {retailerData?.activeProjects} new projects available.
               </p>
             </div>
             <Link href="/retailers/projects">
-              <Button className="bg-white text-emerald-600 hover:bg-emerald-50">
+              <Button className="bg-white text-emerald-600 hover:bg-emerald-50 w-full sm:w-auto">
                 Browse Projects
                 <ArrowUpRight className="ml-2 h-4 w-4" />
               </Button>

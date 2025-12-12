@@ -699,8 +699,8 @@ export default function CreatorDashboard() {
                   </CardHeader>
                   <CardContent>
                     {data.recentBackers.length > 0 ? (
-                      <div className="rounded-lg border">
-                        <div className="grid grid-cols-5 gap-4 border-b bg-muted/50 p-3 text-sm font-medium">
+                      <div className="rounded-lg border overflow-x-auto">
+                        <div className="grid grid-cols-5 gap-4 border-b bg-muted/50 p-3 text-sm font-medium min-w-[600px]">
                           <div>Backer</div>
                           <div>Reward</div>
                           <div>Amount</div>
@@ -710,7 +710,7 @@ export default function CreatorDashboard() {
                         {data.recentBackers.map((backer, i) => (
                           <div
                             key={i}
-                            className="grid grid-cols-5 gap-4 border-b p-3 text-sm last:border-0"
+                            className="grid grid-cols-5 gap-4 border-b p-3 text-sm last:border-0 min-w-[600px]"
                           >
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6">

@@ -639,8 +639,8 @@ function ProjectListItem({ project }: { project: Project }) {
   return (
     <Link href={`/projects/${project.slug}`}>
       <Card className="overflow-hidden transition-all hover:shadow-lg">
-        <div className="flex">
-          <div className="aspect-video w-48 flex-shrink-0 bg-muted relative">
+        <div className="flex flex-col sm:flex-row">
+          <div className="aspect-video w-full sm:w-48 flex-shrink-0 bg-muted relative">
             {project.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img

@@ -361,7 +361,8 @@ export default function ReconcilePage() {
                     <AccordionContent>
                       <div className="pt-4 space-y-4">
                         {/* Comparison Grid */}
-                        <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="overflow-x-auto">
+                        <div className="grid grid-cols-3 gap-4 text-sm min-w-[400px]">
                           <div className="font-medium text-muted-foreground">Metric</div>
                           <div className="font-medium flex items-center gap-1">
                             <Database className="h-4 w-4" /> Database
@@ -399,6 +400,7 @@ export default function ReconcilePage() {
                           <div>
                             {result.stripe.successfulPayments} paid + {result.stripe.pendingSetupIntents} pending
                           </div>
+                        </div>
                         </div>
 
                         {/* Issues Details */}
