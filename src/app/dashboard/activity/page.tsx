@@ -22,6 +22,7 @@ import {
   Users,
   Package,
   RefreshCw,
+  ArrowLeft,
 } from "lucide-react";
 import { useSession } from "@/components/providers/auth-provider";
 
@@ -193,10 +194,10 @@ export default function ActivityPage() {
 
         <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
           <div className="container flex h-16 items-center">
-            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+            <Link href="/" className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
               IndieCrowdfund
             </Link>
-            <Badge variant="outline" className="ml-4 border-primary/30 text-primary">
+            <Badge variant="outline" className="ml-4 border-primary/30 text-primary hidden sm:flex">
               <Activity className="w-3 h-3 mr-1" />
               Activity
             </Badge>
@@ -252,11 +253,11 @@ export default function ActivityPage() {
 
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/" className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
               IndieCrowdfund
             </Link>
-            <Badge variant="outline" className="border-primary/30 text-primary">
+            <Badge variant="outline" className="border-primary/30 text-primary hidden sm:flex">
               <Sparkles className="w-3 h-3 mr-1" />
               Activity
             </Badge>
@@ -270,8 +271,13 @@ export default function ActivityPage() {
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             </Button>
-            <Link href="/dashboard">
+            <Link href="/dashboard" className="hidden sm:block">
               <Button variant="ghost" size="sm">Back to Dashboard</Button>
+            </Link>
+            <Link href="/dashboard" className="sm:hidden">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
             </Link>
           </div>
         </div>

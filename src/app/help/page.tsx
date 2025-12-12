@@ -179,7 +179,7 @@ export default function HelpPage() {
       {/* Quick Stats */}
       <section className="py-12 border-b">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-3 gap-8 text-center">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8 text-center">
             <div>
               <div className="flex items-center justify-center gap-2 text-emerald-600">
                 <Clock className="h-5 w-5" />

@@ -277,25 +277,25 @@ export default function SocialHubPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
               <ChevronLeft className="h-4 w-4" />
-              Dashboard
+              <span className="hidden sm:inline">Dashboard</span>
             </Link>
-            <div className="h-6 w-px bg-border" />
+            <div className="hidden sm:block h-6 w-px bg-border" />
             <div className="flex items-center gap-2">
               <Share2 className="h-5 w-5 text-primary" />
-              <h1 className="text-lg font-semibold">Social Hub</h1>
+              <h1 className="text-base sm:text-lg font-semibold">Social Hub</h1>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button variant="ghost" size="icon" className="hidden sm:flex">
               <Bell className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hidden sm:flex">
               <Settings className="h-5 w-5" />
             </Button>
-            <Avatar>
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
               <AvatarFallback>GT</AvatarFallback>
             </Avatar>
           </div>
@@ -328,20 +328,20 @@ export default function SocialHubPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
             <TabsTrigger value="create">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Create & Post
+              <Sparkles className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Create & Post</span>
             </TabsTrigger>
             <TabsTrigger value="scheduled">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              Scheduled
+              <CalendarIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Scheduled</span>
             </TabsTrigger>
             <TabsTrigger value="analytics">
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Analytics
+              <BarChart3 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Analytics</span>
             </TabsTrigger>
             <TabsTrigger value="accounts">
-              <Link2 className="mr-2 h-4 w-4" />
-              Accounts
+              <Link2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Accounts</span>
             </TabsTrigger>
           </TabsList>
 
