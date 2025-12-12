@@ -697,7 +697,7 @@ export default function PledgePage() {
                 {/* Pledge without reward */}
                 <Card className="border-zinc-200">
                   <CardContent className="p-5">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
                         <h3 className="font-semibold mb-1">Pledge without a reward</h3>
                         <p className="text-sm text-muted-foreground">
@@ -717,7 +717,7 @@ export default function PledgePage() {
                         </div>
                         <Button
                           onClick={handlePledgeWithoutReward}
-                          className="bg-[#028858] hover:bg-[#026d47] text-white"
+                          className="bg-[#028858] hover:bg-[#026d47] text-white whitespace-nowrap"
                         >
                           Pledge ${customPledgeAmount}
                         </Button>
@@ -727,7 +727,7 @@ export default function PledgePage() {
                 </Card>
 
                 {/* Available rewards header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <h3 className="font-semibold">Available rewards</h3>
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Ships to</span>
@@ -755,9 +755,9 @@ export default function PledgePage() {
                       return (
                         <Card key={reward.id} className="border-zinc-200 overflow-hidden">
                           <CardContent className="p-0">
-                            <div className="flex">
+                            <div className="flex flex-col md:flex-row">
                               {/* Left side - Content */}
-                              <div className="flex-1 p-5">
+                              <div className="flex-1 p-5 order-2 md:order-1">
                                 {/* Title */}
                                 <h4 className="font-semibold text-lg uppercase tracking-wide mb-1">
                                   {reward.title}
@@ -821,9 +821,9 @@ export default function PledgePage() {
                               </div>
 
                               {/* Right side - Image and button */}
-                              <div className="w-44 flex-shrink-0 flex flex-col border-l">
+                              <div className="w-full md:w-44 flex-shrink-0 flex flex-col border-t md:border-t-0 md:border-l order-1 md:order-2">
                                 {/* Image */}
-                                <div className="relative aspect-square bg-zinc-100">
+                                <div className="relative aspect-video md:aspect-square bg-zinc-100">
                                   {reward.imageUrl ? (
                                     <Image
                                       src={reward.imageUrl}
@@ -890,9 +890,9 @@ export default function PledgePage() {
                           }`}
                         >
                           <CardContent className="p-0">
-                            <div className="flex">
+                            <div className="flex flex-col md:flex-row">
                               {/* Left side - Content */}
-                              <div className="flex-1 p-5">
+                              <div className="flex-1 p-5 order-2 md:order-1">
                                 <h4 className="font-semibold text-lg uppercase tracking-wide mb-1">
                                   {addon.title}
                                 </h4>
@@ -942,8 +942,8 @@ export default function PledgePage() {
                               </div>
 
                               {/* Right side - Image and button */}
-                              <div className="w-44 flex-shrink-0 flex flex-col border-l">
-                                <div className="relative aspect-square bg-zinc-100">
+                              <div className="w-full md:w-44 flex-shrink-0 flex flex-col border-t md:border-t-0 md:border-l order-1 md:order-2">
+                                <div className="relative aspect-video md:aspect-square bg-zinc-100">
                                   {addon.imageUrl ? (
                                     <Image
                                       src={addon.imageUrl}
