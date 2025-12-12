@@ -365,6 +365,44 @@ export default function ProjectPage() {
     fetchProject();
   }, [slug]);
 
+  // Poll for real-time funding stats updates every 30 seconds
+  useEffect(() => {
+    if (!slug || loading || error) return;
+
+    const pollStats = async () => {
+      try {
+        const response = await fetch(`/api/projects/slug/${slug}/stats`);
+        if (response.ok) {
+          const stats = await response.json();
+          setProject((prev) => ({
+            ...prev,
+            currentAmount: stats.currentAmount,
+            backerCount: stats.backerCount,
+          }));
+        }
+      } catch (err) {
+        // Silently fail - don't interrupt user experience for polling errors
+        console.debug("Stats polling error:", err);
+      }
+    };
+
+    // Poll every 30 seconds
+    const intervalId = setInterval(pollStats, 30000);
+
+    // Also poll immediately when page becomes visible (user returns to tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        pollStats();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [slug, loading, error]);
+
   const tiers = rewards.filter((r) => r.type === "TIER");
   const availableRewards = tiers.filter((r) => r.quantityAvailable === null || r.quantityClaimed < r.quantityAvailable);
   const soldOutRewards = tiers.filter((r) => r.quantityAvailable !== null && r.quantityClaimed >= r.quantityAvailable);
