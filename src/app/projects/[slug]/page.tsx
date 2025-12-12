@@ -407,20 +407,32 @@ export default function ProjectPage() {
     checkExistingPledge();
   }, [project.id]);
 
-  // Poll for real-time funding stats updates every 30 seconds
+  // Track when stats were last updated for animation
+  const [statsJustUpdated, setStatsJustUpdated] = useState(false);
+
+  // Poll for real-time funding stats updates every 10 seconds
   useEffect(() => {
     if (!slug || loading || error) return;
 
     const pollStats = async () => {
       try {
-        const response = await fetch(`/api/projects/slug/${slug}/stats`);
+        const response = await fetch(`/api/projects/slug/${slug}/stats`, {
+          cache: "no-store",
+        });
         if (response.ok) {
           const stats = await response.json();
-          setProject((prev) => ({
-            ...prev,
-            currentAmount: stats.currentAmount,
-            backerCount: stats.backerCount,
-          }));
+          setProject((prev) => {
+            // Only trigger animation if values actually changed
+            if (prev.currentAmount !== stats.currentAmount || prev.backerCount !== stats.backerCount) {
+              setStatsJustUpdated(true);
+              setTimeout(() => setStatsJustUpdated(false), 1500);
+            }
+            return {
+              ...prev,
+              currentAmount: stats.currentAmount,
+              backerCount: stats.backerCount,
+            };
+          });
         }
       } catch (err) {
         // Silently fail - don't interrupt user experience for polling errors
@@ -428,8 +440,11 @@ export default function ProjectPage() {
       }
     };
 
-    // Poll every 30 seconds
-    const intervalId = setInterval(pollStats, 30000);
+    // Poll immediately on mount
+    pollStats();
+
+    // Poll every 10 seconds for more responsive updates
+    const intervalId = setInterval(pollStats, 10000);
 
     // Also poll immediately when page becomes visible (user returns to tab)
     const handleVisibilityChange = () => {
@@ -772,7 +787,7 @@ export default function ProjectPage() {
               {/* Progress bar */}
               <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#05ce78] rounded-full transition-all duration-500"
+                  className={`h-full bg-[#05ce78] rounded-full transition-all duration-700 ease-out ${statsJustUpdated ? "bg-[#04b56a]" : ""}`}
                   style={{ width: `${Math.min(fundingPercentage, 100)}%` }}
                 />
               </div>
@@ -780,7 +795,7 @@ export default function ProjectPage() {
               {/* Funding amount */}
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-[#05ce78]">
+                  <span className={`text-3xl font-bold text-[#05ce78] transition-all duration-500 ${statsJustUpdated ? "scale-110 text-[#04b56a]" : ""}`}>
                     {formatMoney(project.currentAmount)}
                   </span>
                   <Info className="h-4 w-4 text-muted-foreground cursor-help" />
@@ -792,7 +807,7 @@ export default function ProjectPage() {
 
               {/* Backers */}
               <div>
-                <p className="text-2xl font-bold">{project.backerCount.toLocaleString()}</p>
+                <p className={`text-2xl font-bold transition-all duration-500 ${statsJustUpdated ? "scale-110 text-[#05ce78]" : ""}`}>{project.backerCount.toLocaleString()}</p>
                 <p className="text-sm text-muted-foreground">backers</p>
               </div>
 
