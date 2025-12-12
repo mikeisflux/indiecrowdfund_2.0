@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processUnsentConfirmationEmails } from "@/lib/notifications";
 
-/**
- * Cron job endpoint for processing unsent pledge confirmation emails
- *
- * This should be called by a cron service (Vercel Cron, Railway, etc.)
- * Schedule: Every 15 minutes or hourly
- *
- * Example Vercel cron config (vercel.json):
- * {
- *   "crons": [{
- *     "path": "/api/cron/email-retries",
- *     "schedule": "*/15 * * * *"
- *   }]
- * }
- *
- * Security: Protected by CRON_SECRET environment variable
- */
+// Cron job endpoint for processing unsent pledge confirmation emails
+//
+// This should be called by a cron service (Vercel Cron, Railway, etc.)
+// Schedule: Every 15 minutes or hourly
+//
+// Example Vercel cron config (vercel.json):
+// { "crons": [{ "path": "/api/cron/email-retries", "schedule": "0/15 * * * *" }] }
+//
+// Security: Protected by CRON_SECRET environment variable
+
 export async function GET(req: NextRequest) {
   try {
     // Verify cron secret for security
