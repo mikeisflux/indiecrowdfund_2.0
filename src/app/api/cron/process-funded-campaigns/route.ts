@@ -78,8 +78,8 @@ export async function GET(req: NextRequest) {
     // A project is "funded" when currentAmount >= goalAmount
     const fundedProjectsWithPendingPledges = await db.project.findMany({
       where: {
-        // Only active/published projects
-        status: { in: ["ACTIVE", "APPROVED"] },
+        // Only active/published projects (LIVE = running campaign, FUNDED = reached goal)
+        status: { in: ["LIVE", "FUNDED"] },
         // Campaign must be funded (currentAmount >= goalAmount)
         // Using raw query comparison since Prisma doesn't support field comparison directly
       },
