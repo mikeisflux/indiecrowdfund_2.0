@@ -587,6 +587,12 @@ export default function BackerDashboard() {
                                   View Project
                                 </Button>
                               </Link>
+                              <Link href={`/dashboard/pledges/${project.pledge.id}`}>
+                                <Button variant="outline" size="sm" className="hover:border-primary/50">
+                                  <Settings className="mr-2 h-3 w-3" />
+                                  Manage Pledge
+                                </Button>
+                              </Link>
                               <Link href="/dashboard/messages" className="hidden sm:block">
                                 <Button variant="outline" size="sm" className="hover:border-primary/50">
                                   <MessageSquare className="mr-2 h-3 w-3" />
