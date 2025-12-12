@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
  * GET /api/projects/slug/[slug]/stats
  * Lightweight endpoint to fetch just funding stats for real-time updates
  * Returns only currentAmount and backerCount to minimize data transfer
+ *
+ * Also auto-syncs stats if they appear to be stale (self-healing)
  */
 export async function GET(
   req: NextRequest,
@@ -31,19 +33,59 @@ export async function GET(
       );
     }
 
-    // Set cache headers for short-term caching (5 seconds)
-    // This prevents excessive DB queries while keeping data relatively fresh
+    // Auto-sync: Check if stats match actual pledge data
+    // This self-heals when webhooks fail or are delayed
+    const pledgeStats = await db.pledge.aggregate({
+      where: {
+        projectId: project.id,
+        OR: [
+          { status: "COMPLETED" },
+          {
+            status: "PENDING",
+            stripePaymentMethodId: { not: null },
+          },
+        ],
+      },
+      _sum: { amount: true },
+      _count: { id: true },
+    });
+
+    const actualAmount = pledgeStats._sum.amount || 0;
+    const actualBackerCount = pledgeStats._count.id || 0;
+
+    // If stats are out of sync, update them
+    let currentAmount = project.currentAmount;
+    let backerCount = project.backerCount;
+
+    if (project.currentAmount !== actualAmount || project.backerCount !== actualBackerCount) {
+      const updated = await db.project.update({
+        where: { id: project.id },
+        data: {
+          currentAmount: actualAmount,
+          backerCount: actualBackerCount,
+        },
+        select: {
+          currentAmount: true,
+          backerCount: true,
+        },
+      });
+      currentAmount = updated.currentAmount;
+      backerCount = updated.backerCount;
+      console.log(`[Auto-sync] Project ${project.id} stats corrected: $${actualAmount} from ${actualBackerCount} backers`);
+    }
+
+    // No caching - always return fresh data
     return NextResponse.json(
       {
-        currentAmount: project.currentAmount,
-        backerCount: project.backerCount,
+        currentAmount,
+        backerCount,
         goalAmount: project.goalAmount,
-        fundingPercentage: (project.currentAmount / project.goalAmount) * 100,
+        fundingPercentage: (currentAmount / project.goalAmount) * 100,
         status: project.status,
       },
       {
         headers: {
-          "Cache-Control": "public, max-age=5, stale-while-revalidate=10",
+          "Cache-Control": "no-store, no-cache, must-revalidate",
         },
       }
     );
