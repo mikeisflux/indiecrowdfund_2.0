@@ -603,6 +603,57 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
     return false;
   }
 
+  // CRITICAL SAFETY CHECK: Verify payment method is still attached to customer
+  // This prevents charging if admin cancelled/deleted the pledge and detached the payment method
+  try {
+    const paymentMethod = await stripeClient.paymentMethods.retrieve(pledge.stripePaymentMethodId);
+    if (!paymentMethod.customer) {
+      console.log(`[ChargePledge] Payment method ${pledge.stripePaymentMethodId} is detached - skipping charge for pledge ${pledgeId}`);
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          status: "CANCELLED",
+          lastFailureReason: "Payment method was detached (likely cancelled by admin)",
+          stripePaymentMethodId: null,
+        },
+      });
+      return false;
+    }
+    // Also verify it's attached to the correct customer
+    if (paymentMethod.customer !== pledge.stripeCustomerId) {
+      console.log(`[ChargePledge] Payment method ${pledge.stripePaymentMethodId} attached to wrong customer - skipping`);
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          status: "FAILED",
+          lastFailureReason: "Payment method attached to different customer",
+        },
+      });
+      return false;
+    }
+  } catch (pmError) {
+    console.log(`[ChargePledge] Could not retrieve payment method ${pledge.stripePaymentMethodId} - marking as cancelled`);
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: {
+        status: "CANCELLED",
+        lastFailureReason: "Payment method not found (likely cancelled by admin)",
+        stripePaymentMethodId: null,
+      },
+    });
+    return false;
+  }
+
+  // SAFETY: Re-verify pledge status right before charging (prevents race conditions)
+  const freshPledge = await db.pledge.findUnique({
+    where: { id: pledgeId },
+    select: { status: true, stripePaymentMethodId: true },
+  });
+  if (freshPledge?.status !== "PENDING" || !freshPledge.stripePaymentMethodId) {
+    console.log(`[ChargePledge] Pledge ${pledgeId} status changed to ${freshPledge?.status} - skipping charge`);
+    return false;
+  }
+
   const connectedAccountId = pledge.project.creator.stripeConfig?.stripeAccountId;
   if (!connectedAccountId) {
     throw new Error("Creator has not connected Stripe");

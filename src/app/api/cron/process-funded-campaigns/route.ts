@@ -5,15 +5,18 @@ import { processPendingPledgesForProject, getStripeInstance } from "@/lib/paymen
 /**
  * Sync payment methods from Stripe for pledges that have SetupIntents
  * but are missing payment method IDs (e.g., webhook failed)
+ *
+ * SAFETY: Only syncs for PENDING pledges - cancelled pledges are skipped
  */
 async function syncPaymentMethodsFromStripe(projectId: string) {
   const stripe = await getStripeInstance();
 
   // Find pending pledges with SetupIntent but no payment method
+  // CRITICAL: Only sync for PENDING status - never for CANCELLED/FAILED/etc
   const pledgesNeedingSync = await db.pledge.findMany({
     where: {
       projectId,
-      status: "PENDING",
+      status: "PENDING", // SAFETY: Only PENDING pledges
       stripeSetupIntentId: { not: null },
       stripePaymentMethodId: null,
     },
@@ -26,19 +29,47 @@ async function syncPaymentMethodsFromStripe(projectId: string) {
   let synced = 0;
   for (const pledge of pledgesNeedingSync) {
     try {
+      // SAFETY: Re-verify pledge is still PENDING before syncing
+      const currentPledge = await db.pledge.findUnique({
+        where: { id: pledge.id },
+        select: { status: true },
+      });
+
+      if (currentPledge?.status !== "PENDING") {
+        console.log(`[Cron Sync] Skipping pledge ${pledge.id} - status changed to ${currentPledge?.status}`);
+        continue;
+      }
+
       const setupIntent = await stripe.setupIntents.retrieve(pledge.stripeSetupIntentId!);
+
+      // SAFETY: Only sync if SetupIntent succeeded AND wasn't cancelled
       if (setupIntent.status === "succeeded" && setupIntent.payment_method) {
         const paymentMethodId = typeof setupIntent.payment_method === "string"
           ? setupIntent.payment_method
           : setupIntent.payment_method.id;
+
+        // SAFETY: Double-check the payment method is still attached/valid
+        try {
+          const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+          if (!pm.customer) {
+            console.log(`[Cron Sync] Skipping pledge ${pledge.id} - payment method ${paymentMethodId} is detached`);
+            continue;
+          }
+        } catch {
+          console.log(`[Cron Sync] Skipping pledge ${pledge.id} - payment method ${paymentMethodId} not found`);
+          continue;
+        }
 
         await db.pledge.update({
           where: { id: pledge.id },
           data: { stripePaymentMethodId: paymentMethodId },
         });
         synced++;
+      } else if (setupIntent.status === "canceled") {
+        console.log(`[Cron Sync] SetupIntent ${pledge.stripeSetupIntentId} was cancelled - skipping`);
       }
-    } catch {
+    } catch (error) {
+      console.warn(`[Cron Sync] Error syncing pledge ${pledge.id}:`, error);
       // Ignore errors - will be retried next cron run
     }
   }
