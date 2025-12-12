@@ -29,7 +29,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
+  // Wrap auth call in try-catch to prevent RSC prefetch failures
+  let session = null;
+  try {
+    session = await auth();
+  } catch (error) {
+    console.error("Layout auth error:", error);
+    // Continue with null session - auth components will handle gracefully
+  }
 
   return (
     <html lang="en" suppressHydrationWarning>

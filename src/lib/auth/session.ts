@@ -57,62 +57,72 @@ export async function createSession(userId: string): Promise<string> {
 
 // Validate session and get user - cached per request
 export const validateSession = cache(async (): Promise<Session | null> => {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-  if (!token) {
-    return null;
-  }
+    if (!token) {
+      return null;
+    }
 
-  const session = await db.session.findUnique({
-    where: { sessionToken: token },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          image: true,
-          role: true,
+    const session = await db.session.findUnique({
+      where: { sessionToken: token },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            image: true,
+            role: true,
+          },
         },
       },
-    },
-  });
-
-  if (!session) {
-    return null;
-  }
-
-  // Check if session has expired
-  if (session.expires < new Date()) {
-    await db.session.delete({ where: { sessionToken: token } });
-    return null;
-  }
-
-  // Extend session if it's more than halfway through
-  const halfLife = SESSION_MAX_AGE * 500; // Half of max age in ms
-  if (session.expires.getTime() - Date.now() < halfLife) {
-    const newExpires = new Date(Date.now() + SESSION_MAX_AGE * 1000);
-    await db.session.update({
-      where: { sessionToken: token },
-      data: { expires: newExpires },
     });
 
-    const useSecureCookies = process.env.SECURE_COOKIES === "true";
-    const cookieStore = await cookies();
-    cookieStore.set(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: useSecureCookies,
-      sameSite: "lax",
-      expires: newExpires,
-      path: "/",
-    });
-  }
+    if (!session) {
+      return null;
+    }
 
-  return {
-    user: session.user,
-    expires: session.expires,
-  };
+    // Check if session has expired
+    if (session.expires < new Date()) {
+      await db.session.delete({ where: { sessionToken: token } }).catch(() => {});
+      return null;
+    }
+
+    // Extend session if it's more than halfway through
+    const halfLife = SESSION_MAX_AGE * 500; // Half of max age in ms
+    if (session.expires.getTime() - Date.now() < halfLife) {
+      const newExpires = new Date(Date.now() + SESSION_MAX_AGE * 1000);
+      try {
+        await db.session.update({
+          where: { sessionToken: token },
+          data: { expires: newExpires },
+        });
+
+        const useSecureCookies = process.env.SECURE_COOKIES === "true";
+        const updatedCookieStore = await cookies();
+        updatedCookieStore.set(SESSION_COOKIE_NAME, token, {
+          httpOnly: true,
+          secure: useSecureCookies,
+          sameSite: "lax",
+          expires: newExpires,
+          path: "/",
+        });
+      } catch {
+        // Ignore session extension errors - the session is still valid
+      }
+    }
+
+    return {
+      user: session.user,
+      expires: session.expires,
+    };
+  } catch (error) {
+    // Log error but don't throw - return null to allow graceful handling
+    console.error("Session validation error:", error);
+    return null;
+  }
 });
 
 // Delete session (logout)
