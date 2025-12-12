@@ -183,6 +183,7 @@ model Project {
   currentAmount         Float         @default(0)
   backerCount           Int           @default(0)
   followerCount         Int           @default(0)
+  isStaffPick           Boolean       @default(false)
 
   // Relations
   creator               User          @relation("ProjectCreator", fields: [creatorId], references: [id])
