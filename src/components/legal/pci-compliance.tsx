@@ -1,0 +1,140 @@
+/* eslint-disable react/no-unescaped-entities */
+
+import { Lock } from "lucide-react";
+
+export function PciComplianceContent() {
+  return (
+    <div className="prose prose-zinc dark:prose-invert max-w-none">
+      <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
+        <h2 className="text-2xl font-bold mb-2">PCI Compliance Certification</h2>
+        <p className="text-sm text-zinc-500 mb-8">
+          <strong>Last Updated:</strong> December 11, 2025
+        </p>
+
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-6 mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Lock className="h-6 w-6 text-emerald-600" />
+            <h3 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 m-0">Payment Security Status</h3>
+          </div>
+          <p className="text-emerald-700 dark:text-emerald-300 m-0">
+            IndieCrowdfund maintains PCI DSS compliance by partnering with Stripe, a <strong>Level 1 PCI Service Provider</strong>—the highest level of certification in the payment card industry.
+          </p>
+        </div>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">1. What is PCI DSS?</h3>
+        <p className="mb-4">
+          The Payment Card Industry Data Security Standard (PCI DSS) is a set of security standards designed to ensure that ALL companies that accept, process, store, or transmit credit card information maintain a secure environment.
+        </p>
+        <p className="mb-6">
+          PCI DSS compliance is mandatory for any organization that handles cardholder data, and helps protect consumers from credit card fraud and data breaches.
+        </p>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">2. Our Approach to Payment Security</h3>
+        <p className="mb-4">IndieCrowdfund takes a security-first approach to handling payment information:</p>
+        <ul className="list-disc pl-6 mb-6 space-y-2">
+          <li><strong>No storage of card data:</strong> We never store, process, or transmit full credit card numbers on our servers</li>
+          <li><strong>Tokenization:</strong> All payment information is securely tokenized by Stripe before reaching our systems</li>
+          <li><strong>Encrypted connections:</strong> All data transmission uses TLS 1.2+ encryption</li>
+          <li><strong>Secure checkout:</strong> Payment forms are served directly from Stripe's PCI-compliant infrastructure</li>
+        </ul>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">3. Our Payment Partner: Stripe</h3>
+        <p className="mb-4">
+          All payment processing on IndieCrowdfund is handled by Stripe, Inc. Stripe maintains the highest level of PCI compliance:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li><strong>PCI DSS Level 1:</strong> The most rigorous level of certification, processing over 6 million transactions annually</li>
+          <li><strong>Annual audits:</strong> Conducted by a PCI-qualified security assessor (QSA)</li>
+          <li><strong>SOC 2 Type II:</strong> Certified for security, availability, and confidentiality</li>
+          <li><strong>ISO 27001:</strong> Certified information security management system</li>
+        </ul>
+        <p className="mb-6">
+          For more information about Stripe's security practices, visit{" "}
+          <a href="https://stripe.com/docs/security" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
+            stripe.com/docs/security
+          </a>
+        </p>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">4. SAQ A Compliance</h3>
+        <p className="mb-4">
+          IndieCrowdfund qualifies for SAQ A (Self-Assessment Questionnaire A), which applies to merchants who:
+        </p>
+        <ul className="list-disc pl-6 mb-6 space-y-2">
+          <li>Have completely outsourced all cardholder data functions to PCI DSS validated third-party service providers</li>
+          <li>Do not electronically store, process, or transmit any cardholder data on their systems</li>
+          <li>Use only a PCI DSS compliant payment gateway (Stripe) for all transactions</li>
+        </ul>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">5. Security Measures We Implement</h3>
+        <p className="mb-4">Beyond delegating payment processing to Stripe, we implement additional security measures:</p>
+        <ul className="list-disc pl-6 mb-6 space-y-2">
+          <li><strong>HTTPS everywhere:</strong> Our entire platform uses SSL/TLS encryption</li>
+          <li><strong>Regular security audits:</strong> We conduct periodic security assessments</li>
+          <li><strong>Access controls:</strong> Strict role-based access to sensitive systems</li>
+          <li><strong>Fraud detection:</strong> Stripe Radar helps prevent fraudulent transactions</li>
+          <li><strong>Secure authentication:</strong> Multi-factor authentication available for user accounts</li>
+          <li><strong>Data minimization:</strong> We only collect and retain data necessary for operations</li>
+        </ul>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">6. What This Means for You</h3>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">For Backers:</h4>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>Your payment card information is never stored on IndieCrowdfund servers</li>
+          <li>All transactions are protected by bank-level security</li>
+          <li>Stripe's fraud protection helps prevent unauthorized charges</li>
+          <li>You can manage saved payment methods securely through your account</li>
+        </ul>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">For Creators:</h4>
+        <ul className="list-disc pl-6 mb-6 space-y-2">
+          <li>Funds are securely processed through Stripe Connect</li>
+          <li>Payout information is protected by Stripe's security infrastructure</li>
+          <li>You never have direct access to backer payment card details</li>
+          <li>Chargeback and dispute handling follows industry-standard procedures</li>
+        </ul>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">7. Reporting Security Concerns</h3>
+        <p className="mb-4">
+          If you believe you have discovered a security vulnerability or have concerns about payment security, please contact us immediately:
+        </p>
+        <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4 mb-6">
+          <p className="font-semibold mb-2">Security Team</p>
+          <p className="mb-1">
+            Email:{" "}
+            <a href="mailto:security@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+              security@indiecrowdfund.com
+            </a>
+          </p>
+          <p>
+            For urgent security matters:{" "}
+            <a href="mailto:compliance@indiecrowdfund.com" className="text-emerald-600 hover:underline">
+              compliance@indiecrowdfund.com
+            </a>
+          </p>
+        </div>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">8. Compliance Verification</h3>
+        <p className="mb-4">
+          Our PCI compliance status can be verified through:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>Stripe's PCI attestation available at{" "}
+            <a href="https://stripe.com/docs/security/stripe" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
+              stripe.com/docs/security/stripe
+            </a>
+          </li>
+          <li>Our Attestation of Compliance (AOC) is available upon request for business partners</li>
+          <li>Contact <a href="mailto:compliance@indiecrowdfund.com" className="text-emerald-600 hover:underline">compliance@indiecrowdfund.com</a> for verification requests</li>
+        </ul>
+
+        <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-6 mt-8">
+          <h4 className="text-lg font-semibold mb-4">Summary</h4>
+          <p className="mb-0">
+            IndieCrowdfund maintains PCI DSS compliance by partnering exclusively with Stripe, a Level 1 PCI Service Provider. We never store credit card information on our servers, and all payment transactions are processed through Stripe's secure, PCI-compliant infrastructure. This approach ensures the highest level of protection for all financial transactions on our platform.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
