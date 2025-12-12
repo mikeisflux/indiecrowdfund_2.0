@@ -53,7 +53,6 @@ import {
   MapPin,
   Bell,
   RefreshCw,
-  Send,
   ExternalLink,
   DollarSign,
 } from "lucide-react";
@@ -199,11 +198,11 @@ export default function UsersPage() {
   const [userEmails, setUserEmails] = useState<EmailLogEntry[]>([]);
   const [loadingPledges, setLoadingPledges] = useState(false);
   const [loadingEmails, setLoadingEmails] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [viewingEmail, setViewingEmail] = useState<EmailLogEntry | null>(null);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [cancellingPledge, setCancellingPledge] = useState<string | null>(null);
   const [refundingPledge, setRefundingPledge] = useState<string | null>(null);
+  const [resendingReceipt, setResendingReceipt] = useState<string | null>(null);
 
   // API data state
   const [users, setUsers] = useState<User[]>([]);
@@ -404,32 +403,6 @@ export default function UsersPage() {
     }
   };
 
-  // Send/resend confirmation email for a pledge
-  const handleSendConfirmationEmail = async (userId: string, pledgeId: string, forceResend: boolean = false) => {
-    setSendingEmail(pledgeId);
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/emails`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pledgeId, forceResend }),
-      });
-      if (response.ok) {
-        // Refresh pledges and emails after sending
-        await Promise.all([
-          fetchUserPledges(userId),
-          fetchUserEmails(userId),
-        ]);
-      } else {
-        const error = await response.json();
-        console.error("Failed to send email:", error);
-      }
-    } catch (error) {
-      console.error("Failed to send confirmation email:", error);
-    } finally {
-      setSendingEmail(null);
-    }
-  };
-
   // View email content in preview
   const handleViewEmail = (email: EmailLogEntry) => {
     setViewingEmail(email);
@@ -518,6 +491,39 @@ export default function UsersPage() {
       alert("Failed to delete pledge");
     } finally {
       setCancellingPledge(null);
+    }
+  };
+
+  // Resend pledge receipt email (admin) - uses the exact same email as original pledge confirmation
+  const handleResendReceipt = async (pledgeId: string) => {
+    if (!selectedUser) return;
+    if (!confirm("Resend the pledge receipt email to this backer?")) return;
+
+    setResendingReceipt(pledgeId);
+    try {
+      const response = await fetch(`/api/admin/pledges/${pledgeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resend_receipt" }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(data.message || "Receipt email sent successfully");
+        // Refresh pledges and emails after sending
+        await Promise.all([
+          fetchUserPledges(selectedUser.id),
+          fetchUserEmails(selectedUser.id),
+        ]);
+      } else {
+        alert(data.error || "Failed to send receipt email");
+      }
+    } catch (error) {
+      console.error("Failed to resend receipt:", error);
+      alert("Failed to send receipt email");
+    } finally {
+      setResendingReceipt(null);
     }
   };
 
@@ -1437,26 +1443,17 @@ export default function UsersPage() {
                               </p>
                             </div>
                             <div className="flex flex-col gap-2">
-                              {/* Email buttons */}
-                              {!pledge.confirmationEmailSent && (pledge.status === "COMPLETED" || pledge.stripePaymentMethodId) && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSendConfirmationEmail(selectedUser.id, pledge.id)}
-                                  disabled={sendingEmail === pledge.id}
-                                >
-                                  <Send className="h-3 w-3 mr-1" />
-                                  {sendingEmail === pledge.id ? "Sending..." : "Send Receipt"}
-                                </Button>
-                              )}
-                              {pledge.confirmationEmailSent && (
+                              {/* Resend Receipt button - always available for active pledges */}
+                              {(pledge.status === "PENDING" || pledge.status === "COMPLETED") && (
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleSendConfirmationEmail(selectedUser.id, pledge.id, true)}
-                                  disabled={sendingEmail === pledge.id}
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  onClick={() => handleResendReceipt(pledge.id)}
+                                  disabled={resendingReceipt === pledge.id}
                                 >
-                                  <RefreshCw className="h-3 w-3 mr-1" />
-                                  {sendingEmail === pledge.id ? "Sending..." : "Resend"}
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  {resendingReceipt === pledge.id ? "Sending..." : "Resend Receipt"}
                                 </Button>
                               )}
                               {/* Cancel button for PENDING pledges */}

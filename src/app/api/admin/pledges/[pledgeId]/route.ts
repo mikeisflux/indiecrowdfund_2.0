@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
+import { sendPledgeConfirmationEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -134,9 +135,19 @@ export async function PATCH(
         project: {
           select: {
             id: true,
+            title: true,
+            slug: true,
             status: true,
             currentAmount: true,
             goalAmount: true,
+            imageUrl: true,
+            currency: true,
+          },
+        },
+        reward: {
+          select: {
+            id: true,
+            title: true,
           },
         },
         user: {
@@ -151,6 +162,51 @@ export async function PATCH(
 
     if (!pledge) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    }
+
+    // Resend receipt email
+    if (action === "resend_receipt") {
+      if (!pledge.user.email) {
+        return NextResponse.json(
+          { error: "User has no email address" },
+          { status: 400 }
+        );
+      }
+
+      // Determine if charged immediately based on pledge status
+      const chargedImmediately = pledge.status === "COMPLETED";
+
+      try {
+        const result = await sendPledgeConfirmationEmail(
+          pledge.user.email,
+          pledge.user.name || "Backer",
+          pledge.project.title,
+          pledge.project.slug,
+          pledge.amount,
+          pledge.reward?.title || null,
+          chargedImmediately,
+          pledge.project.imageUrl,
+          pledge.project.currency || "USD"
+        );
+
+        if (result.success) {
+          return NextResponse.json({
+            success: true,
+            message: `Receipt email sent to ${pledge.user.email}`,
+          });
+        } else {
+          return NextResponse.json(
+            { error: result.error || "Failed to send receipt email" },
+            { status: 500 }
+          );
+        }
+      } catch (emailError) {
+        console.error("Error sending receipt email:", emailError);
+        return NextResponse.json(
+          { error: "Failed to send receipt email" },
+          { status: 500 }
+        );
+      }
     }
 
     if (action === "cancel") {
@@ -263,7 +319,7 @@ export async function PATCH(
       });
     }
 
-    return NextResponse.json({ error: "Invalid action. Use 'cancel' or 'refund'" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid action. Use 'cancel', 'refund', or 'resend_receipt'" }, { status: 400 });
   } catch (error) {
     console.error("Admin update pledge error:", error);
     return NextResponse.json(

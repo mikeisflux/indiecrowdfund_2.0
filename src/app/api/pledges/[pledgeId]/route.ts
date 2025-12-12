@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import Stripe from "stripe";
+import { getStripeInstance } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-11-17.clover",
-});
 
 // GET - Get pledge details
 export async function GET(
@@ -154,6 +150,7 @@ export async function PATCH(
       }
 
       // Cancel any Stripe intents
+      const stripe = await getStripeInstance();
       if (pledge.stripeSetupIntentId) {
         try {
           await stripe.setupIntents.cancel(pledge.stripeSetupIntentId);
@@ -216,7 +213,8 @@ export async function PATCH(
         const platformFee = Math.round(additionalAmount * 0.03 * 100);
 
         try {
-          const paymentIntent = await stripe.paymentIntents.create({
+          const stripeClient = await getStripeInstance();
+          const paymentIntent = await stripeClient.paymentIntents.create({
             amount: amountInCents,
             currency: "usd",
             customer: pledge.stripeCustomerId || undefined,
@@ -347,6 +345,7 @@ export async function DELETE(
     }
 
     // Cancel any Stripe intents
+    const stripe = await getStripeInstance();
     if (pledge.stripeSetupIntentId) {
       try {
         await stripe.setupIntents.cancel(pledge.stripeSetupIntentId);
