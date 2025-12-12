@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/payment-retries",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/process-funded-campaigns",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/email-retries",
+      "schedule": "0 */4 * * *"
     }
   ]
 }
