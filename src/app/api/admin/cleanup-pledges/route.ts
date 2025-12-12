@@ -151,16 +151,24 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * POST - Safely cancel and clean up a pledge
+ * POST - Safely cancel, clean up, or repair a pledge
  *
  * Body:
- * - pledgeId: The pledge to clean up
- * - action: "cancel" | "delete"
+ * - pledgeId: The pledge to clean up (optional if action is "repair-all")
+ * - projectId: Required for "repair-all" action
+ * - action: "cancel" | "delete" | "repair" | "repair-all"
  *
- * This will:
+ * For cancel/delete:
  * 1. Detach the payment method from Stripe
  * 2. Cancel any pending intents
  * 3. Update/delete the pledge
+ *
+ * For repair:
+ * - Checks actual PaymentIntent status in Stripe and updates pledge accordingly
+ * - Fixes stuck PENDING pledges that were actually charged successfully
+ *
+ * For repair-all:
+ * - Repairs all PENDING pledges with PaymentIntentIds for a project
  */
 export async function POST(req: NextRequest) {
   try {
@@ -174,14 +182,27 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { pledgeId, action } = body;
+    const { pledgeId, projectId, action } = body;
+
+    // Handle repair-all action
+    if (action === "repair-all") {
+      if (!projectId) {
+        return NextResponse.json({ error: "projectId required for repair-all" }, { status: 400 });
+      }
+      return await repairAllPledges(projectId);
+    }
 
     if (!pledgeId) {
       return NextResponse.json({ error: "pledgeId required" }, { status: 400 });
     }
 
+    // Handle repair action for single pledge
+    if (action === "repair") {
+      return await repairSinglePledge(pledgeId);
+    }
+
     if (!["cancel", "delete"].includes(action)) {
-      return NextResponse.json({ error: "action must be 'cancel' or 'delete'" }, { status: 400 });
+      return NextResponse.json({ error: "action must be 'cancel', 'delete', 'repair', or 'repair-all'" }, { status: 400 });
     }
 
     const pledge = await db.pledge.findUnique({
@@ -299,4 +320,222 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Repair a single pledge by checking its actual Stripe status
+ */
+async function repairSinglePledge(pledgeId: string) {
+  const stripe = await getStripeInstance();
+
+  const pledge = await db.pledge.findUnique({
+    where: { id: pledgeId },
+  });
+
+  if (!pledge) {
+    return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+  }
+
+  if (pledge.status !== "PENDING") {
+    return NextResponse.json({
+      success: false,
+      message: `Pledge is already ${pledge.status}, no repair needed`,
+      pledgeId,
+    });
+  }
+
+  // Check PaymentIntent status in Stripe
+  if (pledge.stripePaymentIntentId) {
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(pledge.stripePaymentIntentId);
+
+      if (paymentIntent.status === "succeeded") {
+        // Payment actually succeeded - update pledge to COMPLETED
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            status: "COMPLETED",
+            retryCount: 0,
+            nextRetryAt: null,
+            lastFailureReason: null,
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          pledgeId,
+          action: "repair",
+          stripeStatus: "succeeded",
+          newStatus: "COMPLETED",
+          message: "Pledge status updated to COMPLETED based on Stripe PaymentIntent status",
+        });
+      } else if (paymentIntent.status === "canceled") {
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            status: "CANCELLED",
+            lastFailureReason: "PaymentIntent was cancelled in Stripe",
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          pledgeId,
+          action: "repair",
+          stripeStatus: "canceled",
+          newStatus: "CANCELLED",
+          message: "Pledge status updated to CANCELLED based on Stripe PaymentIntent status",
+        });
+      } else if (paymentIntent.status === "requires_payment_method" && paymentIntent.last_payment_error) {
+        // Payment failed
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            status: "FAILED",
+            lastFailureReason: paymentIntent.last_payment_error.message || "Payment failed",
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          pledgeId,
+          action: "repair",
+          stripeStatus: paymentIntent.status,
+          newStatus: "FAILED",
+          message: "Pledge status updated to FAILED based on Stripe PaymentIntent status",
+        });
+      } else {
+        return NextResponse.json({
+          success: false,
+          pledgeId,
+          stripeStatus: paymentIntent.status,
+          message: `PaymentIntent is in status '${paymentIntent.status}', no action taken`,
+        });
+      }
+    } catch (e) {
+      return NextResponse.json({
+        success: false,
+        pledgeId,
+        error: `Failed to retrieve PaymentIntent: ${e}`,
+      });
+    }
+  }
+
+  return NextResponse.json({
+    success: false,
+    pledgeId,
+    message: "Pledge has no PaymentIntent to check",
+  });
+}
+
+/**
+ * Repair all PENDING pledges with PaymentIntents for a project
+ */
+async function repairAllPledges(projectId: string) {
+  const stripe = await getStripeInstance();
+
+  // Find all PENDING pledges with PaymentIntent IDs
+  const pledges = await db.pledge.findMany({
+    where: {
+      projectId,
+      status: "PENDING",
+      stripePaymentIntentId: { not: null },
+    },
+  });
+
+  if (pledges.length === 0) {
+    return NextResponse.json({
+      success: true,
+      message: "No PENDING pledges with PaymentIntents found",
+      total: 0,
+      repaired: 0,
+      failed: 0,
+    });
+  }
+
+  const results = {
+    total: pledges.length,
+    repaired: 0,
+    failed: 0,
+    cancelled: 0,
+    unchanged: 0,
+    details: [] as Array<{
+      pledgeId: string;
+      stripeStatus: string;
+      newStatus: string | null;
+      error?: string;
+    }>,
+  };
+
+  for (const pledge of pledges) {
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(pledge.stripePaymentIntentId!);
+
+      if (paymentIntent.status === "succeeded") {
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: {
+            status: "COMPLETED",
+            retryCount: 0,
+            nextRetryAt: null,
+            lastFailureReason: null,
+          },
+        });
+        results.repaired++;
+        results.details.push({
+          pledgeId: pledge.id,
+          stripeStatus: "succeeded",
+          newStatus: "COMPLETED",
+        });
+      } else if (paymentIntent.status === "canceled") {
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: {
+            status: "CANCELLED",
+            lastFailureReason: "PaymentIntent was cancelled in Stripe",
+          },
+        });
+        results.cancelled++;
+        results.details.push({
+          pledgeId: pledge.id,
+          stripeStatus: "canceled",
+          newStatus: "CANCELLED",
+        });
+      } else if (paymentIntent.status === "requires_payment_method" && paymentIntent.last_payment_error) {
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: {
+            status: "FAILED",
+            lastFailureReason: paymentIntent.last_payment_error.message || "Payment failed",
+          },
+        });
+        results.failed++;
+        results.details.push({
+          pledgeId: pledge.id,
+          stripeStatus: paymentIntent.status,
+          newStatus: "FAILED",
+        });
+      } else {
+        results.unchanged++;
+        results.details.push({
+          pledgeId: pledge.id,
+          stripeStatus: paymentIntent.status,
+          newStatus: null,
+        });
+      }
+    } catch (e) {
+      results.details.push({
+        pledgeId: pledge.id,
+        stripeStatus: "error",
+        newStatus: null,
+        error: String(e),
+      });
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: `Repaired ${results.repaired} pledges, ${results.cancelled} cancelled, ${results.failed} marked failed, ${results.unchanged} unchanged`,
+    ...results,
+  });
 }

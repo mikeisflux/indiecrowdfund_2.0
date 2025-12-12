@@ -683,14 +683,48 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
       },
     });
 
-    // Update pledge with payment intent ID
-    await db.pledge.update({
-      where: { id: pledgeId },
-      data: {
-        stripePaymentIntentId: paymentIntent.id,
-        // Status will be updated by webhook
-      },
-    });
+    // Since confirm: true, we know immediately if the payment succeeded
+    // Update pledge status based on PaymentIntent status (don't rely solely on webhook)
+    if (paymentIntent.status === "succeeded") {
+      // Payment succeeded - update pledge to COMPLETED immediately
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          stripePaymentIntentId: paymentIntent.id,
+          status: "COMPLETED",
+          retryCount: 0,
+          nextRetryAt: null,
+          lastFailureReason: null,
+        },
+      });
+
+      // Send confirmation email to backer
+      try {
+        await notifyBackerPledgeConfirmed(pledgeId, true);
+      } catch (e) {
+        console.warn(`Could not send confirmation email for pledge ${pledgeId}:`, e);
+      }
+
+      console.log(`[ChargePledge] Payment succeeded for pledge ${pledgeId}, status updated to COMPLETED`);
+    } else if (paymentIntent.status === "processing") {
+      // Payment is processing - save intent ID, status will be updated by webhook
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          stripePaymentIntentId: paymentIntent.id,
+        },
+      });
+      console.log(`[ChargePledge] Payment processing for pledge ${pledgeId}, waiting for webhook`);
+    } else {
+      // Unexpected status - save intent ID for tracking
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          stripePaymentIntentId: paymentIntent.id,
+        },
+      });
+      console.log(`[ChargePledge] Unexpected payment status ${paymentIntent.status} for pledge ${pledgeId}`);
+    }
 
     return true;
   } catch (error) {
@@ -857,6 +891,17 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   const pledgeId = paymentIntent.metadata.pledgeId;
 
   if (!pledgeId) return;
+
+  // Check if pledge is already completed (idempotency - webhook may fire after direct update)
+  const existingPledge = await db.pledge.findUnique({
+    where: { id: pledgeId },
+    select: { status: true },
+  });
+
+  if (existingPledge?.status === "COMPLETED") {
+    console.log(`[Webhook] Pledge ${pledgeId} already COMPLETED, skipping`);
+    return;
+  }
 
   // Save the payment method for potential future use
   const paymentMethodId = typeof paymentIntent.payment_method === "string"
