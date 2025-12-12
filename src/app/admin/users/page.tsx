@@ -48,13 +48,11 @@ import {
   UserPlus,
   Crown,
   Star,
-  ArrowUpRight,
   Store,
   Building,
   MapPin,
   Bell,
   RefreshCw,
-  FileText,
   Send,
   ExternalLink,
   DollarSign,
@@ -961,10 +959,7 @@ export default function UsersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedUser(user);
-                            setShowUserDialog(true);
-                          }}>
+                          <DropdownMenuItem onClick={() => handleViewUser(user)}>
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
