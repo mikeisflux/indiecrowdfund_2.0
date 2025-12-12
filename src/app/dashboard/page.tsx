@@ -33,6 +33,8 @@ import {
   Sparkles,
   Plus,
   Loader2,
+  XCircle,
+  RefreshCw,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 
@@ -75,7 +77,11 @@ interface FundingDataPoint {
 }
 
 interface Backer {
+  id: string;
+  status: string;
+  userId: string;
   name: string;
+  email: string | null;
   image: string | null;
   amount: number;
   reward: string;
@@ -115,6 +121,8 @@ export default function CreatorDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancellingPledge, setCancellingPledge] = useState<string | null>(null);
+  const [refundingPledge, setRefundingPledge] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -153,6 +161,62 @@ export default function CreatorDashboard() {
   // Handle project selection change
   const handleProjectChange = (projectId: string) => {
     setSelectedProjectId(projectId);
+  };
+
+  // Cancel a pending pledge (creator)
+  const handleCancelPledge = async (pledgeId: string) => {
+    if (!confirm("Are you sure you want to cancel this pledge? This will remove the backer and amount from your campaign.")) return;
+
+    setCancellingPledge(pledgeId);
+    try {
+      const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", reason: "Cancelled by creator" }),
+      });
+
+      if (response.ok) {
+        // Refresh dashboard data after cancellation
+        await fetchDashboardData();
+        alert("Pledge cancelled successfully");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to cancel pledge");
+      }
+    } catch (error) {
+      console.error("Failed to cancel pledge:", error);
+      alert("Failed to cancel pledge");
+    } finally {
+      setCancellingPledge(null);
+    }
+  };
+
+  // Refund a completed pledge (creator)
+  const handleRefundPledge = async (pledgeId: string) => {
+    if (!confirm("Are you sure you want to refund this pledge? This will process a refund via Stripe and remove the backer from your campaign.")) return;
+
+    setRefundingPledge(pledgeId);
+    try {
+      const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "refund", reason: "Refunded by creator" }),
+      });
+
+      if (response.ok) {
+        // Refresh dashboard data after refund
+        await fetchDashboardData();
+        alert("Pledge refunded successfully");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to refund pledge");
+      }
+    } catch (error) {
+      console.error("Failed to refund pledge:", error);
+      alert("Failed to refund pledge");
+    } finally {
+      setRefundingPledge(null);
+    }
   };
 
   if (loading && !data) {
@@ -498,8 +562,8 @@ export default function CreatorDashboard() {
                     <CardContent>
                       {data.recentBackers.length > 0 ? (
                         <div className="space-y-4">
-                          {data.recentBackers.slice(0, 5).map((backer, i) => (
-                            <div key={i} className="flex items-center justify-between">
+                          {data.recentBackers.slice(0, 5).map((backer) => (
+                            <div key={backer.id} className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
                                   {backer.image && <AvatarImage src={backer.image} />}
@@ -508,7 +572,15 @@ export default function CreatorDashboard() {
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="text-sm font-medium">{backer.name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-medium">{backer.name}</p>
+                                    <Badge
+                                      variant={backer.status === "COMPLETED" ? "default" : "secondary"}
+                                      className="text-[10px] px-1.5 py-0"
+                                    >
+                                      {backer.status}
+                                    </Badge>
+                                  </div>
                                   <p className="text-xs text-muted-foreground">
                                     {backer.reward}
                                   </p>
@@ -700,17 +772,18 @@ export default function CreatorDashboard() {
                   <CardContent>
                     {data.recentBackers.length > 0 ? (
                       <div className="rounded-lg border overflow-x-auto">
-                        <div className="grid grid-cols-5 gap-4 border-b bg-muted/50 p-3 text-sm font-medium min-w-[600px]">
+                        <div className="grid grid-cols-6 gap-4 border-b bg-muted/50 p-3 text-sm font-medium min-w-[800px]">
                           <div>Backer</div>
                           <div>Reward</div>
                           <div>Amount</div>
                           <div>Status</div>
                           <div>Date</div>
+                          <div>Actions</div>
                         </div>
-                        {data.recentBackers.map((backer, i) => (
+                        {data.recentBackers.map((backer) => (
                           <div
-                            key={i}
-                            className="grid grid-cols-5 gap-4 border-b p-3 text-sm last:border-0 min-w-[600px]"
+                            key={backer.id}
+                            className="grid grid-cols-6 gap-4 border-b p-3 text-sm last:border-0 min-w-[800px] items-center"
                           >
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6">
@@ -719,14 +792,57 @@ export default function CreatorDashboard() {
                                   {backer.name[0]?.toUpperCase() || "?"}
                                 </AvatarFallback>
                               </Avatar>
-                              {backer.name}
+                              <div>
+                                <div>{backer.name}</div>
+                                {backer.email && (
+                                  <div className="text-xs text-muted-foreground">{backer.email}</div>
+                                )}
+                              </div>
                             </div>
                             <div>{backer.reward}</div>
                             <div className="font-medium">${backer.amount}</div>
                             <div>
-                              <Badge variant="secondary">Completed</Badge>
+                              <Badge
+                                variant={
+                                  backer.status === "COMPLETED" ? "default" :
+                                  backer.status === "PENDING" ? "secondary" :
+                                  backer.status === "REFUNDED" ? "outline" :
+                                  "destructive"
+                                }
+                              >
+                                {backer.status}
+                              </Badge>
                             </div>
                             <div className="text-muted-foreground">{backer.time}</div>
+                            <div className="flex gap-2">
+                              {backer.status === "PENDING" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                                  onClick={() => handleCancelPledge(backer.id)}
+                                  disabled={cancellingPledge === backer.id}
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  {cancellingPledge === backer.id ? "..." : "Cancel"}
+                                </Button>
+                              )}
+                              {backer.status === "COMPLETED" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                                  onClick={() => handleRefundPledge(backer.id)}
+                                  disabled={refundingPledge === backer.id}
+                                >
+                                  <RefreshCw className={`h-3 w-3 mr-1 ${refundingPledge === backer.id ? "animate-spin" : ""}`} />
+                                  {refundingPledge === backer.id ? "..." : "Refund"}
+                                </Button>
+                              )}
+                              {(backer.status === "CANCELLED" || backer.status === "REFUNDED") && (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>

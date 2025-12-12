@@ -202,6 +202,8 @@ export default function UsersPage() {
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [viewingEmail, setViewingEmail] = useState<EmailLogEntry | null>(null);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [cancellingPledge, setCancellingPledge] = useState<string | null>(null);
+  const [refundingPledge, setRefundingPledge] = useState<string | null>(null);
 
   // API data state
   const [users, setUsers] = useState<User[]>([]);
@@ -432,6 +434,91 @@ export default function UsersPage() {
   const handleViewEmail = (email: EmailLogEntry) => {
     setViewingEmail(email);
     setShowEmailPreview(true);
+  };
+
+  // Cancel a pending pledge (admin)
+  const handleCancelPledge = async (pledgeId: string) => {
+    if (!selectedUser) return;
+    if (!confirm("Are you sure you want to cancel this pledge? This will remove the backer and amount from the campaign.")) return;
+
+    setCancellingPledge(pledgeId);
+    try {
+      const response = await fetch(`/api/admin/pledges/${pledgeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", reason: "Cancelled by admin" }),
+      });
+
+      if (response.ok) {
+        // Refresh pledges after cancellation
+        await fetchUserPledges(selectedUser.id);
+        alert("Pledge cancelled successfully");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to cancel pledge");
+      }
+    } catch (error) {
+      console.error("Failed to cancel pledge:", error);
+      alert("Failed to cancel pledge");
+    } finally {
+      setCancellingPledge(null);
+    }
+  };
+
+  // Refund a completed pledge (admin)
+  const handleRefundPledge = async (pledgeId: string) => {
+    if (!selectedUser) return;
+    if (!confirm("Are you sure you want to refund this pledge? This will process a refund via Stripe and remove the backer from the campaign.")) return;
+
+    setRefundingPledge(pledgeId);
+    try {
+      const response = await fetch(`/api/admin/pledges/${pledgeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "refund", reason: "Refunded by admin" }),
+      });
+
+      if (response.ok) {
+        // Refresh pledges after refund
+        await fetchUserPledges(selectedUser.id);
+        alert("Pledge refunded successfully");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to refund pledge");
+      }
+    } catch (error) {
+      console.error("Failed to refund pledge:", error);
+      alert("Failed to refund pledge");
+    } finally {
+      setRefundingPledge(null);
+    }
+  };
+
+  // Delete a pledge completely (admin)
+  const handleDeletePledge = async (pledgeId: string) => {
+    if (!selectedUser) return;
+    if (!confirm("Are you sure you want to DELETE this pledge? This will permanently remove it from the database.")) return;
+
+    setCancellingPledge(pledgeId);
+    try {
+      const response = await fetch(`/api/admin/pledges/${pledgeId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        // Refresh pledges after deletion
+        await fetchUserPledges(selectedUser.id);
+        alert("Pledge deleted successfully");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to delete pledge");
+      }
+    } catch (error) {
+      console.error("Failed to delete pledge:", error);
+      alert("Failed to delete pledge");
+    } finally {
+      setCancellingPledge(null);
+    }
   };
 
   // Download email as HTML file
@@ -1350,6 +1437,7 @@ export default function UsersPage() {
                               </p>
                             </div>
                             <div className="flex flex-col gap-2">
+                              {/* Email buttons */}
                               {!pledge.confirmationEmailSent && (pledge.status === "COMPLETED" || pledge.stripePaymentMethodId) && (
                                 <Button
                                   size="sm"
@@ -1369,6 +1457,45 @@ export default function UsersPage() {
                                 >
                                   <RefreshCw className="h-3 w-3 mr-1" />
                                   {sendingEmail === pledge.id ? "Sending..." : "Resend"}
+                                </Button>
+                              )}
+                              {/* Cancel button for PENDING pledges */}
+                              {pledge.status === "PENDING" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                                  onClick={() => handleCancelPledge(pledge.id)}
+                                  disabled={cancellingPledge === pledge.id}
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  {cancellingPledge === pledge.id ? "Cancelling..." : "Cancel"}
+                                </Button>
+                              )}
+                              {/* Refund button for COMPLETED pledges */}
+                              {pledge.status === "COMPLETED" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                                  onClick={() => handleRefundPledge(pledge.id)}
+                                  disabled={refundingPledge === pledge.id}
+                                >
+                                  <DollarSign className="h-3 w-3 mr-1" />
+                                  {refundingPledge === pledge.id ? "Refunding..." : "Refund"}
+                                </Button>
+                              )}
+                              {/* Delete button for cancelled/failed pledges */}
+                              {(pledge.status === "CANCELLED" || pledge.status === "FAILED" || pledge.status === "PENDING") && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                  onClick={() => handleDeletePledge(pledge.id)}
+                                  disabled={cancellingPledge === pledge.id}
+                                >
+                                  <Trash2 className="h-3 w-3 mr-1" />
+                                  {cancellingPledge === pledge.id ? "Deleting..." : "Delete"}
                                 </Button>
                               )}
                             </div>

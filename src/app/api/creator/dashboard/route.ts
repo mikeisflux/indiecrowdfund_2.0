@@ -195,18 +195,20 @@ export async function GET(req: NextRequest) {
         },
       }),
 
-      // Recent backers with user info
+      // Recent backers with user info - include PENDING pledges too
       db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
-          status: "COMPLETED",
+          status: { in: ["PENDING", "COMPLETED"] },
         },
         orderBy: { createdAt: "desc" },
-        take: 10,
+        take: 50,
         include: {
           user: {
             select: {
+              id: true,
               name: true,
+              email: true,
               image: true,
             },
           },
@@ -384,7 +386,11 @@ export async function GET(req: NextRequest) {
       }
 
       return {
+        id: pledge.id,
+        status: pledge.status,
+        userId: pledge.user.id,
         name: pledge.user.name || "Anonymous",
+        email: pledge.user.email,
         image: pledge.user.image,
         amount: pledge.amount,
         reward: pledge.reward?.title || "No Reward",
