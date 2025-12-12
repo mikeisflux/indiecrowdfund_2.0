@@ -173,6 +173,7 @@ export default function EditProjectPage() {
             shippingCost: (typeof reward.shippingCost === 'object' ? reward.shippingCost : {}) as Record<string, number>,
             quantityAvailable: reward.quantityAvailable,
             quantityClaimed: reward.quantityClaimed || 0,
+            backerCount: reward.backerCount || 0,
             visibility: reward.visibility || "PUBLIC",
             items: (reward.items || []).map((item: { id: string; projectItemId?: string; title: string; imageUrl?: string; quantity?: number }) => ({
               id: item.projectItemId || item.id, // Use projectItemId to match global items, fallback to id

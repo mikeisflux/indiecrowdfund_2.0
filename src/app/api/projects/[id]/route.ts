@@ -294,14 +294,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Can only edit draft/submitted/approved projects
-    // LIVE/FUNDED projects can only be edited via specific endpoints (e.g., end reward)
-    if (!["DRAFT", "SUBMITTED", "APPROVED"].includes(project.status)) {
-      return NextResponse.json(
-        { error: "Cannot edit launched project" },
-        { status: 400 }
-      );
-    }
+    // Determine what can be edited based on project status
+    const isLaunched = ["LIVE", "FUNDED", "PAUSED"].includes(project.status);
 
     const body = await req.json();
 
@@ -313,118 +307,141 @@ export async function PATCH(
     // Prepare project update data
     const updateData: Record<string, unknown> = {};
 
-    // Add basic fields
-    if (projectData.title !== undefined) updateData.title = projectData.title;
-    if (projectData.subtitle !== undefined) updateData.subtitle = projectData.subtitle;
+    // For launched projects, only allow editing story section
+    // For draft/submitted/approved projects, allow all edits
+    if (isLaunched) {
+      // Story fields only for launched campaigns
+      if (projectData.description !== undefined) updateData.description = projectData.description;
+      if (projectData.risks !== undefined) updateData.risks = projectData.risks;
+      if (projectData.usesAI !== undefined) updateData.usesAI = projectData.usesAI;
+      if (projectData.faqs !== undefined) updateData.faqs = projectData.faqs;
+    } else {
+      // Add basic fields (only for non-launched projects)
+      if (projectData.title !== undefined) updateData.title = projectData.title;
+      if (projectData.subtitle !== undefined) updateData.subtitle = projectData.subtitle;
 
-    // Handle slug update - check if new slug is already taken
-    if (projectData.slug !== undefined) {
-      const existingProject = await db.project.findFirst({
-        where: {
-          slug: projectData.slug,
-          id: { not: params.id } // Exclude current project
-        },
-        select: { id: true },
-      });
+      // Handle slug update - check if new slug is already taken
+      if (projectData.slug !== undefined) {
+        const existingProject = await db.project.findFirst({
+          where: {
+            slug: projectData.slug,
+            id: { not: params.id } // Exclude current project
+          },
+          select: { id: true },
+        });
 
-      if (existingProject) {
-        return NextResponse.json(
-          { error: "This URL is already taken. Please choose a different one." },
-          { status: 400 }
-        );
+        if (existingProject) {
+          return NextResponse.json(
+            { error: "This URL is already taken. Please choose a different one." },
+            { status: 400 }
+          );
+        }
+        updateData.slug = projectData.slug;
       }
-      updateData.slug = projectData.slug;
+
+      if (projectData.category !== undefined) updateData.category = projectData.category;
+      if (projectData.subcategory !== undefined) updateData.subcategory = projectData.subcategory;
+      if (projectData.secondaryCategory !== undefined) updateData.secondaryCategory = projectData.secondaryCategory;
+      if (projectData.secondarySubcategory !== undefined) updateData.secondarySubcategory = projectData.secondarySubcategory;
+      if (projectData.location !== undefined) updateData.location = projectData.location;
+      if (projectData.imageUrl !== undefined) updateData.imageUrl = projectData.imageUrl;
+      if (projectData.videoUrl !== undefined) updateData.videoUrl = projectData.videoUrl;
+      if (projectData.goalAmount !== undefined) updateData.goalAmount = projectData.goalAmount;
+      if (projectData.durationType !== undefined) updateData.durationType = projectData.durationType;
+      if (projectData.durationDays !== undefined) updateData.durationDays = projectData.durationDays;
+      if (projectData.endDate !== undefined) updateData.endDate = projectData.endDate ? new Date(projectData.endDate) : null;
+      if (projectData.launchDate !== undefined) updateData.launchDate = projectData.launchDate ? new Date(projectData.launchDate) : null;
+
+      // Story fields
+      if (projectData.description !== undefined) updateData.description = projectData.description;
+      if (projectData.risks !== undefined) updateData.risks = projectData.risks;
+      if (projectData.usesAI !== undefined) updateData.usesAI = projectData.usesAI;
+      if (projectData.faqs !== undefined) updateData.faqs = projectData.faqs;
+
+      // Payment fields
+      if (projectData.contactEmail !== undefined) {
+        updateData.contactEmail = projectData.contactEmail; // Keep as-is (empty string is valid)
+      }
+      if (projectData.projectType !== undefined) updateData.projectType = projectData.projectType;
+      if (projectData.hasAdultContent !== undefined) updateData.hasAdultContent = projectData.hasAdultContent;
+      if (projectData.hasRiskyContent !== undefined) updateData.hasRiskyContent = projectData.hasRiskyContent;
+      if (projectData.promoContentSfw !== undefined) updateData.promoContentSfw = projectData.promoContentSfw;
+      if (projectData.allowRetailerPledges !== undefined) updateData.allowRetailerPledges = projectData.allowRetailerPledges;
+      if (projectData.retailerDiscount !== undefined) updateData.retailerDiscount = projectData.retailerDiscount;
+      if (projectData.retailerMinQuantity !== undefined) updateData.retailerMinQuantity = projectData.retailerMinQuantity;
+
+      // Promotion fields
+      if (projectData.prelaunchActive !== undefined) updateData.prelaunchActive = projectData.prelaunchActive;
+      if (projectData.prelaunchDescription !== undefined) updateData.prelaunchDescription = projectData.prelaunchDescription;
+      if (projectData.customReferralTags !== undefined) updateData.customReferralTags = projectData.customReferralTags;
+      if (projectData.googleAnalyticsId !== undefined) updateData.googleAnalyticsId = projectData.googleAnalyticsId;
+      if (projectData.metaPixelId !== undefined) updateData.metaPixelId = projectData.metaPixelId;
+
+      // Status
+      if (projectData.status !== undefined) updateData.status = projectData.status;
     }
-
-    if (projectData.category !== undefined) updateData.category = projectData.category;
-    if (projectData.subcategory !== undefined) updateData.subcategory = projectData.subcategory;
-    if (projectData.secondaryCategory !== undefined) updateData.secondaryCategory = projectData.secondaryCategory;
-    if (projectData.secondarySubcategory !== undefined) updateData.secondarySubcategory = projectData.secondarySubcategory;
-    if (projectData.location !== undefined) updateData.location = projectData.location;
-    if (projectData.imageUrl !== undefined) updateData.imageUrl = projectData.imageUrl;
-    if (projectData.videoUrl !== undefined) updateData.videoUrl = projectData.videoUrl;
-    if (projectData.goalAmount !== undefined) updateData.goalAmount = projectData.goalAmount;
-    if (projectData.durationType !== undefined) updateData.durationType = projectData.durationType;
-    if (projectData.durationDays !== undefined) updateData.durationDays = projectData.durationDays;
-    if (projectData.endDate !== undefined) updateData.endDate = projectData.endDate ? new Date(projectData.endDate) : null;
-    if (projectData.launchDate !== undefined) updateData.launchDate = projectData.launchDate ? new Date(projectData.launchDate) : null;
-
-    // Story fields
-    if (projectData.description !== undefined) updateData.description = projectData.description;
-    if (projectData.risks !== undefined) updateData.risks = projectData.risks;
-    if (projectData.usesAI !== undefined) updateData.usesAI = projectData.usesAI;
-    if (projectData.faqs !== undefined) updateData.faqs = projectData.faqs;
-
-    // Payment fields
-    if (projectData.contactEmail !== undefined) {
-      updateData.contactEmail = projectData.contactEmail; // Keep as-is (empty string is valid)
-    }
-    if (projectData.projectType !== undefined) updateData.projectType = projectData.projectType;
-    if (projectData.hasAdultContent !== undefined) updateData.hasAdultContent = projectData.hasAdultContent;
-    if (projectData.hasRiskyContent !== undefined) updateData.hasRiskyContent = projectData.hasRiskyContent;
-    if (projectData.promoContentSfw !== undefined) updateData.promoContentSfw = projectData.promoContentSfw;
-    if (projectData.allowRetailerPledges !== undefined) updateData.allowRetailerPledges = projectData.allowRetailerPledges;
-    if (projectData.retailerDiscount !== undefined) updateData.retailerDiscount = projectData.retailerDiscount;
-    if (projectData.retailerMinQuantity !== undefined) updateData.retailerMinQuantity = projectData.retailerMinQuantity;
-
-    // Promotion fields
-    if (projectData.prelaunchActive !== undefined) updateData.prelaunchActive = projectData.prelaunchActive;
-    if (projectData.prelaunchDescription !== undefined) updateData.prelaunchDescription = projectData.prelaunchDescription;
-    if (projectData.customReferralTags !== undefined) updateData.customReferralTags = projectData.customReferralTags;
-    if (projectData.googleAnalyticsId !== undefined) updateData.googleAnalyticsId = projectData.googleAnalyticsId;
-    if (projectData.metaPixelId !== undefined) updateData.metaPixelId = projectData.metaPixelId;
-
-    // Status
-    if (projectData.status !== undefined) updateData.status = projectData.status;
 
     // Update project using transaction if we have rewards to handle
     if (rewards && rewards.length > 0) {
       // Use transaction to update project and rewards together
       const updated = await db.$transaction(async (tx) => {
-        // Update project
+        // Update project (only allowed fields based on isLaunched)
         const updatedProject = await tx.project.update({
           where: { id: params.id },
           data: updateData,
         });
 
-        // Delete existing rewards that are not in the new list (only if they have no pledges)
+        // Get existing rewards with backer counts
         const existingRewards = await tx.reward.findMany({
           where: { projectId: params.id },
           include: { _count: { select: { pledges: true } } },
         });
 
-        const newRewardIds = rewards.filter(r => r.id).map(r => r.id);
-        const rewardsToDelete = existingRewards.filter(
-          r => !newRewardIds.includes(r.id) && r._count.pledges === 0
-        );
+        // For launched projects, handle rewards differently
+        if (isLaunched) {
+          // For launched projects:
+          // - Can only update rewards that have NO backers
+          // - Can update isEnded flag for rewards WITH backers
+          // - Cannot delete rewards with backers
+          // - Cannot create new rewards
+          for (const reward of rewards) {
+            if (!reward.id) {
+              // Skip new rewards for launched projects - they can't add new ones
+              continue;
+            }
 
-        // Delete rewards that are no longer in the list (only if no pledges)
-        for (const reward of rewardsToDelete) {
-          await tx.rewardItem.deleteMany({ where: { rewardId: reward.id } });
-          await tx.reward.delete({ where: { id: reward.id } });
-        }
-
-        // Upsert rewards
-        for (const reward of rewards) {
-          const rewardData = {
-            projectId: params.id,
-            type: reward.type,
-            title: reward.title,
-            description: reward.description,
-            amount: reward.amount,
-            imageUrl: reward.imageUrl || null,
-            estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
-            shippingType: reward.shippingType,
-            shippingCountries: reward.shippingCountries || [],
-            shippingCost: reward.shippingCost || 0,
-            quantityAvailable: reward.quantityAvailable ?? null,
-            isEnded: reward.isEnded || false,
-          };
-
-          if (reward.id) {
-            // Update existing reward
             const existingReward = existingRewards.find(r => r.id === reward.id);
-            if (existingReward) {
+            if (!existingReward) continue;
+
+            const hasBacker = existingReward._count.pledges > 0;
+
+            if (hasBacker) {
+              // Only allow updating isEnded for rewards with backers
+              if (reward.isEnded !== undefined && reward.isEnded !== existingReward.isEnded) {
+                await tx.reward.update({
+                  where: { id: reward.id },
+                  data: {
+                    isEnded: reward.isEnded,
+                    endedAt: reward.isEnded ? new Date() : null,
+                  },
+                });
+              }
+            } else {
+              // No backers - can fully edit this reward
+              const rewardData = {
+                type: reward.type,
+                title: reward.title,
+                description: reward.description,
+                amount: reward.amount,
+                imageUrl: reward.imageUrl || null,
+                estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
+                shippingType: reward.shippingType,
+                shippingCountries: reward.shippingCountries || [],
+                shippingCost: reward.shippingCost || 0,
+                quantityAvailable: reward.quantityAvailable ?? null,
+                isEnded: reward.isEnded || false,
+              };
+
               await tx.reward.update({
                 where: { id: reward.id },
                 data: rewardData,
@@ -443,22 +460,76 @@ export async function PATCH(
                 });
               }
             }
-          } else {
-            // Create new reward
-            const newReward = await tx.reward.create({
-              data: rewardData,
-            });
+          }
+        } else {
+          // Non-launched project - full reward editing allowed
+          const newRewardIds = rewards.filter(r => r.id).map(r => r.id);
+          const rewardsToDelete = existingRewards.filter(
+            r => !newRewardIds.includes(r.id) && r._count.pledges === 0
+          );
 
-            // Create items
-            if (reward.items && reward.items.length > 0) {
-              await tx.rewardItem.createMany({
-                data: reward.items.map(item => ({
-                  rewardId: newReward.id,
-                  title: item.title,
-                  description: item.description || null,
-                  imageUrl: item.imageUrl || null,
-                })),
+          // Delete rewards that are no longer in the list (only if no pledges)
+          for (const reward of rewardsToDelete) {
+            await tx.rewardItem.deleteMany({ where: { rewardId: reward.id } });
+            await tx.reward.delete({ where: { id: reward.id } });
+          }
+
+          // Upsert rewards
+          for (const reward of rewards) {
+            const rewardData = {
+              projectId: params.id,
+              type: reward.type,
+              title: reward.title,
+              description: reward.description,
+              amount: reward.amount,
+              imageUrl: reward.imageUrl || null,
+              estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
+              shippingType: reward.shippingType,
+              shippingCountries: reward.shippingCountries || [],
+              shippingCost: reward.shippingCost || 0,
+              quantityAvailable: reward.quantityAvailable ?? null,
+              isEnded: reward.isEnded || false,
+            };
+
+            if (reward.id) {
+              // Update existing reward
+              const existingReward = existingRewards.find(r => r.id === reward.id);
+              if (existingReward) {
+                await tx.reward.update({
+                  where: { id: reward.id },
+                  data: rewardData,
+                });
+
+                // Update items - delete all and recreate
+                await tx.rewardItem.deleteMany({ where: { rewardId: reward.id } });
+                if (reward.items && reward.items.length > 0) {
+                  await tx.rewardItem.createMany({
+                    data: reward.items.map(item => ({
+                      rewardId: reward.id!,
+                      title: item.title,
+                      description: item.description || null,
+                      imageUrl: item.imageUrl || null,
+                    })),
+                  });
+                }
+              }
+            } else {
+              // Create new reward
+              const newReward = await tx.reward.create({
+                data: rewardData,
               });
+
+              // Create items
+              if (reward.items && reward.items.length > 0) {
+                await tx.rewardItem.createMany({
+                  data: reward.items.map(item => ({
+                    rewardId: newReward.id,
+                    title: item.title,
+                    description: item.description || null,
+                    imageUrl: item.imageUrl || null,
+                  })),
+                });
+              }
             }
           }
         }

@@ -37,6 +37,9 @@ export async function GET(
         rewards: {
           include: {
             items: true,
+            _count: {
+              select: { pledges: true },
+            },
           },
           orderBy: { amount: "asc" },
         },
@@ -162,6 +165,7 @@ export async function GET(
       items: RewardItem[];
       isEnded: boolean;
       endedAt: Date | null;
+      _count?: { pledges: number };
     }
 
     // Filter secret rewards - only show if:
@@ -198,6 +202,7 @@ export async function GET(
       shippingCost: r.shippingCost || 0,
       quantityAvailable: r.quantityAvailable,
       quantityClaimed: r.quantityClaimed || 0,
+      backerCount: r._count?.pledges || 0,
       visibility: r.visibility || "PUBLIC",
       // Only include secretToken for creators/admins (so they can share the link)
       secretToken: (isCreator || isAdmin) ? r.secretToken : undefined,
