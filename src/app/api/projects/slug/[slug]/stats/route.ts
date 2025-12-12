@@ -35,14 +35,23 @@ export async function GET(
 
     // Auto-sync: Check if stats match actual pledge data
     // This self-heals when webhooks fail or are delayed
+    //
+    // Two types of pledges:
+    // 1. chargedImmediately: true - Campaign was funded, user charged immediately → COMPLETED
+    // 2. chargedImmediately: false - Campaign not funded yet, card saved → PENDING until goal reached
+    //
+    // Stats should count:
+    // - COMPLETED pledges (already charged)
+    // - PENDING pledges with chargedImmediately=false (real backers waiting for campaign to fund)
     const pledgeStats = await db.pledge.aggregate({
       where: {
         projectId: project.id,
         OR: [
           { status: "COMPLETED" },
           {
+            // PENDING pledges where card was saved for later (campaign not yet funded)
             status: "PENDING",
-            stripePaymentMethodId: { not: null },
+            chargedImmediately: false,
           },
         ],
       },
