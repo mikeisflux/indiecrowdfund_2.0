@@ -32,7 +32,8 @@ export async function GET(req: NextRequest) {
     const isFunded = project.currentAmount >= project.goalAmount || project.status === "FUNDED";
 
     // Find any active pledge for this user/project
-    const pledge = await db.pledge.findFirst({
+    // Includes COMPLETED pledges and PENDING pledges with saved payment method
+    const activePledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
         projectId,
@@ -56,29 +57,80 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    if (!pledge) {
-      return NextResponse.json({ hasPledge: false, pledge: null, isFunded });
+    if (activePledge) {
+      return NextResponse.json({
+        hasPledge: true,
+        isFunded,
+        pledge: {
+          id: activePledge.id,
+          amount: activePledge.amount,
+          status: activePledge.status,
+          reward: activePledge.reward ? {
+            id: activePledge.reward.id,
+            title: activePledge.reward.title,
+            amount: activePledge.reward.amount,
+          } : null,
+          createdAt: activePledge.createdAt,
+          // Can only cancel if project is NOT funded and pledge is pending
+          canCancel: !isFunded && activePledge.status === "PENDING",
+          // Can always add more to pledge
+          canIncrease: true,
+        },
+      });
     }
 
-    return NextResponse.json({
-      hasPledge: true,
-      isFunded,
-      pledge: {
-        id: pledge.id,
-        amount: pledge.amount,
-        status: pledge.status,
-        reward: pledge.reward ? {
-          id: pledge.reward.id,
-          title: pledge.reward.title,
-          amount: pledge.reward.amount,
-        } : null,
-        createdAt: pledge.createdAt,
-        // Can only cancel if project is NOT funded and pledge is pending
-        canCancel: !isFunded && pledge.status === "PENDING",
-        // Can always add more to pledge
-        canIncrease: true,
+    // Also check for pledges in progress (checkout started but not completed)
+    // This helps show "Manage Pledge" for recent checkouts that may still complete
+    const pendingCheckout = await db.pledge.findFirst({
+      where: {
+        userId: session.user.id,
+        projectId,
+        status: "PENDING",
+        stripePaymentMethodId: null,
+        // Has an intent (checkout was started)
+        OR: [
+          { stripeSetupIntentId: { not: null } },
+          { stripePaymentIntentId: { not: null } },
+        ],
+        // Created within last 30 minutes
+        createdAt: {
+          gte: new Date(Date.now() - 30 * 60 * 1000),
+        },
       },
+      include: {
+        reward: {
+          select: {
+            id: true,
+            title: true,
+            amount: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
+
+    if (pendingCheckout) {
+      return NextResponse.json({
+        hasPledge: true,
+        checkoutInProgress: true,
+        isFunded,
+        pledge: {
+          id: pendingCheckout.id,
+          amount: pendingCheckout.amount,
+          status: "CHECKOUT_IN_PROGRESS",
+          reward: pendingCheckout.reward ? {
+            id: pendingCheckout.reward.id,
+            title: pendingCheckout.reward.title,
+            amount: pendingCheckout.reward.amount,
+          } : null,
+          createdAt: pendingCheckout.createdAt,
+          canCancel: true, // Can cancel checkout in progress
+          canIncrease: false, // Must complete checkout first
+        },
+      });
+    }
+
+    return NextResponse.json({ hasPledge: false, pledge: null, isFunded });
   } catch (error) {
     console.error("Check pledge error:", error);
     return NextResponse.json(

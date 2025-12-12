@@ -114,6 +114,8 @@ export default function SettingsPage() {
     error: null,
     success: false,
   });
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     async function fetchSettings() {
@@ -192,6 +194,42 @@ export default function SettingsPage() {
         ...settings,
         websites: settings.websites.filter((_, i) => i !== index),
       });
+    }
+  };
+
+  const handleSendVerificationEmail = async () => {
+    setSendingVerification(true);
+    setVerificationMessage(null);
+
+    try {
+      const response = await fetch("/api/user/verify-email", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        if (data.alreadyVerified) {
+          // Refresh settings to update the verified status
+          const res = await fetch("/api/user/settings");
+          if (res.ok) {
+            const updatedSettings = await res.json();
+            setSettings(updatedSettings);
+          }
+          setVerificationMessage({ type: "success", text: "Your email is already verified!" });
+        } else {
+          setVerificationMessage({ type: "success", text: data.message || "Verification email sent! Check your inbox." });
+        }
+      } else {
+        setVerificationMessage({ type: "error", text: data.error || "Failed to send verification email" });
+      }
+    } catch (error) {
+      console.error("Error sending verification email:", error);
+      setVerificationMessage({ type: "error", text: "Failed to send verification email. Please try again." });
+    } finally {
+      setSendingVerification(false);
+      // Clear message after 5 seconds
+      setTimeout(() => setVerificationMessage(null), 5000);
     }
   };
 
@@ -565,8 +603,20 @@ export default function SettingsPage() {
                       Verified
                     </Badge>
                   ) : (
-                    <Button variant="outline" size="sm">
-                      Verify Email
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSendVerificationEmail}
+                      disabled={sendingVerification}
+                    >
+                      {sendingVerification ? (
+                        <>
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        "Verify Email"
+                      )}
                     </Button>
                   )}
                   <Button
@@ -579,6 +629,21 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </div>
+
+              {verificationMessage && (
+                <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${
+                  verificationMessage.type === "success"
+                    ? "bg-green-500/10 border border-green-500/30 text-green-600"
+                    : "bg-destructive/10 border border-destructive/30 text-destructive"
+                }`}>
+                  {verificationMessage.type === "success" ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4" />
+                  )}
+                  {verificationMessage.text}
+                </div>
+              )}
 
               <div className="text-sm text-muted-foreground">
                 Member since {settings.createdAt ? new Date(settings.createdAt).toLocaleDateString("en-US", {

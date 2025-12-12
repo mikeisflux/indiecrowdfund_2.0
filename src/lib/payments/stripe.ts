@@ -281,72 +281,147 @@ export async function createStripePayment({
   // Users can only have ONE pledge per project (they can edit it, but not create multiple)
   const normalizedRewardId = rewardId && rewardId !== "no-reward" ? rewardId : null;
 
-  // First check for completed or active pledges - these block new pledges
-  const existingActivePledge = await db.pledge.findFirst({
+  // First check for completed pledges - these always block new pledges
+  const existingCompletedPledge = await db.pledge.findFirst({
     where: {
       userId,
       projectId,
-      OR: [
-        { status: "COMPLETED" },
-        {
-          status: "PENDING",
-          stripePaymentMethodId: { not: null }, // Has saved payment method
-        },
-      ],
+      status: "COMPLETED",
     },
-    orderBy: { createdAt: "desc" },
   });
 
-  if (existingActivePledge) {
+  if (existingCompletedPledge) {
     throw new Error("You have already backed this project. Visit your backer dashboard to manage your pledge.");
   }
 
-  // Check for existing pending pledge to reuse (prevents duplicate pending pledges)
-  const existingPendingPledge = await db.pledge.findFirst({
+  // Check for pending pledges with saved payment method - these also block new pledges
+  const existingActivePendingPledge = await db.pledge.findFirst({
     where: {
       userId,
       projectId,
       status: "PENDING",
-      stripePaymentMethodId: null, // No payment method saved yet
-      // Only reuse pledges created within the last hour (stale pledges might have invalid intents)
+      stripePaymentMethodId: { not: null },
+    },
+  });
+
+  if (existingActivePendingPledge) {
+    throw new Error("You have already backed this project. Visit your backer dashboard to manage your pledge.");
+  }
+
+  // Check for any recent pending pledge with an active intent (checkout in progress)
+  // This prevents race conditions where user clicks "Back" twice before first completes
+  const existingCheckoutInProgress = await db.pledge.findFirst({
+    where: {
+      userId,
+      projectId,
+      status: "PENDING",
+      stripePaymentMethodId: null,
+      // Has an intent (checkout was started)
+      OR: [
+        { stripeSetupIntentId: { not: null } },
+        { stripePaymentIntentId: { not: null } },
+      ],
+      // Created within last 30 minutes (active checkout session)
       createdAt: {
-        gte: new Date(Date.now() - 60 * 60 * 1000),
+        gte: new Date(Date.now() - 30 * 60 * 1000),
       },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  // If an existing pending pledge exists with a valid setup/payment intent, reuse it
-  if (existingPendingPledge && (existingPendingPledge.stripeSetupIntentId || existingPendingPledge.stripePaymentIntentId)) {
-    // Retrieve the existing intent to get the client secret
-    if (!isCampaignFunded && existingPendingPledge.stripeSetupIntentId) {
-      const setupIntent = await stripeClient.setupIntents.retrieve(existingPendingPledge.stripeSetupIntentId);
-      if (setupIntent.status === "requires_payment_method" || setupIntent.status === "requires_confirmation") {
-        // Update the pledge with new amount/reward if different
-        if (existingPendingPledge.amount !== amount || existingPendingPledge.rewardId !== normalizedRewardId) {
-          await db.pledge.update({
-            where: { id: existingPendingPledge.id },
-            data: { amount, rewardAmount: amount, rewardId: normalizedRewardId },
-          });
+  // If there's an active checkout, try to reuse it
+  if (existingCheckoutInProgress) {
+    // Retrieve the existing intent to check if it's still usable
+    if (!isCampaignFunded && existingCheckoutInProgress.stripeSetupIntentId) {
+      try {
+        const setupIntent = await stripeClient.setupIntents.retrieve(existingCheckoutInProgress.stripeSetupIntentId);
+        if (setupIntent.status === "requires_payment_method" || setupIntent.status === "requires_confirmation") {
+          // Update the pledge with new amount/reward if different
+          if (existingCheckoutInProgress.amount !== amount || existingCheckoutInProgress.rewardId !== normalizedRewardId) {
+            await db.pledge.update({
+              where: { id: existingCheckoutInProgress.id },
+              data: { amount, rewardAmount: amount, rewardId: normalizedRewardId },
+            });
+          }
+          return {
+            type: "setup_intent" as const,
+            clientSecret: setupIntent.client_secret,
+            pledgeId: existingCheckoutInProgress.id,
+            chargedImmediately: false,
+          };
         }
-        return {
-          type: "setup_intent" as const,
-          clientSecret: setupIntent.client_secret,
-          pledgeId: existingPendingPledge.id,
-          chargedImmediately: false,
-        };
+        // If setupIntent succeeded, payment method should be saved soon
+        // Block creating new pledge to avoid race condition
+        if (setupIntent.status === "succeeded") {
+          throw new Error("Your pledge is being processed. Please wait a moment and check your backer dashboard.");
+        }
+      } catch (e) {
+        // If intent retrieval fails or is in terminal state, we can create a new pledge
+        if (e instanceof Error && e.message.includes("pledge is being processed")) {
+          throw e;
+        }
+        // Intent was canceled or invalid, continue to create new pledge
       }
-    } else if (isCampaignFunded && existingPendingPledge.stripePaymentIntentId) {
-      const paymentIntent = await stripeClient.paymentIntents.retrieve(existingPendingPledge.stripePaymentIntentId);
-      if (paymentIntent.status === "requires_payment_method" || paymentIntent.status === "requires_confirmation") {
-        return {
-          type: "payment_intent" as const,
-          clientSecret: paymentIntent.client_secret,
-          pledgeId: existingPendingPledge.id,
-          chargedImmediately: true,
-        };
+    } else if (isCampaignFunded && existingCheckoutInProgress.stripePaymentIntentId) {
+      try {
+        const paymentIntent = await stripeClient.paymentIntents.retrieve(existingCheckoutInProgress.stripePaymentIntentId);
+        if (paymentIntent.status === "requires_payment_method" || paymentIntent.status === "requires_confirmation") {
+          return {
+            type: "payment_intent" as const,
+            clientSecret: paymentIntent.client_secret,
+            pledgeId: existingCheckoutInProgress.id,
+            chargedImmediately: true,
+          };
+        }
+        // If paymentIntent is processing or succeeded, block new pledge
+        if (paymentIntent.status === "processing" || paymentIntent.status === "succeeded") {
+          throw new Error("Your pledge is being processed. Please wait a moment and check your backer dashboard.");
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message.includes("pledge is being processed")) {
+          throw e;
+        }
+        // Intent was canceled or invalid, continue to create new pledge
       }
     }
+  }
+
+  // Check for old stale pending pledges (older than 30 min) to clean up
+  // These can be reused if they still have valid intents
+  const stalePendingPledge = await db.pledge.findFirst({
+    where: {
+      userId,
+      projectId,
+      status: "PENDING",
+      stripePaymentMethodId: null,
+      createdAt: {
+        lt: new Date(Date.now() - 30 * 60 * 1000),
+        gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Within last 24 hours
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // If there's a stale pending pledge, cancel its old intent and mark it cancelled
+  if (stalePendingPledge) {
+    if (stalePendingPledge.stripeSetupIntentId) {
+      try {
+        await stripeClient.setupIntents.cancel(stalePendingPledge.stripeSetupIntentId);
+      } catch {
+        // Ignore cancellation errors
+      }
+    }
+    if (stalePendingPledge.stripePaymentIntentId) {
+      try {
+        await stripeClient.paymentIntents.cancel(stalePendingPledge.stripePaymentIntentId);
+      } catch {
+        // Ignore cancellation errors
+      }
+    }
+    await db.pledge.update({
+      where: { id: stalePendingPledge.id },
+      data: { status: "CANCELLED", lastFailureReason: "Checkout abandoned, new pledge created" },
+    });
   }
 
   // Create new pending pledge (no valid existing pledge found)
@@ -757,17 +832,34 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     await notifyBackerPledgeConfirmed(pledge.id, true);
   }
 
-  // Check if project just got funded (only relevant for immediate charges)
-  if (
-    pledge.chargedImmediately &&
-    updatedProject.currentAmount >= updatedProject.goalAmount &&
-    updatedProject.currentAmount - pledge.amount < updatedProject.goalAmount
-  ) {
-    // Project just reached its goal!
-    await notifyProjectFunded(pledge.projectId);
+  // Check if project is now funded (only relevant for immediate charges on funded campaigns)
+  if (pledge.chargedImmediately) {
+    const projectIsFunded = updatedProject.currentAmount >= updatedProject.goalAmount;
 
-    // Process all pending pledges for this project
-    await processPendingPledgesForProject(pledge.projectId);
+    // Check if this pledge pushed it over the goal (for notification)
+    const justReachedGoal = projectIsFunded &&
+      updatedProject.currentAmount - pledge.amount < updatedProject.goalAmount;
+
+    if (justReachedGoal) {
+      // Project just reached its goal! Send notification
+      await notifyProjectFunded(pledge.projectId);
+    }
+
+    // Always check for and process pending pledges if project is funded
+    if (projectIsFunded) {
+      const pendingPledgeCount = await db.pledge.count({
+        where: {
+          projectId: pledge.projectId,
+          status: "PENDING",
+          chargedImmediately: false,
+          stripePaymentMethodId: { not: null },
+        },
+      });
+
+      if (pendingPledgeCount > 0) {
+        await processPendingPledgesForProject(pledge.projectId);
+      }
+    }
   }
 }
 
@@ -850,16 +942,35 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
   // Send confirmation email to backer (not charged yet, just card saved)
   await notifyBackerPledgeConfirmed(pledge.id, false);
 
-  // Check if project just got funded
-  if (
-    updatedProject.currentAmount >= updatedProject.goalAmount &&
-    updatedProject.currentAmount - pledge.amount < updatedProject.goalAmount
-  ) {
-    // Project just reached its goal!
-    await notifyProjectFunded(pledge.projectId);
+  // Check if project is now funded (or was already funded)
+  const projectIsFunded = updatedProject.currentAmount >= updatedProject.goalAmount;
 
-    // Process all pending pledges (charge saved cards)
-    await processPendingPledgesForProject(pledge.projectId);
+  // Check if this pledge is the one that pushed it over the goal (for notification)
+  const justReachedGoal = projectIsFunded &&
+    updatedProject.currentAmount - pledge.amount < updatedProject.goalAmount;
+
+  if (justReachedGoal) {
+    // Project just reached its goal! Send notification
+    await notifyProjectFunded(pledge.projectId);
+  }
+
+  // Always check for and process pending pledges if project is funded
+  // This handles edge cases where webhooks were missed or processing failed
+  if (projectIsFunded) {
+    // Check if there are any pending pledges that need to be charged
+    const pendingPledgeCount = await db.pledge.count({
+      where: {
+        projectId: pledge.projectId,
+        status: "PENDING",
+        chargedImmediately: false,
+        stripePaymentMethodId: { not: null },
+      },
+    });
+
+    if (pendingPledgeCount > 0) {
+      // Process all pending pledges (charge saved cards)
+      await processPendingPledgesForProject(pledge.projectId);
+    }
   }
 }
 
