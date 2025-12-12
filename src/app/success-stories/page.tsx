@@ -22,54 +22,64 @@ export const dynamic = "force-dynamic";
 
 // Fetch successful projects from database
 async function getSuccessfulProjects() {
-  const projects = await db.project.findMany({
-    where: {
-      status: "FUNDED",
-    },
-    include: {
-      creator: {
-        select: {
-          name: true,
+  try {
+    const projects = await db.project.findMany({
+      where: {
+        status: "FUNDED",
+      },
+      include: {
+        creator: {
+          select: {
+            name: true,
+          },
         },
       },
-    },
-    orderBy: {
-      currentAmount: "desc",
-    },
-    take: 3,
-  });
+      orderBy: {
+        currentAmount: "desc",
+      },
+      take: 3,
+    });
 
-  return projects.map((project) => ({
-    id: project.id,
-    title: project.title,
-    creator: project.creator.name || "Creator",
-    category: project.category,
-    raised: project.currentAmount,
-    goal: project.goalAmount,
-    backers: project.backerCount,
-    image: project.imageUrl || "",
-    highlight: `${Math.round((project.currentAmount / project.goalAmount) * 100)}% funded`,
-  }));
+    return projects.map((project) => ({
+      id: project.id,
+      title: project.title,
+      creator: project.creator.name || "Creator",
+      category: project.category,
+      raised: project.currentAmount,
+      goal: project.goalAmount,
+      backers: project.backerCount,
+      image: project.imageUrl || "",
+      highlight: `${Math.round((project.currentAmount / project.goalAmount) * 100)}% funded`,
+    }));
+  } catch (error) {
+    console.error("Error fetching successful projects:", error);
+    return [];
+  }
 }
 
 // Fetch category stats from database
 async function getCategoryStats() {
-  const categoryStats = await db.project.groupBy({
-    by: ["category"],
-    where: {
-      status: { in: ["LIVE", "FUNDED"] },
-    },
-    _sum: {
-      currentAmount: true,
-    },
-    _count: true,
-  });
+  try {
+    const categoryStats = await db.project.groupBy({
+      by: ["category"],
+      where: {
+        status: { in: ["LIVE", "FUNDED"] },
+      },
+      _sum: {
+        currentAmount: true,
+      },
+      _count: true,
+    });
 
-  return categoryStats.map((cat) => ({
-    name: cat.category,
-    projects: cat._count,
-    funded: formatCurrency(cat._sum.currentAmount || 0),
-  }));
+    return categoryStats.map((cat) => ({
+      name: cat.category,
+      projects: cat._count,
+      funded: formatCurrency(cat._sum.currentAmount || 0),
+    }));
+  } catch (error) {
+    console.error("Error fetching category stats:", error);
+    return [];
+  }
 }
 
 export default async function SuccessStoriesPage() {

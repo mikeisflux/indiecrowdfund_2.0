@@ -36,72 +36,91 @@ export const dynamic = "force-dynamic";
 
 // Fetch featured/live projects from database
 async function getFeaturedProjects() {
-  const projects = await db.project.findMany({
-    where: {
-      status: "LIVE",
-    },
-    include: {
-      creator: {
-        select: {
-          name: true,
+  try {
+    const projects = await db.project.findMany({
+      where: {
+        status: "LIVE",
+      },
+      include: {
+        creator: {
+          select: {
+            name: true,
+          },
         },
       },
-    },
-    orderBy: {
-      currentAmount: "desc",
-    },
-    take: 6,
-  });
+      orderBy: {
+        currentAmount: "desc",
+      },
+      take: 6,
+    });
 
-  return projects.map((project) => {
-    // Calculate days remaining
-    let daysRemaining = 0;
-    if (project.endDate) {
-      const now = new Date();
-      const end = new Date(project.endDate);
-      daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-    }
+    return projects.map((project) => {
+      // Calculate days remaining
+      let daysRemaining = 0;
+      if (project.endDate) {
+        const now = new Date();
+        const end = new Date(project.endDate);
+        daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      }
 
-    return {
-      id: project.id,
-      slug: project.slug,
-      title: project.title,
-      subtitle: project.subtitle || "",
-      category: project.category,
-      imageUrl: project.imageUrl || "",
-      creator: project.creator.name || "Creator",
-      goalAmount: project.goalAmount,
-      currentAmount: project.currentAmount,
-      backerCount: project.backerCount,
-      daysRemaining,
-    };
-  });
+      return {
+        id: project.id,
+        slug: project.slug,
+        title: project.title,
+        subtitle: project.subtitle || "",
+        category: project.category,
+        imageUrl: project.imageUrl || "",
+        creator: project.creator.name || "Creator",
+        goalAmount: project.goalAmount,
+        currentAmount: project.currentAmount,
+        backerCount: project.backerCount,
+        daysRemaining,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching featured projects:", error);
+    return [];
+  }
 }
 
 // Fetch category counts from database
 async function getCategoryCounts() {
-  const categoryCounts = await db.project.groupBy({
-    by: ["category"],
-    where: {
-      status: "LIVE",
-    },
-    _count: true,
-  });
+  try {
+    const categoryCounts = await db.project.groupBy({
+      by: ["category"],
+      where: {
+        status: "LIVE",
+      },
+      _count: true,
+    });
 
-  const categoryMap = new Map(categoryCounts.map(c => [c.category.toLowerCase(), c._count]));
+    const categoryMap = new Map(categoryCounts.map(c => [c.category.toLowerCase(), c._count]));
 
-  const categories = [
-    { name: "Art", count: categoryMap.get("art") || 0 },
-    { name: "Comics", count: categoryMap.get("comics") || 0 },
-    { name: "Design", count: categoryMap.get("design") || 0 },
-    { name: "Film", count: categoryMap.get("film") || 0 },
-    { name: "Games", count: categoryMap.get("games") || 0 },
-    { name: "Music", count: categoryMap.get("music") || 0 },
-    { name: "Publishing", count: categoryMap.get("publishing") || 0 },
-    { name: "Technology", count: categoryMap.get("technology") || 0 },
-  ];
+    const categories = [
+      { name: "Art", count: categoryMap.get("art") || 0 },
+      { name: "Comics", count: categoryMap.get("comics") || 0 },
+      { name: "Design", count: categoryMap.get("design") || 0 },
+      { name: "Film", count: categoryMap.get("film") || 0 },
+      { name: "Games", count: categoryMap.get("games") || 0 },
+      { name: "Music", count: categoryMap.get("music") || 0 },
+      { name: "Publishing", count: categoryMap.get("publishing") || 0 },
+      { name: "Technology", count: categoryMap.get("technology") || 0 },
+    ];
 
-  return categories;
+    return categories;
+  } catch (error) {
+    console.error("Error fetching category counts:", error);
+    return [
+      { name: "Art", count: 0 },
+      { name: "Comics", count: 0 },
+      { name: "Design", count: 0 },
+      { name: "Film", count: 0 },
+      { name: "Games", count: 0 },
+      { name: "Music", count: 0 },
+      { name: "Publishing", count: 0 },
+      { name: "Technology", count: 0 },
+    ];
+  }
 }
 
 export default async function HomePage() {
