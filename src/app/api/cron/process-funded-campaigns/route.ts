@@ -1,6 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { processPendingPledgesForProject } from "@/lib/payments/stripe";
+import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
+
+/**
+ * Sync payment methods from Stripe for pledges that have SetupIntents
+ * but are missing payment method IDs (e.g., webhook failed)
+ */
+async function syncPaymentMethodsFromStripe(projectId: string) {
+  const stripe = await getStripeInstance();
+
+  // Find pending pledges with SetupIntent but no payment method
+  const pledgesNeedingSync = await db.pledge.findMany({
+    where: {
+      projectId,
+      status: "PENDING",
+      stripeSetupIntentId: { not: null },
+      stripePaymentMethodId: null,
+    },
+    select: {
+      id: true,
+      stripeSetupIntentId: true,
+    },
+  });
+
+  let synced = 0;
+  for (const pledge of pledgesNeedingSync) {
+    try {
+      const setupIntent = await stripe.setupIntents.retrieve(pledge.stripeSetupIntentId!);
+      if (setupIntent.status === "succeeded" && setupIntent.payment_method) {
+        const paymentMethodId = typeof setupIntent.payment_method === "string"
+          ? setupIntent.payment_method
+          : setupIntent.payment_method.id;
+
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: { stripePaymentMethodId: paymentMethodId },
+        });
+        synced++;
+      }
+    } catch {
+      // Ignore errors - will be retried next cron run
+    }
+  }
+
+  return synced;
+}
 
 // Cron job endpoint for processing pending pledges on funded campaigns
 //
@@ -80,8 +124,48 @@ export async function GET(req: NextRequest) {
       totalFailed: 0,
     };
 
+    // Also find projects that might have pledges needing payment method sync
+    const projectsNeedingSync = fundedProjectsWithPendingPledges.filter(
+      (project) => project.currentAmount >= project.goalAmount
+    );
+
+    let totalSynced = 0;
+
+    // First pass: sync payment methods from Stripe for all funded projects
+    for (const project of projectsNeedingSync) {
+      const synced = await syncPaymentMethodsFromStripe(project.id);
+      totalSynced += synced;
+      if (synced > 0) {
+        console.log(`[Cron] Synced ${synced} payment methods for "${project.title}"`);
+      }
+    }
+
+    // Re-query to get updated counts after sync
+    const projectsToProcessAfterSync = await db.project.findMany({
+      where: {
+        id: { in: projectsNeedingSync.map(p => p.id) },
+      },
+      select: {
+        id: true,
+        title: true,
+        _count: {
+          select: {
+            pledges: {
+              where: {
+                status: "PENDING",
+                chargedImmediately: false,
+                stripePaymentMethodId: { not: null },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const projectsReadyToCharge = projectsToProcessAfterSync.filter(p => p._count.pledges > 0);
+
     // Process pending pledges for each funded project
-    for (const project of projectsToProcess) {
+    for (const project of projectsReadyToCharge) {
       try {
         const pledgeResults = await processPendingPledgesForProject(project.id);
 
@@ -116,6 +200,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      totalPaymentMethodsSynced: totalSynced,
       ...results,
       timestamp: new Date().toISOString(),
     });

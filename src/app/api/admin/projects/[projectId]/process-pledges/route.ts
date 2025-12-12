@@ -1,9 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { processPendingPledgesForProject } from "@/lib/payments/stripe";
+import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Sync payment methods from Stripe for pledges that have SetupIntents
+ * but are missing payment method IDs (e.g., webhook failed)
+ */
+async function syncPaymentMethodsFromStripe(projectId: string) {
+  const stripe = await getStripeInstance();
+
+  // Find pending pledges with SetupIntent but no payment method
+  const pledgesNeedingSync = await db.pledge.findMany({
+    where: {
+      projectId,
+      status: "PENDING",
+      stripeSetupIntentId: { not: null },
+      stripePaymentMethodId: null,
+    },
+    select: {
+      id: true,
+      stripeSetupIntentId: true,
+    },
+  });
+
+  const results = {
+    total: pledgesNeedingSync.length,
+    synced: 0,
+    failed: 0,
+  };
+
+  for (const pledge of pledgesNeedingSync) {
+    try {
+      // Retrieve the SetupIntent from Stripe
+      const setupIntent = await stripe.setupIntents.retrieve(pledge.stripeSetupIntentId!);
+
+      // If succeeded and has a payment method, save it
+      if (setupIntent.status === "succeeded" && setupIntent.payment_method) {
+        const paymentMethodId = typeof setupIntent.payment_method === "string"
+          ? setupIntent.payment_method
+          : setupIntent.payment_method.id;
+
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: { stripePaymentMethodId: paymentMethodId },
+        });
+        results.synced++;
+        console.log(`[Sync] Saved payment method for pledge ${pledge.id}`);
+      } else {
+        results.failed++;
+      }
+    } catch (error) {
+      console.error(`[Sync] Failed to sync pledge ${pledge.id}:`, error);
+      results.failed++;
+    }
+  }
+
+  return results;
+}
 
 // POST - Manually trigger charging pending pledges for a funded project
 export async function POST(
@@ -56,6 +112,10 @@ export async function POST(
       }, { status: 400 });
     }
 
+    // First, sync payment methods from Stripe for pledges that are missing them
+    // (this fixes cases where webhooks failed to save the payment method)
+    const syncResults = await syncPaymentMethodsFromStripe(projectId);
+
     // Count pending pledges before processing
     const pendingCount = await db.pledge.count({
       where: {
@@ -69,7 +129,10 @@ export async function POST(
     if (pendingCount === 0) {
       return NextResponse.json({
         success: true,
-        message: "No pending pledges to process",
+        message: syncResults.synced > 0
+          ? `Synced ${syncResults.synced} payment methods but no pledges ready to process`
+          : "No pending pledges to process",
+        syncResults,
         processed: 0,
         successful: 0,
         failed: 0,
@@ -77,13 +140,14 @@ export async function POST(
     }
 
     // Process pending pledges (charge saved cards)
-    const results = await processPendingPledgesForProject(projectId);
+    const chargeResults = await processPendingPledgesForProject(projectId);
 
     return NextResponse.json({
       success: true,
-      message: `Processed ${results.total} pending pledges`,
+      message: `Synced ${syncResults.synced} payment methods, charged ${chargeResults.successful}/${chargeResults.total} pledges`,
       projectTitle: project.title,
-      ...results,
+      syncResults,
+      chargeResults,
     });
   } catch (error) {
     console.error("Process pledges error:", error);
