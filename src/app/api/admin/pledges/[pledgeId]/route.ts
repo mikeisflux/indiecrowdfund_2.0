@@ -218,8 +218,9 @@ export async function PATCH(
         );
       }
 
-      // Cancel any Stripe intents (safely checks status first)
       const stripe = await getStripeInstance();
+
+      // Cancel any Stripe intents (safely checks status first)
       if (pledge.stripeSetupIntentId) {
         await safeCancelSetupIntent(stripe, pledge.stripeSetupIntentId);
       }
@@ -227,12 +228,26 @@ export async function PATCH(
         await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
       }
 
-      // Update pledge status
+      // CRITICAL: Detach the payment method to prevent cron from charging it
+      // This is necessary because SetupIntents that already succeeded can't be "cancelled"
+      // but the payment method remains valid and the cron would charge it
+      if (pledge.stripePaymentMethodId) {
+        try {
+          await stripe.paymentMethods.detach(pledge.stripePaymentMethodId);
+          console.log(`[Admin Cancel] Detached payment method ${pledge.stripePaymentMethodId} for pledge ${pledgeId}`);
+        } catch (detachError) {
+          // Log but continue - payment method might already be detached or invalid
+          console.warn(`[Admin Cancel] Could not detach payment method: ${detachError}`);
+        }
+      }
+
+      // Update pledge status and CLEAR the payment method ID to prevent any charging
       await db.pledge.update({
         where: { id: pledgeId },
         data: {
           status: "CANCELLED",
           lastFailureReason: reason || "Cancelled by admin",
+          stripePaymentMethodId: null, // Clear to prevent cron from charging
         },
       });
 
@@ -354,14 +369,28 @@ export async function DELETE(
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
+    const stripeClient = await getStripeInstance();
+
     // Cancel any Stripe intents for PENDING pledges (safely checks status first)
     if (pledge.status === "PENDING") {
-      const stripeClient = await getStripeInstance();
       if (pledge.stripeSetupIntentId) {
         await safeCancelSetupIntent(stripeClient, pledge.stripeSetupIntentId);
       }
       if (pledge.stripePaymentIntentId) {
         await safeCancelPaymentIntent(stripeClient, pledge.stripePaymentIntentId);
+      }
+    }
+
+    // CRITICAL: Always detach the payment method to prevent any future charging
+    // This is necessary because SetupIntents that already succeeded can't be "cancelled"
+    // but the payment method remains valid and could be charged
+    if (pledge.stripePaymentMethodId) {
+      try {
+        await stripeClient.paymentMethods.detach(pledge.stripePaymentMethodId);
+        console.log(`[Admin Delete] Detached payment method ${pledge.stripePaymentMethodId} for pledge ${pledgeId}`);
+      } catch (detachError) {
+        // Log but continue - payment method might already be detached or invalid
+        console.warn(`[Admin Delete] Could not detach payment method: ${detachError}`);
       }
     }
 
