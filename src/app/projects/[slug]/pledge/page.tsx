@@ -207,7 +207,7 @@ export default function PledgePage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { data: session, status: authStatus } = useSession();
+  const { status: authStatus } = useSession();
   const slug = params.slug as string;
   const rewardId = searchParams.get("reward");
   const amountParam = searchParams.get("amount");

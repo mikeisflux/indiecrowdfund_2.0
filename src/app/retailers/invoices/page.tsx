@@ -101,18 +101,18 @@ export default function RetailerInvoicesPage() {
                 <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
                   <Store className="h-5 w-5 text-white" />
                 </div>
-                <span className="font-bold text-lg">Retailer Portal</span>
+                <span className="font-bold text-lg hidden sm:inline">Retailer Portal</span>
               </Link>
             </div>
 
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="relative">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="ghost" size="icon" className="relative hidden sm:flex">
                 <Bell className="h-5 w-5" />
               </Button>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="hidden sm:flex">
                 <Settings className="h-5 w-5" />
               </Button>
-              <div className="h-8 w-px bg-zinc-200"></div>
+              <div className="h-8 w-px bg-zinc-200 hidden sm:block"></div>
               <Button variant="ghost" size="icon" onClick={handleLogout}>
                 <LogOut className="h-5 w-5" />
               </Button>
@@ -124,34 +124,34 @@ export default function RetailerInvoicesPage() {
       {/* Navigation Tabs */}
       <nav className="bg-white border-b border-zinc-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-8">
+          <div className="flex gap-4 sm:gap-8 overflow-x-auto">
             <Link
               href="/retailers/dashboard"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               Dashboard
             </Link>
             <Link
               href="/retailers/projects"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               Browse Projects
             </Link>
             <Link
               href="/retailers/orders"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               My Orders
             </Link>
             <Link
               href="/retailers/invoices"
-              className="py-4 px-1 border-b-2 border-emerald-600 text-emerald-600 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-emerald-600 text-emerald-600 font-medium text-sm whitespace-nowrap"
             >
               Invoices
             </Link>
             <Link
               href="/retailers/account"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               Account
             </Link>
@@ -160,12 +160,12 @@ export default function RetailerInvoicesPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Invoices</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Invoices</h1>
             <p className="text-zinc-500">View and download your invoices</p>
           </div>
-          <Button variant="outline">
+          <Button variant="outline" className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />
             Export All
           </Button>

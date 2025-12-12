@@ -146,18 +146,18 @@ export default function RetailerProjectsPage() {
                 <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
                   <Store className="h-5 w-5 text-white" />
                 </div>
-                <span className="font-bold text-lg">Retailer Portal</span>
+                <span className="font-bold text-lg hidden sm:inline">Retailer Portal</span>
               </Link>
             </div>
 
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="relative">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="ghost" size="icon" className="relative hidden sm:flex">
                 <Bell className="h-5 w-5" />
               </Button>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="hidden sm:flex">
                 <Settings className="h-5 w-5" />
               </Button>
-              <div className="h-8 w-px bg-zinc-200"></div>
+              <div className="h-8 w-px bg-zinc-200 hidden sm:block"></div>
               <Button variant="ghost" size="icon" onClick={handleLogout}>
                 <LogOut className="h-5 w-5" />
               </Button>
@@ -169,34 +169,34 @@ export default function RetailerProjectsPage() {
       {/* Navigation Tabs */}
       <nav className="bg-white border-b border-zinc-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-8">
+          <div className="flex gap-4 sm:gap-8 overflow-x-auto">
             <Link
               href="/retailers/dashboard"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               Dashboard
             </Link>
             <Link
               href="/retailers/projects"
-              className="py-4 px-1 border-b-2 border-emerald-600 text-emerald-600 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-emerald-600 text-emerald-600 font-medium text-sm whitespace-nowrap"
             >
               Browse Projects
             </Link>
             <Link
               href="/retailers/orders"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               My Orders
             </Link>
             <Link
               href="/retailers/invoices"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               Invoices
             </Link>
             <Link
               href="/retailers/account"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm"
+              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
             >
               Account
             </Link>
@@ -394,8 +394,8 @@ export default function RetailerProjectsPage() {
             {projects.map((project) => (
               <Link key={project.id} href={`/retailers/projects/${project.id}`}>
                 <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
-                  <div className="flex">
-                    <div className="w-64 h-48 bg-zinc-100 relative flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row">
+                    <div className="w-full sm:w-64 h-48 bg-zinc-100 relative flex-shrink-0">
                       <img
                         src={project.imageUrl}
                         alt={project.title}
