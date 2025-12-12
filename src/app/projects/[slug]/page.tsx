@@ -418,7 +418,8 @@ export default function ProjectPage() {
     }).format(amount);
   };
 
-  const formatDate = (date: Date | string) => {
+  const formatDate = (date: Date | string | null | undefined) => {
+    if (!date) return "TBD";
     const d = typeof date === "string" ? new Date(date) : date;
     return d.toLocaleDateString("en-US", {
       weekday: "short",
@@ -457,7 +458,8 @@ export default function ProjectPage() {
   // TODO: Fetch comments from API
   const comments: CommentData[] = [];
 
-  const formatRelativeTime = (date: Date | string) => {
+  const formatRelativeTime = (date: Date | string | null | undefined) => {
+    if (!date) return "";
     const now = new Date();
     const d = typeof date === "string" ? new Date(date) : date;
     const diffMs = now.getTime() - d.getTime();
