@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -441,12 +442,16 @@ const platformFeatures = [
   },
 ];
 
-const stats = [
-  { label: "Projects Funded", value: "10,000+", icon: Rocket },
-  { label: "Total Raised", value: "$50M+", icon: DollarSign },
-  { label: "Happy Backers", value: "500K+", icon: Users },
-  { label: "Countries", value: "180+", icon: Globe },
-];
+interface PlatformStats {
+  projectsFunded: number;
+  projectsLive: number;
+  projectsTotal: number;
+  totalRaised: number;
+  totalBackers: number;
+  totalPledges: number;
+  totalCreators: number;
+  totalUsers: number;
+}
 
 const values = [
   {
@@ -475,7 +480,67 @@ const values = [
   },
 ];
 
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M+`;
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(0)}K+`;
+  }
+  return num.toLocaleString();
+}
+
+function formatCurrency(amount: number): string {
+  if (amount >= 1000000) {
+    return `$${(amount / 1000000).toFixed(1)}M+`;
+  }
+  if (amount >= 1000) {
+    return `$${(amount / 1000).toFixed(0)}K+`;
+  }
+  return `$${amount.toLocaleString()}`;
+}
+
 export default function AboutUsPage() {
+  const [stats, setStats] = useState<PlatformStats | null>(null);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const response = await fetch("/api/platform-stats");
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch platform stats:", error);
+      }
+    }
+    fetchStats();
+  }, []);
+
+  const displayStats = [
+    {
+      label: "Projects Funded",
+      value: stats ? formatNumber(stats.projectsFunded + stats.projectsLive) : "...",
+      icon: Rocket
+    },
+    {
+      label: "Total Raised",
+      value: stats ? formatCurrency(stats.totalRaised) : "...",
+      icon: DollarSign
+    },
+    {
+      label: "Happy Backers",
+      value: stats ? formatNumber(stats.totalBackers) : "...",
+      icon: Users
+    },
+    {
+      label: "Creators",
+      value: stats ? formatNumber(stats.totalCreators) : "...",
+      icon: Globe
+    },
+  ];
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -517,7 +582,7 @@ export default function AboutUsPage() {
       <section className="py-12 bg-white border-b">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat) => (
+            {displayStats.map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 mb-3">
                   <stat.icon className="h-6 w-6 text-indigo-600" />
