@@ -815,7 +815,7 @@ export default function UsersPage() {
                     <td className="p-4">{user.projectCount}</td>
                     <td className="p-4">{user.pledgeCount}</td>
                     <td className="p-4 text-sm text-zinc-500">
-                      {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
+                      {user.createdAt ? formatDistanceToNow(new Date(user.createdAt), { addSuffix: true }) : "N/A"}
                     </td>
                     <td className="p-4">
                       <DropdownMenu>
@@ -1044,7 +1044,7 @@ export default function UsersPage() {
                         </td>
                         <td className="p-4">{getRetailerStatusBadge(retailer.status)}</td>
                         <td className="p-4 text-sm text-zinc-500">
-                          {new Date(retailer.createdAt).toLocaleDateString()}
+                          {retailer.createdAt ? new Date(retailer.createdAt).toLocaleDateString() : "N/A"}
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-2">
@@ -1118,7 +1118,7 @@ export default function UsersPage() {
                   </div>
                   <p className="text-zinc-500">{selectedUser.email}</p>
                   <p className="mt-1 text-sm text-zinc-500">
-                    Member since {formatDistanceToNow(new Date(selectedUser.createdAt), { addSuffix: true })}
+                    Member since {selectedUser.createdAt ? formatDistanceToNow(new Date(selectedUser.createdAt), { addSuffix: true }) : "N/A"}
                   </p>
                 </div>
               </div>
@@ -1188,7 +1188,7 @@ export default function UsersPage() {
                     {getRetailerStatusBadge(selectedRetailer.status)}
                   </div>
                   <p className="text-zinc-500 mt-1">
-                    Applied on {new Date(selectedRetailer.createdAt).toLocaleDateString()}
+                    Applied on {selectedRetailer.createdAt ? new Date(selectedRetailer.createdAt).toLocaleDateString() : "N/A"}
                   </p>
                 </div>
               </div>
