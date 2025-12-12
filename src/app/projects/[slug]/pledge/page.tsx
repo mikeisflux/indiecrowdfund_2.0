@@ -245,6 +245,7 @@ export default function PledgePage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentType, setIntentType] = useState<"payment_intent" | "setup_intent">("setup_intent");
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [currentPledgeId, setCurrentPledgeId] = useState<string | null>(null);
 
   // Handle success redirect
   useEffect(() => {
@@ -313,6 +314,7 @@ export default function PledgePage() {
       // Set the client secret and intent type to show Stripe Elements
       setClientSecret(data.clientSecret);
       setIntentType(data.type || "setup_intent");
+      setCurrentPledgeId(data.pledgeId); // Store pledgeId for confirmation email
       setIsProcessing(false);
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create pledge");
@@ -519,7 +521,18 @@ export default function PledgePage() {
   };
 
   // Called when payment is successful
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
+    // Send confirmation email directly (don't rely on webhooks)
+    if (currentPledgeId) {
+      try {
+        await fetch(`/api/pledges/${currentPledgeId}/confirm`, {
+          method: "POST",
+        });
+      } catch (err) {
+        console.error("Failed to send confirmation email:", err);
+        // Don't block success page - email can be retried later
+      }
+    }
     setStep("success");
     setIsProcessing(false);
   };
