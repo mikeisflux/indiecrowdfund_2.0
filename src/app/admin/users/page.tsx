@@ -797,6 +797,10 @@ export default function UsersPage() {
           <p className="text-zinc-500">Manage platform users and retailer applications</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => { fetchUsers(); if (activeTab === "retailers") fetchRetailers(); }} disabled={isLoading || isLoadingRetailers}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading || isLoadingRetailers ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
           <Button variant="outline" onClick={exportUsers}>
             <Download className="mr-2 h-4 w-4" />
             Export

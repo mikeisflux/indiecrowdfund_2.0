@@ -85,6 +85,7 @@ export async function GET(req: NextRequest) {
       db.user.count({ where }),
       Promise.all([
         db.user.count({ where: { role: "USER" } }),
+        db.user.count({ where: { role: "COOL_KIDS" } }),
         db.user.count({ where: { role: "ADMIN" } }),
         db.user.count({ where: { role: "SUPER_ADMIN" } })
       ])
@@ -104,6 +105,9 @@ export async function GET(req: NextRequest) {
       pledgeCount: user._count.pledges
     }));
 
+    // roleCounts: [USER, COOL_KIDS, ADMIN, SUPER_ADMIN]
+    const totalUsers = roleCounts[0] + roleCounts[1] + roleCounts[2] + roleCounts[3];
+
     return NextResponse.json({
       users: usersWithStats,
       pagination: {
@@ -113,10 +117,10 @@ export async function GET(req: NextRequest) {
         totalPages: Math.ceil(total / limit)
       },
       stats: {
-        total: roleCounts[0] + roleCounts[1] + roleCounts[2],
-        users: roleCounts[0],
-        admins: roleCounts[1],
-        superAdmins: roleCounts[2]
+        total: totalUsers,
+        users: roleCounts[0] + roleCounts[1], // Regular users + Cool Kids
+        admins: roleCounts[2],
+        superAdmins: roleCounts[3]
       }
     });
   } catch (error) {
