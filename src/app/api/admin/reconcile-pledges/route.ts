@@ -115,7 +115,7 @@ async function reconcilePledges(
 
   // Get projects to reconcile
   const projects = await db.project.findMany({
-    where: projectId ? { id: projectId } : { status: { in: ["LIVE", "FUNDED", "COMPLETED"] } },
+    where: projectId ? { id: projectId } : { status: { in: ["LIVE", "FUNDED"] } },
     include: {
       creator: {
         include: {
