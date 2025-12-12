@@ -707,13 +707,13 @@ export async function notifyBackerPledgeConfirmed(
     where: { id: pledgeId },
     include: {
       project: {
-        select: { title: true, slug: true, imageUrl: true },
+        select: { id: true, title: true, slug: true, imageUrl: true },
       },
       reward: {
         select: { title: true },
       },
       user: {
-        select: { email: true, name: true },
+        select: { id: true, email: true, name: true },
       },
     },
   });
@@ -727,7 +727,7 @@ export async function notifyBackerPledgeConfirmed(
   }
 
   try {
-    await sendPledgeConfirmationEmail(
+    const result = await sendPledgeConfirmationEmail(
       pledge.user.email,
       pledge.user.name || "Backer",
       pledge.project.title,
@@ -738,13 +738,28 @@ export async function notifyBackerPledgeConfirmed(
       pledge.project.imageUrl
     );
 
-    // Mark email as sent
-    await db.pledge.update({
-      where: { id: pledgeId },
-      data: { confirmationEmailSent: true },
-    });
+    if (result.success) {
+      // Log to EmailLog for admin tracking
+      await db.emailLog.create({
+        data: {
+          userId: pledge.user.id,
+          projectId: pledge.project.id,
+          pledgeId: pledge.id,
+          type: "PLEDGE_CONFIRMATION",
+          subject: result.subject,
+          recipientEmail: pledge.user.email,
+          htmlContent: result.html,
+        },
+      });
 
-    console.log(`Sent pledge confirmation email to ${pledge.user.email} for pledge ${pledgeId}`);
+      // Mark email as sent on pledge
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: { confirmationEmailSent: true },
+      });
+
+      console.log(`Sent pledge confirmation email to ${pledge.user.email} for pledge ${pledgeId}`);
+    }
   } catch (error) {
     console.error(`Failed to send pledge confirmation email for pledge ${pledgeId}:`, error);
   }
@@ -905,13 +920,13 @@ export async function processUnsentConfirmationEmails() {
     },
     include: {
       project: {
-        select: { title: true, slug: true, imageUrl: true },
+        select: { id: true, title: true, slug: true, imageUrl: true },
       },
       reward: {
         select: { title: true },
       },
       user: {
-        select: { email: true, name: true },
+        select: { id: true, email: true, name: true },
       },
     },
     take: 100, // Process in batches
@@ -927,13 +942,13 @@ export async function processUnsentConfirmationEmails() {
     },
     include: {
       project: {
-        select: { title: true, slug: true, imageUrl: true },
+        select: { id: true, title: true, slug: true, imageUrl: true },
       },
       reward: {
         select: { title: true },
       },
       user: {
-        select: { email: true, name: true },
+        select: { id: true, email: true, name: true },
       },
     },
     take: 100,
@@ -954,7 +969,7 @@ export async function processUnsentConfirmationEmails() {
     }
 
     try {
-      await sendPledgeConfirmationEmail(
+      const emailResult = await sendPledgeConfirmationEmail(
         pledge.user.email,
         pledge.user.name || "Backer",
         pledge.project.title,
@@ -965,14 +980,31 @@ export async function processUnsentConfirmationEmails() {
         pledge.project.imageUrl
       );
 
-      // Mark as sent
-      await db.pledge.update({
-        where: { id: pledge.id },
-        data: { confirmationEmailSent: true },
-      });
+      if (emailResult.success) {
+        // Log to EmailLog for admin tracking
+        await db.emailLog.create({
+          data: {
+            userId: pledge.user.id,
+            projectId: pledge.project.id,
+            pledgeId: pledge.id,
+            type: "PLEDGE_CONFIRMATION",
+            subject: emailResult.subject,
+            recipientEmail: pledge.user.email,
+            htmlContent: emailResult.html,
+          },
+        });
 
-      results.successful++;
-      console.log(`Retry: Sent pledge confirmation email for pledge ${pledge.id}`);
+        // Mark as sent
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: { confirmationEmailSent: true },
+        });
+
+        results.successful++;
+        console.log(`Retry: Sent pledge confirmation email for pledge ${pledge.id}`);
+      } else {
+        results.failed++;
+      }
     } catch (error) {
       results.failed++;
       console.error(`Retry: Failed to send pledge confirmation email for pledge ${pledge.id}:`, error);

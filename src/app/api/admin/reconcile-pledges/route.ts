@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
+import { notifyBackerPledgeConfirmed } from "@/lib/notifications";
 import Stripe from "stripe";
 
 interface ReconciliationResult {
@@ -132,6 +133,7 @@ async function reconcilePledges(
           stripePaymentMethodId: true,
           chargedImmediately: true,
           userId: true,
+          confirmationEmailSent: true,
         },
       },
     },
@@ -182,6 +184,7 @@ interface ProjectWithPledges {
     stripePaymentMethodId: string | null;
     chargedImmediately: boolean;
     userId: string;
+    confirmationEmailSent: boolean;
   }[];
 }
 
@@ -377,17 +380,57 @@ async function reconcileProject(
       },
     });
 
-    // Fix pledge statuses
+    // Fix pledge statuses and payment method IDs
     const entries = Array.from(stripePledgeStatus.entries());
     for (let i = 0; i < entries.length; i++) {
       const [pledgeId, stripeData] = entries[i];
       const dbPledge = dbPledges.find((p) => p.id === pledgeId);
       if (dbPledge) {
+        // Fix PaymentIntent pledges - mark as COMPLETED
         if (stripeData.status === "succeeded" && dbPledge.status !== "COMPLETED") {
           await db.pledge.update({
             where: { id: pledgeId },
             data: { status: "COMPLETED" },
           });
+
+          // Send confirmation email if not already sent
+          if (!dbPledge.confirmationEmailSent) {
+            try {
+              await notifyBackerPledgeConfirmed(pledgeId, true);
+            } catch (e) {
+              console.warn(`Could not send confirmation email for pledge ${pledgeId}:`, e);
+            }
+          }
+        }
+
+        // Fix SetupIntent pledges - update payment method ID if missing
+        // This ensures pledges with saved cards are properly tracked
+        if (stripeData.status === "card_saved" && stripeData.type === "setup_intent") {
+          // Fetch the actual SetupIntent to get the payment method ID
+          try {
+            if (dbPledge.stripeSetupIntentId) {
+              const setupIntent = await stripeClient.setupIntents.retrieve(dbPledge.stripeSetupIntentId);
+              if (setupIntent.payment_method && !dbPledge.stripePaymentMethodId) {
+                await db.pledge.update({
+                  where: { id: pledgeId },
+                  data: {
+                    stripePaymentMethodId: setupIntent.payment_method as string,
+                  },
+                });
+
+                // Send confirmation email if not already sent
+                if (!dbPledge.confirmationEmailSent) {
+                  try {
+                    await notifyBackerPledgeConfirmed(pledgeId, false);
+                  } catch (e) {
+                    console.warn(`Could not send confirmation email for pledge ${pledgeId}:`, e);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.warn(`Could not update payment method for pledge ${pledgeId}:`, e);
+          }
         }
       }
     }

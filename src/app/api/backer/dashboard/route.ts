@@ -25,11 +25,18 @@ export async function GET() {
       savedProjects,
       monthlyPledges,
     ] = await Promise.all([
-      // Get user's completed pledges with full project and reward info
+      // Get user's pledges with full project and reward info
+      // Include COMPLETED pledges and PENDING pledges that have a saved payment method
       db.pledge.findMany({
         where: {
           userId,
-          status: "COMPLETED",
+          OR: [
+            { status: "COMPLETED" },
+            {
+              status: "PENDING",
+              stripePaymentMethodId: { not: null },
+            },
+          ],
         },
         include: {
           project: {
@@ -104,10 +111,17 @@ export async function GET() {
       }),
 
       // Get monthly spending data (last 6 months)
+      // Include both COMPLETED and PENDING pledges with saved payment methods
       db.pledge.findMany({
         where: {
           userId,
-          status: "COMPLETED",
+          OR: [
+            { status: "COMPLETED" },
+            {
+              status: "PENDING",
+              stripePaymentMethodId: { not: null },
+            },
+          ],
           createdAt: {
             gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000),
           },

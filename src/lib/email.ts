@@ -461,11 +461,19 @@ export async function sendPledgeConfirmationEmail(
     </html>
   `;
 
-  return sendEmail({
+  const subject = `Your pledge for "${projectTitle}" is confirmed!`;
+  const result = await sendEmail({
     to: email,
-    subject: `Your pledge for "${projectTitle}" is confirmed!`,
+    subject,
     html,
   });
+
+  // Return both the result and the email content for logging
+  return {
+    ...result,
+    subject,
+    html,
+  };
 }
 
 export async function sendProjectChangesRequestedEmail(

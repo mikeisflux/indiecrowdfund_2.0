@@ -403,6 +403,7 @@ model Pledge {
   project               Project      @relation(fields: [projectId], references: [id])
   reward                Reward?      @relation(fields: [rewardId], references: [id])
   addons                PledgeAddon[]
+  emailLogs             EmailLog[]
 
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
@@ -775,21 +776,27 @@ model ProjectSimilarity {
 }
 
 model EmailLog {
-  id          String    @id @default(cuid())
-  userId      String
-  projectId   String?
-  type        EmailType
-  subject     String?
+  id             String    @id @default(cuid())
+  userId         String?
+  projectId      String?
+  pledgeId       String?
+  type           EmailType
+  subject        String?
+  recipientEmail String    // Store recipient email in case user email changes
+  htmlContent    String?   @db.Text  // Store the full HTML content for viewing/downloading
 
-  sentAt      DateTime  @default(now())
-  openedAt    DateTime?
-  clickedAt   DateTime?
+  sentAt         DateTime  @default(now())
+  openedAt       DateTime?
+  clickedAt      DateTime?
 
-  user        User      @relation(fields: [userId], references: [id])
-  project     Project?  @relation(fields: [projectId], references: [id])
+  user           User?     @relation(fields: [userId], references: [id])
+  project        Project?  @relation(fields: [projectId], references: [id])
+  pledge         Pledge?   @relation(fields: [pledgeId], references: [id])
 
   @@index([userId, type, sentAt])
   @@index([projectId, type])
+  @@index([pledgeId])
+  @@index([recipientEmail])
 }
 
 enum EmailType {
