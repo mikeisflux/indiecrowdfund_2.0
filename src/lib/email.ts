@@ -368,6 +368,106 @@ export async function sendProjectRejectedEmail(
   });
 }
 
+/**
+ * Send pledge confirmation email to backer
+ */
+export async function sendPledgeConfirmationEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  projectSlug: string,
+  amount: number,
+  rewardTitle: string | null,
+  chargedImmediately: boolean,
+  imageUrl?: string | null
+) {
+  const projectUrl = `${APP_URL}/projects/${projectSlug}`;
+  const dashboardUrl = `${APP_URL}/dashboard`;
+
+  const chargeMessage = chargedImmediately
+    ? `Your payment of <strong>$${amount.toFixed(2)}</strong> has been processed successfully.`
+    : `Your card has been saved and will be charged <strong>$${amount.toFixed(2)}</strong> when the campaign reaches its funding goal.`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Pledge Confirmation</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #028858 0%, #10b981 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <h2 style="margin-top: 0; color: white; text-align: center;">Thank You for Your Pledge!</h2>
+
+          ${imageUrl ? `<img src="${imageUrl}" alt="${projectTitle}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""}
+
+          <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0;">
+            <h3 style="margin: 0 0 10px 0; color: white;">${projectTitle}</h3>
+            ${rewardTitle ? `<p style="margin: 0; color: rgba(255,255,255,0.9);">Reward: ${rewardTitle}</p>` : `<p style="margin: 0; color: rgba(255,255,255,0.9);">Pledge without reward</p>`}
+          </div>
+
+          <p style="text-align: center; margin-bottom: 0;">Hi ${backerName || "there"},</p>
+          <p style="text-align: center;">${chargeMessage}</p>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin-top: 0;">Pledge Details</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Amount</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 600;">$${amount.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Reward</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">${rewardTitle || "No reward selected"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;">Status</td>
+              <td style="padding: 8px 0; text-align: right; color: #028858; font-weight: 600;">${chargedImmediately ? "Paid" : "Card Saved"}</td>
+            </tr>
+          </table>
+        </div>
+
+        ${!chargedImmediately ? `
+        <div style="background: #fffbeb; border-radius: 8px; padding: 15px; margin-bottom: 20px; border: 1px solid #fef3c7;">
+          <p style="margin: 0; font-size: 14px;"><strong>Note:</strong> Your card will only be charged if the campaign successfully reaches its funding goal. If the campaign doesn't reach its goal, you won't be charged.</p>
+        </div>
+        ` : ""}
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 15px 0;"><strong>What happens next?</strong></p>
+          <p style="margin: 0; color: #666;">You'll receive updates from the creator as the project progresses. If the campaign is successful, we'll send you a survey to collect shipping details closer to the estimated delivery date.</p>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${projectUrl}" style="display: inline-block; background: #028858; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500; margin-right: 10px;">
+            View Project
+          </a>
+          <a href="${dashboardUrl}" style="display: inline-block; background: #333; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            My Dashboard
+          </a>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because you backed a project on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Your pledge for "${projectTitle}" is confirmed!`,
+    html,
+  });
+}
+
 export async function sendProjectChangesRequestedEmail(
   email: string,
   creatorName: string,

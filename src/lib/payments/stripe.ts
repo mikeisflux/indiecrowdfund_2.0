@@ -4,6 +4,7 @@ import {
   notifyPledgeReceived,
   notifyPledgeFailed,
   notifyProjectFunded,
+  notifyBackerPledgeConfirmed,
 } from "@/lib/notifications";
 
 let stripeInstance: Stripe | null = null;
@@ -276,12 +277,54 @@ export async function createStripePayment({
     user?.email || ""
   );
 
-  // Create pending pledge
+  // Check for existing pending pledge for this user/project/reward to prevent duplicates
+  const normalizedRewardId = rewardId && rewardId !== "no-reward" ? rewardId : null;
+  const existingPledge = await db.pledge.findFirst({
+    where: {
+      userId,
+      projectId,
+      rewardId: normalizedRewardId,
+      status: "PENDING",
+      // Only reuse pledges created within the last hour (stale pledges might have invalid intents)
+      createdAt: {
+        gte: new Date(Date.now() - 60 * 60 * 1000),
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // If an existing pending pledge exists with a valid setup/payment intent, reuse it
+  if (existingPledge && (existingPledge.stripeSetupIntentId || existingPledge.stripePaymentIntentId)) {
+    // Retrieve the existing intent to get the client secret
+    if (!isCampaignFunded && existingPledge.stripeSetupIntentId) {
+      const setupIntent = await stripeClient.setupIntents.retrieve(existingPledge.stripeSetupIntentId);
+      if (setupIntent.status === "requires_payment_method" || setupIntent.status === "requires_confirmation") {
+        return {
+          type: "setup_intent" as const,
+          clientSecret: setupIntent.client_secret,
+          pledgeId: existingPledge.id,
+          chargedImmediately: false,
+        };
+      }
+    } else if (isCampaignFunded && existingPledge.stripePaymentIntentId) {
+      const paymentIntent = await stripeClient.paymentIntents.retrieve(existingPledge.stripePaymentIntentId);
+      if (paymentIntent.status === "requires_payment_method" || paymentIntent.status === "requires_confirmation") {
+        return {
+          type: "payment_intent" as const,
+          clientSecret: paymentIntent.client_secret,
+          pledgeId: existingPledge.id,
+          chargedImmediately: true,
+        };
+      }
+    }
+  }
+
+  // Create new pending pledge (no valid existing pledge found)
   const pledge = await db.pledge.create({
     data: {
       userId,
       projectId,
-      rewardId: rewardId && rewardId !== "no-reward" ? rewardId : null,
+      rewardId: normalizedRewardId,
       amount,
       rewardAmount: amount,
       paymentProcessor: "STRIPE",
@@ -679,6 +722,9 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       pledge.user.name || "A backer",
       pledge.amount
     );
+
+    // Send confirmation email to backer
+    await notifyBackerPledgeConfirmed(pledge.id, true);
   }
 
   // Check if project just got funded (only relevant for immediate charges)
@@ -770,6 +816,9 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
     pledge.user.name || "A backer",
     pledge.amount
   );
+
+  // Send confirmation email to backer (not charged yet, just card saved)
+  await notifyBackerPledgeConfirmed(pledge.id, false);
 
   // Check if project just got funded
   if (

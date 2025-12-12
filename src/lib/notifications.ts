@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, sendPledgeConfirmationEmail } from "@/lib/email";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -697,6 +697,60 @@ export async function notifySurveyReminder(projectId: string, projectTitle: stri
 }
 
 /**
+ * Notify backer when their pledge is confirmed (send confirmation email)
+ */
+export async function notifyBackerPledgeConfirmed(
+  pledgeId: string,
+  chargedImmediately: boolean
+) {
+  const pledge = await db.pledge.findUnique({
+    where: { id: pledgeId },
+    include: {
+      project: {
+        select: { title: true, slug: true, imageUrl: true },
+      },
+      reward: {
+        select: { title: true },
+      },
+      user: {
+        select: { email: true, name: true },
+      },
+    },
+  });
+
+  if (!pledge || !pledge.user.email) return;
+
+  // Check if confirmation email was already sent (prevent duplicates)
+  if (pledge.confirmationEmailSent) {
+    console.log(`Confirmation email already sent for pledge ${pledgeId}`);
+    return;
+  }
+
+  try {
+    await sendPledgeConfirmationEmail(
+      pledge.user.email,
+      pledge.user.name || "Backer",
+      pledge.project.title,
+      pledge.project.slug,
+      pledge.amount,
+      pledge.reward?.title || null,
+      chargedImmediately,
+      pledge.project.imageUrl
+    );
+
+    // Mark email as sent
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: { confirmationEmailSent: true },
+    });
+
+    console.log(`Sent pledge confirmation email to ${pledge.user.email} for pledge ${pledgeId}`);
+  } catch (error) {
+    console.error(`Failed to send pledge confirmation email for pledge ${pledgeId}:`, error);
+  }
+}
+
+/**
  * Notify backers when their project ends
  */
 export async function notifyProjectEnded(projectId: string) {
@@ -832,4 +886,98 @@ export async function notifyFollowedProjectLaunched(projectId: string) {
   // The main notifyProjectLaunched function now handles everything
   // including email notifications for both logged-in and email-only followers
   await notifyProjectLaunched(projectId);
+}
+
+/**
+ * Process unsent pledge confirmation emails
+ * Called by cron job to retry failed email sends
+ */
+export async function processUnsentConfirmationEmails() {
+  // Find completed pledges that haven't had confirmation email sent
+  // Look at pledges completed in the last 24 hours to avoid processing very old records
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const unsentPledges = await db.pledge.findMany({
+    where: {
+      status: "COMPLETED",
+      confirmationEmailSent: false,
+      updatedAt: { gte: oneDayAgo },
+    },
+    include: {
+      project: {
+        select: { title: true, slug: true, imageUrl: true },
+      },
+      reward: {
+        select: { title: true },
+      },
+      user: {
+        select: { email: true, name: true },
+      },
+    },
+    take: 100, // Process in batches
+  });
+
+  // Also find SetupIntent pledges (pending but payment method saved) that need emails
+  const unsentSetupPledges = await db.pledge.findMany({
+    where: {
+      status: "PENDING",
+      stripePaymentMethodId: { not: null },
+      confirmationEmailSent: false,
+      updatedAt: { gte: oneDayAgo },
+    },
+    include: {
+      project: {
+        select: { title: true, slug: true, imageUrl: true },
+      },
+      reward: {
+        select: { title: true },
+      },
+      user: {
+        select: { email: true, name: true },
+      },
+    },
+    take: 100,
+  });
+
+  const allUnsent = [...unsentPledges, ...unsentSetupPledges];
+
+  const results = {
+    total: allUnsent.length,
+    successful: 0,
+    failed: 0,
+  };
+
+  for (const pledge of allUnsent) {
+    if (!pledge.user.email) {
+      results.failed++;
+      continue;
+    }
+
+    try {
+      await sendPledgeConfirmationEmail(
+        pledge.user.email,
+        pledge.user.name || "Backer",
+        pledge.project.title,
+        pledge.project.slug,
+        pledge.amount,
+        pledge.reward?.title || null,
+        pledge.chargedImmediately,
+        pledge.project.imageUrl
+      );
+
+      // Mark as sent
+      await db.pledge.update({
+        where: { id: pledge.id },
+        data: { confirmationEmailSent: true },
+      });
+
+      results.successful++;
+      console.log(`Retry: Sent pledge confirmation email for pledge ${pledge.id}`);
+    } catch (error) {
+      results.failed++;
+      console.error(`Retry: Failed to send pledge confirmation email for pledge ${pledge.id}:`, error);
+    }
+  }
+
+  return results;
 }
