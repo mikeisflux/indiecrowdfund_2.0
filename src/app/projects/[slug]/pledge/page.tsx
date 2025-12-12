@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams, useParams } from "next/navigation";
+import { useSearchParams, useParams, useRouter } from "next/navigation";
+import { useSession } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -205,10 +206,21 @@ function StripePaymentForm({
 export default function PledgePage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { data: session, status: authStatus } = useSession();
   const slug = params.slug as string;
   const rewardId = searchParams.get("reward");
   const amountParam = searchParams.get("amount");
   const successParam = searchParams.get("success");
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (authStatus === "unauthenticated") {
+      // Store the intended destination
+      const returnUrl = encodeURIComponent(`/projects/${slug}/pledge${rewardId ? `?reward=${rewardId}` : ""}`);
+      router.push(`/login?redirect=${returnUrl}`);
+    }
+  }, [authStatus, router, slug, rewardId]);
 
   // Data state - loaded from API
   const [project, setProject] = useState<ProjectData | null>(null);
@@ -550,6 +562,20 @@ export default function PledgePage() {
       </button>
     </div>
   );
+
+  // Auth loading state - wait for auth check before showing content
+  if (authStatus === "loading" || authStatus === "unauthenticated") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">
+            {authStatus === "unauthenticated" ? "Redirecting to login..." : "Checking authentication..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Loading state
   if (isLoading) {

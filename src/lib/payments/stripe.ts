@@ -277,14 +277,37 @@ export async function createStripePayment({
     user?.email || ""
   );
 
-  // Check for existing pending pledge for this user/project/reward to prevent duplicates
+  // Check for ANY existing pledge for this user/project to prevent duplicates
+  // Users can only have ONE pledge per project (they can edit it, but not create multiple)
   const normalizedRewardId = rewardId && rewardId !== "no-reward" ? rewardId : null;
-  const existingPledge = await db.pledge.findFirst({
+
+  // First check for completed or active pledges - these block new pledges
+  const existingActivePledge = await db.pledge.findFirst({
     where: {
       userId,
       projectId,
-      rewardId: normalizedRewardId,
+      OR: [
+        { status: "COMPLETED" },
+        {
+          status: "PENDING",
+          stripePaymentMethodId: { not: null }, // Has saved payment method
+        },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (existingActivePledge) {
+    throw new Error("You have already backed this project. Visit your backer dashboard to manage your pledge.");
+  }
+
+  // Check for existing pending pledge to reuse (prevents duplicate pending pledges)
+  const existingPendingPledge = await db.pledge.findFirst({
+    where: {
+      userId,
+      projectId,
       status: "PENDING",
+      stripePaymentMethodId: null, // No payment method saved yet
       // Only reuse pledges created within the last hour (stale pledges might have invalid intents)
       createdAt: {
         gte: new Date(Date.now() - 60 * 60 * 1000),
@@ -294,25 +317,32 @@ export async function createStripePayment({
   });
 
   // If an existing pending pledge exists with a valid setup/payment intent, reuse it
-  if (existingPledge && (existingPledge.stripeSetupIntentId || existingPledge.stripePaymentIntentId)) {
+  if (existingPendingPledge && (existingPendingPledge.stripeSetupIntentId || existingPendingPledge.stripePaymentIntentId)) {
     // Retrieve the existing intent to get the client secret
-    if (!isCampaignFunded && existingPledge.stripeSetupIntentId) {
-      const setupIntent = await stripeClient.setupIntents.retrieve(existingPledge.stripeSetupIntentId);
+    if (!isCampaignFunded && existingPendingPledge.stripeSetupIntentId) {
+      const setupIntent = await stripeClient.setupIntents.retrieve(existingPendingPledge.stripeSetupIntentId);
       if (setupIntent.status === "requires_payment_method" || setupIntent.status === "requires_confirmation") {
+        // Update the pledge with new amount/reward if different
+        if (existingPendingPledge.amount !== amount || existingPendingPledge.rewardId !== normalizedRewardId) {
+          await db.pledge.update({
+            where: { id: existingPendingPledge.id },
+            data: { amount, rewardAmount: amount, rewardId: normalizedRewardId },
+          });
+        }
         return {
           type: "setup_intent" as const,
           clientSecret: setupIntent.client_secret,
-          pledgeId: existingPledge.id,
+          pledgeId: existingPendingPledge.id,
           chargedImmediately: false,
         };
       }
-    } else if (isCampaignFunded && existingPledge.stripePaymentIntentId) {
-      const paymentIntent = await stripeClient.paymentIntents.retrieve(existingPledge.stripePaymentIntentId);
+    } else if (isCampaignFunded && existingPendingPledge.stripePaymentIntentId) {
+      const paymentIntent = await stripeClient.paymentIntents.retrieve(existingPendingPledge.stripePaymentIntentId);
       if (paymentIntent.status === "requires_payment_method" || paymentIntent.status === "requires_confirmation") {
         return {
           type: "payment_intent" as const,
           clientSecret: paymentIntent.client_secret,
-          pledgeId: existingPledge.id,
+          pledgeId: existingPendingPledge.id,
           chargedImmediately: true,
         };
       }

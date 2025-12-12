@@ -257,6 +257,16 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Existing pledge state (for logged-in users who have already backed)
+  const [existingPledge, setExistingPledge] = useState<{
+    id: string;
+    amount: number;
+    status: string;
+    canCancel: boolean;
+    canIncrease: boolean;
+    reward: { title: string } | null;
+  } | null>(null);
+
   // UI states
   const [isReminded, setIsReminded] = useState(false);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
@@ -364,6 +374,29 @@ export default function ProjectPage() {
 
     fetchProject();
   }, [slug]);
+
+  // Check if user has an existing pledge for this project
+  useEffect(() => {
+    async function checkExistingPledge() {
+      if (!project.id || project.id === "") return;
+
+      try {
+        const response = await fetch(`/api/pledges/check?projectId=${project.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.hasPledge && data.pledge) {
+            setExistingPledge(data.pledge);
+          } else {
+            setExistingPledge(null);
+          }
+        }
+      } catch (err) {
+        console.debug("Error checking pledge status:", err);
+      }
+    }
+
+    checkExistingPledge();
+  }, [project.id]);
 
   // Poll for real-time funding stats updates every 30 seconds
   useEffect(() => {
@@ -574,11 +607,20 @@ export default function ProjectPage() {
               <span className="font-medium truncate max-w-md">{project.title}</span>
             </div>
             <div className="flex items-center gap-3">
-              <Link href={`/projects/${project.slug}/pledge`}>
-                <Button className="bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
-                  Back this project
-                </Button>
-              </Link>
+              {existingPledge ? (
+                <Link href="/dashboard/backer">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Manage Pledge (${existingPledge.amount})
+                  </Button>
+                </Link>
+              ) : (
+                <Link href={`/projects/${project.slug}/pledge`}>
+                  <Button className="bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
+                    Back this project
+                  </Button>
+                </Link>
+              )}
               <Button
                 variant="outline"
                 onClick={() => setIsReminded(!isReminded)}
@@ -713,11 +755,30 @@ export default function ProjectPage() {
               </div>
 
               {/* Back button */}
-              <Link href={`/projects/${project.slug}/pledge`} className="block">
-                <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white font-medium" size="lg">
-                  Back this project
-                </Button>
-              </Link>
+              {existingPledge ? (
+                <div className="space-y-2">
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-medium">
+                      <CheckCircle className="h-5 w-5" />
+                      You&apos;re backing this project!
+                    </div>
+                    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                      Pledged ${existingPledge.amount.toFixed(2)} • {existingPledge.reward?.title || "No reward"}
+                    </p>
+                  </div>
+                  <Link href="/dashboard/backer" className="block">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium" size="lg">
+                      Manage Your Pledge
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <Link href={`/projects/${project.slug}/pledge`} className="block">
+                  <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white font-medium" size="lg">
+                    Back this project
+                  </Button>
+                </Link>
+              )}
 
               {/* Remind me + Social sharing */}
               <div className="flex items-center gap-2">

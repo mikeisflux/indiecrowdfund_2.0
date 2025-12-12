@@ -185,8 +185,16 @@ export async function GET() {
       };
     });
 
-    // Process backed projects
-    const backedProjects = pledges.map((pledge) => {
+    // Process backed projects - deduplicate by project ID (keep the most recent pledge per project)
+    const pledgesByProject = new Map<string, typeof pledges[0]>();
+    pledges.forEach((pledge) => {
+      const existing = pledgesByProject.get(pledge.project.id);
+      if (!existing || new Date(pledge.createdAt) > new Date(existing.createdAt)) {
+        pledgesByProject.set(pledge.project.id, pledge);
+      }
+    });
+
+    const backedProjects = Array.from(pledgesByProject.values()).map((pledge) => {
       let daysRemaining = 0;
       if (pledge.project.endDate) {
         daysRemaining = Math.max(0, Math.ceil(
@@ -210,11 +218,11 @@ export async function GET() {
         pledge: {
           id: pledge.id,
           amount: pledge.amount,
-          reward: pledge.reward.title,
+          reward: pledge.reward?.title || "No reward",
           pledgedAt: pledge.createdAt,
           status: pledge.status,
         },
-        estimatedDelivery: pledge.reward.estimatedDelivery,
+        estimatedDelivery: pledge.reward?.estimatedDelivery || null,
         fulfillmentStatus: pledge.fulfillmentStatus,
         surveyCompleted: pledge.surveyCompleted,
         updates: pledge.project._count.updates,
