@@ -380,7 +380,7 @@ export default function AnalyticsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="flex w-full overflow-x-auto lg:w-auto lg:inline-grid lg:grid-cols-5">
           <TabsTrigger value="overview">
             <BarChart3 className="mr-2 h-4 w-4" />
             Overview

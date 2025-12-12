@@ -247,15 +247,15 @@ export default function SurveyResponsesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/projects/${projectId}/survey`)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Survey
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Survey Responses</h1>
-            <p className="text-zinc-500">View and export backer survey responses</p>
+            <h1 className="text-xl sm:text-2xl font-bold">Survey Responses</h1>
+            <p className="text-zinc-500 text-sm sm:text-base">View and export backer survey responses</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -263,23 +263,25 @@ export default function SurveyResponsesPage() {
             variant="outline"
             onClick={() => handleExport("csv")}
             disabled={isExporting}
+            className="flex-1 sm:flex-none"
           >
             <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Export CSV
+            <span className="hidden sm:inline">Export</span> CSV
           </Button>
           <Button
             variant="outline"
             onClick={() => handleExport("json")}
             disabled={isExporting}
+            className="flex-1 sm:flex-none"
           >
             <FileJson className="mr-2 h-4 w-4" />
-            Export JSON
+            <span className="hidden sm:inline">Export</span> JSON
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -337,7 +339,7 @@ export default function SurveyResponsesPage() {
       {/* Filters */}
       <Card>
         <CardContent className="py-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
               <Input
@@ -347,35 +349,37 @@ export default function SurveyResponsesPage() {
                 className="pl-9"
               />
             </div>
-            <Select value={filter} onValueChange={(v: "all" | "complete" | "incomplete") => setFilter(v)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Responses</SelectItem>
-                <SelectItem value="complete">Completed</SelectItem>
-                <SelectItem value="incomplete">Incomplete</SelectItem>
-              </SelectContent>
-            </Select>
-            {rewards.length > 0 && (
-              <Select value={rewardFilter} onValueChange={setRewardFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by reward" />
+            <div className="flex flex-wrap gap-2">
+              <Select value={filter} onValueChange={(v: "all" | "complete" | "incomplete") => setFilter(v)}>
+                <SelectTrigger className="w-32 sm:w-40">
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Rewards</SelectItem>
-                  {rewards.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.title}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">All Responses</SelectItem>
+                  <SelectItem value="complete">Completed</SelectItem>
+                  <SelectItem value="incomplete">Incomplete</SelectItem>
                 </SelectContent>
               </Select>
-            )}
-            <Button variant="outline" onClick={fetchResponses} disabled={isLoading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
+              {rewards.length > 0 && (
+                <Select value={rewardFilter} onValueChange={setRewardFilter}>
+                  <SelectTrigger className="w-36 sm:w-48">
+                    <SelectValue placeholder="Filter by reward" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Rewards</SelectItem>
+                    {rewards.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button variant="outline" onClick={fetchResponses} disabled={isLoading}>
+                <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline ml-2">Refresh</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

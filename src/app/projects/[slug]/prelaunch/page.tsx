@@ -423,7 +423,7 @@ export default function PrelaunchPage() {
         {/* Share Section */}
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-semibold mb-1 flex items-center gap-2">
                   <Share2 className="h-4 w-4" />
@@ -433,7 +433,7 @@ export default function PrelaunchPage() {
                   Help spread the word about this upcoming project
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant="outline"
                   size="icon"
