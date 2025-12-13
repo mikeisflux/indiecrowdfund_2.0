@@ -41,11 +41,10 @@ export function RewardsTab({
   };
 
   return (
-    <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-      {/* Left Sidebar Column - grid makes it stretch to row height */}
-      <div className="hidden lg:block lg:col-span-3">
-        {/* Sticky container inside the stretched column */}
-        <div className="sticky top-20 max-h-[calc(100vh-100px)]">
+    <div className="lg:flex lg:gap-8">
+      {/* Left Sidebar - self-start prevents stretching, enabling sticky */}
+      <div className="hidden lg:block lg:w-[280px] lg:flex-shrink-0 lg:self-start lg:sticky lg:top-20">
+        <div className="max-h-[calc(100vh-100px)]">
           <h3 className="text-lg font-semibold mb-4">Available rewards</h3>
           <ScrollArea className="max-h-[calc(100vh-180px)]">
             <div className="space-y-3 pr-4">
@@ -95,7 +94,7 @@ export function RewardsTab({
       </div>
 
       {/* Main Content - All Rewards with Scroll Sections */}
-      <div className="lg:col-span-9">
+      <div className="flex-1">
         {tiers.map((reward) => {
           const isLimited = reward.quantityAvailable !== null;
           const isSoldOut = isLimited && reward.quantityClaimed >= reward.quantityAvailable!;
