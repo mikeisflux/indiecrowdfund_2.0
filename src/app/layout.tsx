@@ -46,8 +46,8 @@ export default async function RootLayout({
         <AuthProvider session={session}>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
-            enableSystem
+            defaultTheme="dark"
+            forcedTheme="dark"
             disableTransitionOnChange
           >
             <TrackingProvider>

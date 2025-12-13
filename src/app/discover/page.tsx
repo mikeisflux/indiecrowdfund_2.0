@@ -85,7 +85,7 @@ function DiscoverPageSkeleton() {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
-            <span className="text-xl font-bold text-primary">IndieCrowdfund</span>
+            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">IndieCrowdfund</Link>
           </div>
         </div>
       </header>
