@@ -274,6 +274,7 @@ export function TiersTab({
       const newTiers = tiers.filter(tier => !manualIds.has(tier.id || tier.title));
       setManualOrder([...existingInOrder, ...newTiers]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tiers]);
 
   const sensors = useSensors(

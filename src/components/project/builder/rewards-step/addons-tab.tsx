@@ -270,6 +270,7 @@ export function AddonsTab({
       const newAddons = addons.filter(addon => !manualIds.has(addon.id || addon.title));
       setManualOrder([...existingInOrder, ...newAddons]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addons]);
 
   const sensors = useSensors(

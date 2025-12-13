@@ -192,6 +192,7 @@ export function ItemsTab({
       const newItems = items.filter(item => !manualIds.has(item.id));
       setManualOrder([...existingInOrder, ...newItems]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
   const sensors = useSensors(
