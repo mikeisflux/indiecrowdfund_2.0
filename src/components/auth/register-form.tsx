@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { register } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,8 @@ import { Loader2 } from "lucide-react";
 export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || searchParams.get("redirect");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -21,7 +24,14 @@ export function RegisterForm() {
     const formData = new FormData(e.currentTarget);
 
     try {
-      const result = await register(formData);
+      const result = await register(formData, callbackUrl);
+
+      if (result?.success && result?.redirectTo) {
+        // Use hard navigation to ensure cookie is sent with request
+        window.location.href = result.redirectTo;
+        return;
+      }
+
       if (result?.error) {
         if (typeof result.error === "object") {
           const firstError = Object.values(result.error).flat()[0];
@@ -93,7 +103,7 @@ export function RegisterForm() {
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/login" className="text-primary hover:underline">
+        <Link href={callbackUrl ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/login"} className="text-primary hover:underline">
           Sign in
         </Link>
       </p>

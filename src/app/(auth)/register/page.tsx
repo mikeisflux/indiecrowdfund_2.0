@@ -1,10 +1,20 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import { RegisterForm } from "@/components/auth/register-form";
+import { Loader2 } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Create Account | IndieCrowdfund",
   description: "Create your IndieCrowdfund account to start funding or backing creative projects",
 };
+
+function RegisterFormFallback() {
+  return (
+    <div className="flex items-center justify-center py-8">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 export default function RegisterPage() {
   return (
@@ -18,7 +28,9 @@ export default function RegisterPage() {
             Start funding or backing creative projects
           </p>
         </div>
-        <RegisterForm />
+        <Suspense fallback={<RegisterFormFallback />}>
+          <RegisterForm />
+        </Suspense>
       </div>
     </div>
   );

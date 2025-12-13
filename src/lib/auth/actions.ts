@@ -38,7 +38,7 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-export async function register(formData: FormData) {
+export async function register(formData: FormData, callbackUrl?: string | null) {
   const validatedFields = registerSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -80,8 +80,12 @@ export async function register(formData: FormData) {
   // Create session
   await createSession(user.id);
 
-  // Redirect after successful registration
-  redirect("/dashboard");
+  // Determine redirect destination - go back to where they came from
+  const redirectTo = callbackUrl || "/dashboard";
+
+  // Return success with redirect URL - let client handle navigation
+  // This ensures the Set-Cookie header is properly sent before redirect
+  return { success: true, redirectTo };
 }
 
 export async function login(formData: FormData, callbackUrl?: string) {

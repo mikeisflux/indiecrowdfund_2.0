@@ -14,7 +14,8 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/choose-role";
+  // Support both 'callbackUrl' and 'redirect' params
+  const callbackUrl = searchParams.get("callbackUrl") || searchParams.get("redirect") || "/choose-role";
 
   // Handle URL error params on mount
   useEffect(() => {
@@ -112,7 +113,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <Link href="/register" className="text-primary hover:underline">
+        <Link href={callbackUrl !== "/choose-role" ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/register"} className="text-primary hover:underline">
           Sign up
         </Link>
       </p>
