@@ -380,20 +380,58 @@ export async function sendPledgeConfirmationEmail(
   rewardTitle: string | null,
   chargedImmediately: boolean,
   imageUrl?: string | null,
-  currency: string = "USD"
+  currency: string = "USD",
+  addons: Array<{ title: string; quantity: number; amount: number }> = [],
+  shippingInfo?: {
+    name: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    postalCode: string | null;
+    country: string | null;
+  } | null
 ) {
   const projectUrl = `${APP_URL}/projects/${projectSlug}`;
   const dashboardUrl = `${APP_URL}/dashboard`;
 
+  // Ensure image URL is absolute
+  const absoluteImageUrl = imageUrl
+    ? (imageUrl.startsWith("http") ? imageUrl : `${APP_URL}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`)
+    : null;
+
   // Format amount with the project's currency
-  const formattedAmount = new Intl.NumberFormat("en-US", {
+  const formatCurrency = (value: number) => new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currency,
-  }).format(amount);
+  }).format(value);
+
+  const formattedAmount = formatCurrency(amount);
 
   const chargeMessage = chargedImmediately
     ? `Your payment of <strong>${formattedAmount}</strong> has been processed successfully.`
     : `Your card has been saved and will be charged <strong>${formattedAmount}</strong> when the campaign reaches its funding goal.`;
+
+  // Build addons HTML
+  const addonsHtml = addons.length > 0 ? addons.map(addon => `
+    <tr>
+      <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Add-on: ${addon.title}${addon.quantity > 1 ? ` (×${addon.quantity})` : ""}</td>
+      <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">${formatCurrency(addon.amount)}</td>
+    </tr>
+  `).join("") : "";
+
+  // Build shipping HTML
+  const hasShipping = shippingInfo && (shippingInfo.address || shippingInfo.city || shippingInfo.country);
+  const shippingHtml = hasShipping ? `
+    <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+      <h3 style="margin-top: 0;">Shipping Address</h3>
+      <p style="margin: 0; color: #333;">
+        ${shippingInfo!.name || backerName}<br>
+        ${shippingInfo!.address || ""}<br>
+        ${[shippingInfo!.city, shippingInfo!.state, shippingInfo!.postalCode].filter(Boolean).join(", ")}<br>
+        ${shippingInfo!.country || ""}
+      </p>
+    </div>
+  ` : "";
 
   const html = `
     <!DOCTYPE html>
@@ -411,11 +449,12 @@ export async function sendPledgeConfirmationEmail(
         <div style="background: linear-gradient(135deg, #028858 0%, #10b981 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
           <h2 style="margin-top: 0; color: white; text-align: center;">Thank You for Your Pledge!</h2>
 
-          ${imageUrl ? `<img src="${imageUrl}" alt="${projectTitle}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""}
+          ${absoluteImageUrl ? `<img src="${absoluteImageUrl}" alt="${projectTitle}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""}
 
           <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0;">
             <h3 style="margin: 0 0 10px 0; color: white;">${projectTitle}</h3>
             ${rewardTitle ? `<p style="margin: 0; color: rgba(255,255,255,0.9);">Reward: ${rewardTitle}</p>` : `<p style="margin: 0; color: rgba(255,255,255,0.9);">Pledge without reward</p>`}
+            ${addons.length > 0 ? `<p style="margin: 5px 0 0 0; color: rgba(255,255,255,0.9);">+ ${addons.length} add-on${addons.length > 1 ? "s" : ""}</p>` : ""}
           </div>
 
           <p style="text-align: center; margin-bottom: 0;">Hi ${backerName || "there"},</p>
@@ -426,12 +465,13 @@ export async function sendPledgeConfirmationEmail(
           <h3 style="margin-top: 0;">Pledge Details</h3>
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Amount</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 600;">${formattedAmount}</td>
-            </tr>
-            <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Reward</td>
               <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">${rewardTitle || "No reward selected"}</td>
+            </tr>
+            ${addonsHtml}
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; font-weight: 600;">Total Amount</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 600;">${formattedAmount}</td>
             </tr>
             <tr>
               <td style="padding: 8px 0;">Status</td>
@@ -439,6 +479,8 @@ export async function sendPledgeConfirmationEmail(
             </tr>
           </table>
         </div>
+
+        ${shippingHtml}
 
         ${!chargedImmediately ? `
         <div style="background: #fffbeb; border-radius: 8px; padding: 15px; margin-bottom: 20px; border: 1px solid #fef3c7;">
@@ -448,7 +490,7 @@ export async function sendPledgeConfirmationEmail(
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
           <p style="margin: 0 0 15px 0;"><strong>What happens next?</strong></p>
-          <p style="margin: 0; color: #666;">You'll receive updates from the creator as the project progresses. If the campaign is successful, we'll send you a survey to collect shipping details closer to the estimated delivery date.</p>
+          <p style="margin: 0; color: #666;">You'll receive updates from the creator as the project progresses. ${!hasShipping ? "We'll send you a survey to collect shipping details closer to the estimated delivery date." : "The creator will reach out when it's time to ship your rewards."}</p>
         </div>
 
         <div style="text-align: center; margin: 20px 0;">

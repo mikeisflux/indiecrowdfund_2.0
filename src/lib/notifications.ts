@@ -710,7 +710,13 @@ export async function notifyBackerPledgeConfirmed(
         select: { id: true, title: true, slug: true, imageUrl: true, currency: true },
       },
       reward: {
-        select: { title: true },
+        select: { title: true, amount: true },
+      },
+      addons: {
+        select: {
+          quantity: true,
+          reward: { select: { title: true, amount: true } }
+        },
       },
       user: {
         select: { id: true, email: true, name: true },
@@ -726,6 +732,23 @@ export async function notifyBackerPledgeConfirmed(
     return;
   }
 
+  // Format addons for the email
+  const addons = pledge.addons?.map(addon => ({
+    title: addon.reward.title,
+    quantity: addon.quantity,
+    amount: addon.reward.amount * addon.quantity,
+  })) || [];
+
+  // Get shipping info
+  const shippingInfo = {
+    name: pledge.shippingName || null,
+    address: pledge.shippingAddress || null,
+    city: pledge.shippingCity || null,
+    state: pledge.shippingState || null,
+    postalCode: pledge.shippingPostalCode || null,
+    country: pledge.shippingCountry || null,
+  };
+
   try {
     const result = await sendPledgeConfirmationEmail(
       pledge.user.email,
@@ -736,7 +759,9 @@ export async function notifyBackerPledgeConfirmed(
       pledge.reward?.title || null,
       chargedImmediately,
       pledge.project.imageUrl,
-      pledge.project.currency
+      pledge.project.currency,
+      addons,
+      shippingInfo
     );
 
     if (result.success) {
