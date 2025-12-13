@@ -264,7 +264,17 @@ export function RewardsTab({
                                   )}
                                 </p>
                               </div>
-                              <div className="h-12 w-12 rounded bg-muted flex-shrink-0" />
+                              <div className="h-12 w-12 rounded bg-muted flex-shrink-0 relative overflow-hidden">
+                                {addon.imageUrl && (
+                                  <Image
+                                    src={addon.imageUrl}
+                                    alt={addon.title}
+                                    fill
+                                    sizes="48px"
+                                    className="object-cover"
+                                  />
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
