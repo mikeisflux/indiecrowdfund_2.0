@@ -61,7 +61,7 @@ export function ActiveProjectPanel({
       } else {
         setSyncMessage(`Error: ${data.error || "Failed to sync"}`);
       }
-    } catch (error) {
+    } catch {
       setSyncMessage("Error: Network request failed");
     } finally {
       setIsSyncing(false);
