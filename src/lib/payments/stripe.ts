@@ -564,6 +564,11 @@ export async function createStripePayment({
 /**
  * Charge a pledge that was saved via SetupIntent
  * Called when campaign reaches its funding goal
+ *
+ * DUPLICATE CHARGE PREVENTION:
+ * - Uses Stripe idempotency keys based on pledgeId
+ * - Checks for existing PaymentIntent before creating
+ * - Atomic status check before charging
  */
 export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
   const stripeClient = await getStripeInstance();
@@ -587,8 +592,83 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
     throw new Error("Pledge not found");
   }
 
+  // SAFETY: Skip if already processed
   if (pledge.status !== "PENDING") {
-    return false; // Already processed
+    console.log(`[ChargePledge] Pledge ${pledgeId} already ${pledge.status} - skipping`);
+    return false;
+  }
+
+  // SAFETY: If this pledge already has a PaymentIntent, check its status instead of creating new one
+  if (pledge.stripePaymentIntentId) {
+    try {
+      const existingIntent = await stripeClient.paymentIntents.retrieve(pledge.stripePaymentIntentId);
+
+      if (existingIntent.status === "succeeded") {
+        // Already charged successfully - update our record if needed
+        console.log(`[ChargePledge] PaymentIntent ${pledge.stripePaymentIntentId} already succeeded - updating pledge ${pledgeId}`);
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            status: "COMPLETED",
+            retryCount: 0,
+            nextRetryAt: null,
+            lastFailureReason: null,
+          },
+        });
+        return true;
+      } else if (existingIntent.status === "processing") {
+        // Payment is in progress - don't create another one
+        console.log(`[ChargePledge] PaymentIntent ${pledge.stripePaymentIntentId} is processing - skipping pledge ${pledgeId}`);
+        return false;
+      } else if (existingIntent.status === "canceled" || existingIntent.status === "requires_payment_method") {
+        // Previous attempt was canceled or failed - we can try again (clear the old intent)
+        console.log(`[ChargePledge] PaymentIntent ${pledge.stripePaymentIntentId} status ${existingIntent.status} - will create new one`);
+        // Clear the old intent ID so we create a new one below
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: { stripePaymentIntentId: null },
+        });
+      } else if (existingIntent.status === "requires_action") {
+        // 3D Secure or other action required - leave for user to complete
+        console.log(`[ChargePledge] PaymentIntent ${pledge.stripePaymentIntentId} requires action - skipping`);
+        return false;
+      } else if (existingIntent.status === "requires_confirmation") {
+        // Try to confirm it
+        try {
+          const confirmedIntent = await stripeClient.paymentIntents.confirm(pledge.stripePaymentIntentId);
+          if (confirmedIntent.status === "succeeded") {
+            await db.pledge.update({
+              where: { id: pledgeId },
+              data: {
+                status: "COMPLETED",
+                retryCount: 0,
+                nextRetryAt: null,
+                lastFailureReason: null,
+              },
+            });
+            return true;
+          }
+        } catch {
+          // Confirmation failed - will create new intent
+          console.log(`[ChargePledge] Failed to confirm PaymentIntent ${pledge.stripePaymentIntentId} - will create new one`);
+          await db.pledge.update({
+            where: { id: pledgeId },
+            data: { stripePaymentIntentId: null },
+          });
+        }
+      } else {
+        // Unknown status - skip for safety
+        console.log(`[ChargePledge] PaymentIntent ${pledge.stripePaymentIntentId} status is ${existingIntent.status} - skipping`);
+        return false;
+      }
+    } catch {
+      // Intent doesn't exist anymore - clear it and proceed
+      console.log(`[ChargePledge] Could not retrieve PaymentIntent ${pledge.stripePaymentIntentId} - will create new one`);
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: { stripePaymentIntentId: null },
+      });
+    }
   }
 
   if (!pledge.stripePaymentMethodId || !pledge.stripeCustomerId) {
@@ -663,25 +743,36 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
   const platformFee = Math.round(pledge.amount * 0.03 * 100);
 
   try {
+    // Generate idempotency key based on pledgeId AND retryCount
+    // This ensures that:
+    // 1. Multiple processes charging the same pledge simultaneously get the same PaymentIntent (no duplicates)
+    // 2. Legitimate retries (after card decline) get a new PaymentIntent (different retryCount)
+    const idempotencyKey = `charge_pledge_${pledgeId}_v${pledge.retryCount}`;
+
     // Create PaymentIntent with saved payment method (off-session)
-    const paymentIntent = await stripeClient.paymentIntents.create({
-      amount: amountInCents,
-      currency: "usd",
-      customer: pledge.stripeCustomerId,
-      payment_method: pledge.stripePaymentMethodId,
-      off_session: true,
-      confirm: true,
-      application_fee_amount: platformFee,
-      transfer_data: {
-        destination: connectedAccountId,
+    const paymentIntent = await stripeClient.paymentIntents.create(
+      {
+        amount: amountInCents,
+        currency: "usd",
+        customer: pledge.stripeCustomerId,
+        payment_method: pledge.stripePaymentMethodId,
+        off_session: true,
+        confirm: true,
+        application_fee_amount: platformFee,
+        transfer_data: {
+          destination: connectedAccountId,
+        },
+        metadata: {
+          pledgeId: pledge.id,
+          projectId: pledge.projectId,
+          userId: pledge.userId,
+          chargeType: "campaign_funded",
+        },
       },
-      metadata: {
-        pledgeId: pledge.id,
-        projectId: pledge.projectId,
-        userId: pledge.userId,
-        chargeType: "campaign_funded",
-      },
-    });
+      {
+        idempotencyKey, // Prevents duplicate charges for same pledge
+      }
+    );
 
     // Since confirm: true, we know immediately if the payment succeeded
     // Update pledge status based on PaymentIntent status (don't rely solely on webhook)

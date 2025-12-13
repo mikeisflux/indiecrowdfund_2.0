@@ -137,21 +137,11 @@ export async function POST(
         await notifyProjectFunded(pledge.projectId);
       }
 
-      // Process any pending pledges if project is funded
+      // Process all pending pledges if project is funded (charge saved cards)
       if (projectIsFunded) {
-        const pendingPledgeCount = await db.pledge.count({
-          where: {
-            projectId: pledge.projectId,
-            status: "PENDING",
-            chargedImmediately: false,
-            stripePaymentMethodId: { not: null },
-            confirmationEmailSent: true, // Only process confirmed pledges
-          },
-        });
-
-        if (pendingPledgeCount > 0) {
-          await processPendingPledgesForProject(pledge.projectId);
-        }
+        console.log(`[Confirm] Project ${pledge.projectId} is funded, processing pending pledges...`);
+        const chargeResults = await processPendingPledgesForProject(pledge.projectId);
+        console.log(`[Confirm] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
       }
     }
 
