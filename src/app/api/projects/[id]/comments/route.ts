@@ -102,12 +102,12 @@ export async function POST(
     }
 
     // Check if user is a backer OR the project creator
-    const isCreator = project.creatorId === session.userId;
+    const isCreator = project.creatorId === session.user.id;
 
     if (!isCreator) {
       const pledge = await db.pledge.findFirst({
         where: {
-          userId: session.userId,
+          userId: session.user.id,
           projectId,
           status: "COMPLETED",
         },
@@ -125,7 +125,7 @@ export async function POST(
     const comment = await db.comment.create({
       data: {
         projectId,
-        userId: session.userId,
+        userId: session.user.id,
         content: content.trim(),
       },
       include: {
@@ -142,7 +142,7 @@ export async function POST(
     // Get superbacker status
     const backedProjectsCount = await db.pledge.count({
       where: {
-        userId: session.userId,
+        userId: session.user.id,
         status: "COMPLETED",
       },
     });
