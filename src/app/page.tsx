@@ -278,7 +278,7 @@ export default async function HomePage() {
               Bring Creative Projects to Life
             </h1>
             <p className="mb-8 text-lg text-muted-foreground md:text-xl">
-              IndieCrowdfund is home to thousands of creative projects in art, design,
+              IndieCrowdfund is the future home to thousands of creative projects in art, design,
               film, games, music, and more. Back a project or start your own today.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
