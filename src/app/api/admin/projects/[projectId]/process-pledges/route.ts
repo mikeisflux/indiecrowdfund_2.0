@@ -1,164 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
-
-export const dynamic = "force-dynamic";
+import { processPendingPledgesForProject, chargeSavedPledge } from "@/lib/payments/stripe";
 
 /**
- * Sync payment methods from Stripe for pledges that have SetupIntents
- * but are missing payment method IDs (e.g., webhook failed)
+ * GET /api/admin/projects/[projectId]/process-pledges
+ *
+ * Diagnose pledge status for a project - shows all pledges and their charging eligibility
  */
-async function syncPaymentMethodsFromStripe(projectId: string) {
-  const stripe = await getStripeInstance();
-
-  // Find pending pledges with SetupIntent but no payment method
-  const pledgesNeedingSync = await db.pledge.findMany({
-    where: {
-      projectId,
-      status: "PENDING",
-      stripeSetupIntentId: { not: null },
-      stripePaymentMethodId: null,
-    },
-    select: {
-      id: true,
-      stripeSetupIntentId: true,
-    },
-  });
-
-  const results = {
-    total: pledgesNeedingSync.length,
-    synced: 0,
-    failed: 0,
-  };
-
-  for (const pledge of pledgesNeedingSync) {
-    try {
-      // Retrieve the SetupIntent from Stripe
-      const setupIntent = await stripe.setupIntents.retrieve(pledge.stripeSetupIntentId!);
-
-      // If succeeded and has a payment method, save it
-      if (setupIntent.status === "succeeded" && setupIntent.payment_method) {
-        const paymentMethodId = typeof setupIntent.payment_method === "string"
-          ? setupIntent.payment_method
-          : setupIntent.payment_method.id;
-
-        await db.pledge.update({
-          where: { id: pledge.id },
-          data: { stripePaymentMethodId: paymentMethodId },
-        });
-        results.synced++;
-        console.log(`[Sync] Saved payment method for pledge ${pledge.id}`);
-      } else {
-        results.failed++;
-      }
-    } catch (error) {
-      console.error(`[Sync] Failed to sync pledge ${pledge.id}:`, error);
-      results.failed++;
-    }
-  }
-
-  return results;
-}
-
-// POST - Manually trigger charging pending pledges for a funded project
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check admin status
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    });
-
-    if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const { projectId } = await params;
-
-    // Get the project
-    const project = await db.project.findUnique({
-      where: { id: projectId },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        currentAmount: true,
-        goalAmount: true,
-      },
-    });
-
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    // Check if project has reached its funding goal
-    const isFunded = project.currentAmount >= project.goalAmount;
-
-    if (!isFunded) {
-      return NextResponse.json({
-        error: "Project has not reached its funding goal yet",
-        currentAmount: project.currentAmount,
-        goalAmount: project.goalAmount,
-        percentFunded: Math.round((project.currentAmount / project.goalAmount) * 100),
-      }, { status: 400 });
-    }
-
-    // First, sync payment methods from Stripe for pledges that are missing them
-    // (this fixes cases where webhooks failed to save the payment method)
-    const syncResults = await syncPaymentMethodsFromStripe(projectId);
-
-    // Count pending pledges before processing
-    const pendingCount = await db.pledge.count({
-      where: {
-        projectId,
-        status: "PENDING",
-        chargedImmediately: false,
-        stripePaymentMethodId: { not: null },
-      },
-    });
-
-    if (pendingCount === 0) {
-      return NextResponse.json({
-        success: true,
-        message: syncResults.synced > 0
-          ? `Synced ${syncResults.synced} payment methods but no pledges ready to process`
-          : "No pending pledges to process",
-        syncResults,
-        processed: 0,
-        successful: 0,
-        failed: 0,
-      });
-    }
-
-    // Process pending pledges (charge saved cards)
-    const chargeResults = await processPendingPledgesForProject(projectId);
-
-    return NextResponse.json({
-      success: true,
-      message: `Synced ${syncResults.synced} payment methods, charged ${chargeResults.successful}/${chargeResults.total} pledges`,
-      projectTitle: project.title,
-      syncResults,
-      chargeResults,
-    });
-  } catch (error) {
-    console.error("Process pledges error:", error);
-    return NextResponse.json(
-      { error: "Failed to process pledges" },
-      { status: 500 }
-    );
-  }
-}
-
-// GET - Check status of pending pledges for a project
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
@@ -169,27 +18,40 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check admin status
+    // Check if user is admin or super admin
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true },
     });
 
     if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
     const { projectId } = await params;
 
-    // Get the project
+    // Get project info
     const project = await db.project.findUnique({
       where: { id: projectId },
       select: {
         id: true,
         title: true,
-        status: true,
-        currentAmount: true,
         goalAmount: true,
+        currentAmount: true,
+        backerCount: true,
+        status: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            stripeConfig: {
+              select: {
+                stripeAccountId: true,
+                payoutsEnabled: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -197,58 +59,223 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Get pledge statistics
-    const [pendingWithCard, pendingWithoutCard, completed, failed] = await Promise.all([
-      db.pledge.count({
-        where: {
-          projectId,
-          status: "PENDING",
-          stripePaymentMethodId: { not: null },
+    // Get all pledges for this project
+    const pledges = await db.pledge.findMany({
+      where: { projectId },
+      select: {
+        id: true,
+        amount: true,
+        status: true,
+        chargedImmediately: true,
+        confirmationEmailSent: true,
+        stripePaymentMethodId: true,
+        stripeCustomerId: true,
+        stripePaymentIntentId: true,
+        stripeSetupIntentId: true,
+        retryCount: true,
+        lastFailureReason: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
-      }),
-      db.pledge.count({
-        where: {
-          projectId,
-          status: "PENDING",
-          stripePaymentMethodId: null,
-        },
-      }),
-      db.pledge.count({
-        where: {
-          projectId,
-          status: "COMPLETED",
-        },
-      }),
-      db.pledge.count({
-        where: {
-          projectId,
-          status: "FAILED",
-        },
-      }),
-    ]);
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-    const isFunded = project.currentAmount >= project.goalAmount;
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const projectIsFunded = project.currentAmount >= project.goalAmount;
+    const creatorHasStripe = !!project.creator.stripeConfig?.stripeAccountId;
+
+    // Analyze each pledge
+    const pledgeAnalysis = pledges.map((pledge) => {
+      const issues: string[] = [];
+      let canBeCharged = true;
+
+      if (pledge.status !== "PENDING") {
+        issues.push(`Status is ${pledge.status}, not PENDING`);
+        canBeCharged = false;
+      }
+
+      if (pledge.chargedImmediately) {
+        issues.push("Was charged immediately (PaymentIntent), not a SetupIntent pledge");
+        canBeCharged = false;
+      }
+
+      if (!pledge.stripePaymentMethodId) {
+        issues.push("Missing stripePaymentMethodId - webhook may not have fired");
+        canBeCharged = false;
+      }
+
+      if (!pledge.stripeCustomerId) {
+        issues.push("Missing stripeCustomerId");
+        canBeCharged = false;
+      }
+
+      if (!pledge.confirmationEmailSent && pledge.createdAt > fiveMinutesAgo) {
+        issues.push("Not confirmed (confirmationEmailSent=false) and created < 5 min ago");
+        canBeCharged = false;
+      }
+
+      if (!projectIsFunded) {
+        issues.push("Project not funded yet");
+        canBeCharged = false;
+      }
+
+      if (!creatorHasStripe) {
+        issues.push("Creator has not connected Stripe account");
+        canBeCharged = false;
+      }
+
+      return {
+        ...pledge,
+        analysis: {
+          issues,
+          canBeCharged: canBeCharged && issues.length === 0,
+          isOldPledge: pledge.createdAt < fiveMinutesAgo,
+        },
+      };
+    });
 
     return NextResponse.json({
-      projectTitle: project.title,
-      projectStatus: project.status,
-      currentAmount: project.currentAmount,
-      goalAmount: project.goalAmount,
-      isFunded,
-      percentFunded: Math.round((project.currentAmount / project.goalAmount) * 100),
-      pledges: {
-        pendingWithCard,
-        pendingWithoutCard,
-        completed,
-        failed,
-        total: pendingWithCard + pendingWithoutCard + completed + failed,
+      project: {
+        id: project.id,
+        title: project.title,
+        goalAmount: project.goalAmount,
+        currentAmount: project.currentAmount,
+        backerCount: project.backerCount,
+        status: project.status,
+        isFunded: projectIsFunded,
+        fundingPercent: Math.round((project.currentAmount / project.goalAmount) * 100),
       },
-      canProcessPledges: isFunded && pendingWithCard > 0,
+      creator: {
+        id: project.creator.id,
+        name: project.creator.name,
+        hasStripeConnected: creatorHasStripe,
+        payoutsEnabled: project.creator.stripeConfig?.payoutsEnabled || false,
+      },
+      pledges: pledgeAnalysis,
+      summary: {
+        total: pledges.length,
+        pending: pledges.filter((p) => p.status === "PENDING").length,
+        completed: pledges.filter((p) => p.status === "COMPLETED").length,
+        failed: pledges.filter((p) => p.status === "FAILED").length,
+        chargeableNow: pledgeAnalysis.filter((p) => p.analysis.canBeCharged).length,
+      },
     });
   } catch (error) {
-    console.error("Get pledge status error:", error);
+    console.error("Admin pledge diagnosis error:", error);
     return NextResponse.json(
-      { error: "Failed to get pledge status" },
+      { error: "Failed to diagnose pledges" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/admin/projects/[projectId]/process-pledges
+ *
+ * Manually trigger pledge processing for a funded project
+ */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if user is admin or super admin
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+
+    if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
+    const { projectId } = await params;
+    const body = await req.json().catch(() => ({}));
+    const { pledgeId, force } = body as { pledgeId?: string; force?: boolean };
+
+    // Get project info
+    const project = await db.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        title: true,
+        goalAmount: true,
+        currentAmount: true,
+        creator: {
+          select: {
+            stripeConfig: {
+              select: { stripeAccountId: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const projectIsFunded = project.currentAmount >= project.goalAmount;
+    const creatorHasStripe = !!project.creator.stripeConfig?.stripeAccountId;
+
+    if (!creatorHasStripe) {
+      return NextResponse.json({
+        error: "Creator has not connected Stripe account - cannot process pledges",
+      }, { status: 400 });
+    }
+
+    if (!projectIsFunded && !force) {
+      return NextResponse.json({
+        error: "Project is not funded yet. Use force=true to process anyway.",
+        currentAmount: project.currentAmount,
+        goalAmount: project.goalAmount,
+      }, { status: 400 });
+    }
+
+    // If a specific pledgeId is provided, charge just that one
+    if (pledgeId) {
+      console.log(`[Admin] Manually charging pledge ${pledgeId}`);
+      try {
+        const success = await chargeSavedPledge(pledgeId);
+        return NextResponse.json({
+          success,
+          message: success ? "Pledge charged successfully" : "Pledge could not be charged (check logs)",
+          pledgeId,
+        });
+      } catch (error) {
+        console.error(`[Admin] Error charging pledge ${pledgeId}:`, error);
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+          pledgeId,
+        }, { status: 500 });
+      }
+    }
+
+    // Otherwise, process all pending pledges
+    console.log(`[Admin] Manually processing all pledges for project ${projectId}`);
+    const results = await processPendingPledgesForProject(projectId);
+
+    return NextResponse.json({
+      success: true,
+      message: `Processed ${results.total} pledges`,
+      results,
+    });
+  } catch (error) {
+    console.error("Admin pledge processing error:", error);
+    return NextResponse.json(
+      { error: "Failed to process pledges" },
       { status: 500 }
     );
   }
