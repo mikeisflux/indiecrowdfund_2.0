@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,9 @@ import {
   Clock,
   Info,
   Loader2,
+  Edit,
+  AlertTriangle,
+  ShieldAlert,
 } from "lucide-react";
 
 interface PledgeDetails {
@@ -224,6 +228,10 @@ export default function ManagePledgePage() {
   }
 
   const fundingPercent = (pledge.project.currentAmount / pledge.project.goalAmount) * 100;
+  const isPending = pledge.status === "PENDING";
+  const isCompleted = pledge.status === "COMPLETED";
+  const isCampaignLive = pledge.project.status === "LIVE";
+  const hasReachedGoal = pledge.isFunded;
 
   return (
     <div className="container max-w-2xl py-8">
@@ -323,20 +331,44 @@ export default function ManagePledgePage() {
         </CardContent>
       </Card>
 
-      {/* Actions based on pledge status */}
-      {pledge.status === "PENDING" && !pledge.isFunded && (
+      {/* PENDING + NOT FUNDED: Full modification options */}
+      {isPending && !hasReachedGoal && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-lg">Modify Your Pledge</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Modify Your Pledge
+            </CardTitle>
             <CardDescription>
-              The campaign is still active and hasn&apos;t reached its funding goal yet. You can increase or cancel your pledge.
+              The campaign is still active and hasn&apos;t reached its funding goal yet. You can modify, add to, or cancel your pledge at any time before the campaign ends.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Change Reward / Addons */}
+            <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+              <Label className="text-sm font-medium mb-2 block text-blue-700 dark:text-blue-300">
+                Change Your Reward or Add-ons
+              </Label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Want to select a different reward tier or modify your add-ons? You can change your selection while the campaign is still active.
+              </p>
+              <Link href={`/projects/${pledge.project.slug}/pledge?modify=${pledge.id}`}>
+                <Button variant="outline" className="w-full border-blue-300 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Change Reward or Add-ons
+                </Button>
+              </Link>
+            </div>
+
+            <Separator />
+
             {/* Increase Pledge */}
             {pledge.canIncrease && (
               <div className="p-4 rounded-lg border">
                 <Label className="text-sm font-medium mb-2 block">Increase Your Pledge</Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Add extra support to this project. The additional amount will be collected if the campaign reaches its goal.
+                </p>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -366,144 +398,84 @@ export default function ManagePledgePage() {
                 </div>
               </div>
             )}
+
+            <Separator />
 
             {/* Cancel Pledge */}
             {pledge.canCancel && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full" disabled={isProcessing}>
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Cancel Pledge
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Cancel Your Pledge?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to cancel your ${pledge.amount.toFixed(2)} pledge to &quot;{pledge.project.title}&quot;?
-                      This action cannot be undone. Your payment authorization will be released and you will not be charged.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Keep My Pledge</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleCancelPledge}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {isProcessing ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : null}
-                      Yes, Cancel Pledge
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Completed Pledge - Can only add items */}
-      {pledge.status === "COMPLETED" && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Your Pledge Has Been Processed</CardTitle>
-            <CardDescription>
-              The campaign was successfully funded and your payment has been processed.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Add more to pledge if project is still live */}
-            {pledge.canIncrease && (
-              <div className="p-4 rounded-lg border">
-                <Label className="text-sm font-medium mb-2 block">Add to Your Pledge</Label>
+              <div className="p-4 rounded-lg border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20">
+                <Label className="text-sm font-medium mb-2 block text-red-700 dark:text-red-300">
+                  Cancel Your Pledge
+                </Label>
                 <p className="text-sm text-muted-foreground mb-3">
-                  You can still increase your support. Additional amounts will be charged immediately.
+                  If you&apos;ve changed your mind, you can cancel your pledge. No payment will be collected and your support will be removed from the campaign.
                 </p>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="number"
-                      min="1"
-                      step="0.01"
-                      placeholder="Additional amount"
-                      value={additionalAmount}
-                      onChange={(e) => setAdditionalAmount(e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleIncreasePledge}
-                    disabled={isProcessing || !additionalAmount}
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full" disabled={isProcessing}>
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Cancel Pledge
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancel Your Pledge?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to cancel your ${pledge.amount.toFixed(2)} pledge to &quot;{pledge.project.title}&quot;?
+                        This action cannot be undone. Your payment authorization will be released and you will not be charged.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep My Pledge</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleCancelPledge}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isProcessing ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        Yes, Cancel Pledge
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             )}
-
-            {/* Refund Information */}
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertTitle>About Refunds</AlertTitle>
-              <AlertDescription className="space-y-2">
-                <p>
-                  Once a pledge has been processed, refunds are handled directly by the project creator.
-                  Refund policies vary by project and are at the discretion of each individual creator.
-                </p>
-                <p className="font-medium">
-                  To request a refund, please contact the creator directly through the project&apos;s message system.
-                </p>
-              </AlertDescription>
-            </Alert>
-
-            <Link href="/dashboard/messages">
-              <Button variant="outline" className="w-full">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Contact Creator About Refund
-              </Button>
-            </Link>
           </CardContent>
         </Card>
       )}
 
-      {/* Pending Pledge but Project is Funded */}
-      {pledge.status === "PENDING" && pledge.isFunded && (
+      {/* PENDING + FUNDED: Payment processing, no cancellation */}
+      {isPending && hasReachedGoal && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-lg">Campaign Successfully Funded</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              Campaign Successfully Funded
+            </CardTitle>
             <CardDescription>
               Great news! The campaign reached its funding goal. Your payment will be processed automatically.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertTitle>Payment Processing</AlertTitle>
-              <AlertDescription>
+            <Alert className="border-green-200 bg-green-50 dark:bg-green-950/30">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-700 dark:text-green-300">Payment Processing</AlertTitle>
+              <AlertDescription className="text-green-600 dark:text-green-400">
                 Your pledge of ${pledge.amount.toFixed(2)} is being processed. You&apos;ll receive a confirmation once the payment is complete.
               </AlertDescription>
             </Alert>
 
-            {/* Refund Information */}
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertTitle>About Refunds</AlertTitle>
-              <AlertDescription className="space-y-2">
+            {/* Refund Policy Alert */}
+            <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30">
+              <ShieldAlert className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-700 dark:text-amber-300">Important: Refund Policy</AlertTitle>
+              <AlertDescription className="text-amber-600 dark:text-amber-400 space-y-2">
                 <p>
-                  Once a campaign is funded, pledges cannot be cancelled through the platform.
-                  If you need to request a refund, you must contact the project creator directly.
+                  Once a campaign reaches its funding goal, pledges cannot be cancelled through the platform.
                 </p>
-                <p className="font-medium">
-                  Refund availability and policies are determined by each creator and are not guaranteed.
+                <p>
+                  <strong>If you need a refund after your payment is processed, you must contact the project creator directly.</strong> Refund availability and policies are determined by each individual creator and are not guaranteed.
                 </p>
               </AlertDescription>
             </Alert>
@@ -512,6 +484,98 @@ export default function ManagePledgePage() {
               <Button variant="outline" className="w-full">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Contact Creator
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* COMPLETED: Payment processed, add-only + strong refund messaging */}
+      {isCompleted && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              Payment Completed
+            </CardTitle>
+            <CardDescription>
+              Your pledge has been successfully processed. Thank you for supporting this project!
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Add to pledge if campaign still live */}
+            {isCampaignLive && pledge.canIncrease && (
+              <div className="p-4 rounded-lg border">
+                <Label className="text-sm font-medium mb-2 block">Add Additional Support</Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Want to add more to your contribution? Additional amounts will be charged immediately.
+                </p>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      min="1"
+                      step="0.01"
+                      placeholder="Additional amount"
+                      value={additionalAmount}
+                      onChange={(e) => setAdditionalAmount(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleIncreasePledge}
+                    disabled={isProcessing || !additionalAmount}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Strong Refund Policy Messaging */}
+            <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-700 dark:text-amber-300">About Refunds</AlertTitle>
+              <AlertDescription className="text-amber-600 dark:text-amber-400 space-y-3">
+                <p>
+                  <strong>Your payment has been processed and the creator has received the funds.</strong>
+                </p>
+                <p>
+                  If you need a refund, you must contact the project creator directly. IndieCrowdfund does not process refunds on behalf of creators.
+                </p>
+                <p className="font-medium">
+                  Please note: Refunds are at the sole discretion of the creator and are not guaranteed. Each creator sets their own refund policy.
+                </p>
+              </AlertDescription>
+            </Alert>
+
+            <div className="p-4 rounded-lg border bg-muted/30">
+              <h4 className="font-medium mb-2 flex items-center gap-2">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                How to Request a Refund
+              </h4>
+              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                <li>Contact the creator through the project&apos;s message system</li>
+                <li>Explain your reason for requesting a refund</li>
+                <li>The creator will review your request and respond directly</li>
+                <li>If approved, the creator will process the refund through their payment system</li>
+              </ol>
+            </div>
+
+            <Link href="/dashboard/messages">
+              <Button variant="outline" className="w-full">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Contact Creator About Refund
               </Button>
             </Link>
           </CardContent>
