@@ -31,6 +31,7 @@ import {
   Info,
 } from "lucide-react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
+import { SHIPPING_COUNTRIES } from "@/types";
 import {
   Elements,
   PaymentElement,
@@ -79,15 +80,37 @@ interface AddonData {
   includes: string[];
 }
 
-const COUNTRIES = [
-  { code: "US", name: "United States", currency: "USD" },
-  { code: "CA", name: "Canada", currency: "CAD" },
-  { code: "GB", name: "United Kingdom", currency: "GBP" },
-  { code: "AU", name: "Australia", currency: "AUD" },
-  { code: "DE", name: "Germany", currency: "EUR" },
-  { code: "FR", name: "France", currency: "EUR" },
-  { code: "JP", name: "Japan", currency: "JPY" },
-];
+// Map timezone to country code for auto-detection
+const TIMEZONE_TO_COUNTRY: Record<string, string> = {
+  "America/New_York": "US", "America/Los_Angeles": "US", "America/Chicago": "US", "America/Denver": "US",
+  "America/Toronto": "CA", "America/Vancouver": "CA", "America/Montreal": "CA",
+  "Europe/London": "GB", "Europe/Berlin": "DE", "Europe/Paris": "FR", "Europe/Rome": "IT", "Europe/Madrid": "ES",
+  "Europe/Amsterdam": "NL", "Europe/Brussels": "BE", "Europe/Zurich": "CH", "Europe/Vienna": "AT",
+  "Europe/Stockholm": "SE", "Europe/Oslo": "NO", "Europe/Copenhagen": "DK", "Europe/Helsinki": "FI",
+  "Europe/Dublin": "IE", "Europe/Warsaw": "PL", "Europe/Prague": "CZ", "Europe/Lisbon": "PT",
+  "Europe/Athens": "GR", "Europe/Bucharest": "RO", "Europe/Budapest": "HU",
+  "Australia/Sydney": "AU", "Australia/Melbourne": "AU", "Australia/Perth": "AU",
+  "Pacific/Auckland": "NZ", "Asia/Tokyo": "JP", "Asia/Singapore": "SG", "Asia/Hong_Kong": "HK",
+  "Asia/Seoul": "KR", "America/Mexico_City": "MX", "America/Sao_Paulo": "BR", "America/Buenos_Aires": "AR",
+  "America/Santiago": "CL", "America/Bogota": "CO", "Asia/Bangkok": "TH", "Asia/Kuala_Lumpur": "MY",
+  "Asia/Manila": "PH", "Asia/Jakarta": "ID", "Asia/Kolkata": "IN", "Africa/Johannesburg": "ZA",
+  "Asia/Dubai": "AE", "Asia/Jerusalem": "IL", "Asia/Taipei": "TW", "Asia/Shanghai": "CN", "Europe/Moscow": "RU",
+};
+
+// Detect user's country from timezone
+function detectUserCountry(): string {
+  try {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const detectedCountry = TIMEZONE_TO_COUNTRY[timezone];
+    // Only return if it's a country we support for shipping
+    if (detectedCountry && SHIPPING_COUNTRIES.some(c => c.code === detectedCountry)) {
+      return detectedCountry;
+    }
+  } catch {
+    // Ignore errors
+  }
+  return "US"; // Default fallback
+}
 
 const FAQ_ITEMS = [
   {
@@ -237,7 +260,13 @@ export default function PledgePage() {
   const [step, setStep] = useState<Step>(rewardId || addItemsParam ? "addons" : "rewards");
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
   const [bonusSupport, setBonusSupport] = useState<number>(0);
-  const [shippingCountry, setShippingCountry] = useState("US");
+  const [shippingCountry, setShippingCountry] = useState(() => {
+    // Try to detect on initial render (client-side only)
+    if (typeof window !== "undefined") {
+      return detectUserCountry();
+    }
+    return "US";
+  });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddItemsMode] = useState(!!addItemsParam);
@@ -603,7 +632,7 @@ export default function PledgePage() {
     setPaymentError(message);
   };
 
-  const currentCountry = COUNTRIES.find((c) => c.code === shippingCountry);
+  const currentCountry = SHIPPING_COUNTRIES.find((c) => c.code === shippingCountry);
 
   // Breadcrumb navigation
   const Breadcrumb = () => (
@@ -909,11 +938,11 @@ export default function PledgePage() {
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Ships to</span>
                     <Select value={shippingCountry} onValueChange={setShippingCountry}>
-                      <SelectTrigger className="w-40 h-8">
+                      <SelectTrigger className="w-48 h-8">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {COUNTRIES.map((country) => (
+                        {SHIPPING_COUNTRIES.map((country) => (
                           <SelectItem key={country.code} value={country.code}>
                             {country.name}
                           </SelectItem>
