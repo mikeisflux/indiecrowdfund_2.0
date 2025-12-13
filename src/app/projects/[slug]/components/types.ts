@@ -50,6 +50,12 @@ export interface RewardItem {
   quantity: number;
 }
 
+export interface RewardBacker {
+  id: string;
+  name: string;
+  image: string | null;
+}
+
 export interface RewardData {
   id: string;
   type: string;
@@ -63,6 +69,8 @@ export interface RewardData {
   shippingCountries: string[];
   quantityAvailable: number | null;
   quantityClaimed: number;
+  backerCount: number;
+  backers: RewardBacker[];
   imageUrl: string;
   items: RewardItem[];
   isEnded: boolean;

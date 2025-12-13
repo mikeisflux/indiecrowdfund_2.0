@@ -173,15 +173,32 @@ export function RewardsTab({
                         <div>
                           <p className="text-xs text-muted-foreground uppercase mb-1">Backers</p>
                           <div className="flex items-center gap-2">
-                            <span className="text-lg font-semibold">{reward.quantityClaimed}</span>
-                            <div className="flex -space-x-2">
-                              {[1, 2, 3].map((i) => (
-                                <div
-                                  key={i}
-                                  className="h-6 w-6 rounded-full bg-muted border-2 border-background"
-                                />
-                              ))}
-                            </div>
+                            <span className="text-lg font-semibold">{reward.backerCount || 0}</span>
+                            {reward.backers && reward.backers.length > 0 && (
+                              <div className="flex -space-x-2">
+                                {reward.backers.slice(0, 5).map((backer) => (
+                                  <div
+                                    key={backer.id}
+                                    className="h-6 w-6 rounded-full border-2 border-background overflow-hidden bg-muted flex items-center justify-center"
+                                    title={backer.name}
+                                  >
+                                    {backer.image ? (
+                                      <Image
+                                        src={backer.image}
+                                        alt={backer.name}
+                                        width={24}
+                                        height={24}
+                                        className="object-cover w-full h-full"
+                                      />
+                                    ) : (
+                                      <span className="text-[10px] font-medium text-muted-foreground">
+                                        {backer.name.charAt(0).toUpperCase()}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div>

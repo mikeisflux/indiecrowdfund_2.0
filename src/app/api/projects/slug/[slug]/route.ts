@@ -40,6 +40,29 @@ export async function GET(
             _count: {
               select: { pledges: true },
             },
+            // Get the first 5 backers for avatar display
+            pledges: {
+              where: {
+                OR: [
+                  { status: "COMPLETED" },
+                  {
+                    status: "PENDING",
+                    stripePaymentMethodId: { not: null },
+                  },
+                ],
+              },
+              take: 5,
+              orderBy: { createdAt: "desc" },
+              select: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    image: true,
+                  },
+                },
+              },
+            },
           },
           orderBy: { amount: "asc" },
         },
@@ -148,6 +171,13 @@ export async function GET(
       description: string | null;
       imageUrl: string | null;
     }
+    interface RewardPledge {
+      user: {
+        id: string;
+        name: string | null;
+        image: string | null;
+      };
+    }
     interface Reward {
       id: string;
       type: string;
@@ -167,6 +197,7 @@ export async function GET(
       isEnded: boolean;
       endedAt: Date | null;
       _count?: { pledges: number };
+      pledges?: RewardPledge[];
     }
 
     // Filter secret rewards - only show if:
@@ -204,6 +235,12 @@ export async function GET(
       quantityAvailable: r.quantityAvailable,
       quantityClaimed: r.quantityClaimed || 0,
       backerCount: r._count?.pledges || 0,
+      // Include recent backer avatars for display
+      backers: (r.pledges || []).map((p: RewardPledge) => ({
+        id: p.user.id,
+        name: p.user.name || "Backer",
+        image: p.user.image || null,
+      })),
       visibility: r.visibility || "PUBLIC",
       // Only include secretToken for creators/admins (so they can share the link)
       secretToken: (isCreator || isAdmin) ? r.secretToken : undefined,
