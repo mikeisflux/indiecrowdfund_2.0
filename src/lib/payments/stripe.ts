@@ -1148,9 +1148,18 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
 
   if (!existingPledge) return;
 
-  // Skip if already processed (payment method already saved AND confirmed)
+  // If already processed (payment method saved AND confirmed), still check for funded project
+  // This acts as a failsafe - duplicate webhook calls can still trigger processing
   if (existingPledge.stripePaymentMethodId && existingPledge.confirmationEmailSent) {
-    console.log(`[SetupIntent] Pledge ${pledgeId} already processed, skipping`);
+    console.log(`[SetupIntent] Pledge ${pledgeId} already processed, checking if project needs processing...`);
+
+    // Still check if project is funded and process pending pledges as failsafe
+    const projectIsFunded = existingPledge.project.currentAmount >= existingPledge.project.goalAmount;
+    if (projectIsFunded) {
+      console.log(`[SetupIntent] Project ${existingPledge.projectId} is funded, processing pending pledges as failsafe...`);
+      const chargeResults = await processPendingPledgesForProject(existingPledge.projectId);
+      console.log(`[SetupIntent] Failsafe charged ${chargeResults.successful}/${chargeResults.total} pledges`);
+    }
     return;
   }
 
@@ -1169,6 +1178,9 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
 
   console.log(`[SetupIntent] Payment method saved and confirmed for pledge ${pledgeId}`);
 
+  // Track current project amount for funding check
+  let currentProjectAmount = existingPledge.project.currentAmount;
+
   // Update project stats if not already counted
   // (Only if pledge wasn't already confirmed by the confirm endpoint)
   if (needsConfirmation && !existingPledge.chargedImmediately) {
@@ -1179,6 +1191,8 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
         backerCount: { increment: 1 },
       },
     });
+
+    currentProjectAmount = updatedProject.currentAmount;
 
     // Update reward quantity if limited
     if (existingPledge.rewardId) {
@@ -1200,26 +1214,29 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
 
     console.log(`[SetupIntent] Updated project stats: +$${existingPledge.amount}`);
 
-    // Check if project just reached funding goal
-    const projectIsFunded = updatedProject.currentAmount >= updatedProject.goalAmount;
-
-    if (projectIsFunded) {
-      console.log(`[SetupIntent] Project ${existingPledge.projectId} is funded! Processing pending pledges...`);
-
-      // Notify that project was funded (if this pledge pushed it over)
-      const justReachedGoal = updatedProject.currentAmount - existingPledge.amount < updatedProject.goalAmount;
-      if (justReachedGoal) {
-        await notifyProjectFunded(existingPledge.projectId);
-      }
-
-      // Process all pending pledges (charge saved cards)
-      const chargeResults = await processPendingPledgesForProject(existingPledge.projectId);
-      console.log(`[SetupIntent] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
+    // Notify that project was funded (if this pledge pushed it over)
+    const justReachedGoal = currentProjectAmount >= existingPledge.project.goalAmount &&
+      currentProjectAmount - existingPledge.amount < existingPledge.project.goalAmount;
+    if (justReachedGoal) {
+      await notifyProjectFunded(existingPledge.projectId);
     }
+
+    // Send confirmation email to backer
+    await notifyBackerPledgeConfirmed(pledgeId, false);
   }
 
-  // Send confirmation email to backer
-  await notifyBackerPledgeConfirmed(pledgeId, false);
+  // ALWAYS check if project is funded and process pending pledges
+  // This acts as a failsafe - every new backer on a funded project triggers processing
+  // The duplicate charge prevention (idempotency keys, PaymentIntent checks) prevents double-charging
+  const projectIsFunded = currentProjectAmount >= existingPledge.project.goalAmount;
+
+  if (projectIsFunded) {
+    console.log(`[SetupIntent] Project ${existingPledge.projectId} is funded (${currentProjectAmount}/${existingPledge.project.goalAmount}). Processing pending pledges...`);
+
+    // Process all pending pledges (charge saved cards)
+    const chargeResults = await processPendingPledgesForProject(existingPledge.projectId);
+    console.log(`[SetupIntent] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
+  }
 }
 
 async function handleAccountUpdate(account: Stripe.Account) {
