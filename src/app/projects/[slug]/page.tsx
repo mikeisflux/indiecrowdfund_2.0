@@ -270,6 +270,37 @@ export default function ProjectPage() {
     setComments((prev) => [newComment, ...prev]);
   };
 
+  // Share handler
+  const handleShare = (platform: "facebook" | "twitter" | "bluesky" | "email" | "copy") => {
+    const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+    const shareText = `Check out ${project.title} on IndieCrowdfund!`;
+
+    let url: string | null = null;
+
+    switch (platform) {
+      case "facebook":
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+        break;
+      case "twitter":
+        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+        break;
+      case "bluesky":
+        url = `https://bsky.app/intent/compose?text=${encodeURIComponent(shareText + " " + shareUrl)}`;
+        break;
+      case "email":
+        url = `mailto:?subject=${encodeURIComponent(project.title)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`;
+        break;
+      case "copy":
+        navigator.clipboard.writeText(shareUrl);
+        // Could add a toast notification here
+        return;
+    }
+
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer,width=600,height=400");
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -569,19 +600,19 @@ export default function ProjectPage() {
                   Remind me
                 </Button>
                 <div className="flex items-center">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1877f2]">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1877f2]" onClick={() => handleShare("facebook")}>
                     <FacebookIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1da1f2]">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1da1f2]" onClick={() => handleShare("twitter")}>
                     <TwitterIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#0085ff]">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#0085ff]" onClick={() => handleShare("bluesky")}>
                     <BlueskyIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleShare("email")}>
                     <EmailIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleShare("copy")}>
                     <LinkIcon />
                   </Button>
                 </div>
