@@ -179,6 +179,127 @@ export async function PATCH(
       });
     }
 
+    if (action === "modify") {
+      // Can only modify reward/addons for PENDING pledges when project is not funded
+      if (isFunded) {
+        return NextResponse.json(
+          { error: "Cannot modify pledge after project is funded" },
+          { status: 400 }
+        );
+      }
+
+      if (pledge.status !== "PENDING") {
+        return NextResponse.json(
+          { error: "Can only modify pending pledges" },
+          { status: 400 }
+        );
+      }
+
+      if (pledge.project.status !== "LIVE") {
+        return NextResponse.json(
+          { error: "Can only modify pledge while project is live" },
+          { status: 400 }
+        );
+      }
+
+      const { rewardId, addonIds, newAmount } = body;
+
+      // Validate new reward if provided
+      let newReward = null;
+      if (rewardId && rewardId !== "no-reward") {
+        newReward = await db.reward.findUnique({
+          where: { id: rewardId },
+        });
+
+        if (!newReward || newReward.projectId !== pledge.projectId) {
+          return NextResponse.json({ error: "Invalid reward" }, { status: 400 });
+        }
+
+        // Check availability (but allow if it's the same reward)
+        if (newReward.quantityAvailable !== null &&
+            newReward.quantityClaimed >= newReward.quantityAvailable &&
+            pledge.rewardId !== rewardId) {
+          return NextResponse.json({ error: "Reward sold out" }, { status: 400 });
+        }
+      }
+
+      // Validate addons if provided
+      if (addonIds && addonIds.length > 0) {
+        const validAddons = await db.addon.findMany({
+          where: {
+            id: { in: addonIds },
+            projectId: pledge.projectId,
+          },
+        });
+
+        if (validAddons.length !== addonIds.length) {
+          return NextResponse.json({ error: "Invalid addons" }, { status: 400 });
+        }
+      }
+
+      // Calculate old contribution for project update
+      const oldAmount = pledge.amount;
+      const amountDiff = newAmount - oldAmount;
+
+      // If changing reward, update claimed counts
+      if (pledge.rewardId && pledge.rewardId !== rewardId) {
+        // Decrement old reward's claimed count
+        await db.reward.update({
+          where: { id: pledge.rewardId },
+          data: { quantityClaimed: { decrement: 1 } },
+        });
+      }
+
+      if (rewardId && rewardId !== "no-reward" && pledge.rewardId !== rewardId) {
+        // Increment new reward's claimed count
+        await db.reward.update({
+          where: { id: rewardId },
+          data: { quantityClaimed: { increment: 1 } },
+        });
+      }
+
+      // Delete old addon associations
+      await db.pledgeAddon.deleteMany({
+        where: { pledgeId },
+      });
+
+      // Create new addon associations
+      if (addonIds && addonIds.length > 0) {
+        await db.pledgeAddon.createMany({
+          data: addonIds.map((addonId: string) => ({
+            pledgeId,
+            addonId,
+            quantity: 1,
+          })),
+        });
+      }
+
+      // Update the pledge
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          rewardId: rewardId === "no-reward" ? null : rewardId || null,
+          amount: newAmount,
+        },
+      });
+
+      // Update project current amount
+      if (amountDiff !== 0) {
+        await db.project.update({
+          where: { id: pledge.projectId },
+          data: {
+            currentAmount: { increment: amountDiff },
+          },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Pledge modified successfully",
+        newAmount,
+      });
+    }
+
     if (action === "increase") {
       // Can always increase pledge amount while project is live
       if (pledge.project.status !== "LIVE") {

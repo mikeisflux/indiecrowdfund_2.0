@@ -21,6 +21,8 @@ import {
   Heart,
   Zap,
   Menu,
+  Eye,
+  Sparkles,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { getPlatformStats } from "@/lib/stats/actions";
@@ -123,11 +125,57 @@ async function getCategoryCounts() {
   }
 }
 
+// Fetch projects in prelaunch from database
+async function getPrelaunchProjects() {
+  try {
+    const projects = await db.project.findMany({
+      where: {
+        prelaunchActive: true,
+        status: {
+          not: "LIVE", // Exclude projects that are already live
+        },
+      },
+      include: {
+        creator: {
+          select: {
+            name: true,
+          },
+        },
+        _count: {
+          select: {
+            followers: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 6,
+    });
+
+    return projects.map((project) => ({
+      id: project.id,
+      slug: project.slug,
+      title: project.title,
+      subtitle: project.subtitle || "",
+      category: project.category,
+      imageUrl: project.imageUrl || "",
+      creator: project.creator.name || "Creator",
+      followerCount: project._count.followers,
+      launchDate: project.launchDate,
+    }));
+  } catch (error) {
+    console.error("Error fetching prelaunch projects:", error);
+    return [];
+  }
+}
+
 export default async function HomePage() {
-  const [stats, featuredProjects, categories] = await Promise.all([
+  const [stats, featuredProjects, categories, prelaunchProjects] = await Promise.all([
     getPlatformStats(),
     getFeaturedProjects(),
     getCategoryCounts(),
+    getPrelaunchProjects(),
   ]);
 
   return (
@@ -351,6 +399,78 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Projects in Prelaunch */}
+      {prelaunchProjects.length > 0 && (
+        <section className="border-t bg-gradient-to-b from-amber-50/50 to-background dark:from-amber-950/20 py-16 md:py-24">
+          <div className="container">
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles className="h-5 w-5 text-amber-500" />
+                  <h2 className="text-2xl font-bold md:text-3xl">Projects in Prelaunch</h2>
+                </div>
+                <p className="text-muted-foreground">Coming soon - follow to get notified when they launch</p>
+              </div>
+              <Link href="/discover?prelaunch=true">
+                <Button variant="ghost">
+                  View all
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {prelaunchProjects.map((project) => (
+                <Link key={project.id} href={`/projects/${project.slug}/prelaunch`}>
+                  <Card className="overflow-hidden h-full transition-all hover:shadow-lg border-amber-200/50 dark:border-amber-800/30">
+                    <div className="aspect-video bg-muted relative">
+                      {project.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={project.imageUrl}
+                          alt={project.title}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-amber-800/20">
+                          <Sparkles className="h-12 w-12 text-amber-400/50" />
+                        </div>
+                      )}
+                      <Badge className="absolute left-3 top-3 bg-amber-500 hover:bg-amber-600">
+                        Coming Soon
+                      </Badge>
+                      <Badge className="absolute right-3 top-3" variant="secondary">
+                        {project.category}
+                      </Badge>
+                    </div>
+                    <CardContent className="pt-4">
+                      <h3 className="mb-1 font-semibold line-clamp-1">{project.title}</h3>
+                      <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+                        {project.subtitle}
+                      </p>
+                      <p className="text-xs text-muted-foreground">by {project.creator}</p>
+                    </CardContent>
+                    <CardFooter className="border-t pt-4">
+                      <div className="flex w-full items-center justify-between text-sm">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Eye className="h-4 w-4" />
+                          <span>{project.followerCount} {project.followerCount === 1 ? 'follower' : 'followers'}</span>
+                        </div>
+                        {project.launchDate && (
+                          <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                            Launching {new Date(project.launchDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                    </CardFooter>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Categories */}
       <section className="border-t bg-muted/30 py-16 md:py-24">

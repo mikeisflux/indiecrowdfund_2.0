@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { ProjectData, RewardData, StoryNavItem } from "../types";
-import { processStoryHtml, formatMoney, formatDeliveryDate } from "../utils";
+import { processStoryHtml, formatDeliveryDate } from "../utils";
 
 interface CampaignTabProps {
   project: ProjectData;
