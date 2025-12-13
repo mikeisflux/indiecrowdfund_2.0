@@ -212,6 +212,7 @@ export default function PledgePage() {
   const rewardId = searchParams.get("reward");
   const amountParam = searchParams.get("amount");
   const successParam = searchParams.get("success");
+  const addItemsParam = searchParams.get("addItems"); // For adding items to existing completed pledge
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -233,12 +234,14 @@ export default function PledgePage() {
   const [customPledgeAmount, setCustomPledgeAmount] = useState(amountParam ? parseInt(amountParam) : 10);
 
   // UI state
-  const [step, setStep] = useState<Step>(rewardId ? "addons" : "rewards");
+  const [step, setStep] = useState<Step>(rewardId || addItemsParam ? "addons" : "rewards");
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
   const [bonusSupport, setBonusSupport] = useState<number>(0);
   const [shippingCountry, setShippingCountry] = useState("US");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAddItemsMode] = useState(!!addItemsParam);
+  const [existingPledgeId] = useState<string | null>(addItemsParam);
 
   // Stripe state
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
@@ -272,11 +275,59 @@ export default function PledgePage() {
 
   // Auto-create pledge when entering payment step to load Stripe form
   useEffect(() => {
-    if (step === "payment" && !clientSecret && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) {
-      createPledgeForPayment();
+    // For add items mode, we need selected addons
+    if (isAddItemsMode) {
+      if (step === "payment" && !clientSecret && !isProcessing && !paymentError && project && Object.keys(selectedAddons).length > 0) {
+        createAdditionalItemsPurchase();
+      }
+    } else {
+      // Normal flow - need reward or pledge without reward
+      if (step === "payment" && !clientSecret && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) {
+        createPledgeForPayment();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, isProcessing, paymentError]);
+  }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, isProcessing, paymentError, isAddItemsMode, selectedAddons]);
+
+  // Create additional items purchase for existing pledge
+  const createAdditionalItemsPurchase = async () => {
+    if (!project || !existingPledgeId || Object.keys(selectedAddons).length === 0) return;
+    if (clientSecret) return; // Already have a client secret
+
+    setIsProcessing(true);
+    setPaymentError(null);
+
+    try {
+      const addonIds = Object.keys(selectedAddons);
+
+      const response = await fetch(`/api/pledges/${existingPledgeId}/add-items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          addonIds,
+          amount: addItemsTotal,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create additional items purchase");
+      }
+
+      if (!data.clientSecret) {
+        throw new Error("Invalid payment response - missing client secret");
+      }
+
+      setClientSecret(data.clientSecret);
+      setIntentType(data.type || "payment_intent"); // Additional items are charged immediately
+      setCurrentPledgeId(existingPledgeId);
+      setIsProcessing(false);
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Failed to create additional items purchase");
+      setIsProcessing(false);
+    }
+  };
 
   // Create pledge and get Stripe client secret (called automatically when entering payment step)
   const createPledgeForPayment = async () => {
@@ -496,6 +547,9 @@ export default function PledgePage() {
   const totalShipping = rewardShipping + addonsShipping;
   const total = subtotal + totalShipping;
 
+  // For add items mode - only addons and shipping
+  const addItemsTotal = addonsTotal + addonsShipping;
+
   const handleAddonToggle = (addonId: string) => {
     setSelectedAddons((prev) => {
       if (prev[addonId]) {
@@ -522,15 +576,22 @@ export default function PledgePage() {
 
   // Called when payment is successful
   const handlePaymentSuccess = async () => {
-    // Send confirmation email directly (don't rely on webhooks)
     if (currentPledgeId) {
       try {
-        await fetch(`/api/pledges/${currentPledgeId}/confirm`, {
-          method: "POST",
-        });
+        if (isAddItemsMode) {
+          // Confirm additional items purchase
+          await fetch(`/api/pledges/${currentPledgeId}/confirm-add-items`, {
+            method: "POST",
+          });
+        } else {
+          // Send confirmation email directly (don't rely on webhooks)
+          await fetch(`/api/pledges/${currentPledgeId}/confirm`, {
+            method: "POST",
+          });
+        }
       } catch (err) {
-        console.error("Failed to send confirmation email:", err);
-        // Don't block success page - email can be retried later
+        console.error("Failed to confirm payment:", err);
+        // Don't block success page - can be retried later
       }
     }
     setStep("success");
@@ -547,29 +608,34 @@ export default function PledgePage() {
   // Breadcrumb navigation
   const Breadcrumb = () => (
     <div className="flex items-center gap-2 text-sm">
-      <button
-        onClick={() => setStep("rewards")}
-        className={step === "rewards" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}
-      >
-        Rewards
-      </button>
-      {/* Only show Add-ons step when there's a selected reward (not for pledge without reward) */}
-      {selectedReward && (
+      {/* In add items mode, skip rewards step */}
+      {!isAddItemsMode && (
         <>
+          <button
+            onClick={() => setStep("rewards")}
+            className={step === "rewards" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}
+          >
+            Rewards
+          </button>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </>
+      )}
+      {/* Show Add-ons step when there's a selected reward or in add items mode */}
+      {(selectedReward || isAddItemsMode) && (
+        <>
           <button
             onClick={() => setStep("addons")}
             className={step === "addons" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}
           >
-            Add-ons
+            {isAddItemsMode ? "Select Items" : "Add-ons"}
           </button>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </>
       )}
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
       <button
-        onClick={() => (selectedReward || pledgeWithoutReward) && setStep("payment")}
+        onClick={() => (selectedReward || pledgeWithoutReward || (isAddItemsMode && Object.keys(selectedAddons).length > 0)) && setStep("payment")}
         className={step === "payment" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"}
-        disabled={!selectedReward && !pledgeWithoutReward}
+        disabled={!selectedReward && !pledgeWithoutReward && !(isAddItemsMode && Object.keys(selectedAddons).length > 0)}
       >
         Payment
       </button>
@@ -701,17 +767,25 @@ export default function PledgePage() {
 
             {/* Main message */}
             <h1 className="mb-3 text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
-              Thank you for making this project come to life!
+              {isAddItemsMode
+                ? "Additional items added successfully!"
+                : "Thank you for making this project come to life!"}
             </h1>
 
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-green-100 dark:bg-green-900/50 px-4 py-2 text-green-700 dark:text-green-300">
               <CheckCircle className="h-5 w-5" />
-              <span className="font-medium">Your payment has been accepted!</span>
+              <span className="font-medium">
+                {isAddItemsMode ? "Your purchase has been completed!" : "Your payment has been accepted!"}
+              </span>
             </div>
 
             <p className="mb-10 text-lg text-muted-foreground">
-              Your support means the world to <span className="font-semibold text-foreground">{project?.creator?.name || 'the creator'}</span>.
-              You&apos;ll receive a confirmation email shortly with all the details.
+              {isAddItemsMode ? (
+                <>Your additional items have been added to your pledge. You&apos;ll receive a confirmation email shortly.</>
+              ) : (
+                <>Your support means the world to <span className="font-semibold text-foreground">{project?.creator?.name || 'the creator'}</span>.
+                You&apos;ll receive a confirmation email shortly with all the details.</>
+              )}
             </p>
 
             {/* Action buttons */}
@@ -973,9 +1047,14 @@ export default function PledgePage() {
             {step === "addons" && (
               <>
                 <div>
-                  <h2 className="text-xl font-semibold mb-1">Add-ons</h2>
+                  <h2 className="text-xl font-semibold mb-1">
+                    {isAddItemsMode ? "Add Additional Items" : "Add-ons"}
+                  </h2>
                   <p className="text-muted-foreground text-sm">
-                    Extras available to add to your pledge
+                    {isAddItemsMode
+                      ? "Select items to add to your existing pledge. You will be charged immediately for these additions."
+                      : "Extras available to add to your pledge"
+                    }
                   </p>
                 </div>
 
@@ -1197,8 +1276,67 @@ export default function PledgePage() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-6 space-y-6">
-              {/* Order Summary for Add-ons step */}
-              {step === "addons" && (selectedReward || pledgeWithoutReward) && (
+              {/* Order Summary for Add-ons step - Add Items Mode */}
+              {step === "addons" && isAddItemsMode && (
+                <Card>
+                  <CardContent className="p-5">
+                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Additional Items</p>
+
+                    {/* Selected Add-ons */}
+                    {Object.keys(selectedAddons).length > 0 ? (
+                      <div className="pb-4 border-b">
+                        {Object.entries(selectedAddons).map(([id, qty]) => {
+                          const addon = addons.find(a => a.id === id);
+                          if (!addon) return null;
+                          return (
+                            <div key={id} className="flex justify-between text-sm py-1">
+                              <span>{addon.title} x{qty}</span>
+                              <span>${addon.amount * qty}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground pb-4 border-b">
+                        Select items to add to your pledge
+                      </p>
+                    )}
+
+                    {/* Shipping */}
+                    {addonsShipping > 0 && (
+                      <div className="py-4 border-b">
+                        <div className="flex justify-between text-sm">
+                          <span>Shipping to {currentCountry?.name}</span>
+                          <span>${addonsShipping}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="pt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total</span>
+                        <span className="text-xl font-bold">${addItemsTotal}</span>
+                      </div>
+                    </div>
+
+                    {/* Continue button */}
+                    <div className="mt-4">
+                      <Button
+                        className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
+                        size="lg"
+                        onClick={() => setStep("payment")}
+                        disabled={Object.keys(selectedAddons).length === 0}
+                      >
+                        Continue to Payment
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Order Summary for Add-ons step - Normal Mode */}
+              {step === "addons" && !isAddItemsMode && (selectedReward || pledgeWithoutReward) && (
                 <Card>
                   <CardContent className="p-5">
                     {/* Selected reward */}
@@ -1287,8 +1425,87 @@ export default function PledgePage() {
                 </Card>
               )}
 
-              {/* Payment step sidebar - simpler layout */}
-              {step === "payment" && (selectedReward || pledgeWithoutReward) && (
+              {/* Payment step sidebar - Add Items Mode */}
+              {step === "payment" && isAddItemsMode && Object.keys(selectedAddons).length > 0 && (
+                <Card>
+                  <CardContent className="p-5">
+                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Additional Items</p>
+
+                    {/* Selected Add-ons */}
+                    <div className="pb-4 border-b">
+                      {Object.entries(selectedAddons).map(([id, qty]) => {
+                        const addon = addons.find(a => a.id === id);
+                        if (!addon) return null;
+                        return (
+                          <div key={id} className="flex justify-between text-sm py-1">
+                            <span>{addon.title} x{qty}</span>
+                            <span>${addon.amount * qty}.00</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Shipping */}
+                    {addonsShipping > 0 && (
+                      <div className="py-4 border-b">
+                        <div className="flex justify-between text-sm">
+                          <span>Shipping to {currentCountry?.name}</span>
+                          <span>${addonsShipping}.00</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Total amount */}
+                    <div className="py-4 border-b">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total amount</span>
+                        <span className="text-xl font-bold">${addItemsTotal}.00</span>
+                      </div>
+                    </div>
+
+                    {/* Disclaimer */}
+                    <div className="py-4">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        This purchase will be charged immediately to your payment method.
+                      </p>
+
+                      <div className="flex items-start gap-3 mb-4">
+                        <Checkbox
+                          id="terms-add-items"
+                          checked={agreedToTerms}
+                          onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                        />
+                        <Label htmlFor="terms-add-items" className="text-xs leading-relaxed text-muted-foreground">
+                          I understand that rewards or reimbursements aren&apos;t guaranteed by either IndieCrowdfund or the creator.
+                        </Label>
+                      </div>
+
+                      {/* Status message */}
+                      {!clientSecret ? (
+                        <div className="flex items-center justify-center gap-2 py-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Setting up payment...</span>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-center text-muted-foreground">
+                          Enter your card details above to complete your purchase.
+                        </p>
+                      )}
+
+                      <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
+                        By submitting, you agree to IndieCrowdfund&apos;s{" "}
+                        <Link href="/terms" className="underline">Terms of Use</Link>
+                        , and{" "}
+                        <Link href="/privacy" className="underline">Privacy Policy</Link>
+                        , and for our payment processor, Stripe, to charge your payment method.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Payment step sidebar - Normal Mode */}
+              {step === "payment" && !isAddItemsMode && (selectedReward || pledgeWithoutReward) && (
                 <Card>
                   <CardContent className="p-5">
                     {/* Reward */}

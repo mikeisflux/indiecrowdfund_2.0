@@ -503,6 +503,24 @@ export default function ManagePledgePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Add Additional Items - only show if campaign is still live */}
+            {isCampaignLive && (
+              <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <Label className="text-sm font-medium mb-2 block text-blue-700 dark:text-blue-300">
+                  Add Additional Items
+                </Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Want to add more items to your pledge? Browse available add-ons and increase your support. Additional items will be charged immediately.
+                </p>
+                <Link href={`/projects/${pledge.project.slug}/pledge?addItems=${pledge.id}`}>
+                  <Button variant="outline" className="w-full border-blue-300 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900">
+                    <Package className="h-4 w-4 mr-2" />
+                    Browse Add-ons
+                  </Button>
+                </Link>
+              </div>
+            )}
+
             {/* Add to pledge if campaign still live */}
             {isCampaignLive && pledge.canIncrease && (
               <div className="p-4 rounded-lg border">

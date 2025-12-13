@@ -1,0 +1,180 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { getStripeInstance } from "@/lib/payments/stripe";
+
+/**
+ * POST /api/pledges/[pledgeId]/confirm-add-items
+ *
+ * Called by the frontend after successful payment for additional items.
+ * This endpoint:
+ * 1. Verifies the payment was successful
+ * 2. Creates addon associations
+ * 3. Updates addon claimed counts
+ * 4. Updates project currentAmount (but NOT backerCount)
+ * 5. Updates the pledge total amount
+ */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ pledgeId: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { pledgeId } = await params;
+
+    // Get the pledge with metadata
+    const pledge = await db.pledge.findUnique({
+      where: { id: pledgeId },
+      include: {
+        project: {
+          select: {
+            id: true,
+            currentAmount: true,
+          },
+        },
+      },
+    });
+
+    if (!pledge) {
+      return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    }
+
+    // Verify the pledge belongs to the current user
+    if (pledge.userId !== session.user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get pending additional items from metadata
+    const metadata = pledge.metadata as {
+      pendingAdditionalItems?: {
+        paymentIntentId: string;
+        addonIds: string[];
+        amount: number;
+        createdAt: string;
+      };
+    } | null;
+
+    const pendingItems = metadata?.pendingAdditionalItems;
+
+    if (!pendingItems) {
+      return NextResponse.json(
+        { error: "No pending additional items found" },
+        { status: 400 }
+      );
+    }
+
+    // Verify payment was successful
+    const stripe = await getStripeInstance();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: "Payment system unavailable" },
+        { status: 500 }
+      );
+    }
+
+    const paymentIntent = await stripe.paymentIntents.retrieve(pendingItems.paymentIntentId);
+
+    if (paymentIntent.status !== "succeeded") {
+      return NextResponse.json(
+        { error: "Payment not yet completed" },
+        { status: 400 }
+      );
+    }
+
+    // Get the addons
+    const addons = await db.addon.findMany({
+      where: {
+        id: { in: pendingItems.addonIds },
+      },
+    });
+
+    // Perform all updates in a transaction
+    await db.$transaction(async (tx) => {
+      // Create PledgeAddon records for each addon
+      for (const addon of addons) {
+        // Check if this addon already exists for this pledge
+        const existingAddon = await tx.pledgeAddon.findFirst({
+          where: {
+            pledgeId: pledge.id,
+            addonId: addon.id,
+          },
+        });
+
+        if (existingAddon) {
+          // Increment quantity
+          await tx.pledgeAddon.update({
+            where: { id: existingAddon.id },
+            data: { quantity: existingAddon.quantity + 1 },
+          });
+        } else {
+          // Create new
+          await tx.pledgeAddon.create({
+            data: {
+              pledgeId: pledge.id,
+              addonId: addon.id,
+              quantity: 1,
+            },
+          });
+        }
+
+        // Update addon claimed count
+        await tx.addon.update({
+          where: { id: addon.id },
+          data: {
+            quantityClaimed: { increment: 1 },
+          },
+        });
+      }
+
+      // Update pledge amount
+      await tx.pledge.update({
+        where: { id: pledge.id },
+        data: {
+          amount: pledge.amount + pendingItems.amount,
+          // Clear the pending items from metadata
+          metadata: {
+            ...(typeof pledge.metadata === "object" && pledge.metadata !== null
+              ? { ...pledge.metadata, pendingAdditionalItems: undefined }
+              : {}),
+            completedAdditionalItems: [
+              ...((metadata as Record<string, unknown>)?.completedAdditionalItems as unknown[] || []),
+              {
+                paymentIntentId: pendingItems.paymentIntentId,
+                addonIds: pendingItems.addonIds,
+                amount: pendingItems.amount,
+                completedAt: new Date().toISOString(),
+              },
+            ],
+          },
+        },
+      });
+
+      // Update project currentAmount (but NOT backerCount!)
+      await tx.project.update({
+        where: { id: pledge.projectId },
+        data: {
+          currentAmount: { increment: pendingItems.amount },
+        },
+      });
+    });
+
+    console.log(`[ConfirmAddItems] Successfully added ${addons.length} items to pledge ${pledgeId}, amount: $${pendingItems.amount}`);
+
+    return NextResponse.json({
+      success: true,
+      message: "Additional items added successfully",
+      addedAmount: pendingItems.amount,
+      addedItems: addons.map((a: { title: string }) => a.title),
+    });
+  } catch (error) {
+    console.error("Failed to confirm additional items:", error);
+    return NextResponse.json(
+      { error: "Failed to confirm additional items" },
+      { status: 500 }
+    );
+  }
+}
