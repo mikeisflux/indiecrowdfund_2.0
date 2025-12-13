@@ -17,22 +17,24 @@ echo "🚀 Starting build and swap..."
 echo "=================================="
 START_TIME=$(date +%s)
 
-# Step 1: Select and pull branch
+# Step 1: Pull latest changes
 echo ""
-echo "📥 Step 1: Select branch to deploy..."
+echo "📥 Step 1: Pull latest changes..."
 
 CURRENT_BRANCH=$(git branch --show-current)
 echo ""
-echo "Available branches:"
-git branch -a | grep -v "HEAD" | head -20
+echo "   Current branch: ${CURRENT_BRANCH}"
 echo ""
-read -p "Enter branch to deploy [${CURRENT_BRANCH}]: " DEPLOY_BRANCH
-DEPLOY_BRANCH="${DEPLOY_BRANCH:-$CURRENT_BRANCH}"
+echo "Available remote branches:"
+git branch -r | grep -v "HEAD" | head -20
+echo ""
+read -p "Enter branch to pull from [${CURRENT_BRANCH}]: " PULL_BRANCH
+PULL_BRANCH="${PULL_BRANCH:-$CURRENT_BRANCH}"
 
 echo ""
-echo "   Deploying branch: ${DEPLOY_BRANCH}"
+echo "   Pulling from: ${PULL_BRANCH}"
 
-if git fetch origin "$DEPLOY_BRANCH" 2>&1 && git checkout "$DEPLOY_BRANCH" 2>&1 && git pull origin "$DEPLOY_BRANCH" 2>&1; then
+if git fetch origin "$PULL_BRANCH" 2>&1 && git pull origin "$PULL_BRANCH" 2>&1; then
     echo -e "${GREEN}   Git pull successful${NC}"
 else
     echo -e "${YELLOW}   Could not pull (continuing with local code)${NC}"
