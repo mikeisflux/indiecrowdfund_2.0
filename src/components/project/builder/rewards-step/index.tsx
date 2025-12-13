@@ -28,9 +28,11 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     addItem,
     updateItem,
     removeItem,
+    reorderItems,
     addReward,
     updateReward,
     removeReward,
+    reorderRewards,
     projectStatus,
     projectId,
     endReward,
@@ -762,6 +764,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             onEditItem={openEditItemDialog}
             onDeleteItem={handleDeleteItem}
             onItemImageChange={handleItemImageChange}
+            onReorderItems={reorderItems}
           />
         </TabsContent>
 
@@ -778,6 +781,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             onEndReward={handleEndReward}
             onRewardImageChange={handleRewardImageChange}
             onOpenImportDialog={() => setIsImportDialogOpen(true)}
+            onReorderRewards={reorderRewards}
           />
         </TabsContent>
 
@@ -794,6 +798,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             onEndReward={handleEndReward}
             onRewardImageChange={handleRewardImageChange}
             onOpenImportDialog={() => setIsImportDialogOpen(true)}
+            onReorderRewards={reorderRewards}
           />
         </TabsContent>
       </Tabs>

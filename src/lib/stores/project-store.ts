@@ -37,12 +37,14 @@ interface ProjectBuilderState {
   addItem: (item: RewardItemData) => void;
   updateItem: (id: string, item: RewardItemData) => void;
   removeItem: (id: string) => void;
+  reorderItems: (items: RewardItemData[]) => void;
 
   // Reward management
   addReward: (reward: RewardData) => void;
   updateReward: (index: number, reward: RewardData) => void;
   removeReward: (index: number) => void;
   copyRewardToAddon: (index: number) => void;
+  reorderRewards: (rewards: RewardData[]) => void;
 
   // Reset
   reset: () => void;
@@ -144,6 +146,8 @@ export const useProjectStore = create<ProjectBuilderState>()(
           })),
         })),
 
+      reorderItems: (items) => set({ items }),
+
       addReward: (reward) =>
         set((state) => ({ rewards: [...state.rewards, reward] })),
 
@@ -171,6 +175,8 @@ export const useProjectStore = create<ProjectBuilderState>()(
 
           return { rewards: [...state.rewards, addon] };
         }),
+
+      reorderRewards: (rewards) => set({ rewards }),
 
       reset: () => set(initialState),
 
