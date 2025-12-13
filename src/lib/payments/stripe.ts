@@ -1020,9 +1020,14 @@ export async function handleStripeWebhook(
 }
 
 async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
+  console.log(`[Webhook] handlePaymentSuccess called for PaymentIntent ${paymentIntent.id}`);
   const pledgeId = paymentIntent.metadata.pledgeId;
 
-  if (!pledgeId) return;
+  if (!pledgeId) {
+    console.log(`[Webhook] No pledgeId in metadata for PaymentIntent ${paymentIntent.id}, skipping`);
+    return;
+  }
+  console.log(`[Webhook] Processing payment success for pledge ${pledgeId}`);
 
   // Check if pledge is already completed (idempotency - webhook may fire after direct update)
   const existingPledge = await db.pledge.findUnique({
