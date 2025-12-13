@@ -41,11 +41,14 @@ export function ActiveProjectPanel({
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [isProcessingPledges, setIsProcessingPledges] = useState(false);
   const [processMessage, setProcessMessage] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
 
   // Clear messages when project changes
   useEffect(() => {
     setSyncMessage(null);
     setProcessMessage(null);
+    setVerifyMessage(null);
   }, [project?.id]);
 
   const handleProcessPledges = async () => {
@@ -102,6 +105,44 @@ export function ActiveProjectPanel({
       setIsSyncing(false);
     }
   };
+
+  const handleVerifyPayments = async () => {
+    if (!project) return;
+
+    setIsVerifying(true);
+    setVerifyMessage(null);
+
+    try {
+      const response = await fetch(`/api/admin/projects/${project.id}/process-pledges`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify" }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.results.total === 0) {
+          setVerifyMessage("No pending immediate-charge pledges to verify");
+        } else {
+          setVerifyMessage(
+            `Verified ${data.results.verified}/${data.results.total}: ${data.results.alreadySucceeded} completed, ${data.results.failed} failed`
+          );
+          // Refresh stats if any pledges were updated
+          if (data.results.alreadySucceeded > 0) {
+            handleSyncStats();
+          }
+        }
+      } else {
+        setVerifyMessage(`Error: ${data.error || "Failed to verify payments"}`);
+      }
+    } catch {
+      setVerifyMessage("Error: Network request failed");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   if (!project || (project.status !== "LIVE" && project.status !== "APPROVED")) {
     return (
       <Card className="h-[400px] flex items-center justify-center">
@@ -203,14 +244,28 @@ export function ActiveProjectPanel({
               {isSyncing ? "Syncing..." : "Sync Stats"}
             </Button>
           </div>
-          <div className="mb-4">
-            <Button variant="outline" className="w-full" asChild>
+          <div className="flex items-center gap-2 mb-2">
+            <Button variant="outline" className="flex-1" asChild>
               <a href={`/api/admin/projects/${project.id}/process-pledges`} target="_blank" rel="noopener noreferrer">
                 <FileSearch className="mr-2 h-4 w-4" />
-                Diagnose Pledges
+                Diagnose
               </a>
             </Button>
+            <Button
+              variant="outline"
+              onClick={handleVerifyPayments}
+              disabled={isVerifying}
+              className="flex-1"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isVerifying ? "animate-spin" : ""}`} />
+              {isVerifying ? "Verifying..." : "Verify Payments"}
+            </Button>
           </div>
+          {verifyMessage && (
+            <p className={`text-sm mb-2 ${verifyMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
+              {verifyMessage}
+            </p>
+          )}
           {syncMessage && (
             <p className={`text-sm mb-4 ${syncMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
               {syncMessage}

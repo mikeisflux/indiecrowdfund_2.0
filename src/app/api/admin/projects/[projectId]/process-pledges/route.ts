@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { processPendingPledgesForProject, chargeSavedPledge } from "@/lib/payments/stripe";
+import { processPendingPledgesForProject, chargeSavedPledge, getStripeClient } from "@/lib/payments/stripe";
 
 /**
  * GET /api/admin/projects/[projectId]/process-pledges
@@ -206,7 +206,12 @@ export async function POST(
 
     const { projectId } = await params;
     const body = await req.json().catch(() => ({}));
-    const { pledgeId, force } = body as { pledgeId?: string; force?: boolean };
+    const { pledgeId, force, action } = body as { pledgeId?: string; force?: boolean; action?: string };
+
+    // Special action: verify PaymentIntent statuses
+    if (action === "verify") {
+      return await verifyPaymentIntents(projectId);
+    }
 
     // Get project info
     const project = await db.project.findUnique({
@@ -283,4 +288,110 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+/**
+ * Verify PaymentIntent statuses with Stripe and update pledges accordingly.
+ * This fixes pledges that were charged immediately but webhook didn't fire.
+ */
+async function verifyPaymentIntents(projectId: string) {
+  const stripeClient = getStripeClient();
+
+  // Find all PENDING pledges that were charged immediately (have PaymentIntentId)
+  const pendingPledges = await db.pledge.findMany({
+    where: {
+      projectId,
+      status: "PENDING",
+      chargedImmediately: true,
+      stripePaymentIntentId: { not: null },
+    },
+    select: {
+      id: true,
+      amount: true,
+      stripePaymentIntentId: true,
+      stripePaymentMethodId: true,
+      user: {
+        select: { name: true, email: true },
+      },
+    },
+  });
+
+  const results = {
+    total: pendingPledges.length,
+    verified: 0,
+    alreadySucceeded: 0,
+    stillProcessing: 0,
+    failed: 0,
+    errors: [] as string[],
+    details: [] as Array<{
+      pledgeId: string;
+      user: string;
+      amount: number;
+      paymentIntentId: string;
+      stripeStatus: string;
+      action: string;
+    }>,
+  };
+
+  for (const pledge of pendingPledges) {
+    try {
+      // Retrieve PaymentIntent from Stripe
+      const paymentIntent = await stripeClient.paymentIntents.retrieve(
+        pledge.stripePaymentIntentId!
+      );
+
+      const detail = {
+        pledgeId: pledge.id,
+        user: pledge.user.name || pledge.user.email || "Unknown",
+        amount: pledge.amount,
+        paymentIntentId: pledge.stripePaymentIntentId!,
+        stripeStatus: paymentIntent.status,
+        action: "",
+      };
+
+      if (paymentIntent.status === "succeeded") {
+        // Payment succeeded! Update pledge to COMPLETED
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: {
+            status: "COMPLETED",
+            stripePaymentMethodId: typeof paymentIntent.payment_method === "string"
+              ? paymentIntent.payment_method
+              : paymentIntent.payment_method?.id || pledge.stripePaymentMethodId,
+          },
+        });
+        results.alreadySucceeded++;
+        detail.action = "Updated to COMPLETED";
+      } else if (paymentIntent.status === "processing") {
+        results.stillProcessing++;
+        detail.action = "Still processing - no action taken";
+      } else if (paymentIntent.status === "requires_payment_method" || paymentIntent.status === "canceled") {
+        // Payment failed - update pledge to FAILED
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: {
+            status: "FAILED",
+            lastFailureReason: `PaymentIntent status: ${paymentIntent.status}`,
+          },
+        });
+        results.failed++;
+        detail.action = `Marked as FAILED (status: ${paymentIntent.status})`;
+      } else {
+        detail.action = `Unknown status: ${paymentIntent.status} - no action taken`;
+      }
+
+      results.details.push(detail);
+      results.verified++;
+    } catch (error) {
+      results.errors.push(
+        `Pledge ${pledge.id}: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: `Verified ${results.verified} of ${results.total} pledges`,
+    results,
+  });
 }
