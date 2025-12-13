@@ -25,18 +25,45 @@ export function RewardsTab({
   selectedAddons,
   onToggleAddon,
 }: RewardsTabProps) {
-  const [selectedRewardId, setSelectedRewardId] = useState<string>(tiers[0]?.id || "");
+  const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
   const availableRewards = tiers.filter((r) => r.quantityAvailable === null || r.quantityClaimed < r.quantityAvailable);
   const soldOutRewards = tiers.filter((r) => r.quantityAvailable !== null && r.quantityClaimed >= r.quantityAvailable);
 
   const scrollToReward = (rewardId: string) => {
     setSelectedRewardId(rewardId);
-    const element = document.getElementById(`reward-section-${rewardId}`);
-    if (element) {
-      const yOffset = -80;
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: "smooth" });
+    // Use setTimeout to scroll after state update causes layout change
+    setTimeout(() => {
+      const element = document.getElementById(`reward-section-${rewardId}`);
+      if (element) {
+        const yOffset = -80;
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+    }, 50);
+  };
+
+  const handleCardClick = (rewardId: string) => {
+    // If already selected, keep it selected (don't toggle off)
+    // Just scroll to it if clicking the same reward
+    if (selectedRewardId === rewardId) {
+      const element = document.getElementById(`reward-section-${rewardId}`);
+      if (element) {
+        const yOffset = -80;
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+      return;
     }
+    // Select new reward and scroll to it after layout updates
+    setSelectedRewardId(rewardId);
+    setTimeout(() => {
+      const element = document.getElementById(`reward-section-${rewardId}`);
+      if (element) {
+        const yOffset = -80;
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+    }, 50);
   };
 
   return (
@@ -113,7 +140,7 @@ export function RewardsTab({
                         ? "ring-2 ring-[#05ce78] ring-offset-2"
                         : "hover:ring-1 hover:ring-muted-foreground/20"
                     }`}
-                    onClick={() => setSelectedRewardId(reward.id)}
+                    onClick={() => handleCardClick(reward.id)}
                   >
                     {/* Reward Image */}
                     <div className="aspect-[4/3] bg-muted relative">

@@ -59,11 +59,19 @@ export default function ProjectPage() {
   const [project, setProject] = useState<ProjectData>(initialProject);
   const [rewards, setRewards] = useState<RewardData[]>([]);
   const [addons, setAddons] = useState<AddonData[]>([]);
+  const [comments, setComments] = useState<CommentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Existing pledge state (for logged-in users who have already backed)
   const [existingPledge, setExistingPledge] = useState<ExistingPledge | null>(null);
+
+  // User state for comments
+  const [currentUser, setCurrentUser] = useState<{
+    id: string;
+    name: string;
+    image?: string;
+  } | null>(null);
 
   // UI states
   const [isReminded, setIsReminded] = useState(false);
@@ -138,6 +146,42 @@ export default function ProjectPage() {
 
     checkExistingPledge();
   }, [project.id]);
+
+  // Fetch comments for this project
+  useEffect(() => {
+    async function fetchComments() {
+      if (!project.id || project.id === "") return;
+
+      try {
+        const response = await fetch(`/api/projects/${project.id}/comments`);
+        if (response.ok) {
+          const data = await response.json();
+          setComments(data);
+        }
+      } catch (err) {
+        console.debug("Error fetching comments:", err);
+      }
+    }
+
+    fetchComments();
+  }, [project.id]);
+
+  // Fetch current user info for comments
+  useEffect(() => {
+    async function fetchCurrentUser() {
+      try {
+        const response = await fetch("/api/user/me");
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentUser(data.user);
+        }
+      } catch (err) {
+        console.debug("Error fetching user:", err);
+      }
+    }
+
+    fetchCurrentUser();
+  }, []);
 
   // Poll for real-time funding stats updates every 10 seconds
   useEffect(() => {
@@ -216,8 +260,15 @@ export default function ProjectPage() {
 
   // TODO: Fetch similar projects from API
   const similarProjects: SimilarProject[] = [];
-  // TODO: Fetch comments from API
-  const comments: CommentData[] = [];
+
+  // Derived states for comments
+  const isLoggedIn = currentUser !== null;
+  const isBacker = existingPledge?.status === "COMPLETED";
+  const isCreator = currentUser?.id === project.creatorId;
+
+  const handleCommentAdded = (newComment: CommentData) => {
+    setComments((prev) => [newComment, ...prev]);
+  };
 
   // Loading state
   if (loading) {
@@ -620,9 +671,16 @@ export default function ProjectPage() {
 
         {activeTab === "comments" && (
           <CommentsTab
+            projectId={project.id}
             comments={comments}
             similarProjects={similarProjects}
             onTabChange={handleTabClick}
+            isLoggedIn={isLoggedIn}
+            isBacker={isBacker}
+            isCreator={isCreator}
+            currentUserName={currentUser?.name}
+            currentUserAvatar={currentUser?.image}
+            onCommentAdded={handleCommentAdded}
           />
         )}
 

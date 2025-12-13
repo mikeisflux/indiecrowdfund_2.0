@@ -119,6 +119,7 @@ export async function GET(
       // Status
       status: project.status,
       // Creator
+      creatorId: project.creatorId,
       creator: {
         id: project.creator.id,
         name: project.creator.name || "Creator",

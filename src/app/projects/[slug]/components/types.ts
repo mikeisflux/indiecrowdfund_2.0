@@ -37,6 +37,7 @@ export interface ProjectData {
   endDate: string | Date;
   launchedAt: string | Date | null;
   creator: ProjectCreator;
+  creatorId: string;
   usesAI: boolean;
   faqs: { question: string; answer: string }[];
   updates: ProjectUpdate[];
@@ -145,6 +146,7 @@ export const initialProject: ProjectData = {
     projectsCreated: 0,
     projectsBacked: 0,
   },
+  creatorId: "",
   usesAI: false,
   faqs: [],
   updates: [],

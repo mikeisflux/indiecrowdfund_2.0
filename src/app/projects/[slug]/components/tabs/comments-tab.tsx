@@ -1,30 +1,126 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, Clock, Pin, Bookmark } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Heart, Clock, Pin, Bookmark, Loader2 } from "lucide-react";
 import { CommentData, SimilarProject, TabValue } from "../types";
 import { formatRelativeTime } from "../utils";
 
 interface CommentsTabProps {
+  projectId: string;
   comments: CommentData[];
   similarProjects: SimilarProject[];
   onTabChange: (tab: TabValue) => void;
+  isLoggedIn: boolean;
+  isBacker: boolean;
+  isCreator: boolean;
+  currentUserName?: string;
+  currentUserAvatar?: string;
+  onCommentAdded: (comment: CommentData) => void;
 }
 
-export function CommentsTab({ comments, similarProjects, onTabChange }: CommentsTabProps) {
+export function CommentsTab({
+  projectId,
+  comments,
+  similarProjects,
+  onTabChange,
+  isLoggedIn,
+  isBacker,
+  isCreator,
+  currentUserName,
+  currentUserAvatar,
+  onCommentAdded,
+}: CommentsTabProps) {
+  const [newComment, setNewComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canComment = isLoggedIn && (isBacker || isCreator);
+
+  const handleSubmitComment = async () => {
+    if (!newComment.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newComment.trim() }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to post comment");
+      }
+
+      const comment = await response.json();
+      onCommentAdded(comment);
+      setNewComment("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to post comment");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <div className="space-y-12">
       {/* Comments Main Section */}
       <div className="grid gap-8 lg:grid-cols-12">
         {/* Left - Comments List */}
         <div className="lg:col-span-8">
-          {/* Only backers notice */}
-          <p className="text-center text-muted-foreground text-sm mb-6">
-            Only backers can post comments.
-          </p>
+          {/* Comment Form for Backers */}
+          {canComment ? (
+            <div className="mb-8">
+              <div className="flex gap-3">
+                <Avatar className="h-10 w-10 flex-shrink-0">
+                  <AvatarImage src={currentUserAvatar} />
+                  <AvatarFallback className="bg-muted text-muted-foreground">
+                    {currentUserName?.[0] || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-3">
+                  <Textarea
+                    placeholder="Share your thoughts or ask a question..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    className="min-h-[100px] resize-none"
+                    disabled={isSubmitting}
+                  />
+                  {error && (
+                    <p className="text-sm text-destructive">{error}</p>
+                  )}
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSubmitComment}
+                      disabled={!newComment.trim() || isSubmitting}
+                      className="bg-[#05ce78] hover:bg-[#04b86a]"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Posting...
+                        </>
+                      ) : (
+                        "Post Comment"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground text-sm mb-6">
+              {isLoggedIn
+                ? "Only backers can post comments. Back this project to join the conversation."
+                : "Sign in and back this project to post comments."}
+            </p>
+          )}
 
           {/* Comments */}
           <div className="space-y-0">
