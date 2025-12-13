@@ -48,6 +48,8 @@ interface ProjectData {
   paymentProcessor: "STRIPE";
   hasAdultContent: boolean;
   estimatedDelivery: string;
+  currentAmount: number;
+  goalAmount: number;
   creator: { id: string; name: string; location: string; image: string };
 }
 
@@ -112,19 +114,25 @@ function detectUserCountry(): string {
   return "US"; // Default fallback
 }
 
-const FAQ_ITEMS = [
+const getFaqItems = (isFunded: boolean) => [
   {
     question: "How do I pledge?",
     answer: "Select your reward tier, add any optional add-ons, enter your shipping information, and complete your payment. You'll receive a confirmation email once your pledge is processed.",
   },
   {
     question: "When is my card charged?",
-    answer: "Your card is only charged when the campaign reaches its funding goal. If you pledge before the goal is met, your payment is held and will only be processed once the campaign successfully funds. If the campaign doesn't reach its goal, you won't be charged at all.",
+    answer: isFunded
+      ? "Your card is charged immediately when you complete your pledge. This project has already reached its funding goal, so payments are processed right away."
+      : "Your card is only charged when the campaign reaches its funding goal. If you pledge before the goal is met, your payment is held and will only be processed once the campaign successfully funds. If the campaign doesn't reach its goal, you won't be charged at all.",
   },
-  {
-    question: "So I'm only charged if funding succeeds?",
-    answer: "Exactly! Your payment is held until the campaign reaches its funding goal. If the project doesn't reach its goal by the deadline, your payment method is never charged.",
-  },
+  ...(isFunded
+    ? []
+    : [
+        {
+          question: "So I'm only charged if funding succeeds?",
+          answer: "Exactly! Your payment is held until the campaign reaches its funding goal. If the project doesn't reach its goal by the deadline, your payment method is never charged.",
+        },
+      ]),
   {
     question: "What can others see about my pledge?",
     answer: "Creators can see your name, email, and pledge amount. Other backers can only see your public profile name. Your payment details are never shared with creators.",
@@ -425,6 +433,8 @@ export default function PledgePage() {
         paymentProcessor: projectData.paymentProcessor || "STRIPE",
         hasAdultContent: projectData.hasAdultContent || false,
         estimatedDelivery: projectData.estimatedDelivery || "",
+        currentAmount: projectData.currentAmount || 0,
+        goalAmount: projectData.goalAmount || 0,
         creator: {
           id: projectData.creator?.id || "",
           name: projectData.creator?.name || "Creator",
@@ -1645,7 +1655,7 @@ export default function PledgePage() {
               <div>
                 <h3 className="font-medium mb-3">Frequently Asked Questions</h3>
                 <Accordion type="single" collapsible>
-                  {FAQ_ITEMS.map((item, idx) => (
+                  {getFaqItems(Boolean(project && project.currentAmount >= project.goalAmount)).map((item, idx) => (
                     <AccordionItem key={idx} value={`faq-${idx}`} className="border-b">
                       <AccordionTrigger className="py-3 text-sm hover:no-underline text-left">
                         {item.question}

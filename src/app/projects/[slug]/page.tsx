@@ -652,7 +652,15 @@ export default function ProjectPage() {
                 <ShieldCheck className="h-5 w-5 text-black" />
               </div>
               <p className="text-sm">
-                <strong>You&apos;re only charged if the project meets</strong> its funding goal by the campaign deadline.
+                {project.currentAmount >= project.goalAmount ? (
+                  <>
+                    <strong>Your card is charged immediately</strong> when you back this funded project.
+                  </>
+                ) : (
+                  <>
+                    <strong>You&apos;re only charged if the project meets</strong> its funding goal by the campaign deadline.
+                  </>
+                )}
               </p>
             </div>
           </div>
