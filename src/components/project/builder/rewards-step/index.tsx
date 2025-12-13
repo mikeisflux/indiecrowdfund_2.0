@@ -345,9 +345,15 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       estimatedDelivery = new Date(parseInt(deliveryYear), monthIndex, 1);
     }
 
+    // Ensure items have projectItemId set for proper checkbox state persistence
+    const itemsWithProjectItemId = selectedItems.map(item => ({
+      ...item,
+      projectItemId: item.id, // Ensure projectItemId is always set to match global item id
+    }));
+
     const rewardToSave: RewardData = {
       ...currentReward,
-      items: selectedItems,
+      items: itemsWithProjectItemId,
       quantityAvailable: quantityType === "limited" ? currentReward.quantityAvailable : undefined,
       visibility: audienceType === "secret" ? "SECRET" : "PUBLIC",
       secretToken: audienceType === "secret" ? (secretToken || currentReward.secretToken) : undefined,
@@ -532,11 +538,18 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     const tier = tiers[tierIndex];
     if (!tier) return;
 
+    // Ensure items have projectItemId set for checkbox persistence
+    const itemsWithProjectItemId = tier.items.map(item => ({
+      ...item,
+      projectItemId: item.projectItemId || item.id,
+    }));
+
     addReward({
       ...tier,
       id: undefined,
       type: "ADDON",
       title: `${tier.title} (Add-on)`,
+      items: itemsWithProjectItemId,
     });
 
     setIsImportDialogOpen(false);
@@ -630,6 +643,12 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           }
         }
 
+        // Ensure items have projectItemId set for checkbox persistence
+        const itemsWithProjectItemId = matchedItems.map(item => ({
+          ...item,
+          projectItemId: item.id,
+        }));
+
         addReward({
           type: rewardType,
           title: row.title.trim(),
@@ -641,7 +660,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
           quantityAvailable: row.quantityAvailable ? parseInt(row.quantityAvailable) : undefined,
           visibility: row.visibility === "SECRET" ? "SECRET" : "PUBLIC",
           estimatedDelivery,
-          items: matchedItems,
+          items: itemsWithProjectItemId,
         });
         importedCount++;
       }
