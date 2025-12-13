@@ -6,7 +6,7 @@ import {
   notifyPledgeReceived,
   notifyProjectFunded,
 } from "@/lib/notifications";
-import { processPendingPledgesForProject } from "@/lib/payments/stripe";
+import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm
@@ -72,14 +72,6 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify payment method was saved (checkout actually completed)
-    if (!pledge.stripePaymentMethodId && !pledge.chargedImmediately) {
-      return NextResponse.json({
-        success: false,
-        error: "Payment method not saved - checkout incomplete",
-      }, { status: 400 });
-    }
-
     // Check if already confirmed (prevent double-counting stats)
     if (pledge.confirmationEmailSent) {
       return NextResponse.json({
@@ -87,6 +79,39 @@ export async function POST(
         message: "Pledge already confirmed",
         alreadyConfirmed: true,
       });
+    }
+
+    // If payment method not saved yet (webhook hasn't run), try to fetch from Stripe
+    let paymentMethodId = pledge.stripePaymentMethodId;
+    if (!paymentMethodId && !pledge.chargedImmediately && pledge.stripeSetupIntentId) {
+      try {
+        const stripeClient = await getStripeInstance();
+        const setupIntent = await stripeClient.setupIntents.retrieve(pledge.stripeSetupIntentId);
+
+        if (setupIntent.status === "succeeded" && setupIntent.payment_method) {
+          paymentMethodId = typeof setupIntent.payment_method === "string"
+            ? setupIntent.payment_method
+            : setupIntent.payment_method.id;
+
+          // Save the payment method to the pledge
+          await db.pledge.update({
+            where: { id: pledgeId },
+            data: { stripePaymentMethodId: paymentMethodId },
+          });
+
+          console.log(`[Confirm] Fetched payment method from Stripe for pledge ${pledgeId}`);
+        }
+      } catch (err) {
+        console.error(`[Confirm] Failed to fetch SetupIntent from Stripe:`, err);
+      }
+    }
+
+    // Verify payment method was saved (checkout actually completed)
+    if (!paymentMethodId && !pledge.chargedImmediately) {
+      return NextResponse.json({
+        success: false,
+        error: "Payment method not saved - checkout incomplete. Please try again.",
+      }, { status: 400 });
     }
 
     // Mark as confirmed FIRST (before updating stats)
