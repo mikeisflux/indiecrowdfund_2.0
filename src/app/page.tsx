@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { MobileProfileLinks } from "@/components/mobile-profile-links";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
@@ -217,6 +218,7 @@ export default async function HomePage() {
                 className="w-64 pl-10"
               />
             </div>
+            <ThemeToggle />
             <div className="hidden sm:block">
               <UserProfileDropdown />
             </div>
@@ -251,6 +253,10 @@ export default async function HomePage() {
                   <Link href="/bug-report" className="text-sm font-medium hover:text-primary py-2">
                     Bug Report
                   </Link>
+                  <div className="border-t pt-4 mt-2 flex items-center justify-between">
+                    <span className="text-sm font-medium">Theme</span>
+                    <ThemeToggle />
+                  </div>
                   <div className="border-t pt-4 mt-2">
                     <MobileProfileLinks />
                   </div>
