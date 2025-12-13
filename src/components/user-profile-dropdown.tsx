@@ -11,7 +11,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Plus,
+  LogOut,
+  Bookmark,
+  Compass,
+  Heart,
+  User,
+  Settings,
+  MessageSquare,
+  Activity,
+  ChevronRight
+} from "lucide-react";
 
 interface ProjectSummary {
   id: string;
@@ -96,225 +108,199 @@ export function UserProfileDropdown() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-[calc(100vw-1rem)] sm:w-[90vw] max-w-[580px] p-0"
+        className="w-[min(calc(100vw-16px),580px)] p-0"
         align="end"
         sideOffset={8}
-        collisionPadding={8}
-        forceMount
+        alignOffset={-4}
       >
-        {/* Responsive layout - stack on mobile, 3 columns on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x max-h-[70vh] sm:max-h-[80vh] overflow-y-auto">
-          {/* Column 1: Your Account */}
-          <div className="p-5">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-              Your Account
-            </h3>
-            <div className="space-y-3">
-              <Link href="/dashboard/backer" className="block text-sm hover:text-primary transition-colors">
-                Saved projects
-              </Link>
-              <Link href="/discover" className="block text-sm hover:text-primary transition-colors">
-                Recommended for you
-              </Link>
-              <Link href="/dashboard/following" className="block text-sm hover:text-primary transition-colors">
-                Following
-              </Link>
-            </div>
-            <div className="mt-6 space-y-3">
-              <Link href="/dashboard" className="block text-sm hover:text-primary transition-colors">
-                Profile
-              </Link>
-              <Link href="/dashboard/settings" className="block text-sm hover:text-primary transition-colors">
-                Settings
-              </Link>
-              <Link href="/dashboard/messages" className="block text-sm hover:text-primary transition-colors">
-                Messages
-              </Link>
-              <Link href="/dashboard/activity" className="flex items-center gap-2 text-sm text-primary transition-colors">
-                <span className="h-2 w-2 rounded-full bg-green-500" />
-                Activity
-              </Link>
-            </div>
-          </div>
+        <ScrollArea className="max-h-[calc(100vh-100px)]">
+          {/* Mobile: Single column layout, Desktop: 3 columns */}
+          <div className="md:grid md:grid-cols-3 md:divide-x">
 
-          {/* Column 2: Backed Projects */}
-          <div className="p-5">
-            <Link href="/dashboard/backer">
-              <Button variant="outline" size="sm" className="w-full mb-4 text-xs font-semibold uppercase tracking-wider">
-                Backer Dashboard
-              </Button>
-            </Link>
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded bg-muted animate-pulse flex-shrink-0" />
-                    <div className="h-3 w-24 bg-muted animate-pulse rounded" />
-                  </div>
-                ))}
+            {/* Column 1: Your Account - Compact on mobile */}
+            <div className="p-4 md:p-5 border-b md:border-b-0">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                Your Account
+              </h3>
+
+              {/* Mobile: 2-column grid for quick links, Desktop: list */}
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-1 md:gap-0 md:space-y-2">
+                <Link href="/dashboard/backer" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                  <Bookmark className="h-4 w-4 md:hidden" />
+                  <span>Saved projects</span>
+                </Link>
+                <Link href="/discover" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                  <Compass className="h-4 w-4 md:hidden" />
+                  <span>Recommended</span>
+                </Link>
+                <Link href="/dashboard/following" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                  <Heart className="h-4 w-4 md:hidden" />
+                  <span>Following</span>
+                </Link>
+                <Link href="/dashboard" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                  <User className="h-4 w-4 md:hidden" />
+                  <span>Profile</span>
+                </Link>
+                <Link href="/dashboard/settings" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                  <Settings className="h-4 w-4 md:hidden" />
+                  <span>Settings</span>
+                </Link>
+                <Link href="/dashboard/messages" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                  <MessageSquare className="h-4 w-4 md:hidden" />
+                  <span>Messages</span>
+                </Link>
               </div>
-            ) : profileData?.backedProjects && profileData.backedProjects.length > 0 ? (
-              <div className="space-y-2">
-                {profileData.backedProjects.slice(0, 5).map((project) => (
-                  <Link
-                    key={project.id}
-                    href={`/projects/${project.slug}`}
-                    className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
-                  >
-                    <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
-                      {project.imageUrl ? (
-                        <Image
-                          src={project.imageUrl}
-                          alt={project.title}
-                          width={40}
-                          height={40}
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
-                      )}
+
+              {/* Activity link with indicator - separate on mobile */}
+              <Link href="/dashboard/activity" className="flex items-center gap-2 text-sm text-primary transition-colors mt-3 p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                <Activity className="h-4 w-4 md:hidden" />
+                <span className="hidden md:inline h-2 w-2 rounded-full bg-green-500" />
+                <span>Activity</span>
+                <span className="md:hidden h-2 w-2 rounded-full bg-green-500" />
+              </Link>
+            </div>
+
+            {/* Column 2: Backer Dashboard */}
+            <div className="p-4 md:p-5 border-b md:border-b-0">
+              <Link href="/dashboard/backer" className="flex items-center justify-between mb-3 group">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">
+                  Backer Dashboard
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </Link>
+
+              {loading ? (
+                <div className="space-y-2">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded bg-muted animate-pulse flex-shrink-0" />
+                      <div className="h-3 w-20 bg-muted animate-pulse rounded" />
                     </div>
-                    <span className="text-sm truncate max-w-[200px] md:max-w-[120px]">{project.title}</span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No backed projects yet</p>
-            )}
-          </div>
+                  ))}
+                </div>
+              ) : profileData?.backedProjects && profileData.backedProjects.length > 0 ? (
+                <div className="space-y-1">
+                  {profileData.backedProjects.slice(0, 4).map((project) => (
+                    <Link
+                      key={project.id}
+                      href={`/projects/${project.slug}`}
+                      className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
+                    >
+                      <div className="h-9 w-9 rounded bg-muted overflow-hidden flex-shrink-0">
+                        {project.imageUrl ? (
+                          <Image
+                            src={project.imageUrl}
+                            alt={project.title}
+                            width={36}
+                            height={36}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
+                        )}
+                      </div>
+                      <span className="text-sm truncate flex-1">{project.title}</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No backed projects yet</p>
+              )}
+            </div>
 
-          {/* Column 3: Created Projects */}
-          <div className="p-5">
-            <Link href="/dashboard">
-              <Button variant="outline" size="sm" className="w-full mb-4 text-xs font-semibold uppercase tracking-wider">
-                Creator Dashboard
-              </Button>
-            </Link>
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded bg-muted animate-pulse flex-shrink-0" />
-                    <div className="h-3 w-24 bg-muted animate-pulse rounded" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <>
-                {profileData?.createdProjects && profileData.createdProjects.length > 0 ? (
-                  <div className="space-y-2">
-                    {profileData.createdProjects.slice(0, 4).map((project) => {
-                      // Always link to edit page for created projects
-                      const href = `/projects/${project.slug}/edit`;
-                      const isDraft = project.status === "DRAFT" || project.status === "SUBMITTED";
-                      return (
-                        <Link
-                          key={project.id}
-                          href={href}
-                          className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
-                        >
-                          <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
-                            {project.imageUrl ? (
-                              <Image
-                                src={project.imageUrl}
-                                alt={project.title}
-                                width={40}
-                                height={40}
-                                className="object-cover w-full h-full"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
-                            )}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-sm truncate max-w-[200px] md:max-w-[120px]">{project.title}</span>
-                            {isDraft && (
-                              <span className="text-xs text-muted-foreground">{project.status}</span>
-                            )}
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ) : null}
+            {/* Column 3: Creator Dashboard */}
+            <div className="p-4 md:p-5">
+              <Link href="/dashboard" className="flex items-center justify-between mb-3 group">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">
+                  Creator Dashboard
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </Link>
 
-                {/* Collaborating projects */}
-                {profileData?.collaboratingProjects && profileData.collaboratingProjects.length > 0 && (
-                  <div className="mt-3 pt-3 border-t space-y-2">
-                    <span className="text-xs text-muted-foreground">Collaborating</span>
-                    {profileData.collaboratingProjects.slice(0, 3).map((project) => {
-                      // Always link to edit page for collaborating projects
-                      const href = `/projects/${project.slug}/edit`;
-                      const isDraft = project.status === "DRAFT" || project.status === "SUBMITTED";
-                      return (
-                        <Link
-                          key={project.id}
-                          href={href}
-                          className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
-                        >
-                          <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
-                            {project.imageUrl ? (
-                              <Image
-                                src={project.imageUrl}
-                                alt={project.title}
-                                width={40}
-                                height={40}
-                                className="object-cover w-full h-full"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
-                            )}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-sm truncate max-w-[200px] md:max-w-[120px]">{project.title}</span>
-                            {isDraft && (
-                              <span className="text-xs text-muted-foreground">{project.status}</span>
-                            )}
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
+              {loading ? (
+                <div className="space-y-2">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded bg-muted animate-pulse flex-shrink-0" />
+                      <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  {profileData?.createdProjects && profileData.createdProjects.length > 0 ? (
+                    <div className="space-y-1">
+                      {profileData.createdProjects.slice(0, 3).map((project) => {
+                        const href = `/projects/${project.slug}/edit`;
+                        const isDraft = project.status === "DRAFT" || project.status === "SUBMITTED";
+                        return (
+                          <Link
+                            key={project.id}
+                            href={href}
+                            className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
+                          >
+                            <div className="h-9 w-9 rounded bg-muted overflow-hidden flex-shrink-0">
+                              {project.imageUrl ? (
+                                <Image
+                                  src={project.imageUrl}
+                                  alt={project.title}
+                                  width={36}
+                                  height={36}
+                                  className="object-cover w-full h-full"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
+                              )}
+                            </div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <span className="text-sm truncate">{project.title}</span>
+                              {isDraft && (
+                                <span className="text-xs text-muted-foreground">{project.status}</span>
+                              )}
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ) : null}
 
-                {/* New project button */}
-                <div className="mt-4">
+                  {/* New project button */}
                   <Link
                     href="/projects/new"
-                    className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
+                    className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors mt-2"
                   >
-                    <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center">
-                      <Plus className="h-5 w-5 text-muted-foreground" />
+                    <div className="h-9 w-9 rounded bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center">
+                      <Plus className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <span className="text-sm">New</span>
+                    <span className="text-sm">New project</span>
                   </Link>
-                </div>
 
-                {/* View all link */}
-                {((profileData?.createdProjects?.length || 0) > 0 ||
-                  (profileData?.collaboratingProjects?.length || 0) > 0) && (
-                  <Link
-                    href="/dashboard"
-                    className="block text-sm text-muted-foreground hover:text-primary mt-3 transition-colors"
-                  >
-                    View all
-                  </Link>
-                )}
-              </>
-            )}
+                  {/* View all link */}
+                  {((profileData?.createdProjects?.length || 0) > 0 ||
+                    (profileData?.collaboratingProjects?.length || 0) > 0) && (
+                    <Link
+                      href="/dashboard"
+                      className="block text-sm text-muted-foreground hover:text-primary mt-2 transition-colors"
+                    >
+                      View all →
+                    </Link>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Logout - full width at bottom */}
-        <div className="border-t px-5 py-4">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            Log out
-          </button>
-        </div>
+          {/* Logout - full width at bottom */}
+          <div className="border-t px-4 md:px-5 py-3">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-sm hover:text-primary transition-colors w-full p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent"
+            >
+              <LogOut className="h-4 w-4" />
+              Log out
+            </button>
+          </div>
+        </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
   );
