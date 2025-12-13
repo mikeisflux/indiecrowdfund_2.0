@@ -17,6 +17,8 @@ import {
   AlertCircle,
   Power,
   RefreshCw,
+  CreditCard,
+  Loader2,
 } from "lucide-react";
 import { Project } from "./types";
 import { formatDuration } from "./utils";
@@ -36,11 +38,43 @@ export function ActiveProjectPanel({
 }: ActiveProjectPanelProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [isProcessingPledges, setIsProcessingPledges] = useState(false);
+  const [processMessage, setProcessMessage] = useState<string | null>(null);
 
-  // Clear sync message when project changes
+  // Clear messages when project changes
   useEffect(() => {
     setSyncMessage(null);
+    setProcessMessage(null);
   }, [project?.id]);
+
+  const handleProcessPledges = async () => {
+    if (!project) return;
+
+    setIsProcessingPledges(true);
+    setProcessMessage(null);
+
+    try {
+      const response = await fetch(`/api/admin/projects/${project.id}/process-pledges`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.results.total === 0) {
+          setProcessMessage("No pending pledges to process");
+        } else {
+          setProcessMessage(`Processed ${data.results.successful}/${data.results.total} pledges successfully`);
+        }
+      } else {
+        setProcessMessage(`Error: ${data.error || "Failed to process pledges"}`);
+      }
+    } catch {
+      setProcessMessage("Error: Network request failed");
+    } finally {
+      setIsProcessingPledges(false);
+    }
+  };
 
   const handleSyncStats = async () => {
     if (!project) return;
@@ -172,6 +206,30 @@ export function ActiveProjectPanel({
             <p className={`text-sm mb-4 ${syncMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
               {syncMessage}
             </p>
+          )}
+
+          {/* Process Pledges Button - shows for funded projects */}
+          {project.currentAmount >= project.goalAmount && (
+            <div className="mb-4">
+              <Button
+                variant="default"
+                onClick={handleProcessPledges}
+                disabled={isProcessingPledges}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {isProcessingPledges ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CreditCard className="mr-2 h-4 w-4" />
+                )}
+                {isProcessingPledges ? "Processing..." : "Process Pending Pledges"}
+              </Button>
+              {processMessage && (
+                <p className={`text-sm mt-2 ${processMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
+                  {processMessage}
+                </p>
+              )}
+            </div>
           )}
 
           <div className="flex items-center gap-2">
