@@ -20,12 +20,15 @@ START_TIME=$(date +%s)
 # Step 1: Pull latest changes
 echo ""
 echo "📥 Step 1: Pulling latest changes..."
-if git pull origin main 2>&1; then
-    echo -e "${GREEN}   Git pull successful${NC}"
-elif git pull origin $(git branch --show-current) 2>&1; then
+
+# Use specified branch, or default to current branch
+DEPLOY_BRANCH="${1:-$(git branch --show-current)}"
+echo "   Branch: ${DEPLOY_BRANCH}"
+
+if git fetch origin "$DEPLOY_BRANCH" 2>&1 && git checkout "$DEPLOY_BRANCH" 2>&1 && git pull origin "$DEPLOY_BRANCH" 2>&1; then
     echo -e "${GREEN}   Git pull successful${NC}"
 else
-    echo -e "${YELLOW}   Skipping git pull (may be on feature branch)${NC}"
+    echo -e "${YELLOW}   Could not pull (continuing with local code)${NC}"
 fi
 
 # Step 2: Install dependencies
