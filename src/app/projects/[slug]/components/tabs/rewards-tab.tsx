@@ -6,7 +6,6 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Package } from "lucide-react";
 import { RewardData, AddonData } from "../types";
 import { formatMoney, formatDeliveryDate } from "../utils";
@@ -44,9 +43,9 @@ export function RewardsTab({
     <div className="lg:flex lg:gap-8">
       {/* Left Sidebar - sticky with independent scroll */}
       <div className="hidden lg:block lg:w-[280px] lg:flex-shrink-0">
-        <div className="sticky top-20 h-[calc(100vh-100px)] overflow-hidden">
+        <div className="sticky top-20">
           <h3 className="text-lg font-semibold mb-4">Available rewards</h3>
-          <ScrollArea className="h-[calc(100vh-160px)]">
+          <div className="h-[calc(100vh-140px)] overflow-y-auto pr-2">
             <div className="space-y-3 pr-4">
               {availableRewards.map((reward) => (
                 <button
@@ -89,7 +88,7 @@ export function RewardsTab({
                 </>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       </div>
 
