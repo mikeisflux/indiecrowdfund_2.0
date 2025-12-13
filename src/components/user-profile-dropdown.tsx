@@ -95,9 +95,15 @@ export function UserProfileDropdown() {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[90vw] max-w-[580px] p-0" align="end" forceMount>
+      <DropdownMenuContent
+        className="w-[calc(100vw-1rem)] sm:w-[90vw] max-w-[580px] p-0"
+        align="end"
+        sideOffset={8}
+        collisionPadding={8}
+        forceMount
+      >
         {/* Responsive layout - stack on mobile, 3 columns on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x max-h-[80vh] overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x max-h-[70vh] sm:max-h-[80vh] overflow-y-auto">
           {/* Column 1: Your Account */}
           <div className="p-5">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
