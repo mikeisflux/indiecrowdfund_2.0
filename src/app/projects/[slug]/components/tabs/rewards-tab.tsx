@@ -109,7 +109,14 @@ export function RewardsTab({
               {/* Middle - Reward Card */}
               <div className="lg:col-span-5">
                 <div className="sticky top-20">
-                  <Card className={`overflow-hidden ${isSoldOut ? "opacity-60" : ""}`}>
+                  <Card
+                    className={`overflow-hidden cursor-pointer transition-all ${isSoldOut ? "opacity-60" : ""} ${
+                      selectedRewardId === reward.id
+                        ? "ring-2 ring-[#05ce78] ring-offset-2"
+                        : "hover:ring-1 hover:ring-muted-foreground/20"
+                    }`}
+                    onClick={() => setSelectedRewardId(reward.id)}
+                  >
                     {/* Reward Image */}
                     <div className="aspect-[4/3] bg-muted relative">
                       {reward.imageUrl ? (
@@ -206,8 +213,8 @@ export function RewardsTab({
                   </div>
                 </div>
 
-                {/* Optional Add-ons */}
-                {addons.length > 0 && (
+                {/* Optional Add-ons - only show for selected reward */}
+                {addons.length > 0 && selectedRewardId === reward.id && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-3">Optional add-ons</p>
                     <div className="space-y-3">
