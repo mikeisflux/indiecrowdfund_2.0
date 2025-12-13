@@ -1118,25 +1118,108 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
 
   if (!paymentMethodId) return;
 
-  // Get the pledge to check if it's already been processed
+  // Get the pledge with project info
   const existingPledge = await db.pledge.findUnique({
     where: { id: pledgeId },
-    select: { stripePaymentMethodId: true, status: true },
+    select: {
+      stripePaymentMethodId: true,
+      status: true,
+      confirmationEmailSent: true,
+      amount: true,
+      projectId: true,
+      rewardId: true,
+      chargedImmediately: true,
+      project: {
+        select: {
+          id: true,
+          goalAmount: true,
+          currentAmount: true,
+          creatorId: true,
+          title: true,
+        },
+      },
+      user: {
+        select: {
+          name: true,
+        },
+      },
+    },
   });
 
-  // Skip if already processed (payment method already saved)
-  if (existingPledge?.stripePaymentMethodId) return;
+  if (!existingPledge) return;
 
-  // Save the payment method only - stats are updated when user confirms checkout
-  // This prevents counting pledges where user abandoned checkout after card save
+  // Skip if already processed (payment method already saved AND confirmed)
+  if (existingPledge.stripePaymentMethodId && existingPledge.confirmationEmailSent) {
+    console.log(`[SetupIntent] Pledge ${pledgeId} already processed, skipping`);
+    return;
+  }
+
+  // Determine what needs to be updated
+  const needsPaymentMethod = !existingPledge.stripePaymentMethodId;
+  const needsConfirmation = !existingPledge.confirmationEmailSent;
+
+  // Save the payment method and mark as confirmed
   await db.pledge.update({
     where: { id: pledgeId },
     data: {
       stripePaymentMethodId: paymentMethodId,
+      confirmationEmailSent: true,
     },
   });
 
-  console.log(`[SetupIntent] Payment method saved for pledge ${pledgeId}, awaiting checkout confirmation`);
+  console.log(`[SetupIntent] Payment method saved and confirmed for pledge ${pledgeId}`);
+
+  // Update project stats if not already counted
+  // (Only if pledge wasn't already confirmed by the confirm endpoint)
+  if (needsConfirmation && !existingPledge.chargedImmediately) {
+    const updatedProject = await db.project.update({
+      where: { id: existingPledge.projectId },
+      data: {
+        currentAmount: { increment: existingPledge.amount },
+        backerCount: { increment: 1 },
+      },
+    });
+
+    // Update reward quantity if limited
+    if (existingPledge.rewardId) {
+      await db.reward.update({
+        where: { id: existingPledge.rewardId },
+        data: {
+          quantityClaimed: { increment: 1 },
+        },
+      });
+    }
+
+    // Notify creator of new pledge
+    await notifyPledgeReceived(
+      existingPledge.projectId,
+      existingPledge.project.creatorId,
+      existingPledge.user?.name || "A backer",
+      existingPledge.amount
+    );
+
+    console.log(`[SetupIntent] Updated project stats: +$${existingPledge.amount}`);
+
+    // Check if project just reached funding goal
+    const projectIsFunded = updatedProject.currentAmount >= updatedProject.goalAmount;
+
+    if (projectIsFunded) {
+      console.log(`[SetupIntent] Project ${existingPledge.projectId} is funded! Processing pending pledges...`);
+
+      // Notify that project was funded (if this pledge pushed it over)
+      const justReachedGoal = updatedProject.currentAmount - existingPledge.amount < updatedProject.goalAmount;
+      if (justReachedGoal) {
+        await notifyProjectFunded(existingPledge.projectId);
+      }
+
+      // Process all pending pledges (charge saved cards)
+      const chargeResults = await processPendingPledgesForProject(existingPledge.projectId);
+      console.log(`[SetupIntent] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
+    }
+  }
+
+  // Send confirmation email to backer
+  await notifyBackerPledgeConfirmed(pledgeId, false);
 }
 
 async function handleAccountUpdate(account: Stripe.Account) {
