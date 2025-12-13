@@ -41,13 +41,25 @@ export async function GET(
               select: { pledges: true },
             },
             // Get the first 5 backers for avatar display
+            // Include COMPLETED and committed PENDING pledges
             pledges: {
               where: {
                 OR: [
                   { status: "COMPLETED" },
                   {
+                    // PENDING with saved payment method
                     status: "PENDING",
                     stripePaymentMethodId: { not: null },
+                  },
+                  {
+                    // PENDING with confirmed checkout
+                    status: "PENDING",
+                    confirmationEmailSent: true,
+                  },
+                  {
+                    // PENDING with SetupIntent (checkout was started)
+                    status: "PENDING",
+                    stripeSetupIntentId: { not: null },
                   },
                 ],
               },
