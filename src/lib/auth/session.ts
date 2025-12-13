@@ -119,7 +119,15 @@ export const validateSession = cache(async (): Promise<Session | null> => {
       expires: session.expires,
     };
   } catch (error) {
-    // Log error but don't throw - return null to allow graceful handling
+    // During static generation, cookies() throws DYNAMIC_SERVER_USAGE - this is expected
+    // Only log unexpected errors
+    const isDynamicServerError =
+      (error instanceof Error && error.message?.includes("Dynamic server usage")) ||
+      (error && typeof error === "object" && "digest" in error && error.digest === "DYNAMIC_SERVER_USAGE");
+
+    if (isDynamicServerError) {
+      return null;
+    }
     console.error("Session validation error:", error);
     return null;
   }
