@@ -47,7 +47,7 @@ export async function GET(
             stripeConfig: {
               select: {
                 stripeAccountId: true,
-                payoutsEnabled: true,
+                isOnboarded: true,
               },
             },
           },
@@ -155,7 +155,7 @@ export async function GET(
         id: project.creator.id,
         name: project.creator.name,
         hasStripeConnected: creatorHasStripe,
-        payoutsEnabled: project.creator.stripeConfig?.payoutsEnabled || false,
+        isOnboarded: project.creator.stripeConfig?.isOnboarded || false,
       },
       pledges: pledgeAnalysis,
       summary: {
