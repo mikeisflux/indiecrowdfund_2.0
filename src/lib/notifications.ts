@@ -733,7 +733,7 @@ export async function notifyBackerPledgeConfirmed(
   }
 
   // Format addons for the email
-  const addons = pledge.addons?.map(addon => ({
+  const addons = pledge.addons?.map((addon: { quantity: number; reward: { title: string; amount: number } }) => ({
     title: addon.reward.title,
     quantity: addon.quantity,
     amount: addon.reward.amount * addon.quantity,
