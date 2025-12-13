@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { processPendingPledgesForProject, chargeSavedPledge, getStripeClient } from "@/lib/payments/stripe";
+import { processPendingPledgesForProject, chargeSavedPledge, getStripeInstance } from "@/lib/payments/stripe";
 
 /**
  * GET /api/admin/projects/[projectId]/process-pledges
@@ -295,7 +295,7 @@ export async function POST(
  * This fixes pledges that were charged immediately but webhook didn't fire.
  */
 async function verifyPaymentIntents(projectId: string) {
-  const stripeClient = getStripeClient();
+  const stripeClient = await getStripeInstance();
 
   // Find all PENDING pledges that were charged immediately (have PaymentIntentId)
   const pendingPledges = await db.pledge.findMany({
