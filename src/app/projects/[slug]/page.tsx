@@ -69,7 +69,6 @@ export default function ProjectPage() {
   const [isReminded, setIsReminded] = useState(false);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [activeTab, setActiveTab] = useState<TabValue>("campaign");
-  const [selectedRewardId, setSelectedRewardId] = useState<string>("");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
   // Refs for tab content sections
@@ -106,11 +105,6 @@ export default function ProjectPage() {
         setProject(data.project);
         setRewards(data.rewards || []);
         setAddons(data.addons || []);
-
-        // Set default selected reward if available
-        if (data.rewards && data.rewards.length > 0) {
-          setSelectedRewardId(data.rewards[0].id);
-        }
       } catch (err) {
         console.error("Error fetching project:", err);
         setError("Failed to load project");
@@ -607,8 +601,6 @@ export default function ProjectPage() {
             projectSlug={project.slug}
             tiers={tiers}
             addons={addons}
-            selectedRewardId={selectedRewardId}
-            onSelectedRewardChange={setSelectedRewardId}
             selectedAddons={selectedAddons}
             onToggleAddon={toggleAddon}
           />

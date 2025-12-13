@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Package } from "lucide-react";
 import { RewardData, AddonData } from "../types";
 import { formatMoney, formatDeliveryDate } from "../utils";
@@ -14,8 +15,6 @@ interface RewardsTabProps {
   projectSlug: string;
   tiers: RewardData[];
   addons: AddonData[];
-  selectedRewardId: string;
-  onSelectedRewardChange: (rewardId: string) => void;
   selectedAddons: string[];
   onToggleAddon: (addonId: string) => void;
 }
@@ -24,44 +23,15 @@ export function RewardsTab({
   projectSlug,
   tiers,
   addons,
-  selectedRewardId,
-  onSelectedRewardChange,
   selectedAddons,
   onToggleAddon,
 }: RewardsTabProps) {
+  const [selectedRewardId, setSelectedRewardId] = useState<string>(tiers[0]?.id || "");
   const availableRewards = tiers.filter((r) => r.quantityAvailable === null || r.quantityClaimed < r.quantityAvailable);
   const soldOutRewards = tiers.filter((r) => r.quantityAvailable !== null && r.quantityClaimed >= r.quantityAvailable);
 
-  // Track which reward section is in view
-  useEffect(() => {
-    const observerCallback: IntersectionObserverCallback = (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const rewardId = entry.target.id.replace("reward-section-", "");
-          onSelectedRewardChange(rewardId);
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(observerCallback, {
-      root: null,
-      rootMargin: "-20% 0px -60% 0px",
-      threshold: 0,
-    });
-
-    // Observe all reward sections
-    tiers.forEach((reward) => {
-      const element = document.getElementById(`reward-section-${reward.id}`);
-      if (element) {
-        observer.observe(element);
-      }
-    });
-
-    return () => observer.disconnect();
-  }, [tiers, onSelectedRewardChange]);
-
   const scrollToReward = (rewardId: string) => {
-    onSelectedRewardChange(rewardId);
+    setSelectedRewardId(rewardId);
     const element = document.getElementById(`reward-section-${rewardId}`);
     if (element) {
       const yOffset = -80;
@@ -72,52 +42,54 @@ export function RewardsTab({
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
-      {/* Left Sidebar - Rewards List */}
+      {/* Left Sidebar - Rewards List (independently scrollable) */}
       <div className="lg:col-span-3">
         <div className="sticky top-20">
           <h3 className="text-lg font-semibold mb-4">Available rewards</h3>
-          <div className="space-y-3">
-            {availableRewards.map((reward) => (
-              <button
-                key={reward.id}
-                onClick={() => scrollToReward(reward.id)}
-                className={`w-full text-left p-3 rounded-lg border transition-all ${
-                  selectedRewardId === reward.id
-                    ? "border-l-4 border-l-[#05ce78] border-t border-r border-b bg-muted/30"
-                    : "border-transparent hover:bg-muted/50"
-                }`}
-              >
-                <p className="font-medium text-sm">{reward.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  {formatMoney(reward.amount)} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
-                </p>
-              </button>
-            ))}
-          </div>
+          <ScrollArea className="h-[calc(100vh-180px)]">
+            <div className="space-y-3 pr-4">
+              {availableRewards.map((reward) => (
+                <button
+                  key={reward.id}
+                  onClick={() => scrollToReward(reward.id)}
+                  className={`w-full text-left p-3 rounded-lg border transition-all ${
+                    selectedRewardId === reward.id
+                      ? "border-l-4 border-l-[#05ce78] border-t border-r border-b bg-muted/30"
+                      : "border-transparent hover:bg-muted/50"
+                  }`}
+                >
+                  <p className="font-medium text-sm">{reward.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatMoney(reward.amount)} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
+                  </p>
+                </button>
+              ))}
 
-          {soldOutRewards.length > 0 && (
-            <>
-              <h3 className="text-lg font-semibold mt-8 mb-4">All gone</h3>
-              <div className="space-y-3 opacity-60">
-                {soldOutRewards.map((reward) => (
-                  <button
-                    key={reward.id}
-                    onClick={() => scrollToReward(reward.id)}
-                    className={`w-full text-left p-3 rounded-lg border transition-all ${
-                      selectedRewardId === reward.id
-                        ? "border-l-4 border-l-gray-400 border-t border-r border-b bg-muted/30"
-                        : "border-transparent hover:bg-muted/50"
-                    }`}
-                  >
-                    <p className="font-medium text-sm">{reward.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatMoney(reward.amount)} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+              {soldOutRewards.length > 0 && (
+                <>
+                  <h3 className="text-lg font-semibold mt-8 mb-4">All gone</h3>
+                  <div className="space-y-3 opacity-60">
+                    {soldOutRewards.map((reward) => (
+                      <button
+                        key={reward.id}
+                        onClick={() => scrollToReward(reward.id)}
+                        className={`w-full text-left p-3 rounded-lg border transition-all ${
+                          selectedRewardId === reward.id
+                            ? "border-l-4 border-l-gray-400 border-t border-r border-b bg-muted/30"
+                            : "border-transparent hover:bg-muted/50"
+                        }`}
+                      >
+                        <p className="font-medium text-sm">{reward.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatMoney(reward.amount)} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </ScrollArea>
         </div>
       </div>
 
