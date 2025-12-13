@@ -28,7 +28,7 @@ export async function POST(
     }
 
     // Calculate actual stats from pledges
-    // Count COMPLETED pledges + PENDING pledges with saved payment method (real backers)
+    // Count COMPLETED pledges + CONFIRMED PENDING pledges (checkout completed)
     const pledgeStats = await db.pledge.aggregate({
       where: {
         projectId,
@@ -37,6 +37,7 @@ export async function POST(
           {
             status: "PENDING",
             stripePaymentMethodId: { not: null },
+            confirmationEmailSent: true, // Only count confirmed checkouts
           },
         ],
       },

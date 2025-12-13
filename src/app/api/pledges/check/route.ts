@@ -31,8 +31,8 @@ export async function GET(req: NextRequest) {
 
     const isFunded = project.currentAmount >= project.goalAmount || project.status === "FUNDED";
 
-    // Find any active pledge for this user/project
-    // Includes COMPLETED pledges and PENDING pledges with saved payment method
+    // Find any CONFIRMED pledge for this user/project
+    // Includes COMPLETED pledges and CONFIRMED PENDING pledges
     const activePledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
           {
             status: "PENDING",
             stripePaymentMethodId: { not: null },
+            confirmationEmailSent: true, // Only count as active if checkout was confirmed
           },
         ],
       },
@@ -79,8 +80,50 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Also check for pledges in progress (checkout started but not completed)
-    // This helps show "Manage Pledge" for recent checkouts that may still complete
+    // Check for pledges where payment method was saved but checkout not confirmed
+    // (user closed browser after Stripe saved card but before seeing success page)
+    const unconfirmedPledge = await db.pledge.findFirst({
+      where: {
+        userId: session.user.id,
+        projectId,
+        status: "PENDING",
+        stripePaymentMethodId: { not: null },
+        confirmationEmailSent: false,
+      },
+      include: {
+        reward: {
+          select: {
+            id: true,
+            title: true,
+            amount: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (unconfirmedPledge) {
+      return NextResponse.json({
+        hasPledge: true,
+        checkoutInProgress: true,
+        isFunded,
+        pledge: {
+          id: unconfirmedPledge.id,
+          amount: unconfirmedPledge.amount,
+          status: "CHECKOUT_IN_PROGRESS",
+          reward: unconfirmedPledge.reward ? {
+            id: unconfirmedPledge.reward.id,
+            title: unconfirmedPledge.reward.title,
+            amount: unconfirmedPledge.reward.amount,
+          } : null,
+          createdAt: unconfirmedPledge.createdAt,
+          canCancel: true,
+          canIncrease: false,
+        },
+      });
+    }
+
+    // Check for pledges in progress (checkout started, no payment method saved)
     const pendingCheckout = await db.pledge.findFirst({
       where: {
         userId: session.user.id,

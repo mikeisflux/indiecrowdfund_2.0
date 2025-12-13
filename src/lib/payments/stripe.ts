@@ -1028,83 +1028,16 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
   // Skip if already processed (payment method already saved)
   if (existingPledge?.stripePaymentMethodId) return;
 
-  // Save the payment method and get full pledge details
-  const pledge = await db.pledge.update({
+  // Save the payment method only - stats are updated when user confirms checkout
+  // This prevents counting pledges where user abandoned checkout after card save
+  await db.pledge.update({
     where: { id: pledgeId },
     data: {
       stripePaymentMethodId: paymentMethodId,
     },
-    include: {
-      project: {
-        include: {
-          creator: true,
-        },
-      },
-      user: true,
-    },
   });
 
-  // Update project funding (pledged amount - even though not charged yet)
-  // This shows momentum to other potential backers
-  const updatedProject = await db.project.update({
-    where: { id: pledge.projectId },
-    data: {
-      currentAmount: { increment: pledge.amount },
-      backerCount: { increment: 1 },
-    },
-  });
-
-  // Update reward quantity if limited (only if pledge has a reward)
-  if (pledge.rewardId) {
-    await db.reward.update({
-      where: { id: pledge.rewardId },
-      data: {
-        quantityClaimed: { increment: 1 },
-      },
-    });
-  }
-
-  // Notify creator of new pledge
-  await notifyPledgeReceived(
-    pledge.projectId,
-    pledge.project.creatorId,
-    pledge.user.name || "A backer",
-    pledge.amount
-  );
-
-  // Send confirmation email to backer (not charged yet, just card saved)
-  await notifyBackerPledgeConfirmed(pledge.id, false);
-
-  // Check if project is now funded (or was already funded)
-  const projectIsFunded = updatedProject.currentAmount >= updatedProject.goalAmount;
-
-  // Check if this pledge is the one that pushed it over the goal (for notification)
-  const justReachedGoal = projectIsFunded &&
-    updatedProject.currentAmount - pledge.amount < updatedProject.goalAmount;
-
-  if (justReachedGoal) {
-    // Project just reached its goal! Send notification
-    await notifyProjectFunded(pledge.projectId);
-  }
-
-  // Always check for and process pending pledges if project is funded
-  // This handles edge cases where webhooks were missed or processing failed
-  if (projectIsFunded) {
-    // Check if there are any pending pledges that need to be charged
-    const pendingPledgeCount = await db.pledge.count({
-      where: {
-        projectId: pledge.projectId,
-        status: "PENDING",
-        chargedImmediately: false,
-        stripePaymentMethodId: { not: null },
-      },
-    });
-
-    if (pendingPledgeCount > 0) {
-      // Process all pending pledges (charge saved cards)
-      await processPendingPledgesForProject(pledge.projectId);
-    }
-  }
+  console.log(`[SetupIntent] Payment method saved for pledge ${pledgeId}, awaiting checkout confirmation`);
 }
 
 async function handleAccountUpdate(account: Stripe.Account) {
