@@ -20,21 +20,41 @@ export async function GET() {
     });
 
     // Fetch all backer data in parallel
+    // For backwards compatibility with pledges created before confirmationEmailSent feature
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
     const [
       pledges,
       savedProjects,
       monthlyPledges,
     ] = await Promise.all([
       // Get user's pledges with full project and reward info
-      // Include COMPLETED pledges and PENDING pledges that have a saved payment method
+      // Include COMPLETED pledges and PENDING pledges that are "committed"
+      // A pledge is considered committed if:
+      // 1. It has a saved payment method, OR
+      // 2. It's confirmed (confirmationEmailSent), OR
+      // 3. It's old (>5 min) and has a SetupIntent (backwards compatibility)
       db.pledge.findMany({
         where: {
           userId,
           OR: [
             { status: "COMPLETED" },
             {
+              // Pending with saved payment method
               status: "PENDING",
               stripePaymentMethodId: { not: null },
+            },
+            {
+              // Pending with confirmation (checkout completed successfully)
+              status: "PENDING",
+              confirmationEmailSent: true,
+            },
+            {
+              // Old pending pledges with SetupIntent (backwards compatibility)
+              // Webhook might have failed to save payment method
+              status: "PENDING",
+              stripeSetupIntentId: { not: null },
+              createdAt: { lt: fiveMinutesAgo },
             },
           ],
         },
@@ -111,20 +131,29 @@ export async function GET() {
       }),
 
       // Get monthly spending data (last 6 months)
-      // Include both COMPLETED and PENDING pledges with saved payment methods
+      // Include both COMPLETED and committed PENDING pledges
       db.pledge.findMany({
         where: {
           userId,
+          createdAt: {
+            gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000),
+          },
           OR: [
             { status: "COMPLETED" },
             {
               status: "PENDING",
               stripePaymentMethodId: { not: null },
             },
+            {
+              status: "PENDING",
+              confirmationEmailSent: true,
+            },
+            {
+              status: "PENDING",
+              stripeSetupIntentId: { not: null },
+              createdAt: { lt: fiveMinutesAgo },
+            },
           ],
-          createdAt: {
-            gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000),
-          },
         },
         select: {
           amount: true,
