@@ -41,60 +41,58 @@ export function RewardsTab({
   };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-12">
-      {/* Left Sidebar - Rewards List (independently scrollable) */}
-      <div className="lg:col-span-3">
-        <div className="sticky top-20">
-          <h3 className="text-lg font-semibold mb-4">Available rewards</h3>
-          <ScrollArea className="h-[calc(100vh-180px)]">
-            <div className="space-y-3 pr-4">
-              {availableRewards.map((reward) => (
-                <button
-                  key={reward.id}
-                  onClick={() => scrollToReward(reward.id)}
-                  className={`w-full text-left p-3 rounded-lg border transition-all ${
-                    selectedRewardId === reward.id
-                      ? "border-l-4 border-l-[#05ce78] border-t border-r border-b bg-muted/30"
-                      : "border-transparent hover:bg-muted/50"
-                  }`}
-                >
-                  <p className="font-medium text-sm">{reward.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatMoney(reward.amount)} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
-                  </p>
-                </button>
-              ))}
+    <div className="relative">
+      {/* Left Sidebar - Rewards List (fixed position on desktop) */}
+      <div className="hidden lg:block lg:fixed lg:top-20 lg:w-[280px] lg:h-[calc(100vh-100px)] bg-background z-10">
+        <h3 className="text-lg font-semibold mb-4">Available rewards</h3>
+        <ScrollArea className="h-[calc(100vh-180px)]">
+          <div className="space-y-3 pr-4">
+            {availableRewards.map((reward) => (
+              <button
+                key={reward.id}
+                onClick={() => scrollToReward(reward.id)}
+                className={`w-full text-left p-3 rounded-lg border transition-all ${
+                  selectedRewardId === reward.id
+                    ? "border-l-4 border-l-[#05ce78] border-t border-r border-b bg-muted/30"
+                    : "border-transparent hover:bg-muted/50"
+                }`}
+              >
+                <p className="font-medium text-sm">{reward.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  {formatMoney(reward.amount)} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
+                </p>
+              </button>
+            ))}
 
-              {soldOutRewards.length > 0 && (
-                <>
-                  <h3 className="text-lg font-semibold mt-8 mb-4">All gone</h3>
-                  <div className="space-y-3 opacity-60">
-                    {soldOutRewards.map((reward) => (
-                      <button
-                        key={reward.id}
-                        onClick={() => scrollToReward(reward.id)}
-                        className={`w-full text-left p-3 rounded-lg border transition-all ${
-                          selectedRewardId === reward.id
-                            ? "border-l-4 border-l-gray-400 border-t border-r border-b bg-muted/30"
-                            : "border-transparent hover:bg-muted/50"
-                        }`}
-                      >
-                        <p className="font-medium text-sm">{reward.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatMoney(reward.amount)} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
+            {soldOutRewards.length > 0 && (
+              <>
+                <h3 className="text-lg font-semibold mt-8 mb-4">All gone</h3>
+                <div className="space-y-3 opacity-60">
+                  {soldOutRewards.map((reward) => (
+                    <button
+                      key={reward.id}
+                      onClick={() => scrollToReward(reward.id)}
+                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        selectedRewardId === reward.id
+                          ? "border-l-4 border-l-gray-400 border-t border-r border-b bg-muted/30"
+                          : "border-transparent hover:bg-muted/50"
+                      }`}
+                    >
+                      <p className="font-medium text-sm">{reward.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatMoney(reward.amount)} <span className="text-xs">{reward.items.length} item{reward.items.length !== 1 ? "s" : ""} included</span>
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </ScrollArea>
       </div>
 
       {/* Main Content - All Rewards with Scroll Sections */}
-      <div className="lg:col-span-9">
+      <div className="lg:ml-[300px]">
         {tiers.map((reward) => {
           const isLimited = reward.quantityAvailable !== null;
           const isSoldOut = isLimited && reward.quantityClaimed >= reward.quantityAvailable!;
