@@ -884,32 +884,65 @@ async function schedulePaymentRetry(pledgeId: string, failureReason: string) {
 
 /**
  * Process all pending pledges when a campaign reaches its goal
- * Only processes confirmed pledges or old pledges (for backwards compatibility)
+ * Processes pledges with saved payment methods, and also fetches payment methods
+ * from Stripe for pledges that have SetupIntent but missing payment method.
  */
 export async function processPendingPledgesForProject(projectId: string) {
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  const stripeClient = await getStripeInstance();
 
-  // Find confirmed pending pledges OR old pledges (backwards compatibility)
+  // Find all pending pledges that could potentially be charged
   const pendingPledges = await db.pledge.findMany({
     where: {
       projectId,
       status: "PENDING",
       chargedImmediately: false,
-      stripePaymentMethodId: { not: null },
       OR: [
+        { stripePaymentMethodId: { not: null } },
+        { stripeSetupIntentId: { not: null } },
         { confirmationEmailSent: true },
-        { createdAt: { lt: fiveMinutesAgo } }, // Old pledges (before confirmationEmailSent feature)
       ],
     },
   });
 
   const results = {
-    total: pendingPledges.length,
+    total: 0,
     successful: 0,
     failed: 0,
   };
 
   for (const pledge of pendingPledges) {
+    // If no payment method saved, try to fetch from Stripe via SetupIntent
+    let paymentMethodId = pledge.stripePaymentMethodId;
+
+    if (!paymentMethodId && pledge.stripeSetupIntentId) {
+      try {
+        const setupIntent = await stripeClient.setupIntents.retrieve(pledge.stripeSetupIntentId);
+        if (setupIntent.status === "succeeded" && setupIntent.payment_method) {
+          paymentMethodId = typeof setupIntent.payment_method === "string"
+            ? setupIntent.payment_method
+            : setupIntent.payment_method.id;
+
+          // Save the payment method to the pledge
+          await db.pledge.update({
+            where: { id: pledge.id },
+            data: { stripePaymentMethodId: paymentMethodId },
+          });
+
+          console.log(`[ProcessPledges] Fetched payment method for pledge ${pledge.id}`);
+        }
+      } catch (err) {
+        console.error(`[ProcessPledges] Failed to fetch SetupIntent for pledge ${pledge.id}:`, err);
+      }
+    }
+
+    // Only count and process pledges that have a payment method
+    if (!paymentMethodId) {
+      console.log(`[ProcessPledges] Skipping pledge ${pledge.id} - no payment method`);
+      continue;
+    }
+
+    results.total++;
+
     try {
       const success = await chargeSavedPledge(pledge.id);
       if (success) {

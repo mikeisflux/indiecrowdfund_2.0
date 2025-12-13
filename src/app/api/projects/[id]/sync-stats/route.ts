@@ -28,27 +28,31 @@ export async function POST(
     }
 
     // Calculate actual stats from pledges
-    // Count COMPLETED pledges + CONFIRMED PENDING pledges (checkout completed)
-    // Also count old PENDING pledges with payment method (backwards compatibility)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-
+    // Count COMPLETED pledges + PENDING pledges that completed checkout
+    // A pledge counts if:
+    // - Status is COMPLETED (already charged)
+    // - Status is PENDING with saved payment method (ready to charge when funded)
+    // - Status is PENDING with SetupIntent (user completed checkout flow)
+    // - Status is PENDING with confirmationEmailSent (explicitly confirmed)
     const pledgeStats = await db.pledge.aggregate({
       where: {
         projectId,
         OR: [
           { status: "COMPLETED" },
           {
-            // Confirmed pending pledges
+            // Pending pledges with saved payment method
             status: "PENDING",
             stripePaymentMethodId: { not: null },
-            confirmationEmailSent: true,
           },
           {
-            // Old pending pledges (backwards compatibility - created before confirmationEmailSent feature)
+            // Pending pledges with SetupIntent (user completed checkout)
             status: "PENDING",
-            stripePaymentMethodId: { not: null },
-            confirmationEmailSent: false,
-            createdAt: { lt: fiveMinutesAgo }, // Only count if older than 5 min
+            stripeSetupIntentId: { not: null },
+          },
+          {
+            // Explicitly confirmed pending pledges
+            status: "PENDING",
+            confirmationEmailSent: true,
           },
         ],
       },
