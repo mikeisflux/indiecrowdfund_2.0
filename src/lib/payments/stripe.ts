@@ -1164,7 +1164,6 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
   }
 
   // Determine what needs to be updated
-  const needsPaymentMethod = !existingPledge.stripePaymentMethodId;
   const needsConfirmation = !existingPledge.confirmationEmailSent;
 
   // Save the payment method and mark as confirmed
