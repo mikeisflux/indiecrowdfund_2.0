@@ -516,20 +516,37 @@ export default function ProjectPage() {
               </div>
 
               {/* Back button */}
-              {existingPledge ? (
+              {existingPledge && existingPledge.status !== "CHECKOUT_IN_PROGRESS" ? (
                 <div className="space-y-2">
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-medium">
+                  <div className="p-3 bg-[#05ce78]/10 rounded-lg border border-[#05ce78]/20">
+                    <div className="flex items-center gap-2 text-[#05ce78] font-medium">
                       <CheckCircle className="h-5 w-5" />
                       You&apos;re backing this project!
                     </div>
-                    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                    <p className="text-sm text-[#05ce78]/80 mt-1">
                       Pledged ${existingPledge.amount.toFixed(2)} • {existingPledge.reward?.title || "No reward"}
                     </p>
                   </div>
                   <Link href="/dashboard/backer" className="block">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium" size="lg">
+                    <Button className="w-full bg-[#05ce78] hover:bg-[#04b86a] text-white font-medium" size="lg">
                       Manage Your Pledge
+                    </Button>
+                  </Link>
+                </div>
+              ) : existingPledge && existingPledge.status === "CHECKOUT_IN_PROGRESS" ? (
+                <div className="space-y-2">
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300 font-medium">
+                      <AlertTriangle className="h-5 w-5" />
+                      Checkout not completed
+                    </div>
+                    <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                      Your pledge of ${existingPledge.amount.toFixed(2)} is not yet confirmed.
+                    </p>
+                  </div>
+                  <Link href={`/projects/${project.slug}/pledge`} className="block">
+                    <Button className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium" size="lg">
+                      Complete Your Pledge
                     </Button>
                   </Link>
                 </div>
