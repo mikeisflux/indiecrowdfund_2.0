@@ -19,6 +19,7 @@ import {
   RefreshCw,
   CreditCard,
   Loader2,
+  FileSearch,
 } from "lucide-react";
 import { Project } from "./types";
 import { formatDuration } from "./utils";
@@ -185,7 +186,7 @@ export function ActiveProjectPanel({
 
         {/* Action Buttons for Active Campaigns */}
         <div className="p-4 border-t bg-zinc-50 dark:bg-zinc-800/50">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-2">
             <Button variant="outline" className="flex-1" asChild>
               <a href={`/projects/${project.slug}`} target="_blank" rel="noopener noreferrer">
                 <Eye className="mr-2 h-4 w-4" />
@@ -200,6 +201,14 @@ export function ActiveProjectPanel({
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
               {isSyncing ? "Syncing..." : "Sync Stats"}
+            </Button>
+          </div>
+          <div className="mb-4">
+            <Button variant="outline" className="w-full" asChild>
+              <a href={`/api/admin/projects/${project.id}/process-pledges`} target="_blank" rel="noopener noreferrer">
+                <FileSearch className="mr-2 h-4 w-4" />
+                Diagnose Pledges
+              </a>
             </Button>
           </div>
           {syncMessage && (
