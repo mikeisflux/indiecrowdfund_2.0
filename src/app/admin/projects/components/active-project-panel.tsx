@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import {
   Zap,
   AlertCircle,
   Power,
+  RefreshCw,
 } from "lucide-react";
 import { Project } from "./types";
 import { formatDuration } from "./utils";
@@ -23,13 +25,48 @@ interface ActiveProjectPanelProps {
   project: Project | null;
   onMakeLive: () => void;
   onDeactivate: () => void;
+  onStatsUpdated?: (newStats: { currentAmount: number; backerCount: number }) => void;
 }
 
 export function ActiveProjectPanel({
   project,
   onMakeLive,
   onDeactivate,
+  onStatsUpdated,
 }: ActiveProjectPanelProps) {
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  // Clear sync message when project changes
+  useEffect(() => {
+    setSyncMessage(null);
+  }, [project?.id]);
+
+  const handleSyncStats = async () => {
+    if (!project) return;
+
+    setIsSyncing(true);
+    setSyncMessage(null);
+
+    try {
+      const response = await fetch(`/api/projects/${project.id}/sync-stats`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSyncMessage(`Synced: $${data.currentAmount.toLocaleString()} from ${data.backerCount} backers`);
+        onStatsUpdated?.({ currentAmount: data.currentAmount, backerCount: data.backerCount });
+      } else {
+        setSyncMessage(`Error: ${data.error || "Failed to sync"}`);
+      }
+    } catch (error) {
+      setSyncMessage("Error: Network request failed");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
   if (!project || (project.status !== "LIVE" && project.status !== "APPROVED")) {
     return (
       <Card className="h-[400px] flex items-center justify-center">
@@ -121,7 +158,21 @@ export function ActiveProjectPanel({
                 View Campaign
               </a>
             </Button>
+            <Button
+              variant="outline"
+              onClick={handleSyncStats}
+              disabled={isSyncing}
+              className="flex-1"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+              {isSyncing ? "Syncing..." : "Sync Stats"}
+            </Button>
           </div>
+          {syncMessage && (
+            <p className={`text-sm mb-4 ${syncMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
+              {syncMessage}
+            </p>
+          )}
 
           <div className="flex items-center gap-2">
             {project.status === "APPROVED" ? (
