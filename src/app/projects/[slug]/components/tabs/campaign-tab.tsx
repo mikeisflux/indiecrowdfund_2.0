@@ -244,11 +244,36 @@ export function CampaignTab({ project, tiers }: CampaignTabProps) {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="text-sm">
-                    <span className="font-medium">{reward.quantityClaimed}</span>
-                    <span className="text-muted-foreground"> backers</span>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-medium">{reward.backerCount || 0}</span>
+                    <span className="text-muted-foreground">backers</span>
+                    {reward.backers && reward.backers.length > 0 && (
+                      <div className="flex -space-x-1">
+                        {reward.backers.slice(0, 3).map((backer) => (
+                          <div
+                            key={backer.id}
+                            className="h-5 w-5 rounded-full border-2 border-background overflow-hidden bg-muted flex items-center justify-center"
+                            title={backer.name}
+                          >
+                            {backer.image ? (
+                              <Image
+                                src={backer.image}
+                                alt={backer.name}
+                                width={20}
+                                height={20}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              <span className="text-[8px] font-medium text-muted-foreground">
+                                {backer.name.charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {isLimited && !isSoldOut && (
-                      <span className="text-muted-foreground"> • {remaining} left</span>
+                      <span className="text-muted-foreground">• {remaining} left</span>
                     )}
                   </div>
                   {isSoldOut && (
