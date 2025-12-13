@@ -109,9 +109,12 @@ export function UserProfileDropdown() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         className="w-[min(calc(100vw-16px),580px)] p-0"
+        side="bottom"
         align="end"
         sideOffset={8}
         alignOffset={-4}
+        collisionPadding={{ top: 16, right: 8, bottom: 16, left: 8 }}
+        avoidCollisions={true}
       >
         <ScrollArea className="max-h-[calc(100vh-100px)]">
           {/* Mobile: Single column layout, Desktop: 3 columns */}
