@@ -272,10 +272,10 @@ export default async function HomePage() {
         <div className="container">
           <div className="mx-auto max-w-3xl text-center">
             <Badge className="mb-4" variant="secondary">
-              Fund what matters to you
+              Free speech advocates
             </Badge>
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-              Bring Creative Projects to Life
+              Support Who You Love
             </h1>
             <p className="mb-8 text-lg text-muted-foreground md:text-xl">
               IndieCrowdfund is the future home to thousands of creative projects in art, design,
