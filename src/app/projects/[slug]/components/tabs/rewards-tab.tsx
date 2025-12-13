@@ -42,11 +42,11 @@ export function RewardsTab({
 
   return (
     <div className="lg:flex lg:gap-8">
-      {/* Left Sidebar - self-start prevents stretching, enabling sticky */}
-      <div className="hidden lg:block lg:w-[280px] lg:flex-shrink-0 lg:self-start lg:sticky lg:top-20">
-        <div className="max-h-[calc(100vh-100px)]">
+      {/* Left Sidebar - sticky with independent scroll */}
+      <div className="hidden lg:block lg:w-[280px] lg:flex-shrink-0">
+        <div className="sticky top-20 h-[calc(100vh-100px)] overflow-hidden">
           <h3 className="text-lg font-semibold mb-4">Available rewards</h3>
-          <ScrollArea className="max-h-[calc(100vh-180px)]">
+          <ScrollArea className="h-[calc(100vh-160px)]">
             <div className="space-y-3 pr-4">
               {availableRewards.map((reward) => (
                 <button
