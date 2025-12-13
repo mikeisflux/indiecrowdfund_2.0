@@ -25,6 +25,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
+import { MobileProfileLinks } from "@/components/mobile-profile-links";
 import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
@@ -251,7 +252,7 @@ export default async function HomePage() {
                     Bug Report
                   </Link>
                   <div className="border-t pt-4 mt-2">
-                    <UserProfileDropdown />
+                    <MobileProfileLinks />
                   </div>
                 </nav>
               </SheetContent>
