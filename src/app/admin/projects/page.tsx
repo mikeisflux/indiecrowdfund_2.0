@@ -2,15 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -19,124 +15,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   FolderKanban,
   Search,
   Clock,
   CheckCircle,
-  XCircle,
   Eye,
-  ThumbsUp,
-  ThumbsDown,
   History,
-  User,
-  Calendar,
-  DollarSign,
-  Image as ImageIcon,
-  Video,
   Flag,
   RefreshCw,
-  AlertCircle,
-  RotateCcw,
   Loader2,
   Zap,
-  Send,
-  Power,
 } from "lucide-react";
-
-interface Creator {
-  id: string;
-  name: string | null;
-  email: string;
-  emailVerified: Date | null;
-  createdAt: string;
-  _count: {
-    createdProjects: number;
-  };
-}
-
-interface Project {
-  id: string;
-  title: string;
-  subtitle: string | null;
-  slug: string;
-  description: string | null;
-  category: string;
-  goalAmount: number;
-  currentAmount: number;
-  currency: string;
-  durationType: "FIXED_DAYS" | "END_DATE" | null;
-  durationDays: number | null;
-  endDate: string | null;
-  videoUrl: string | null;
-  imageUrl: string | null;
-  risks: string | null;
-  status: string;
-  createdAt: string;
-  creator: Creator;
-  rewards: { id: string }[];
-  _count: {
-    pledges: number;
-  };
-}
-
-interface ReviewHistory {
-  id: string;
-  projectId: string;
-  action: string;
-  notes: string | null;
-  internalNotes: string | null;
-  rejectionReason: string | null;
-  previousStatus: string | null;
-  newStatus: string | null;
-  createdAt: string;
-  project: {
-    id: string;
-    title: string;
-    slug: string;
-    status: string;
-    creator: {
-      name: string | null;
-      email: string;
-    };
-  };
-  reviewer: {
-    name: string | null;
-    email: string;
-  } | null;
-}
-
-interface Stats {
-  pending: number;
-  approvedToday: number;
-  rejectedToday: number;
-  activeCampaigns?: number;
-}
-
-const rejectionReasons = [
-  { value: "INCOMPLETE_INFORMATION", label: "Incomplete Information" },
-  { value: "POLICY_VIOLATION", label: "Policy Violation" },
-  { value: "PROHIBITED_CONTENT", label: "Prohibited Content" },
-  { value: "INTELLECTUAL_PROPERTY", label: "Intellectual Property Issues" },
-  { value: "FRAUD_SUSPECTED", label: "Suspected Fraud" },
-  { value: "UNREALISTIC_GOALS", label: "Unrealistic Goals" },
-  { value: "MISSING_REWARDS", label: "Missing or Inadequate Rewards" },
-  { value: "IDENTITY_VERIFICATION", label: "Identity Verification Required" },
-  { value: "OTHER", label: "Other" },
-];
+import {
+  Project,
+  ReviewHistory,
+  Stats,
+  getFlags,
+  getFlagBadge,
+  ReviewStatsCards,
+  ProjectListItem,
+  ProjectDetailPanel,
+  ActiveProjectPanel,
+  ReviewHistoryTab,
+  ReviewDialog,
+  RejectDialog,
+  DeactivateDialog,
+  MakeLiveDialog,
+} from "./components";
 
 export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState("pending");
@@ -182,7 +87,6 @@ export default function ProjectsPage() {
 
   const fetchActiveProjects = useCallback(async () => {
     try {
-      // Fetch both LIVE and APPROVED projects
       const liveParams = new URLSearchParams({
         status: "LIVE",
         ...(categoryFilter !== "all" && { category: categoryFilter }),
@@ -235,10 +139,8 @@ export default function ProjectsPage() {
     fetchReviewHistory();
   }, [fetchProjects, fetchActiveProjects, fetchReviewHistory]);
 
-  // Clear selected project and refetch data when switching tabs
   useEffect(() => {
     setSelectedProject(null);
-    // Refetch data based on active tab
     if (activeTab === "active") {
       fetchActiveProjects();
     } else if (activeTab === "pending") {
@@ -247,38 +149,6 @@ export default function ProjectsPage() {
       fetchReviewHistory();
     }
   }, [activeTab, fetchActiveProjects, fetchProjects, fetchReviewHistory]);
-
-  const getFlags = (project: Project): string[] => {
-    const flags: string[] = [];
-    if (project.creator._count.createdProjects === 1) {
-      flags.push("first_project");
-    }
-    if (!project.creator.emailVerified) {
-      flags.push("unverified_creator");
-    }
-    if (project.goalAmount > 100000) {
-      flags.push("high_goal");
-    }
-    if (!project.videoUrl) {
-      flags.push("no_video");
-    }
-    return flags;
-  };
-
-  const getFlagBadge = (flag: string) => {
-    const flagConfig: Record<string, { label: string; variant: "destructive" | "outline" | "secondary" }> = {
-      first_project: { label: "First Project", variant: "secondary" },
-      unverified_creator: { label: "Unverified", variant: "destructive" },
-      high_goal: { label: "High Goal", variant: "outline" },
-      no_video: { label: "No Video", variant: "outline" },
-    };
-    const config = flagConfig[flag] || { label: flag, variant: "outline" as const };
-    return (
-      <Badge key={flag} variant={config.variant} className="text-xs">
-        {config.label}
-      </Badge>
-    );
-  };
 
   const handleApprove = () => {
     setReviewAction("approve");
@@ -396,7 +266,6 @@ export default function ProjectsPage() {
       });
 
       if (response.ok) {
-        // Refresh the projects list
         await fetchProjects();
         setShowReviewDialog(false);
         setShowRejectDialog(false);
@@ -416,31 +285,6 @@ export default function ProjectsPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatDuration = (project: Project) => {
-    if (project.durationType === "END_DATE" && project.endDate) {
-      const endDate = new Date(project.endDate);
-      return `Ends ${endDate.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
-    } else if (project.durationDays) {
-      return `${project.durationDays} days`;
-    }
-    return "30 days";
-  };
-
   const filteredProjects = projects.filter((project) => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -451,6 +295,16 @@ export default function ProjectsPage() {
       );
     }
     return true;
+  });
+
+  const filteredActiveProjects = activeProjects.filter((project) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      project.title.toLowerCase().includes(query) ||
+      project.creator.name?.toLowerCase().includes(query) ||
+      project.creator.email.toLowerCase().includes(query)
+    );
   });
 
   const flaggedProjects = filteredProjects.filter((p) => getFlags(p).length > 0);
@@ -487,63 +341,7 @@ export default function ProjectsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-amber-100 p-2 dark:bg-amber-900/30">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-                <p className="text-xs text-zinc-500">Pending Review</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-emerald-100 p-2 dark:bg-emerald-900/30">
-                <CheckCircle className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.approvedToday}</p>
-                <p className="text-xs text-zinc-500">Approved Today</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-red-100 p-2 dark:bg-red-900/30">
-                <XCircle className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.rejectedToday}</p>
-                <p className="text-xs text-zinc-500">Rejected Today</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
-                <Flag className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{flaggedProjects.length}</p>
-                <p className="text-xs text-zinc-500">Flagged Projects</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <ReviewStatsCards stats={stats} flaggedCount={flaggedProjects.length} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
@@ -615,252 +413,24 @@ export default function ProjectsPage() {
               </CardContent>
             </Card>
           ) : (
-            /* Projects Queue */
             <div className="grid gap-4 lg:grid-cols-2">
-              {/* Project List */}
               <div className="space-y-4">
-                {filteredProjects.map((project) => {
-                  const flags = getFlags(project);
-                  return (
-                    <Card
-                      key={project.id}
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedProject?.id === project.id ? "ring-2 ring-emerald-500" : ""
-                      } ${flags.length > 2 ? "border-red-200 bg-red-50/30 dark:bg-red-950/10" : ""}`}
-                      onClick={() => setSelectedProject(project)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-4">
-                          {/* Project Image */}
-                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
-                            {project.imageUrl ? (
-                              <Image src={project.imageUrl} alt="" fill className="object-cover" />
-                            ) : (
-                              <FolderKanban className="h-6 w-6 text-zinc-400" />
-                            )}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h4 className="font-semibold truncate">{project.title}</h4>
-                                <p className="text-sm text-zinc-500 truncate">{project.subtitle || "No subtitle"}</p>
-                              </div>
-                              <Badge variant="outline">{project.category}</Badge>
-                            </div>
-
-                            <div className="mt-2 flex items-center gap-4 text-xs text-zinc-500">
-                              <span className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                {project.creator.name || project.creator.email}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <DollarSign className="h-3 w-3" />
-                                ${project.goalAmount.toLocaleString()}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {formatDate(project.createdAt)}
-                              </span>
-                            </div>
-
-                            {flags.length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {flags.map((flag) => getFlagBadge(flag))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                {filteredProjects.map((project) => (
+                  <ProjectListItem
+                    key={project.id}
+                    project={project}
+                    isSelected={selectedProject?.id === project.id}
+                    onClick={() => setSelectedProject(project)}
+                  />
+                ))}
               </div>
 
-              {/* Project Detail Panel */}
-              {selectedProject ? (
-                <Card className="h-fit sticky top-6">
-                  <CardHeader className="border-b">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>{selectedProject.title}</CardTitle>
-                        <CardDescription>{selectedProject.subtitle || "No subtitle"}</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Accordion type="multiple" defaultValue={["overview", "creator"]} className="w-full">
-                      {/* Overview */}
-                      <AccordionItem value="overview">
-                        <AccordionTrigger className="px-4">Project Overview</AccordionTrigger>
-                        <AccordionContent className="px-4 pb-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs text-zinc-500">Goal</p>
-                              <p className="font-semibold">${selectedProject.goalAmount.toLocaleString()} {selectedProject.currency}</p>
-                            </div>
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs text-zinc-500">Duration</p>
-                              <p className="font-semibold">{formatDuration(selectedProject)}</p>
-                            </div>
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs text-zinc-500">Category</p>
-                              <p className="font-semibold">{selectedProject.category}</p>
-                            </div>
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs text-zinc-500">Rewards</p>
-                              <p className="font-semibold">{selectedProject.rewards.length} tiers</p>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 flex items-center gap-4">
-                            {selectedProject.videoUrl ? (
-                              <Badge variant="outline" className="text-emerald-600">
-                                <Video className="mr-1 h-3 w-3" /> Has Video
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-amber-600">
-                                <Video className="mr-1 h-3 w-3" /> No Video
-                              </Badge>
-                            )}
-                            {selectedProject.imageUrl && (
-                              <Badge variant="outline">
-                                <ImageIcon className="mr-1 h-3 w-3" /> Has Cover
-                              </Badge>
-                            )}
-                          </div>
-
-                          {selectedProject.description && (
-                            <div className="mt-4">
-                              <p className="text-xs text-zinc-500 mb-1">Description Preview</p>
-                              <div
-                                className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 prose prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedProject.description) }}
-                              />
-                            </div>
-                          )}
-
-                          {selectedProject.risks && (
-                            <div className="mt-4">
-                              <p className="text-xs text-zinc-500 mb-1">Risks & Challenges</p>
-                              <div
-                                className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 prose prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedProject.risks) }}
-                              />
-                            </div>
-                          )}
-                        </AccordionContent>
-                      </AccordionItem>
-
-                      {/* Creator Info */}
-                      <AccordionItem value="creator">
-                        <AccordionTrigger className="px-4">Creator Information</AccordionTrigger>
-                        <AccordionContent className="px-4 pb-4">
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 font-semibold text-zinc-600">
-                              {(selectedProject.creator.name || selectedProject.creator.email).charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold">{selectedProject.creator.name || "No name"}</p>
-                                {selectedProject.creator.emailVerified ? (
-                                  <Badge className="bg-blue-100 text-blue-700">
-                                    <CheckCircle className="mr-1 h-3 w-3" /> Verified
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="destructive">
-                                    <AlertCircle className="mr-1 h-3 w-3" /> Unverified
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-zinc-500">{selectedProject.creator.email}</p>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 grid grid-cols-2 gap-3">
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs text-zinc-500">Total Projects</p>
-                              <p className="font-semibold">{selectedProject.creator._count.createdProjects}</p>
-                            </div>
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs text-zinc-500">Member Since</p>
-                              <p className="font-semibold">{formatDate(selectedProject.creator.createdAt)}</p>
-                            </div>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-
-                      {/* Flags */}
-                      {getFlags(selectedProject).length > 0 && (
-                        <AccordionItem value="flags">
-                          <AccordionTrigger className="px-4">
-                            Flags
-                            <Badge variant="destructive" className="ml-2">
-                              {getFlags(selectedProject).length}
-                            </Badge>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <div className="space-y-2">
-                              {getFlags(selectedProject).map((flag) => (
-                                <div key={flag} className="flex items-center gap-2 text-sm text-amber-700">
-                                  <Flag className="h-4 w-4" />
-                                  <span className="capitalize">{flag.replace(/_/g, " ")}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
-                    </Accordion>
-
-                    {/* Action Buttons */}
-                    <div className="p-4 border-t bg-zinc-50 dark:bg-zinc-800/50">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Button variant="outline" className="flex-1" asChild>
-                          <a href={`/projects/${selectedProject.slug}`} target="_blank" rel="noopener noreferrer">
-                            <Eye className="mr-2 h-4 w-4" />
-                            Preview Project
-                          </a>
-                        </Button>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Button
-                          onClick={handleApprove}
-                          className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                        >
-                          <ThumbsUp className="mr-2 h-4 w-4" />
-                          Approve
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={handleRequestChanges}
-                          className="flex-1"
-                        >
-                          <RotateCcw className="mr-2 h-4 w-4" />
-                          Request Changes
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={handleReject}
-                          className="flex-1"
-                        >
-                          <ThumbsDown className="mr-2 h-4 w-4" />
-                          Reject
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="h-[400px] flex items-center justify-center">
-                  <div className="text-center text-zinc-500">
-                    <FolderKanban className="h-12 w-12 mx-auto mb-3 text-zinc-300" />
-                    <p className="font-medium">Select a project to review</p>
-                    <p className="text-sm">Click on a project from the queue to see details</p>
-                  </div>
-                </Card>
-              )}
+              <ProjectDetailPanel
+                project={selectedProject}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                onRequestChanges={handleRequestChanges}
+              />
             </div>
           )}
         </TabsContent>
@@ -907,197 +477,24 @@ export default function ProjectsPage() {
             </Card>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
-              {/* Active Projects List */}
               <div className="space-y-4">
-                {activeProjects
-                  .filter((project) => {
-                    if (!searchQuery) return true;
-                    const query = searchQuery.toLowerCase();
-                    return (
-                      project.title.toLowerCase().includes(query) ||
-                      project.creator.name?.toLowerCase().includes(query) ||
-                      project.creator.email.toLowerCase().includes(query)
-                    );
-                  })
-                  .map((project) => (
-                    <Card
-                      key={project.id}
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedProject?.id === project.id ? "ring-2 ring-emerald-500" : ""
-                      }`}
-                      onClick={() => setSelectedProject(project)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-4">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
-                            {project.imageUrl ? (
-                              <Image src={project.imageUrl} alt="" fill className="object-cover" />
-                            ) : (
-                              <FolderKanban className="h-6 w-6 text-zinc-400" />
-                            )}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h4 className="font-semibold truncate">{project.title}</h4>
-                                  <Badge className={project.status === "LIVE" ? "bg-emerald-600" : "bg-amber-600"}>
-                                    {project.status}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-zinc-500 truncate">{project.subtitle || "No subtitle"}</p>
-                              </div>
-                              <Badge variant="outline">{project.category}</Badge>
-                            </div>
-
-                            <div className="mt-2 flex items-center gap-4 text-xs text-zinc-500">
-                              <span className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                {project.creator.name || project.creator.email}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <DollarSign className="h-3 w-3" />
-                                ${project.currentAmount.toLocaleString()} / ${project.goalAmount.toLocaleString()}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                {project._count.pledges} backers
-                              </span>
-                            </div>
-
-                            <div className="mt-2">
-                              <div className="h-2 bg-zinc-200 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-emerald-600 rounded-full"
-                                  style={{ width: `${Math.min(100, (project.currentAmount / project.goalAmount) * 100)}%` }}
-                                />
-                              </div>
-                              <p className="text-xs text-zinc-500 mt-1">
-                                {Math.round((project.currentAmount / project.goalAmount) * 100)}% funded
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                {filteredActiveProjects.map((project) => (
+                  <ProjectListItem
+                    key={project.id}
+                    project={project}
+                    isSelected={selectedProject?.id === project.id}
+                    onClick={() => setSelectedProject(project)}
+                    showStatus
+                    showFunding
+                  />
+                ))}
               </div>
 
-              {/* Active Project Detail Panel */}
-              {selectedProject && (selectedProject.status === "LIVE" || selectedProject.status === "APPROVED") ? (
-                <Card className="h-fit sticky top-6">
-                  <CardHeader className="border-b">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <CardTitle>{selectedProject.title}</CardTitle>
-                          <Badge className={selectedProject.status === "LIVE" ? "bg-emerald-600" : "bg-amber-600"}>
-                            {selectedProject.status}
-                          </Badge>
-                        </div>
-                        <CardDescription>{selectedProject.subtitle || "No subtitle"}</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Accordion type="multiple" defaultValue={["overview", "funding"]} className="w-full">
-                      {/* Overview */}
-                      <AccordionItem value="overview">
-                        <AccordionTrigger className="px-4">Campaign Overview</AccordionTrigger>
-                        <AccordionContent className="px-4 pb-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs text-zinc-500">Goal</p>
-                              <p className="font-semibold">${selectedProject.goalAmount.toLocaleString()} {selectedProject.currency}</p>
-                            </div>
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs text-zinc-500">Raised</p>
-                              <p className="font-semibold text-emerald-600">${selectedProject.currentAmount.toLocaleString()}</p>
-                            </div>
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs text-zinc-500">Backers</p>
-                              <p className="font-semibold">{selectedProject._count.pledges}</p>
-                            </div>
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs text-zinc-500">Duration</p>
-                              <p className="font-semibold">{formatDuration(selectedProject)}</p>
-                            </div>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-
-                      {/* Creator Info */}
-                      <AccordionItem value="creator">
-                        <AccordionTrigger className="px-4">Creator Information</AccordionTrigger>
-                        <AccordionContent className="px-4 pb-4">
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 font-semibold text-zinc-600">
-                              {(selectedProject.creator.name || selectedProject.creator.email).charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold">{selectedProject.creator.name || "No name"}</p>
-                                {selectedProject.creator.emailVerified ? (
-                                  <Badge className="bg-blue-100 text-blue-700">
-                                    <CheckCircle className="mr-1 h-3 w-3" /> Verified
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="destructive">
-                                    <AlertCircle className="mr-1 h-3 w-3" /> Unverified
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-zinc-500">{selectedProject.creator.email}</p>
-                            </div>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-
-                    {/* Action Buttons for Active Campaigns */}
-                    <div className="p-4 border-t bg-zinc-50 dark:bg-zinc-800/50">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Button variant="outline" className="flex-1" asChild>
-                          <a href={`/projects/${selectedProject.slug}`} target="_blank" rel="noopener noreferrer">
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Campaign
-                          </a>
-                        </Button>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {selectedProject.status === "APPROVED" ? (
-                          <Button
-                            onClick={handleMakeLive}
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                          >
-                            <Zap className="mr-2 h-4 w-4" />
-                            Make Live
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="destructive"
-                            onClick={handleDeactivate}
-                            className="flex-1"
-                          >
-                            <Power className="mr-2 h-4 w-4" />
-                            Deactivate
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="h-[400px] flex items-center justify-center">
-                  <div className="text-center text-zinc-500">
-                    <Zap className="h-12 w-12 mx-auto mb-3 text-zinc-300" />
-                    <p className="font-medium">Select a campaign to manage</p>
-                    <p className="text-sm">Click on a campaign to see details and actions</p>
-                  </div>
-                </Card>
-              )}
+              <ActiveProjectPanel
+                project={selectedProject}
+                onMakeLive={handleMakeLive}
+                onDeactivate={handleDeactivate}
+              />
             </div>
           )}
         </TabsContent>
@@ -1165,356 +562,55 @@ export default function ProjectsPage() {
 
         {/* History Tab */}
         <TabsContent value="history" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Review History</CardTitle>
-              <CardDescription>All project review decisions and status changes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {reviewHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <History className="h-12 w-12 text-zinc-300 mb-4" />
-                  <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No review history yet</h3>
-                  <p className="text-sm text-zinc-500">Review decisions will appear here.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {reviewHistory.map((review) => (
-                    <div key={review.id} className="flex items-start gap-4 rounded-lg border p-4">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0 ${
-                        review.action === "APPROVED" ? "bg-emerald-100" :
-                        review.action === "REJECTED" ? "bg-red-100" :
-                        review.action === "DEACTIVATE" ? "bg-orange-100" :
-                        review.action === "REACTIVATE" ? "bg-blue-100" :
-                        review.action === "SEND_TO_REVIEW" ? "bg-purple-100" :
-                        "bg-amber-100"
-                      }`}>
-                        {review.action === "APPROVED" ? (
-                          <CheckCircle className="h-5 w-5 text-emerald-600" />
-                        ) : review.action === "REJECTED" ? (
-                          <XCircle className="h-5 w-5 text-red-600" />
-                        ) : review.action === "DEACTIVATE" ? (
-                          <Power className="h-5 w-5 text-orange-600" />
-                        ) : review.action === "REACTIVATE" ? (
-                          <Zap className="h-5 w-5 text-blue-600" />
-                        ) : review.action === "SEND_TO_REVIEW" ? (
-                          <Send className="h-5 w-5 text-purple-600" />
-                        ) : (
-                          <RotateCcw className="h-5 w-5 text-amber-600" />
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <a
-                            href={`/projects/${review.project.slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium hover:underline truncate"
-                          >
-                            {review.project.title}
-                          </a>
-                          <Badge variant={
-                            review.action === "APPROVED" ? "default" :
-                            review.action === "REJECTED" ? "destructive" :
-                            review.action === "DEACTIVATE" ? "outline" :
-                            review.action === "REACTIVATE" ? "default" :
-                            "secondary"
-                          } className={
-                            review.action === "APPROVED" ? "bg-emerald-600" :
-                            review.action === "REACTIVATE" ? "bg-blue-600" :
-                            ""
-                          }>
-                            {review.action.replace(/_/g, " ")}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-zinc-500 mt-1">
-                          by {review.project.creator.name || review.project.creator.email}
-                        </p>
-                        {review.notes && (
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2 line-clamp-2">
-                            {review.notes}
-                          </p>
-                        )}
-                        {review.rejectionReason && (
-                          <p className="text-sm text-red-600 mt-1">
-                            Reason: {review.rejectionReason.replace(/_/g, " ")}
-                          </p>
-                        )}
-                        {review.previousStatus && review.newStatus && (
-                          <p className="text-xs text-zinc-400 mt-1">
-                            Status: {review.previousStatus} → {review.newStatus}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="text-right text-sm text-zinc-500 flex-shrink-0">
-                        <p className="font-medium">{review.reviewer?.name || review.reviewer?.email || "System"}</p>
-                        <p>{formatDate(review.createdAt)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ReviewHistoryTab reviewHistory={reviewHistory} />
         </TabsContent>
       </Tabs>
 
-      {/* Approve/Request Changes Dialog */}
-      <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {reviewAction === "approve" ? "Approve Project" : "Request Changes"}
-            </DialogTitle>
-            <DialogDescription>
-              {reviewAction === "approve"
-                ? "The project will be approved and the creator can launch it."
-                : "The creator will be notified to make changes before resubmitting."}
-            </DialogDescription>
-          </DialogHeader>
+      {/* Dialogs */}
+      <ReviewDialog
+        open={showReviewDialog}
+        onOpenChange={setShowReviewDialog}
+        reviewAction={reviewAction === "reject" ? null : reviewAction}
+        reviewNotes={reviewNotes}
+        onReviewNotesChange={setReviewNotes}
+        internalNotes={internalNotes}
+        onInternalNotesChange={setInternalNotes}
+        sendEmail={sendEmail}
+        onSendEmailChange={setSendEmail}
+        isSubmitting={isSubmitting}
+        onSubmit={submitReview}
+      />
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Notes to Creator</Label>
-              <Textarea
-                placeholder={reviewAction === "approve"
-                  ? "Optional: Add any notes for the creator..."
-                  : "Explain what changes are needed..."}
-                value={reviewNotes}
-                onChange={(e) => setReviewNotes(e.target.value)}
-                rows={4}
-              />
-            </div>
+      <RejectDialog
+        open={showRejectDialog}
+        onOpenChange={setShowRejectDialog}
+        rejectionReason={rejectionReason}
+        onRejectionReasonChange={setRejectionReason}
+        reviewNotes={reviewNotes}
+        onReviewNotesChange={setReviewNotes}
+        internalNotes={internalNotes}
+        onInternalNotesChange={setInternalNotes}
+        sendEmail={sendEmail}
+        onSendEmailChange={setSendEmail}
+        isSubmitting={isSubmitting}
+        onSubmit={submitReview}
+      />
 
-            <div className="space-y-2">
-              <Label>Internal Notes (not sent to creator)</Label>
-              <Textarea
-                placeholder="Add internal notes for other reviewers..."
-                value={internalNotes}
-                onChange={(e) => setInternalNotes(e.target.value)}
-                rows={2}
-              />
-            </div>
+      <DeactivateDialog
+        open={showDeactivateDialog}
+        onOpenChange={setShowDeactivateDialog}
+        isSubmitting={isSubmitting}
+        onSubmit={submitDeactivate}
+      />
 
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="sendEmail"
-                checked={sendEmail}
-                onCheckedChange={(checked) => setSendEmail(checked === true)}
-              />
-              <Label htmlFor="sendEmail" className="text-sm">
-                Send email notification to creator
-              </Label>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReviewDialog(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button
-              onClick={submitReview}
-              disabled={isSubmitting}
-              className={reviewAction === "approve" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : reviewAction === "approve" ? (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Approve Project
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Request Changes
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">Reject Project</DialogTitle>
-            <DialogDescription>
-              The project will be rejected and the creator will be notified.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Rejection Reason *</Label>
-              <Select value={rejectionReason} onValueChange={setRejectionReason}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a reason..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {rejectionReasons.map((reason) => (
-                    <SelectItem key={reason.value} value={reason.value}>
-                      {reason.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Explanation to Creator *</Label>
-              <Textarea
-                placeholder="Provide a clear explanation for the rejection..."
-                value={reviewNotes}
-                onChange={(e) => setReviewNotes(e.target.value)}
-                rows={4}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Internal Notes</Label>
-              <Textarea
-                placeholder="Add internal notes..."
-                value={internalNotes}
-                onChange={(e) => setInternalNotes(e.target.value)}
-                rows={2}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="sendEmailReject"
-                checked={sendEmail}
-                onCheckedChange={(checked) => setSendEmail(checked === true)}
-              />
-              <Label htmlFor="sendEmailReject" className="text-sm">
-                Send rejection email to creator
-              </Label>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={submitReview}
-              disabled={isSubmitting || !rejectionReason || !reviewNotes}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Reject Project
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Deactivate Campaign Dialog */}
-      <Dialog open={showDeactivateDialog} onOpenChange={setShowDeactivateDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Deactivate Campaign</DialogTitle>
-            <DialogDescription>
-              This will send the project back to review.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Are you sure you want to deactivate this campaign? The campaign will be unpublished and sent back to the review queue.
-            </p>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeactivateDialog(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={submitDeactivate}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deactivating...
-                </>
-              ) : (
-                <>
-                  <Power className="mr-2 h-4 w-4" />
-                  Deactivate
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Make Live Dialog */}
-      <Dialog open={showMakeLiveDialog} onOpenChange={setShowMakeLiveDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Make Campaign Live</DialogTitle>
-            <DialogDescription>
-              This will make the campaign live and accepting pledges.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Are you sure you want to make this campaign live? The campaign will be published and start accepting pledges immediately.
-            </p>
-            <div className="flex items-center gap-2 mt-4">
-              <Checkbox
-                id="sendEmailMakeLive"
-                checked={sendEmail}
-                onCheckedChange={(checked) => setSendEmail(checked === true)}
-              />
-              <Label htmlFor="sendEmailMakeLive" className="text-sm">
-                Send notification email to creator
-              </Label>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMakeLiveDialog(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={submitMakeLive}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Making Live...
-                </>
-              ) : (
-                <>
-                  <Zap className="mr-2 h-4 w-4" />
-                  Make Live
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MakeLiveDialog
+        open={showMakeLiveDialog}
+        onOpenChange={setShowMakeLiveDialog}
+        sendEmail={sendEmail}
+        onSendEmailChange={setSendEmail}
+        isSubmitting={isSubmitting}
+        onSubmit={submitMakeLive}
+      />
     </div>
   );
 }
