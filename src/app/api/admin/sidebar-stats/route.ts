@@ -28,10 +28,10 @@ export async function GET() {
       // Total projects count
       db.project.count(),
 
-      // Pending moderation (projects awaiting review - using SUBMITTED status)
-      db.project.count({
+      // Pending moderation (reports needing action)
+      db.report.count({
         where: {
-          status: "SUBMITTED",
+          status: { in: ["PENDING", "UNDER_REVIEW", "ESCALATED"] },
         },
       }),
 
