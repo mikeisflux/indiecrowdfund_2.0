@@ -60,13 +60,21 @@ else
     exit 1
 fi
 
-# Step 5: Backup current build
+# Step 5: Backup current build (keep last 2 backups)
 echo ""
 echo "💾 Step 5: Backing up current build..."
-rm -rf .next-backup
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 if [ -d ".next" ]; then
-    cp -r .next .next-backup
-    echo -e "${GREEN}   Backup saved to .next-backup${NC}"
+    cp -r .next ".next-backup-${TIMESTAMP}"
+    echo -e "${GREEN}   Backup saved to .next-backup-${TIMESTAMP}${NC}"
+
+    # Keep only the 2 most recent backups, delete older ones
+    BACKUP_COUNT=$(ls -dt .next-backup-* 2>/dev/null | wc -l)
+    if [ "$BACKUP_COUNT" -gt 2 ]; then
+        echo "   Cleaning old backups (keeping last 2)..."
+        ls -dt .next-backup-* | tail -n +3 | xargs rm -rf
+        echo -e "${GREEN}   Old backups removed${NC}"
+    fi
 else
     echo -e "${YELLOW}   No existing build to backup${NC}"
 fi
@@ -87,11 +95,12 @@ else
     echo "=================================="
     echo ""
 
-    # Restore backup
-    if [ -d ".next-backup" ]; then
-        echo "🔄 Restoring backup..."
+    # Restore most recent backup
+    LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
+    if [ -n "$LATEST_BACKUP" ]; then
+        echo "🔄 Restoring backup from ${LATEST_BACKUP}..."
         rm -rf .next
-        mv .next-backup .next
+        cp -r "$LATEST_BACKUP" .next
         echo -e "${GREEN}   Backup restored. Site is still running.${NC}"
     fi
     exit 1
@@ -105,11 +114,12 @@ if pm2 restart all --update-env 2>&1; then
 else
     echo -e "${RED}❌ ERROR: PM2 restart failed!${NC}"
     echo "   Attempting rollback..."
-    if [ -d ".next-backup" ]; then
+    LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
+    if [ -n "$LATEST_BACKUP" ]; then
         rm -rf .next
-        mv .next-backup .next
+        cp -r "$LATEST_BACKUP" .next
         pm2 restart all --update-env
-        echo -e "${YELLOW}   Rolled back to previous build${NC}"
+        echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
     fi
     exit 1
 fi
@@ -120,11 +130,9 @@ echo "🔍 Step 8: Verifying deployment..."
 sleep 3
 if pm2 status | grep -q "online"; then
     echo -e "${GREEN}   App is running!${NC}"
-    rm -rf .next-backup
 else
     echo -e "${RED}❌ App may not be running correctly!${NC}"
     echo "   Check: pm2 logs"
-    echo "   Keeping backup for potential rollback"
     exit 1
 fi
 
@@ -132,11 +140,19 @@ fi
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 
+# List available backups
+BACKUP_LIST=$(ls -dt .next-backup-* 2>/dev/null | head -2)
+
 echo ""
 echo "=================================="
 echo -e "${GREEN}✅ Deployment complete!${NC}"
 echo "   Duration: ${DURATION}s"
 echo ""
+echo "Available backups:"
+for backup in $BACKUP_LIST; do
+    echo "   - $backup"
+done
+echo ""
 echo "Commands:"
 echo "   View logs:  pm2 logs"
-echo "   Rollback:   mv .next-backup .next && pm2 restart all"
+echo "   Rollback:   cp -r .next-backup-TIMESTAMP .next && pm2 restart all"
