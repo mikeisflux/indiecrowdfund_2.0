@@ -216,8 +216,8 @@ export default function ProjectPage() {
     // Poll immediately on mount
     pollStats();
 
-    // Poll every 10 seconds for more responsive updates
-    const intervalId = setInterval(pollStats, 10000);
+    // Poll every 5 seconds for near real-time updates
+    const intervalId = setInterval(pollStats, 5000);
 
     // Also poll immediately when page becomes visible (user returns to tab)
     const handleVisibilityChange = () => {
