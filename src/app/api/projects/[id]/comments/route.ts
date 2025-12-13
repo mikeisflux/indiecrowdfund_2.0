@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { validateSession } from "@/lib/auth/session";
 
-// GET /api/projects/[projectId]/comments - Fetch comments for a project
+// GET /api/projects/[id]/comments - Fetch comments for a project
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { projectId } = await params;
+    const { id: projectId } = await params;
 
     const comments = await db.comment.findMany({
       where: { projectId },
@@ -64,10 +64,10 @@ export async function GET(
   }
 }
 
-// POST /api/projects/[projectId]/comments - Create a new comment (backers only)
+// POST /api/projects/[id]/comments - Create a new comment (backers only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await validateSession();
@@ -78,7 +78,7 @@ export async function POST(
       );
     }
 
-    const { projectId } = await params;
+    const { id: projectId } = await params;
     const { content } = await request.json();
 
     if (!content || content.trim().length === 0) {
