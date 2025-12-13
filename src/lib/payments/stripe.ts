@@ -793,14 +793,22 @@ async function schedulePaymentRetry(pledgeId: string, failureReason: string) {
 
 /**
  * Process all pending pledges when a campaign reaches its goal
+ * Only processes confirmed pledges or old pledges (for backwards compatibility)
  */
 export async function processPendingPledgesForProject(projectId: string) {
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+  // Find confirmed pending pledges OR old pledges (backwards compatibility)
   const pendingPledges = await db.pledge.findMany({
     where: {
       projectId,
       status: "PENDING",
       chargedImmediately: false,
       stripePaymentMethodId: { not: null },
+      OR: [
+        { confirmationEmailSent: true },
+        { createdAt: { lt: fiveMinutesAgo } }, // Old pledges (before confirmationEmailSent feature)
+      ],
     },
   });
 

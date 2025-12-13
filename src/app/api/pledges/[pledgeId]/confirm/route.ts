@@ -89,6 +89,13 @@ export async function POST(
       });
     }
 
+    // Mark as confirmed FIRST (before updating stats)
+    // This ensures this pledge is included when checking for pending pledges to process
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: { confirmationEmailSent: true },
+    });
+
     // Update project stats (only for SetupIntent pledges - PaymentIntent pledges update stats in webhook)
     let updatedProject = pledge.project;
     if (!pledge.chargedImmediately) {
@@ -148,13 +155,8 @@ export async function POST(
       }
     }
 
-    // Mark as confirmed and send email
-    await db.pledge.update({
-      where: { id: pledgeId },
-      data: { confirmationEmailSent: true },
-    });
-
     // Send confirmation email if user has email
+    // (pledge was already marked as confirmed above)
     let emailSent = false;
     if (pledge.user.email) {
       const emailResult = await sendPledgeConfirmationEmail(
