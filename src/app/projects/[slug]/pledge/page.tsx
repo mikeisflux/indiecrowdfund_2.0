@@ -1006,6 +1006,8 @@ export default function PledgePage() {
                                       src={reward.imageUrl}
                                       alt={reward.title}
                                       fill
+                                      sizes="(max-width: 768px) 100vw, 176px"
+                                      priority
                                       className="object-cover"
                                     />
                                   ) : (
@@ -1131,6 +1133,8 @@ export default function PledgePage() {
                                       src={addon.imageUrl}
                                       alt={addon.title}
                                       fill
+                                      sizes="(max-width: 768px) 100vw, 176px"
+                                      priority
                                       className="object-cover"
                                     />
                                   ) : (

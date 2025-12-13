@@ -521,7 +521,7 @@ export default function ProjectsPage() {
                       <div key={project.id} className="flex items-center gap-4 rounded-lg border border-red-200 bg-red-50/50 p-4 dark:bg-red-950/10">
                         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 relative overflow-hidden">
                           {project.imageUrl ? (
-                            <Image src={project.imageUrl} alt="" fill className="object-cover" />
+                            <Image src={project.imageUrl} alt="" fill sizes="48px" className="object-cover" />
                           ) : (
                             <FolderKanban className="h-6 w-6 text-zinc-400" />
                           )}

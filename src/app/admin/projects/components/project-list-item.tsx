@@ -36,7 +36,7 @@ export function ProjectListItem({
           {/* Project Image */}
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
             {project.imageUrl ? (
-              <Image src={project.imageUrl} alt="" fill className="object-cover" />
+              <Image src={project.imageUrl} alt="" fill sizes="48px" className="object-cover" />
             ) : (
               <FolderKanban className="h-6 w-6 text-zinc-400" />
             )}

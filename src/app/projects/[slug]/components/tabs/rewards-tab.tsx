@@ -144,6 +144,8 @@ export function RewardsTab({
                           src={reward.imageUrl}
                           alt={reward.title}
                           fill
+                          sizes="(max-width: 1024px) 100vw, 50vw"
+                          priority
                           className="object-cover"
                         />
                       ) : (
