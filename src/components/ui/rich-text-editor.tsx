@@ -222,14 +222,6 @@ export function RichTextEditor({
     }
   };
 
-  const addImageFromUrl = useCallback(() => {
-    if (!editor) return;
-    const url = window.prompt("Enter image URL:");
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
-  }, [editor]);
-
   if (!editor) {
     return (
       <div className={cn("border rounded-md min-h-[400px] animate-pulse bg-muted", className)} />
