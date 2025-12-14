@@ -634,27 +634,6 @@ export default function PledgePage() {
     });
   };
 
-  const setAddonQuantity = (addonId: string, quantity: number) => {
-    setSelectedAddons((prev) => {
-      if (quantity <= 0) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { [addonId]: _removed, ...rest } = prev;
-        return rest;
-      }
-
-      // Check limited quantity if applicable
-      const addon = addons.find(a => a.id === addonId);
-      if (addon?.limitedQuantity !== null && addon?.limitedQuantity !== undefined) {
-        const availableQty = addon.limitedQuantity - addon.quantityClaimed;
-        if (quantity > availableQty) {
-          return { ...prev, [addonId]: availableQty };
-        }
-      }
-
-      return { ...prev, [addonId]: quantity };
-    });
-  };
-
   const handleSelectReward = (reward: RewardData) => {
     setSelectedReward(reward);
     setPledgeWithoutReward(false);
