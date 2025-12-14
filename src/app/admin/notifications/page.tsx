@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface Notification {
   id: string;
@@ -33,10 +34,19 @@ interface Notification {
   actionUrl?: string;
 }
 
+interface NotificationStats {
+  total: number;
+  unread: number;
+  today: number;
+  thisWeek: number;
+}
+
 export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [stats, setStats] = useState<NotificationStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Notification preferences
   const [preferences, setPreferences] = useState({
@@ -48,81 +58,38 @@ export default function NotificationsPage() {
     soundEnabled: true,
   });
 
-  // Load notifications (would come from API in production)
-  useEffect(() => {
-    const loadNotifications = async () => {
-      setIsLoading(true);
-      // Simulating API call - in production this would fetch from /api/admin/notifications
-      await new Promise(resolve => setTimeout(resolve, 500));
+  // Load notifications from API
+  const loadNotifications = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/admin/notifications", {
+        headers: getCSRFHeaders(),
+      });
 
-      setNotifications([
-        {
-          id: "1",
-          type: "project",
-          title: "New Project Submitted",
-          message: "Project 'Indie Game Dev Tools' has been submitted for review",
-          read: false,
-          createdAt: new Date(Date.now() - 1000 * 60 * 15), // 15 min ago
-          actionUrl: "/admin/projects",
-        },
-        {
-          id: "2",
-          type: "user",
-          title: "New User Registration",
-          message: "Sarah Johnson has created a new account",
-          read: false,
-          createdAt: new Date(Date.now() - 1000 * 60 * 45), // 45 min ago
-          actionUrl: "/admin/users",
-        },
-        {
-          id: "3",
-          type: "payment",
-          title: "Large Pledge Received",
-          message: "$500 pledge received for 'Creative Writing Workshop'",
-          read: true,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        },
-        {
-          id: "4",
-          type: "alert",
-          title: "High Fraud Risk Detected",
-          message: "Project 'Quick Profits LLC' flagged by AI moderation",
-          read: false,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-          actionUrl: "/admin/moderation",
-        },
-        {
-          id: "5",
-          type: "project",
-          title: "Project Funded",
-          message: "'Artisan Coffee Roaster' reached its funding goal",
-          read: true,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-        },
-        {
-          id: "6",
-          type: "message",
-          title: "Support Request",
-          message: "New support ticket from creator: Payment setup help",
-          read: true,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8 hours ago
-        },
-        {
-          id: "7",
-          type: "user",
-          title: "Retailer Application",
-          message: "Comics & More Shop has applied for retailer access",
-          read: true,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-          actionUrl: "/admin/users",
-        },
-      ]);
+      if (!response.ok) {
+        throw new Error("Failed to fetch notifications");
+      }
 
+      const data = await response.json();
+
+      // Convert date strings to Date objects
+      const notificationsWithDates = data.notifications.map((n: Notification & { createdAt: string }) => ({
+        ...n,
+        createdAt: new Date(n.createdAt),
+      }));
+
+      setNotifications(notificationsWithDates);
+      setStats(data.stats);
+    } catch (error) {
+      console.error("Error loading notifications:", error);
+    } finally {
       setIsLoading(false);
-    };
-
-    loadNotifications();
+    }
   }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -132,18 +99,84 @@ export default function NotificationsPage() {
     return n.type === activeTab;
   });
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    // Optimistic update
     setNotifications(prev =>
       prev.map(n => (n.id === id ? { ...n, read: true } : n))
     );
+
+    try {
+      await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify({
+          action: "markRead",
+          notificationIds: [id],
+        }),
+      });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      // Revert on error
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, read: false } : n))
+      );
+    }
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    const previousNotifications = [...notifications];
+    // Optimistic update
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+    try {
+      await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify({
+          action: "markAllRead",
+        }),
+      });
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+      // Revert on error
+      setNotifications(previousNotifications);
+    }
   };
 
   const deleteNotification = (id: string) => {
+    // Local delete only (these are virtual notifications)
     setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const savePreferences = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify({
+          action: "updatePreferences",
+          preferences,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save preferences");
+      }
+    } catch (error) {
+      console.error("Error saving preferences:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -376,8 +409,15 @@ export default function NotificationsPage() {
                 </div>
               </div>
 
-              <Button className="w-full">
-                Save Preferences
+              <Button className="w-full" onClick={savePreferences} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Preferences"
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -392,24 +432,37 @@ export default function NotificationsPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-zinc-500">Today</span>
                   <Badge variant="secondary">
-                    {notifications.filter(n =>
-                      n.createdAt > new Date(Date.now() - 24 * 60 * 60 * 1000)
-                    ).length} notifications
+                    {stats?.today || 0} notifications
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-zinc-500">This week</span>
-                  <Badge variant="secondary">{notifications.length} notifications</Badge>
+                  <Badge variant="secondary">{stats?.thisWeek || 0} notifications</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-zinc-500">Unread</span>
-                  <Badge variant={unreadCount > 0 ? "default" : "secondary"}>
-                    {unreadCount}
+                  <Badge variant={(stats?.unread || 0) > 0 ? "default" : "secondary"}>
+                    {stats?.unread || 0}
                   </Badge>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Refresh Button */}
+          <Button
+            variant="outline"
+            className="mt-4 w-full"
+            onClick={loadNotifications}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            Refresh Notifications
+          </Button>
         </div>
       </div>
     </div>

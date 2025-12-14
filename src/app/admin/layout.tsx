@@ -330,10 +330,16 @@ export default function AdminLayout({
             </Link>
 
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-            </Button>
+            <Link href="/admin/notifications">
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {stats?.notifications && stats.notifications > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {stats.notifications > 99 ? "99+" : stats.notifications}
+                  </span>
+                )}
+              </Button>
+            </Link>
 
             {/* User menu */}
             <DropdownMenu>

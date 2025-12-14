@@ -4,6 +4,85 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// Calculate unread notifications for an admin
+async function calculateUnreadNotifications(adminId: string): Promise<number> {
+  try {
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    // Get read notification state
+    const setting = await db.adminSetting.findUnique({
+      where: { key: `admin_read_notifications_${adminId}` },
+    });
+
+    const readState = setting?.value as { readIds?: string[]; allReadBefore?: string } | null;
+    const readIds = new Set(readState?.readIds || []);
+    const allReadBefore = readState?.allReadBefore ? new Date(readState.allReadBefore) : null;
+
+    // Count unread events from various sources
+    const [
+      pendingProjects,
+      recentUsers,
+      largePledges,
+      flaggedProjects,
+      bugReports,
+    ] = await Promise.all([
+      // Pending projects
+      db.project.count({
+        where: {
+          status: "PENDING",
+          createdAt: { gte: oneWeekAgo },
+          ...(allReadBefore ? { createdAt: { gte: allReadBefore } } : {}),
+        },
+      }),
+
+      // New users (last week)
+      db.user.count({
+        where: {
+          createdAt: { gte: oneWeekAgo },
+          ...(allReadBefore ? { createdAt: { gte: allReadBefore } } : {}),
+        },
+      }),
+
+      // Large pledges ($100+)
+      db.pledge.count({
+        where: {
+          amount: { gte: 10000 },
+          status: "COMPLETED",
+          createdAt: { gte: oneWeekAgo },
+          ...(allReadBefore ? { createdAt: { gte: allReadBefore } } : {}),
+        },
+      }),
+
+      // Flagged projects
+      db.project.count({
+        where: {
+          aiModerationStatus: { in: ["FLAGGED", "PENDING"] },
+          ...(allReadBefore ? { updatedAt: { gte: allReadBefore } } : {}),
+        },
+      }),
+
+      // Open bug reports
+      db.bugReport.count({
+        where: {
+          status: { in: ["OPEN", "IN_PROGRESS"] },
+          createdAt: { gte: oneWeekAgo },
+          ...(allReadBefore ? { createdAt: { gte: allReadBefore } } : {}),
+        },
+      }),
+    ]);
+
+    // Total potential notifications
+    let total = pendingProjects + recentUsers + largePledges + flaggedProjects + bugReports;
+
+    // Subtract read ones (rough estimate - exact count would require generating all IDs)
+    total = Math.max(0, total - readIds.size);
+
+    return total;
+  } catch {
+    return 0;
+  }
+}
+
 export async function GET() {
   // Verify admin access
   const session = await validateSession();
@@ -42,9 +121,8 @@ export async function GET() {
         },
       }),
 
-      // Count of unseen/unread admin notifications (if you have a notification system)
-      // For now, we'll return 0 or you can add notification tracking
-      Promise.resolve(0),
+      // Count unread admin notifications (virtual notifications from system events)
+      calculateUnreadNotifications(session.user.id),
 
       // Total media files
       db.mediaFile.count(),
