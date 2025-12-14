@@ -98,7 +98,14 @@ export async function GET(request: Request) {
           profilesLastWeek,
           avgProfileScore: avgProfileScore._avg.profileScore?.toFixed(1) || "0",
         },
-        topProfiles: topProfiles.map((p) => ({
+        topProfiles: topProfiles.map((p: {
+          userId: string;
+          profileScore: number;
+          totalProjectsBacked: number;
+          totalProjectsViewed: number;
+          categoryInterests: unknown;
+          user: { id: string; name: string | null; email: string | null };
+        }) => ({
           userId: p.userId,
           userName: p.user.name || p.user.email?.split("@")[0],
           profileScore: p.profileScore,
@@ -316,7 +323,7 @@ export async function POST(request: Request) {
       }
 
       const results = await batchUpdateUserInterests(
-        staleProfiles.map((p) => p.userId)
+        staleProfiles.map((p: { userId: string }) => p.userId)
       );
 
       return NextResponse.json({

@@ -113,9 +113,30 @@ export async function POST(
       },
     });
 
+    // Define types for AI results
+    type ModerationResult = {
+      isApproved: boolean;
+      riskLevel: "low" | "medium" | "high" | "critical";
+      flags: string[];
+      explanation: string;
+      suggestedAction: "approve" | "review" | "reject";
+      confidence: number;
+    };
+
+    type FraudAnalysisResult = {
+      fraudScore: number;
+      riskFactors: Array<{
+        factor: string;
+        severity: "low" | "medium" | "high";
+        description: string;
+      }>;
+      recommendation: "approve" | "manual_review" | "reject";
+      explanation: string;
+    };
+
     // Run AI moderation and fraud detection in parallel
-    let aiModerationResult = null;
-    let aiFraudResult = null;
+    let aiModerationResult: ModerationResult | null = null;
+    let aiFraudResult: FraudAnalysisResult | null = null;
 
     // Get platform settings for AI feature toggles
     const platformSettings = await db.platformSettings.findUnique({
@@ -160,7 +181,7 @@ export async function POST(
           aiPromises.push(Promise.resolve(null));
         }
 
-        [aiModerationResult, aiFraudResult] = await Promise.all(aiPromises) as [typeof aiModerationResult, typeof aiFraudResult];
+        [aiModerationResult, aiFraudResult] = await Promise.all(aiPromises) as [ModerationResult | null, FraudAnalysisResult | null];
 
         // Apply AI moderation flags
         if (aiModerationResult) {

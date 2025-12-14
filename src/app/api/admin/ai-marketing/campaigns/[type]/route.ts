@@ -139,7 +139,7 @@ export async function GET(
     const profiledUsers = interestProfiles.length;
     const avgProfileScore =
       interestProfiles.length > 0
-        ? interestProfiles.reduce((sum, p) => sum + p.profileScore, 0) / interestProfiles.length
+        ? interestProfiles.reduce((sum: number, p: { profileScore: number }) => sum + p.profileScore, 0) / interestProfiles.length
         : 0;
 
     // Aggregate category interests
@@ -285,7 +285,10 @@ export async function POST(
         },
       });
 
-      const profileMap = new Map(profiles.map(p => [p.userId, p]));
+      type ProfileEntry = { userId: string; categoryInterests: unknown; tagInterests: unknown; profileScore: number };
+      const profileMap = new Map<string, ProfileEntry>(
+        profiles.map((p: ProfileEntry) => [p.userId, p])
+      );
 
       // Calculate match scores for each recipient against the projects
       for (const userId of recipientUserIds) {
@@ -355,12 +358,12 @@ export async function POST(
     // Generate content variants if enabled
     let subjectVariants: string[] | null = null;
     if (aiSettings.contentOptimization) {
-      const variants = await generateVariantsIfEnabled(aiContent.subject, "subject", {
+      const variantsResult = await generateVariantsIfEnabled(aiContent.subject, "subject", {
         campaignType: type,
         targetAudience: type,
       });
-      if (variants) {
-        subjectVariants = variants;
+      if (variantsResult && variantsResult.variants) {
+        subjectVariants = variantsResult.variants.map((v) => v.content);
       }
     }
 

@@ -187,13 +187,13 @@ export async function POST(request: Request) {
     // Generate content variants for A/B testing if Content Optimization is enabled
     let subjectVariants: string[] | null = null;
     if (aiSettings.contentOptimization) {
-      const variants = await generateVariantsIfEnabled(
+      const variantsResult = await generateVariantsIfEnabled(
         aiContent.subject,
         "subject",
         { campaignType: targetAudience || "all", targetAudience: targetAudience || "all" }
       );
-      if (variants) {
-        subjectVariants = variants;
+      if (variantsResult && variantsResult.variants) {
+        subjectVariants = variantsResult.variants.map((v) => v.content);
       }
     }
 

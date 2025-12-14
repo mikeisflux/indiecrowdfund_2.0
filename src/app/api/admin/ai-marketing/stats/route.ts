@@ -217,7 +217,7 @@ export async function GET() {
           ...(p.subcategory ? [p.subcategory] : []),
         ];
         // Remove duplicates
-        const uniqueTags = [...new Set(allTags)];
+        const uniqueTags = Array.from(new Set(allTags));
         return {
           id: p.id,
           name: p.title,

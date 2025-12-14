@@ -168,7 +168,7 @@ export async function calculateUserInterests(userId: string): Promise<UserIntere
     .map((b) => b.searchQuery!.toLowerCase())
     .reduce((acc: string[], query) => {
       // Extract keywords (simple tokenization)
-      const words = query.split(/\s+/).filter((w) => w.length > 2);
+      const words = query.split(/\s+/).filter((w: string) => w.length > 2);
       return [...acc, ...words];
     }, []);
 
@@ -493,7 +493,7 @@ export async function findMatchingUsersForProject(
   });
 
   // Calculate match scores
-  const scoredUsers = profiles.map((profile) => ({
+  const scoredUsers = profiles.map((profile: { userId: string; categoryInterests: unknown; tagInterests: unknown }) => ({
     userId: profile.userId,
     matchScore: calculateProjectMatchScore(
       {
@@ -510,7 +510,7 @@ export async function findMatchingUsersForProject(
 
   // Filter and sort
   return scoredUsers
-    .filter((u) => u.matchScore >= minMatchScore)
-    .sort((a, b) => b.matchScore - a.matchScore)
+    .filter((u: { userId: string; matchScore: number }) => u.matchScore >= minMatchScore)
+    .sort((a: { matchScore: number }, b: { matchScore: number }) => b.matchScore - a.matchScore)
     .slice(0, limit);
 }

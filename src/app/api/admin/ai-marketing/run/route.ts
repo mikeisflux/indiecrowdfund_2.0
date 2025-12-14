@@ -277,8 +277,8 @@ export async function POST(request: Request) {
         });
 
         const userIds = [
-          ...usersNeedingProfiles.map(u => u.id),
-          ...usersWithStaleProfiles.map(u => u.userId),
+          ...usersNeedingProfiles.map((u: { id: string }) => u.id),
+          ...usersWithStaleProfiles.map((u: { userId: string }) => u.userId),
         ];
 
         if (userIds.length === 0) {
