@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
@@ -78,6 +79,34 @@ export async function POST(req: NextRequest) {
 
     // Return the API URL for serving the image
     const url = `/api/uploads/projects/${effectiveProjectId}/${uploadType}/${filename}`;
+
+    // Determine the folder name for the media library
+    // Use project-specific folder or the upload type
+    const folderName = projectId ? `projects` : uploadType;
+
+    // Create MediaFile record to track in the admin media library
+    try {
+      await db.mediaFile.create({
+        data: {
+          uploaderId: session.user.id,
+          filename,
+          originalName: file.name,
+          mimeType: file.type,
+          size: file.size,
+          url,
+          thumbnailUrl: url, // Use same URL for images
+          width: null,
+          height: null,
+          duration: null,
+          folder: folderName,
+          tags: projectId ? [`project:${projectId}`] : [],
+          altText: null,
+        },
+      });
+    } catch (dbError) {
+      // Log but don't fail - the file was still uploaded successfully
+      console.error("Error creating MediaFile record:", dbError);
+    }
 
     return NextResponse.json({
       success: true,
