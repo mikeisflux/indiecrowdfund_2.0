@@ -5,7 +5,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import {
@@ -24,6 +24,8 @@ import {
   Code,
   Minus,
   Type,
+  Upload,
+  Loader2,
 } from "lucide-react";
 
 interface RichTextEditorProps {
@@ -31,6 +33,7 @@ interface RichTextEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  projectId?: string;
 }
 
 export function RichTextEditor({
@@ -38,7 +41,42 @@ export function RichTextEditor({
   onChange,
   placeholder = "Type '/' for commands or just start writing...",
   className,
+  projectId,
 }: RichTextEditorProps) {
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "story");
+      if (projectId) {
+        formData.append("projectId", projectId);
+      }
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to upload image");
+      }
+
+      const data = await response.json();
+      return data.url || null;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert(error instanceof Error ? error.message : "Failed to upload image");
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -52,9 +90,10 @@ export function RichTextEditor({
       }),
       Image.configure({
         HTMLAttributes: {
-          class: "max-w-full h-auto rounded-lg my-4 block",
+          class: "max-w-full h-auto rounded-lg my-4 block mx-auto",
+          style: "max-width: 800px;",
         },
-        allowBase64: false, // Don't allow base64 images - they bloat localStorage
+        allowBase64: true, // Allow base64 temporarily during upload
       }),
       Link.configure({
         openOnClick: false,
@@ -79,19 +118,30 @@ export function RichTextEditor({
         class:
           "prose prose-sm sm:prose lg:prose-lg dark:prose-invert max-w-none min-h-[400px] focus:outline-none px-4 py-3",
       },
-      // Handle paste - preserve formatting but convert base64 images to placeholder
+      // Handle paste - upload images and preserve formatting
       handlePaste: (view, event) => {
         const clipboardData = event.clipboardData;
         if (!clipboardData) return false;
 
-        // Check for direct image paste (screenshot, etc) - skip these
+        // Check for direct image paste (screenshot, etc)
         const items = clipboardData.items;
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
-          if (item.type.startsWith("image/") && !clipboardData.getData("text/html")) {
-            // Direct image paste without HTML - alert user
+          if (item.type.startsWith("image/")) {
             event.preventDefault();
-            alert("Please use the image button to add images via URL, or upload images through the media section.");
+            const file = item.getAsFile();
+            if (file) {
+              // Handle async upload without awaiting
+              uploadImage(file).then((url) => {
+                if (url && view.state) {
+                  view.dispatch(
+                    view.state.tr.replaceSelectionWith(
+                      view.state.schema.nodes.image.create({ src: url })
+                    )
+                  );
+                }
+              });
+            }
             return true;
           }
         }
@@ -100,7 +150,7 @@ export function RichTextEditor({
         // TipTap will automatically filter out problematic content
         return false;
       },
-      // Handle drop - don't allow direct image drops
+      // Handle drop - upload dropped images
       handleDrop: (view, event) => {
         const files = event.dataTransfer?.files;
         if (files && files.length > 0) {
@@ -108,7 +158,21 @@ export function RichTextEditor({
             const file = files[i];
             if (file.type.startsWith("image/")) {
               event.preventDefault();
-              alert("Please use the image button to add images via URL, or upload images through the media section.");
+              const coordinates = view.posAtCoords({
+                left: event.clientX,
+                top: event.clientY,
+              });
+              // Handle async upload without awaiting
+              uploadImage(file).then((url) => {
+                if (url && view.state && coordinates) {
+                  view.dispatch(
+                    view.state.tr.insert(
+                      coordinates.pos,
+                      view.state.schema.nodes.image.create({ src: url })
+                    )
+                  );
+                }
+              });
               return true;
             }
           }
@@ -141,8 +205,26 @@ export function RichTextEditor({
   }, [editor]);
 
   const addImage = useCallback(() => {
+    // Open file picker for image selection
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && editor) {
+      const url = await uploadImage(file);
+      if (url) {
+        editor.chain().focus().setImage({ src: url }).run();
+      }
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const addImageFromUrl = useCallback(() => {
     if (!editor) return;
-    const url = window.prompt("Enter image URL (or paste/drop an image directly):");
+    const url = window.prompt("Enter image URL:");
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
     }
@@ -156,6 +238,14 @@ export function RichTextEditor({
 
   return (
     <div className={cn("border rounded-md overflow-hidden bg-background", className)}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+
       {/* Floating toolbar on selection */}
       {editor && (
         <BubbleMenu
@@ -338,9 +428,14 @@ export function RichTextEditor({
             variant="ghost"
             size="sm"
             onClick={addImage}
+            disabled={isUploading}
             title="Add Image"
           >
-            <ImageIcon className="h-4 w-4" />
+            {isUploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImageIcon className="h-4 w-4" />
+            )}
           </Button>
         </div>
 
@@ -373,12 +468,23 @@ export function RichTextEditor({
       {/* Editor Content */}
       <div className="relative">
         <EditorContent editor={editor} />
+        {isUploading && (
+          <div className="absolute inset-0 bg-white/80 dark:bg-zinc-900/80 flex items-center justify-center">
+            <div className="flex items-center gap-2 text-primary">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Uploading image...</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer hint */}
       <div className="px-4 py-2 border-t bg-muted/20 text-xs text-muted-foreground flex items-center justify-between">
-        <span>Paste content from any website - formatting and links are preserved</span>
-        <span>Use image button to add images via URL</span>
+        <span className="flex items-center gap-1">
+          <Upload className="h-3 w-3" />
+          Drag & drop or paste images directly into the editor
+        </span>
+        <span>Paste content from any website - formatting preserved</span>
       </div>
     </div>
   );
