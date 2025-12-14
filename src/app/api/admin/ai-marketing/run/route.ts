@@ -8,6 +8,7 @@ import {
 } from "@/lib/ai/marketing-services";
 import { autoTagProject } from "@/lib/ai/openai";
 import { getAISettings, clearSettingsCache } from "@/lib/ai/settings-integration";
+import { batchUpdateUserInterests } from "@/lib/ai/user-interests";
 
 export const dynamic = "force-dynamic";
 
@@ -241,6 +242,73 @@ export async function POST(request: Request) {
           success: true,
           message: `Tagged ${successful} of ${projects.length} projects`,
           results,
+        };
+        break;
+      }
+
+      // ==========================================
+      // RUN USER INTEREST PROFILING
+      // ==========================================
+      case "runUserProfiling": {
+        const limit = params?.limit || 50;
+
+        // Get users with behavior data or pledges who need profiling
+        const usersNeedingProfiles = await db.user.findMany({
+          where: {
+            OR: [
+              { behaviors: { some: {} } },
+              { pledges: { some: { status: "COMPLETED" } } },
+            ],
+            interestProfile: null,
+          },
+          take: limit,
+          select: { id: true },
+        });
+
+        // Also get users with stale profiles (older than 7 days)
+        const usersWithStaleProfiles = await db.userInterestProfile.findMany({
+          where: {
+            lastCalculatedAt: {
+              lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            },
+          },
+          take: Math.max(0, limit - usersNeedingProfiles.length),
+          select: { userId: true },
+        });
+
+        const userIds = [
+          ...usersNeedingProfiles.map(u => u.id),
+          ...usersWithStaleProfiles.map(u => u.userId),
+        ];
+
+        if (userIds.length === 0) {
+          result = {
+            success: true,
+            message: "All user profiles are up to date",
+            processed: 0,
+          };
+          break;
+        }
+
+        const updateResults = await batchUpdateUserInterests(userIds);
+
+        // Get updated stats
+        const [totalProfiles, avgScore] = await Promise.all([
+          db.userInterestProfile.count(),
+          db.userInterestProfile.aggregate({
+            _avg: { profileScore: true },
+          }),
+        ]);
+
+        result = {
+          success: true,
+          message: `Updated ${updateResults.processed} user interest profiles`,
+          processed: updateResults.processed,
+          failed: updateResults.failed,
+          stats: {
+            totalProfiles,
+            avgProfileScore: avgScore._avg.profileScore?.toFixed(1) || "0",
+          },
         };
         break;
       }

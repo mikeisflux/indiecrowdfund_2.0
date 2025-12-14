@@ -8,8 +8,10 @@ import {
   scheduleWithOptimalTimes,
   canSendEmail,
 } from "@/lib/ai/settings-integration";
-// User interest matching functions available for future use:
-// import { findMatchingUsersForProject, batchUpdateUserInterests } from "@/lib/ai/user-interests";
+import {
+  findMatchingUsersForProject,
+  calculateProjectMatchScore,
+} from "@/lib/ai/user-interests";
 
 export const dynamic = "force-dynamic";
 
@@ -257,12 +259,66 @@ export async function POST(
         title: true,
         description: true,
         category: true,
+        subcategory: true,
+        tags: true,
         goalAmount: true,
       },
     });
 
     if (projects.length === 0) {
       return NextResponse.json({ error: "No projects available for campaign" }, { status: 400 });
+    }
+
+    // Use interest matching to prioritize recipients
+    let matchedRecipients: Array<{ userId: string; matchScore: number }> = [];
+    let unmatchedRecipients: string[] = [];
+
+    if (aiSettings.emailPersonalization) {
+      // Get user interest profiles for recipients
+      const profiles = await db.userInterestProfile.findMany({
+        where: { userId: { in: recipientUserIds } },
+        select: {
+          userId: true,
+          categoryInterests: true,
+          tagInterests: true,
+          profileScore: true,
+        },
+      });
+
+      const profileMap = new Map(profiles.map(p => [p.userId, p]));
+
+      // Calculate match scores for each recipient against the projects
+      for (const userId of recipientUserIds) {
+        const profile = profileMap.get(userId);
+        if (profile && profile.profileScore >= 20) {
+          // Calculate average match score across all projects
+          let totalScore = 0;
+          for (const project of projects) {
+            const score = calculateProjectMatchScore(
+              {
+                categoryInterests: profile.categoryInterests as Record<string, number>,
+                tagInterests: profile.tagInterests as Record<string, number>,
+              },
+              {
+                category: project.category,
+                subcategory: project.subcategory,
+                tags: project.tags as string[],
+              }
+            );
+            totalScore += score;
+          }
+          const avgScore = totalScore / projects.length;
+          matchedRecipients.push({ userId, matchScore: avgScore });
+        } else {
+          unmatchedRecipients.push(userId);
+        }
+      }
+
+      // Sort matched recipients by score (highest first)
+      matchedRecipients.sort((a, b) => b.matchScore - a.matchScore);
+    } else {
+      // No personalization - all recipients are unmatched
+      unmatchedRecipients = recipientUserIds;
     }
 
     // Generate AI content
@@ -311,17 +367,42 @@ export async function POST(
     // Get optimal send times if enabled
     let optimalSchedule: Map<string, { hour: number; day: number }> | null = null;
     if (aiSettings.sendTimeOptimization && !scheduleFor) {
-      optimalSchedule = await scheduleWithOptimalTimes(recipientUserIds.slice(0, 100));
+      // Prioritize matched recipients for send time optimization
+      const sampleIds = matchedRecipients.length > 0
+        ? matchedRecipients.slice(0, 100).map(r => r.userId)
+        : recipientUserIds.slice(0, 100);
+      optimalSchedule = await scheduleWithOptimalTimes(sampleIds);
     }
 
+    // Build ordered recipient list (matched first, then unmatched)
+    const orderedRecipientIds = [
+      ...matchedRecipients.map(r => r.userId),
+      ...unmatchedRecipients,
+    ];
+
     // Filter recipients based on email limits
-    const eligibleRecipients: string[] = [];
-    for (const userId of recipientUserIds) {
+    const eligibleRecipients: Array<{ userId: string; matchScore?: number }> = [];
+    let skippedDueToLimits = 0;
+
+    for (const userId of orderedRecipientIds) {
       const canSend = await canSendEmail(userId);
       if (canSend.canSend) {
-        eligibleRecipients.push(userId);
+        const matched = matchedRecipients.find(r => r.userId === userId);
+        eligibleRecipients.push({
+          userId,
+          matchScore: matched?.matchScore,
+        });
+      } else {
+        skippedDueToLimits++;
       }
     }
+
+    // Calculate match statistics
+    const matchedEligible = eligibleRecipients.filter(r => r.matchScore !== undefined);
+    const highMatchCount = matchedEligible.filter(r => (r.matchScore || 0) >= 50).length;
+    const avgMatchScore = matchedEligible.length > 0
+      ? matchedEligible.reduce((sum, r) => sum + (r.matchScore || 0), 0) / matchedEligible.length
+      : 0;
 
     // Create the campaign
     const campaign = await db.emailCampaign.create({
@@ -342,6 +423,12 @@ export async function POST(
           subjectVariants: subjectVariants || undefined,
           hasOptimalSchedule: !!optimalSchedule,
           campaignType: type,
+          interestMatching: {
+            enabled: aiSettings.emailPersonalization,
+            matchedRecipients: matchedEligible.length,
+            highMatchRecipients: highMatchCount,
+            avgMatchScore: Math.round(avgMatchScore),
+          },
         },
       },
     });
@@ -356,7 +443,14 @@ export async function POST(
         recipientCount: campaign.recipientCount,
         eligibleRecipients: eligibleRecipients.length,
         totalRecipients: recipientUserIds.length,
-        skippedDueToLimits: recipientUserIds.length - eligibleRecipients.length,
+        skippedDueToLimits,
+      },
+      interestMatching: {
+        enabled: aiSettings.emailPersonalization,
+        matchedRecipients: matchedEligible.length,
+        unmatchedRecipients: eligibleRecipients.length - matchedEligible.length,
+        highMatchRecipients: highMatchCount,
+        avgMatchScore: Math.round(avgMatchScore),
       },
       aiContent,
       subjectVariants,
