@@ -1,6 +1,5 @@
 "use client";
 
-import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useCallback, useRef } from "react";
 import Image from "next/image";
