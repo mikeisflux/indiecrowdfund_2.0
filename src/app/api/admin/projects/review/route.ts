@@ -214,13 +214,14 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status") || "SUBMITTED";
     const category = searchParams.get("category");
+    const prelaunchOnly = searchParams.get("prelaunch") === "true";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
     const skip = (page - 1) * limit;
 
-    const where: Record<string, unknown> = {
-      status,
-    };
+    const where: Record<string, unknown> = prelaunchOnly
+      ? { prelaunchActive: true }
+      : { status };
 
     if (category && category !== "all") {
       where.category = category;
@@ -242,10 +243,12 @@ export async function GET(req: NextRequest) {
           durationType: true,
           durationDays: true,
           endDate: true,
+          launchDate: true,
           videoUrl: true,
           imageUrl: true,
           risks: true,
           status: true,
+          prelaunchActive: true,
           createdAt: true,
           creator: {
             select: {
@@ -267,6 +270,7 @@ export async function GET(req: NextRequest) {
           _count: {
             select: {
               pledges: true,
+              followers: true,
             },
           },
         },

@@ -22,15 +22,18 @@ export interface Project {
   durationType: "FIXED_DAYS" | "END_DATE" | null;
   durationDays: number | null;
   endDate: string | null;
+  launchDate: string | null;
   videoUrl: string | null;
   imageUrl: string | null;
   risks: string | null;
   status: string;
+  prelaunchActive: boolean;
   createdAt: string;
   creator: Creator;
   rewards: { id: string }[];
   _count: {
     pledges: number;
+    followers?: number;
   };
 }
 
@@ -65,6 +68,7 @@ export interface Stats {
   approvedToday: number;
   rejectedToday: number;
   activeCampaigns?: number;
+  prelaunchActive?: number;
 }
 
 export const rejectionReasons = [

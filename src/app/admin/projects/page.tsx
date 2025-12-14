@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Loader2,
   Zap,
+  Sparkles,
 } from "lucide-react";
 import {
   Project,
@@ -49,8 +50,9 @@ export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState("pending");
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjects, setActiveProjects] = useState<Project[]>([]);
+  const [prelaunchProjects, setPrelaunchProjects] = useState<Project[]>([]);
   const [reviewHistory, setReviewHistory] = useState<ReviewHistory[]>([]);
-  const [stats, setStats] = useState<Stats>({ pending: 0, approvedToday: 0, rejectedToday: 0, activeCampaigns: 0 });
+  const [stats, setStats] = useState<Stats>({ pending: 0, approvedToday: 0, rejectedToday: 0, activeCampaigns: 0, prelaunchActive: 0 });
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -123,6 +125,26 @@ export default function ProjectsPage() {
     }
   }, [categoryFilter]);
 
+  const fetchPrelaunchProjects = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({
+        prelaunch: "true",
+        ...(categoryFilter !== "all" && { category: categoryFilter }),
+      });
+      const response = await fetch(`/api/admin/projects/review?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPrelaunchProjects(data.projects || []);
+        setStats((prev) => ({
+          ...prev,
+          prelaunchActive: data.projects?.length || 0,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching prelaunch projects:", error);
+    }
+  }, [categoryFilter]);
+
   const fetchReviewHistory = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/projects/history?limit=50");
@@ -138,8 +160,9 @@ export default function ProjectsPage() {
   useEffect(() => {
     fetchProjects();
     fetchActiveProjects();
+    fetchPrelaunchProjects();
     fetchReviewHistory();
-  }, [fetchProjects, fetchActiveProjects, fetchReviewHistory]);
+  }, [fetchProjects, fetchActiveProjects, fetchPrelaunchProjects, fetchReviewHistory]);
 
   useEffect(() => {
     setSelectedProject(null);
@@ -147,10 +170,12 @@ export default function ProjectsPage() {
       fetchActiveProjects();
     } else if (activeTab === "pending") {
       fetchProjects();
+    } else if (activeTab === "prelaunch") {
+      fetchPrelaunchProjects();
     } else if (activeTab === "history") {
       fetchReviewHistory();
     }
-  }, [activeTab, fetchActiveProjects, fetchProjects, fetchReviewHistory]);
+  }, [activeTab, fetchActiveProjects, fetchProjects, fetchPrelaunchProjects, fetchReviewHistory]);
 
   const handleApprove = () => {
     setReviewAction("approve");
@@ -309,6 +334,16 @@ export default function ProjectsPage() {
     );
   });
 
+  const filteredPrelaunchProjects = prelaunchProjects.filter((project) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      project.title.toLowerCase().includes(query) ||
+      project.creator.name?.toLowerCase().includes(query) ||
+      project.creator.email.toLowerCase().includes(query)
+    );
+  });
+
   const flaggedProjects = filteredProjects.filter((p) => getFlags(p).length > 0);
 
   if (isLoading) {
@@ -359,6 +394,13 @@ export default function ProjectsPage() {
             Active Campaigns
             {activeProjects.length > 0 && (
               <Badge variant="default" className="ml-2 bg-emerald-600">{activeProjects.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="prelaunch">
+            <Sparkles className="mr-2 h-4 w-4" />
+            Prelaunch
+            {prelaunchProjects.length > 0 && (
+              <Badge variant="default" className="ml-2 bg-amber-500">{prelaunchProjects.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="flagged">
@@ -497,6 +539,179 @@ export default function ProjectsPage() {
                 onMakeLive={handleMakeLive}
                 onDeactivate={handleDeactivate}
               />
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Prelaunch Tab */}
+        <TabsContent value="prelaunch" className="mt-6 space-y-4">
+          {/* Filters */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Input
+                placeholder="Search prelaunch projects..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Technology">Technology</SelectItem>
+                <SelectItem value="Film & Video">Film & Video</SelectItem>
+                <SelectItem value="Games">Games</SelectItem>
+                <SelectItem value="Design">Design</SelectItem>
+                <SelectItem value="Food & Drink">Food & Drink</SelectItem>
+                <SelectItem value="Music">Music</SelectItem>
+                <SelectItem value="Art">Art</SelectItem>
+                <SelectItem value="Comics">Comics</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {prelaunchProjects.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Sparkles className="h-12 w-12 text-amber-300 mb-4" />
+                <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No prelaunch pages</h3>
+                <p className="text-sm text-zinc-500 max-w-sm">
+                  There are no active prelaunch pages currently published.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-4">
+                {filteredPrelaunchProjects.map((project) => (
+                  <Card
+                    key={project.id}
+                    className={`cursor-pointer transition-all hover:shadow-md ${
+                      selectedProject?.id === project.id ? "ring-2 ring-amber-500 shadow-md" : ""
+                    }`}
+                    onClick={() => setSelectedProject(project)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 relative overflow-hidden flex-shrink-0">
+                          {project.imageUrl ? (
+                            <Image src={project.imageUrl} alt="" fill sizes="48px" className="object-cover" />
+                          ) : (
+                            <Sparkles className="h-6 w-6 text-amber-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold truncate">{project.title}</h4>
+                            <Badge variant="default" className="bg-amber-500 text-xs">Prelaunch</Badge>
+                            <Badge variant="outline" className="text-xs">{project.category}</Badge>
+                          </div>
+                          <p className="text-sm text-zinc-500 truncate">
+                            by {project.creator.name || project.creator.email}
+                          </p>
+                          <div className="flex items-center gap-4 mt-1 text-xs text-zinc-500">
+                            <span className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              {project._count.followers || 0} followers
+                            </span>
+                            {project.launchDate && (
+                              <span>
+                                Launch: {new Date(project.launchDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Prelaunch Detail Panel */}
+              <Card className="h-fit sticky top-4">
+                {selectedProject ? (
+                  <>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle>{selectedProject.title}</CardTitle>
+                          <CardDescription>
+                            by {selectedProject.creator.name || selectedProject.creator.email}
+                          </CardDescription>
+                        </div>
+                        <Badge variant="default" className="bg-amber-500">Prelaunch Active</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {selectedProject.imageUrl && (
+                        <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-100">
+                          <Image
+                            src={selectedProject.imageUrl}
+                            alt={selectedProject.title}
+                            fill
+                            sizes="(max-width: 768px) 100vw, 50vw"
+                            className="object-cover"
+                          />
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <p className="text-xs text-zinc-500">Category</p>
+                          <p className="font-medium">{selectedProject.category}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-zinc-500">Followers</p>
+                          <p className="font-medium">{selectedProject._count.followers || 0}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-zinc-500">Goal</p>
+                          <p className="font-medium">${selectedProject.goalAmount.toLocaleString()}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-zinc-500">Launch Date</p>
+                          <p className="font-medium">
+                            {selectedProject.launchDate
+                              ? new Date(selectedProject.launchDate).toLocaleDateString()
+                              : "Not set"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {selectedProject.subtitle && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-zinc-500">Subtitle</p>
+                          <p className="text-sm">{selectedProject.subtitle}</p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-4 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => window.open(`/projects/${selectedProject.slug}/prelaunch`, "_blank")}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Page
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </>
+                ) : (
+                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                    <Sparkles className="h-12 w-12 text-zinc-300 mb-4" />
+                    <h3 className="font-medium text-zinc-900 dark:text-white mb-2">Select a prelaunch page</h3>
+                    <p className="text-sm text-zinc-500">
+                      Click on a prelaunch page to see details
+                    </p>
+                  </CardContent>
+                )}
+              </Card>
             </div>
           )}
         </TabsContent>
