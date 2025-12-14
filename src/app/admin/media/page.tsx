@@ -185,6 +185,7 @@ export default function MediaPage() {
 
         const response = await fetch("/api/admin/media/upload", {
           method: "POST",
+          headers: { ...getCSRFHeaders() },
           body: formData,
         });
 

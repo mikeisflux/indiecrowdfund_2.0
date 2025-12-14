@@ -62,6 +62,7 @@ export function ActiveProjectPanel({
     try {
       const response = await fetch(`/api/admin/projects/${project.id}/process-pledges`, {
         method: "POST",
+        headers: { ...getCSRFHeaders() },
       });
 
       const data = await response.json();
@@ -91,6 +92,7 @@ export function ActiveProjectPanel({
     try {
       const response = await fetch(`/api/projects/${project.id}/sync-stats`, {
         method: "POST",
+        headers: { ...getCSRFHeaders() },
       });
 
       const data = await response.json();
