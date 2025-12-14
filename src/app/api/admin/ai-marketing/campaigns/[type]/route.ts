@@ -9,7 +9,6 @@ import {
   canSendEmail,
 } from "@/lib/ai/settings-integration";
 import {
-  findMatchingUsersForProject,
   calculateProjectMatchScore,
 } from "@/lib/ai/user-interests";
 
@@ -270,7 +269,7 @@ export async function POST(
     }
 
     // Use interest matching to prioritize recipients
-    let matchedRecipients: Array<{ userId: string; matchScore: number }> = [];
+    const matchedRecipients: Array<{ userId: string; matchScore: number }> = [];
     let unmatchedRecipients: string[] = [];
 
     if (aiSettings.emailPersonalization) {

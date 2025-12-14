@@ -75,6 +75,7 @@ export function CampaignTypeDialog({
       setIntro("");
       setSelectedProjects([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, campaignType]);
 
   const fetchConfig = async () => {
