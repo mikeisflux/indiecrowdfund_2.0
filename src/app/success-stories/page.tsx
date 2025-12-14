@@ -92,7 +92,7 @@ export default async function SuccessStoriesPage() {
   const stats = [
     { value: platformStats.totalPledged > 0 ? formatCurrency(platformStats.totalPledged) : "$0", label: "Total Raised", icon: DollarSign },
     { value: formatNumber(platformStats.projectsFunded), label: "Funded Projects", icon: Trophy },
-    { value: formatNumber(platformStats.totalBackers), label: "Happy Backers", icon: Users },
+    { value: formatNumber(platformStats.backerPool), label: "Backer Pool", icon: Users },
     { value: `${platformStats.successRate}%`, label: "Success Rate", icon: TrendingUp },
   ];
 

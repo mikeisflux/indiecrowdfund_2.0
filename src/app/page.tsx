@@ -317,9 +317,9 @@ export default async function HomePage() {
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-primary">
-                {stats.totalBackers > 0 ? formatNumber(stats.totalBackers) : "0"}
+                {stats.backerPool > 0 ? `${formatNumber(stats.backerPool)}+` : "0"}
               </p>
-              <p className="text-sm text-muted-foreground">Backers worldwide</p>
+              <p className="text-sm text-muted-foreground">Backer pool</p>
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-primary">

@@ -6,8 +6,8 @@ import { unstable_cache } from "next/cache";
 export interface PlatformStats {
   totalPledged: number;
   projectsFunded: number;
-  totalBackers: number;
   successRate: number;
+  backerPool: number;
 }
 
 export interface RetailerStats {
@@ -21,8 +21,8 @@ export interface RetailerStats {
 const DEFAULT_PLATFORM_STATS: PlatformStats = {
   totalPledged: 0,
   projectsFunded: 0,
-  totalBackers: 0,
   successRate: 0,
+  backerPool: 0,
 };
 
 const DEFAULT_RETAILER_STATS: RetailerStats = {
@@ -62,14 +62,6 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
       },
     });
 
-    // Get unique backers count (users who have made at least one completed pledge)
-    const uniqueBackers = await db.pledge.groupBy({
-      by: ["userId"],
-      where: {
-        status: "COMPLETED",
-      },
-    });
-
     // Calculate success rate (funded / (funded + failed))
     const failedProjects = await db.project.count({
       where: {
@@ -82,11 +74,14 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
       ? Math.round((fundedProjects / totalCompleted) * 100)
       : 0;
 
+    // Get total registered users (backer pool)
+    const totalUsers = await db.user.count();
+
     return {
       totalPledged: pledgeStats._sum.amount || 0,
       projectsFunded: fundedProjects,
-      totalBackers: uniqueBackers.length,
       successRate,
+      backerPool: totalUsers,
     };
   } catch (error) {
     console.error("Error fetching platform stats:", error);

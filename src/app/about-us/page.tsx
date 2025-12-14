@@ -448,7 +448,6 @@ interface PlatformStats {
   projectsLive: number;
   projectsTotal: number;
   totalRaised: number;
-  totalBackers: number;
   totalPledges: number;
   totalCreators: number;
   totalUsers: number;
@@ -531,8 +530,8 @@ export default function AboutUsPage() {
       icon: DollarSign
     },
     {
-      label: "Happy Backers",
-      value: stats ? formatNumber(stats.totalBackers) : "...",
+      label: "Backer Pool",
+      value: stats ? formatNumber(stats.totalUsers) : "...",
       icon: Users
     },
     {
