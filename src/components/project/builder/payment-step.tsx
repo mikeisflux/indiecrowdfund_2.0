@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Input } from "@/components/ui/input";
@@ -87,7 +89,7 @@ export function PaymentStep() {
     try {
       const response = await fetch("/api/stripe/connect", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
       });
 
       const data = await response.json();

@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -150,7 +152,7 @@ export default function BugReportsPage() {
     try {
       const response = await fetch("/api/bug-reports", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           id: selectedReport.id,
           status: newStatus || undefined,
@@ -182,7 +184,7 @@ export default function BugReportsPage() {
     try {
       const response = await fetch("/api/bug-reports", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ id: reportId, status }),
       });
 

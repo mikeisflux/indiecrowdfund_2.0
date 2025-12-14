@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -345,7 +347,7 @@ export default function PledgePage() {
 
       const response = await fetch(`/api/pledges/${existingPledgeId}/add-items`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           addons: addonsWithQuantity,
           amount: addItemsTotal,
@@ -389,7 +391,7 @@ export default function PledgePage() {
 
       const response = await fetch("/api/pledges", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           projectId: project.id,
           rewardId: selectedReward?.id || null,

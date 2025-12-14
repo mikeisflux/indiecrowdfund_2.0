@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";

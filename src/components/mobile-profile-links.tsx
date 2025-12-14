@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import Link from "next/link";
 import { useSession } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -21,7 +23,7 @@ export function MobileProfileLinks() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", headers: getCSRFHeaders() });
       window.location.href = "/";
     } catch (error) {
       console.error("Logout failed:", error);

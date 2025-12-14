@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
@@ -276,7 +278,7 @@ export default function MediaPage() {
     setDeleting(true);
     try {
       for (const fileId of selectedFiles) {
-        await fetch(`/api/admin/media?fileId=${fileId}`, { method: "DELETE" });
+        await fetch(`/api/admin/media?fileId=${fileId}`, { method: "DELETE", headers: getCSRFHeaders() });
       }
       setSelectedFiles([]);
       fetchMedia();
@@ -289,7 +291,7 @@ export default function MediaPage() {
 
   const deleteFile = async (fileId: string) => {
     try {
-      const response = await fetch(`/api/admin/media?fileId=${fileId}`, { method: "DELETE" });
+      const response = await fetch(`/api/admin/media?fileId=${fileId}`, { method: "DELETE", headers: getCSRFHeaders() });
       if (response.ok) {
         fetchMedia();
       }
@@ -328,7 +330,7 @@ export default function MediaPage() {
     try {
       const response = await fetch("/api/admin/media", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           fileId: editingFile.id,
           originalName: editForm.originalName,
@@ -358,7 +360,7 @@ export default function MediaPage() {
     try {
       const response = await fetch("/api/admin/media", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           fileIds: idsToMove,
           folder: targetFolder,

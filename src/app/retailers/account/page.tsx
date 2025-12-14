@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,7 +59,7 @@ export default function RetailerAccountPage() {
   }, [router]);
 
   const handleLogout = async () => {
-    await fetch("/api/retailers/logout", { method: "POST" });
+    await fetch("/api/retailers/logout", { method: "POST", headers: getCSRFHeaders() });
     window.location.href = "/retailers/login";
   };
 
@@ -68,7 +70,7 @@ export default function RetailerAccountPage() {
     try {
       const response = await fetch("/api/retailers/account", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify(account),
       });
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,7 +126,7 @@ export function MessagesPanel({
             // Mark as read
             await fetch("/api/messages", {
               method: "PATCH",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
               body: JSON.stringify({
                 conversationWith: selectedConversation.otherUser.id,
                 projectId: selectedConversation.project.id,
@@ -172,7 +174,7 @@ export function MessagesPanel({
     try {
       const res = await fetch("/api/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           recipientId: selectedConversation.otherUser.id,
           projectId: selectedConversation.project.id,

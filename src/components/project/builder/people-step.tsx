@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { CollaboratorData } from "@/types";
@@ -67,7 +69,7 @@ export function PeopleStep() {
     try {
       const response = await fetch("/api/user/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify(profileData),
       });
       if (!response.ok) {
@@ -130,7 +132,7 @@ export function PeopleStep() {
       try {
         const response = await fetch(`/api/projects/${projectId}/collaborators`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify(newCollaborator),
         });
 
@@ -187,7 +189,7 @@ export function PeopleStep() {
       try {
         const response = await fetch(
           `/api/projects/${projectId}/collaborators?collaboratorId=${collaborator.id}`,
-          { method: "DELETE" }
+          { method: "DELETE", headers: getCSRFHeaders() }
         );
 
         if (!response.ok) {

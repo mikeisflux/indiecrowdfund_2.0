@@ -1,3 +1,4 @@
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,7 +82,7 @@ export function AISettingsTab({
       try {
         const res = await fetch("/api/admin/ai-marketing/run", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify({ action, params: { limit: 50 } }),
         });
         const data = await res.json();
@@ -106,7 +107,7 @@ export function AISettingsTab({
     try {
       const res = await fetch("/api/admin/ai-marketing/run", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ action, params }),
       });
       const data = await res.json();

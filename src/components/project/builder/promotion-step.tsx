@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Input } from "@/components/ui/input";
@@ -120,13 +122,13 @@ export function PromotionStep() {
       if (projectId) {
         response = await fetch(`/api/projects/${projectId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify(projectData),
         });
       } else {
         response = await fetch("/api/projects", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify(projectData),
         });
       }
@@ -176,7 +178,7 @@ export function PromotionStep() {
     try {
       const response = await fetch(`/api/projects/${projectId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ prelaunchActive: false }),
       });
 

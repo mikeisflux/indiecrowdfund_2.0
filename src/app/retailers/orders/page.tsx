@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,7 +65,7 @@ export default function RetailerOrdersPage() {
   }, [router]);
 
   const handleLogout = async () => {
-    await fetch("/api/retailers/logout", { method: "POST" });
+    await fetch("/api/retailers/logout", { method: "POST", headers: getCSRFHeaders() });
     window.location.href = "/retailers/login";
   };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,7 +169,7 @@ export default function AIControlPage() {
     try {
       await fetch("/api/admin/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           section: "aiMarketing",
           data: {
@@ -194,7 +195,7 @@ export default function AIControlPage() {
       const [statusRes, settingsRes] = await Promise.all([
         fetch("/api/admin/ai-marketing/run", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify({ action: "getStatus" }),
         }),
         fetch("/api/admin/settings"),
@@ -269,7 +270,7 @@ export default function AIControlPage() {
     try {
       const res = await fetch("/api/admin/ai-marketing/run", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ action, params: { limit: 100 } }),
       });
       const data = await res.json();

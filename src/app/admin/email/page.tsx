@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import { sanitizeEmailHtml } from "@/lib/utils/sanitize";
 import { Button } from "@/components/ui/button";
@@ -246,7 +248,7 @@ export default function EmailPage() {
     try {
       await fetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ isStarred: !email.isStarred }),
       });
       setEmails(emails.map(e => e.id === email.id ? { ...e, isStarred: !e.isStarred } : e));
@@ -335,7 +337,7 @@ export default function EmailPage() {
     try {
       const response = await fetch(
         `/api/admin/mailboxes/${selectedMailbox.id}/emails/${selectedEmail.id}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers: getCSRFHeaders() }
       );
       if (response.ok) {
         setEmails(emails.filter(e => e.id !== selectedEmail.id));
@@ -831,7 +833,7 @@ function ComposeEmailDialog({
     try {
       const response = await fetch(`/api/admin/mailboxes/${fromMailboxId}/emails`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           toEmail: to,
           subject,
@@ -1029,7 +1031,7 @@ function MailboxDialog({
 
       const response = await fetch(url, {
         method: mailbox ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           name,
           email,

@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -108,7 +110,7 @@ export default function ManagePledgePage() {
     try {
       const response = await fetch(`/api/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ action: "cancel" }),
       });
 
@@ -138,7 +140,7 @@ export default function ManagePledgePage() {
     try {
       const response = await fetch(`/api/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ action: "increase", amount }),
       });
 

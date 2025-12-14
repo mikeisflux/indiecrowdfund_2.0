@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -181,7 +183,7 @@ export default function ProjectsPage() {
     try {
       const response = await fetch("/api/admin/projects/status", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           projectId: selectedProject.id,
           action: "MAKE_LIVE",
@@ -214,7 +216,7 @@ export default function ProjectsPage() {
     try {
       const response = await fetch("/api/admin/projects/status", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           projectId: selectedProject.id,
           action: "SEND_TO_REVIEW",
@@ -254,7 +256,7 @@ export default function ProjectsPage() {
 
       const response = await fetch("/api/admin/projects/review", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           projectId: selectedProject.id,
           action: actionMap[reviewAction!],

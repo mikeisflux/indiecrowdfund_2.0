@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -366,7 +368,7 @@ export default function AIMarketingPage() {
     try {
       const response = await fetch("/api/admin/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           section: "aiMarketing",
           data: {
@@ -422,7 +424,7 @@ export default function AIMarketingPage() {
     try {
       const response = await fetch("/api/admin/ai-marketing/auto-tag", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           confidenceThreshold: aiSettings.autoTagConfidence,
           maxTags: aiSettings.maxTags,
@@ -488,7 +490,7 @@ export default function AIMarketingPage() {
 
       const response = await fetch("/api/admin/ai-marketing/auto-tag", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ projectUpdates: approvedUpdates }),
       });
 
@@ -549,7 +551,7 @@ export default function AIMarketingPage() {
     try {
       const response = await fetch("/api/admin/ai-marketing/campaigns", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify(campaignForm),
       });
 
@@ -612,7 +614,7 @@ export default function AIMarketingPage() {
       for (const rec of recommendations) {
         await fetch("/api/admin/ai-marketing/campaigns", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify({
             name: rec.name,
             targetAudience: rec.targetAudience,

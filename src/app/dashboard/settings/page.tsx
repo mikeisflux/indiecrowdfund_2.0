@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -146,7 +148,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch("/api/user/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           name: settings.name,
           bio: settings.bio,
@@ -260,7 +262,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch("/api/user/settings/email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           newEmail: emailChange.newEmail,
           password: emailChange.password,

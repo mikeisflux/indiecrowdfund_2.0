@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -219,7 +221,7 @@ export default function PageBuilderPage() {
     try {
       const response = await fetch("/api/admin/pages", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           id: selectedPageId,
           content: { blocks: pageContent },
@@ -247,7 +249,7 @@ export default function PageBuilderPage() {
     try {
       const response = await fetch("/api/admin/pages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           title: newPageTitle,
           slug: newPageSlug.toLowerCase().replace(/\s+/g, "-"),

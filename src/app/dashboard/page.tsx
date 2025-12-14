@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -171,7 +173,7 @@ export default function CreatorDashboard() {
     try {
       const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ action: "cancel", reason: "Cancelled by creator" }),
       });
 
@@ -199,7 +201,7 @@ export default function CreatorDashboard() {
     try {
       const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ action: "refund", reason: "Refunded by creator" }),
       });
 

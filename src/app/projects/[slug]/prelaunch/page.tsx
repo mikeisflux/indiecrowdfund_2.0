@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
@@ -149,7 +151,7 @@ export default function PrelaunchPage() {
     try {
       const response = await fetch("/api/user/following", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           projectId: project?.id,
           type: "prelaunch",

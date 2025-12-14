@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useCallback } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { RewardData, RewardItemData, RewardType, ShippingType } from "@/types";
@@ -138,7 +140,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
         const method = editingItemId ? "PATCH" : "POST";
         const response = await fetch(`/api/projects/${projectId}/items`, {
           method,
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify({
             id: editingItemId || undefined,
             title: currentItem.title,
@@ -188,7 +190,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       try {
         const response = await fetch(
           `/api/projects/${projectId}/items?itemId=${id}`,
-          { method: "DELETE" }
+          { method: "DELETE", headers: getCSRFHeaders() }
         );
 
         if (!response.ok) {
@@ -218,7 +220,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       try {
         const response = await fetch(`/api/projects/${projectId}/items`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify({
             id: itemId,
             title: item.title,
@@ -248,7 +250,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       try {
         const response = await fetch(`/api/projects/${projectId}/rewards`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify({
             id: reward.id,
             type: reward.type,
@@ -370,7 +372,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
         const response = await fetch(`/api/projects/${projectId}/rewards`, {
           method,
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify({
             id: isEditing ? currentReward.id : undefined,
             type: rewardToSave.type,
@@ -458,7 +460,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       try {
         const response = await fetch(
           `/api/projects/${projectId}/rewards?rewardId=${reward.id}`,
-          { method: "DELETE" }
+          { method: "DELETE", headers: getCSRFHeaders() }
         );
 
         if (!response.ok) {

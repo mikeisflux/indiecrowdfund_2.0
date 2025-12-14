@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -62,7 +64,7 @@ export function NotificationsDropdown() {
     try {
       await fetch("/api/user/notifications", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           action: "markRead",
           notificationIds: [id],
@@ -81,7 +83,7 @@ export function NotificationsDropdown() {
     try {
       await fetch("/api/user/notifications", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ action: "markAllRead" }),
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

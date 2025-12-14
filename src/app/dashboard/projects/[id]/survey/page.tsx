@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -168,7 +170,7 @@ export default function SurveyBuilderPage() {
     try {
       const response = await fetch(`/api/projects/${projectId}/survey`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           introTitle,
           introMessage,
@@ -192,7 +194,7 @@ export default function SurveyBuilderPage() {
     try {
       const response = await fetch(`/api/projects/${projectId}/survey`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           introTitle,
           introMessage,
@@ -251,7 +253,7 @@ export default function SurveyBuilderPage() {
 
       const response = await fetch(`/api/projects/${projectId}/survey/item-questions`, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify(body),
       });
 
@@ -270,7 +272,7 @@ export default function SurveyBuilderPage() {
     try {
       const response = await fetch(
         `/api/projects/${projectId}/survey/item-questions?questionId=${questionId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers: getCSRFHeaders() }
       );
 
       if (response.ok) {
@@ -289,7 +291,7 @@ export default function SurveyBuilderPage() {
 
       const response = await fetch(`/api/projects/${projectId}/survey/backer-questions`, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify(body),
       });
 
@@ -308,7 +310,7 @@ export default function SurveyBuilderPage() {
     try {
       const response = await fetch(
         `/api/projects/${projectId}/survey/backer-questions?questionId=${questionId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers: getCSRFHeaders() }
       );
 
       if (response.ok) {

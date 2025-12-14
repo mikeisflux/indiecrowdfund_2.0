@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect } from "react";
 import { useSession } from "@/components/providers/auth-provider";
 import { useRouter } from "next/navigation";
@@ -107,7 +109,7 @@ export function IDVerificationGate({ projectId, children }: IDVerificationGatePr
     setStartingVerification(true);
 
     try {
-      const res = await fetch("/api/verify-id", { method: "POST" });
+      const res = await fetch("/api/verify-id", { method: "POST", headers: getCSRFHeaders() });
       const data = await res.json();
 
       if (data.success && data.verificationUrl) {
@@ -317,7 +319,7 @@ export function AgeGateDialog({ open, onClose, onVerified, reason }: AgeGateDial
 
     setLoading(true);
     try {
-      const res = await fetch("/api/verify-id", { method: "POST" });
+      const res = await fetch("/api/verify-id", { method: "POST", headers: getCSRFHeaders() });
       const data = await res.json();
 
       if (data.success && data.verificationUrl) {

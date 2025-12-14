@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,7 +86,7 @@ export default function NotificationsPage() {
     try {
       await fetch("/api/user/notifications", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           action: "markRead",
           notificationIds: [id],
@@ -103,7 +105,7 @@ export default function NotificationsPage() {
     try {
       await fetch("/api/user/notifications", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ action: "markAllRead" }),
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

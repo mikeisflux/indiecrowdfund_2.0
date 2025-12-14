@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -126,7 +128,7 @@ export default function RetailerProjectsPage() {
   };
 
   const handleLogout = async () => {
-    await fetch("/api/retailers/logout", { method: "POST" });
+    await fetch("/api/retailers/logout", { method: "POST", headers: getCSRFHeaders() });
     // Use window.location.href for full navigation to ensure session is cleared
     window.location.href = "/retailers/login";
   };

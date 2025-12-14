@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useProjectStore, BUILDER_STEPS } from "@/lib/stores/project-store";
@@ -158,14 +160,14 @@ export function ProjectBuilder() {
         // Update existing project
         response = await fetch(`/api/projects/${projectId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify(projectData),
         });
       } else {
         // Create new project (POST doesn't handle rewards yet, will need a subsequent PATCH)
         response = await fetch("/api/projects", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify(projectData),
         });
       }
@@ -184,7 +186,7 @@ export function ProjectBuilder() {
         if (transformedRewards.length > 0) {
           const rewardsResponse = await fetch(`/api/projects/${result.project.id}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
             body: JSON.stringify({ rewards: transformedRewards }),
           });
 
@@ -227,7 +229,7 @@ export function ProjectBuilder() {
     try {
       const response = await fetch(`/api/projects/${projectId}/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
       });
 
       const result = await response.json();
@@ -274,7 +276,7 @@ export function ProjectBuilder() {
     try {
       const response = await fetch(`/api/projects/${projectId}/launch`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
       });
 
       const result = await response.json();

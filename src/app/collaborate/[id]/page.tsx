@@ -1,5 +1,7 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
@@ -69,7 +71,7 @@ export default function CollaboratePage() {
     try {
       const res = await fetch(`/api/collaborator/${params.id}/respond`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ action }),
       });
 
