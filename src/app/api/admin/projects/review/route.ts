@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       internalNotes,
       rejectionReason,
       sendEmail = true,
+      isPrelaunch = false, // Whether this is a prelaunch review
     } = body;
 
     if (!projectId || !action) {
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
         title: true,
         slug: true,
         status: true,
+        prelaunchStatus: true,
         contactEmail: true, // Email from payment settings
         creator: {
           select: { id: true, email: true, name: true },
@@ -61,11 +63,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.status !== "SUBMITTED") {
-      return NextResponse.json(
-        { error: "Project is not in submitted status" },
-        { status: 400 }
-      );
+    // Check status based on review type
+    if (isPrelaunch) {
+      if (project.prelaunchStatus !== "SUBMITTED") {
+        return NextResponse.json(
+          { error: "Prelaunch page is not in submitted status" },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (project.status !== "SUBMITTED") {
+        return NextResponse.json(
+          { error: "Project is not in submitted status" },
+          { status: 400 }
+        );
+      }
     }
 
     // Determine new status based on action
@@ -99,11 +111,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Update project and create review record in a transaction
+    const updateData = isPrelaunch
+      ? { prelaunchStatus: newStatus, ...(newStatus === "APPROVED" && { prelaunchActive: true }) }
+      : { status: newStatus };
+
+    const previousStatus = isPrelaunch ? project.prelaunchStatus : project.status;
+
     const [updatedProject, review] = await db.$transaction([
       // Update project status
       db.project.update({
         where: { id: projectId },
-        data: { status: newStatus },
+        data: updateData,
       }),
 
       // Create review record
@@ -113,12 +131,12 @@ export async function POST(req: NextRequest) {
           reviewerId: session.user.id,
           reviewerEmail: session.user.email,
           action: reviewAction,
-          previousStatus: project.status,
+          previousStatus: previousStatus,
           newStatus,
           notes,
           internalNotes,
           rejectionReason: rejectionReason || null,
-          flagsRaised: [],
+          flagsRaised: isPrelaunch ? ["prelaunch_review"] : [],
         },
       }),
     ]);
@@ -214,14 +232,23 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status") || "SUBMITTED";
     const category = searchParams.get("category");
-    const prelaunchOnly = searchParams.get("prelaunch") === "true";
+    const prelaunchActive = searchParams.get("prelaunchActive") === "true"; // Active prelaunch pages
+    const prelaunchReview = searchParams.get("prelaunchReview") === "true"; // Prelaunch pending review
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
     const skip = (page - 1) * limit;
 
-    const where: Record<string, unknown> = prelaunchOnly
-      ? { prelaunchActive: true }
-      : { status };
+    let where: Record<string, unknown>;
+    if (prelaunchActive) {
+      // Active prelaunch pages (approved and active)
+      where = { prelaunchActive: true, prelaunchStatus: "APPROVED" };
+    } else if (prelaunchReview) {
+      // Prelaunch pages pending review
+      where = { prelaunchStatus: "SUBMITTED" };
+    } else {
+      // Regular project status query
+      where = { status };
+    }
 
     if (category && category !== "all") {
       where.category = category;

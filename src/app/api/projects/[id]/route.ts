@@ -350,7 +350,7 @@ export async function PATCH(
 
     const project = await db.project.findUnique({
       where: { id: params.id },
-      select: { creatorId: true, status: true },
+      select: { creatorId: true, status: true, prelaunchStatus: true },
     });
 
     if (!project) {
@@ -461,11 +461,11 @@ export async function PATCH(
         const canActivate = await canActivatePrelaunchImmediately(session.user.id);
 
         if (!canActivate) {
-          // User needs approval - check if project is already approved
-          if (project.status !== "APPROVED") {
-            // Submit the project for review instead of activating prelaunch
-            // Save all the other project data but submit for review
-            updateData.status = "SUBMITTED";
+          // User needs approval - check if prelaunch is already approved
+          if (project.prelaunchStatus !== "APPROVED") {
+            // Submit the prelaunch for review instead of activating
+            // Save all the other project data but submit prelaunch for review
+            updateData.prelaunchStatus = "SUBMITTED";
 
             // Get the full project data to include in review
             const fullProject = await db.project.findUnique({
@@ -479,7 +479,7 @@ export async function PATCH(
                 projectId: params.id,
                 action: "SUBMITTED",
                 previousStatus: project.status,
-                newStatus: "SUBMITTED",
+                newStatus: project.status, // Keep project status unchanged
                 notes: "Pre-launch page submitted for review. Standard user without previous successful campaign.",
                 flagsRaised: ["prelaunch_review"],
               },
@@ -503,10 +503,10 @@ export async function PATCH(
               success: true,
               requiresApproval: true,
               message: "Your pre-launch page has been submitted for review. Once approved, you can activate it.",
-              project: { id: params.id, status: "SUBMITTED" },
+              project: { id: params.id, prelaunchStatus: "SUBMITTED" },
             });
           }
-          // Project is approved, allow prelaunch activation
+          // Prelaunch is approved, allow activation
           updateData.prelaunchActive = true;
         } else {
           // User can activate prelaunch immediately

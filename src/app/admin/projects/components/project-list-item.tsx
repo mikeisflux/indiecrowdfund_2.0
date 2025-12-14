@@ -13,6 +13,7 @@ interface ProjectListItemProps {
   onClick: () => void;
   showStatus?: boolean;
   showFunding?: boolean;
+  badge?: React.ReactNode;
 }
 
 export function ProjectListItem({
@@ -21,6 +22,7 @@ export function ProjectListItem({
   onClick,
   showStatus = false,
   showFunding = false,
+  badge,
 }: ProjectListItemProps) {
   const flags = getFlags(project);
 
@@ -47,6 +49,7 @@ export function ProjectListItem({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h4 className="font-semibold truncate">{project.title}</h4>
+                  {badge}
                   {showStatus && (
                     <Badge className={project.status === "LIVE" ? "bg-emerald-600" : "bg-amber-600"}>
                       {project.status}

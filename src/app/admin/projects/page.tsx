@@ -51,8 +51,9 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjects, setActiveProjects] = useState<Project[]>([]);
   const [prelaunchProjects, setPrelaunchProjects] = useState<Project[]>([]);
+  const [prelaunchReviewProjects, setPrelaunchReviewProjects] = useState<Project[]>([]);
   const [reviewHistory, setReviewHistory] = useState<ReviewHistory[]>([]);
-  const [stats, setStats] = useState<Stats>({ pending: 0, approvedToday: 0, rejectedToday: 0, activeCampaigns: 0, prelaunchActive: 0 });
+  const [stats, setStats] = useState<Stats>({ pending: 0, approvedToday: 0, rejectedToday: 0, activeCampaigns: 0, prelaunchActive: 0, prelaunchReview: 0 });
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -128,7 +129,7 @@ export default function ProjectsPage() {
   const fetchPrelaunchProjects = useCallback(async () => {
     try {
       const params = new URLSearchParams({
-        prelaunch: "true",
+        prelaunchActive: "true",
         ...(categoryFilter !== "all" && { category: categoryFilter }),
       });
       const response = await fetch(`/api/admin/projects/review?${params}`);
@@ -142,6 +143,26 @@ export default function ProjectsPage() {
       }
     } catch (error) {
       console.error("Error fetching prelaunch projects:", error);
+    }
+  }, [categoryFilter]);
+
+  const fetchPrelaunchReviewProjects = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({
+        prelaunchReview: "true",
+        ...(categoryFilter !== "all" && { category: categoryFilter }),
+      });
+      const response = await fetch(`/api/admin/projects/review?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPrelaunchReviewProjects(data.projects || []);
+        setStats((prev) => ({
+          ...prev,
+          prelaunchReview: data.projects?.length || 0,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching prelaunch review projects:", error);
     }
   }, [categoryFilter]);
 
@@ -161,8 +182,9 @@ export default function ProjectsPage() {
     fetchProjects();
     fetchActiveProjects();
     fetchPrelaunchProjects();
+    fetchPrelaunchReviewProjects();
     fetchReviewHistory();
-  }, [fetchProjects, fetchActiveProjects, fetchPrelaunchProjects, fetchReviewHistory]);
+  }, [fetchProjects, fetchActiveProjects, fetchPrelaunchProjects, fetchPrelaunchReviewProjects, fetchReviewHistory]);
 
   useEffect(() => {
     setSelectedProject(null);
@@ -170,12 +192,14 @@ export default function ProjectsPage() {
       fetchActiveProjects();
     } else if (activeTab === "pending") {
       fetchProjects();
+    } else if (activeTab === "prelaunchReview") {
+      fetchPrelaunchReviewProjects();
     } else if (activeTab === "prelaunch") {
       fetchPrelaunchProjects();
     } else if (activeTab === "history") {
       fetchReviewHistory();
     }
-  }, [activeTab, fetchActiveProjects, fetchProjects, fetchPrelaunchProjects, fetchReviewHistory]);
+  }, [activeTab, fetchActiveProjects, fetchProjects, fetchPrelaunchProjects, fetchPrelaunchReviewProjects, fetchReviewHistory]);
 
   const handleApprove = () => {
     setReviewAction("approve");
@@ -271,6 +295,7 @@ export default function ProjectsPage() {
     if (!selectedProject) return;
 
     setIsSubmitting(true);
+    const isPrelaunchReview = activeTab === "prelaunchReview";
 
     try {
       const actionMap = {
@@ -289,11 +314,17 @@ export default function ProjectsPage() {
           internalNotes,
           rejectionReason: reviewAction === "reject" ? rejectionReason : null,
           sendEmail,
+          isPrelaunch: isPrelaunchReview,
         }),
       });
 
       if (response.ok) {
-        await fetchProjects();
+        if (isPrelaunchReview) {
+          await fetchPrelaunchReviewProjects();
+          await fetchPrelaunchProjects();
+        } else {
+          await fetchProjects();
+        }
         setShowReviewDialog(false);
         setShowRejectDialog(false);
         setSelectedProject(null);
@@ -344,6 +375,16 @@ export default function ProjectsPage() {
     );
   });
 
+  const filteredPrelaunchReviewProjects = prelaunchReviewProjects.filter((project) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      project.title.toLowerCase().includes(query) ||
+      project.creator.name?.toLowerCase().includes(query) ||
+      project.creator.email.toLowerCase().includes(query)
+    );
+  });
+
   const flaggedProjects = filteredProjects.filter((p) => getFlags(p).length > 0);
 
   if (isLoading) {
@@ -381,12 +422,19 @@ export default function ProjectsPage() {
       <ReviewStatsCards stats={stats} flaggedCount={flaggedProjects.length} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="pending">
             <Clock className="mr-2 h-4 w-4" />
-            Pending Review
+            Project Review
             {filteredProjects.length > 0 && (
               <Badge variant="destructive" className="ml-2">{filteredProjects.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="prelaunchReview">
+            <Sparkles className="mr-2 h-4 w-4" />
+            Prelaunch Review
+            {prelaunchReviewProjects.length > 0 && (
+              <Badge variant="destructive" className="ml-2">{prelaunchReviewProjects.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="active">
@@ -398,7 +446,7 @@ export default function ProjectsPage() {
           </TabsTrigger>
           <TabsTrigger value="prelaunch">
             <Sparkles className="mr-2 h-4 w-4" />
-            Prelaunch
+            Active Prelaunch
             {prelaunchProjects.length > 0 && (
               <Badge variant="default" className="ml-2 bg-amber-500">{prelaunchProjects.length}</Badge>
             )}
@@ -543,7 +591,72 @@ export default function ProjectsPage() {
           )}
         </TabsContent>
 
-        {/* Prelaunch Tab */}
+        {/* Prelaunch Review Tab */}
+        <TabsContent value="prelaunchReview" className="mt-6 space-y-4">
+          {/* Filters */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Input
+                placeholder="Search prelaunch submissions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Technology">Technology</SelectItem>
+                <SelectItem value="Film & Video">Film & Video</SelectItem>
+                <SelectItem value="Games">Games</SelectItem>
+                <SelectItem value="Design">Design</SelectItem>
+                <SelectItem value="Food & Drink">Food & Drink</SelectItem>
+                <SelectItem value="Music">Music</SelectItem>
+                <SelectItem value="Art">Art</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {filteredPrelaunchReviewProjects.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Sparkles className="h-12 w-12 text-zinc-300 mb-4" />
+                <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No prelaunch pages pending review</h3>
+                <p className="text-sm text-zinc-500 max-w-sm">
+                  All prelaunch submissions have been reviewed. New submissions will appear here.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-4">
+                {filteredPrelaunchReviewProjects.map((project) => (
+                  <ProjectListItem
+                    key={project.id}
+                    project={project}
+                    isSelected={selectedProject?.id === project.id}
+                    onClick={() => setSelectedProject(project)}
+                    badge={<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">Prelaunch</Badge>}
+                  />
+                ))}
+              </div>
+
+              <ProjectDetailPanel
+                project={selectedProject}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                onRequestChanges={handleRequestChanges}
+                isPrelaunch
+              />
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Active Prelaunch Tab */}
         <TabsContent value="prelaunch" className="mt-6 space-y-4">
           {/* Filters */}
           <div className="flex items-center gap-4">

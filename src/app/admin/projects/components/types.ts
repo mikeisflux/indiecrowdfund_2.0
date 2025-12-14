@@ -69,6 +69,7 @@ export interface Stats {
   rejectedToday: number;
   activeCampaigns?: number;
   prelaunchActive?: number;
+  prelaunchReview?: number;
 }
 
 export const rejectionReasons = [

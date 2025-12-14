@@ -165,8 +165,9 @@ model Project {
   stripeAccountId       String?
 
   // Promotion
-  prelaunchActive       Boolean       @default(false)
-  prelaunchDescription  String?       @db.Text
+  prelaunchActive       Boolean         @default(false)
+  prelaunchStatus       PrelaunchStatus @default(DRAFT)
+  prelaunchDescription  String?         @db.Text
   customReferralTags    String[]
   googleAnalyticsId     String?
   googleAnalyticsSecret String?
@@ -254,6 +255,13 @@ enum ProjectStatus {
   FUNDED
   FAILED
   CANCELLED
+}
+
+enum PrelaunchStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
 }
 
 enum PaymentProcessor {
