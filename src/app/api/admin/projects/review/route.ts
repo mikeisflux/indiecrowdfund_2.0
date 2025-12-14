@@ -240,8 +240,9 @@ export async function GET(req: NextRequest) {
 
     let where: Record<string, unknown>;
     if (prelaunchActive) {
-      // Active prelaunch pages (approved and active)
-      where = { prelaunchActive: true, prelaunchStatus: "APPROVED" };
+      // Active prelaunch pages - show all with prelaunchActive: true
+      // (includes legacy pages that were published before prelaunchStatus was added)
+      where = { prelaunchActive: true };
     } else if (prelaunchReview) {
       // Prelaunch pages pending review
       where = { prelaunchStatus: "SUBMITTED" };
