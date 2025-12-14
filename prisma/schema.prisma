@@ -54,6 +54,7 @@ model User {
   notifications     Notification[]
   bugReports        BugReport[]
   mediaFiles        MediaFile[]
+  apiKeys           ApiKey[]
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -1958,4 +1959,55 @@ enum BugPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+// ============================================
+// API KEYS
+// ============================================
+
+model ApiKey {
+  id            String        @id @default(cuid())
+
+  // Key details
+  name          String        // Display name for the key
+  key           String        @unique // The actual API key (hashed prefix for display)
+  keyHash       String        // Hashed version of the full key for verification
+  prefix        String        // First 8 chars for identification (e.g., "sk_live_")
+
+  // Environment
+  environment   ApiEnvironment @default(PRODUCTION)
+
+  // Status
+  status        ApiKeyStatus  @default(ACTIVE)
+
+  // Usage tracking
+  lastUsedAt    DateTime?
+  usageCount    Int           @default(0)
+
+  // Timestamps
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  expiresAt     DateTime?     // Optional expiration
+  revokedAt     DateTime?
+
+  // Created by admin
+  createdById   String?
+  createdBy     User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([key])
+  @@index([prefix])
+  @@index([status])
+  @@index([createdById])
+}
+
+enum ApiEnvironment {
+  PRODUCTION
+  DEVELOPMENT
+  STAGING
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
 }

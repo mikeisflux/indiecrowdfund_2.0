@@ -30,14 +30,6 @@ import {
   DatabaseSettings,
 } from "@/components/admin/settings";
 
-// API keys and webhooks (these would come from a separate API in production)
-const apiKeys = [
-  { id: "1", name: "Production API", key: "sk_live_xxxx...xxxx", created: "2024-01-15", lastUsed: "2 hours ago", status: "active" },
-  { id: "2", name: "Development API", key: "sk_test_xxxx...xxxx", created: "2024-02-20", lastUsed: "5 days ago", status: "active" },
-  { id: "3", name: "Mobile App", key: "sk_live_yyyy...yyyy", created: "2024-03-10", lastUsed: "1 hour ago", status: "active" },
-];
-
-
 interface PlatformSettings {
   siteName: string;
   siteDescription: string | null;
@@ -148,8 +140,6 @@ interface PlatformSettings {
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
-  const [showApiKey, setShowApiKey] = useState<string | null>(null);
-  const [isCreatingKey, setIsCreatingKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -795,13 +785,7 @@ export default function SettingsPage() {
           onSave={handleSave}
         />
 
-        <ApiSettings
-          apiKeys={apiKeys}
-          isCreatingKey={isCreatingKey}
-          showApiKey={showApiKey}
-          onCreateKeyChange={setIsCreatingKey}
-          onShowApiKeyToggle={(keyId) => setShowApiKey(showApiKey === keyId ? null : keyId)}
-        />
+        <ApiSettings />
 
         <DatabaseSettings />
       </Tabs>
