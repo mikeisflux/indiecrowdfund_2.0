@@ -868,6 +868,27 @@ enum EmailType {
 }
 
 // ============================================
+// NEWSLETTER SUBSCRIBERS
+// ============================================
+
+model NewsletterSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  source       String?  // csv_import, website_signup, etc.
+  isActive     Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+  unsubscribedAt DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+  @@index([isActive])
+  @@index([source])
+}
+
+// ============================================
 // BACKER SURVEYS
 // ============================================
 

@@ -3,8 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { EmailEditor } from "@/components/ui/email-editor";
 import {
   Select,
   SelectContent,
@@ -203,12 +203,15 @@ export function CampaignDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Intro Message</Label>
-                    <Textarea
-                      placeholder="Brief intro for the email. AI will add personalized project recommendations below."
-                      rows={3}
+                    <Label>Email Body Content</Label>
+                    <p className="text-xs text-zinc-500 mb-2">
+                      Design your email with rich formatting. Drag & drop or paste images directly.
+                    </p>
+                    <EmailEditor
                       value={form.introMessage}
-                      onChange={(e) => onFormChange({ ...form, introMessage: e.target.value })}
+                      onChange={(value) => onFormChange({ ...form, introMessage: value })}
+                      placeholder="Start designing your email... AI will add personalized project recommendations below your content."
+                      minHeight="200px"
                     />
                   </div>
                 </>

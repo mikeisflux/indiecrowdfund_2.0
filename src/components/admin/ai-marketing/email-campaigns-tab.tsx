@@ -9,6 +9,7 @@ import {
   Send,
   ShoppingCart,
   ArrowRight,
+  Upload,
 } from "lucide-react";
 
 interface EmailStats {
@@ -36,6 +37,7 @@ interface EmailCampaignsTabProps {
   emailCampaigns: EmailCampaign[];
   setShowCampaignDialog: (show: boolean) => void;
   onConfigureCampaignType?: (type: "subscriber" | "backer" | "creator") => void;
+  onImportCSV?: () => void;
 }
 
 export function EmailCampaignsTab({
@@ -43,6 +45,7 @@ export function EmailCampaignsTab({
   emailCampaigns,
   setShowCampaignDialog,
   onConfigureCampaignType,
+  onImportCSV,
 }: EmailCampaignsTabProps) {
   return (
     <div className="mt-6 space-y-6">
@@ -104,14 +107,24 @@ export function EmailCampaignsTab({
                   <p className="text-sm text-zinc-500">Target newsletter subscribers</p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                className="mt-4 w-full"
-                onClick={() => onConfigureCampaignType?.("subscriber")}
-              >
-                <ArrowRight className="mr-2 h-4 w-4" />
-                Configure
-              </Button>
+              <div className="mt-4 flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => onConfigureCampaignType?.("subscriber")}
+                >
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  Configure
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={onImportCSV}
+                  title="Import subscribers from CSV"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="rounded-lg border p-4">

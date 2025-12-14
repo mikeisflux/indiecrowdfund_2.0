@@ -38,6 +38,7 @@ import {
   ResultsViewerDialog,
   TagReviewDialog,
   CampaignDialog,
+  CSVImportDialog,
   PendingTagUpdate,
   CampaignForm,
   CampaignTemplate,
@@ -104,6 +105,7 @@ export default function AIMarketingPage() {
   const [showCampaignTypeDialog, setShowCampaignTypeDialog] = useState(false);
   const [selectedCampaignType, setSelectedCampaignType] = useState<"subscriber" | "backer" | "creator" | null>(null);
   const [isApplyingTags, setIsApplyingTags] = useState(false);
+  const [showCSVImportDialog, setShowCSVImportDialog] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [aiRunResults, setAiRunResults] = useState<Record<string, { success: boolean; message: string; data?: any; timestamp: string }>>({});
   const [showResultsViewer, setShowResultsViewer] = useState(false);
@@ -838,6 +840,7 @@ export default function AIMarketingPage() {
             emailCampaigns={emailCampaigns}
             setShowCampaignDialog={setShowCampaignDialog}
             onConfigureCampaignType={handleConfigureCampaignType}
+            onImportCSV={() => setShowCSVImportDialog(true)}
           />
         </TabsContent>
 
@@ -1071,6 +1074,13 @@ export default function AIMarketingPage() {
         open={showCampaignTypeDialog}
         onOpenChange={setShowCampaignTypeDialog}
         campaignType={selectedCampaignType}
+        onSuccess={() => loadData()}
+      />
+
+      {/* CSV Import Dialog */}
+      <CSVImportDialog
+        open={showCSVImportDialog}
+        onOpenChange={setShowCSVImportDialog}
         onSuccess={() => loadData()}
       />
     </div>

@@ -11,8 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { EmailEditor } from "@/components/ui/email-editor";
 import { Loader2, Users, UserCheck, Layers, Send, Check, AlertCircle } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 
@@ -275,15 +275,17 @@ export function CampaignTypeDialog({
               />
             </div>
 
-            {/* Intro Message */}
+            {/* Intro Message with Rich Text Editor */}
             <div className="space-y-2">
-              <Label htmlFor="intro">Introduction Message (optional)</Label>
-              <Textarea
-                id="intro"
+              <Label>Email Body Content (optional)</Label>
+              <p className="text-xs text-zinc-500 mb-2">
+                Design your email content below. Drag & drop or paste images directly. AI will add personalized project recommendations after your content.
+              </p>
+              <EmailEditor
                 value={intro}
-                onChange={(e) => setIntro(e.target.value)}
-                placeholder="AI will generate personalized intro if left empty"
-                rows={3}
+                onChange={setIntro}
+                placeholder="Start designing your email... Drag & drop images, add formatting, and create beautiful HTML emails."
+                minHeight="200px"
               />
             </div>
 
