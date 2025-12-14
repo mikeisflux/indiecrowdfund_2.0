@@ -101,8 +101,7 @@ export function OverviewTab({
               </ul>
             </div>
             <Button
-              variant="outline"
-              className="bg-white"
+              className="bg-violet-600 text-white hover:bg-violet-700"
               onClick={handleApplyRecommendations}
               disabled={isApplyingRecommendations || recommendations.length === 0}
             >

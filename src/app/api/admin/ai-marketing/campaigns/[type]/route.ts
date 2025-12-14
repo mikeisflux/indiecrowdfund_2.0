@@ -8,6 +8,8 @@ import {
   scheduleWithOptimalTimes,
   canSendEmail,
 } from "@/lib/ai/settings-integration";
+// User interest matching functions available for future use:
+// import { findMatchingUsersForProject, batchUpdateUserInterests } from "@/lib/ai/user-interests";
 
 export const dynamic = "force-dynamic";
 
@@ -116,8 +118,43 @@ export async function GET(
         goalAmount: true,
         currentAmount: true,
         imageUrl: true,
+        tags: true,
       },
     });
+
+    // Get user interest profile stats for this audience
+    const recipientIds = recipients.map((r) => r.id);
+    const interestProfiles = await db.userInterestProfile.findMany({
+      where: { userId: { in: recipientIds } },
+      select: {
+        profileScore: true,
+        totalProjectsBacked: true,
+        categoryInterests: true,
+      },
+    });
+
+    // Calculate audience insights
+    const profiledUsers = interestProfiles.length;
+    const avgProfileScore =
+      interestProfiles.length > 0
+        ? interestProfiles.reduce((sum, p) => sum + p.profileScore, 0) / interestProfiles.length
+        : 0;
+
+    // Aggregate category interests
+    const categoryAggregates: Record<string, number> = {};
+    for (const profile of interestProfiles) {
+      const interests = profile.categoryInterests as Record<string, number>;
+      for (const [category, score] of Object.entries(interests)) {
+        if (score >= 0.5) {
+          categoryAggregates[category] = (categoryAggregates[category] || 0) + 1;
+        }
+      }
+    }
+
+    const topCategories = Object.entries(categoryAggregates)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([category, count]) => ({ category, count }));
 
     return NextResponse.json({
       type,
@@ -129,6 +166,13 @@ export async function GET(
         emailPersonalization: aiSettings.emailPersonalization,
         sendTimeOptimization: aiSettings.sendTimeOptimization,
         contentOptimization: aiSettings.contentOptimization,
+      },
+      audienceInsights: {
+        profiledUsers,
+        avgProfileScore: avgProfileScore.toFixed(1),
+        topCategories,
+        usersWithProfiles: profiledUsers,
+        usersWithoutProfiles: recipientCount - profiledUsers,
       },
     });
   } catch (error) {

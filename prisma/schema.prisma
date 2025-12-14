@@ -47,6 +47,7 @@ model User {
   comments          Comment[]
   behaviors         UserBehavior[]
   preferences       UserPreference?
+  interestProfile   UserInterestProfile?
   emailLogs         EmailLog[]
   stripeConfig      StripeConfig?
   idVerifications   IDVerification[]
@@ -184,6 +185,9 @@ model Project {
   backerCount           Int           @default(0)
   followerCount         Int           @default(0)
   isStaffPick           Boolean       @default(false)
+
+  // AI-generated tags for matching
+  tags                  String[]
 
   // Relations
   creator               User          @relation("ProjectCreator", fields: [creatorId], references: [id])
@@ -719,6 +723,47 @@ enum BehaviorEventType {
   SCROLL_DEPTH
   HOVER
   CREATOR_VIEW
+}
+
+// User interest profile for AI-powered email matching
+model UserInterestProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Category interests (weighted by engagement)
+  categoryInterests Json     // { "TECHNOLOGY": 0.85, "GAMES": 0.72, ... }
+
+  // Tag interests from viewed/backed projects
+  tagInterests      Json     // { "indie": 0.9, "puzzle": 0.65, ... }
+
+  // Search-based interests
+  searchInterests   String[] // Keywords from search queries
+
+  // Engagement metrics
+  totalProjectsViewed    Int     @default(0)
+  totalProjectsBacked    Int     @default(0)
+  avgPledgeAmount        Float   @default(0)
+
+  // Preferred project attributes
+  preferredGoalRange     Json?   // { "min": 1000, "max": 50000 }
+  preferredDuration      Int?    // Preferred campaign duration in days
+
+  // Time preferences (for send time optimization)
+  activeHours            Int[]   // Hours when user is most active (0-23)
+  activeDays             Int[]   // Days when user is most active (0-6, 0=Sunday)
+
+  // Profile quality score (based on data available)
+  profileScore           Float   @default(0) // 0-100
+
+  // Last calculation timestamp
+  lastCalculatedAt       DateTime @default(now())
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([profileScore])
+  @@index([lastCalculatedAt])
 }
 
 model UserPreference {
