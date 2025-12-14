@@ -1,6 +1,6 @@
 "use client";
 
-
+import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +54,7 @@ export default function PaymentSettingsPage() {
     try {
       const res = await fetch("/api/stripe/connect", {
         method: "POST",
+        headers: getCSRFHeaders(),
       });
       const data = await res.json();
 
@@ -77,6 +78,7 @@ export default function PaymentSettingsPage() {
     try {
       const res = await fetch("/api/stripe/connect/refresh", {
         method: "POST",
+        headers: getCSRFHeaders(),
       });
       const data = await res.json();
 

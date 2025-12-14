@@ -1,6 +1,6 @@
 "use client";
 
-
+import { getCSRFHeaders } from "@/lib/csrf";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,7 @@ export default function StripeRefreshPage() {
     try {
       const res = await fetch("/api/stripe/connect/refresh", {
         method: "POST",
+        headers: getCSRFHeaders(),
       });
       const data = await res.json();
 

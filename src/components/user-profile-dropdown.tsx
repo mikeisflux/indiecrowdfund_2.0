@@ -1,5 +1,6 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -64,7 +65,7 @@ export function UserProfileDropdown() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", headers: getCSRFHeaders() });
       // Force a hard navigation to clear all cached state
       window.location.href = "/";
     } catch (error) {

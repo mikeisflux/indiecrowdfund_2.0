@@ -1,6 +1,6 @@
 "use client";
 
-
+import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,7 @@ export function ImageUpload({
 
       const response = await fetch("/api/upload", {
         method: "POST",
+        headers: getCSRFHeaders(),
         body: formData,
       });
 

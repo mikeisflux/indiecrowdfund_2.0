@@ -1,6 +1,6 @@
 "use client";
 
-
+import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -102,6 +102,7 @@ export default function FollowingPage() {
     try {
       const res = await fetch(`/api/user/following?projectId=${projectId}`, {
         method: "DELETE",
+        headers: getCSRFHeaders(),
       });
       if (res.ok && data) {
         setData({
@@ -121,6 +122,7 @@ export default function FollowingPage() {
     try {
       const res = await fetch(`/api/user/following?creatorId=${creatorId}`, {
         method: "DELETE",
+        headers: getCSRFHeaders(),
       });
       if (res.ok && data) {
         setData({
