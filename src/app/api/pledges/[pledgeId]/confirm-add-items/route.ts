@@ -52,7 +52,8 @@ export async function POST(
     const metadata = pledge.metadata as {
       pendingAdditionalItems?: {
         paymentIntentId: string;
-        addonIds: string[];
+        addons?: { id: string; quantity: number }[]; // New format with quantities
+        addonIds?: string[]; // Legacy format
         amount: number;
         createdAt: string;
       };
@@ -66,6 +67,20 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    // Support both new format (addons with quantities) and legacy format (addonIds)
+    const addonsWithQuantity: { id: string; quantity: number }[] = pendingItems.addons ||
+      (pendingItems.addonIds ? pendingItems.addonIds.map(id => ({ id, quantity: 1 })) : []);
+
+    if (addonsWithQuantity.length === 0) {
+      return NextResponse.json(
+        { error: "No addons found in pending items" },
+        { status: 400 }
+      );
+    }
+
+    const addonIds = addonsWithQuantity.map(a => a.id);
+    const quantityMap = new Map(addonsWithQuantity.map(a => [a.id, a.quantity]));
 
     // Verify payment was successful
     const stripe = await getStripeInstance();
@@ -88,14 +103,19 @@ export async function POST(
     // Get the addons
     const addons = await db.addon.findMany({
       where: {
-        id: { in: pendingItems.addonIds },
+        id: { in: addonIds },
       },
     });
 
+    // Calculate total quantity for logging
+    const totalQuantity = addonsWithQuantity.reduce((sum, a) => sum + a.quantity, 0);
+
     // Perform all updates in a transaction
     await db.$transaction(async (tx) => {
-      // Create PledgeAddon records for each addon
+      // Create PledgeAddon records for each addon with quantity
       for (const addon of addons) {
+        const quantity = quantityMap.get(addon.id) || 1;
+
         // Check if this addon already exists for this pledge
         const existingAddon = await tx.pledgeAddon.findFirst({
           where: {
@@ -108,7 +128,10 @@ export async function POST(
           // Increment quantity
           await tx.pledgeAddon.update({
             where: { id: existingAddon.id },
-            data: { quantity: existingAddon.quantity + 1 },
+            data: {
+              quantity: existingAddon.quantity + quantity,
+              amount: (existingAddon.quantity + quantity) * addon.amount,
+            },
           });
         } else {
           // Create new
@@ -116,7 +139,8 @@ export async function POST(
             data: {
               pledgeId: pledge.id,
               addonId: addon.id,
-              quantity: 1,
+              quantity,
+              amount: addon.amount * quantity,
             },
           });
         }
@@ -125,7 +149,7 @@ export async function POST(
         await tx.addon.update({
           where: { id: addon.id },
           data: {
-            quantityClaimed: { increment: 1 },
+            quantityClaimed: { increment: quantity },
           },
         });
       }
@@ -144,7 +168,7 @@ export async function POST(
               ...((metadata as Record<string, unknown>)?.completedAdditionalItems as unknown[] || []),
               {
                 paymentIntentId: pendingItems.paymentIntentId,
-                addonIds: pendingItems.addonIds,
+                addons: addonsWithQuantity,
                 amount: pendingItems.amount,
                 completedAt: new Date().toISOString(),
               },
@@ -162,7 +186,7 @@ export async function POST(
       });
     });
 
-    console.log(`[ConfirmAddItems] Successfully added ${addons.length} items to pledge ${pledgeId}, amount: $${pendingItems.amount}`);
+    console.log(`[ConfirmAddItems] Successfully added ${totalQuantity} items (${addons.length} unique) to pledge ${pledgeId}, amount: $${pendingItems.amount}`);
 
     return NextResponse.json({
       success: true,

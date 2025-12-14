@@ -146,9 +146,17 @@ export function PromotionStep() {
         setProjectSlug(result.project.slug);
       }
 
-      updatePromotion({ prelaunchActive: true });
-      setJustPublished(true);
-      toast.success("Pre-launch page published!");
+      // Check if the prelaunch requires approval
+      if (result.requiresApproval) {
+        toast.info(result.message || "Your pre-launch page has been submitted for review.");
+        // Don't set prelaunchActive - it's pending approval
+        updatePromotion({ prelaunchActive: false });
+        setJustPublished(false);
+      } else {
+        updatePromotion({ prelaunchActive: true });
+        setJustPublished(true);
+        toast.success("Pre-launch page published!");
+      }
     } catch (error) {
       console.error("Publish pre-launch error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to publish");

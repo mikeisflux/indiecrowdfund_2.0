@@ -29,6 +29,8 @@ import {
   AlertTriangle,
   Loader2,
   Info,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { SHIPPING_COUNTRIES } from "@/types";
@@ -335,13 +337,17 @@ export default function PledgePage() {
     setPaymentError(null);
 
     try {
-      const addonIds = Object.keys(selectedAddons);
+      // Send addons with quantities
+      const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
+        id,
+        quantity,
+      }));
 
       const response = await fetch(`/api/pledges/${existingPledgeId}/add-items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          addonIds,
+          addons: addonsWithQuantity,
           amount: addItemsTotal,
         }),
       });
@@ -375,7 +381,11 @@ export default function PledgePage() {
     setPaymentError(null);
 
     try {
-      const addonIds = Object.keys(selectedAddons);
+      // Send addons with quantities
+      const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
+        id,
+        quantity,
+      }));
 
       const response = await fetch("/api/pledges", {
         method: "POST",
@@ -383,7 +393,7 @@ export default function PledgePage() {
         body: JSON.stringify({
           projectId: project.id,
           rewardId: selectedReward?.id || null,
-          addonIds,
+          addons: addonsWithQuantity,
           amount: total,
         }),
       });
@@ -597,6 +607,51 @@ export default function PledgePage() {
         return rest;
       }
       return { ...prev, [addonId]: 1 };
+    });
+  };
+
+  const handleAddonQuantityChange = (addonId: string, delta: number) => {
+    setSelectedAddons((prev) => {
+      const currentQty = prev[addonId] || 0;
+      const newQty = Math.max(0, currentQty + delta);
+
+      if (newQty === 0) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [addonId]: _removed, ...rest } = prev;
+        return rest;
+      }
+
+      // Check limited quantity if applicable
+      const addon = addons.find(a => a.id === addonId);
+      if (addon?.limitedQuantity !== null && addon?.limitedQuantity !== undefined) {
+        const availableQty = addon.limitedQuantity - addon.quantityClaimed;
+        if (newQty > availableQty) {
+          return prev; // Don't exceed available quantity
+        }
+      }
+
+      return { ...prev, [addonId]: newQty };
+    });
+  };
+
+  const setAddonQuantity = (addonId: string, quantity: number) => {
+    setSelectedAddons((prev) => {
+      if (quantity <= 0) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [addonId]: _removed, ...rest } = prev;
+        return rest;
+      }
+
+      // Check limited quantity if applicable
+      const addon = addons.find(a => a.id === addonId);
+      if (addon?.limitedQuantity !== null && addon?.limitedQuantity !== undefined) {
+        const availableQty = addon.limitedQuantity - addon.quantityClaimed;
+        if (quantity > availableQty) {
+          return { ...prev, [addonId]: availableQty };
+        }
+      }
+
+      return { ...prev, [addonId]: quantity };
     });
   };
 
@@ -1183,23 +1238,36 @@ export default function PledgePage() {
                                   )}
                                 </div>
 
-                                <Button
-                                  onClick={() => handleAddonToggle(addon.id)}
-                                  className={`rounded-none h-12 font-medium ${
-                                    isSelected
-                                      ? "bg-[#028858] hover:bg-[#026d47] text-white"
-                                      : "bg-zinc-900 hover:bg-zinc-800 text-white"
-                                  }`}
-                                >
-                                  {isSelected ? (
-                                    <>
-                                      <CheckCircle className="h-4 w-4 mr-2" />
-                                      Added
-                                    </>
-                                  ) : (
-                                    "Add"
-                                  )}
-                                </Button>
+                                {isSelected ? (
+                                  /* Quantity controls when addon is selected */
+                                  <div className="flex items-center h-12 bg-[#028858]">
+                                    <Button
+                                      onClick={() => handleAddonQuantityChange(addon.id, -1)}
+                                      className="h-full px-3 rounded-none bg-transparent hover:bg-[#026d47] text-white border-r border-white/20"
+                                      variant="ghost"
+                                    >
+                                      <Minus className="h-4 w-4" />
+                                    </Button>
+                                    <div className="flex-1 flex items-center justify-center text-white font-medium">
+                                      {selectedAddons[addon.id]}
+                                    </div>
+                                    <Button
+                                      onClick={() => handleAddonQuantityChange(addon.id, 1)}
+                                      className="h-full px-3 rounded-none bg-transparent hover:bg-[#026d47] text-white border-l border-white/20"
+                                      variant="ghost"
+                                      disabled={addon.limitedQuantity !== null && addon.limitedQuantity !== undefined && selectedAddons[addon.id] >= (addon.limitedQuantity - addon.quantityClaimed)}
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    onClick={() => handleAddonToggle(addon.id)}
+                                    className="rounded-none h-12 font-medium bg-zinc-900 hover:bg-zinc-800 text-white w-full"
+                                  >
+                                    Add
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </CardContent>

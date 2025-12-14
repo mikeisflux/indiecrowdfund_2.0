@@ -174,10 +174,15 @@ async function safeCancelPaymentIntent(stripeClient: Stripe, paymentIntentId: st
   }
 }
 
+interface AddonWithQuantity {
+  id: string;
+  quantity: number;
+}
+
 interface CreatePaymentParams {
   projectId: string;
   rewardId: string | null | undefined; // Optional for "pledge without reward"
-  addonIds: string[];
+  addons: AddonWithQuantity[]; // Addons with quantities
   amount: number;
   userId: string;
 }
@@ -280,7 +285,7 @@ async function getOrCreateStripeCustomer(
 export async function createStripePayment({
   projectId,
   rewardId,
-  addonIds,
+  addons,
   amount,
   userId,
 }: CreatePaymentParams) {
@@ -477,8 +482,9 @@ export async function createStripePayment({
   });
 
   // Create addon records if any
-  if (addonIds.length > 0) {
-    const addons = await db.reward.findMany({
+  if (addons.length > 0) {
+    const addonIds = addons.map(a => a.id);
+    const addonRecords = await db.reward.findMany({
       where: {
         id: { in: addonIds },
         type: "ADDON",
@@ -486,12 +492,15 @@ export async function createStripePayment({
       select: { id: true, amount: true },
     });
 
+    // Create a map for quick lookup
+    const addonPriceMap = new Map(addonRecords.map(a => [a.id, a.amount]));
+
     await db.pledgeAddon.createMany({
       data: addons.map((addon) => ({
         pledgeId: pledge.id,
         addonId: addon.id,
-        quantity: 1,
-        amount: addon.amount,
+        quantity: addon.quantity,
+        amount: (addonPriceMap.get(addon.id) || 0) * addon.quantity,
       })),
     });
   }

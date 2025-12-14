@@ -18,14 +18,20 @@ export async function POST(
 
     const { pledgeId } = await params;
     const body = await req.json();
-    const { addonIds, amount } = body;
+    const { addons, addonIds, amount } = body;
 
-    if (!addonIds || !Array.isArray(addonIds) || addonIds.length === 0) {
+    // Support both new format (addons with quantities) and legacy format (addonIds)
+    const addonsWithQuantity: { id: string; quantity: number }[] = addons ||
+      (addonIds ? addonIds.map((id: string) => ({ id, quantity: 1 })) : []);
+
+    if (addonsWithQuantity.length === 0) {
       return NextResponse.json(
         { error: "At least one addon is required" },
         { status: 400 }
       );
     }
+
+    const addonIdList = addonsWithQuantity.map(a => a.id);
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -75,30 +81,40 @@ export async function POST(
     // Validate addons exist and belong to this project
     const validAddons = await db.addon.findMany({
       where: {
-        id: { in: addonIds },
+        id: { in: addonIdList },
         projectId: pledge.projectId,
       },
     });
 
-    if (validAddons.length !== addonIds.length) {
+    if (validAddons.length !== addonIdList.length) {
       return NextResponse.json(
         { error: "Some addons are invalid" },
         { status: 400 }
       );
     }
 
-    // Check addon availability
+    // Create a map for quick lookup
+    const addonQuantityMap = new Map(addonsWithQuantity.map(a => [a.id, a.quantity]));
+
+    // Check addon availability with quantities
     for (const addon of validAddons) {
-      if (addon.quantityAvailable !== null && addon.quantityClaimed >= addon.quantityAvailable) {
-        return NextResponse.json(
-          { error: `${addon.title} is sold out` },
-          { status: 400 }
-        );
+      const requestedQty = addonQuantityMap.get(addon.id) || 1;
+      if (addon.quantityAvailable !== null) {
+        const availableQty = addon.quantityAvailable - addon.quantityClaimed;
+        if (requestedQty > availableQty) {
+          return NextResponse.json(
+            { error: `Only ${availableQty} of ${addon.title} available` },
+            { status: 400 }
+          );
+        }
       }
     }
 
-    // Calculate the expected amount
-    const calculatedAmount = validAddons.reduce((sum: number, addon: { amount: number }) => sum + addon.amount, 0);
+    // Calculate the expected amount with quantities
+    const calculatedAmount = validAddons.reduce((sum: number, addon: { id: string; amount: number }) => {
+      const qty = addonQuantityMap.get(addon.id) || 1;
+      return sum + (addon.amount * qty);
+    }, 0);
 
     // Allow some tolerance for shipping costs
     if (amount < calculatedAmount) {
@@ -138,7 +154,7 @@ export async function POST(
         userId: session.user.id,
         projectId: pledge.projectId,
         type: "additional_items",
-        addonIds: JSON.stringify(addonIds),
+        addons: JSON.stringify(addonsWithQuantity),
       },
     };
 
@@ -164,7 +180,7 @@ export async function POST(
           ...(typeof pledge.metadata === "object" && pledge.metadata !== null ? pledge.metadata : {}),
           pendingAdditionalItems: {
             paymentIntentId: paymentIntent.id,
-            addonIds,
+            addons: addonsWithQuantity,
             amount,
             createdAt: new Date().toISOString(),
           },

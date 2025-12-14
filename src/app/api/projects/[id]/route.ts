@@ -2,7 +2,91 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { sendCollaboratorInviteEmail } from "@/lib/email";
+import { sendCollaboratorInviteEmail, sendProjectSubmittedEmail } from "@/lib/email";
+
+// Helper function to check if a user has had a successful (funded + fulfilled) campaign
+async function hasSuccessfulCampaign(userId: string): Promise<boolean> {
+  // Find projects that are FUNDED or have reached their goal
+  const fundedProjects = await db.project.findMany({
+    where: {
+      creatorId: userId,
+      OR: [
+        { status: "FUNDED" },
+        // Also check projects that reached their goal but may still be LIVE
+        {
+          status: { in: ["LIVE", "FUNDED"] },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      currentAmount: true,
+      goalAmount: true,
+    },
+  });
+
+  // Filter to only projects that actually reached their goal
+  const projectsThatReachedGoal = fundedProjects.filter(
+    (p) => p.currentAmount >= p.goalAmount
+  );
+
+  if (projectsThatReachedGoal.length === 0) {
+    return false;
+  }
+
+  // Check if any of these projects have >= 85% fulfillment
+  for (const project of projectsThatReachedGoal) {
+    const pledges = await db.pledge.findMany({
+      where: {
+        projectId: project.id,
+        status: "COMPLETED",
+      },
+      select: {
+        fulfillmentStatus: true,
+      },
+    });
+
+    if (pledges.length === 0) {
+      continue; // No completed pledges to fulfill
+    }
+
+    const deliveredCount = pledges.filter(
+      (p) => p.fulfillmentStatus === "DELIVERED"
+    ).length;
+    const fulfillmentPercentage = (deliveredCount / pledges.length) * 100;
+
+    if (fulfillmentPercentage >= 85) {
+      return true; // Found a successful campaign
+    }
+  }
+
+  return false;
+}
+
+// Helper function to check if user can activate prelaunch without approval
+async function canActivatePrelaunchImmediately(userId: string): Promise<boolean> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+
+  if (!user) {
+    return false;
+  }
+
+  // Admins and Super Admins can always activate prelaunch
+  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") {
+    return true;
+  }
+
+  // Cool Kids can activate prelaunch without approval
+  if (user.role === "COOL_KIDS") {
+    return true;
+  }
+
+  // Standard users need a successful campaign
+  return await hasSuccessfulCampaign(userId);
+}
 
 // Schema for reward items
 const rewardItemSchema = z.object({
@@ -371,7 +455,67 @@ export async function PATCH(
       if (projectData.retailerMinQuantity !== undefined) updateData.retailerMinQuantity = projectData.retailerMinQuantity;
 
       // Promotion fields
-      if (projectData.prelaunchActive !== undefined) updateData.prelaunchActive = projectData.prelaunchActive;
+      // Check prelaunch activation - standard users without successful campaigns need approval
+      if (projectData.prelaunchActive === true) {
+        // Check if user can activate prelaunch immediately
+        const canActivate = await canActivatePrelaunchImmediately(session.user.id);
+
+        if (!canActivate) {
+          // User needs approval - check if project is already approved
+          if (project.status !== "APPROVED") {
+            // Submit the project for review instead of activating prelaunch
+            // Save all the other project data but submit for review
+            updateData.status = "SUBMITTED";
+
+            // Get the full project data to include in review
+            const fullProject = await db.project.findUnique({
+              where: { id: params.id },
+              select: { title: true, creatorId: true, creator: { select: { name: true, email: true } } },
+            });
+
+            // Create a project review record for prelaunch review
+            await db.projectReview.create({
+              data: {
+                projectId: params.id,
+                action: "SUBMITTED",
+                previousStatus: project.status,
+                newStatus: "SUBMITTED",
+                notes: "Pre-launch page submitted for review. Standard user without previous successful campaign.",
+                flagsRaised: ["prelaunch_review"],
+              },
+            });
+
+            // Send email notification to creator
+            if (fullProject?.creator?.email) {
+              try {
+                await sendProjectSubmittedEmail(
+                  fullProject.creator.email,
+                  fullProject.creator.name || "Creator",
+                  fullProject.title
+                );
+              } catch (emailError) {
+                console.error("Failed to send project submitted email:", emailError);
+              }
+            }
+
+            // Return early with a message about needing approval
+            return NextResponse.json({
+              success: true,
+              requiresApproval: true,
+              message: "Your pre-launch page has been submitted for review. Once approved, you can activate it.",
+              project: { id: params.id, status: "SUBMITTED" },
+            });
+          }
+          // Project is approved, allow prelaunch activation
+          updateData.prelaunchActive = true;
+        } else {
+          // User can activate prelaunch immediately
+          updateData.prelaunchActive = true;
+        }
+      } else if (projectData.prelaunchActive === false) {
+        updateData.prelaunchActive = false;
+      }
+
       if (projectData.prelaunchDescription !== undefined) updateData.prelaunchDescription = projectData.prelaunchDescription;
       if (projectData.customReferralTags !== undefined) updateData.customReferralTags = projectData.customReferralTags;
       if (projectData.googleAnalyticsId !== undefined) updateData.googleAnalyticsId = projectData.googleAnalyticsId;

@@ -4,10 +4,18 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { createStripePayment } from "@/lib/payments/stripe";
 
+// Addon with quantity schema
+const addonWithQuantitySchema = z.object({
+  id: z.string(),
+  quantity: z.number().int().positive(),
+});
+
 const createPledgeSchema = z.object({
   projectId: z.string(),
   rewardId: z.string().nullable().optional(), // Optional for "pledge without reward"
+  // Support both array of IDs (legacy) and array of objects with quantities
   addonIds: z.array(z.string()).default([]),
+  addons: z.array(addonWithQuantitySchema).optional(), // New format with quantities
   amount: z.number().positive(),
   shippingAddress: z.object({
     name: z.string(),
@@ -80,10 +88,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Use the new addons format if provided, otherwise convert legacy addonIds
+    const addonsWithQuantity = data.addons || data.addonIds.map(id => ({ id, quantity: 1 }));
+
     const result = await createStripePayment({
       projectId: data.projectId,
       rewardId: data.rewardId,
-      addonIds: data.addonIds,
+      addons: addonsWithQuantity,
       amount: data.amount,
       userId: session.user.id,
     });

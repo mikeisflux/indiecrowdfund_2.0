@@ -202,7 +202,12 @@ export async function PATCH(
         );
       }
 
-      const { rewardId, addonIds, newAmount } = body;
+      const { rewardId, addonIds, addons, newAmount } = body;
+
+      // Support both new format (addons with quantities) and legacy format (addonIds)
+      const addonsWithQuantity: { id: string; quantity: number }[] = addons ||
+        (addonIds ? addonIds.map((id: string) => ({ id, quantity: 1 })) : []);
+      const addonIdList = addonsWithQuantity.map(a => a.id);
 
       // Validate new reward if provided
       let newReward = null;
@@ -224,15 +229,15 @@ export async function PATCH(
       }
 
       // Validate addons if provided
-      if (addonIds && addonIds.length > 0) {
+      if (addonIdList.length > 0) {
         const validAddons = await db.addon.findMany({
           where: {
-            id: { in: addonIds },
+            id: { in: addonIdList },
             projectId: pledge.projectId,
           },
         });
 
-        if (validAddons.length !== addonIds.length) {
+        if (validAddons.length !== addonIdList.length) {
           return NextResponse.json({ error: "Invalid addons" }, { status: 400 });
         }
       }
@@ -263,13 +268,21 @@ export async function PATCH(
         where: { pledgeId },
       });
 
-      // Create new addon associations
-      if (addonIds && addonIds.length > 0) {
+      // Create new addon associations with quantities
+      if (addonsWithQuantity.length > 0) {
+        // Get addon prices
+        const addonRecords = await db.addon.findMany({
+          where: { id: { in: addonIdList } },
+          select: { id: true, amount: true },
+        });
+        const addonPriceMap = new Map(addonRecords.map(a => [a.id, a.amount]));
+
         await db.pledgeAddon.createMany({
-          data: addonIds.map((addonId: string) => ({
+          data: addonsWithQuantity.map((addon) => ({
             pledgeId,
-            addonId,
-            quantity: 1,
+            addonId: addon.id,
+            quantity: addon.quantity,
+            amount: (addonPriceMap.get(addon.id) || 0) * addon.quantity,
           })),
         });
       }
