@@ -142,7 +142,7 @@ export async function POST(
         userId: string;
         projectId: string;
         type: string;
-        addonIds: string;
+        addons: string;
       };
       application_fee_amount?: number;
       transfer_data?: { destination: string };

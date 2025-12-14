@@ -275,14 +275,16 @@ export async function PATCH(
           where: { id: { in: addonIdList } },
           select: { id: true, amount: true },
         });
-        const addonPriceMap = new Map(addonRecords.map(a => [a.id, a.amount]));
+        const addonPriceMap = new Map<string, number>(
+          addonRecords.map((a: { id: string; amount: number }) => [a.id, Number(a.amount)])
+        );
 
         await db.pledgeAddon.createMany({
           data: addonsWithQuantity.map((addon) => ({
             pledgeId,
             addonId: addon.id,
             quantity: addon.quantity,
-            amount: (addonPriceMap.get(addon.id) || 0) * addon.quantity,
+            amount: (addonPriceMap.get(addon.id) ?? 0) * addon.quantity,
           })),
         });
       }

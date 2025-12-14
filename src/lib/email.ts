@@ -226,6 +226,69 @@ export async function sendCollaboratorInviteEmail(
 }
 
 // Project Review Email Functions
+export async function sendProjectSubmittedEmail(
+  email: string,
+  creatorName: string,
+  projectTitle: string
+) {
+  const dashboardUrl = `${APP_URL}/dashboard/projects`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Project Submitted for Review</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: #f0f9ff; border-radius: 8px; padding: 30px; margin-bottom: 20px; border: 1px solid #bae6fd;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background: #0ea5e9; color: white; padding: 10px 20px; border-radius: 50px; font-size: 14px; font-weight: 600;">
+              UNDER REVIEW
+            </div>
+          </div>
+
+          <h2 style="margin-top: 0; color: #0369a1; text-align: center;">Project Submitted!</h2>
+          <p>Hi ${creatorName || "Creator"},</p>
+          <p>Your project <strong>"${projectTitle}"</strong> has been submitted for review.</p>
+
+          <div style="background: white; border-radius: 6px; padding: 15px; margin: 20px 0; border-left: 4px solid #0ea5e9;">
+            <p style="margin: 0; color: #666; font-size: 14px;"><strong>What happens next?</strong></p>
+            <p style="margin: 10px 0 0 0;">Our team will review your project within 1-2 business days. We'll notify you by email once the review is complete.</p>
+          </div>
+
+          <p>In the meantime, you can continue to make edits to your project. Any changes will be included in the review.</p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${dashboardUrl}" style="display: inline-block; background: #0ea5e9; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+              View Your Projects
+            </a>
+          </div>
+
+          <p style="color: #666; font-size: 14px; text-align: center;">
+            Thank you for using ${APP_NAME}!
+          </p>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Your project "${projectTitle}" is under review`,
+    html,
+  });
+}
+
 export async function sendProjectApprovedEmail(
   email: string,
   creatorName: string,
