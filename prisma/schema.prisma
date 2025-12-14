@@ -1261,6 +1261,12 @@ model PlatformSettings {
   stripePublishableKey  String?
   stripeWebhookSecret   String?
 
+  // CCBill Settings
+  ccbillEnabled         Boolean  @default(false)
+
+  // Payout Settings
+  autoPayouts           Boolean  @default(false)
+
   // Email Settings
   emailProvider         String   @default("smtp")
   smtpHost              String?
@@ -1272,6 +1278,10 @@ model PlatformSettings {
   sendgridApiKey        String?
   mailgunApiKey         String?
   mailgunDomain         String?
+  emailVerificationRequired Boolean @default(false)
+  welcomeEmailEnabled   Boolean  @default(true)
+  pledgeConfirmationEnabled Boolean @default(true)
+  projectUpdateNotifications Boolean @default(true)
 
   // Social Settings
   twitterHandle         String?
@@ -1297,6 +1307,10 @@ model PlatformSettings {
   dalleApiKey           String?
   stabilityApiKey       String?
 
+  // Social Auto-Posting Settings
+  autoPostEnabled       Boolean  @default(false)
+  postApprovalRequired  Boolean  @default(true)
+
   // AI Settings
   aiProvider            String   @default("openai")
   openaiApiKey          String?
@@ -1304,6 +1318,7 @@ model PlatformSettings {
   aiAutoModeration      Boolean  @default(false)
   aiAutoTagging         Boolean  @default(false)
   aiContentGeneration   Boolean  @default(false)
+  aiFraudDetection      Boolean  @default(true)
 
   // AI Marketing Settings
   aiAutoTagConfidence   Int      @default(75)
@@ -1355,6 +1370,8 @@ model PlatformSettings {
   ipRateLimitEnabled    Boolean  @default(true)
   ipRateLimitRequests   Int      @default(100)
   ipRateLimitWindow     Int      @default(60)
+  csrfProtection        Boolean  @default(true)
+  contentSecurityPolicy Boolean  @default(true)
 
   // Theme Settings
   primaryColor          String   @default("#0066FF")

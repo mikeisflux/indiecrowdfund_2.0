@@ -92,6 +92,20 @@ interface PlatformSettings {
   aiAutoModeration: boolean;
   aiAutoTagging: boolean;
   aiContentGeneration: boolean;
+  aiFraudDetection: boolean;
+  // Email notification settings
+  emailVerificationRequired: boolean;
+  welcomeEmailEnabled: boolean;
+  pledgeConfirmationEnabled: boolean;
+  projectUpdateNotifications: boolean;
+  // Payment settings
+  autoPayouts: boolean;
+  // Social auto-posting settings
+  autoPostEnabled: boolean;
+  postApprovalRequired: boolean;
+  // Security settings
+  csrfProtection: boolean;
+  contentSecurityPolicy: boolean;
   // ID Verification (Shufti Pro)
   idVerificationEnabled: boolean;
   shuftiClientId: string | null;
@@ -290,6 +304,7 @@ export default function SettingsPage() {
         ccbillSubAccount: settings.ccbillSubaccount || "",
         ccbillFlexId: settings.ccbillFormName || "",
         ccbillSalt: settings.ccbillSalt || "",
+        autoPayouts: settings.autoPayouts || false,
       }));
 
       setEmailSettings((prev) => ({
@@ -304,6 +319,10 @@ export default function SettingsPage() {
         sendgridApiKey: settings.sendgridApiKey || "",
         mailgunApiKey: settings.mailgunApiKey || "",
         mailgunDomain: settings.mailgunDomain || "",
+        emailVerificationRequired: settings.emailVerificationRequired || false,
+        welcomeEmailEnabled: settings.welcomeEmailEnabled !== false,
+        pledgeConfirmationEnabled: settings.pledgeConfirmationEnabled !== false,
+        projectUpdateNotifications: settings.projectUpdateNotifications !== false,
       }));
 
       setSecuritySettings((prev) => ({
@@ -314,6 +333,8 @@ export default function SettingsPage() {
         passwordMinLength: String(settings.passwordMinLength || 8),
         requireSpecialChar: settings.requireSpecialChars || true,
         rateLimit: String(settings.ipRateLimitRequests || 100),
+        csrfProtection: settings.csrfProtection !== false,
+        contentSecurityPolicy: settings.contentSecurityPolicy !== false,
       }));
 
       setAiSettings((prev) => ({
@@ -325,6 +346,7 @@ export default function SettingsPage() {
         autoTagging: settings.aiAutoTagging || false,
         contentModeration: settings.aiAutoModeration || false,
         marketingCopy: settings.aiContentGeneration || false,
+        fraudDetection: settings.aiFraudDetection !== false, // Default to true if not set
       }));
 
       // Set enabled flags based on whether API keys exist
@@ -358,6 +380,9 @@ export default function SettingsPage() {
         twitterAccessSecret: settings.twitterAccessSecret || "",
         dalleApiKey: settings.dalleApiKey || "",
         stabilityApiKey: settings.stabilityApiKey || "",
+        // Auto-posting settings
+        autoPostEnabled: settings.autoPostEnabled || false,
+        postApprovalRequired: settings.postApprovalRequired !== false,
       }));
 
       // Load ID verification settings
@@ -483,6 +508,8 @@ export default function SettingsPage() {
             stripePublishableKey: currentPaymentSettings.stripePublicKey,
             stripeSecretKey: currentPaymentSettings.stripeSecretKey,
             stripeWebhookSecret: currentPaymentSettings.stripeWebhookSecret,
+            ccbillEnabled: currentPaymentSettings.ccbillEnabled,
+            autoPayouts: currentPaymentSettings.autoPayouts,
           };
           break;
         case "email":
@@ -498,6 +525,10 @@ export default function SettingsPage() {
             sendgridApiKey: emailSettings.sendgridApiKey,
             mailgunApiKey: emailSettings.mailgunApiKey,
             mailgunDomain: emailSettings.mailgunDomain,
+            emailVerificationRequired: emailSettings.emailVerificationRequired,
+            welcomeEmailEnabled: emailSettings.welcomeEmailEnabled,
+            pledgeConfirmationEnabled: emailSettings.pledgeConfirmationEnabled,
+            projectUpdateNotifications: emailSettings.projectUpdateNotifications,
           };
           break;
         case "social":
@@ -516,6 +547,8 @@ export default function SettingsPage() {
             twitterAccessSecret: socialSettings.twitterAccessSecret,
             dalleApiKey: socialSettings.dalleApiKey,
             stabilityApiKey: socialSettings.stabilityApiKey,
+            autoPostEnabled: socialSettings.autoPostEnabled,
+            postApprovalRequired: socialSettings.postApprovalRequired,
           };
           break;
         case "ai":
@@ -527,6 +560,7 @@ export default function SettingsPage() {
             aiAutoModeration: aiSettings.contentModeration,
             aiAutoTagging: aiSettings.autoTagging,
             aiContentGeneration: aiSettings.marketingCopy,
+            aiFraudDetection: aiSettings.fraudDetection,
           };
           break;
         case "security":
@@ -539,6 +573,8 @@ export default function SettingsPage() {
             requireSpecialChars: securitySettings.requireSpecialChar,
             ipRateLimitEnabled: true,
             ipRateLimitRequests: parseInt(securitySettings.rateLimit),
+            csrfProtection: securitySettings.csrfProtection,
+            contentSecurityPolicy: securitySettings.contentSecurityPolicy,
           };
           break;
         case "idverify":

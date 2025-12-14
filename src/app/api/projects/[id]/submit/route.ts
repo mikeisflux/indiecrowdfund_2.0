@@ -117,6 +117,15 @@ export async function POST(
     let aiModerationResult = null;
     let aiFraudResult = null;
 
+    // Get platform settings for AI feature toggles
+    const platformSettings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: {
+        aiAutoModeration: true,
+        aiFraudDetection: true,
+      },
+    });
+
     try {
       const projectContent = {
         title: project.title,
@@ -135,10 +144,23 @@ export async function POST(
 
       // Only run AI if API keys are configured
       if (process.env.ANTHROPIC_API_KEY) {
-        [aiModerationResult, aiFraudResult] = await Promise.all([
-          moderateContent(projectContent),
-          analyzeFraud(projectContent),
-        ]);
+        const aiPromises: Promise<unknown>[] = [];
+
+        // Run moderation if enabled (default to true if setting doesn't exist)
+        if (platformSettings?.aiAutoModeration !== false) {
+          aiPromises.push(moderateContent(projectContent));
+        } else {
+          aiPromises.push(Promise.resolve(null));
+        }
+
+        // Run fraud detection if enabled (default to true if setting doesn't exist)
+        if (platformSettings?.aiFraudDetection !== false) {
+          aiPromises.push(analyzeFraud(projectContent));
+        } else {
+          aiPromises.push(Promise.resolve(null));
+        }
+
+        [aiModerationResult, aiFraudResult] = await Promise.all(aiPromises) as [typeof aiModerationResult, typeof aiFraudResult];
 
         // Apply AI moderation flags
         if (aiModerationResult) {

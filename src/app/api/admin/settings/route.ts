@@ -179,22 +179,25 @@ export async function PATCH(req: NextRequest) {
         "logoUrl", "faviconUrl"
       ],
       payments: [
-        "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret"
+        "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret",
+        "ccbillEnabled", "autoPayouts"
       ],
       email: [
         "emailProvider", "smtpHost", "smtpPort", "smtpUser", "smtpPassword",
-        "smtpFromEmail", "smtpFromName", "sendgridApiKey", "mailgunApiKey", "mailgunDomain"
+        "smtpFromEmail", "smtpFromName", "sendgridApiKey", "mailgunApiKey", "mailgunDomain",
+        "emailVerificationRequired", "welcomeEmailEnabled", "pledgeConfirmationEnabled", "projectUpdateNotifications"
       ],
       social: [
         "twitterHandle", "facebookUrl", "instagramHandle", "youtubeUrl", "discordUrl",
         "facebookAppId", "facebookAppSecret", "facebookPageAccessToken",
         "youtubeClientId", "youtubeClientSecret", "youtubeApiKey",
         "twitterApiKey", "twitterApiSecret", "twitterBearerToken", "twitterAccessToken", "twitterAccessSecret",
-        "dalleApiKey", "stabilityApiKey"
+        "dalleApiKey", "stabilityApiKey",
+        "autoPostEnabled", "postApprovalRequired"
       ],
       ai: [
         "aiProvider", "openaiApiKey", "anthropicApiKey",
-        "aiAutoModeration", "aiAutoTagging", "aiContentGeneration"
+        "aiAutoModeration", "aiAutoTagging", "aiContentGeneration", "aiFraudDetection"
       ],
       aiMarketing: [
         "aiAutoTagging", "aiAutoTagConfidence", "aiMaxTags",
@@ -211,7 +214,8 @@ export async function PATCH(req: NextRequest) {
       security: [
         "twoFactorRequired", "sessionTimeout", "maxLoginAttempts",
         "passwordMinLength", "requireSpecialChars",
-        "ipRateLimitEnabled", "ipRateLimitRequests", "ipRateLimitWindow"
+        "ipRateLimitEnabled", "ipRateLimitRequests", "ipRateLimitWindow",
+        "csrfProtection", "contentSecurityPolicy"
       ],
       idverify: [
         "idVerificationEnabled", "shuftiClientId", "shuftiSecretKey",
