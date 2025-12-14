@@ -35,12 +35,14 @@ interface EmailCampaignsTabProps {
   emailStats: EmailStats | null;
   emailCampaigns: EmailCampaign[];
   setShowCampaignDialog: (show: boolean) => void;
+  onConfigureCampaignType?: (type: "subscriber" | "backer" | "creator") => void;
 }
 
 export function EmailCampaignsTab({
   emailStats,
   emailCampaigns,
   setShowCampaignDialog,
+  onConfigureCampaignType,
 }: EmailCampaignsTabProps) {
   return (
     <div className="mt-6 space-y-6">
@@ -102,7 +104,11 @@ export function EmailCampaignsTab({
                   <p className="text-sm text-zinc-500">Target newsletter subscribers</p>
                 </div>
               </div>
-              <Button variant="outline" className="mt-4 w-full">
+              <Button
+                variant="outline"
+                className="mt-4 w-full"
+                onClick={() => onConfigureCampaignType?.("subscriber")}
+              >
                 <ArrowRight className="mr-2 h-4 w-4" />
                 Configure
               </Button>
@@ -118,7 +124,11 @@ export function EmailCampaignsTab({
                   <p className="text-sm text-zinc-500">Engage previous backers</p>
                 </div>
               </div>
-              <Button variant="outline" className="mt-4 w-full">
+              <Button
+                variant="outline"
+                className="mt-4 w-full"
+                onClick={() => onConfigureCampaignType?.("backer")}
+              >
                 <ArrowRight className="mr-2 h-4 w-4" />
                 Configure
               </Button>
@@ -134,7 +144,11 @@ export function EmailCampaignsTab({
                   <p className="text-sm text-zinc-500">Notify project creators</p>
                 </div>
               </div>
-              <Button variant="outline" className="mt-4 w-full">
+              <Button
+                variant="outline"
+                className="mt-4 w-full"
+                onClick={() => onConfigureCampaignType?.("creator")}
+              >
                 <ArrowRight className="mr-2 h-4 w-4" />
                 Configure
               </Button>

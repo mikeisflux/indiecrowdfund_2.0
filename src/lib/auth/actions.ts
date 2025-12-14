@@ -77,6 +77,39 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
     return { error: { _form: ["Something went wrong. Please try again."] } };
   }
 
+  // Send welcome email if enabled
+  try {
+    const { sendWelcomeEmail, isEmailTypeEnabled, sendVerificationEmail, isEmailVerificationRequired } = await import("@/lib/email");
+
+    // Check if welcome email is enabled and send it
+    const welcomeEnabled = await isEmailTypeEnabled("welcome");
+    if (welcomeEnabled) {
+      await sendWelcomeEmail(email, name);
+    }
+
+    // Check if email verification is required and send verification email
+    const verificationRequired = await isEmailVerificationRequired();
+    if (verificationRequired) {
+      // Generate verification token
+      const verificationToken = crypto.randomUUID();
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      // Store the verification token
+      await db.verificationToken.create({
+        data: {
+          identifier: email,
+          token: verificationToken,
+          expires,
+        },
+      });
+
+      await sendVerificationEmail(email, name, verificationToken);
+    }
+  } catch (emailError) {
+    // Don't fail registration if email fails
+    console.error("Failed to send welcome/verification email:", emailError);
+  }
+
   // Create session
   await createSession(user.id);
 

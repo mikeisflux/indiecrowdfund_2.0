@@ -40,6 +40,7 @@ import {
   CampaignForm,
   CampaignTemplate,
 } from "@/components/admin/ai-marketing";
+import { CampaignTypeDialog } from "@/components/admin/ai-marketing/dialogs/campaign-type-dialog";
 
 // Types for dynamic data
 interface ProjectTag {
@@ -98,6 +99,8 @@ export default function AIMarketingPage() {
   const [activityLogs, setActivityLogs] = useState<Array<{ id: string; action: string; details: string; timestamp: string }>>([]);
   const [showTagReview, setShowTagReview] = useState(false);
   const [pendingTagUpdates, setPendingTagUpdates] = useState<PendingTagUpdate[]>([]);
+  const [showCampaignTypeDialog, setShowCampaignTypeDialog] = useState(false);
+  const [selectedCampaignType, setSelectedCampaignType] = useState<"subscriber" | "backer" | "creator" | null>(null);
   const [isApplyingTags, setIsApplyingTags] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [aiRunResults, setAiRunResults] = useState<Record<string, { success: boolean; message: string; data?: any; timestamp: string }>>({});
@@ -636,6 +639,11 @@ export default function AIMarketingPage() {
     setShowCampaignViewer(true);
   };
 
+  const handleConfigureCampaignType = (type: "subscriber" | "backer" | "creator") => {
+    setSelectedCampaignType(type);
+    setShowCampaignTypeDialog(true);
+  };
+
   const loadActivityLogs = async () => {
     // Generate activity logs from campaigns and settings changes
     const logs = [
@@ -827,6 +835,7 @@ export default function AIMarketingPage() {
             emailStats={emailStats}
             emailCampaigns={emailCampaigns}
             setShowCampaignDialog={setShowCampaignDialog}
+            onConfigureCampaignType={handleConfigureCampaignType}
           />
         </TabsContent>
 
@@ -1053,6 +1062,14 @@ export default function AIMarketingPage() {
         aiRunResults={aiRunResults}
         sortConfig={sortConfig}
         onSortConfigChange={setSortConfig}
+      />
+
+      {/* Campaign Type Dialog */}
+      <CampaignTypeDialog
+        open={showCampaignTypeDialog}
+        onOpenChange={setShowCampaignTypeDialog}
+        campaignType={selectedCampaignType}
+        onSuccess={() => loadData()}
       />
     </div>
   );
