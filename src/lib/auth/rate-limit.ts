@@ -1,8 +1,11 @@
 /**
  * Rate limiting for brute force protection
  * Uses in-memory storage with sliding window algorithm
+ * Reads configuration from database with caching
  * For production with multiple instances, consider using Redis
  */
+
+import { db } from "@/lib/db";
 
 interface RateLimitEntry {
   attempts: number;
@@ -24,25 +27,122 @@ const ipAttempts = new Map<string, RateLimitEntry>();
 const accountAttempts = new Map<string, RateLimitEntry>();
 const lockoutCounts = new Map<string, { count: number; lastLockout: number }>();
 
-// Default configurations
+// Cached settings from database
+let cachedSettings: {
+  globalRateLimitEnabled: boolean;
+  globalRateLimitRequests: number;
+  globalRateLimitWindow: number;
+  loginRateLimitEnabled: boolean;
+  loginRateLimitRequests: number;
+  loginRateLimitWindow: number;
+  passwordResetRateLimitRequests: number;
+  passwordResetRateLimitWindow: number;
+  maxLoginAttempts: number;
+} | null = null;
+let settingsCacheTime = 0;
+const SETTINGS_CACHE_TTL = 60 * 1000; // 1 minute cache
+
+// Load settings from database with caching
+async function getSettings() {
+  const now = Date.now();
+  if (cachedSettings && now - settingsCacheTime < SETTINGS_CACHE_TTL) {
+    return cachedSettings;
+  }
+
+  try {
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: {
+        globalRateLimitEnabled: true,
+        globalRateLimitRequests: true,
+        globalRateLimitWindow: true,
+        loginRateLimitEnabled: true,
+        loginRateLimitRequests: true,
+        loginRateLimitWindow: true,
+        passwordResetRateLimitRequests: true,
+        passwordResetRateLimitWindow: true,
+        maxLoginAttempts: true,
+      },
+    });
+
+    if (settings) {
+      cachedSettings = settings;
+      settingsCacheTime = now;
+      return settings;
+    }
+  } catch (error) {
+    console.error("Error loading rate limit settings:", error);
+  }
+
+  // Return defaults if database query fails
+  return {
+    globalRateLimitEnabled: true,
+    globalRateLimitRequests: 100,
+    globalRateLimitWindow: 60,
+    loginRateLimitEnabled: true,
+    loginRateLimitRequests: 5,
+    loginRateLimitWindow: 300,
+    passwordResetRateLimitRequests: 3,
+    passwordResetRateLimitWindow: 900,
+    maxLoginAttempts: 5,
+  };
+}
+
+// Clear the settings cache (call this when settings are updated)
+export function clearRateLimitSettingsCache() {
+  cachedSettings = null;
+  settingsCacheTime = 0;
+}
+
+// Get dynamic configurations based on database settings
+async function getLoginConfig(): Promise<RateLimitConfig> {
+  const settings = await getSettings();
+  return {
+    maxAttempts: settings.loginRateLimitRequests,
+    windowMs: settings.loginRateLimitWindow * 1000,
+    lockoutMs: settings.loginRateLimitWindow * 1000,
+    blockAfterLockouts: 3,
+    extendedBlockMs: 60 * 60 * 1000, // 1 hour extended block
+  };
+}
+
+async function getPasswordResetConfig(): Promise<RateLimitConfig> {
+  const settings = await getSettings();
+  return {
+    maxAttempts: settings.passwordResetRateLimitRequests,
+    windowMs: settings.passwordResetRateLimitWindow * 1000,
+    lockoutMs: settings.passwordResetRateLimitWindow * 1000,
+  };
+}
+
+async function getIpConfig(): Promise<RateLimitConfig> {
+  const settings = await getSettings();
+  return {
+    maxAttempts: settings.globalRateLimitRequests,
+    windowMs: settings.globalRateLimitWindow * 1000,
+    lockoutMs: settings.globalRateLimitWindow * 2 * 1000, // Double the window for lockout
+  };
+}
+
+// Default configurations (used as fallback)
 const LOGIN_CONFIG: RateLimitConfig = {
   maxAttempts: 5,              // 5 failed attempts
-  windowMs: 15 * 60 * 1000,    // within 15 minutes
-  lockoutMs: 15 * 60 * 1000,   // lockout for 15 minutes
+  windowMs: 5 * 60 * 1000,     // within 5 minutes (300 seconds)
+  lockoutMs: 5 * 60 * 1000,    // lockout for 5 minutes
   blockAfterLockouts: 3,       // after 3 lockouts
   extendedBlockMs: 60 * 60 * 1000, // block for 1 hour
 };
 
 const PASSWORD_RESET_CONFIG: RateLimitConfig = {
   maxAttempts: 3,              // 3 reset requests
-  windowMs: 60 * 60 * 1000,    // within 1 hour
-  lockoutMs: 60 * 60 * 1000,   // lockout for 1 hour
+  windowMs: 15 * 60 * 1000,    // within 15 minutes (900 seconds)
+  lockoutMs: 15 * 60 * 1000,   // lockout for 15 minutes
 };
 
 const IP_CONFIG: RateLimitConfig = {
-  maxAttempts: 20,             // 20 total attempts from one IP
-  windowMs: 15 * 60 * 1000,    // within 15 minutes
-  lockoutMs: 30 * 60 * 1000,   // lockout for 30 minutes
+  maxAttempts: 100,            // 100 total attempts from one IP
+  windowMs: 60 * 1000,         // within 1 minute (60 seconds)
+  lockoutMs: 2 * 60 * 1000,    // lockout for 2 minutes
 };
 
 // Cleanup old entries periodically (every 5 minutes)
@@ -182,15 +282,24 @@ export interface RateLimitResult {
 /**
  * Check if a login attempt is allowed based on IP and account
  */
-export function checkLoginRateLimit(
+export async function checkLoginRateLimit(
   ip: string | null,
   email: string
-): RateLimitResult {
+): Promise<RateLimitResult> {
   const normalizedEmail = email.toLowerCase().trim();
+  const settings = await getSettings();
+
+  // Check if login rate limiting is enabled
+  if (!settings.loginRateLimitEnabled) {
+    return { allowed: true, remainingAttempts: 999 };
+  }
+
+  const loginConfig = await getLoginConfig();
+  const ipConfig = await getIpConfig();
 
   // Check IP-based rate limit
-  if (ip) {
-    const ipCheck = checkRateLimit(ipAttempts, ip, IP_CONFIG);
+  if (ip && settings.globalRateLimitEnabled) {
+    const ipCheck = checkRateLimit(ipAttempts, ip, ipConfig);
     if (!ipCheck.allowed) {
       return {
         allowed: false,
@@ -202,7 +311,7 @@ export function checkLoginRateLimit(
   }
 
   // Check account-based rate limit
-  const accountCheck = checkRateLimit(accountAttempts, normalizedEmail, LOGIN_CONFIG);
+  const accountCheck = checkRateLimit(accountAttempts, normalizedEmail, loginConfig);
   if (!accountCheck.allowed) {
     return {
       allowed: false,
@@ -215,7 +324,7 @@ export function checkLoginRateLimit(
   return {
     allowed: true,
     remainingAttempts: Math.min(
-      ip ? checkRateLimit(ipAttempts, ip, IP_CONFIG).remainingAttempts : LOGIN_CONFIG.maxAttempts,
+      ip && settings.globalRateLimitEnabled ? checkRateLimit(ipAttempts, ip, ipConfig).remainingAttempts : loginConfig.maxAttempts,
       accountCheck.remainingAttempts
     ),
   };
@@ -224,34 +333,37 @@ export function checkLoginRateLimit(
 /**
  * Record a login attempt (success or failure)
  */
-export function recordLoginAttempt(
+export async function recordLoginAttempt(
   ip: string | null,
   email: string,
   success: boolean
-): void {
+): Promise<void> {
   const normalizedEmail = email.toLowerCase().trim();
+  const loginConfig = await getLoginConfig();
+  const ipConfig = await getIpConfig();
 
   if (ip) {
-    recordAttempt(ipAttempts, ip, IP_CONFIG, success);
+    recordAttempt(ipAttempts, ip, ipConfig, success);
   }
 
-  recordAttempt(accountAttempts, normalizedEmail, LOGIN_CONFIG, success);
+  recordAttempt(accountAttempts, normalizedEmail, loginConfig, success);
 }
 
 /**
  * Check if password reset request is allowed
  */
-export function checkPasswordResetRateLimit(
+export async function checkPasswordResetRateLimit(
   ip: string | null,
   email: string
-): RateLimitResult {
+): Promise<RateLimitResult> {
   const normalizedEmail = email.toLowerCase().trim();
   const key = `reset:${normalizedEmail}`;
+  const passwordResetConfig = await getPasswordResetConfig();
 
   // Check IP-based rate limit for reset requests
   if (ip) {
     const ipKey = `reset:${ip}`;
-    const ipCheck = checkRateLimit(ipAttempts, ipKey, PASSWORD_RESET_CONFIG);
+    const ipCheck = checkRateLimit(ipAttempts, ipKey, passwordResetConfig);
     if (!ipCheck.allowed) {
       return {
         allowed: false,
@@ -263,7 +375,7 @@ export function checkPasswordResetRateLimit(
   }
 
   // Check account-based rate limit
-  const accountCheck = checkRateLimit(accountAttempts, key, PASSWORD_RESET_CONFIG);
+  const accountCheck = checkRateLimit(accountAttempts, key, passwordResetConfig);
   if (!accountCheck.allowed) {
     return {
       allowed: false,
@@ -282,34 +394,44 @@ export function checkPasswordResetRateLimit(
 /**
  * Record a password reset request
  */
-export function recordPasswordResetAttempt(
+export async function recordPasswordResetAttempt(
   ip: string | null,
   email: string
-): void {
+): Promise<void> {
   const normalizedEmail = email.toLowerCase().trim();
   const key = `reset:${normalizedEmail}`;
+  const passwordResetConfig = await getPasswordResetConfig();
 
   if (ip) {
     const ipKey = `reset:${ip}`;
-    recordAttempt(ipAttempts, ipKey, PASSWORD_RESET_CONFIG, false);
+    recordAttempt(ipAttempts, ipKey, passwordResetConfig, false);
   }
 
-  recordAttempt(accountAttempts, key, PASSWORD_RESET_CONFIG, false);
+  recordAttempt(accountAttempts, key, passwordResetConfig, false);
 }
 
 /**
  * Check retailer login rate limit (uses same logic but separate tracking)
  */
-export function checkRetailerLoginRateLimit(
+export async function checkRetailerLoginRateLimit(
   ip: string | null,
   identifier: string // email or access code
-): RateLimitResult {
+): Promise<RateLimitResult> {
   const key = `retailer:${identifier.toLowerCase().trim()}`;
+  const settings = await getSettings();
+
+  // Check if login rate limiting is enabled
+  if (!settings.loginRateLimitEnabled) {
+    return { allowed: true, remainingAttempts: 999 };
+  }
+
+  const loginConfig = await getLoginConfig();
+  const ipConfig = await getIpConfig();
 
   // Check IP-based rate limit
-  if (ip) {
+  if (ip && settings.globalRateLimitEnabled) {
     const ipKey = `retailer:${ip}`;
-    const ipCheck = checkRateLimit(ipAttempts, ipKey, IP_CONFIG);
+    const ipCheck = checkRateLimit(ipAttempts, ipKey, ipConfig);
     if (!ipCheck.allowed) {
       return {
         allowed: false,
@@ -321,7 +443,7 @@ export function checkRetailerLoginRateLimit(
   }
 
   // Check account-based rate limit
-  const accountCheck = checkRateLimit(accountAttempts, key, LOGIN_CONFIG);
+  const accountCheck = checkRateLimit(accountAttempts, key, loginConfig);
   if (!accountCheck.allowed) {
     return {
       allowed: false,
@@ -340,19 +462,21 @@ export function checkRetailerLoginRateLimit(
 /**
  * Record retailer login attempt
  */
-export function recordRetailerLoginAttempt(
+export async function recordRetailerLoginAttempt(
   ip: string | null,
   identifier: string,
   success: boolean
-): void {
+): Promise<void> {
   const key = `retailer:${identifier.toLowerCase().trim()}`;
+  const loginConfig = await getLoginConfig();
+  const ipConfig = await getIpConfig();
 
   if (ip) {
     const ipKey = `retailer:${ip}`;
-    recordAttempt(ipAttempts, ipKey, IP_CONFIG, success);
+    recordAttempt(ipAttempts, ipKey, ipConfig, success);
   }
 
-  recordAttempt(accountAttempts, key, LOGIN_CONFIG, success);
+  recordAttempt(accountAttempts, key, loginConfig, success);
 }
 
 /**
@@ -373,16 +497,17 @@ function formatRetryTime(seconds: number): string {
 /**
  * Get remaining lockout time for an account (for display purposes)
  */
-export function getAccountLockoutInfo(email: string): {
+export async function getAccountLockoutInfo(email: string): Promise<{
   isLocked: boolean;
   retryAfter?: number;
   attemptsRemaining?: number;
-} {
+}> {
   const normalizedEmail = email.toLowerCase().trim();
   const entry = accountAttempts.get(normalizedEmail);
+  const loginConfig = await getLoginConfig();
 
   if (!entry) {
-    return { isLocked: false, attemptsRemaining: LOGIN_CONFIG.maxAttempts };
+    return { isLocked: false, attemptsRemaining: loginConfig.maxAttempts };
   }
 
   const now = Date.now();
@@ -395,13 +520,13 @@ export function getAccountLockoutInfo(email: string): {
   }
 
   // Check if window has expired
-  if (now - entry.firstAttempt > LOGIN_CONFIG.windowMs) {
-    return { isLocked: false, attemptsRemaining: LOGIN_CONFIG.maxAttempts };
+  if (now - entry.firstAttempt > loginConfig.windowMs) {
+    return { isLocked: false, attemptsRemaining: loginConfig.maxAttempts };
   }
 
   return {
     isLocked: false,
-    attemptsRemaining: Math.max(0, LOGIN_CONFIG.maxAttempts - entry.attempts),
+    attemptsRemaining: Math.max(0, loginConfig.maxAttempts - entry.attempts),
   };
 }
 

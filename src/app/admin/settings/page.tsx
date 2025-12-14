@@ -120,6 +120,18 @@ interface PlatformSettings {
   maxLoginAttempts: number;
   passwordMinLength: number;
   requireSpecialChars: boolean;
+  // Global Rate Limiting
+  globalRateLimitEnabled: boolean;
+  globalRateLimitRequests: number;
+  globalRateLimitWindow: number;
+  // Login Rate Limiting
+  loginRateLimitEnabled: boolean;
+  loginRateLimitRequests: number;
+  loginRateLimitWindow: number;
+  // Password Reset Rate Limiting
+  passwordResetRateLimitRequests: number;
+  passwordResetRateLimitWindow: number;
+  // Legacy fields (still used in some places)
   ipRateLimitEnabled: boolean;
   ipRateLimitRequests: number;
   ipRateLimitWindow: number;
@@ -204,7 +216,17 @@ export default function SettingsPage() {
     passwordMinLength: "8",
     requireSpecialChar: true,
     ipWhitelist: "",
-    rateLimit: "100",
+    // Global Rate Limiting
+    globalRateLimitEnabled: true,
+    globalRateLimit: "100",
+    globalRateLimitWindow: "60",
+    // Login Rate Limiting
+    loginRateLimitEnabled: true,
+    loginRateLimit: "5",
+    loginRateLimitWindow: "300",
+    // Password Reset Rate Limiting
+    passwordResetRateLimit: "3",
+    passwordResetRateLimitWindow: "900",
     csrfProtection: true,
     contentSecurityPolicy: true,
   });
@@ -332,7 +354,17 @@ export default function SettingsPage() {
         maxLoginAttempts: String(settings.maxLoginAttempts || 5),
         passwordMinLength: String(settings.passwordMinLength || 8),
         requireSpecialChar: settings.requireSpecialChars || true,
-        rateLimit: String(settings.ipRateLimitRequests || 100),
+        // Global Rate Limiting
+        globalRateLimitEnabled: settings.globalRateLimitEnabled !== false,
+        globalRateLimit: String(settings.globalRateLimitRequests || settings.ipRateLimitRequests || 100),
+        globalRateLimitWindow: String(settings.globalRateLimitWindow || settings.ipRateLimitWindow || 60),
+        // Login Rate Limiting
+        loginRateLimitEnabled: settings.loginRateLimitEnabled !== false,
+        loginRateLimit: String(settings.loginRateLimitRequests || 5),
+        loginRateLimitWindow: String(settings.loginRateLimitWindow || 300),
+        // Password Reset Rate Limiting
+        passwordResetRateLimit: String(settings.passwordResetRateLimitRequests || 3),
+        passwordResetRateLimitWindow: String(settings.passwordResetRateLimitWindow || 900),
         csrfProtection: settings.csrfProtection !== false,
         contentSecurityPolicy: settings.contentSecurityPolicy !== false,
       }));
@@ -571,8 +603,21 @@ export default function SettingsPage() {
             maxLoginAttempts: parseInt(securitySettings.maxLoginAttempts),
             passwordMinLength: parseInt(securitySettings.passwordMinLength),
             requireSpecialChars: securitySettings.requireSpecialChar,
-            ipRateLimitEnabled: true,
-            ipRateLimitRequests: parseInt(securitySettings.rateLimit),
+            // Global Rate Limiting
+            globalRateLimitEnabled: securitySettings.globalRateLimitEnabled,
+            globalRateLimitRequests: parseInt(securitySettings.globalRateLimit),
+            globalRateLimitWindow: parseInt(securitySettings.globalRateLimitWindow),
+            // Login Rate Limiting
+            loginRateLimitEnabled: securitySettings.loginRateLimitEnabled,
+            loginRateLimitRequests: parseInt(securitySettings.loginRateLimit),
+            loginRateLimitWindow: parseInt(securitySettings.loginRateLimitWindow),
+            // Password Reset Rate Limiting
+            passwordResetRateLimitRequests: parseInt(securitySettings.passwordResetRateLimit),
+            passwordResetRateLimitWindow: parseInt(securitySettings.passwordResetRateLimitWindow),
+            // Legacy fields for backwards compatibility
+            ipRateLimitEnabled: securitySettings.globalRateLimitEnabled,
+            ipRateLimitRequests: parseInt(securitySettings.globalRateLimit),
+            ipRateLimitWindow: parseInt(securitySettings.globalRateLimitWindow),
             csrfProtection: securitySettings.csrfProtection,
             contentSecurityPolicy: securitySettings.contentSecurityPolicy,
           };

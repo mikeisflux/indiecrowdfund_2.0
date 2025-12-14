@@ -135,7 +135,7 @@ export async function login(formData: FormData, callbackUrl?: string) {
 
   // Check rate limit before attempting login
   const clientIP = await getClientIP();
-  const rateLimitCheck = checkLoginRateLimit(clientIP, email);
+  const rateLimitCheck = await checkLoginRateLimit(clientIP, email);
 
   if (!rateLimitCheck.allowed) {
     return {
@@ -153,7 +153,7 @@ export async function login(formData: FormData, callbackUrl?: string) {
 
   if (!user || !user.password) {
     // Record failed attempt (even for non-existent users to prevent enumeration timing attacks)
-    recordLoginAttempt(clientIP, email, false);
+    await recordLoginAttempt(clientIP, email, false);
     return { error: { _form: ["Invalid email or password"] } };
   }
 
@@ -162,10 +162,10 @@ export async function login(formData: FormData, callbackUrl?: string) {
 
   if (!isPasswordValid) {
     // Record failed attempt
-    recordLoginAttempt(clientIP, email, false);
+    await recordLoginAttempt(clientIP, email, false);
 
     // Calculate remaining attempts for user feedback
-    const updatedCheck = checkLoginRateLimit(clientIP, email);
+    const updatedCheck = await checkLoginRateLimit(clientIP, email);
     const remainingMsg = updatedCheck.remainingAttempts > 0
       ? ` (${updatedCheck.remainingAttempts} attempts remaining)`
       : "";
@@ -174,7 +174,7 @@ export async function login(formData: FormData, callbackUrl?: string) {
   }
 
   // Record successful login (clears rate limit)
-  recordLoginAttempt(clientIP, email, true);
+  await recordLoginAttempt(clientIP, email, true);
 
   // Create session
   await createSession(user.id);
@@ -223,7 +223,7 @@ export async function requestPasswordReset(formData: FormData) {
 
   // Check rate limit before processing reset request
   const clientIP = await getClientIP();
-  const rateLimitCheck = checkPasswordResetRateLimit(clientIP, email);
+  const rateLimitCheck = await checkPasswordResetRateLimit(clientIP, email);
 
   if (!rateLimitCheck.allowed) {
     // Still return success to prevent enumeration, but don't actually send email
@@ -237,7 +237,7 @@ export async function requestPasswordReset(formData: FormData) {
 
   try {
     // Record the reset attempt
-    recordPasswordResetAttempt(clientIP, email);
+    await recordPasswordResetAttempt(clientIP, email);
 
     // Check if user exists
     const user = await db.user.findUnique({

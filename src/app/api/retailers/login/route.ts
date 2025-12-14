@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check rate limit before processing
-    const rateLimitCheck = checkRetailerLoginRateLimit(clientIP, identifier);
+    const rateLimitCheck = await checkRetailerLoginRateLimit(clientIP, identifier);
     if (!rateLimitCheck.allowed) {
       return NextResponse.json(
         {
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
       if (!retailer) {
         // Record failed attempt
-        recordRetailerLoginAttempt(clientIP, email, false);
+        await recordRetailerLoginAttempt(clientIP, email, false);
         return NextResponse.json(
           { error: "Invalid email or password" },
           { status: 401 }
@@ -89,10 +89,10 @@ export async function POST(req: NextRequest) {
       const isPasswordValid = await compare(password, retailer.passwordHash);
       if (!isPasswordValid) {
         // Record failed attempt
-        recordRetailerLoginAttempt(clientIP, email, false);
+        await recordRetailerLoginAttempt(clientIP, email, false);
 
         // Get remaining attempts for feedback
-        const updatedCheck = checkRetailerLoginRateLimit(clientIP, email);
+        const updatedCheck = await checkRetailerLoginRateLimit(clientIP, email);
         const remainingMsg = updatedCheck.remainingAttempts > 0
           ? ` (${updatedCheck.remainingAttempts} attempts remaining)`
           : "";
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
 
       if (!retailer) {
         // Record failed attempt
-        recordRetailerLoginAttempt(clientIP, accessCode, false);
+        await recordRetailerLoginAttempt(clientIP, accessCode, false);
         return NextResponse.json(
           { error: "Invalid access code" },
           { status: 401 }
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Record successful login (clears rate limit)
-    recordRetailerLoginAttempt(clientIP, identifier, true);
+    await recordRetailerLoginAttempt(clientIP, identifier, true);
 
     // Check retailer status
     if (retailer.status === "PENDING") {

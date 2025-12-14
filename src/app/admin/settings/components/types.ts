@@ -54,7 +54,17 @@ export interface SecuritySettings {
   passwordMinLength: string;
   requireSpecialChar: boolean;
   ipWhitelist: string;
-  rateLimit: string;
+  // Global Rate Limiting
+  globalRateLimitEnabled: boolean;
+  globalRateLimit: string;
+  globalRateLimitWindow: string;
+  // Login/Sensitive Endpoint Rate Limiting
+  loginRateLimitEnabled: boolean;
+  loginRateLimit: string;
+  loginRateLimitWindow: string;
+  // Password Reset Rate Limiting
+  passwordResetRateLimit: string;
+  passwordResetRateLimitWindow: string;
   csrfProtection: boolean;
   contentSecurityPolicy: boolean;
 }

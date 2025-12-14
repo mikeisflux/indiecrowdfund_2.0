@@ -1412,6 +1412,18 @@ model PlatformSettings {
   maxLoginAttempts      Int      @default(5)
   passwordMinLength     Int      @default(8)
   requireSpecialChars   Boolean  @default(true)
+  // Global Rate Limiting (for general API requests)
+  globalRateLimitEnabled    Boolean  @default(true)
+  globalRateLimitRequests   Int      @default(100)
+  globalRateLimitWindow     Int      @default(60)
+  // Login/Sensitive Endpoint Rate Limiting
+  loginRateLimitEnabled     Boolean  @default(true)
+  loginRateLimitRequests    Int      @default(5)
+  loginRateLimitWindow      Int      @default(300)
+  // Password Reset Rate Limiting
+  passwordResetRateLimitRequests  Int  @default(3)
+  passwordResetRateLimitWindow    Int  @default(900)
+  // Legacy fields (kept for backwards compatibility)
   ipRateLimitEnabled    Boolean  @default(true)
   ipRateLimitRequests   Int      @default(100)
   ipRateLimitWindow     Int      @default(60)
