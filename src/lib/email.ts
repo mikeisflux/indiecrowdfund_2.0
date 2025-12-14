@@ -23,6 +23,31 @@ async function getEmailSettings() {
   }
 }
 
+// Email notification type checks - returns true if email type is enabled
+export async function isEmailTypeEnabled(emailType: "welcome" | "pledgeConfirmation" | "projectUpdate" | "verification"): Promise<boolean> {
+  const settings = await getEmailSettings();
+  if (!settings) return true; // Default to enabled if no settings
+
+  switch (emailType) {
+    case "welcome":
+      return settings.welcomeEmailEnabled !== false;
+    case "pledgeConfirmation":
+      return settings.pledgeConfirmationEnabled !== false;
+    case "projectUpdate":
+      return settings.projectUpdateNotifications !== false;
+    case "verification":
+      return settings.emailVerificationRequired !== false;
+    default:
+      return true;
+  }
+}
+
+// Check if email verification is required
+export async function isEmailVerificationRequired(): Promise<boolean> {
+  const settings = await getEmailSettings();
+  return settings?.emailVerificationRequired ?? false;
+}
+
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   const settings = await getEmailSettings();
 

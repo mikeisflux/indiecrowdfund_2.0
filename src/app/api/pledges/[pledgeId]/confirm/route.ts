@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sendPledgeConfirmationEmail } from "@/lib/email";
+import { sendPledgeConfirmationEmail, isEmailTypeEnabled } from "@/lib/email";
 import {
   notifyPledgeReceived,
   notifyProjectFunded,
@@ -170,10 +170,12 @@ export async function POST(
       }
     }
 
-    // Send confirmation email if user has email
+    // Send confirmation email if user has email and feature is enabled
     // (pledge was already marked as confirmed above)
     let emailSent = false;
-    if (pledge.user.email) {
+    const pledgeEmailEnabled = await isEmailTypeEnabled("pledgeConfirmation");
+
+    if (pledge.user.email && pledgeEmailEnabled) {
       const emailResult = await sendPledgeConfirmationEmail(
         pledge.user.email,
         pledge.user.name || "Backer",
@@ -192,6 +194,8 @@ export async function POST(
       } else {
         console.error(`[Confirm] Failed to send confirmation email for pledge ${pledgeId}:`, emailResult.error);
       }
+    } else if (!pledgeEmailEnabled) {
+      console.log(`[Confirm] Pledge confirmation emails are disabled in settings`);
     }
 
     return NextResponse.json({

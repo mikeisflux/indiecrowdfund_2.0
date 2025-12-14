@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateCampaignContent } from "@/lib/ai";
+import {
+  getAISettings,
+  generateVariantsIfEnabled,
+  scheduleWithOptimalTimes,
+  generateSegmentsIfEnabled,
+} from "@/lib/ai/settings-integration";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -74,6 +80,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // Get AI settings to check which features are enabled
+    const aiSettings = await getAISettings();
 
     // Get projects matching the category filter
     const projectWhere: { status: string; category?: string } = {
@@ -175,6 +184,40 @@ export async function POST(request: Request) {
       };
     }
 
+    // Generate content variants for A/B testing if Content Optimization is enabled
+    let subjectVariants: string[] | null = null;
+    if (aiSettings.contentOptimization) {
+      const variants = await generateVariantsIfEnabled(
+        aiContent.subject,
+        "subject",
+        { campaignType: targetAudience || "all", targetAudience: targetAudience || "all" }
+      );
+      if (variants) {
+        subjectVariants = variants;
+      }
+    }
+
+    // Get optimal send times if Send Time Optimization is enabled
+    let optimalSchedule: Map<string, { hour: number; day: number }> | null = null;
+    if (aiSettings.sendTimeOptimization && !scheduleFor) {
+      // Get sample of recipient user IDs for optimization
+      const sampleUsers = await db.user.findMany({
+        where: { emailVerified: { not: null } },
+        take: 100,
+        select: { id: true },
+      });
+      optimalSchedule = await scheduleWithOptimalTimes(sampleUsers.map(u => u.id));
+    }
+
+    // Use Smart Segmentation to refine audience if enabled
+    let segmentInfo = null;
+    if (aiSettings.smartSegmentation && targetAudience === "all") {
+      const segments = await generateSegmentsIfEnabled();
+      if (segments && segments.length > 0) {
+        segmentInfo = segments;
+      }
+    }
+
     // Create the campaign in the database
     const campaign = await db.emailCampaign.create({
       data: {
@@ -189,9 +232,20 @@ export async function POST(request: Request) {
         projectCategory: projectCategory || "all",
         scheduledAt: scheduleFor ? new Date(scheduleFor) : null,
         aiGenerated: true,
-        aiContent: aiContent as object,
+        aiContent: {
+          ...aiContent as object,
+          subjectVariants: subjectVariants || undefined,
+          hasOptimalSchedule: !!optimalSchedule,
+          segmentInfo: segmentInfo || undefined,
+        },
       },
     });
+
+    // Build feature usage message
+    const featuresUsed: string[] = [];
+    if (subjectVariants) featuresUsed.push(`${subjectVariants.length} subject variants generated`);
+    if (optimalSchedule) featuresUsed.push("optimal send times calculated");
+    if (segmentInfo) featuresUsed.push(`${segmentInfo.length} smart segments identified`);
 
     return NextResponse.json({
       success: true,
@@ -202,10 +256,20 @@ export async function POST(request: Request) {
         status: campaign.status,
         recipientCount: campaign.recipientCount,
         aiContent,
+        subjectVariants,
+        hasOptimalSchedule: !!optimalSchedule,
+      },
+      featuresEnabled: {
+        emailPersonalization: aiSettings.emailPersonalization,
+        contentOptimization: aiSettings.contentOptimization,
+        sendTimeOptimization: aiSettings.sendTimeOptimization,
+        smartSegmentation: aiSettings.smartSegmentation,
+        abTesting: aiSettings.abTesting,
+        predictiveAnalytics: aiSettings.predictiveAnalytics,
       },
       message: scheduleFor
         ? `Campaign scheduled for ${new Date(scheduleFor).toLocaleString()}`
-        : "Campaign created as draft. Review and send when ready.",
+        : `Campaign created as draft.${featuresUsed.length > 0 ? ` AI features: ${featuresUsed.join(", ")}.` : ""} Review and send when ready.`,
     });
   } catch (error) {
     console.error("Error creating campaign:", error);

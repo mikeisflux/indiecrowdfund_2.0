@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { sendEmail, sendPledgeConfirmationEmail } from "@/lib/email";
+import { sendEmail, sendPledgeConfirmationEmail, isEmailTypeEnabled } from "@/lib/email";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -485,6 +485,14 @@ export async function notifyProjectUpdate(
 
   if (notifications.length > 0) {
     await db.notification.createMany({ data: notifications });
+  }
+
+  // Check if project update notifications are enabled before sending emails
+  const projectUpdateEnabled = await isEmailTypeEnabled("projectUpdate");
+
+  if (!projectUpdateEnabled) {
+    console.log(`Project update notifications are disabled in settings`);
+    return;
   }
 
   // Send emails to all users (backers + followers with userId) and email-only followers
