@@ -22,6 +22,7 @@ import {
   CreditCard,
   Loader2,
   FileSearch,
+  Hash,
 } from "lucide-react";
 import { Project } from "./types";
 import { formatDuration } from "./utils";
@@ -45,12 +46,15 @@ export function ActiveProjectPanel({
   const [processMessage, setProcessMessage] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+  const [backfillMessage, setBackfillMessage] = useState<string | null>(null);
 
   // Clear messages when project changes
   useEffect(() => {
     setSyncMessage(null);
     setProcessMessage(null);
     setVerifyMessage(null);
+    setBackfillMessage(null);
   }, [project?.id]);
 
   const handleProcessPledges = async () => {
@@ -144,6 +148,36 @@ export function ActiveProjectPanel({
       setVerifyMessage("Error: Network request failed");
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  const handleBackfillBackerNumbers = async () => {
+    if (!project) return;
+
+    setIsBackfilling(true);
+    setBackfillMessage(null);
+
+    try {
+      const response = await fetch(`/api/admin/projects/${project.id}/backfill-backer-numbers`, {
+        method: "POST",
+        headers: { ...getCSRFHeaders() },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setBackfillMessage(
+          data.updated > 0
+            ? `Assigned backer #s to ${data.updated} pledges (${data.alreadyHad} already had)`
+            : "All pledges already have backer numbers"
+        );
+      } else {
+        setBackfillMessage(`Error: ${data.error || "Failed to backfill"}`);
+      }
+    } catch {
+      setBackfillMessage("Error: Network request failed");
+    } finally {
+      setIsBackfilling(false);
     }
   };
 
@@ -265,6 +299,26 @@ export function ActiveProjectPanel({
               {isVerifying ? "Verifying..." : "Verify Payments"}
             </Button>
           </div>
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant="outline"
+              onClick={handleBackfillBackerNumbers}
+              disabled={isBackfilling}
+              className="flex-1"
+            >
+              {isBackfilling ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Hash className="mr-2 h-4 w-4" />
+              )}
+              {isBackfilling ? "Assigning..." : "Assign Backer #s"}
+            </Button>
+          </div>
+          {backfillMessage && (
+            <p className={`text-sm mb-2 ${backfillMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
+              {backfillMessage}
+            </p>
+          )}
           {verifyMessage && (
             <p className={`text-sm mb-2 ${verifyMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
               {verifyMessage}
