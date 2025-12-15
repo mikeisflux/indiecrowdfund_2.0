@@ -432,7 +432,14 @@ export function ProjectBuilder() {
             {BUILDER_STEPS.map((step, index) => (
               <button
                 key={step.id}
-                onClick={() => setCurrentStep(index)}
+                onClick={async () => {
+                  // Auto-save when switching steps (only if moving away from current step)
+                  if (index !== currentStep && !isSaving) {
+                    await saveProject();
+                  }
+                  setCurrentStep(index);
+                }}
+                disabled={isSaving}
                 className={cn(
                   "flex min-w-[140px] flex-col items-center border-b-2 px-4 py-3 text-sm transition-colors",
                   currentStep === index
@@ -483,9 +490,27 @@ export function ProjectBuilder() {
               </Button>
 
               {currentStep < BUILDER_STEPS.length - 1 ? (
-                <Button onClick={nextStep}>
-                  Next
-                  <ChevronRight className="ml-2 h-4 w-4" />
+                <Button
+                  onClick={async () => {
+                    // Auto-save when clicking Next
+                    const saved = await saveProject();
+                    if (saved) {
+                      nextStep();
+                    }
+                  }}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      Next
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               ) : isApproved ? (
                 <Button
