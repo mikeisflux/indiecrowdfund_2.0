@@ -1099,16 +1099,24 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       });
     }
 
-    // Notify creator of new pledge
-    await notifyPledgeReceived(
-      pledge.projectId,
-      pledge.project.creatorId,
-      pledge.user.name || "A backer",
-      pledge.amount
-    );
+    // Notify creator of new pledge (non-blocking - don't fail webhook if notification fails)
+    try {
+      await notifyPledgeReceived(
+        pledge.projectId,
+        pledge.project.creatorId,
+        pledge.user.name || "A backer",
+        pledge.amount
+      );
+    } catch (notifyError) {
+      console.error(`[Webhook] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
+    }
 
-    // Send confirmation email to backer
-    await notifyBackerPledgeConfirmed(pledge.id, true);
+    // Send confirmation email to backer (non-blocking)
+    try {
+      await notifyBackerPledgeConfirmed(pledge.id, true);
+    } catch (emailError) {
+      console.error(`[Webhook] Failed to send confirmation email for pledge ${pledgeId}:`, emailError);
+    }
   }
 
   // Check if project is now funded (only relevant for immediate charges on funded campaigns)
@@ -1120,8 +1128,12 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       updatedProject.currentAmount - pledge.amount < updatedProject.goalAmount;
 
     if (justReachedGoal) {
-      // Project just reached its goal! Send notification
-      await notifyProjectFunded(pledge.projectId);
+      // Project just reached its goal! Send notification (non-blocking)
+      try {
+        await notifyProjectFunded(pledge.projectId);
+      } catch (fundedError) {
+        console.error(`[Webhook] Failed to notify project funded for ${pledge.projectId}:`, fundedError);
+      }
     }
 
     // Always check for and process pending pledges if project is funded
@@ -1250,13 +1262,17 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
       });
     }
 
-    // Notify creator of new pledge
-    await notifyPledgeReceived(
-      existingPledge.projectId,
-      existingPledge.project.creatorId,
-      existingPledge.user?.name || "A backer",
-      existingPledge.amount
-    );
+    // Notify creator of new pledge (non-blocking - don't fail webhook if notification fails)
+    try {
+      await notifyPledgeReceived(
+        existingPledge.projectId,
+        existingPledge.project.creatorId,
+        existingPledge.user?.name || "A backer",
+        existingPledge.amount
+      );
+    } catch (notifyError) {
+      console.error(`[SetupIntent] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
+    }
 
     console.log(`[SetupIntent] Updated project stats: +$${existingPledge.amount}`);
 
@@ -1264,11 +1280,19 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
     const justReachedGoal = currentProjectAmount >= existingPledge.project.goalAmount &&
       currentProjectAmount - existingPledge.amount < existingPledge.project.goalAmount;
     if (justReachedGoal) {
-      await notifyProjectFunded(existingPledge.projectId);
+      try {
+        await notifyProjectFunded(existingPledge.projectId);
+      } catch (fundedError) {
+        console.error(`[SetupIntent] Failed to notify project funded for ${existingPledge.projectId}:`, fundedError);
+      }
     }
 
-    // Send confirmation email to backer
-    await notifyBackerPledgeConfirmed(pledgeId, false);
+    // Send confirmation email to backer (non-blocking)
+    try {
+      await notifyBackerPledgeConfirmed(pledgeId, false);
+    } catch (emailError) {
+      console.error(`[SetupIntent] Failed to send confirmation email for pledge ${pledgeId}:`, emailError);
+    }
   }
 
   // ALWAYS check if project is funded and process pending pledges
