@@ -1,6 +1,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
+import { fetchWithRetry } from "@/lib/fetch-utils";
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
@@ -77,14 +78,14 @@ export default function ProjectsPage() {
         status: "SUBMITTED",
         ...(categoryFilter !== "all" && { category: categoryFilter }),
       });
-      const response = await fetch(`/api/admin/projects/review?${params}`);
+      const response = await fetchWithRetry(`/api/admin/projects/review?${params}`);
       if (response.ok) {
         const data = await response.json();
         setProjects(data.projects || []);
         setStats(data.stats || { pending: 0, approvedToday: 0, rejectedToday: 0 });
       }
     } catch (error) {
-      console.error("Error fetching projects:", error);
+      console.error("Error fetching projects after retries:", error);
     } finally {
       setIsLoading(false);
     }
@@ -102,8 +103,8 @@ export default function ProjectsPage() {
       });
 
       const [liveResponse, approvedResponse] = await Promise.all([
-        fetch(`/api/admin/projects/review?${liveParams}`),
-        fetch(`/api/admin/projects/review?${approvedParams}`),
+        fetchWithRetry(`/api/admin/projects/review?${liveParams}`),
+        fetchWithRetry(`/api/admin/projects/review?${approvedParams}`),
       ]);
 
       const allProjects: Project[] = [];
@@ -132,7 +133,7 @@ export default function ProjectsPage() {
         prelaunchActive: "true",
         ...(categoryFilter !== "all" && { category: categoryFilter }),
       });
-      const response = await fetch(`/api/admin/projects/review?${params}`);
+      const response = await fetchWithRetry(`/api/admin/projects/review?${params}`);
       if (response.ok) {
         const data = await response.json();
         setPrelaunchProjects(data.projects || []);
@@ -142,7 +143,7 @@ export default function ProjectsPage() {
         }));
       }
     } catch (error) {
-      console.error("Error fetching prelaunch projects:", error);
+      console.error("Error fetching prelaunch projects after retries:", error);
     }
   }, [categoryFilter]);
 
@@ -152,7 +153,7 @@ export default function ProjectsPage() {
         prelaunchReview: "true",
         ...(categoryFilter !== "all" && { category: categoryFilter }),
       });
-      const response = await fetch(`/api/admin/projects/review?${params}`);
+      const response = await fetchWithRetry(`/api/admin/projects/review?${params}`);
       if (response.ok) {
         const data = await response.json();
         setPrelaunchReviewProjects(data.projects || []);
@@ -162,19 +163,19 @@ export default function ProjectsPage() {
         }));
       }
     } catch (error) {
-      console.error("Error fetching prelaunch review projects:", error);
+      console.error("Error fetching prelaunch review projects after retries:", error);
     }
   }, [categoryFilter]);
 
   const fetchReviewHistory = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/projects/history?limit=50");
+      const response = await fetchWithRetry("/api/admin/projects/history?limit=50");
       if (response.ok) {
         const data = await response.json();
         setReviewHistory(data.reviews || []);
       }
     } catch (error) {
-      console.error("Error fetching review history:", error);
+      console.error("Error fetching review history after retries:", error);
     }
   }, []);
 

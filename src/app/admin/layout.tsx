@@ -46,6 +46,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
+import { fetchWithRetry } from "@/lib/fetch-utils";
 
 // Types for sidebar stats
 interface SidebarStats {
@@ -129,16 +130,17 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState<SidebarStats | null>(null);
 
-  // Fetch sidebar stats
+  // Fetch sidebar stats with automatic retry
   const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/sidebar-stats");
+      const response = await fetchWithRetry("/api/admin/sidebar-stats");
       if (response.ok) {
         const data = await response.json();
         setStats(data);
       }
     } catch (error) {
-      console.error("Failed to fetch sidebar stats:", error);
+      // Only log after all retries have failed
+      console.error("Failed to fetch sidebar stats after retries:", error);
     }
   }, []);
 
