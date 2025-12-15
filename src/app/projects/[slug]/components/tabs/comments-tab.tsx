@@ -20,6 +20,7 @@ interface CommentsTabProps {
   isLoggedIn: boolean;
   isBacker: boolean;
   isCreator: boolean;
+  currentUserId?: string;
   currentUserName?: string;
   currentUserAvatar?: string;
   onCommentAdded: (comment: CommentData) => void;
@@ -34,6 +35,7 @@ export function CommentsTab({
   isLoggedIn,
   isBacker,
   isCreator,
+  currentUserId,
   currentUserName,
   currentUserAvatar,
   onCommentAdded,
@@ -211,7 +213,7 @@ export function CommentsTab({
                     </p>
                   ))}
 
-                  {/* Reply Button for Creator */}
+                  {/* Reply Button - Only creators can reply to backer comments */}
                   {isCreator && !comment.isCreator && (
                     <div className="mt-3">
                       {replyingTo === comment.id ? (
@@ -292,6 +294,9 @@ export function CommentsTab({
                                 Creator
                               </Badge>
                             )}
+                            {reply.isSuperbacker && (
+                              <span className="text-[#e85b46] text-xs font-medium">Superbacker</span>
+                            )}
                             <span className="text-xs text-muted-foreground">
                               {formatRelativeTime(reply.createdAt)}
                             </span>
@@ -301,6 +306,66 @@ export function CommentsTab({
                               {paragraph}
                             </p>
                           ))}
+
+                          {/* Reply button on replies - only the original commenter can reply to creator replies */}
+                          {reply.isCreator && currentUserId && currentUserId === comment.userId && (
+                            <div className="ml-8 mt-2">
+                              {replyingTo === reply.id ? (
+                                <div className="space-y-2">
+                                  <Textarea
+                                    placeholder="Write your reply..."
+                                    value={replyContent}
+                                    onChange={(e) => setReplyContent(e.target.value)}
+                                    className="min-h-[60px] resize-none text-sm"
+                                    disabled={isSubmittingReply}
+                                    autoFocus
+                                  />
+                                  {replyError && (
+                                    <p className="text-sm text-destructive">{replyError}</p>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleSubmitReply(reply.id)}
+                                      disabled={!replyContent.trim() || isSubmittingReply}
+                                      className="bg-[#05ce78] hover:bg-[#04b86a]"
+                                    >
+                                      {isSubmittingReply ? (
+                                        <>
+                                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                          Posting...
+                                        </>
+                                      ) : (
+                                        "Post Reply"
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setReplyingTo(null);
+                                        setReplyContent("");
+                                        setReplyError(null);
+                                      }}
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-muted-foreground hover:text-foreground h-7 px-2"
+                                  onClick={() => setReplyingTo(reply.id)}
+                                >
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  Reply
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

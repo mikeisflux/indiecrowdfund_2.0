@@ -99,6 +99,7 @@ export interface SimilarProject {
 
 export interface CommentReply {
   id: string;
+  userId: string;
   author: string;
   avatarUrl: string | null;
   isCreator: boolean;
@@ -109,6 +110,7 @@ export interface CommentReply {
 
 export interface CommentData {
   id: string;
+  userId: string;
   author: string;
   avatarUrl: string | null;
   isCreator: boolean;

@@ -745,6 +745,7 @@ export default function ProjectPage() {
             isLoggedIn={isLoggedIn}
             isBacker={isBacker}
             isCreator={isCreator}
+            currentUserId={currentUser?.id}
             currentUserName={currentUser?.name}
             currentUserAvatar={currentUser?.image}
             onCommentAdded={handleCommentAdded}

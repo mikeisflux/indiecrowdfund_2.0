@@ -31,6 +31,7 @@ async function formatComment(
 
   const formatted: {
     id: string;
+    userId: string;
     author: string;
     avatarUrl: string | null;
     content: string;
@@ -40,6 +41,7 @@ async function formatComment(
     isPinned: boolean;
     replies?: Array<{
       id: string;
+      userId: string;
       author: string;
       avatarUrl: string | null;
       content: string;
@@ -49,6 +51,7 @@ async function formatComment(
     }>;
   } = {
     id: comment.id,
+    userId: comment.userId,
     author: comment.user.name || "Anonymous",
     avatarUrl: comment.user.image,
     content: comment.content,
@@ -71,6 +74,7 @@ async function formatComment(
 
         return {
           id: reply.id,
+          userId: reply.userId,
           author: reply.user.name || "Anonymous",
           avatarUrl: reply.user.image,
           content: reply.content,
@@ -188,27 +192,21 @@ export async function POST(
     const isCreator = project.creatorId === session.user.id;
 
     // Store parent comment for notification later
-    let parentComment: { id: string; userId: string } | null = null;
+    let parentComment: { id: string; userId: string; parentId: string | null } | null = null;
+    let rootCommentUserId: string | null = null;
 
-    // If this is a reply (has parentId), only creators can reply
+    // If this is a reply (has parentId)
     if (parentId) {
-      if (!isCreator) {
-        return NextResponse.json(
-          { error: "Only the project creator can reply to comments" },
-          { status: 403 }
-        );
-      }
-
       // Verify parent comment exists and belongs to this project
       parentComment = await db.comment.findFirst({
         where: {
           id: parentId,
           projectId,
-          parentId: null, // Can only reply to top-level comments
         },
         select: {
           id: true,
           userId: true,
+          parentId: true,
         },
       });
 
@@ -217,6 +215,53 @@ export async function POST(
           { error: "Parent comment not found" },
           { status: 404 }
         );
+      }
+
+      // Determine the root comment (top-level comment in the thread)
+      let rootComment = parentComment;
+      if (parentComment.parentId) {
+        // This is a reply to a reply - find the root comment
+        const root = await db.comment.findFirst({
+          where: {
+            id: parentComment.parentId,
+            projectId,
+          },
+          select: {
+            id: true,
+            userId: true,
+            parentId: true,
+          },
+        });
+        if (root) {
+          rootComment = root;
+        }
+      }
+      rootCommentUserId = rootComment.userId;
+
+      // Permission check for replies:
+      // - Creators can reply to any comment
+      // - Backers can reply if they are the original commenter (continuing conversation)
+      // - Backers can reply if they have backed the project (joining discussion)
+      if (!isCreator) {
+        const isOriginalCommenter = rootCommentUserId === session.user.id;
+
+        if (!isOriginalCommenter) {
+          // Check if they're a backer
+          const pledge = await db.pledge.findFirst({
+            where: {
+              userId: session.user.id,
+              projectId,
+              status: "COMPLETED",
+            },
+          });
+
+          if (!pledge) {
+            return NextResponse.json(
+              { error: "Only backers can reply to comments" },
+              { status: 403 }
+            );
+          }
+        }
       }
     } else {
       // For top-level comments, must be backer or creator
@@ -238,13 +283,21 @@ export async function POST(
       }
     }
 
+    // When replying to a reply, flatten it under the root comment
+    // This keeps all replies at one level of nesting for easier display
+    let actualParentId = parentId || null;
+    if (parentComment && parentComment.parentId) {
+      // This is a reply to a reply - use the root comment as parent
+      actualParentId = parentComment.parentId;
+    }
+
     // Create the comment/reply
     const comment = await db.comment.create({
       data: {
         projectId,
         userId: session.user.id,
         content: content.trim(),
-        parentId: parentId || null,
+        parentId: actualParentId,
       },
       include: {
         user: {
@@ -290,6 +343,7 @@ export async function POST(
 
     return NextResponse.json({
       id: comment.id,
+      userId: session.user.id,
       author: comment.user.name || "Anonymous",
       avatarUrl: comment.user.image,
       content: comment.content,
