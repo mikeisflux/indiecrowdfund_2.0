@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { validateSession } from "@/lib/auth/session";
+import { notifyCommentReply } from "@/lib/notifications";
 
 // Helper to format a comment with user info
 async function formatComment(
@@ -186,6 +187,9 @@ export async function POST(
 
     const isCreator = project.creatorId === session.user.id;
 
+    // Store parent comment for notification later
+    let parentComment: { id: string; userId: string } | null = null;
+
     // If this is a reply (has parentId), only creators can reply
     if (parentId) {
       if (!isCreator) {
@@ -196,11 +200,15 @@ export async function POST(
       }
 
       // Verify parent comment exists and belongs to this project
-      const parentComment = await db.comment.findFirst({
+      parentComment = await db.comment.findFirst({
         where: {
           id: parentId,
           projectId,
           parentId: null, // Can only reply to top-level comments
+        },
+        select: {
+          id: true,
+          userId: true,
         },
       });
 
@@ -256,6 +264,29 @@ export async function POST(
         status: "COMPLETED",
       },
     });
+
+    // Send notification to the original commenter if this is a reply
+    if (parentComment && parentComment.userId !== session.user.id) {
+      // Get project details for the notification
+      const projectDetails = await db.project.findUnique({
+        where: { id: projectId },
+        select: { title: true, slug: true },
+      });
+
+      if (projectDetails) {
+        // Non-blocking notification - don't fail the request if notification fails
+        notifyCommentReply(
+          parentComment.userId,
+          session.user.name || "The creator",
+          projectId,
+          projectDetails.title,
+          projectDetails.slug,
+          content.trim()
+        ).catch((err) => {
+          console.error("Failed to send comment reply notification:", err);
+        });
+      }
+    }
 
     return NextResponse.json({
       id: comment.id,

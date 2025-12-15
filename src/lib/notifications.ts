@@ -569,6 +569,63 @@ export async function notifyMessageReceived(
 }
 
 /**
+ * Send comment reply email
+ */
+async function sendCommentReplyEmail(
+  email: string,
+  userName: string,
+  replierName: string,
+  projectTitle: string,
+  projectSlug: string,
+  replyContent: string
+) {
+  const commentsUrl = `${APP_URL}/projects/${projectSlug}?tab=comments`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Reply to Your Comment</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+          <h2 style="margin-top: 0; color: #333;">Hi ${userName},</h2>
+
+          <p><strong>${replierName}</strong> replied to your comment on <strong>"${projectTitle}"</strong>:</p>
+
+          <div style="background: #fff; border-left: 4px solid #05ce78; padding: 15px 20px; margin: 20px 0; border-radius: 0 6px 6px 0;">
+            <p style="margin: 0; color: #333; white-space: pre-wrap;">${replyContent}</p>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${commentsUrl}" style="display: inline-block; background: #05ce78; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+              View Conversation
+            </a>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>You received this email because you commented on this project.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `${replierName} replied to your comment on "${projectTitle}"`,
+    html,
+  });
+}
+
+/**
  * Notify user when someone replies to their comment
  */
 export async function notifyCommentReply(
@@ -576,16 +633,41 @@ export async function notifyCommentReply(
   replierName: string,
   projectId: string,
   projectTitle: string,
-  projectSlug: string
+  projectSlug: string,
+  replyContent?: string
 ) {
+  // Create in-app notification
   await createNotification({
     userId,
     type: "COMMENT_REPLY",
     title: "New Reply",
     message: `${replierName} replied to your comment on "${projectTitle}"`,
-    actionUrl: `/projects/${projectSlug}#comments`,
+    actionUrl: `/projects/${projectSlug}?tab=comments`,
     projectId,
   });
+
+  // Send email notification
+  try {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true },
+    });
+
+    if (user?.email && replyContent) {
+      await sendCommentReplyEmail(
+        user.email,
+        user.name || "there",
+        replierName,
+        projectTitle,
+        projectSlug,
+        replyContent
+      );
+      console.log(`Sent comment reply email to ${user.email}`);
+    }
+  } catch (error) {
+    console.error("Failed to send comment reply email:", error);
+    // Don't throw - in-app notification was still created
+  }
 }
 
 /**
