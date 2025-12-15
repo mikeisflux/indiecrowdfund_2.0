@@ -19,11 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
+import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle, RefreshCw, Loader2, Save } from "lucide-react";
+import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 
 export function PaymentStep() {
-  const { payment, updatePayment, basics } = useProjectStore();
+  const { payment, updatePayment, basics, projectId } = useProjectStore();
   const [isConnecting, setIsConnecting] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<{
     connected: boolean;
@@ -33,6 +34,47 @@ export function PaymentStep() {
   }>({ connected: false, onboarded: false, loading: true, error: null });
   const [connectError, setConnectError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [emailSaved, setEmailSaved] = useState(false);
+
+  // Save contact email to database immediately
+  const handleSaveContactEmail = async () => {
+    if (!projectId) {
+      toast.error("Please save your project first before setting the contact email");
+      return;
+    }
+
+    if (!payment.contactEmail || !payment.contactEmail.includes("@")) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setIsSavingEmail(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ contactEmail: payment.contactEmail }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save email");
+      }
+
+      setEmailSaved(true);
+      updatePayment({ contactEmailConfirmed: true });
+      toast.success("Contact email saved!");
+
+      // Reset the saved indicator after 3 seconds
+      setTimeout(() => setEmailSaved(false), 3000);
+    } catch (error) {
+      console.error("Failed to save contact email:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save email");
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
 
   // Check Stripe connection status on mount
   useEffect(() => {
@@ -157,24 +199,42 @@ export function PaymentStep() {
             type="email"
             placeholder="your@email.com"
             value={payment.contactEmail || ""}
-            onChange={(e) => updatePayment({ contactEmail: e.target.value })}
+            onChange={(e) => {
+              updatePayment({ contactEmail: e.target.value, contactEmailConfirmed: false });
+              setEmailSaved(false);
+            }}
             className="flex-1"
           />
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="contactEmailConfirmed"
-              checked={payment.contactEmailConfirmed || false}
-              onCheckedChange={(checked) =>
-                updatePayment({ contactEmailConfirmed: checked as boolean })
-              }
-            />
-            <Label htmlFor="contactEmailConfirmed" className="text-sm font-normal cursor-pointer whitespace-nowrap">
-              Confirm email
-            </Label>
-          </div>
+          <Button
+            type="button"
+            variant={emailSaved ? "default" : "outline"}
+            size="sm"
+            onClick={handleSaveContactEmail}
+            disabled={isSavingEmail || !payment.contactEmail || emailSaved}
+            className={emailSaved ? "bg-green-600 hover:bg-green-600" : ""}
+          >
+            {isSavingEmail ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                Saving...
+              </>
+            ) : emailSaved ? (
+              <>
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Saved
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-1" />
+                Save Email
+              </>
+            )}
+          </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          This email will be verified before launch. Check the box to confirm this is correct.
+          {projectId
+            ? "Click 'Save Email' to commit this email to your project. This email will receive important notifications about your campaign."
+            : "Save your project first (click Next on any step), then you can save your contact email."}
         </p>
       </div>
 
