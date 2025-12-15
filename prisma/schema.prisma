@@ -576,10 +576,13 @@ model Comment {
   updateId    String?
   userId      String
   content     String   @db.Text
+  parentId    String?  // For creator replies
 
   project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   update      Update?  @relation(fields: [updateId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id])
+  parent      Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -587,6 +590,7 @@ model Comment {
   @@index([projectId])
   @@index([updateId])
   @@index([userId])
+  @@index([parentId])
 }
 
 // ============================================

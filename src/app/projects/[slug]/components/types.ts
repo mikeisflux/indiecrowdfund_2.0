@@ -97,15 +97,26 @@ export interface SimilarProject {
   isProjectWeLove: boolean;
 }
 
+export interface CommentReply {
+  id: string;
+  author: string;
+  avatarUrl: string | null;
+  isCreator: boolean;
+  isSuperbacker: boolean;
+  createdAt: Date | string;
+  content: string;
+}
+
 export interface CommentData {
   id: string;
   author: string;
-  avatarUrl: string;
+  avatarUrl: string | null;
   isCreator: boolean;
   isSuperbacker: boolean;
   isPinned: boolean;
-  createdAt: Date;
+  createdAt: Date | string;
   content: string;
+  replies?: CommentReply[];
 }
 
 export interface StoryNavItem {

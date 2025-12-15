@@ -2,6 +2,88 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { validateSession } from "@/lib/auth/session";
 
+// Helper to format a comment with user info
+async function formatComment(
+  comment: {
+    id: string;
+    userId: string;
+    content: string;
+    createdAt: Date;
+    user: { id: string; name: string | null; image: string | null };
+    replies?: Array<{
+      id: string;
+      userId: string;
+      content: string;
+      createdAt: Date;
+      user: { id: string; name: string | null; image: string | null };
+    }>;
+  },
+  creatorId: string
+) {
+  // Check if user is superbacker (backed 25+ projects)
+  const backedProjectsCount = await db.pledge.count({
+    where: {
+      userId: comment.userId,
+      status: "COMPLETED",
+    },
+  });
+
+  const formatted: {
+    id: string;
+    author: string;
+    avatarUrl: string | null;
+    content: string;
+    createdAt: string;
+    isCreator: boolean;
+    isSuperbacker: boolean;
+    isPinned: boolean;
+    replies?: Array<{
+      id: string;
+      author: string;
+      avatarUrl: string | null;
+      content: string;
+      createdAt: string;
+      isCreator: boolean;
+      isSuperbacker: boolean;
+    }>;
+  } = {
+    id: comment.id,
+    author: comment.user.name || "Anonymous",
+    avatarUrl: comment.user.image,
+    content: comment.content,
+    createdAt: comment.createdAt.toISOString(),
+    isCreator: comment.userId === creatorId,
+    isSuperbacker: backedProjectsCount >= 25,
+    isPinned: false,
+  };
+
+  // Format replies if present
+  if (comment.replies && comment.replies.length > 0) {
+    formatted.replies = await Promise.all(
+      comment.replies.map(async (reply) => {
+        const replyBackedCount = await db.pledge.count({
+          where: {
+            userId: reply.userId,
+            status: "COMPLETED",
+          },
+        });
+
+        return {
+          id: reply.id,
+          author: reply.user.name || "Anonymous",
+          avatarUrl: reply.user.image,
+          content: reply.content,
+          createdAt: reply.createdAt.toISOString(),
+          isCreator: reply.userId === creatorId,
+          isSuperbacker: replyBackedCount >= 25,
+        };
+      })
+    );
+  }
+
+  return formatted;
+}
+
 // GET /api/projects/[id]/comments - Fetch comments for a project
 export async function GET(
   request: NextRequest,
@@ -10,8 +92,12 @@ export async function GET(
   try {
     const { id: projectId } = await params;
 
+    // Fetch only top-level comments (no parentId), include replies
     const comments = await db.comment.findMany({
-      where: { projectId },
+      where: {
+        projectId,
+        parentId: null, // Only top-level comments
+      },
       include: {
         user: {
           select: {
@@ -19,6 +105,18 @@ export async function GET(
             name: true,
             image: true,
           },
+        },
+        replies: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "asc" },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -30,28 +128,13 @@ export async function GET(
       select: { creatorId: true },
     });
 
-    // Get superbacker status for each commenter
-    const formattedComments = await Promise.all(
-      comments.map(async (comment) => {
-        // Check if user is superbacker (backed 25+ projects)
-        const backedProjectsCount = await db.pledge.count({
-          where: {
-            userId: comment.userId,
-            status: "COMPLETED",
-          },
-        });
+    if (!project) {
+      return NextResponse.json([]);
+    }
 
-        return {
-          id: comment.id,
-          author: comment.user.name || "Anonymous",
-          avatarUrl: comment.user.image,
-          content: comment.content,
-          createdAt: comment.createdAt.toISOString(),
-          isCreator: comment.userId === project?.creatorId,
-          isSuperbacker: backedProjectsCount >= 25,
-          isPinned: false, // TODO: Add pinned field to Comment model if needed
-        };
-      })
+    // Format all comments with their replies
+    const formattedComments = await Promise.all(
+      comments.map((comment) => formatComment(comment, project.creatorId))
     );
 
     return NextResponse.json(formattedComments);
@@ -64,7 +147,7 @@ export async function GET(
   }
 }
 
-// POST /api/projects/[id]/comments - Create a new comment (backers only)
+// POST /api/projects/[id]/comments - Create a new comment or reply
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -79,7 +162,7 @@ export async function POST(
     }
 
     const { id: projectId } = await params;
-    const { content } = await request.json();
+    const { content, parentId } = await request.json();
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
@@ -101,32 +184,59 @@ export async function POST(
       );
     }
 
-    // Check if user is a backer OR the project creator
     const isCreator = project.creatorId === session.user.id;
 
-    if (!isCreator) {
-      const pledge = await db.pledge.findFirst({
-        where: {
-          userId: session.user.id,
-          projectId,
-          status: "COMPLETED",
-        },
-      });
-
-      if (!pledge) {
+    // If this is a reply (has parentId), only creators can reply
+    if (parentId) {
+      if (!isCreator) {
         return NextResponse.json(
-          { error: "Only backers can comment on this project" },
+          { error: "Only the project creator can reply to comments" },
           { status: 403 }
         );
       }
+
+      // Verify parent comment exists and belongs to this project
+      const parentComment = await db.comment.findFirst({
+        where: {
+          id: parentId,
+          projectId,
+          parentId: null, // Can only reply to top-level comments
+        },
+      });
+
+      if (!parentComment) {
+        return NextResponse.json(
+          { error: "Parent comment not found" },
+          { status: 404 }
+        );
+      }
+    } else {
+      // For top-level comments, must be backer or creator
+      if (!isCreator) {
+        const pledge = await db.pledge.findFirst({
+          where: {
+            userId: session.user.id,
+            projectId,
+            status: "COMPLETED",
+          },
+        });
+
+        if (!pledge) {
+          return NextResponse.json(
+            { error: "Only backers can comment on this project" },
+            { status: 403 }
+          );
+        }
+      }
     }
 
-    // Create the comment
+    // Create the comment/reply
     const comment = await db.comment.create({
       data: {
         projectId,
         userId: session.user.id,
         content: content.trim(),
+        parentId: parentId || null,
       },
       include: {
         user: {
@@ -156,6 +266,7 @@ export async function POST(
       isCreator,
       isSuperbacker: backedProjectsCount >= 25,
       isPinned: false,
+      parentId: comment.parentId,
     });
   } catch (error) {
     console.error("Error creating comment:", error);

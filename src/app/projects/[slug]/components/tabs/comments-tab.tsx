@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Heart, Clock, Pin, Bookmark, Loader2 } from "lucide-react";
-import { CommentData, SimilarProject, TabValue } from "../types";
+import { Heart, Clock, Pin, Bookmark, Loader2, MessageSquare, X } from "lucide-react";
+import { CommentData, CommentReply, SimilarProject, TabValue } from "../types";
 import { formatRelativeTime } from "../utils";
 
 interface CommentsTabProps {
@@ -23,6 +23,7 @@ interface CommentsTabProps {
   currentUserName?: string;
   currentUserAvatar?: string;
   onCommentAdded: (comment: CommentData) => void;
+  onReplyAdded?: (parentId: string, reply: CommentReply) => void;
 }
 
 export function CommentsTab({
@@ -36,10 +37,15 @@ export function CommentsTab({
   currentUserName,
   currentUserAvatar,
   onCommentAdded,
+  onReplyAdded,
 }: CommentsTabProps) {
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
 
   const canComment = isLoggedIn && (isBacker || isCreator);
 
@@ -70,6 +76,38 @@ export function CommentsTab({
       setIsSubmitting(false);
     }
   };
+
+  const handleSubmitReply = async (parentId: string) => {
+    if (!replyContent.trim() || isSubmittingReply) return;
+
+    setIsSubmittingReply(true);
+    setReplyError(null);
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ content: replyContent.trim(), parentId }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to post reply");
+      }
+
+      const reply = await response.json();
+      if (onReplyAdded) {
+        onReplyAdded(parentId, reply);
+      }
+      setReplyContent("");
+      setReplyingTo(null);
+    } catch (err) {
+      setReplyError(err instanceof Error ? err.message : "Failed to post reply");
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
+
   return (
     <div className="space-y-12">
       {/* Comments Main Section */}
@@ -135,7 +173,7 @@ export function CommentsTab({
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={comment.avatarUrl} />
+                      <AvatarImage src={comment.avatarUrl || undefined} />
                       <AvatarFallback className="bg-muted text-muted-foreground">
                         {comment.author[0]}
                       </AvatarFallback>
@@ -172,6 +210,101 @@ export function CommentsTab({
                       {paragraph}
                     </p>
                   ))}
+
+                  {/* Reply Button for Creator */}
+                  {isCreator && !comment.isCreator && (
+                    <div className="mt-3">
+                      {replyingTo === comment.id ? (
+                        <div className="space-y-3 mt-3">
+                          <Textarea
+                            placeholder="Write your reply..."
+                            value={replyContent}
+                            onChange={(e) => setReplyContent(e.target.value)}
+                            className="min-h-[80px] resize-none text-sm"
+                            disabled={isSubmittingReply}
+                            autoFocus
+                          />
+                          {replyError && (
+                            <p className="text-sm text-destructive">{replyError}</p>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleSubmitReply(comment.id)}
+                              disabled={!replyContent.trim() || isSubmittingReply}
+                              className="bg-[#05ce78] hover:bg-[#04b86a]"
+                            >
+                              {isSubmittingReply ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  Posting...
+                                </>
+                              ) : (
+                                "Post Reply"
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setReplyingTo(null);
+                                setReplyContent("");
+                                setReplyError(null);
+                              }}
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={() => setReplyingTo(comment.id)}
+                        >
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          Reply
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Display Replies */}
+                  {comment.replies && comment.replies.length > 0 && (
+                    <div className="mt-4 space-y-3">
+                      {comment.replies.map((reply) => (
+                        <div
+                          key={reply.id}
+                          className="border-l-2 border-[#05ce78] pl-4 py-2"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={reply.avatarUrl || undefined} />
+                              <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                                {reply.author[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium text-sm">{reply.author}</span>
+                            {reply.isCreator && (
+                              <Badge className="bg-[#05ce78] hover:bg-[#05ce78] text-white text-[10px] px-1.5 py-0">
+                                Creator
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {formatRelativeTime(reply.createdAt)}
+                            </span>
+                          </div>
+                          {reply.content.split("\n").map((paragraph, idx) => (
+                            <p key={idx} className="text-sm text-muted-foreground ml-8 mb-1 last:mb-0">
+                              {paragraph}
+                            </p>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

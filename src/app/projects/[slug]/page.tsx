@@ -32,6 +32,7 @@ import {
   AddonData,
   SimilarProject,
   CommentData,
+  CommentReply,
   ExistingPledge,
   TabValue,
   initialProject,
@@ -268,6 +269,16 @@ export default function ProjectPage() {
 
   const handleCommentAdded = (newComment: CommentData) => {
     setComments((prev) => [newComment, ...prev]);
+  };
+
+  const handleReplyAdded = (parentId: string, reply: CommentReply) => {
+    setComments((prev) =>
+      prev.map((comment) =>
+        comment.id === parentId
+          ? { ...comment, replies: [...(comment.replies || []), reply] }
+          : comment
+      )
+    );
   };
 
   // Share handler
@@ -737,6 +748,7 @@ export default function ProjectPage() {
             currentUserName={currentUser?.name}
             currentUserAvatar={currentUser?.image}
             onCommentAdded={handleCommentAdded}
+            onReplyAdded={handleReplyAdded}
           />
         )}
 
