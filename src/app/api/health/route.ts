@@ -22,6 +22,16 @@ interface HealthResponse {
   };
 }
 
+// Platform settings cache for health checks
+interface PlatformSettingsCache {
+  stripeSecretKey: string | null;
+  stripePublishableKey: string | null;
+  stripeWebhookSecret: string | null;
+  sendgridApiKey: string | null;
+  smtpFromEmail: string | null;
+  emailProvider: string | null;
+}
+
 // Simple health check endpoint for maintenance page and admin dashboard
 export async function GET() {
   const checks: HealthCheck[] = [];
@@ -36,7 +46,7 @@ export async function GET() {
     overallStatus = "degraded";
   }
 
-  // Get database metrics if healthy
+  // Get database metrics and platform settings if healthy
   let metrics = {
     database: {
       totalUsers: 0,
@@ -45,12 +55,25 @@ export async function GET() {
     },
   };
 
+  let platformSettings: PlatformSettingsCache | null = null;
+
   if (dbCheck.status !== "unhealthy") {
     try {
-      const [userCount, projectCount, pledgeCount] = await Promise.all([
+      const [userCount, projectCount, pledgeCount, settings] = await Promise.all([
         db.user.count(),
         db.project.count(),
         db.pledge.count(),
+        db.platformSettings.findUnique({
+          where: { id: "default" },
+          select: {
+            stripeSecretKey: true,
+            stripePublishableKey: true,
+            stripeWebhookSecret: true,
+            sendgridApiKey: true,
+            smtpFromEmail: true,
+            emailProvider: true,
+          },
+        }),
       ]);
       metrics = {
         database: {
@@ -59,16 +82,17 @@ export async function GET() {
           totalPledges: pledgeCount,
         },
       };
+      platformSettings = settings;
     } catch {
       // Metrics are non-critical, continue
     }
   }
 
-  // Check external services (non-blocking)
-  const stripeCheck = checkStripeConfig();
+  // Check external services (using database settings primarily, env vars as fallback)
+  const stripeCheck = checkStripeConfig(platformSettings);
   checks.push(stripeCheck);
 
-  const emailCheck = checkEmailConfig();
+  const emailCheck = checkEmailConfig(platformSettings);
   checks.push(emailCheck);
 
   const storageCheck = checkStorageConfig();
@@ -126,10 +150,11 @@ async function checkDatabase(): Promise<HealthCheck> {
   }
 }
 
-function checkStripeConfig(): HealthCheck {
-  const hasSecretKey = !!process.env.STRIPE_SECRET_KEY;
-  const hasPublishableKey = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-  const hasWebhookSecret = !!process.env.STRIPE_WEBHOOK_SECRET;
+function checkStripeConfig(settings: PlatformSettingsCache | null): HealthCheck {
+  // Check database settings first, then fall back to env vars
+  const hasSecretKey = !!(settings?.stripeSecretKey || process.env.STRIPE_SECRET_KEY);
+  const hasPublishableKey = !!(settings?.stripePublishableKey || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+  const hasWebhookSecret = !!(settings?.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET);
 
   if (hasSecretKey && hasPublishableKey && hasWebhookSecret) {
     return { name: "stripe", status: "healthy" };
@@ -148,10 +173,27 @@ function checkStripeConfig(): HealthCheck {
   }
 }
 
-function checkEmailConfig(): HealthCheck {
-  const hasSendGridKey = !!process.env.SENDGRID_API_KEY;
-  const hasFromEmail = !!process.env.SENDGRID_FROM_EMAIL;
+function checkEmailConfig(settings: PlatformSettingsCache | null): HealthCheck {
+  // Check database settings first, then fall back to env vars
+  const hasSendGridKey = !!(settings?.sendgridApiKey || process.env.SENDGRID_API_KEY);
+  const hasFromEmail = !!(settings?.smtpFromEmail || process.env.SENDGRID_FROM_EMAIL);
+  const emailProvider = settings?.emailProvider || "sendgrid";
 
+  // If using SMTP provider, check differently
+  if (emailProvider === "smtp") {
+    // For SMTP, just having fromEmail configured is enough for health check
+    if (hasFromEmail) {
+      return { name: "email", status: "healthy" };
+    } else {
+      return {
+        name: "email",
+        status: "degraded",
+        error: "From email not configured",
+      };
+    }
+  }
+
+  // SendGrid check
   if (hasSendGridKey && hasFromEmail) {
     return { name: "email", status: "healthy" };
   } else if (hasSendGridKey) {
@@ -164,7 +206,7 @@ function checkEmailConfig(): HealthCheck {
     return {
       name: "email",
       status: "unhealthy",
-      error: "SendGrid not configured",
+      error: "Email provider not configured",
     };
   }
 }
