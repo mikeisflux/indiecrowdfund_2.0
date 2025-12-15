@@ -805,7 +805,7 @@ export async function notifyBackerPledgeConfirmed(
       addons: {
         select: {
           quantity: true,
-          reward: { select: { title: true, amount: true } }
+          addon: { select: { title: true, amount: true } }
         },
       },
       user: {
@@ -823,10 +823,10 @@ export async function notifyBackerPledgeConfirmed(
   }
 
   // Format addons for the email
-  const addons = pledge.addons?.map((addon: { quantity: number; reward: { title: string; amount: number } }) => ({
-    title: addon.reward.title,
-    quantity: addon.quantity,
-    amount: addon.reward.amount * addon.quantity,
+  const addons = pledge.addons?.map((addonEntry: { quantity: number; addon: { title: string; amount: number } }) => ({
+    title: addonEntry.addon.title,
+    quantity: addonEntry.quantity,
+    amount: addonEntry.addon.amount * addonEntry.quantity,
   })) || [];
 
   // Get shipping info
