@@ -66,10 +66,24 @@ export async function POST(req: NextRequest) {
     // Check status based on review type
     if (isPrelaunch) {
       if (project.prelaunchStatus !== "SUBMITTED") {
-        return NextResponse.json(
-          { error: "Prelaunch page is not in submitted status" },
-          { status: 400 }
-        );
+        // Backward compatibility: check if there's a pending prelaunch review record
+        // (orphaned submission from before the bug fix)
+        const pendingPrelaunchReview = await db.projectReview.findFirst({
+          where: {
+            projectId,
+            action: "SUBMITTED",
+            flagsRaised: { has: "prelaunch_review" },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (!pendingPrelaunchReview) {
+          return NextResponse.json(
+            { error: "Prelaunch page is not in submitted status" },
+            { status: 400 }
+          );
+        }
+        // If we found a pending review, allow the approval to proceed
       }
     } else {
       if (project.status !== "SUBMITTED") {
@@ -244,8 +258,29 @@ export async function GET(req: NextRequest) {
       // (includes legacy pages that were published before prelaunchStatus was added)
       where = { prelaunchActive: true };
     } else if (prelaunchReview) {
-      // Prelaunch pages pending review
-      where = { prelaunchStatus: "SUBMITTED" };
+      // Prelaunch pages pending review - includes backward compatibility for orphaned submissions
+      // These are projects where:
+      // 1. prelaunchStatus is "SUBMITTED" (new properly saved submissions), OR
+      // 2. There's a ProjectReview with action "SUBMITTED" and flagsRaised contains "prelaunch_review"
+      //    but prelaunchStatus is still DRAFT (orphaned submissions from before the bug fix)
+      where = {
+        OR: [
+          { prelaunchStatus: "SUBMITTED" },
+          {
+            AND: [
+              { prelaunchStatus: "DRAFT" },
+              {
+                reviews: {
+                  some: {
+                    action: "SUBMITTED",
+                    flagsRaised: { has: "prelaunch_review" },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      };
     } else {
       // Regular project status query
       where = { status };
