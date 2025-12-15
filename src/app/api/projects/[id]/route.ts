@@ -473,6 +473,12 @@ export async function PATCH(
               select: { title: true, creatorId: true, creator: { select: { name: true, email: true } } },
             });
 
+            // Update the project FIRST to save prelaunchStatus and any other data
+            await db.project.update({
+              where: { id: params.id },
+              data: updateData,
+            });
+
             // Create a project review record for prelaunch review
             await db.projectReview.create({
               data: {
@@ -498,7 +504,7 @@ export async function PATCH(
               }
             }
 
-            // Return early with a message about needing approval
+            // Return with a message about needing approval
             return NextResponse.json({
               success: true,
               requiresApproval: true,
