@@ -19,11 +19,12 @@ const maintenanceBypassRoutes = [
   "/favicon.ico",
 ];
 
-// Routes that are exempt from CSRF protection (webhooks, etc.)
+// Routes that are exempt from CSRF protection (webhooks, analytics, etc.)
 const csrfExemptRoutes = [
   "/api/webhooks",
   "/api/stripe",
   "/api/health",
+  "/api/track", // Analytics tracking endpoint
 ];
 
 // Generate a CSRF token
