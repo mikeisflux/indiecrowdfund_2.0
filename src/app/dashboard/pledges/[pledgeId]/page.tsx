@@ -49,6 +49,7 @@ interface PledgeDetails {
   amount: number;
   status: string;
   createdAt: string;
+  backerNumber: number | null;
   project: {
     id: string;
     title: string;
@@ -250,17 +251,26 @@ export default function ManagePledgePage() {
       {/* Pledge Details */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            {pledge.project.title}
-          </CardTitle>
-          <CardDescription>
-            Pledged on {new Date(pledge.createdAt).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </CardDescription>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                {pledge.project.title}
+              </CardTitle>
+              <CardDescription>
+                Pledged on {new Date(pledge.createdAt).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </CardDescription>
+            </div>
+            {pledge.backerNumber && (
+              <Badge variant="outline" className="text-sm font-medium">
+                Backer #{pledge.backerNumber}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Pledge Amount */}

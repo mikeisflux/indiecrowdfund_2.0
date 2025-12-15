@@ -378,6 +378,9 @@ model Pledge {
   projectId             String
   rewardId              String?      // Optional - null for "pledge without reward"
 
+  // Backer number - order in which they backed this project (assigned on successful payment)
+  backerNumber          Int?
+
   // Amounts
   amount                Float
   rewardAmount          Float

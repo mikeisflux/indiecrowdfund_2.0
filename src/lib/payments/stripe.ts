@@ -786,6 +786,18 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
     // Since confirm: true, we know immediately if the payment succeeded
     // Update pledge status based on PaymentIntent status (don't rely solely on webhook)
     if (paymentIntent.status === "succeeded") {
+      // Calculate backer number if not already assigned
+      let backerNumber = pledge.backerNumber;
+      if (!backerNumber) {
+        const existingBackerCount = await db.pledge.count({
+          where: {
+            projectId: pledge.projectId,
+            backerNumber: { not: null },
+          },
+        });
+        backerNumber = existingBackerCount + 1;
+      }
+
       // Payment succeeded - update pledge to COMPLETED immediately
       await db.pledge.update({
         where: { id: pledgeId },
@@ -795,6 +807,7 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
           retryCount: 0,
           nextRetryAt: null,
           lastFailureReason: null,
+          backerNumber,
         },
       });
 
@@ -805,7 +818,7 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
         console.warn(`Could not send confirmation email for pledge ${pledgeId}:`, e);
       }
 
-      console.log(`[ChargePledge] Payment succeeded for pledge ${pledgeId}, status updated to COMPLETED`);
+      console.log(`[ChargePledge] Payment succeeded for pledge ${pledgeId}, backer #${backerNumber}, status updated to COMPLETED`);
     } else if (paymentIntent.status === "processing") {
       // Payment is processing - save intent ID, status will be updated by webhook
       await db.pledge.update({
@@ -1041,7 +1054,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   // Check if pledge is already completed (idempotency - webhook may fire after direct update)
   const existingPledge = await db.pledge.findUnique({
     where: { id: pledgeId },
-    select: { status: true },
+    select: { status: true, projectId: true, backerNumber: true },
   });
 
   if (existingPledge?.status === "COMPLETED") {
@@ -1054,6 +1067,19 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     ? paymentIntent.payment_method
     : paymentIntent.payment_method?.id;
 
+  // Calculate backer number if not already assigned
+  let backerNumber = existingPledge?.backerNumber;
+  if (!backerNumber && existingPledge?.projectId) {
+    // Count existing confirmed backers for this project
+    const existingBackerCount = await db.pledge.count({
+      where: {
+        projectId: existingPledge.projectId,
+        backerNumber: { not: null },
+      },
+    });
+    backerNumber = existingBackerCount + 1;
+  }
+
   const pledge = await db.pledge.update({
     where: { id: pledgeId },
     data: {
@@ -1063,6 +1089,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       retryCount: 0,
       nextRetryAt: null,
       lastFailureReason: null,
+      backerNumber,
     },
     include: {
       project: {
@@ -1188,6 +1215,7 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
       projectId: true,
       rewardId: true,
       chargedImmediately: true,
+      backerNumber: true,
       project: {
         select: {
           id: true,
@@ -1225,16 +1253,30 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
   // Determine what needs to be updated
   const needsConfirmation = !existingPledge.confirmationEmailSent;
 
+  // Calculate backer number if not already assigned
+  let backerNumber = existingPledge.backerNumber;
+  if (!backerNumber) {
+    // Count existing confirmed backers for this project
+    const existingBackerCount = await db.pledge.count({
+      where: {
+        projectId: existingPledge.projectId,
+        backerNumber: { not: null },
+      },
+    });
+    backerNumber = existingBackerCount + 1;
+  }
+
   // Save the payment method and mark as confirmed
   await db.pledge.update({
     where: { id: pledgeId },
     data: {
       stripePaymentMethodId: paymentMethodId,
       confirmationEmailSent: true,
+      backerNumber,
     },
   });
 
-  console.log(`[SetupIntent] Payment method saved and confirmed for pledge ${pledgeId}`);
+  console.log(`[SetupIntent] Payment method saved and confirmed for pledge ${pledgeId}, backer #${backerNumber}`);
 
   // Track current project amount for funding check
   let currentProjectAmount = existingPledge.project.currentAmount;
