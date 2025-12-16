@@ -35,18 +35,22 @@ export default function CollaboratePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ accepted: boolean; projectSlug?: string } | null>(null);
 
+  // Extract id from params with null safety
+  const collaborationId = params?.id as string | undefined;
+
   useEffect(() => {
     async function fetchCollaboration() {
       if (sessionStatus === "loading") return;
+      if (!collaborationId) return;
 
       if (!session?.user) {
         // Redirect to login with return URL
-        router.push(`/login?callbackUrl=/collaborate/${params.id}`);
+        router.push(`/login?callbackUrl=/collaborate/${collaborationId}`);
         return;
       }
 
       try {
-        const res = await fetch(`/api/collaborator/${params.id}`);
+        const res = await fetch(`/api/collaborator/${collaborationId}`);
         if (!res.ok) {
           const data = await res.json();
           setError(data.error || "Failed to load invitation");
@@ -62,14 +66,14 @@ export default function CollaboratePage() {
     }
 
     fetchCollaboration();
-  }, [params.id, session, sessionStatus, router]);
+  }, [collaborationId, session, sessionStatus, router]);
 
   async function handleRespond(action: "accept" | "decline") {
     setResponding(true);
     setError(null);
 
     try {
-      const res = await fetch(`/api/collaborator/${params.id}/respond`, {
+      const res = await fetch(`/api/collaborator/${collaborationId}/respond`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ action }),
