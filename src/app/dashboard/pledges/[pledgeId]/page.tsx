@@ -77,7 +77,7 @@ interface PledgeDetails {
 export default function ManagePledgePage() {
   const params = useParams();
   const router = useRouter();
-  const pledgeId = params.pledgeId as string;
+  const pledgeId = (params?.pledgeId as string) || "";
 
   const [pledge, setPledge] = useState<PledgeDetails | null>(null);
   const [loading, setLoading] = useState(true);

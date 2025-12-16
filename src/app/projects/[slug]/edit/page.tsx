@@ -10,7 +10,7 @@ import { toast } from "sonner";
 export default function EditProjectPage() {
   const params = useParams();
   const router = useRouter();
-  const slug = params.slug as string;
+  const slug = (params?.slug as string) || "";
   const [loading, setLoading] = useState(true);
 
   const {

@@ -14,7 +14,7 @@ export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || searchParams.get("redirect");
+  const callbackUrl = searchParams?.get("callbackUrl") || searchParams?.get("redirect");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

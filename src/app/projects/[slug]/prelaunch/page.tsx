@@ -76,7 +76,7 @@ interface ProjectData {
 
 export default function PrelaunchPage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const slug = (params?.slug as string) || "";
   const { data: session, status: sessionStatus } = useSession();
 
   const [project, setProject] = useState<ProjectData | null>(null);

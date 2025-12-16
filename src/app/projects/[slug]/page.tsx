@@ -54,7 +54,7 @@ import {
 
 export default function ProjectPage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const slug = (params?.slug as string) || "";
 
   // Data states
   const [project, setProject] = useState<ProjectData>(initialProject);

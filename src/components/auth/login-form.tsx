@@ -15,11 +15,11 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
   // Support both 'callbackUrl' and 'redirect' params
-  const callbackUrl = searchParams.get("callbackUrl") || searchParams.get("redirect") || "/choose-role";
+  const callbackUrl = searchParams?.get("callbackUrl") || searchParams?.get("redirect") || "/choose-role";
 
   // Handle URL error params on mount
   useEffect(() => {
-    const urlError = searchParams.get("error");
+    const urlError = searchParams?.get("error");
     if (urlError) {
       setError(urlError === "SessionRequired"
         ? "Please sign in to access this page."

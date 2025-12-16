@@ -67,7 +67,7 @@ interface OrderItem {
 export default function RetailerProjectDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params.id as string;
+  const projectId = (params?.id as string) || "";
 
   const [isLoading, setIsLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);

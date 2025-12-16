@@ -166,6 +166,7 @@ function StripePaymentForm({
   setIsProcessing,
   total,
   intentType,
+  pledgeId,
 }: {
   onSuccess: () => void;
   onError: (message: string) => void;
@@ -174,6 +175,7 @@ function StripePaymentForm({
   setIsProcessing: (val: boolean) => void;
   total: number;
   intentType: "payment_intent" | "setup_intent";
+  pledgeId: string | null;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -184,7 +186,9 @@ function StripePaymentForm({
     setIsProcessing(true);
 
     try {
-      const return_url = `${window.location.origin}/projects/${window.location.pathname.split("/")[2]}/pledge?success=true`;
+      // Include pledgeId in return URL so confirmation can happen after 3D Secure redirect
+      const slug = window.location.pathname.split("/")[2];
+      const return_url = `${window.location.origin}/projects/${slug}/pledge?success=true${pledgeId ? `&pledgeId=${pledgeId}` : ""}`;
 
       // Use the correct confirmation method based on intent type
       // SetupIntent is used for campaigns that haven't reached their goal yet (card is saved but not charged)
@@ -243,11 +247,12 @@ export default function PledgePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { status: authStatus } = useSession();
-  const slug = params.slug as string;
-  const rewardId = searchParams.get("reward");
-  const amountParam = searchParams.get("amount");
-  const successParam = searchParams.get("success");
-  const addItemsParam = searchParams.get("addItems"); // For adding items to existing completed pledge
+  const slug = (params?.slug as string) || "";
+  const rewardId = searchParams?.get("reward") ?? null;
+  const amountParam = searchParams?.get("amount") ?? null;
+  const successParam = searchParams?.get("success") ?? null;
+  const addItemsParam = searchParams?.get("addItems") ?? null; // For adding items to existing completed pledge
+  const pledgeIdParam = searchParams?.get("pledgeId") ?? null; // For confirmation after 3D Secure redirect
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -291,12 +296,30 @@ export default function PledgePage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [currentPledgeId, setCurrentPledgeId] = useState<string | null>(null);
 
-  // Handle success redirect
+  // Handle success redirect (including after 3D Secure authentication)
   useEffect(() => {
-    if (successParam === "true") {
-      setStep("success");
+    async function handleSuccessRedirect() {
+      if (successParam === "true") {
+        // If we have a pledgeId from the URL, call the confirmation endpoint
+        // This handles the case where user was redirected for 3D Secure authentication
+        if (pledgeIdParam) {
+          try {
+            const res = await fetch(`/api/pledges/${pledgeIdParam}/confirm`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            });
+            if (!res.ok) {
+              console.error("Failed to confirm pledge after redirect");
+            }
+          } catch (error) {
+            console.error("Error confirming pledge after redirect:", error);
+          }
+        }
+        setStep("success");
+      }
     }
-  }, [successParam]);
+    handleSuccessRedirect();
+  }, [successParam, pledgeIdParam]);
 
   // Initialize Stripe
   useEffect(() => {
@@ -982,10 +1005,12 @@ export default function PledgePage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <h3 className="font-semibold">Available rewards</h3>
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Ships to</span>
+                    <span className="text-muted-foreground">Your shipping location:</span>
                     <Select value={shippingCountry} onValueChange={setShippingCountry}>
-                      <SelectTrigger className="w-48 h-8">
-                        <SelectValue />
+                      <SelectTrigger className="w-52 h-8">
+                        <SelectValue>
+                          {SHIPPING_COUNTRIES.find(c => c.code === shippingCountry)?.name || shippingCountry}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {SHIPPING_COUNTRIES.map((country) => (
@@ -1346,6 +1371,7 @@ export default function PledgePage() {
                           setIsProcessing={setIsProcessing}
                           total={total}
                           intentType={intentType}
+                          pledgeId={currentPledgeId}
                         />
                       </Elements>
                     ) : (

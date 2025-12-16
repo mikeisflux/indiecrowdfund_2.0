@@ -104,14 +104,14 @@ function DiscoverContent() {
   const searchParams = useSearchParams();
 
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [search, setSearch] = useState(searchParams.get("q") || "");
-  const [category, setCategory] = useState(searchParams.get("category") || "");
-  const [sort, setSort] = useState(searchParams.get("sort") || "trending");
+  const [search, setSearch] = useState(searchParams?.get("q") || "");
+  const [category, setCategory] = useState(searchParams?.get("category") || "");
+  const [sort, setSort] = useState(searchParams?.get("sort") || "trending");
   const [showStaffPicks, setShowStaffPicks] = useState(
-    searchParams.get("staffPicks") === "true"
+    searchParams?.get("staffPicks") === "true"
   );
   const [showFunded, setShowFunded] = useState(
-    searchParams.get("funded") !== "false"
+    searchParams?.get("funded") !== "false"
   );
   const [isLoading, setIsLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -178,7 +178,7 @@ function DiscoverContent() {
 
   // Update URL when filters change
   const updateFilters = (updates: Record<string, string | boolean | null>) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() || "");
 
     Object.entries(updates).forEach(([key, value]) => {
       if (value === null || value === "" || value === false) {

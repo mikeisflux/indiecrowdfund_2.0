@@ -108,7 +108,7 @@ interface SurveyStats {
 export default function SurveyBuilderPage() {
   const params = useParams();
   const router = useRouter();
-  const projectId = params.id as string;
+  const projectId = (params?.id as string) || "";
 
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [rewards, setRewards] = useState<Reward[]>([]);

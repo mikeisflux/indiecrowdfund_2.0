@@ -99,7 +99,7 @@ type Step = "intro" | "items" | "questions" | "address" | "review";
 export default function BackerSurveyPage() {
   const params = useParams();
   const router = useRouter();
-  const pledgeId = params.pledgeId as string;
+  const pledgeId = (params?.pledgeId as string) || "";
 
   const [data, setData] = useState<SurveyData | null>(null);
   const [isLoading, setIsLoading] = useState(true);

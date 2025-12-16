@@ -113,7 +113,7 @@ interface Pagination {
 export default function SurveyResponsesPage() {
   const params = useParams();
   const router = useRouter();
-  const projectId = params.id as string;
+  const projectId = (params?.id as string) || "";
 
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, completed: 0, incomplete: 0, responseRate: 0 });

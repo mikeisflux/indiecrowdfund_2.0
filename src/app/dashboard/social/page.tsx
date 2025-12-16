@@ -139,8 +139,8 @@ export default function SocialHubPage() {
 
   // Handle OAuth callback messages
   useEffect(() => {
-    const success = searchParams.get("success");
-    const error = searchParams.get("error");
+    const success = searchParams?.get("success");
+    const error = searchParams?.get("error");
 
     if (success) {
       toast.success(success);

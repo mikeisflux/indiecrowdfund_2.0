@@ -18,7 +18,7 @@ export function ResetPasswordForm() {
   const [isValidToken, setIsValidToken] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get("token");
+  const token = searchParams?.get("token");
 
   // Validate token on mount
   useEffect(() => {
