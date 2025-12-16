@@ -73,7 +73,7 @@ export default function TermsPage() {
           Back to Home
         </Link>
 
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-2">
             Legal & Policies
           </h1>
@@ -82,62 +82,8 @@ export default function TermsPage() {
           </p>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            {/* Desktop Tabs - Scrollable for many tabs */}
-            <div className="hidden md:block overflow-x-auto mb-8">
-              <TabsList className="inline-flex w-auto min-w-full">
-                <TabsTrigger value="terms" className="flex items-center gap-2 whitespace-nowrap">
-                  <ScrollText className="h-4 w-4" />
-                  Terms
-                </TabsTrigger>
-                <TabsTrigger value="privacy" className="flex items-center gap-2 whitespace-nowrap">
-                  <Shield className="h-4 w-4" />
-                  Privacy
-                </TabsTrigger>
-                <TabsTrigger value="refunds" className="flex items-center gap-2 whitespace-nowrap">
-                  <RotateCcw className="h-4 w-4" />
-                  Refunds
-                </TabsTrigger>
-                <TabsTrigger value="creator" className="flex items-center gap-2 whitespace-nowrap">
-                  <UserCheck className="h-4 w-4" />
-                  Creator
-                </TabsTrigger>
-                <TabsTrigger value="backer" className="flex items-center gap-2 whitespace-nowrap">
-                  <AlertTriangle className="h-4 w-4" />
-                  Backer Risks
-                </TabsTrigger>
-                <TabsTrigger value="shipping" className="flex items-center gap-2 whitespace-nowrap">
-                  <Package className="h-4 w-4" />
-                  Shipping
-                </TabsTrigger>
-                <TabsTrigger value="chargebacks" className="flex items-center gap-2 whitespace-nowrap">
-                  <CreditCard className="h-4 w-4" />
-                  Chargebacks
-                </TabsTrigger>
-                <TabsTrigger value="fraud" className="flex items-center gap-2 whitespace-nowrap">
-                  <ShieldAlert className="h-4 w-4" />
-                  Fraud
-                </TabsTrigger>
-                <TabsTrigger value="cookies" className="flex items-center gap-2 whitespace-nowrap">
-                  <Cookie className="h-4 w-4" />
-                  Cookies
-                </TabsTrigger>
-                <TabsTrigger value="guidelines" className="flex items-center gap-2 whitespace-nowrap">
-                  <FileText className="h-4 w-4" />
-                  Community
-                </TabsTrigger>
-                <TabsTrigger value="dmca" className="flex items-center gap-2 whitespace-nowrap">
-                  <Copyright className="h-4 w-4" />
-                  DMCA
-                </TabsTrigger>
-                <TabsTrigger value="ai-policy" className="flex items-center gap-2 whitespace-nowrap">
-                  <Brain className="h-4 w-4" />
-                  AI Policy
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            {/* Mobile Tabs */}
-            <TabsList className="md:hidden grid w-full grid-cols-3 gap-2 mb-8 h-auto">
+            {/* Mobile Tabs - Grid Layout */}
+            <TabsList className="lg:hidden grid w-full grid-cols-3 gap-2 mb-8 h-auto">
               <TabsTrigger value="terms" className="flex items-center gap-2 py-3">
                 <ScrollText className="h-4 w-4" />
                 <span className="text-xs">Terms</span>
@@ -187,6 +133,67 @@ export default function TermsPage() {
                 <span className="text-xs">AI</span>
               </TabsTrigger>
             </TabsList>
+
+            {/* Desktop Layout - Vertical Sidebar */}
+            <div className="hidden lg:flex gap-8">
+              {/* Left Sidebar Navigation */}
+              <div className="w-64 flex-shrink-0">
+                <div className="sticky top-24">
+                  <TabsList className="flex flex-col h-auto w-full bg-transparent space-y-1">
+                    <TabsTrigger value="terms" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <ScrollText className="h-4 w-4" />
+                      Terms of Service
+                    </TabsTrigger>
+                    <TabsTrigger value="privacy" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <Shield className="h-4 w-4" />
+                      Privacy Policy
+                    </TabsTrigger>
+                    <TabsTrigger value="refunds" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <RotateCcw className="h-4 w-4" />
+                      Refund Policy
+                    </TabsTrigger>
+                    <TabsTrigger value="creator" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <UserCheck className="h-4 w-4" />
+                      Creator Agreement
+                    </TabsTrigger>
+                    <TabsTrigger value="backer" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <AlertTriangle className="h-4 w-4" />
+                      Backer Risks
+                    </TabsTrigger>
+                    <TabsTrigger value="shipping" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <Package className="h-4 w-4" />
+                      Shipping & Rewards
+                    </TabsTrigger>
+                    <TabsTrigger value="chargebacks" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <CreditCard className="h-4 w-4" />
+                      Chargebacks
+                    </TabsTrigger>
+                    <TabsTrigger value="fraud" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <ShieldAlert className="h-4 w-4" />
+                      Fraud Prevention
+                    </TabsTrigger>
+                    <TabsTrigger value="cookies" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <Cookie className="h-4 w-4" />
+                      Cookie Policy
+                    </TabsTrigger>
+                    <TabsTrigger value="guidelines" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <FileText className="h-4 w-4" />
+                      Community Guidelines
+                    </TabsTrigger>
+                    <TabsTrigger value="dmca" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <Copyright className="h-4 w-4" />
+                      DMCA Policy
+                    </TabsTrigger>
+                    <TabsTrigger value="ai-policy" className="w-full justify-start gap-3 px-4 py-3 data-[state=active]:bg-zinc-100 dark:data-[state=active]:bg-zinc-800 rounded-lg">
+                      <Brain className="h-4 w-4" />
+                      AI Policy
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              </div>
+
+              {/* Content Area */}
+              <div className="flex-1 min-w-0">
 
             {/* Terms of Service */}
             <TabsContent value="terms">
@@ -1370,6 +1377,8 @@ export default function TermsPage() {
                 </div>
               </div>
             </TabsContent>
+              </div>
+            </div>
           </Tabs>
         </div>
       </main>
