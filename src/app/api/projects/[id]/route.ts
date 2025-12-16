@@ -461,7 +461,17 @@ export async function PATCH(
         const canActivate = await canActivatePrelaunchImmediately(session.user.id);
 
         if (!canActivate) {
-          // User needs approval - check if prelaunch is already approved
+          // User needs approval - check if prelaunch is already approved or pending
+          if (project.prelaunchStatus === "SUBMITTED") {
+            // Already submitted, just return success without creating duplicate records
+            return NextResponse.json({
+              success: true,
+              requiresApproval: true,
+              message: "Your pre-launch page is already submitted and pending review.",
+              project: { id: params.id, prelaunchStatus: "SUBMITTED" },
+            });
+          }
+
           if (project.prelaunchStatus !== "APPROVED") {
             // Submit the prelaunch for review instead of activating
             // Save all the other project data but submit prelaunch for review
