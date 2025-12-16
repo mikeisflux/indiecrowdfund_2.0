@@ -1001,27 +1001,41 @@ export default function PledgePage() {
                   </CardContent>
                 </Card>
 
+                {/* Shipping location selector - prominent since it affects pricing */}
+                <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                        <div>
+                          <Label htmlFor="shipping-country" className="text-sm font-medium">
+                            Where should we ship your rewards?
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Shipping costs vary by location
+                          </p>
+                        </div>
+                      </div>
+                      <Select value={shippingCountry} onValueChange={setShippingCountry}>
+                        <SelectTrigger id="shipping-country" className="w-full sm:w-56 bg-white dark:bg-zinc-900">
+                          <SelectValue>
+                            {SHIPPING_COUNTRIES.find(c => c.code === shippingCountry)?.name || shippingCountry}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SHIPPING_COUNTRIES.map((country) => (
+                            <SelectItem key={country.code} value={country.code}>
+                              {country.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Available rewards header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <h3 className="font-semibold">Available rewards</h3>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Your shipping location:</span>
-                    <Select value={shippingCountry} onValueChange={setShippingCountry}>
-                      <SelectTrigger className="w-52 h-8">
-                        <SelectValue>
-                          {SHIPPING_COUNTRIES.find(c => c.code === shippingCountry)?.name || shippingCountry}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SHIPPING_COUNTRIES.map((country) => (
-                          <SelectItem key={country.code} value={country.code}>
-                            {country.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                <h3 className="font-semibold">Available rewards</h3>
 
                 {/* Reward cards */}
                 {allRewards.length > 0 ? (

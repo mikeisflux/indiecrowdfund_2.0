@@ -13,8 +13,8 @@ function VerifyEmailContent() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
 
-  const token = searchParams.get("token");
-  const email = searchParams.get("email");
+  const token = searchParams?.get("token") ?? null;
+  const email = searchParams?.get("email") ?? null;
 
   useEffect(() => {
     async function verifyEmail() {

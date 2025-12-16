@@ -49,7 +49,7 @@ function VerificationCompleteContent() {
 
   // Sanitize returnUrl to prevent open redirect attacks
   const safeReturnUrl = useMemo(
-    () => getSafeReturnUrl(searchParams.get("returnUrl")),
+    () => getSafeReturnUrl(searchParams?.get("returnUrl") ?? null),
     [searchParams]
   );
 
