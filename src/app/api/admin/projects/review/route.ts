@@ -258,29 +258,8 @@ export async function GET(req: NextRequest) {
       // (includes legacy pages that were published before prelaunchStatus was added)
       where = { prelaunchActive: true };
     } else if (prelaunchReview) {
-      // Prelaunch pages pending review - includes backward compatibility for orphaned submissions
-      // These are projects where:
-      // 1. prelaunchStatus is "SUBMITTED" (new properly saved submissions), OR
-      // 2. There's a ProjectReview with action "SUBMITTED" and flagsRaised contains "prelaunch_review"
-      //    but prelaunchStatus is still DRAFT (orphaned submissions from before the bug fix)
-      where = {
-        OR: [
-          { prelaunchStatus: "SUBMITTED" },
-          {
-            AND: [
-              { prelaunchStatus: "DRAFT" },
-              {
-                reviews: {
-                  some: {
-                    action: "SUBMITTED",
-                    flagsRaised: { has: "prelaunch_review" },
-                  },
-                },
-              },
-            ],
-          },
-        ],
-      };
+      // Prelaunch pages pending review
+      where = { prelaunchStatus: "SUBMITTED" };
     } else {
       // Regular project status query
       where = { status };
