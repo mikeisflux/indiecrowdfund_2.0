@@ -14,16 +14,6 @@ const questionSchema = z.object({
   options: z.array(z.string()).optional(),
 });
 
-const surveyUpdateSchema = z.object({
-  questions: z.array(questionSchema),
-  settings: z.object({
-    allowAddressChanges: z.boolean().optional(),
-    sendConfirmationEmail: z.boolean().optional(),
-    lockAfterFulfillment: z.boolean().optional(),
-    requireAllFields: z.boolean().optional(),
-  }).optional(),
-});
-
 // GET - Get survey and questions for a project
 export async function GET(req: NextRequest) {
   try {
@@ -170,6 +160,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { projectId, questions, settings } = body;
 
     if (!projectId) {
@@ -219,7 +210,7 @@ export async function POST(req: NextRequest) {
 
     // Filter out section breaks and item-related questions
     const backerQuestions = questions.filter(
-      (q: any) => q.type !== "section_break" && !q.isItemQuestion
+      (q: { type: string; isItemQuestion?: boolean }) => q.type !== "section_break" && !q.isItemQuestion
     );
 
     // Create new backer questions

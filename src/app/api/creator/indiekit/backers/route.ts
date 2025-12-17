@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No valid pledges found" }, { status: 400 });
     }
 
-    let results: { success: number; failed: number; errors?: string[] } = {
+    const results: { success: number; failed: number; errors?: string[] } = {
       success: 0,
       failed: 0,
       errors: [],

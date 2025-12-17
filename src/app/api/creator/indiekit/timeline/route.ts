@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
       where: {
         projectId,
         ...(dateFilter && { createdAt: { gte: dateFilter } }),
-        ...(typeFilter && { type: { in: typeFilter as any[] } }),
+        ...(typeFilter && { type: { in: typeFilter as string[] } }),
       },
       orderBy: { createdAt: "desc" },
       take: limit,
