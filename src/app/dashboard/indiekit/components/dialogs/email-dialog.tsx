@@ -34,6 +34,7 @@ import {
   CheckCircle2,
   Calendar,
   Filter,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -191,6 +192,15 @@ Click here to see the project and back us today!`);
                     </span>
                   </div>
                 </div>
+
+                <hr />
+
+                {/* Unsubscribe Info Link */}
+                <div>
+                  <Button variant="link" className="text-teal-600 p-0 h-auto text-sm">
+                    What happens to a member that unsubscribes?
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -267,6 +277,12 @@ Click here to see the project and back us today!`);
                 <div className="space-y-4 p-6 border rounded-lg">
                   <h3 className="text-lg font-semibold">2. Send Your Emails</h3>
 
+                  {/* FREE Banner */}
+                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <span className="text-sm font-medium">Email campaigns are FREE - no limits, no charges</span>
+                  </div>
+
                   {/* Send To Count */}
                   <div className="space-y-2">
                     <Label>Send To</Label>
@@ -297,6 +313,30 @@ Click here to see the project and back us today!`);
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <Input type="datetime-local" className="w-auto" />
                     </div>
+                  </div>
+
+                  {/* Reply Email Section */}
+                  <div className="space-y-2 pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Replies by members to this campaign will be sent to your support email:
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium font-mono">user@example.com</span>
+                      <Button variant="link" className="text-teal-600 p-0 h-auto text-sm">
+                        Edit »
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Import Email List Section */}
+                  <div className="space-y-2 pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Do you have an email list that you would like to add to this campaign?
+                    </p>
+                    <Button variant="outline">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import Email List
+                    </Button>
                   </div>
                 </div>
               </div>

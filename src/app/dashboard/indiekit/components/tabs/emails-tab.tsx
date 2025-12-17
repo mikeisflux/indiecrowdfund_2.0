@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, MoreHorizontal, Mail, PenLine } from "lucide-react";
+import { Plus, MoreHorizontal, Mail, PenLine, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EmailCampaign } from "../../types";
 
@@ -58,6 +58,19 @@ const launchTimelineStages = [
 export function EmailsTab({ emailCampaigns, onOpenEmailDialog }: EmailsTabProps) {
   return (
     <div className="space-y-6">
+      {/* Launch Navigation */}
+      <div className="flex items-center gap-1 border-b pb-4">
+        <Home className="h-4 w-4 text-teal-600 mr-1" />
+        <span className="font-medium text-teal-600">Launch</span>
+        <div className="flex gap-1 ml-4">
+          <Button variant="ghost" size="sm">Dashboard</Button>
+          <Button variant="ghost" size="sm" className="text-teal-600 font-medium">Email Campaigns</Button>
+          <Button variant="ghost" size="sm">Teaser Pages</Button>
+          <Button variant="ghost" size="sm">Projects</Button>
+          <Button variant="ghost" size="sm">Members</Button>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold">Email Campaigns</h3>
