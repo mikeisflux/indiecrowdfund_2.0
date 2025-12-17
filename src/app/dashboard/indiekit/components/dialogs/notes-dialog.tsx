@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ import {
   Clock,
   Trash2,
   User,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,7 +44,7 @@ interface NotesDialogProps {
   onOpenChange: (open: boolean) => void;
   backerId: string;
   backerName: string;
-  existingNotes?: Note[];
+  projectId?: string;
   onSave?: (note: { content: string; category: string }) => void;
   onDelete?: (noteId: string) => void;
 }
@@ -56,70 +57,108 @@ const noteCategories = [
   { id: "important", label: "Important", color: "bg-red-100 text-red-700" },
 ];
 
-const demoNotes: Note[] = [
-  {
-    id: "1",
-    content: "Backer requested address change - updated to new California address",
-    category: "shipping",
-    pinned: true,
-    createdAt: "Dec 15, 2024 at 2:30 PM",
-    author: "Creator",
-  },
-  {
-    id: "2",
-    content: "Card declined on first attempt, successfully charged on retry",
-    category: "payment",
-    pinned: false,
-    createdAt: "Dec 10, 2024 at 10:15 AM",
-    author: "System",
-  },
-];
-
 export function NotesDialog({
   open,
   onOpenChange,
   backerId,
   backerName,
-  existingNotes = demoNotes,
+  projectId,
   onSave,
   onDelete,
 }: NotesDialogProps) {
-  const [notes, setNotes] = useState<Note[]>(existingNotes);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
   const [category, setCategory] = useState("general");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleAddNote = () => {
+  // Fetch notes when dialog opens
+  useEffect(() => {
+    if (open && backerId) {
+      fetchNotes();
+    }
+  }, [open, backerId]);
+
+  const fetchNotes = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/creator/indiekit/notes?pledgeId=${backerId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotes(data.notes || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notes:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddNote = async () => {
     if (!newNote.trim()) {
       toast.error("Please enter a note");
       return;
     }
 
-    const note: Note = {
-      id: String(Date.now()),
-      content: newNote.trim(),
-      category,
-      pinned: false,
-      createdAt: new Date().toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      }),
-      author: "You",
-    };
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pledgeId: backerId,
+          projectId,
+          content: newNote.trim(),
+          category,
+        }),
+      });
 
-    setNotes([note, ...notes]);
-    onSave?.({ content: note.content, category: note.category });
-    toast.success("Note added");
-    setNewNote("");
-    setCategory("general");
+      if (!res.ok) throw new Error("Failed to add note");
+
+      const data = await res.json();
+      const note: Note = {
+        id: data.note.id,
+        content: data.note.content,
+        category: data.note.category || "general",
+        pinned: data.note.pinned || false,
+        createdAt: new Date(data.note.createdAt).toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+        author: data.note.author || "You",
+      };
+
+      setNotes([note, ...notes]);
+      onSave?.({ content: note.content, category: note.category });
+      toast.success("Note added");
+      setNewNote("");
+      setCategory("general");
+    } catch (error) {
+      toast.error("Failed to add note");
+      console.error("Add note error:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteNote = (noteId: string) => {
-    setNotes(notes.filter(n => n.id !== noteId));
-    onDelete?.(noteId);
-    toast.success("Note deleted");
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      const res = await fetch(`/api/creator/indiekit/notes?noteId=${noteId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete note");
+
+      setNotes(notes.filter(n => n.id !== noteId));
+      onDelete?.(noteId);
+      toast.success("Note deleted");
+    } catch (error) {
+      toast.error("Failed to delete note");
+      console.error("Delete note error:", error);
+    }
   };
 
   const togglePin = (noteId: string) => {
@@ -175,7 +214,8 @@ export function NotesDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={handleAddNote} className="bg-teal-600 hover:bg-teal-700">
+              <Button onClick={handleAddNote} disabled={isSaving} className="bg-teal-600 hover:bg-teal-700">
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Add Note
               </Button>
             </div>
@@ -183,7 +223,12 @@ export function NotesDialog({
 
           {/* Notes List */}
           <div className="space-y-3">
-            {sortedNotes.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                <p className="text-sm">Loading notes...</p>
+              </div>
+            ) : sortedNotes.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No notes yet</p>

@@ -80,12 +80,42 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
     window.open(`/survey/${backer.id}`, '_blank');
   };
 
-  const handleResendSurvey = () => {
-    toast.success(`Survey resent to ${backer.email}`);
+  const handleResendSurvey = async () => {
+    try {
+      const res = await fetch("/api/creator/indiekit/backers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send_survey_reminder",
+          pledgeIds: [backer.id],
+          projectId: backer.projectId,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to resend survey");
+      toast.success(`Survey resent to ${backer.email}`);
+    } catch (error) {
+      toast.error("Failed to resend survey");
+      console.error("Resend survey error:", error);
+    }
   };
 
-  const handlePushToFulfillment = () => {
-    toast.success(`Order pushed to fulfillment`);
+  const handlePushToFulfillment = async () => {
+    try {
+      const res = await fetch("/api/creator/indiekit/backers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "push_to_fulfillment",
+          pledgeIds: [backer.id],
+          projectId: backer.projectId,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to push to fulfillment");
+      toast.success(`Order pushed to fulfillment`);
+    } catch (error) {
+      toast.error("Failed to push to fulfillment");
+      console.error("Push to fulfillment error:", error);
+    }
   };
 
   return (

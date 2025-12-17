@@ -41,6 +41,7 @@ export interface WorkflowStep {
 
 export interface Backer {
   id: string;
+  projectId?: string;
   name: string;
   email: string;
   avatar?: string;

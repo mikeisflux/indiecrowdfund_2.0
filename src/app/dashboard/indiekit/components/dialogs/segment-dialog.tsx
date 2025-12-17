@@ -26,6 +26,7 @@ import {
   Plus,
   Trash2,
   Filter,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,6 +40,7 @@ interface SegmentRule {
 interface SegmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  projectId?: string;
   onSave?: (segment: { name: string; description: string; rules: SegmentRule[] }) => void;
   editingSegment?: {
     id: string;
@@ -80,6 +82,7 @@ const operatorOptions: Record<string, { id: string; label: string }[]> = {
 export function SegmentDialog({
   open,
   onOpenChange,
+  projectId,
   onSave,
   editingSegment,
 }: SegmentDialogProps) {
@@ -88,6 +91,8 @@ export function SegmentDialog({
   const [rules, setRules] = useState<SegmentRule[]>(
     editingSegment?.rules || [{ id: "1", field: "", operator: "", value: "" }]
   );
+  const [isSaving, setIsSaving] = useState(false);
+  const [estimatedCount, setEstimatedCount] = useState(0);
 
   const addRule = () => {
     setRules([...rules, { id: String(Date.now()), field: "", operator: "", value: "" }]);
@@ -107,7 +112,7 @@ export function SegmentDialog({
     return operatorOptions[field] || operatorOptions.default;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       toast.error("Please enter a segment name");
       return;
@@ -119,19 +124,37 @@ export function SegmentDialog({
       return;
     }
 
-    onSave?.({
-      name: name.trim(),
-      description: description.trim(),
-      rules: validRules,
-    });
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/segments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          name: name.trim(),
+          description: description.trim(),
+          criteria: validRules,
+          type: "custom",
+        }),
+      });
 
-    toast.success(editingSegment ? "Segment updated" : "Segment created");
-    onOpenChange(false);
+      if (!res.ok) throw new Error("Failed to create segment");
+
+      onSave?.({
+        name: name.trim(),
+        description: description.trim(),
+        rules: validRules,
+      });
+
+      toast.success(editingSegment ? "Segment updated" : "Segment created");
+      onOpenChange(false);
+    } catch (error) {
+      toast.error("Failed to save segment");
+      console.error("Save segment error:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
-
-  // Calculate estimated backer count (demo)
-  const estimatedCount = rules.filter(r => r.field && r.operator && r.value).length > 0 ?
-    Math.floor(Math.random() * 500) + 50 : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -254,8 +277,8 @@ export function SegmentDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSave}>
-            <Users className="h-4 w-4 mr-2" />
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Users className="h-4 w-4 mr-2" />}
             {editingSegment ? "Update Segment" : "Create Segment"}
           </Button>
         </DialogFooter>

@@ -62,7 +62,6 @@ import type {
   SurveyAddon,
 } from "./types";
 import { WORKFLOW_STEPS, SHIPPING_SERVICES } from "./constants";
-import { getDemoData } from "./demo-data";
 
 // Components
 import {
@@ -163,18 +162,7 @@ export default function IndieKitPage() {
       }
     } catch (error) {
       console.error("IndieKit fetch error:", error);
-      // Set demo data for development
-      const demo = getDemoData();
-      setProjects(demo.projects);
-      setSelectedProjectId(demo.selectedProjectId);
-      setStats(demo.stats);
-      setBackers(demo.backers);
-      setPackageGroups(demo.packageGroups);
-      setDigitalFiles(demo.digitalFiles);
-      setDistributionRules(demo.distributionRules);
-      setSurveyAddons(demo.surveyAddons);
-      setEmailCampaigns(demo.emailCampaigns);
-      setWorkflowSteps(demo.workflowSteps);
+      toast.error("Failed to load IndieKit data. Please try again.");
     } finally {
       setLoading(false);
     }
