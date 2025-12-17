@@ -111,6 +111,10 @@ export default function IndieKitPage() {
   const [distributionRules, setDistributionRules] = useState<DistributionRule[]>([]);
   const [emailCampaigns, setEmailCampaigns] = useState<EmailCampaign[]>([]);
   const [surveyAddons, setSurveyAddons] = useState<SurveyAddon[]>([]);
+  const [segments, setSegments] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [surveyQuestions, setSurveyQuestions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBackers, setSelectedBackers] = useState<string[]>([]);
@@ -146,6 +150,9 @@ export default function IndieKitPage() {
       setPackageGroups(data.packageGroups || []);
       setDigitalFiles(data.digitalFiles || []);
       setEmailCampaigns(data.emailCampaigns || []);
+      setSegments(data.segments || []);
+      setProducts(data.products || []);
+      setTimeline(data.timeline || []);
 
       if (!selectedProjectId && data.projects?.length > 0) {
         setSelectedProjectId(data.projects[0].id);
@@ -612,35 +619,35 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="segments">
-                <SegmentsTab />
+                <SegmentsTab segments={segments} />
               </TabsContent>
 
               <TabsContent value="export">
-                <ExportTab />
+                <ExportTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="timeline">
-                <TimelineTab />
+                <TimelineTab entries={timeline} />
               </TabsContent>
 
               <TabsContent value="counts">
-                <CountsTab />
+                <CountsTab stats={stats} backers={backers} />
               </TabsContent>
 
               <TabsContent value="support">
-                <SupportTab />
+                <SupportTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="survey-builder">
-                <SurveyBuilderTab />
+                <SurveyBuilderTab projectId={selectedProjectId} questions={surveyQuestions} />
               </TabsContent>
 
               <TabsContent value="settings">
-                <SettingsTab />
+                <SettingsTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="products">
-                <ProductsTab />
+                <ProductsTab products={products} projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="account">

@@ -55,6 +55,7 @@ model User {
   bugReports        BugReport[]
   mediaFiles        MediaFile[]
   apiKeys           ApiKey[]
+  backerNotes       BackerNote[]
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -2017,4 +2018,200 @@ enum ApiKeyStatus {
   ACTIVE
   REVOKED
   EXPIRED
+}
+
+// ============================================
+// INDIEKIT - FULFILLMENT MANAGEMENT
+// ============================================
+
+// Products/SKUs for fulfillment
+model FulfillmentProduct {
+  id                String            @id @default(cuid())
+  projectId         String
+
+  // Product details
+  sku               String
+  name              String
+  description       String?           @db.Text
+  type              ProductType       @default(PHYSICAL)
+  imageUrl          String?
+
+  // Physical product attributes
+  weight            Float?            // in oz
+  weightUnit        String?           @default("oz")
+  length            Float?            // in inches
+  width             Float?            // in inches
+  height            Float?            // in inches
+  dimensionUnit     String?           @default("in")
+
+  // Customs info for international shipping
+  customsCode       String?           // HS/Tariff code
+  countryOfOrigin   String?
+  customsDescription String?
+
+  // Status
+  status            ProductStatus     @default(INCOMPLETE)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@unique([projectId, sku])
+  @@index([projectId])
+  @@index([status])
+}
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+}
+
+enum ProductStatus {
+  READY
+  INCOMPLETE
+  NO_WEIGHT
+  NO_CUSTOMS
+  ERROR
+}
+
+// Backer segments for targeted actions
+model BackerSegment {
+  id                String            @id @default(cuid())
+  projectId         String
+
+  name              String
+  description       String?
+  type              SegmentType       @default(CUSTOM)
+
+  // Filter criteria (stored as JSON)
+  criteria          Json?             // { field: "pledgeAmount", operator: ">=", value: 100 }
+
+  // Cached count (updated periodically)
+  backerCount       Int               @default(0)
+
+  // Dynamic vs static
+  isDynamic         Boolean           @default(true)
+  staticBackerIds   String[]          // For static segments, list of pledge IDs
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([projectId])
+  @@index([type])
+}
+
+enum SegmentType {
+  PLEDGE_LEVEL
+  ADDON
+  SURVEY_STATUS
+  SHIPPING_REGION
+  PAYMENT_STATUS
+  CUSTOM
+}
+
+// Activity log for timeline
+model FulfillmentActivity {
+  id                String              @id @default(cuid())
+  projectId         String
+
+  // Activity details
+  type              ActivityType
+  title             String
+  description       String?
+  metadata          Json?               // Additional context
+
+  // Related entities
+  pledgeId          String?
+  userId            String?
+
+  // Grouping for batch operations
+  batchId           String?             // Group related activities
+  affectedCount     Int?                // Number of items affected
+
+  createdAt         DateTime            @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([type])
+  @@index([pledgeId])
+  @@index([batchId])
+}
+
+enum ActivityType {
+  SURVEY_SENT
+  SURVEY_REMINDER
+  SURVEY_COMPLETED
+  ORDERS_LOCKED
+  ADDRESSES_LOCKED
+  CARDS_CHARGED
+  CHARGE_FAILED
+  ORDERS_PUSHED
+  PUSH_FAILED
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  DIGITAL_DISTRIBUTED
+  ADDRESS_UPDATED
+  REFUND_ISSUED
+  NOTE_ADDED
+  BALANCE_ADJUSTED
+}
+
+// Support tickets/notes for backers
+model BackerNote {
+  id                String            @id @default(cuid())
+  pledgeId          String
+
+  content           String            @db.Text
+  isInternal        Boolean           @default(true)
+
+  // Who created this
+  createdById       String?
+  createdBy         User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([pledgeId])
+  @@index([createdById])
+}
+
+// Digital file distribution
+model DigitalFile {
+  id                String            @id @default(cuid())
+  projectId         String
+
+  name              String
+  fileName          String
+  fileUrl           String
+  fileSize          Int               // in bytes
+  mimeType          String?
+
+  // Distribution tracking
+  totalEligible     Int               @default(0)
+  distributedCount  Int               @default(0)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  distributions     DigitalDistribution[]
+
+  @@index([projectId])
+}
+
+// Distribution rules and tracking
+model DigitalDistribution {
+  id                String            @id @default(cuid())
+  digitalFileId     String
+  pledgeId          String
+
+  // Distribution status
+  distributedAt     DateTime?
+  downloadedAt      DateTime?
+  downloadCount     Int               @default(0)
+
+  digitalFile       DigitalFile       @relation(fields: [digitalFileId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime          @default(now())
+
+  @@unique([digitalFileId, pledgeId])
+  @@index([digitalFileId])
+  @@index([pledgeId])
 }

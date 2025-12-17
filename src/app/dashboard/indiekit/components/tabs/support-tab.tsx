@@ -61,41 +61,8 @@ interface SupportTicket {
 
 interface SupportTabProps {
   tickets?: SupportTicket[];
+  projectId?: string;
 }
-
-// Demo data
-const demoTickets: SupportTicket[] = [
-  {
-    id: "1",
-    pledgeId: "37408853",
-    email: "john.doe@email.com",
-    name: "John Doe",
-    subject: "Need to change shipping address",
-    status: "open",
-    createdAt: "12/15/24",
-    lastUpdate: "2 hours ago",
-  },
-  {
-    id: "2",
-    pledgeId: "37408901",
-    email: "jane.smith@email.com",
-    name: "Jane Smith",
-    subject: "Survey link not working",
-    status: "pending",
-    createdAt: "12/14/24",
-    lastUpdate: "1 day ago",
-  },
-  {
-    id: "3",
-    pledgeId: "37409012",
-    email: "mike.johnson@email.com",
-    name: "Mike Johnson",
-    subject: "Want to upgrade pledge",
-    status: "resolved",
-    createdAt: "12/13/24",
-    lastUpdate: "2 days ago",
-  },
-];
 
 const statusColors = {
   open: "bg-yellow-100 text-yellow-700",
@@ -109,7 +76,7 @@ const statusIcons = {
   resolved: <CheckCircle2 className="h-3 w-3" />,
 };
 
-export function SupportTab({ tickets = demoTickets }: SupportTabProps) {
+export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [showBackerDialog, setShowBackerDialog] = useState(false);

@@ -72,103 +72,8 @@ interface Product {
 
 interface ProductsTabProps {
   products?: Product[];
+  projectId?: string;
 }
-
-// Demo data
-const demoProducts: Product[] = [
-  {
-    id: "1",
-    sku: "FS-VOL1-PHY",
-    name: "Flying Sparks Vol 1",
-    type: "physical",
-    weight: 8,
-    weightUnit: "oz",
-    customsCode: "4901.99.00",
-    countryOfOrigin: "United States",
-    status: "ready",
-  },
-  {
-    id: "2",
-    sku: "FS-VOL2-PHY",
-    name: "Flying Sparks Vol 2",
-    type: "physical",
-    weight: 8,
-    weightUnit: "oz",
-    customsCode: "4901.99.00",
-    countryOfOrigin: "United States",
-    status: "ready",
-  },
-  {
-    id: "3",
-    sku: "FS-VOL3-PHY",
-    name: "Flying Sparks Vol 3",
-    type: "physical",
-    weight: 8,
-    weightUnit: "oz",
-    customsCode: "4901.99.00",
-    countryOfOrigin: "United States",
-    status: "ready",
-  },
-  {
-    id: "4",
-    sku: "FS-SLIP",
-    name: "Collector's Slipcase",
-    type: "physical",
-    weight: 12,
-    weightUnit: "oz",
-    customsCode: "4901.99.00",
-    countryOfOrigin: "United States",
-    status: "ready",
-  },
-  {
-    id: "5",
-    sku: "FS-ART",
-    name: "Art Print Set",
-    type: "physical",
-    weight: 2,
-    weightUnit: "oz",
-    customsCode: "4911.91.00",
-    countryOfOrigin: "United States",
-    status: "ready",
-  },
-  {
-    id: "6",
-    sku: "FS-VOL1-DIG",
-    name: "Flying Sparks Vol 1 PDF",
-    type: "digital",
-    status: "ready",
-  },
-  {
-    id: "7",
-    sku: "FS-VOL2-DIG",
-    name: "Flying Sparks Vol 2 PDF",
-    type: "digital",
-    status: "ready",
-  },
-  {
-    id: "8",
-    sku: "FS-WALLS",
-    name: "Wallpaper Pack",
-    type: "digital",
-    status: "ready",
-  },
-  {
-    id: "9",
-    sku: "FS-VOL1-SGN",
-    name: "Flying Sparks Vol 1 Signed",
-    type: "physical",
-    status: "no_weight",
-  },
-  {
-    id: "10",
-    sku: "FS-POSTER",
-    name: "Limited Edition Poster",
-    type: "physical",
-    weight: 4,
-    weightUnit: "oz",
-    status: "no_customs",
-  },
-];
 
 const statusConfig = {
   ready: { label: "Ready", icon: CheckCircle2, className: "bg-green-100 text-green-700" },
@@ -177,7 +82,7 @@ const statusConfig = {
   error: { label: "Error", icon: XCircle, className: "bg-red-100 text-red-700" },
 };
 
-export function ProductsTab({ products = demoProducts }: ProductsTabProps) {
+export function ProductsTab({ products = [], projectId }: ProductsTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");

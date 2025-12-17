@@ -88,6 +88,11 @@ export async function GET(req: NextRequest) {
       survey,
       surveyResponses,
       addOnSales,
+      segments,
+      products,
+      recentActivity,
+      digitalFilesData,
+      emailCampaignsData,
     ] = await Promise.all([
       // Get all pledges for the project with user info
       db.pledge.findMany({
@@ -161,6 +166,46 @@ export async function GET(req: NextRequest) {
           },
         },
         _sum: { amount: true },
+      }),
+
+      // Get segments for this project
+      db.backerSegment.findMany({
+        where: { projectId: selectedProjectId },
+        orderBy: { createdAt: "desc" },
+      }),
+
+      // Get products for this project
+      db.fulfillmentProduct.findMany({
+        where: { projectId: selectedProjectId },
+        orderBy: { createdAt: "desc" },
+      }),
+
+      // Get recent activity
+      db.fulfillmentActivity.findMany({
+        where: { projectId: selectedProjectId },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+
+      // Get digital files
+      db.digitalFile.findMany({
+        where: { projectId: selectedProjectId },
+        include: {
+          distributions: true,
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+
+      // Get email campaigns (if project-specific campaigns exist)
+      db.emailCampaign.findMany({
+        where: {
+          filters: {
+            path: ["projectId"],
+            equals: selectedProjectId,
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 20,
       }),
     ]);
 
@@ -282,18 +327,86 @@ export async function GET(req: NextRequest) {
     // Determine workflow state based on project/survey state
     const workflowState = getWorkflowState(survey, surveyResponses.length, surveysCompleted, pledges);
 
+    // Format segments for frontend
+    const formattedSegments = segments.map(segment => ({
+      id: segment.id,
+      name: segment.name,
+      type: segment.type.toLowerCase(),
+      criteria: segment.criteria ? JSON.stringify(segment.criteria) : "",
+      backerCount: segment.backerCount,
+      createdAt: segment.createdAt.toLocaleDateString(),
+    }));
+
+    // Format products for frontend
+    const formattedProducts = products.map(product => {
+      let status: "ready" | "no_weight" | "no_customs" | "error" = "ready";
+      if (product.type === "PHYSICAL") {
+        if (!product.weight) status = "no_weight";
+        else if (!product.customsCode) status = "no_customs";
+      }
+      return {
+        id: product.id,
+        sku: product.sku,
+        name: product.name,
+        type: product.type.toLowerCase() as "physical" | "digital",
+        weight: product.weight || undefined,
+        weightUnit: product.weightUnit || "oz",
+        dimensions: product.length && product.width && product.height
+          ? { length: product.length, width: product.width, height: product.height, unit: product.dimensionUnit || "in" }
+          : undefined,
+        customsCode: product.customsCode || undefined,
+        countryOfOrigin: product.countryOfOrigin || undefined,
+        status,
+      };
+    });
+
+    // Format timeline entries
+    const activityTypeMap: Record<string, string> = {
+      SURVEY_SENT: "survey_reminder", SURVEY_REMINDER: "survey_reminder", SURVEY_COMPLETED: "survey_completed",
+      ORDERS_LOCKED: "orders_pushed", ADDRESSES_LOCKED: "address_updated", CARDS_CHARGED: "cards_charged",
+      CHARGE_FAILED: "charge_failed", ORDERS_PUSHED: "orders_pushed", PUSH_FAILED: "charge_failed",
+      ORDER_SHIPPED: "order_shipped", ORDER_DELIVERED: "order_shipped", DIGITAL_DISTRIBUTED: "digital_download",
+      ADDRESS_UPDATED: "address_updated", REFUND_ISSUED: "refund", NOTE_ADDED: "comment", BALANCE_ADJUSTED: "cards_charged",
+    };
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+
+    const formattedTimeline = recentActivity.map(activity => {
+      const activityDate = new Date(activity.createdAt); activityDate.setHours(0, 0, 0, 0);
+      let dateLabel = activity.createdAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }).toUpperCase();
+      if (activityDate.getTime() === today.getTime()) dateLabel = "TODAY";
+      else if (activityDate.getTime() === yesterday.getTime()) dateLabel = "YESTERDAY";
+      return {
+        id: activity.id, type: activityTypeMap[activity.type] || "comment",
+        time: activity.createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+        title: activity.title, detail: activity.description || "", date: dateLabel,
+      };
+    });
+
+    // Format digital files
+    const formattedDigitalFiles = digitalFilesData.map(file => ({
+      id: file.id, name: file.name, size: formatFileSize(file.fileSize), type: file.mimeType?.split("/")[1]?.toUpperCase() || "FILE",
+      uploadedAt: file.createdAt.toLocaleDateString(), distributedTo: file.distributedCount, totalEligible: file.totalEligible,
+    }));
+
+    // Format email campaigns
+    const formattedEmailCampaigns = emailCampaignsData.map(campaign => ({
+      id: campaign.id, title: campaign.name, status: campaign.status.toLowerCase(),
+      sentAt: campaign.sentAt?.toLocaleDateString(), scheduledFor: campaign.scheduledFor?.toLocaleDateString(),
+      recipients: campaign.recipientCount, openRate: campaign.sentCount > 0 ? Math.round((campaign.openCount / campaign.sentCount) * 100) : undefined,
+    }));
+
     return NextResponse.json({
-      projects: projects.map(p => ({
-        id: p.id,
-        title: p.title,
-        slug: p.slug,
-        status: p.status,
-      })),
+      projects: projects.map(p => ({ id: p.id, title: p.title, slug: p.slug, status: p.status })),
       stats,
       backers: processedBackers,
       packageGroups,
-      digitalFiles: [], // Would be populated from actual digital file storage
-      emailCampaigns: [], // Would be populated from email campaign records
+      segments: formattedSegments,
+      products: formattedProducts,
+      timeline: formattedTimeline,
+      digitalFiles: formattedDigitalFiles,
+      emailCampaigns: formattedEmailCampaigns,
       workflowState,
     });
   } catch (error) {
@@ -303,6 +416,16 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Helper to format file size
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + " B";
+  const kb = bytes / 1024;
+  if (kb < 1024) return kb.toFixed(1) + " KB";
+  const mb = kb / 1024;
+  if (mb < 1024) return mb.toFixed(1) + " MB";
+  return (mb / 1024).toFixed(1) + " GB";
 }
 
 // Helper to determine workflow state

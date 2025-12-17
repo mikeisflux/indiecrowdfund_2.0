@@ -1,0 +1,227 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
+
+export const dynamic = "force-dynamic";
+
+const noteSchema = z.object({
+  pledgeId: z.string(),
+  content: z.string().min(1).max(10000),
+  isInternal: z.boolean().default(true),
+});
+
+// GET - Get notes for a pledge
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const pledgeId = searchParams.get("pledgeId");
+
+    if (!pledgeId) {
+      return NextResponse.json({ error: "Pledge ID required" }, { status: 400 });
+    }
+
+    // Verify access via pledge's project
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId },
+      include: {
+        project: {
+          select: { creatorId: true },
+        },
+      },
+    });
+
+    if (!pledge) {
+      return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    }
+
+    // Check access
+    if (pledge.project.creatorId !== session.user.id) {
+      const hasAccess = await db.projectCollaborator.findFirst({
+        where: {
+          projectId: pledge.projectId,
+          userId: session.user.id,
+          status: "ACCEPTED",
+        },
+      });
+
+      if (!hasAccess) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+    }
+
+    const notes = await db.backerNote.findMany({
+      where: { pledgeId },
+      include: {
+        createdBy: {
+          select: { name: true, email: true, image: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const formattedNotes = notes.map(note => ({
+      id: note.id,
+      content: note.content,
+      isInternal: note.isInternal,
+      createdAt: note.createdAt.toISOString(),
+      createdBy: note.createdBy
+        ? {
+            name: note.createdBy.name,
+            email: note.createdBy.email,
+            image: note.createdBy.image,
+          }
+        : null,
+    }));
+
+    return NextResponse.json({ notes: formattedNotes });
+  } catch (error) {
+    console.error("IndieKit notes fetch error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch notes" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Create a new note
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const validatedData = noteSchema.parse(body);
+
+    // Verify access via pledge's project
+    const pledge = await db.pledge.findFirst({
+      where: { id: validatedData.pledgeId },
+      include: {
+        project: {
+          select: { id: true, creatorId: true },
+        },
+      },
+    });
+
+    if (!pledge) {
+      return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    }
+
+    // Check access
+    if (pledge.project.creatorId !== session.user.id) {
+      const hasAccess = await db.projectCollaborator.findFirst({
+        where: {
+          projectId: pledge.projectId,
+          userId: session.user.id,
+          status: "ACCEPTED",
+        },
+      });
+
+      if (!hasAccess) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+    }
+
+    const note = await db.backerNote.create({
+      data: {
+        pledgeId: validatedData.pledgeId,
+        content: validatedData.content,
+        isInternal: validatedData.isInternal,
+        createdById: session.user.id,
+      },
+      include: {
+        createdBy: {
+          select: { name: true, email: true, image: true },
+        },
+      },
+    });
+
+    // Log activity
+    await db.fulfillmentActivity.create({
+      data: {
+        projectId: pledge.project.id,
+        type: "NOTE_ADDED",
+        title: "Note added to backer",
+        pledgeId: validatedData.pledgeId,
+        userId: session.user.id,
+      },
+    });
+
+    return NextResponse.json({
+      note: {
+        id: note.id,
+        content: note.content,
+        isInternal: note.isInternal,
+        createdAt: note.createdAt.toISOString(),
+        createdBy: note.createdBy
+          ? {
+              name: note.createdBy.name,
+              email: note.createdBy.email,
+              image: note.createdBy.image,
+            }
+          : null,
+      },
+    }, { status: 201 });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Validation failed", details: error.issues },
+        { status: 400 }
+      );
+    }
+    console.error("IndieKit note create error:", error);
+    return NextResponse.json(
+      { error: "Failed to create note" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Delete a note
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const noteId = searchParams.get("noteId");
+
+    if (!noteId) {
+      return NextResponse.json({ error: "Note ID required" }, { status: 400 });
+    }
+
+    const note = await db.backerNote.findFirst({
+      where: { id: noteId },
+    });
+
+    if (!note) {
+      return NextResponse.json({ error: "Note not found" }, { status: 404 });
+    }
+
+    // Only the creator can delete their own note
+    if (note.createdById !== session.user.id) {
+      return NextResponse.json({ error: "Can only delete your own notes" }, { status: 403 });
+    }
+
+    await db.backerNote.delete({
+      where: { id: noteId },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("IndieKit note delete error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete note" },
+      { status: 500 }
+    );
+  }
+}

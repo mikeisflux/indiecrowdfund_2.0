@@ -59,6 +59,7 @@ interface SurveyQuestion {
 
 interface SurveyBuilderTabProps {
   questions?: SurveyQuestion[];
+  projectId?: string;
 }
 
 const questionTypes = [
@@ -77,39 +78,7 @@ const questionTypes = [
   { id: "info_text", label: "Info Text", icon: Info },
 ];
 
-// Demo questions
-const demoQuestions: SurveyQuestion[] = [
-  {
-    id: "1",
-    type: "address",
-    label: "Shipping Address",
-    required: true,
-    helpText: "Where should we ship your rewards?",
-  },
-  {
-    id: "2",
-    type: "multiple_choice",
-    label: "T-Shirt Size",
-    required: true,
-    options: ["Small", "Medium", "Large", "X-Large", "XX-Large"],
-  },
-  {
-    id: "3",
-    type: "short_text",
-    label: "Name for Personalization",
-    required: false,
-    helpText: "Enter the name you want on your personalized item",
-  },
-  {
-    id: "4",
-    type: "checkboxes",
-    label: "Communication Preferences",
-    required: false,
-    options: ["Email updates", "SMS notifications", "Newsletter subscription"],
-  },
-];
-
-export function SurveyBuilderTab({ questions = demoQuestions }: SurveyBuilderTabProps) {
+export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTabProps) {
   const [surveyQuestions, setSurveyQuestions] = useState(questions);
   const [editingQuestion, setEditingQuestion] = useState<SurveyQuestion | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);

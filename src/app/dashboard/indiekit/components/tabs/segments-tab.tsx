@@ -40,51 +40,8 @@ interface Segment {
 
 interface SegmentsTabProps {
   segments?: Segment[];
+  projectId?: string;
 }
-
-// Demo data
-const demoSegments: Segment[] = [
-  {
-    id: "1",
-    name: "Premium Backers",
-    type: "pledge_level",
-    criteria: "Pledge Level: Collector's Edition ($150+)",
-    backerCount: 89,
-    createdAt: "11/15/24",
-  },
-  {
-    id: "2",
-    name: "Art Print Add-on",
-    type: "addon",
-    criteria: "Has Add-on: Limited Art Print",
-    backerCount: 156,
-    createdAt: "11/10/24",
-  },
-  {
-    id: "3",
-    name: "Survey Incomplete",
-    type: "survey_status",
-    criteria: "Survey Status: Not Completed",
-    backerCount: 34,
-    createdAt: "11/01/24",
-  },
-  {
-    id: "4",
-    name: "International Backers",
-    type: "shipping_region",
-    criteria: "Region: Outside US",
-    backerCount: 142,
-    createdAt: "10/28/24",
-  },
-  {
-    id: "5",
-    name: "Payment Failed",
-    type: "payment_status",
-    criteria: "Payment Status: Errored",
-    backerCount: 12,
-    createdAt: "11/20/24",
-  },
-];
 
 const typeLabels: Record<Segment["type"], string> = {
   pledge_level: "Pledge Level",
@@ -104,7 +61,7 @@ const typeColors: Record<Segment["type"], string> = {
   custom: "bg-gray-100 text-gray-700",
 };
 
-export function SegmentsTab({ segments = demoSegments }: SegmentsTabProps) {
+export function SegmentsTab({ segments = [], projectId }: SegmentsTabProps) {
   return (
     <div className="space-y-6">
       {/* Header */}

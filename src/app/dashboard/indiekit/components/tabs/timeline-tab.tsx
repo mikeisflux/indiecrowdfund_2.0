@@ -38,69 +38,8 @@ interface TimelineEntry {
 
 interface TimelineTabProps {
   entries?: TimelineEntry[];
+  projectId?: string;
 }
-
-// Demo data
-const demoEntries: TimelineEntry[] = [
-  {
-    id: "1",
-    type: "survey_reminder",
-    time: "10:45 AM",
-    title: "Survey reminder sent to 19 backers",
-    detail: "View affected backers",
-    link: "#",
-    date: "TODAY",
-  },
-  {
-    id: "2",
-    type: "orders_pushed",
-    time: "9:30 AM",
-    title: "15 orders pushed to ShipStation",
-    detail: "Package Group #643455",
-    date: "TODAY",
-  },
-  {
-    id: "3",
-    type: "cards_charged",
-    time: "3:15 PM",
-    title: "12 cards charged successfully ($847.00)",
-    detail: "3 charges failed - View errors",
-    link: "#",
-    date: "YESTERDAY",
-  },
-  {
-    id: "4",
-    type: "survey_completed",
-    time: "11:00 AM",
-    title: "Survey completed by john.doe@email.com",
-    detail: "Pledge #37408853",
-    date: "YESTERDAY",
-  },
-  {
-    id: "5",
-    type: "digital_download",
-    time: "2:00 PM",
-    title: "Digital downloads distributed to 45 backers",
-    detail: "Flying Sparks Vol 1",
-    date: "DECEMBER 14, 2024",
-  },
-  {
-    id: "6",
-    type: "order_shipped",
-    time: "4:30 PM",
-    title: "150 orders marked as shipped",
-    detail: "US Standard package group",
-    date: "DECEMBER 14, 2024",
-  },
-  {
-    id: "7",
-    type: "address_updated",
-    time: "10:15 AM",
-    title: "Address updated by backer",
-    detail: "jane.smith@email.com - Pledge #37408901",
-    date: "DECEMBER 13, 2024",
-  },
-];
 
 const typeIcons: Record<TimelineEntry["type"], React.ReactNode> = {
   survey_reminder: <Bell className="h-5 w-5 text-yellow-500" />,
@@ -115,7 +54,7 @@ const typeIcons: Record<TimelineEntry["type"], React.ReactNode> = {
   comment: <MessageSquare className="h-5 w-5 text-gray-500" />,
 };
 
-export function TimelineTab({ entries = demoEntries }: TimelineTabProps) {
+export function TimelineTab({ entries = [], projectId }: TimelineTabProps) {
   const [activityFilter, setActivityFilter] = useState("all");
   const [dateRange, setDateRange] = useState("30days");
 
