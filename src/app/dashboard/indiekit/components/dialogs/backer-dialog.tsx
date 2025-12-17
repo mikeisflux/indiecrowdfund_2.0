@@ -38,6 +38,9 @@ import {
   Plus,
   ExternalLink,
   DollarSign,
+  MessageSquare,
+  Printer,
+  Undo2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Backer } from "../../types";
@@ -46,6 +49,11 @@ import { AddressValidationDialog } from "./address-validation-dialog";
 import { BalanceEditorDialog } from "./balance-editor-dialog";
 import { EditOrderDialog } from "./edit-order-dialog";
 import { TrackingDialog } from "./tracking-dialog";
+import { RefundDialog } from "./refund-dialog";
+import { NotesDialog } from "./notes-dialog";
+import { EmailComposerDialog } from "./email-composer-dialog";
+import { CancelOrderDialog } from "./confirm-dialog";
+import { PackingSlipDialog } from "./packing-slip-dialog";
 
 interface BackerDialogProps {
   open: boolean;
@@ -59,6 +67,11 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
   const [showBalanceEditor, setShowBalanceEditor] = useState(false);
   const [showEditOrder, setShowEditOrder] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
+  const [showRefund, setShowRefund] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [showEmailComposer, setShowEmailComposer] = useState(false);
+  const [showCancelOrder, setShowCancelOrder] = useState(false);
+  const [showPackingSlip, setShowPackingSlip] = useState(false);
 
   if (!backer) return null;
 
@@ -107,13 +120,17 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => toast.info("Opening email composer...")}>
+                  <DropdownMenuItem onClick={() => setShowEmailComposer(true)}>
                     <Mail className="h-4 w-4 mr-2" />
                     Send Email
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleResendSurvey}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Resend Survey
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowNotes(true)}>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Add Note
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setShowEditOrder(true)}>
@@ -124,16 +141,25 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                     <DollarSign className="h-4 w-4 mr-2" />
                     Adjust Balance
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowRefund(true)}>
+                    <Undo2 className="h-4 w-4 mr-2" />
+                    Issue Refund
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setShowTracking(true)}>
                     <Truck className="h-4 w-4 mr-2" />
                     Add Tracking
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowPackingSlip(true)}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Packing Slip
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handlePushToFulfillment}>
                     <Package className="h-4 w-4 mr-2" />
                     Push to Fulfillment
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600" onClick={() => toast.error("Order cancellation requires confirmation")}>
+                  <DropdownMenuItem className="text-red-600" onClick={() => setShowCancelOrder(true)}>
                     Cancel Order
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -458,7 +484,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening email composer...")}>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setShowEmailComposer(true)}>
             <Mail className="h-4 w-4 mr-2" />
             Contact Backer
           </Button>
@@ -519,6 +545,70 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
         onSave={(tracking) => {
           console.log("Tracking added:", tracking);
         }}
+      />
+
+      <RefundDialog
+        open={showRefund}
+        onOpenChange={setShowRefund}
+        backerId={backer.id}
+        backerName={backer.name}
+        backerEmail={backer.email}
+        totalPaid={backer.balance?.pledgeAmount || 0}
+        onRefund={(refund) => {
+          console.log("Refund processed:", refund);
+        }}
+      />
+
+      <NotesDialog
+        open={showNotes}
+        onOpenChange={setShowNotes}
+        backerId={backer.id}
+        backerName={backer.name}
+        onSave={(note) => {
+          console.log("Note added:", note);
+        }}
+      />
+
+      <EmailComposerDialog
+        open={showEmailComposer}
+        onOpenChange={setShowEmailComposer}
+        recipientEmail={backer.email}
+        recipientName={backer.name}
+        onSend={(email) => {
+          console.log("Email sent:", email);
+        }}
+      />
+
+      <CancelOrderDialog
+        open={showCancelOrder}
+        onOpenChange={setShowCancelOrder}
+        orderId={backer.id}
+        backerName={backer.name}
+        onConfirm={() => {
+          toast.success("Order cancelled");
+        }}
+      />
+
+      <PackingSlipDialog
+        open={showPackingSlip}
+        onOpenChange={setShowPackingSlip}
+        orderId={backer.id}
+        backerName={backer.name}
+        backerEmail={backer.email}
+        shippingAddress={backer.shippingAddress || {
+          name: backer.name,
+          line1: "123 Main St",
+          city: "San Francisco",
+          state: "CA",
+          postalCode: "94102",
+          country: "United States",
+        }}
+        items={backer.items?.map(item => ({
+          name: item.name,
+          sku: `SKU-${item.name.substring(0, 3).toUpperCase()}`,
+          quantity: item.quantity,
+        })) || []}
+        pledgeLevel={backer.reward}
       />
     </Dialog>
   );
