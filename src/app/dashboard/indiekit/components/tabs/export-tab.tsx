@@ -36,38 +36,7 @@ interface ExportTabProps {
   exportHistory?: ExportHistory[];
 }
 
-// Demo data
-const demoExportHistory: ExportHistory[] = [
-  {
-    id: "1",
-    name: "All Backers Export",
-    type: "All Backers",
-    format: "CSV",
-    recordCount: 679,
-    createdAt: "12/15/24 09:30 AM",
-    status: "completed",
-  },
-  {
-    id: "2",
-    name: "US Standard Pack List",
-    type: "Package Group",
-    format: "PDF",
-    recordCount: 245,
-    createdAt: "12/14/24 02:15 PM",
-    status: "completed",
-  },
-  {
-    id: "3",
-    name: "International Addresses",
-    type: "Segment",
-    format: "CSV",
-    recordCount: 142,
-    createdAt: "12/13/24 11:00 AM",
-    status: "completed",
-  },
-];
-
-export function ExportTab({ exportHistory = demoExportHistory }: ExportTabProps) {
+export function ExportTab({ exportHistory = [] }: ExportTabProps) {
   const [exportOption, setExportOption] = useState("all");
   const [exportFormat, setExportFormat] = useState("csv");
   const [selectedFields, setSelectedFields] = useState({

@@ -15,29 +15,46 @@ import {
   DollarSign,
   Users,
   ShoppingCart,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Backer, FulfillmentStats } from "../../types";
 import { STATUS_LABELS } from "../../types";
 
+interface TimelineEntry {
+  id: string;
+  type: string;
+  time: string;
+  title: string;
+  detail: string;
+  date: string;
+}
+
 interface OverviewTabProps {
   stats: FulfillmentStats | null;
   backers: Backer[];
+  timeline?: TimelineEntry[];
 }
 
-// Demo chart data for Raised in IndieKit
-const raisedChartData = [
-  { label: "Campaign", amount: 48500, color: "bg-teal-600" },
-  { label: "Pre-orders", amount: 5720, color: "bg-teal-400" },
-  { label: "Add-ons", amount: 3245, color: "bg-teal-300" },
-];
-
-export function OverviewTab({ stats, backers }: OverviewTabProps) {
+export function OverviewTab({ stats, backers, timeline = [] }: OverviewTabProps) {
   // Determine next action based on current state
   const surveysPending = stats?.surveysPending || 0;
   const notShipped = backers.filter(b => b.status !== "shipped").length;
 
-  const totalRaised = raisedChartData.reduce((sum, d) => sum + d.amount, 0);
+  // Calculate raised amounts from stats
+  const campaignRaised = stats?.totalRaised || 0;
+  const preOrderRaised = stats?.preOrderRevenue || 0;
+  const addonsRaised = stats?.addonRevenue || 0;
+  const totalRaised = campaignRaised + preOrderRaised + addonsRaised;
+
+  const raisedChartData = totalRaised > 0 ? [
+    { label: "Campaign", amount: campaignRaised, color: "bg-teal-600" },
+    { label: "Pre-orders", amount: preOrderRaised, color: "bg-teal-400" },
+    { label: "Add-ons", amount: addonsRaised, color: "bg-teal-300" },
+  ].filter(d => d.amount > 0) : [];
+
+  // Get recent activity (last 5 entries)
+  const recentActivity = timeline.slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -81,55 +98,63 @@ export function OverviewTab({ stats, backers }: OverviewTabProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Chart Side */}
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-4xl font-bold">${totalRaised.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">Total Raised</p>
-              </div>
-
-              {/* Horizontal stacked bar chart */}
-              <div className="flex h-10 rounded-lg overflow-hidden">
-                {raisedChartData.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className={cn(item.color, "flex items-center justify-center text-white text-xs font-medium")}
-                    style={{ width: `${(item.amount / totalRaised) * 100}%` }}
-                  >
-                    {(item.amount / totalRaised) * 100 > 15 && `$${(item.amount / 1000).toFixed(1)}k`}
-                  </div>
-                ))}
-              </div>
-
-              {/* Legend */}
-              <div className="flex justify-center gap-6">
-                {raisedChartData.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <div className={cn("w-3 h-3 rounded-sm", item.color)} />
-                    <span className="text-sm text-muted-foreground">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Details Side */}
-            <div className="space-y-3">
-              {raisedChartData.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center py-2 border-b last:border-0">
-                  <div className="flex items-center gap-2">
-                    <div className={cn("w-3 h-3 rounded-sm", item.color)} />
-                    <span className="text-sm font-medium">{item.label}</span>
-                  </div>
-                  <span className="font-semibold">${item.amount.toLocaleString()}</span>
+          {totalRaised > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Chart Side */}
+              <div className="space-y-4">
+                <div className="text-center">
+                  <p className="text-4xl font-bold">${totalRaised.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">Total Raised</p>
                 </div>
-              ))}
-              <div className="flex justify-between items-center pt-2 border-t-2">
-                <span className="font-semibold">Total</span>
-                <span className="text-lg font-bold">${totalRaised.toLocaleString()}</span>
+
+                {/* Horizontal stacked bar chart */}
+                <div className="flex h-10 rounded-lg overflow-hidden">
+                  {raisedChartData.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={cn(item.color, "flex items-center justify-center text-white text-xs font-medium")}
+                      style={{ width: `${(item.amount / totalRaised) * 100}%` }}
+                    >
+                      {(item.amount / totalRaised) * 100 > 15 && `$${(item.amount / 1000).toFixed(1)}k`}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Legend */}
+                <div className="flex justify-center gap-6">
+                  {raisedChartData.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <div className={cn("w-3 h-3 rounded-sm", item.color)} />
+                      <span className="text-sm text-muted-foreground">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Details Side */}
+              <div className="space-y-3">
+                {raisedChartData.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center py-2 border-b last:border-0">
+                    <div className="flex items-center gap-2">
+                      <div className={cn("w-3 h-3 rounded-sm", item.color)} />
+                      <span className="text-sm font-medium">{item.label}</span>
+                    </div>
+                    <span className="font-semibold">${item.amount.toLocaleString()}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center pt-2 border-t-2">
+                  <span className="font-semibold">Total</span>
+                  <span className="text-lg font-bold">${totalRaised.toLocaleString()}</span>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No revenue data yet</p>
+              <p className="text-sm">Revenue will appear here once your campaign processes payments</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -266,38 +291,43 @@ export function OverviewTab({ stats, backers }: OverviewTabProps) {
           <Button variant="outline" size="sm">View All</Button>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">150 orders shipped</p>
-                <p className="text-xs text-muted-foreground">US Standard package group</p>
-              </div>
-              <p className="text-xs text-muted-foreground">2 hours ago</p>
+          {recentActivity.length > 0 ? (
+            <div className="space-y-4">
+              {recentActivity.map((activity) => (
+                <div key={activity.id} className="flex items-center gap-4">
+                  <div className={cn(
+                    "h-10 w-10 rounded-full flex items-center justify-center",
+                    activity.type === "survey_completed" && "bg-green-100",
+                    activity.type === "order_shipped" && "bg-green-100",
+                    activity.type === "survey_reminder" && "bg-blue-100",
+                    activity.type === "digital_download" && "bg-purple-100",
+                    activity.type === "cards_charged" && "bg-green-100",
+                    activity.type === "charge_failed" && "bg-red-100",
+                    !["survey_completed", "order_shipped", "survey_reminder", "digital_download", "cards_charged", "charge_failed"].includes(activity.type) && "bg-gray-100"
+                  )}>
+                    {activity.type === "survey_completed" && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    {activity.type === "order_shipped" && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    {activity.type === "survey_reminder" && <Mail className="h-5 w-5 text-blue-600" />}
+                    {activity.type === "digital_download" && <Download className="h-5 w-5 text-purple-600" />}
+                    {activity.type === "cards_charged" && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    {activity.type === "charge_failed" && <AlertCircle className="h-5 w-5 text-red-600" />}
+                    {!["survey_completed", "order_shipped", "survey_reminder", "digital_download", "cards_charged", "charge_failed"].includes(activity.type) && <Circle className="h-5 w-5 text-gray-600" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{activity.title}</p>
+                    <p className="text-xs text-muted-foreground">{activity.detail}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{activity.time}</p>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <Mail className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Survey reminder sent</p>
-                <p className="text-xs text-muted-foreground">34 backers reminded</p>
-              </div>
-              <p className="text-xs text-muted-foreground">5 hours ago</p>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Inbox className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No recent activity</p>
+              <p className="text-sm">Activity will appear here as you manage your fulfillment</p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <Download className="h-5 w-5 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Digital files distributed</p>
-                <p className="text-xs text-muted-foreground">Soundtrack.zip sent to 320 backers</p>
-              </div>
-              <p className="text-xs text-muted-foreground">Yesterday</p>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

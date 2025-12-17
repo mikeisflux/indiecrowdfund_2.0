@@ -10,6 +10,7 @@ import {
   Globe,
   CreditCard,
   BarChart3,
+  Inbox,
 } from "lucide-react";
 
 interface CountBreakdown {
@@ -29,42 +30,14 @@ interface CountsTabProps {
   paymentStatusBreakdown?: CountBreakdown[];
 }
 
-// Demo data
-const demoPledgeLevelBreakdown: CountBreakdown[] = [
-  { label: "Digital Only ($25)", count: 234, percentage: 34.5, color: "bg-blue-500" },
-  { label: "Standard Edition ($50)", count: 289, percentage: 42.6, color: "bg-teal-500" },
-  { label: "Collector's Edition ($150)", count: 89, percentage: 13.1, color: "bg-purple-500" },
-  { label: "Ultimate Bundle ($250)", count: 67, percentage: 9.8, color: "bg-amber-500" },
-];
-
-const demoSurveyStatusBreakdown: CountBreakdown[] = [
-  { label: "Completed", count: 612, percentage: 90.1, color: "bg-green-500" },
-  { label: "Partially Completed", count: 34, percentage: 5.0, color: "bg-yellow-500" },
-  { label: "Not Started", count: 33, percentage: 4.9, color: "bg-red-500" },
-];
-
-const demoShippingRegionBreakdown: CountBreakdown[] = [
-  { label: "United States", count: 398, percentage: 58.6, color: "bg-blue-500" },
-  { label: "Canada", count: 89, percentage: 13.1, color: "bg-red-500" },
-  { label: "Europe", count: 112, percentage: 16.5, color: "bg-purple-500" },
-  { label: "Asia Pacific", count: 45, percentage: 6.6, color: "bg-teal-500" },
-  { label: "Rest of World", count: 35, percentage: 5.2, color: "bg-gray-500" },
-];
-
-const demoPaymentStatusBreakdown: CountBreakdown[] = [
-  { label: "Collected", count: 645, percentage: 95.0, color: "bg-green-500" },
-  { label: "Pending", count: 22, percentage: 3.2, color: "bg-yellow-500" },
-  { label: "Failed", count: 12, percentage: 1.8, color: "bg-red-500" },
-];
-
 export function CountsTab({
-  totalBackers = 679,
-  surveysDone = 612,
-  preOrders = 156,
-  pledgeLevelBreakdown = demoPledgeLevelBreakdown,
-  surveyStatusBreakdown = demoSurveyStatusBreakdown,
-  shippingRegionBreakdown = demoShippingRegionBreakdown,
-  paymentStatusBreakdown = demoPaymentStatusBreakdown,
+  totalBackers = 0,
+  surveysDone = 0,
+  preOrders = 0,
+  pledgeLevelBreakdown = [],
+  surveyStatusBreakdown = [],
+  shippingRegionBreakdown = [],
+  paymentStatusBreakdown = [],
 }: CountsTabProps) {
   const surveyCompletionRate = Math.round((surveysDone / totalBackers) * 100);
 
@@ -142,7 +115,7 @@ export function CountsTab({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {pledgeLevelBreakdown.map((item) => (
+            {pledgeLevelBreakdown.length > 0 ? pledgeLevelBreakdown.map((item) => (
               <div key={item.label} className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>{item.label}</span>
@@ -152,7 +125,12 @@ export function CountsTab({
                 </div>
                 <Progress value={item.percentage} className="h-2" />
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No pledge level data yet</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -165,7 +143,7 @@ export function CountsTab({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {surveyStatusBreakdown.map((item) => (
+            {surveyStatusBreakdown.length > 0 ? surveyStatusBreakdown.map((item) => (
               <div key={item.label} className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="flex items-center gap-2">
@@ -180,7 +158,12 @@ export function CountsTab({
                 </div>
                 <Progress value={item.percentage} className="h-2" />
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No survey data yet</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -193,7 +176,7 @@ export function CountsTab({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {shippingRegionBreakdown.map((item) => (
+            {shippingRegionBreakdown.length > 0 ? shippingRegionBreakdown.map((item) => (
               <div key={item.label} className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="flex items-center gap-2">
@@ -208,7 +191,12 @@ export function CountsTab({
                 </div>
                 <Progress value={item.percentage} className="h-2" />
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No shipping data yet</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -221,7 +209,7 @@ export function CountsTab({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {paymentStatusBreakdown.map((item) => (
+            {paymentStatusBreakdown.length > 0 ? paymentStatusBreakdown.map((item) => (
               <div key={item.label} className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="flex items-center gap-2">
@@ -236,7 +224,12 @@ export function CountsTab({
                 </div>
                 <Progress value={item.percentage} className="h-2" />
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No payment data yet</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

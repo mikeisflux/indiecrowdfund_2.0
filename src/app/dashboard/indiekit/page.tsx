@@ -541,7 +541,7 @@ export default function IndieKitPage() {
               </TabsList>
 
               <TabsContent value="overview">
-                <OverviewTab stats={stats} backers={backers} />
+                <OverviewTab stats={stats} backers={backers} timeline={timeline} />
               </TabsContent>
 
               <TabsContent value="backers">
