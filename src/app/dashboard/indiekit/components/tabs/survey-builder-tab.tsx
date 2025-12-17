@@ -29,6 +29,7 @@ import {
   CircleDot,
   CheckSquare,
   ChevronDown,
+  ChevronUp,
   MapPin,
   Mail,
   Phone,
@@ -45,6 +46,7 @@ import {
   Edit,
   Settings,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SurveyQuestion {
   id: string;
@@ -111,6 +113,8 @@ export function SurveyBuilderTab({ questions = demoQuestions }: SurveyBuilderTab
   const [surveyQuestions, setSurveyQuestions] = useState(questions);
   const [editingQuestion, setEditingQuestion] = useState<SurveyQuestion | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const getQuestionIcon = (type: string) => {
     const questionType = questionTypes.find((q) => q.id === type);
@@ -135,6 +139,65 @@ export function SurveyBuilderTab({ questions = demoQuestions }: SurveyBuilderTab
 
   const handleDeleteQuestion = (id: string) => {
     setSurveyQuestions(surveyQuestions.filter((q) => q.id !== id));
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (draggedId !== id) {
+      setDragOverId(id);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const draggedIndex = surveyQuestions.findIndex((q) => q.id === draggedId);
+    const targetIndex = surveyQuestions.findIndex((q) => q.id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const newQuestions = [...surveyQuestions];
+    const [draggedItem] = newQuestions.splice(draggedIndex, 1);
+    newQuestions.splice(targetIndex, 0, draggedItem);
+
+    setSurveyQuestions(newQuestions);
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  // Move question up/down
+  const moveQuestion = (id: string, direction: "up" | "down") => {
+    const index = surveyQuestions.findIndex((q) => q.id === id);
+    if (index === -1) return;
+
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= surveyQuestions.length) return;
+
+    const newQuestions = [...surveyQuestions];
+    [newQuestions[index], newQuestions[newIndex]] = [newQuestions[newIndex], newQuestions[index]];
+    setSurveyQuestions(newQuestions);
   };
 
   return (
@@ -208,11 +271,47 @@ export function SurveyBuilderTab({ questions = demoQuestions }: SurveyBuilderTab
               </div>
             ) : (
               surveyQuestions.map((question, index) => (
-                <Card key={question.id} className="border-dashed">
+                <Card
+                  key={question.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, question.id)}
+                  onDragOver={(e) => handleDragOver(e, question.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, question.id)}
+                  onDragEnd={handleDragEnd}
+                  className={cn(
+                    "border-dashed transition-all",
+                    draggedId === question.id && "opacity-50 scale-95",
+                    dragOverId === question.id && "border-teal-500 border-2 bg-teal-50"
+                  )}
+                >
                   <CardContent className="pt-4">
                     <div className="flex items-start gap-3">
-                      <div className="cursor-grab pt-1">
-                        <GripVertical className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="cursor-grab pt-1 hover:bg-muted rounded p-1">
+                          <GripVertical className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        {/* Move up/down buttons */}
+                        <div className="flex flex-col">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            disabled={index === 0}
+                            onClick={() => moveQuestion(question.id, "up")}
+                          >
+                            <ChevronUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            disabled={index === surveyQuestions.length - 1}
+                            onClick={() => moveQuestion(question.id, "down")}
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">

@@ -35,6 +35,8 @@ export interface WorkflowStep {
   description: string;
   status: "completed" | "in_progress" | "pending" | "locked";
   icon: ElementType;
+  targetTab?: string;
+  actionCount?: number;
 }
 
 export interface Backer {

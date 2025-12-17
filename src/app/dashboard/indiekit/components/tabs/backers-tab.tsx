@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,8 +18,17 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -27,6 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import {
   Search,
   Filter,
@@ -37,7 +48,14 @@ import {
   Mail,
   Check,
   Clock,
+  CreditCard,
+  Lock,
+  MapPin,
+  ChevronDown,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { Backer } from "../../types";
 import { STATUS_COLORS, STATUS_LABELS } from "../../types";
 
@@ -66,12 +84,62 @@ export function BackersTab({
   onOpenBackerDetail,
   onPushSelectedOrders,
 }: BackersTabProps) {
+  const [showChargeDialog, setShowChargeDialog] = useState(false);
+  const [isCharging, setIsCharging] = useState(false);
+  const [chargeProgress, setChargeProgress] = useState(0);
+
   const filteredBackers = backers.filter((backer) => {
     const matchesSearch = backer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       backer.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || backer.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Calculate stats for selected backers
+  const selectedBackerData = backers.filter(b => selectedBackers.includes(b.id));
+  const totalToCharge = selectedBackerData.reduce((sum, b) => sum + (b.balance?.balanceDue || 0), 0);
+  const backersNeedingCharge = selectedBackerData.filter(b => (b.balance?.balanceDue || 0) > 0).length;
+
+  // Handle bulk charge cards
+  const handleChargeCards = async () => {
+    setIsCharging(true);
+    setChargeProgress(0);
+
+    // Simulate charging process
+    for (let i = 0; i <= 100; i += 10) {
+      await new Promise(r => setTimeout(r, 200));
+      setChargeProgress(i);
+    }
+
+    setIsCharging(false);
+    setShowChargeDialog(false);
+    toast.success(`Successfully charged ${backersNeedingCharge} backers`);
+  };
+
+  // Handle bulk send survey reminder
+  const handleSendSurveyReminder = () => {
+    const pendingSurveys = selectedBackerData.filter(b => !b.surveyCompleted).length;
+    if (pendingSurveys === 0) {
+      toast.info("All selected backers have completed their surveys");
+      return;
+    }
+    toast.success(`Sending survey reminders to ${pendingSurveys} backers...`);
+  };
+
+  // Handle bulk lock orders
+  const handleLockOrders = () => {
+    toast.success(`Locking orders for ${selectedBackers.length} backers...`);
+  };
+
+  // Handle bulk lock addresses
+  const handleLockAddresses = () => {
+    const withAddresses = selectedBackerData.filter(b => b.addressComplete).length;
+    if (withAddresses === 0) {
+      toast.error("No selected backers have complete addresses");
+      return;
+    }
+    toast.success(`Locking addresses for ${withAddresses} backers...`);
+  };
 
   return (
     <div className="space-y-4">
@@ -103,10 +171,46 @@ export function BackersTab({
         </div>
         <div className="flex gap-2">
           {selectedBackers.length > 0 && (
-            <Button onClick={onPushSelectedOrders} className="bg-teal-600 hover:bg-teal-700">
-              <Send className="h-4 w-4 mr-2" />
-              Push {selectedBackers.length} Orders
-            </Button>
+            <>
+              {/* Bulk Actions Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    Bulk Actions ({selectedBackers.length})
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={handleSendSurveyReminder}>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send Survey Reminder
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowChargeDialog(true)}>
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Charge Cards
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLockOrders}>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Lock Orders
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLockAddresses}>
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Lock Addresses
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onPushSelectedOrders}>
+                    <Send className="h-4 w-4 mr-2" />
+                    Push to Fulfillment
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button onClick={onPushSelectedOrders} className="bg-teal-600 hover:bg-teal-700">
+                <Send className="h-4 w-4 mr-2" />
+                Push {selectedBackers.length} Orders
+              </Button>
+            </>
           )}
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
@@ -114,6 +218,89 @@ export function BackersTab({
           </Button>
         </div>
       </div>
+
+      {/* Card Charging Dialog */}
+      <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-teal-600" />
+              Charge Cards
+            </DialogTitle>
+            <DialogDescription>
+              Review and process card charges for selected backers
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Charge Summary */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Selected Backers</span>
+                <span className="font-medium">{selectedBackers.length}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Backers with Balance Due</span>
+                <span className="font-medium">{backersNeedingCharge}</span>
+              </div>
+              <div className="flex justify-between text-sm border-t pt-3">
+                <span className="font-medium">Total to Charge</span>
+                <span className="font-bold text-lg text-teal-600">${totalToCharge.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Warning */}
+            {backersNeedingCharge === 0 ? (
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                <p className="text-amber-800">No selected backers have a balance due.</p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+                <p className="text-blue-800">
+                  Cards will be charged for add-ons, shipping, and any balance adjustments.
+                  Backers will receive email receipts.
+                </p>
+              </div>
+            )}
+
+            {/* Progress */}
+            {isCharging && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Processing charges...</span>
+                  <span>{chargeProgress}%</span>
+                </div>
+                <Progress value={chargeProgress} className="h-2" />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowChargeDialog(false)} disabled={isCharging}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={handleChargeCards}
+              disabled={isCharging || backersNeedingCharge === 0}
+            >
+              {isCharging ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Charge ${totalToCharge.toFixed(2)}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Backers Table */}
       <Card>
