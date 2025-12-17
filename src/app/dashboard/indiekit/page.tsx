@@ -36,6 +36,8 @@ import {
   FileText,
   FolderKanban,
   UsersRound,
+  Layers,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -76,6 +78,8 @@ import {
   TeaserPagesTab,
   MembersTab,
   ProjectsTab,
+  SegmentsTab,
+  ExportTab,
 } from "./components/tabs";
 
 export default function IndieKitPage() {
@@ -420,6 +424,14 @@ export default function IndieKitPage() {
                   <FolderKanban className="h-4 w-4 mr-2" />
                   Projects
                 </TabsTrigger>
+                <TabsTrigger value="segments">
+                  <Layers className="h-4 w-4 mr-2" />
+                  Segments
+                </TabsTrigger>
+                <TabsTrigger value="export">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview">
@@ -493,6 +505,14 @@ export default function IndieKitPage() {
 
               <TabsContent value="projects">
                 <ProjectsTab />
+              </TabsContent>
+
+              <TabsContent value="segments">
+                <SegmentsTab />
+              </TabsContent>
+
+              <TabsContent value="export">
+                <ExportTab />
               </TabsContent>
             </Tabs>
           </div>
