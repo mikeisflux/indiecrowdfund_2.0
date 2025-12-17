@@ -479,9 +479,6 @@ export default function IndieKitPage() {
                   <Truck className="h-4 w-4 mr-2" />
                   Shipping
                 </TabsTrigger>
-              </TabsList>
-              {/* Row 2 */}
-              <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="digital">
                   <Download className="h-4 w-4 mr-2" />
                   Digital
@@ -490,6 +487,9 @@ export default function IndieKitPage() {
                   <TrendingUp className="h-4 w-4 mr-2" />
                   Pre-Orders
                 </TabsTrigger>
+              </TabsList>
+              {/* Row 2 */}
+              <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="emails">
                   <Mail className="h-4 w-4 mr-2" />
                   Emails
@@ -502,9 +502,6 @@ export default function IndieKitPage() {
                   <UsersRound className="h-4 w-4 mr-2" />
                   Members
                 </TabsTrigger>
-              </TabsList>
-              {/* Row 3 */}
-              <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="projects">
                   <FolderKanban className="h-4 w-4 mr-2" />
                   Projects
@@ -521,13 +518,13 @@ export default function IndieKitPage() {
                   <Clock className="h-4 w-4 mr-2" />
                   Timeline
                 </TabsTrigger>
+              </TabsList>
+              {/* Row 3 */}
+              <TabsList className="mb-6 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="counts">
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Counts
                 </TabsTrigger>
-              </TabsList>
-              {/* Row 4 */}
-              <TabsList className="mb-6 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="support">
                   <HeadphonesIcon className="h-4 w-4 mr-2" />
                   Support
