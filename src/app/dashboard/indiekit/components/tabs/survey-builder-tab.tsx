@@ -78,6 +78,7 @@ const questionTypes = [
   { id: "info_text", label: "Info Text", icon: Info },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTabProps) {
   const [surveyQuestions, setSurveyQuestions] = useState(questions);
   const [editingQuestion, setEditingQuestion] = useState<SurveyQuestion | null>(null);

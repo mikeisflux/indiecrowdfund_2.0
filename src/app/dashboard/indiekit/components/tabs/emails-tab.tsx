@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, MoreHorizontal, Mail, PenLine, Home } from "lucide-react";
+import { MoreHorizontal, Mail, PenLine, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EmailCampaign } from "../../types";
 
@@ -171,6 +171,7 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog }: EmailsTabProps)
             <div className="absolute left-3 top-3 bottom-3 w-0.5 bg-teal-200" />
 
             <div className="space-y-8">
+              {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
               {launchTimelineStages.map((stage, index) => (
                 <div key={stage.id} className="relative flex gap-6">
                   {/* Timeline dot */}

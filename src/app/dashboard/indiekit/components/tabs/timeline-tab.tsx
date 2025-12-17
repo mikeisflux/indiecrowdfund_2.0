@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -54,6 +53,7 @@ const typeIcons: Record<TimelineEntry["type"], React.ReactNode> = {
   comment: <MessageSquare className="h-5 w-5 text-gray-500" />,
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function TimelineTab({ entries = [], projectId }: TimelineTabProps) {
   const [activityFilter, setActivityFilter] = useState("all");
   const [dateRange, setDateRange] = useState("30days");

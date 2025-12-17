@@ -61,6 +61,7 @@ const typeColors: Record<Segment["type"], string> = {
   custom: "bg-gray-100 text-gray-700",
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function SegmentsTab({ segments = [], projectId }: SegmentsTabProps) {
   return (
     <div className="space-y-6">

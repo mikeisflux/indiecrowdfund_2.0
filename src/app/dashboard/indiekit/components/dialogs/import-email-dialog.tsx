@@ -23,8 +23,6 @@ import {
 import {
   Upload,
   FileSpreadsheet,
-  Check,
-  AlertCircle,
   Loader2,
   X,
 } from "lucide-react";

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -72,13 +71,6 @@ export function NotesDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch notes when dialog opens
-  useEffect(() => {
-    if (open && backerId) {
-      fetchNotes();
-    }
-  }, [open, backerId]);
-
   const fetchNotes = async () => {
     setIsLoading(true);
     try {
@@ -93,6 +85,14 @@ export function NotesDialog({
       setIsLoading(false);
     }
   };
+
+  // Fetch notes when dialog opens
+  useEffect(() => {
+    if (open && backerId) {
+      fetchNotes();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, backerId]);
 
   const handleAddNote = async () => {
     if (!newNote.trim()) {

@@ -33,9 +33,8 @@ import {
   Plug,
   Users,
   AlertTriangle,
-  Image,
+  Image as ImageIcon,
   Globe,
-  Clock,
   Archive,
   Trash2,
 } from "lucide-react";
@@ -130,7 +129,7 @@ export function SettingsTab({
                   <Label>Project Image</Label>
                   <div className="flex items-center gap-4">
                     <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center">
-                      <Image className="h-8 w-8 text-muted-foreground" />
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
                     </div>
                     <Button variant="outline">Change Image</Button>
                   </div>

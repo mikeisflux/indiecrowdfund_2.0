@@ -40,6 +40,7 @@ interface BalanceEditorDialogProps {
 export function BalanceEditorDialog({
   open,
   onOpenChange,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   backerId,
   backerName,
   currentBalance,

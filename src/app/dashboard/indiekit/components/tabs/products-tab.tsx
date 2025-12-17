@@ -82,6 +82,7 @@ const statusConfig = {
   error: { label: "Error", icon: XCircle, className: "bg-red-100 text-red-700" },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ProductsTab({ products = [], projectId }: ProductsTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");

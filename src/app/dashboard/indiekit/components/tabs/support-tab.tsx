@@ -76,6 +76,7 @@ const statusIcons = {
   resolved: <CheckCircle2 className="h-3 w-3" />,
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);

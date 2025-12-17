@@ -25,13 +25,12 @@ import {
 import {
   Mail,
   Send,
-  Paperclip,
   Eye,
   Bold,
   Italic,
   Link,
   List,
-  Image,
+  Image as ImageIcon,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -263,7 +262,7 @@ The {{project_name}} Team`);
                   <List className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Image className="h-4 w-4" />
+                  <ImageIcon className="h-4 w-4" />
                 </Button>
               </div>
             </div>
