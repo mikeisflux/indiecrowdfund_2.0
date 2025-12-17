@@ -457,7 +457,8 @@ export default function IndieKitPage() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="mb-6 flex-wrap h-auto gap-1 p-2 bg-muted/50">
+              {/* Primary Tabs - Fulfillment */}
+              <TabsList className="mb-2 flex-wrap h-auto gap-1 p-2 bg-muted/50">
                 <TabsTrigger value="overview">
                   <LayoutDashboard className="h-4 w-4 mr-2" />
                   Overview
@@ -490,6 +491,9 @@ export default function IndieKitPage() {
                   <Mail className="h-4 w-4 mr-2" />
                   Emails
                 </TabsTrigger>
+              </TabsList>
+              {/* Secondary Tabs - Management & Settings */}
+              <TabsList className="mb-6 flex-wrap h-auto gap-1 p-2 bg-muted/50">
                 <TabsTrigger value="teaser">
                   <FileText className="h-4 w-4 mr-2" />
                   Teaser Pages
@@ -526,13 +530,13 @@ export default function IndieKitPage() {
                   <FormInput className="h-4 w-4 mr-2" />
                   Survey Builder
                 </TabsTrigger>
-                <TabsTrigger value="settings">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </TabsTrigger>
                 <TabsTrigger value="products">
                   <BoxIcon className="h-4 w-4 mr-2" />
                   Products
+                </TabsTrigger>
+                <TabsTrigger value="settings">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
                 </TabsTrigger>
                 <TabsTrigger value="account">
                   <UserCircle className="h-4 w-4 mr-2" />
