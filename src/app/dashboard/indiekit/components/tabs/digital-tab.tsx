@@ -21,6 +21,8 @@ import {
   Download,
   Send,
   Trash2,
+  Play,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DigitalFile, DistributionRule, FulfillmentStats } from "../../types";
@@ -79,10 +81,22 @@ export function DigitalTab({
             <CardTitle>Distribution Rules</CardTitle>
             <CardDescription>Configure automatic file distribution based on order contents</CardDescription>
           </div>
-          <Button onClick={onOpenDistributionDialog} variant="outline">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Rule
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon">
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              disabled={distributionRules.filter(r => r.status === "not_started").length === 0}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Start all distributions ({distributionRules.filter(r => r.status === "not_started").length})
+            </Button>
+            <Button onClick={onOpenDistributionDialog} variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Rule
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>

@@ -12,6 +12,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
   Eye,
   Edit,
   Mail,
@@ -23,6 +30,12 @@ import {
   Package,
   Truck,
   History,
+  MoreHorizontal,
+  RefreshCw,
+  Link2,
+  HelpCircle,
+  Users,
+  Plus,
 } from "lucide-react";
 import type { Backer } from "../../types";
 import { STATUS_COLORS, STATUS_LABELS } from "../../types";
@@ -49,6 +62,47 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                 <Eye className="h-3 w-3 mr-1" />
                 View as Backer
               </Button>
+              <Button variant="outline" size="sm">
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Resend
+              </Button>
+              <Button variant="outline" size="sm">
+                <Link2 className="h-3 w-3" />
+              </Button>
+              <Button variant="outline" size="sm">
+                <HelpCircle className="h-3 w-3" />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Actions
+                    <MoreHorizontal className="h-3 w-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send Email
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Resend Survey
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Order
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Package className="h-4 w-4 mr-2" />
+                    Push to Fulfillment
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600">
+                    Cancel Order
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -118,12 +172,13 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full justify-start">
+            <TabsList className="w-full justify-start flex-wrap">
               <TabsTrigger value="order">Order</TabsTrigger>
               <TabsTrigger value="digital">Digital Downloads</TabsTrigger>
               <TabsTrigger value="shipping">Shipping</TabsTrigger>
               <TabsTrigger value="packages">Packages</TabsTrigger>
               <TabsTrigger value="emails">Emails</TabsTrigger>
+              <TabsTrigger value="segments">Segments</TabsTrigger>
               <TabsTrigger value="changelog">Changelog</TabsTrigger>
             </TabsList>
 
@@ -205,6 +260,18 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                         </div>
                       </div>
                     )}
+                    {/* Manually Added Items */}
+                    <div className="border-t pt-2">
+                      <p className="text-xs text-muted-foreground font-medium mb-2 flex justify-between">
+                        <span>Manually Added Items (0)</span>
+                        <span>QTY</span>
+                      </p>
+                      <p className="text-sm text-muted-foreground italic">nothing added</p>
+                      <Button variant="outline" size="sm" className="mt-3">
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add SKUs
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -274,6 +341,38 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                   <Mail className="h-3 w-3 mr-1" />
                   Send Email
                 </Button>
+              </div>
+            </TabsContent>
+
+            {/* Segments Tab */}
+            <TabsContent value="segments" className="space-y-4">
+              <div className="rounded-lg border p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-medium">Backer Segments</h4>
+                  <Button variant="outline" size="sm">
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add to Segment
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Segments help you organize backers for targeted communication and fulfillment.
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-teal-600" />
+                      <span className="text-sm font-medium">Early Bird Backers</span>
+                    </div>
+                    <Badge variant="secondary">Auto</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-teal-600" />
+                      <span className="text-sm font-medium">Premium Tier</span>
+                    </div>
+                    <Badge variant="secondary">Auto</Badge>
+                  </div>
+                </div>
               </div>
             </TabsContent>
 

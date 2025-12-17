@@ -11,6 +11,8 @@ import {
   Download,
   Mail,
   Banknote,
+  Sparkles,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Backer, FulfillmentStats } from "../../types";
@@ -22,8 +24,43 @@ interface OverviewTabProps {
 }
 
 export function OverviewTab({ stats, backers }: OverviewTabProps) {
+  // Determine next action based on current state
+  const surveysPending = stats?.surveysPending || 0;
+  const notShipped = backers.filter(b => b.status !== "shipped").length;
+
   return (
     <div className="space-y-6">
+      {/* What's Next Success Banner */}
+      <div className="bg-teal-600 text-white rounded-lg p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">What&apos;s Next?</h3>
+              {surveysPending > 0 ? (
+                <p className="text-teal-100">
+                  Send survey reminders to {surveysPending} backers who haven&apos;t completed their survey yet.
+                </p>
+              ) : notShipped > 0 ? (
+                <p className="text-teal-100">
+                  All surveys collected! Ready to start shipping {notShipped} orders.
+                </p>
+              ) : (
+                <p className="text-teal-100">
+                  All orders have been shipped! Your campaign fulfillment is complete.
+                </p>
+              )}
+            </div>
+          </div>
+          <Button variant="secondary" className="bg-white text-teal-600 hover:bg-teal-50">
+            {surveysPending > 0 ? "Send Reminders" : notShipped > 0 ? "Start Shipping" : "View Report"}
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </div>
+
       {/* Status Flow Component */}
       <Card>
         <CardHeader>

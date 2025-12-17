@@ -25,7 +25,10 @@ import {
   ArrowRight,
   ChevronRight,
   AlertCircle,
+  RotateCcw,
+  RefreshCcw,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { PackageGroup } from "../../types";
 
 interface PackagesTabProps {
@@ -39,61 +42,157 @@ export function PackagesTab({
   packageGroupFilter,
   onPackageGroupFilterChange,
 }: PackagesTabProps) {
+  // Calculate totals for Process All actions
+  const totalNotPushed = packageGroups.reduce((sum, g) => sum + g.statusCounts.notPushed, 0);
+  const totalErrored = packageGroups.reduce((sum, g) => sum + g.statusCounts.pushErrored, 0);
+
   return (
-    <div className="space-y-4">
-      {/* Package Group Filter */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <h3 className="text-lg font-semibold">Package Groups</h3>
-          <div className="flex gap-2">
-            <Button
-              variant={packageGroupFilter === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => onPackageGroupFilterChange("all")}
-              className={packageGroupFilter === "all" ? "bg-teal-600 hover:bg-teal-700" : ""}
-            >
-              All ({packageGroups.length})
-            </Button>
-            <Button
-              variant={packageGroupFilter === "incomplete" ? "default" : "outline"}
-              size="sm"
-              onClick={() => onPackageGroupFilterChange("incomplete")}
-              className={packageGroupFilter === "incomplete" ? "bg-teal-600 hover:bg-teal-700" : ""}
-            >
-              Incomplete ({packageGroups.filter(g => g.type === "incomplete").length})
-            </Button>
-            <Button
-              variant={packageGroupFilter === "international" ? "default" : "outline"}
-              size="sm"
-              onClick={() => onPackageGroupFilterChange("international")}
-              className={packageGroupFilter === "international" ? "bg-teal-600 hover:bg-teal-700" : ""}
-            >
-              International ({packageGroups.filter(g => g.type === "international").length})
-            </Button>
-            <Button
-              variant={packageGroupFilter === "domestic" ? "default" : "outline"}
-              size="sm"
-              onClick={() => onPackageGroupFilterChange("domestic")}
-              className={packageGroupFilter === "domestic" ? "bg-teal-600 hover:bg-teal-700" : ""}
-            >
-              Domestic ({packageGroups.filter(g => g.type === "domestic").length})
-            </Button>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Groups
-          </Button>
-          <Button className="bg-teal-600 hover:bg-teal-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Group
-          </Button>
-        </div>
+    <div className="space-y-6">
+      {/* Fulfillment Integration Header */}
+      <div className="bg-teal-600 text-white rounded-lg p-6">
+        <h2 className="text-xl font-semibold mb-2">Fulfillment Integration</h2>
+        <p className="text-teal-100">Push orders to your shipping service and track fulfillment status</p>
       </div>
 
-      {/* Package Groups Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* Process Tabs */}
+      <Tabs defaultValue="by-group">
+        <TabsList>
+          <TabsTrigger value="process-all">Process All</TabsTrigger>
+          <TabsTrigger value="by-group">Process by Group</TabsTrigger>
+        </TabsList>
+
+        {/* Process All Tab */}
+        <TabsContent value="process-all" className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-semibold mb-4">Bulk Actions</h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Push all orders to your shipping service at once, or retry failed pushes.
+              </p>
+
+              <div className="flex flex-wrap gap-4">
+                <Button
+                  className="bg-teal-600 hover:bg-teal-700"
+                  disabled={totalNotPushed === 0}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Push all {totalNotPushed} orders
+                </Button>
+                <Button
+                  className="bg-amber-600 hover:bg-amber-700"
+                  disabled={totalErrored === 0}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Re-push all {totalErrored} errored orders
+                </Button>
+                <Button variant="outline">
+                  <RefreshCcw className="h-4 w-4 mr-2" />
+                  Update Order Status
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Status Summary */}
+          <Card>
+            <CardContent className="pt-6">
+              <h4 className="font-medium mb-4">Overall Status</h4>
+              <div className="flex items-center justify-between py-4 px-6 bg-muted/30 rounded-lg">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="w-3 h-3 rounded-full bg-gray-400" />
+                    <span className="text-sm text-muted-foreground">Not Pushed</span>
+                  </div>
+                  <p className="text-3xl font-bold">{totalNotPushed}</p>
+                </div>
+                <ArrowRight className="h-6 w-6 text-gray-300" />
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="w-3 h-3 rounded-full bg-amber-500" />
+                    <span className="text-sm text-muted-foreground">Push Errored</span>
+                  </div>
+                  <p className="text-3xl font-bold">{totalErrored}</p>
+                </div>
+                <ArrowRight className="h-6 w-6 text-gray-300" />
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="w-3 h-3 rounded-full bg-amber-500" />
+                    <span className="text-sm text-muted-foreground">Pushed</span>
+                  </div>
+                  <p className="text-3xl font-bold">
+                    {packageGroups.reduce((sum, g) => sum + g.statusCounts.pushed, 0)}
+                  </p>
+                </div>
+                <ArrowRight className="h-6 w-6 text-gray-300" />
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span className="text-sm text-muted-foreground">Shipped</span>
+                  </div>
+                  <p className="text-3xl font-bold">
+                    {packageGroups.reduce((sum, g) => sum + g.statusCounts.shipped, 0)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Process by Group Tab */}
+        <TabsContent value="by-group" className="space-y-4">
+          {/* Package Group Filter */}
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <h3 className="text-lg font-semibold">Package Groups</h3>
+              <div className="flex gap-2">
+                <Button
+                  variant={packageGroupFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onPackageGroupFilterChange("all")}
+                  className={packageGroupFilter === "all" ? "bg-teal-600 hover:bg-teal-700" : ""}
+                >
+                  All ({packageGroups.length})
+                </Button>
+                <Button
+                  variant={packageGroupFilter === "incomplete" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onPackageGroupFilterChange("incomplete")}
+                  className={packageGroupFilter === "incomplete" ? "bg-teal-600 hover:bg-teal-700" : ""}
+                >
+                  Incomplete ({packageGroups.filter(g => g.type === "incomplete").length})
+                </Button>
+                <Button
+                  variant={packageGroupFilter === "international" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onPackageGroupFilterChange("international")}
+                  className={packageGroupFilter === "international" ? "bg-teal-600 hover:bg-teal-700" : ""}
+                >
+                  International ({packageGroups.filter(g => g.type === "international").length})
+                </Button>
+                <Button
+                  variant={packageGroupFilter === "domestic" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onPackageGroupFilterChange("domestic")}
+                  className={packageGroupFilter === "domestic" ? "bg-teal-600 hover:bg-teal-700" : ""}
+                >
+                  Domestic ({packageGroups.filter(g => g.type === "domestic").length})
+                </Button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Groups
+              </Button>
+              <Button className="bg-teal-600 hover:bg-teal-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Group
+              </Button>
+            </div>
+          </div>
+
+          {/* Package Groups Grid */}
+          <div className="grid gap-6 md:grid-cols-2">
         {packageGroups
           .filter(g => packageGroupFilter === "all" || g.type === packageGroupFilter)
           .map((group) => (
@@ -212,7 +311,9 @@ export function PackagesTab({
             </CardContent>
           </Card>
         ))}
-      </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
