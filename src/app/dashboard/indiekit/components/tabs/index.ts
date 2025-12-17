@@ -6,3 +6,6 @@ export { ShippingTab } from "./shipping-tab";
 export { DigitalTab } from "./digital-tab";
 export { PreOrdersTab } from "./preorders-tab";
 export { EmailsTab } from "./emails-tab";
+export { TeaserPagesTab } from "./teaser-pages-tab";
+export { MembersTab } from "./members-tab";
+export { ProjectsTab } from "./projects-tab";

@@ -33,6 +33,9 @@ import {
   TrendingUp,
   ChevronRight,
   Loader2,
+  FileText,
+  FolderKanban,
+  UsersRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -70,6 +73,9 @@ import {
   DigitalTab,
   PreOrdersTab,
   EmailsTab,
+  TeaserPagesTab,
+  MembersTab,
+  ProjectsTab,
 } from "./components/tabs";
 
 export default function IndieKitPage() {
@@ -402,6 +408,18 @@ export default function IndieKitPage() {
                   <Mail className="h-4 w-4 mr-2" />
                   Emails
                 </TabsTrigger>
+                <TabsTrigger value="teaser">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Teaser Pages
+                </TabsTrigger>
+                <TabsTrigger value="members">
+                  <UsersRound className="h-4 w-4 mr-2" />
+                  Members
+                </TabsTrigger>
+                <TabsTrigger value="projects">
+                  <FolderKanban className="h-4 w-4 mr-2" />
+                  Projects
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview">
@@ -463,6 +481,18 @@ export default function IndieKitPage() {
                   emailCampaigns={emailCampaigns}
                   onOpenEmailDialog={() => setIsEmailDialogOpen(true)}
                 />
+              </TabsContent>
+
+              <TabsContent value="teaser">
+                <TeaserPagesTab />
+              </TabsContent>
+
+              <TabsContent value="members">
+                <MembersTab />
+              </TabsContent>
+
+              <TabsContent value="projects">
+                <ProjectsTab />
               </TabsContent>
             </Tabs>
           </div>
