@@ -457,8 +457,8 @@ export default function IndieKitPage() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              {/* Primary Tabs - Fulfillment */}
-              <TabsList className="mb-2 flex-wrap h-auto gap-1 p-2 bg-muted/50">
+              {/* Row 1 */}
+              <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="overview">
                   <LayoutDashboard className="h-4 w-4 mr-2" />
                   Overview
@@ -479,6 +479,9 @@ export default function IndieKitPage() {
                   <Truck className="h-4 w-4 mr-2" />
                   Shipping
                 </TabsTrigger>
+              </TabsList>
+              {/* Row 2 */}
+              <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="digital">
                   <Download className="h-4 w-4 mr-2" />
                   Digital
@@ -491,9 +494,6 @@ export default function IndieKitPage() {
                   <Mail className="h-4 w-4 mr-2" />
                   Emails
                 </TabsTrigger>
-              </TabsList>
-              {/* Secondary Tabs - Management & Settings */}
-              <TabsList className="mb-6 flex-wrap h-auto gap-1 p-2 bg-muted/50">
                 <TabsTrigger value="teaser">
                   <FileText className="h-4 w-4 mr-2" />
                   Teaser Pages
@@ -502,6 +502,9 @@ export default function IndieKitPage() {
                   <UsersRound className="h-4 w-4 mr-2" />
                   Members
                 </TabsTrigger>
+              </TabsList>
+              {/* Row 3 */}
+              <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="projects">
                   <FolderKanban className="h-4 w-4 mr-2" />
                   Projects
@@ -522,6 +525,9 @@ export default function IndieKitPage() {
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Counts
                 </TabsTrigger>
+              </TabsList>
+              {/* Row 4 */}
+              <TabsList className="mb-6 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="support">
                   <HeadphonesIcon className="h-4 w-4 mr-2" />
                   Support
