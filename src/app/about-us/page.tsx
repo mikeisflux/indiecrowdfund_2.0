@@ -44,6 +44,11 @@ import {
   Megaphone,
   Lightbulb,
   ArrowRight,
+  ClipboardList,
+  Download,
+  ShoppingCart,
+  FileDown,
+  Box,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
 
@@ -180,6 +185,85 @@ const platformFeatures = [
         description:
           "Download backer data, financial reports, and fulfillment spreadsheets. CSV and Excel formats supported.",
         icon: FileText,
+      },
+    ],
+  },
+  {
+    category: "IndieKit",
+    icon: Box,
+    color: "bg-teal-100 text-teal-600",
+    features: [
+      {
+        title: "Backer Management",
+        description:
+          "View, search, and filter all backers with detailed profiles including order history, survey responses, notes, and communication history.",
+        icon: Users,
+      },
+      {
+        title: "Survey System",
+        description:
+          "Collect shipping addresses, size preferences, and custom responses from backers with automated reminders and validation.",
+        icon: ClipboardList,
+      },
+      {
+        title: "Fulfillment Workflow",
+        description:
+          "Step-by-step guided workflow from surveys to shipping with progress tracking, action items, and status updates for each stage.",
+        icon: CheckCircle,
+      },
+      {
+        title: "Package Groups",
+        description:
+          "Organize backers into shipping groups by region, pledge level, or custom criteria for efficient batch fulfillment and label generation.",
+        icon: Package,
+      },
+      {
+        title: "Digital Distribution",
+        description:
+          "Upload and distribute digital rewards like PDFs, ebooks, and downloads to eligible backers automatically with download tracking.",
+        icon: Download,
+      },
+      {
+        title: "Email Campaigns",
+        description:
+          "Send targeted emails to backers, segments, or groups with customizable templates, scheduling, and open/click tracking.",
+        icon: Mail,
+      },
+      {
+        title: "Shipping Integration",
+        description:
+          "Connect with ShipStation and other shipping services to generate labels, calculate rates, and track packages in real-time.",
+        icon: Truck,
+      },
+      {
+        title: "Backer Segments",
+        description:
+          "Create dynamic segments based on pledge level, survey status, shipping region, or custom rules for targeted communications and actions.",
+        icon: Layers,
+      },
+      {
+        title: "Export Tools",
+        description:
+          "Export backer data, addresses, and order information in CSV or PDF formats compatible with fulfillment services and spreadsheets.",
+        icon: FileDown,
+      },
+      {
+        title: "Pre-Order Store",
+        description:
+          "Continue selling products after your campaign ends with a built-in pre-order store that integrates with your fulfillment workflow.",
+        icon: ShoppingCart,
+      },
+      {
+        title: "Activity Timeline",
+        description:
+          "Track all fulfillment actions with a comprehensive timeline showing surveys, payments, shipments, refunds, and backer interactions.",
+        icon: Clock,
+      },
+      {
+        title: "Product Management",
+        description:
+          "Manage SKUs, weights, dimensions, and customs information for all physical products with inventory tracking and variant support.",
+        icon: Box,
       },
     ],
   },
