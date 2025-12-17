@@ -65,7 +65,8 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    const formattedNotes = notes.map(note => ({
+    type NoteType = { id: string; content: string; isInternal: boolean; createdAt: Date; createdBy: { name: string | null; email: string | null; image: string | null } | null };
+    const formattedNotes = notes.map((note: NoteType) => ({
       id: note.id,
       content: note.content,
       isInternal: note.isInternal,

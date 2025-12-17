@@ -121,7 +121,8 @@ export async function GET(req: NextRequest) {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    const formattedEntries = activities.map(activity => {
+    type ActivityDbType = { id: string; type: string; createdAt: Date; title: string; description: string | null; metadata: unknown };
+    const formattedEntries = activities.map((activity: ActivityDbType) => {
       const activityDate = new Date(activity.createdAt);
       activityDate.setHours(0, 0, 0, 0);
 

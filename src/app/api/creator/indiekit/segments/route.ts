@@ -58,7 +58,8 @@ export async function GET(req: NextRequest) {
     });
 
     // Map to frontend format
-    const formattedSegments = segments.map(segment => ({
+    type SegmentType = { id: string; name: string; type: string; criteria: unknown; backerCount: number; createdAt: Date };
+    const formattedSegments = segments.map((segment: SegmentType) => ({
       id: segment.id,
       name: segment.name,
       type: segment.type.toLowerCase(),

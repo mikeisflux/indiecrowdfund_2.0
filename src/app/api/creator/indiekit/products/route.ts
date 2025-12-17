@@ -66,7 +66,8 @@ export async function GET(req: NextRequest) {
     });
 
     // Map to frontend format
-    const formattedProducts = products.map(product => {
+    type ProductType = { id: string; sku: string; name: string; type: string; weight: number | null; weightUnit: string | null; length: number | null; width: number | null; height: number | null; dimensionUnit: string | null; customsCode: string | null; countryOfOrigin: string | null; customsDescription: string | null };
+    const formattedProducts = products.map((product: ProductType) => {
       // Determine status
       let status: "ready" | "no_weight" | "no_customs" | "error" = "ready";
       if (product.type === "PHYSICAL") {

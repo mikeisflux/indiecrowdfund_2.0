@@ -611,7 +611,7 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="export">
-                <ExportTab projectId={selectedProjectId} />
+                <ExportTab />
               </TabsContent>
 
               <TabsContent value="timeline">
@@ -619,7 +619,11 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="counts">
-                <CountsTab stats={stats} backers={backers} />
+                <CountsTab
+                  totalBackers={stats?.totalBackers}
+                  surveysDone={stats?.surveysCompleted}
+                  preOrders={stats?.preOrderBackers}
+                />
               </TabsContent>
 
               <TabsContent value="support">
@@ -631,7 +635,9 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="settings">
-                <SettingsTab projectId={selectedProjectId} />
+                <SettingsTab
+                  projectName={projects.find(p => p.id === selectedProjectId)?.title}
+                />
               </TabsContent>
 
               <TabsContent value="products">

@@ -86,7 +86,13 @@ export async function GET(req: NextRequest) {
     }
 
     // Map backer questions to frontend format
-    const questions = survey.backerQuestions.map((q, index) => ({
+    type BackerQuestionType = { id: string; questionType: string; question: string; isRequired: boolean; description: string | null; options: string[]; sortOrder: number };
+    type VariantType = { id: string; variantType: string; options: string[]; sortOrder: number };
+    type CustomQuestionType = { id: string; questionType: string; question: string; isRequired: boolean; description: string | null; options: string[]; sortOrder: number };
+    type ItemQuestionType = { id: string; itemName: string; itemDescription: string | null; sortOrder: number; variants: VariantType[]; customQuestions: CustomQuestionType[] };
+    type QuestionFormat = { id: string; type: string; label: string; required: boolean; helpText: string | undefined; options: string[] | undefined; sortOrder: number };
+
+    const questions: QuestionFormat[] = survey.backerQuestions.map((q: BackerQuestionType) => ({
       id: q.id,
       type: mapQuestionType(q.questionType),
       label: q.question,
@@ -97,7 +103,7 @@ export async function GET(req: NextRequest) {
     }));
 
     // Add item questions if they exist (mapped as section with variants)
-    survey.itemQuestions.forEach((item) => {
+    survey.itemQuestions.forEach((item: ItemQuestionType) => {
       questions.push({
         id: item.id,
         type: "section_break",
@@ -109,7 +115,7 @@ export async function GET(req: NextRequest) {
       });
 
       // Add variant questions
-      item.variants.forEach((variant) => {
+      item.variants.forEach((variant: VariantType) => {
         questions.push({
           id: variant.id,
           type: "dropdown",
@@ -122,7 +128,7 @@ export async function GET(req: NextRequest) {
       });
 
       // Add custom questions
-      item.customQuestions.forEach((custom) => {
+      item.customQuestions.forEach((custom: CustomQuestionType) => {
         questions.push({
           id: custom.id,
           type: mapQuestionType(custom.questionType),
@@ -144,7 +150,7 @@ export async function GET(req: NextRequest) {
         introTitle: survey.introTitle,
         introMessage: survey.introMessage,
       },
-      questions: questions.sort((a, b) => a.sortOrder - b.sortOrder),
+      questions: questions.sort((a: QuestionFormat, b: QuestionFormat) => a.sortOrder - b.sortOrder),
     });
   } catch (error) {
     console.error("IndieKit surveys fetch error:", error);

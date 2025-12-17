@@ -269,7 +269,7 @@ export async function GET(req: NextRequest) {
       // Build items list
       const items = [
         ...(pledge.reward ? [{ name: pledge.reward.title, quantity: 1 }] : []),
-        ...pledge.addons.map(a => ({ name: a.addon.title, quantity: a.quantity })),
+        ...pledge.addons.map((a: { addon: { title: string }; quantity: number }) => ({ name: a.addon.title, quantity: a.quantity })),
       ];
 
       return {
@@ -328,7 +328,7 @@ export async function GET(req: NextRequest) {
     const workflowState = getWorkflowState(survey, surveyResponses.length, surveysCompleted, pledges);
 
     // Format segments for frontend
-    const formattedSegments = segments.map(segment => ({
+    const formattedSegments = segments.map((segment: { id: string; name: string; type: string; criteria: unknown; backerCount: number; createdAt: Date }) => ({
       id: segment.id,
       name: segment.name,
       type: segment.type.toLowerCase(),
@@ -338,7 +338,8 @@ export async function GET(req: NextRequest) {
     }));
 
     // Format products for frontend
-    const formattedProducts = products.map(product => {
+    type ProductType = { id: string; sku: string; name: string; type: string; weight: number | null; weightUnit: string | null; length: number | null; width: number | null; height: number | null; dimensionUnit: string | null; customsCode: string | null; countryOfOrigin: string | null };
+    const formattedProducts = products.map((product: ProductType) => {
       let status: "ready" | "no_weight" | "no_customs" | "error" = "ready";
       if (product.type === "PHYSICAL") {
         if (!product.weight) status = "no_weight";
@@ -372,7 +373,8 @@ export async function GET(req: NextRequest) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
 
-    const formattedTimeline = recentActivity.map(activity => {
+    type ActivityType = { id: string; type: string; createdAt: Date; title: string; description: string | null };
+    const formattedTimeline = recentActivity.map((activity: ActivityType) => {
       const activityDate = new Date(activity.createdAt); activityDate.setHours(0, 0, 0, 0);
       let dateLabel = activity.createdAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }).toUpperCase();
       if (activityDate.getTime() === today.getTime()) dateLabel = "TODAY";
@@ -385,13 +387,15 @@ export async function GET(req: NextRequest) {
     });
 
     // Format digital files
-    const formattedDigitalFiles = digitalFilesData.map(file => ({
+    type DigitalFileType = { id: string; name: string; fileSize: number; mimeType: string | null; createdAt: Date; distributedCount: number; totalEligible: number };
+    const formattedDigitalFiles = digitalFilesData.map((file: DigitalFileType) => ({
       id: file.id, name: file.name, size: formatFileSize(file.fileSize), type: file.mimeType?.split("/")[1]?.toUpperCase() || "FILE",
       uploadedAt: file.createdAt.toLocaleDateString(), distributedTo: file.distributedCount, totalEligible: file.totalEligible,
     }));
 
     // Format email campaigns
-    const formattedEmailCampaigns = emailCampaignsData.map(campaign => ({
+    type CampaignType = { id: string; name: string; status: string; sentAt: Date | null; scheduledFor: Date | null; recipientCount: number; sentCount: number; openCount: number };
+    const formattedEmailCampaigns = emailCampaignsData.map((campaign: CampaignType) => ({
       id: campaign.id, title: campaign.name, status: campaign.status.toLowerCase(),
       sentAt: campaign.sentAt?.toLocaleDateString(), scheduledFor: campaign.scheduledFor?.toLocaleDateString(),
       recipients: campaign.recipientCount, openRate: campaign.sentCount > 0 ? Math.round((campaign.openCount / campaign.sentCount) * 100) : undefined,
@@ -429,19 +433,21 @@ function formatFileSize(bytes: number): string {
 }
 
 // Helper to determine workflow state
+type WorkflowStatus = "completed" | "in_progress" | "pending" | "locked";
+
 function getWorkflowState(
   survey: { status: string } | null,
   totalResponses: number,
   completedResponses: number,
   pledges: { fulfillmentStatus: string }[]
 ) {
-  const steps = [
-    { id: "surveys", label: "Send & Remind", description: "Collect backer surveys", icon: "Mail", status: "pending" as const },
-    { id: "lock_orders", label: "Lock Orders", description: "Finalize backer selections", icon: "Lock", status: "locked" as const },
-    { id: "charge_cards", label: "Charge Cards", description: "Process additional payments", icon: "CreditCard", status: "locked" as const },
-    { id: "lock_addresses", label: "Lock Addresses", description: "Confirm shipping details", icon: "MapPin", status: "locked" as const },
-    { id: "start_shipping", label: "Start Shipping", description: "Push orders to fulfillment", icon: "Truck", status: "locked" as const },
-    { id: "shipped", label: "Shipped", description: "Mark orders as complete", icon: "CheckCircle2", status: "locked" as const },
+  const steps: { id: string; label: string; description: string; icon: string; status: WorkflowStatus }[] = [
+    { id: "surveys", label: "Send & Remind", description: "Collect backer surveys", icon: "Mail", status: "pending" },
+    { id: "lock_orders", label: "Lock Orders", description: "Finalize backer selections", icon: "Lock", status: "locked" },
+    { id: "charge_cards", label: "Charge Cards", description: "Process additional payments", icon: "CreditCard", status: "locked" },
+    { id: "lock_addresses", label: "Lock Addresses", description: "Confirm shipping details", icon: "MapPin", status: "locked" },
+    { id: "start_shipping", label: "Start Shipping", description: "Push orders to fulfillment", icon: "Truck", status: "locked" },
+    { id: "shipped", label: "Shipped", description: "Mark orders as complete", icon: "CheckCircle2", status: "locked" },
   ];
 
   // Determine current step based on state

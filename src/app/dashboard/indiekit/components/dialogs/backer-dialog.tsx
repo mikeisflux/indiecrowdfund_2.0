@@ -529,7 +529,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
           line1: backer.shippingAddress.line1,
           line2: backer.shippingAddress.line2,
           city: backer.shippingAddress.city,
-          state: backer.shippingAddress.state,
+          state: backer.shippingAddress.state || "",
           postalCode: backer.shippingAddress.postalCode,
           country: backer.shippingAddress.country,
         } : null}
@@ -625,12 +625,20 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
         orderId={backer.id}
         backerName={backer.name}
         backerEmail={backer.email}
-        shippingAddress={backer.shippingAddress || {
+        shippingAddress={backer.shippingAddress ? {
+          name: backer.shippingAddress.name || backer.name,
+          line1: backer.shippingAddress.line1,
+          line2: backer.shippingAddress.line2,
+          city: backer.shippingAddress.city,
+          state: backer.shippingAddress.state || "",
+          postalCode: backer.shippingAddress.postalCode,
+          country: backer.shippingAddress.country,
+        } : {
           name: backer.name,
-          line1: "123 Main St",
-          city: "San Francisco",
-          state: "CA",
-          postalCode: "94102",
+          line1: "Address not provided",
+          city: "Unknown",
+          state: "",
+          postalCode: "",
           country: "United States",
         }}
         items={backer.items?.map(item => ({
