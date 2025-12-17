@@ -5,15 +5,6 @@ import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
-// Survey question schema
-const questionSchema = z.object({
-  type: z.string(),
-  label: z.string().min(1).max(500),
-  required: z.boolean().default(false),
-  helpText: z.string().optional(),
-  options: z.array(z.string()).optional(),
-});
-
 // GET - Get survey and questions for a project
 export async function GET(req: NextRequest) {
   try {
