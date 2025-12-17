@@ -260,6 +260,8 @@ export async function GET(req: NextRequest) {
       let status: "not_pushed" | "push_errored" | "pushed" | "shipped" = "not_pushed";
       if (pledge.fulfillmentStatus === "SHIPPED" || pledge.fulfillmentStatus === "DELIVERED") {
         status = "shipped";
+      } else if (pledge.fulfillmentStatus === "FAILED") {
+        status = "push_errored";
       } else if (pledge.fulfillmentStatus === "IN_PROGRESS") {
         status = "pushed";
       } else if (pledge.status === "COMPLETED" && surveyResponse?.isComplete) {
