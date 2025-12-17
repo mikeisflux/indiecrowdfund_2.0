@@ -37,9 +37,15 @@ import {
   Users,
   Plus,
   ExternalLink,
+  DollarSign,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { Backer } from "../../types";
 import { STATUS_COLORS, STATUS_LABELS } from "../../types";
+import { AddressValidationDialog } from "./address-validation-dialog";
+import { BalanceEditorDialog } from "./balance-editor-dialog";
+import { EditOrderDialog } from "./edit-order-dialog";
+import { TrackingDialog } from "./tracking-dialog";
 
 interface BackerDialogProps {
   open: boolean;
@@ -49,25 +55,45 @@ interface BackerDialogProps {
 
 export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) {
   const [activeTab, setActiveTab] = useState("order");
+  const [showAddressValidation, setShowAddressValidation] = useState(false);
+  const [showBalanceEditor, setShowBalanceEditor] = useState(false);
+  const [showEditOrder, setShowEditOrder] = useState(false);
+  const [showTracking, setShowTracking] = useState(false);
 
   if (!backer) return null;
+
+  const handleViewAsBacker = () => {
+    toast.info("Opening backer survey view...");
+    window.open(`/survey/${backer.id}`, '_blank');
+  };
+
+  const handleResendSurvey = () => {
+    toast.success(`Survey resent to ${backer.email}`);
+  };
+
+  const handlePushToFulfillment = () => {
+    toast.success(`Order pushed to fulfillment`);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between">
           <div>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
               Pledge #{backer.id}
-              <Button variant="outline" size="sm" className="ml-2">
+              <Button variant="outline" size="sm" className="ml-2" onClick={handleViewAsBacker}>
                 <Eye className="h-3 w-3 mr-1" />
                 View as Backer
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleResendSurvey}>
                 <RefreshCw className="h-3 w-3 mr-1" />
                 Resend
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/survey/${backer.id}`);
+                toast.success("Survey link copied to clipboard");
+              }}>
                 <Link2 className="h-3 w-3" />
               </Button>
               <Button variant="outline" size="sm">
@@ -81,25 +107,33 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toast.info("Opening email composer...")}>
                     <Mail className="h-4 w-4 mr-2" />
                     Send Email
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleResendSurvey}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Resend Survey
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowEditOrder(true)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Order
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowBalanceEditor(true)}>
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Adjust Balance
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowTracking(true)}>
+                    <Truck className="h-4 w-4 mr-2" />
+                    Add Tracking
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handlePushToFulfillment}>
                     <Package className="h-4 w-4 mr-2" />
                     Push to Fulfillment
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600">
+                  <DropdownMenuItem className="text-red-600" onClick={() => toast.error("Order cancellation requires confirmation")}>
                     Cancel Order
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -144,7 +178,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
             <div className="rounded-lg border p-4">
               <div className="flex justify-between items-start mb-3">
                 <h4 className="font-medium">Shipping Information</h4>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => setShowAddressValidation(true)}>
                   <Edit className="h-3 w-3 mr-1" />
                   Edit
                 </Button>
@@ -188,7 +222,13 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
               <div className="grid md:grid-cols-2 gap-4">
                 {/* Balance Card */}
                 <div className="rounded-lg border p-4">
-                  <h4 className="font-medium mb-3">Balance</h4>
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-medium">Balance</h4>
+                    <Button variant="ghost" size="sm" onClick={() => setShowBalanceEditor(true)}>
+                      <DollarSign className="h-3 w-3 mr-1" />
+                      Adjust
+                    </Button>
+                  </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
@@ -418,12 +458,68 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button className="bg-teal-600 hover:bg-teal-700">
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening email composer...")}>
             <Mail className="h-4 w-4 mr-2" />
             Contact Backer
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Sub-dialogs */}
+      <AddressValidationDialog
+        open={showAddressValidation}
+        onOpenChange={setShowAddressValidation}
+        originalAddress={backer.shippingAddress ? {
+          line1: backer.shippingAddress.line1,
+          line2: backer.shippingAddress.line2,
+          city: backer.shippingAddress.city,
+          state: backer.shippingAddress.state,
+          postalCode: backer.shippingAddress.postalCode,
+          country: backer.shippingAddress.country,
+        } : null}
+        onConfirm={(address) => {
+          console.log("Address updated:", address);
+        }}
+      />
+
+      <BalanceEditorDialog
+        open={showBalanceEditor}
+        onOpenChange={setShowBalanceEditor}
+        backerId={backer.id}
+        backerName={backer.name}
+        currentBalance={backer.balance?.balanceDue || 0}
+        onSave={(adjustment) => {
+          console.log("Balance adjustment:", adjustment);
+        }}
+      />
+
+      <EditOrderDialog
+        open={showEditOrder}
+        onOpenChange={setShowEditOrder}
+        orderId={backer.id}
+        backerName={backer.name}
+        items={backer.items?.map(item => ({
+          id: String(Math.random()),
+          name: item.name,
+          quantity: item.quantity,
+          price: 25,
+        })) || []}
+        shippingAmount={backer.balance?.shippingAmount || 0}
+        onSave={(updates) => {
+          console.log("Order updated:", updates);
+        }}
+      />
+
+      <TrackingDialog
+        open={showTracking}
+        onOpenChange={setShowTracking}
+        orderId={backer.id}
+        backerName={backer.name}
+        backerEmail={backer.email}
+        onSave={(tracking) => {
+          console.log("Tracking added:", tracking);
+        }}
+      />
     </Dialog>
   );
 }
