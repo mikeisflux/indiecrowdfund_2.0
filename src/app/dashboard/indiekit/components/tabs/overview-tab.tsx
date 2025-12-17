@@ -13,6 +13,9 @@ import {
   Banknote,
   Sparkles,
   ChevronRight,
+  DollarSign,
+  Users,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Backer, FulfillmentStats } from "../../types";
@@ -23,10 +26,19 @@ interface OverviewTabProps {
   backers: Backer[];
 }
 
+// Demo chart data for Raised in IndieKit
+const raisedChartData = [
+  { label: "Campaign", amount: 48500, color: "bg-teal-600" },
+  { label: "Pre-orders", amount: 5720, color: "bg-teal-400" },
+  { label: "Add-ons", amount: 3245, color: "bg-teal-300" },
+];
+
 export function OverviewTab({ stats, backers }: OverviewTabProps) {
   // Determine next action based on current state
   const surveysPending = stats?.surveysPending || 0;
   const notShipped = backers.filter(b => b.status !== "shipped").length;
+
+  const totalRaised = raisedChartData.reduce((sum, d) => sum + d.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -61,6 +73,67 @@ export function OverviewTab({ stats, backers }: OverviewTabProps) {
         </div>
       </div>
 
+      {/* Raised in IndieKit Card with Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-teal-600" />
+            Raised in IndieKit
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Chart Side */}
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-4xl font-bold">${totalRaised.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Total Raised</p>
+              </div>
+
+              {/* Horizontal stacked bar chart */}
+              <div className="flex h-10 rounded-lg overflow-hidden">
+                {raisedChartData.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(item.color, "flex items-center justify-center text-white text-xs font-medium")}
+                    style={{ width: `${(item.amount / totalRaised) * 100}%` }}
+                  >
+                    {(item.amount / totalRaised) * 100 > 15 && `$${(item.amount / 1000).toFixed(1)}k`}
+                  </div>
+                ))}
+              </div>
+
+              {/* Legend */}
+              <div className="flex justify-center gap-6">
+                {raisedChartData.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className={cn("w-3 h-3 rounded-sm", item.color)} />
+                    <span className="text-sm text-muted-foreground">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Details Side */}
+            <div className="space-y-3">
+              {raisedChartData.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center py-2 border-b last:border-0">
+                  <div className="flex items-center gap-2">
+                    <div className={cn("w-3 h-3 rounded-sm", item.color)} />
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </div>
+                  <span className="font-semibold">${item.amount.toLocaleString()}</span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center pt-2 border-t-2">
+                <span className="font-semibold">Total</span>
+                <span className="text-lg font-bold">${totalRaised.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Status Flow Component */}
       <Card>
         <CardHeader>
@@ -92,6 +165,61 @@ export function OverviewTab({ stats, backers }: OverviewTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Key Metrics Grid */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Total Backers</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">{stats?.totalBackers || 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Surveys Completed</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">
+              {stats?.surveysCompleted || 0}
+              <span className="text-sm font-normal text-muted-foreground ml-1">
+                ({((stats?.surveysCompleted || 0) / (stats?.totalBackers || 1) * 100).toFixed(0)}%)
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Purchased Add-ons</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">
+              {stats?.backersWithAddons || 0}
+              <span className="text-sm font-normal text-muted-foreground ml-1">
+                ({((stats?.backersWithAddons || 0) / (stats?.totalBackers || 1) * 100).toFixed(0)}%)
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <span className="text-sm text-muted-foreground">Fulfilled</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">
+              {stats?.fulfilledBackers || 0}
+              <span className="text-sm font-normal text-muted-foreground ml-1">
+                ({((stats?.fulfilledBackers || 0) / (stats?.totalBackers || 1) * 100).toFixed(0)}%)
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Charge Details Breakdown */}
       <Card>

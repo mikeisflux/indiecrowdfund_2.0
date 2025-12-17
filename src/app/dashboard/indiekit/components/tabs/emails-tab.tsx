@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, MoreHorizontal } from "lucide-react";
+import { Plus, MoreHorizontal, Mail, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EmailCampaign } from "../../types";
 
@@ -26,52 +26,92 @@ interface EmailsTabProps {
   onOpenEmailDialog: () => void;
 }
 
+// Launch Timeline stages from design document
+const launchTimelineStages = [
+  {
+    id: "before-launch",
+    title: "Before Launch",
+    description: "Get your fans excited about your upcoming project and have them ready to pledge on day one. Send this before you launch and your project is still a draft.",
+  },
+  {
+    id: "before-launch-prelaunch",
+    title: "Before Launch (w/ pre-launch)",
+    description: "Get your fans excited about your project with a special pre-launch page where they can sign up for notifications.",
+  },
+  {
+    id: "at-launch",
+    title: "At Launch",
+    description: "Announce exclusively to your fans that your project is now live. Encourage them to back immediately for the best rewards.",
+  },
+  {
+    id: "after-launch",
+    title: "After Launch",
+    description: "Remind those that were interested but haven't pledged yet. Share updates on stretch goals and campaign progress.",
+  },
+  {
+    id: "project-ending",
+    title: "Project Ending",
+    description: "Remind your fans that they only have a limited time left to back your project. Create urgency with a final push.",
+  },
+];
+
 export function EmailsTab({ emailCampaigns, onOpenEmailDialog }: EmailsTabProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold">Email Campaigns</h3>
           <p className="text-sm text-muted-foreground">Communicate with your backers</p>
         </div>
-        <Button onClick={onOpenEmailDialog} className="bg-teal-600 hover:bg-teal-700">
-          <Plus className="h-4 w-4 mr-2" />
-          New Campaign
+        <Button onClick={onOpenEmailDialog} variant="outline">
+          <PenLine className="h-4 w-4 mr-2" />
+          Draft Your Next Email
         </Button>
       </div>
 
+      {/* Email Campaign List */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Campaign</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Recipients</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Open Rate</TableHead>
+                <TableHead className="w-16">Status</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Sent on</TableHead>
+                <TableHead>Sent to</TableHead>
+                <TableHead>Scheduled</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {emailCampaigns.map((campaign) => (
-                <TableRow key={campaign.id}>
-                  <TableCell className="font-medium">{campaign.title}</TableCell>
+                <TableRow key={campaign.id} className="h-[72px]">
                   <TableCell>
                     <Badge className={cn(
-                      campaign.status === "sent" && "bg-green-100 text-green-700",
+                      "text-xs uppercase",
+                      campaign.status === "sent" && "bg-teal-600 text-white",
                       campaign.status === "scheduled" && "bg-blue-100 text-blue-700",
-                      campaign.status === "draft" && "bg-gray-100 text-gray-700"
+                      campaign.status === "draft" && "bg-gray-200 text-gray-700"
                     )}>
-                      {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                      {campaign.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{campaign.recipients}</TableCell>
                   <TableCell>
-                    {campaign.sentAt || campaign.scheduledFor || "—"}
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-14 bg-muted rounded flex items-center justify-center">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <span className="font-medium">{campaign.title}</span>
+                    </div>
                   </TableCell>
-                  <TableCell>
-                    {campaign.openRate ? `${campaign.openRate}%` : "—"}
+                  <TableCell className="text-muted-foreground">
+                    {campaign.sentAt || "never"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {campaign.recipients} {campaign.recipients === 1 ? "member" : "members"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {campaign.scheduledFor || (campaign.status === "sent" ? "Sent" : "Not yet scheduled")}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -92,16 +132,65 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog }: EmailsTabProps)
                   </TableCell>
                 </TableRow>
               ))}
+              {emailCampaigns.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No email campaigns yet. Create your first campaign to get started.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Suggested Timeline */}
+      {/* Your Launch Timeline */}
+      <Card>
+        <CardHeader className="text-center pb-2">
+          <CardTitle className="text-2xl">Your Launch Timeline</CardTitle>
+          <CardDescription className="text-base">
+            We&apos;ll help you send the right messages at the right times.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="max-w-3xl mx-auto">
+          <div className="relative pl-8">
+            {/* Vertical timeline line */}
+            <div className="absolute left-3 top-3 bottom-3 w-0.5 bg-teal-200" />
+
+            <div className="space-y-8">
+              {launchTimelineStages.map((stage, index) => (
+                <div key={stage.id} className="relative flex gap-6">
+                  {/* Timeline dot */}
+                  <div className="absolute left-[-20px] w-3 h-3 rounded-full bg-teal-500 mt-1.5" />
+
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h4 className="font-semibold flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-teal-600" />
+                          {stage.title}
+                        </h4>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {stage.description}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" className="shrink-0">
+                        Start draft
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Suggested Email Timeline (Post-Campaign) */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Suggested Email Timeline</CardTitle>
-          <CardDescription>Optimal times to reach your backers</CardDescription>
+          <CardTitle className="text-base">Post-Campaign Email Timeline</CardTitle>
+          <CardDescription>Optimal times to reach your backers after funding</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">

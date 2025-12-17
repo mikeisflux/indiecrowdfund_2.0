@@ -37,6 +37,7 @@ export function getDemoData(): DemoData {
       surveysPending: 34,
       totalRaised: 125000,
       addOnPurchases: 8500,
+      backersWithAddons: 412,
       digitalDownloads: 595,
       packagesShipped: 420,
       chargeStats: {

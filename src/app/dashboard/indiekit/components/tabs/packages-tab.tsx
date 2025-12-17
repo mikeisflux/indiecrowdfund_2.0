@@ -32,6 +32,7 @@ import {
   MoreHorizontal,
   Send,
   ArrowRight,
+  ArrowLeft,
   ChevronRight,
   AlertCircle,
   RotateCcw,
@@ -83,6 +84,12 @@ export function PackagesTab({
 
   return (
     <div className="space-y-6">
+      {/* Back Button */}
+      <Button variant="ghost" size="sm" className="-mb-4">
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back
+      </Button>
+
       {/* Fulfillment Integration Header */}
       <div className="bg-teal-600 text-white rounded-lg p-6">
         <div className="flex justify-between items-center">

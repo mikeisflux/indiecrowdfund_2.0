@@ -14,6 +14,7 @@ export interface FulfillmentStats {
   surveysPending: number;
   totalRaised: number;
   addOnPurchases: number;
+  backersWithAddons: number;
   digitalDownloads: number;
   packagesShipped: number;
   chargeStats: {

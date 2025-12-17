@@ -45,18 +45,24 @@ export function DigitalTab({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold">Digital Downloads</h3>
-          <p className="text-sm text-muted-foreground">Manage and distribute digital rewards</p>
+        <div className="flex items-center gap-3">
+          <Download className="h-6 w-6 text-teal-600" />
+          <div>
+            <h3 className="text-lg font-semibold">Digital Downloads</h3>
+            <p className="text-sm text-muted-foreground">Manage and distribute digital rewards</p>
+          </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline">
+            Learn More
+          </Button>
           <Button variant="outline">
             <Eye className="h-4 w-4 mr-2" />
             View Downloads ({digitalFiles.length})
           </Button>
           <Button onClick={onOpenUploadDialog} className="bg-teal-600 hover:bg-teal-700">
-            <Upload className="h-4 w-4 mr-2" />
-            Upload File
+            <Plus className="h-4 w-4 mr-2" />
+            Create
           </Button>
         </div>
       </div>
