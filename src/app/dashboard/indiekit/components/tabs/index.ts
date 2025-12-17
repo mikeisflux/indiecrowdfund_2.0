@@ -11,3 +11,8 @@ export { MembersTab } from "./members-tab";
 export { ProjectsTab } from "./projects-tab";
 export { SegmentsTab } from "./segments-tab";
 export { ExportTab } from "./export-tab";
+export { TimelineTab } from "./timeline-tab";
+export { CountsTab } from "./counts-tab";
+export { SupportTab } from "./support-tab";
+export { SurveyBuilderTab } from "./survey-builder-tab";
+export { SettingsTab } from "./settings-tab";

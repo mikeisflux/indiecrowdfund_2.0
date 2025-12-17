@@ -38,6 +38,10 @@ import {
   UsersRound,
   Layers,
   FileDown,
+  Clock,
+  BarChart3,
+  HeadphonesIcon,
+  FormInput,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -80,6 +84,11 @@ import {
   ProjectsTab,
   SegmentsTab,
   ExportTab,
+  TimelineTab,
+  CountsTab,
+  SupportTab,
+  SurveyBuilderTab,
+  SettingsTab,
 } from "./components/tabs";
 
 export default function IndieKitPage() {
@@ -432,6 +441,26 @@ export default function IndieKitPage() {
                   <FileDown className="h-4 w-4 mr-2" />
                   Export
                 </TabsTrigger>
+                <TabsTrigger value="timeline">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Timeline
+                </TabsTrigger>
+                <TabsTrigger value="counts">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Counts
+                </TabsTrigger>
+                <TabsTrigger value="support">
+                  <HeadphonesIcon className="h-4 w-4 mr-2" />
+                  Support
+                </TabsTrigger>
+                <TabsTrigger value="survey-builder">
+                  <FormInput className="h-4 w-4 mr-2" />
+                  Survey Builder
+                </TabsTrigger>
+                <TabsTrigger value="settings">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview">
@@ -513,6 +542,26 @@ export default function IndieKitPage() {
 
               <TabsContent value="export">
                 <ExportTab />
+              </TabsContent>
+
+              <TabsContent value="timeline">
+                <TimelineTab />
+              </TabsContent>
+
+              <TabsContent value="counts">
+                <CountsTab />
+              </TabsContent>
+
+              <TabsContent value="support">
+                <SupportTab />
+              </TabsContent>
+
+              <TabsContent value="survey-builder">
+                <SurveyBuilderTab />
+              </TabsContent>
+
+              <TabsContent value="settings">
+                <SettingsTab />
               </TabsContent>
             </Tabs>
           </div>
