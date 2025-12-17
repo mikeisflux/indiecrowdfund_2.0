@@ -3,3 +3,4 @@ export { UploadDialog } from "./upload-dialog";
 export { EmailDialog } from "./email-dialog";
 export { AddonDialog } from "./addon-dialog";
 export { DistributionDialog } from "./distribution-dialog";
+export { NPSFeedbackDialog } from "./nps-feedback-dialog";

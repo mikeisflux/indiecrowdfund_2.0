@@ -42,6 +42,8 @@ import {
   BarChart3,
   HeadphonesIcon,
   FormInput,
+  BoxIcon,
+  UserCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -69,6 +71,7 @@ import {
   EmailDialog,
   AddonDialog,
   DistributionDialog,
+  NPSFeedbackDialog,
 } from "./components/dialogs";
 import {
   OverviewTab,
@@ -89,7 +92,10 @@ import {
   SupportTab,
   SurveyBuilderTab,
   SettingsTab,
+  ProductsTab,
+  AccountSettingsTab,
 } from "./components/tabs";
+import { WhatsNextBanner } from "./components/whats-next-banner";
 
 export default function IndieKitPage() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -114,6 +120,7 @@ export default function IndieKitPage() {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isAddonDialogOpen, setIsAddonDialogOpen] = useState(false);
   const [isDistributionDialogOpen, setIsDistributionDialogOpen] = useState(false);
+  const [isNPSDialogOpen, setIsNPSDialogOpen] = useState(false);
   const [packageGroupFilter, setPackageGroupFilter] = useState<string>("all");
 
   // Fetch IndieKit data
@@ -386,6 +393,17 @@ export default function IndieKitPage() {
               </Card>
             </div>
 
+            {/* What's Next Banner - shown when fulfillment is nearly complete */}
+            {fulfillmentPercent >= 95 && (
+              <div className="mb-6">
+                <WhatsNextBanner
+                  upcomingProjectsCount={3}
+                  onTellUsClick={() => toast.info("Opening project submission form...")}
+                  onViewProjects={() => setActiveTab("projects")}
+                />
+              </div>
+            )}
+
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="mb-6 flex-wrap">
@@ -460,6 +478,14 @@ export default function IndieKitPage() {
                 <TabsTrigger value="settings">
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
+                </TabsTrigger>
+                <TabsTrigger value="products">
+                  <BoxIcon className="h-4 w-4 mr-2" />
+                  Products
+                </TabsTrigger>
+                <TabsTrigger value="account">
+                  <UserCircle className="h-4 w-4 mr-2" />
+                  Account
                 </TabsTrigger>
               </TabsList>
 
@@ -563,6 +589,14 @@ export default function IndieKitPage() {
               <TabsContent value="settings">
                 <SettingsTab />
               </TabsContent>
+
+              <TabsContent value="products">
+                <ProductsTab />
+              </TabsContent>
+
+              <TabsContent value="account">
+                <AccountSettingsTab />
+              </TabsContent>
             </Tabs>
           </div>
         </div>
@@ -594,6 +628,15 @@ export default function IndieKitPage() {
         open={isDistributionDialogOpen}
         onOpenChange={setIsDistributionDialogOpen}
         digitalFiles={digitalFiles}
+      />
+
+      <NPSFeedbackDialog
+        open={isNPSDialogOpen}
+        onOpenChange={setIsNPSDialogOpen}
+        onSubmit={(score, feedback) => {
+          console.log("NPS Score:", score, "Feedback:", feedback);
+          toast.success("Thank you for your feedback!");
+        }}
       />
     </div>
   );
