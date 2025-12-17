@@ -457,7 +457,7 @@ export default function IndieKitPage() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="mb-6 flex-wrap">
+              <TabsList className="mb-6 flex-wrap h-auto gap-1 p-2 bg-muted/50">
                 <TabsTrigger value="overview">
                   <LayoutDashboard className="h-4 w-4 mr-2" />
                   Overview
@@ -565,6 +565,10 @@ export default function IndieKitPage() {
                   backers={backers}
                   surveyAddons={surveyAddons}
                   onOpenAddonDialog={() => setIsAddonDialogOpen(true)}
+                  onOpenImportDialog={() => {
+                    toast.info("Opening add-on import...");
+                    // TODO: Open import dialog to select add-ons from other projects
+                  }}
                 />
               </TabsContent>
 

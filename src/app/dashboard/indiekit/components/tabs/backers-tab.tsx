@@ -88,12 +88,19 @@ export function BackersTab({
   const [isCharging, setIsCharging] = useState(false);
   const [chargeProgress, setChargeProgress] = useState(0);
 
-  const filteredBackers = backers.filter((backer) => {
-    const matchesSearch = backer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      backer.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || backer.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredBackers = backers
+    .filter((backer) => {
+      const matchesSearch = backer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        backer.email.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || backer.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      // Sort by backer number, backers without numbers go to the end
+      const aNum = a.backerNumber || Infinity;
+      const bNum = b.backerNumber || Infinity;
+      return aNum - bNum;
+    });
 
   // Calculate stats for selected backers
   const selectedBackerData = backers.filter(b => selectedBackers.includes(b.id));
@@ -169,13 +176,13 @@ export function BackersTab({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {selectedBackers.length > 0 && (
             <>
               {/* Bulk Actions Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" className="whitespace-nowrap">
                     Bulk Actions ({selectedBackers.length})
                     <ChevronDown className="h-4 w-4 ml-2" />
                   </Button>
@@ -314,6 +321,7 @@ export function BackersTab({
                     onCheckedChange={onSelectAllBackers}
                   />
                 </TableHead>
+                <TableHead className="w-16">#</TableHead>
                 <TableHead>Backer</TableHead>
                 <TableHead>Reward</TableHead>
                 <TableHead>Amount</TableHead>
@@ -330,6 +338,9 @@ export function BackersTab({
                       checked={selectedBackers.includes(backer.id)}
                       onCheckedChange={() => onToggleBackerSelection(backer.id)}
                     />
+                  </TableCell>
+                  <TableCell onClick={() => onOpenBackerDetail(backer)} className="font-medium text-muted-foreground">
+                    {backer.backerNumber || "—"}
                   </TableCell>
                   <TableCell onClick={() => onOpenBackerDetail(backer)}>
                     <div className="flex items-center gap-3">

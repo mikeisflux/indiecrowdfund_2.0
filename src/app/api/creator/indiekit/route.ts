@@ -274,6 +274,7 @@ export async function GET(req: NextRequest) {
 
       return {
         id: pledge.id,
+        backerNumber: pledge.backerNumber || 0,
         name: pledge.user.name || "Anonymous",
         email: pledge.user.email || "",
         avatar: pledge.user.image || undefined,
@@ -304,23 +305,61 @@ export async function GET(req: NextRequest) {
     });
 
     const packageGroups = Array.from(rewardGroups.entries()).map(([rewardTitle, group], idx) => {
+      const notPushedCount = group.backers.filter(b => b.status === "not_pushed").length;
+      const erroredCount = group.backers.filter(b => b.status === "push_errored").length;
+      const pushedCount = group.backers.filter(b => b.status === "pushed").length;
       const shippedCount = group.backers.filter(b => b.status === "shipped").length;
-      const processingCount = group.backers.filter(b => b.status === "pushed").length;
 
       let status: "pending" | "processing" | "shipped" = "pending";
       if (shippedCount === group.backers.length) {
         status = "shipped";
-      } else if (processingCount > 0 || shippedCount > 0) {
+      } else if (pushedCount > 0 || shippedCount > 0) {
         status = "processing";
       }
 
+      // Determine type based on shipping addresses
+      const hasInternational = group.backers.some(b =>
+        b.shippingAddress && b.shippingAddress.country && b.shippingAddress.country !== "US"
+      );
+      const hasIncomplete = group.backers.some(b => !b.shippingAddress);
+      const type: "domestic" | "international" | "incomplete" =
+        hasIncomplete ? "incomplete" : hasInternational ? "international" : "domestic";
+
+      // Build items with full structure
+      const firstBackerItems = group.backers[0]?.items || [];
+      const items = firstBackerItems.map((item: { name: string; quantity: number; sku?: string }) => ({
+        name: item.name,
+        quantity: item.quantity,
+        weight: { lbs: 0, oz: 8 }, // Default weight - would come from product data
+        customsValid: true,
+        sku: item.sku,
+      }));
+
+      // Calculate total weight
+      const totalWeight = items.reduce(
+        (acc: { lbs: number; oz: number }, item: { weight: { lbs: number; oz: number } }) => ({
+          lbs: acc.lbs + item.weight.lbs,
+          oz: acc.oz + item.weight.oz,
+        }),
+        { lbs: 0, oz: 0 }
+      );
+
       return {
-        id: `pg-${idx}`,
+        id: `pg-${idx + 1}`,
         name: rewardTitle,
-        itemCount: group.backers[0]?.items.length || 1,
+        type,
+        itemCount: items.length,
         backerCount: group.backers.length,
         status,
-        items: group.backers[0]?.items.map(i => i.name) || [],
+        statusCounts: {
+          notPushed: notPushedCount,
+          pushErrored: erroredCount,
+          pushed: pushedCount,
+          shipped: shippedCount,
+        },
+        lastSentAt: undefined,
+        items,
+        totalWeight,
       };
     });
 

@@ -72,13 +72,39 @@ else
     exit 1
 fi
 
-# Step 5: Backup current build (keep last 2 backups)
+# Step 5: Clean up any previous failed build attempts
 echo ""
-echo "💾 Step 5: Backing up current build..."
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-if [ -d ".next" ]; then
-    cp -r .next ".next-backup-${TIMESTAMP}"
-    echo -e "${GREEN}   Backup saved to .next-backup-${TIMESTAMP}${NC}"
+echo "🧹 Step 5: Cleaning up previous build attempts..."
+if [ -d ".next-new" ]; then
+    rm -rf .next-new
+    echo -e "${GREEN}   Cleaned up .next-new${NC}"
+else
+    echo -e "${GREEN}   No cleanup needed${NC}"
+fi
+
+# Step 6: Build new version to separate directory (zero-downtime)
+echo ""
+echo "🔨 Step 6: Building new version to .next-new (site stays live)..."
+BUILD_OUTPUT=$(NEXT_BUILD_OUTPUT=.next-new npm run build 2>&1)
+BUILD_EXIT_CODE=$?
+
+if [ $BUILD_EXIT_CODE -eq 0 ]; then
+    echo -e "${GREEN}✅ Build successful!${NC}"
+
+    # Step 6b: Atomic swap - backup old, swap in new
+    echo ""
+    echo "🔄 Step 6b: Swapping build directories..."
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+    if [ -d ".next" ]; then
+        # Move old build to backup
+        mv .next ".next-backup-${TIMESTAMP}"
+        echo "   Backed up old build to .next-backup-${TIMESTAMP}"
+    fi
+
+    # Move new build into place
+    mv .next-new .next
+    echo -e "${GREEN}   New build is now live!${NC}"
 
     # Keep only the 2 most recent backups, delete older ones
     BACKUP_COUNT=$(ls -dt .next-backup-* 2>/dev/null | wc -l)
@@ -88,33 +114,16 @@ if [ -d ".next" ]; then
         echo -e "${GREEN}   Old backups removed${NC}"
     fi
 else
-    echo -e "${YELLOW}   No existing build to backup${NC}"
-fi
-
-# Step 6: Build new version
-echo ""
-echo "🔨 Step 6: Building new version..."
-BUILD_OUTPUT=$(npm run build 2>&1)
-BUILD_EXIT_CODE=$?
-
-if [ $BUILD_EXIT_CODE -eq 0 ]; then
-    echo -e "${GREEN}✅ Build successful!${NC}"
-else
     echo -e "${RED}❌ BUILD FAILED!${NC}"
     echo ""
     echo "========== BUILD ERRORS =========="
     echo "$BUILD_OUTPUT" | tail -50
     echo "=================================="
     echo ""
+    echo -e "${GREEN}   Site is still running with old build.${NC}"
 
-    # Restore most recent backup
-    LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
-    if [ -n "$LATEST_BACKUP" ]; then
-        echo "🔄 Restoring backup from ${LATEST_BACKUP}..."
-        rm -rf .next
-        cp -r "$LATEST_BACKUP" .next
-        echo -e "${GREEN}   Backup restored. Site is still running.${NC}"
-    fi
+    # Clean up failed build attempt
+    rm -rf .next-new
     exit 1
 fi
 
@@ -129,7 +138,7 @@ else
     LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
     if [ -n "$LATEST_BACKUP" ]; then
         rm -rf .next
-        cp -r "$LATEST_BACKUP" .next
+        mv "$LATEST_BACKUP" .next
         pm2 restart all --update-env
         echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
     fi

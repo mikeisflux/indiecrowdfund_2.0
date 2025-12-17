@@ -20,6 +20,7 @@ import {
   Check,
   X,
   Trash2,
+  Download,
 } from "lucide-react";
 import type { SurveyAddon, Backer, FulfillmentStats } from "../../types";
 
@@ -28,9 +29,10 @@ interface AddonsTabProps {
   backers: Backer[];
   surveyAddons: SurveyAddon[];
   onOpenAddonDialog: () => void;
+  onOpenImportDialog?: () => void;
 }
 
-export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog }: AddonsTabProps) {
+export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onOpenImportDialog }: AddonsTabProps) {
   return (
     <div className="space-y-6">
       {/* Add-ons Header */}
@@ -41,10 +43,18 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog }: A
             Configure add-ons that backers can purchase during their survey
           </p>
         </div>
-        <Button onClick={onOpenAddonDialog} className="bg-teal-600 hover:bg-teal-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Add-on
-        </Button>
+        <div className="flex items-center gap-2">
+          {onOpenImportDialog && (
+            <Button variant="outline" onClick={onOpenImportDialog}>
+              <Download className="h-4 w-4 mr-2" />
+              Import Add-on
+            </Button>
+          )}
+          <Button onClick={onOpenAddonDialog} className="bg-teal-600 hover:bg-teal-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Add New Add-on
+          </Button>
+        </div>
       </div>
 
       {/* Add-ons Stats */}
@@ -161,10 +171,18 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog }: A
               <p className="text-sm text-muted-foreground mb-4">
                 Create add-ons to offer additional products during the survey
               </p>
-              <Button onClick={onOpenAddonDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Add-on
-              </Button>
+              <div className="flex items-center justify-center gap-2">
+                {onOpenImportDialog && (
+                  <Button variant="outline" onClick={onOpenImportDialog}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Import Add-on
+                  </Button>
+                )}
+                <Button onClick={onOpenAddonDialog}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Add-on
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

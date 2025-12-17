@@ -478,10 +478,10 @@ export function PackagesTab({
           </div>
 
           {/* Package Group Filter */}
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <h3 className="text-lg font-semibold">Package Groups</h3>
-              <div className="flex gap-2">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <h3 className="text-lg font-semibold whitespace-nowrap">Package Groups</h3>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={packageGroupFilter === "all" ? "default" : "outline"}
                   size="sm"
@@ -516,7 +516,7 @@ export function PackagesTab({
                 </Button>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh Groups

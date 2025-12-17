@@ -46,10 +46,10 @@ export function PreOrdersTab({ stats }: PreOrdersTabProps) {
   return (
     <div className="space-y-6">
       {/* Launch Navigation */}
-      <div className="flex items-center gap-1 border-b pb-4">
+      <div className="flex flex-wrap items-center gap-1 border-b pb-4">
         <Home className="h-4 w-4 text-teal-600 mr-1" />
         <span className="font-medium text-teal-600">Launch</span>
-        <div className="flex gap-1 ml-4">
+        <div className="flex flex-wrap gap-1 ml-4">
           <Button variant="ghost" size="sm" className="text-teal-600 font-medium">Dashboard</Button>
           <Button variant="ghost" size="sm">Email Campaigns</Button>
           <Button variant="ghost" size="sm">Teaser Pages</Button>

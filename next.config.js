@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allow custom build output directory for zero-downtime deployments
+  distDir: process.env.NEXT_BUILD_OUTPUT || '.next',
   // Increase body size limit for server actions (default is 1MB)
   experimental: {
     serverActions: {
