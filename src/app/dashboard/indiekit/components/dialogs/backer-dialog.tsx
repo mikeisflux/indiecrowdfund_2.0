@@ -36,6 +36,7 @@ import {
   HelpCircle,
   Users,
   Plus,
+  ExternalLink,
 } from "lucide-react";
 import type { Backer } from "../../types";
 import { STATUS_COLORS, STATUS_LABELS } from "../../types";
@@ -196,7 +197,19 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                       </div>
                       <span>(${backer.balance?.pledgeAmount?.toFixed(2) || "0.00"})</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">View pledge on Kickstarter</p>
+                    <div className="text-xs">
+                      <span className="text-muted-foreground">Indiecrowdfund</span>
+                      <span className="text-muted-foreground"> (Collected)</span>
+                    </div>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-teal-600 p-0 h-auto text-xs"
+                      onClick={() => window.open(`/projects/pledge/${backer.id}`, '_blank')}
+                    >
+                      View pledge on Indiecrowdfund
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </Button>
                     <div className="border-t pt-2 mt-2">
                       <div className="flex justify-between">
                         <span>Pledge Level</span>
