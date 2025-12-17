@@ -44,13 +44,11 @@ export function OverviewTab({ stats, backers, timeline = [] }: OverviewTabProps)
   // Calculate raised amounts from stats
   const campaignRaised = stats?.totalRaised || 0;
   const preOrderRaised = stats?.preOrderRevenue || 0;
-  const addonsRaised = stats?.addonRevenue || 0;
-  const totalRaised = campaignRaised + preOrderRaised + addonsRaised;
+  const totalRaised = campaignRaised + preOrderRaised;
 
   const raisedChartData = totalRaised > 0 ? [
     { label: "Campaign", amount: campaignRaised, color: "bg-teal-600" },
     { label: "Pre-orders", amount: preOrderRaised, color: "bg-teal-400" },
-    { label: "Add-ons", amount: addonsRaised, color: "bg-teal-300" },
   ].filter(d => d.amount > 0) : [];
 
   // Get recent activity (last 5 entries)
