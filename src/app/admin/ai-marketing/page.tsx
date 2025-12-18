@@ -44,6 +44,7 @@ import {
   CampaignTemplate,
 } from "@/components/admin/ai-marketing";
 import { CampaignTypeDialog } from "@/components/admin/ai-marketing/dialogs/campaign-type-dialog";
+import { SubscriberListTab } from "@/components/admin/ai-marketing/subscriber-list-tab";
 
 // Types for dynamic data
 interface ProjectTag {
@@ -103,7 +104,7 @@ export default function AIMarketingPage() {
   const [showTagReview, setShowTagReview] = useState(false);
   const [pendingTagUpdates, setPendingTagUpdates] = useState<PendingTagUpdate[]>([]);
   const [showCampaignTypeDialog, setShowCampaignTypeDialog] = useState(false);
-  const [selectedCampaignType, setSelectedCampaignType] = useState<"subscriber" | "backer" | "creator" | null>(null);
+  const [selectedCampaignType, setSelectedCampaignType] = useState<"subscriber" | "backer" | "creator" | "retailer" | null>(null);
   const [isApplyingTags, setIsApplyingTags] = useState(false);
   const [showCSVImportDialog, setShowCSVImportDialog] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -643,7 +644,7 @@ export default function AIMarketingPage() {
     setShowCampaignViewer(true);
   };
 
-  const handleConfigureCampaignType = (type: "subscriber" | "backer" | "creator") => {
+  const handleConfigureCampaignType = (type: "subscriber" | "backer" | "creator" | "retailer") => {
     setSelectedCampaignType(type);
     setShowCampaignTypeDialog(true);
   };
@@ -784,10 +785,14 @@ export default function AIMarketingPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
           <TabsTrigger value="overview">
             <BarChart3 className="mr-2 h-4 w-4" />
             Overview
+          </TabsTrigger>
+          <TabsTrigger value="subscribers">
+            <Users className="mr-2 h-4 w-4" />
+            Email Lists
           </TabsTrigger>
           <TabsTrigger value="auto-tagging">
             <Tag className="mr-2 h-4 w-4" />
@@ -795,15 +800,15 @@ export default function AIMarketingPage() {
           </TabsTrigger>
           <TabsTrigger value="email-campaigns">
             <Mail className="mr-2 h-4 w-4" />
-            Email Campaigns
+            Campaigns
           </TabsTrigger>
           <TabsTrigger value="behavior">
             <Activity className="mr-2 h-4 w-4" />
-            Behavior Tracking
+            Behavior
           </TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="mr-2 h-4 w-4" />
-            AI Settings
+            Settings
           </TabsTrigger>
         </TabsList>
 
@@ -820,6 +825,11 @@ export default function AIMarketingPage() {
             setShowCampaignDialog={setShowCampaignDialog}
             handleViewCampaign={handleViewCampaign}
           />
+        </TabsContent>
+
+        {/* Subscriber List Tab */}
+        <TabsContent value="subscribers">
+          <SubscriberListTab onImportCSV={() => setShowCSVImportDialog(true)} />
         </TabsContent>
 
         {/* Auto-Tagging Tab */}

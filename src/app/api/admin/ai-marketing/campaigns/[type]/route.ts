@@ -53,34 +53,94 @@ export async function GET(
 
     switch (type) {
       case "subscriber":
-        // Newsletter subscribers - users with email verified
-        recipients = await db.user.findMany({
-          where: {
-            emailVerified: { not: null },
-          },
-          select: { id: true, email: true, name: true },
-          take: 100,
+        // Newsletter subscribers - include both registered users AND imported newsletter subscribers
+        // EXCLUDING: retailers AND backers (each list stays separate)
+
+        // Get backer user IDs to exclude
+        const backerPledges = await db.pledge.findMany({
+          where: { status: "COMPLETED" },
+          select: { userId: true },
+          distinct: ["userId"],
         });
-        recipientCount = await db.user.count({
-          where: { emailVerified: { not: null } },
+        const backerUserIdSet = new Set(backerPledges.map(p => p.userId));
+
+        const [verifiedUsers, newsletterSubs] = await Promise.all([
+          db.user.findMany({
+            where: { emailVerified: { not: null } },
+            select: { id: true, email: true, name: true },
+          }),
+          db.newsletterSubscriber.findMany({
+            where: {
+              isActive: true,
+              source: { not: { contains: "retailer" } },
+            },
+            select: { id: true, email: true, name: true },
+          }),
+        ]);
+
+        // Get backer emails for filtering newsletter subscribers
+        const backerEmails = await db.user.findMany({
+          where: { id: { in: Array.from(backerUserIdSet) } },
+          select: { email: true },
         });
-        description = "Target newsletter subscribers with verified email addresses";
+        const backerEmailSet = new Set(backerEmails.map(b => b.email.toLowerCase()));
+
+        // Count totals (excluding retailers and backers)
+        const filteredVerifiedUsers = verifiedUsers.filter(u => !backerUserIdSet.has(u.id));
+        const filteredNewsletterSubs = newsletterSubs.filter(s => !backerEmailSet.has(s.email.toLowerCase()));
+
+        // Combine and dedupe by email (newsletter subscribers take priority)
+        const emailSet = new Set<string>();
+        const combinedRecipients: { id: string; email: string; name: string | null }[] = [];
+
+        // Add newsletter subscribers first (already filtered)
+        for (const sub of filteredNewsletterSubs.slice(0, 50)) {
+          if (!emailSet.has(sub.email.toLowerCase())) {
+            emailSet.add(sub.email.toLowerCase());
+            combinedRecipients.push(sub);
+          }
+        }
+
+        // Add verified users that aren't already in the list and aren't backers
+        for (const user of filteredVerifiedUsers.slice(0, 50)) {
+          if (!emailSet.has(user.email.toLowerCase())) {
+            emailSet.add(user.email.toLowerCase());
+            combinedRecipients.push(user);
+          }
+        }
+
+        recipients = combinedRecipients;
+        recipientCount = filteredVerifiedUsers.length + filteredNewsletterSubs.length;
+        description = "Target newsletter subscribers with verified email addresses (excludes backers & retailers)";
         break;
 
       case "backer":
-        // Previous backers - users who have made pledges
+        // Previous backers - users who have made pledges (excluding retailers)
         const backerIds = await db.pledge.findMany({
           where: { status: "COMPLETED" },
           select: { userId: true },
           distinct: ["userId"],
         });
         const backerUserIds = backerIds.map((b) => b.userId);
-        recipients = await db.user.findMany({
+
+        // Get retailer emails to exclude
+        const retailerEmailsForBackers = await db.newsletterSubscriber.findMany({
+          where: {
+            isActive: true,
+            source: { contains: "retailer", mode: "insensitive" },
+          },
+          select: { email: true },
+        });
+        const retailerEmailSetForBackers = new Set(retailerEmailsForBackers.map(r => r.email.toLowerCase()));
+
+        const allBackerUsers = await db.user.findMany({
           where: { id: { in: backerUserIds } },
           select: { id: true, email: true, name: true },
-          take: 100,
         });
-        recipientCount = backerUserIds.length;
+
+        // Filter out retailers
+        recipients = allBackerUsers.filter(u => !retailerEmailSetForBackers.has(u.email.toLowerCase())).slice(0, 100);
+        recipientCount = allBackerUsers.filter(u => !retailerEmailSetForBackers.has(u.email.toLowerCase())).length;
         description = "Engage previous backers who have supported projects";
         break;
 
@@ -97,6 +157,26 @@ export async function GET(
           where: { projects: { some: {} } },
         });
         description = "Notify project creators about platform updates and tips";
+        break;
+
+      case "retailer":
+        // Retailers - stored as newsletter subscribers with source "retailer"
+        const retailerSubs = await db.newsletterSubscriber.findMany({
+          where: {
+            isActive: true,
+            source: { contains: "retailer", mode: "insensitive" },
+          },
+          select: { id: true, email: true, name: true },
+          take: 100,
+        });
+        recipients = retailerSubs;
+        recipientCount = await db.newsletterSubscriber.count({
+          where: {
+            isActive: true,
+            source: { contains: "retailer", mode: "insensitive" },
+          },
+        });
+        description = "Reach out to retail partners and potential stockists";
         break;
 
       default:
@@ -206,23 +286,79 @@ export async function POST(
 
     // Get recipients based on campaign type
     let recipientUserIds: string[] = [];
+    let newsletterSubscriberEmails: string[] = [];
 
     switch (type) {
       case "subscriber":
-        const subscribers = await db.user.findMany({
-          where: { emailVerified: { not: null } },
-          select: { id: true },
-        });
-        recipientUserIds = subscribers.map((s) => s.id);
-        break;
+        // Get both registered users and newsletter subscribers (excluding retailers AND backers)
 
-      case "backer":
-        const backers = await db.pledge.findMany({
+        // Get backer IDs and emails to exclude
+        const backerPledgesForSub = await db.pledge.findMany({
           where: { status: "COMPLETED" },
           select: { userId: true },
           distinct: ["userId"],
         });
-        recipientUserIds = backers.map((b) => b.userId);
+        const backerUserIdSetForSub = new Set(backerPledgesForSub.map(p => p.userId));
+        const backerEmailsForSub = await db.user.findMany({
+          where: { id: { in: Array.from(backerUserIdSetForSub) } },
+          select: { email: true },
+        });
+        const backerEmailSetForSub = new Set(backerEmailsForSub.map(b => b.email.toLowerCase()));
+
+        const [subscriberUsers, nlSubscribers] = await Promise.all([
+          db.user.findMany({
+            where: { emailVerified: { not: null } },
+            select: { id: true, email: true },
+          }),
+          db.newsletterSubscriber.findMany({
+            where: {
+              isActive: true,
+              source: { not: { contains: "retailer" } },
+            },
+            select: { email: true },
+          }),
+        ]);
+
+        // Filter out backers from registered users
+        recipientUserIds = subscriberUsers
+          .filter(s => !backerUserIdSetForSub.has(s.id))
+          .map((s) => s.id);
+
+        // Track newsletter subscriber emails separately (they don't have user IDs)
+        // Exclude already registered users AND backers
+        const userEmails = new Set(subscriberUsers.map(u => u.email.toLowerCase()));
+        newsletterSubscriberEmails = nlSubscribers
+          .map(s => s.email.toLowerCase())
+          .filter(email => !userEmails.has(email) && !backerEmailSetForSub.has(email));
+        break;
+
+      case "backer":
+        // Get backers (excluding retailers)
+        const backersForPost = await db.pledge.findMany({
+          where: { status: "COMPLETED" },
+          select: { userId: true },
+          distinct: ["userId"],
+        });
+
+        // Get retailer emails to exclude
+        const retailerEmailsForBackerPost = await db.newsletterSubscriber.findMany({
+          where: {
+            isActive: true,
+            source: { contains: "retailer", mode: "insensitive" },
+          },
+          select: { email: true },
+        });
+        const retailerEmailSetForBackerPost = new Set(retailerEmailsForBackerPost.map(r => r.email.toLowerCase()));
+
+        // Get backer user emails and filter out retailers
+        const backerUsersForPost = await db.user.findMany({
+          where: { id: { in: backersForPost.map(b => b.userId) } },
+          select: { id: true, email: true },
+        });
+
+        recipientUserIds = backerUsersForPost
+          .filter(u => !retailerEmailSetForBackerPost.has(u.email.toLowerCase()))
+          .map(u => u.id);
         break;
 
       case "creator":
@@ -233,11 +369,24 @@ export async function POST(
         recipientUserIds = creators.map((c) => c.id);
         break;
 
+      case "retailer":
+        // Retailers are stored as newsletter subscribers with source "retailer"
+        const retailers = await db.newsletterSubscriber.findMany({
+          where: {
+            isActive: true,
+            source: { contains: "retailer", mode: "insensitive" },
+          },
+          select: { email: true },
+        });
+        newsletterSubscriberEmails = retailers.map((r) => r.email.toLowerCase());
+        break;
+
       default:
         return NextResponse.json({ error: "Invalid campaign type" }, { status: 400 });
     }
 
-    if (recipientUserIds.length === 0) {
+    const totalRecipients = recipientUserIds.length + newsletterSubscriberEmails.length;
+    if (totalRecipients === 0) {
       return NextResponse.json({ error: "No recipients found for this campaign type" }, { status: 400 });
     }
 

@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   ArrowRight,
   Upload,
+  Store,
 } from "lucide-react";
 
 interface EmailStats {
@@ -36,7 +37,7 @@ interface EmailCampaignsTabProps {
   emailStats: EmailStats | null;
   emailCampaigns: EmailCampaign[];
   setShowCampaignDialog: (show: boolean) => void;
-  onConfigureCampaignType?: (type: "subscriber" | "backer" | "creator") => void;
+  onConfigureCampaignType?: (type: "subscriber" | "backer" | "creator" | "retailer") => void;
   onImportCSV?: () => void;
 }
 
@@ -96,7 +97,7 @@ export function EmailCampaignsTab({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             <div className="rounded-lg border p-4">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-blue-100 p-2">
@@ -161,6 +162,26 @@ export function EmailCampaignsTab({
                 variant="outline"
                 className="mt-4 w-full"
                 onClick={() => onConfigureCampaignType?.("creator")}
+              >
+                <ArrowRight className="mr-2 h-4 w-4" />
+                Configure
+              </Button>
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-amber-100 p-2">
+                  <Store className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="font-medium">Retailer Campaigns</p>
+                  <p className="text-sm text-zinc-500">Reach retail partners</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                className="mt-4 w-full"
+                onClick={() => onConfigureCampaignType?.("retailer")}
               >
                 <ArrowRight className="mr-2 h-4 w-4" />
                 Configure

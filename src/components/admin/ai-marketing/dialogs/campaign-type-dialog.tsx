@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmailEditor } from "@/components/ui/email-editor";
-import { Loader2, Users, UserCheck, Layers, Send, Check, AlertCircle, FileArchive } from "lucide-react";
+import { Loader2, Users, UserCheck, Layers, Send, Check, AlertCircle, FileArchive, Store } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import JSZip from "jszip";
 
@@ -41,7 +41,7 @@ interface CampaignTypeConfig {
 interface CampaignTypeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  campaignType: "subscriber" | "backer" | "creator" | null;
+  campaignType: "subscriber" | "backer" | "creator" | "retailer" | null;
   onSuccess?: () => void;
 }
 
@@ -106,6 +106,7 @@ export function CampaignTypeDialog({
         subscriber: "Newsletter Subscriber Campaign",
         backer: "Backer Engagement Campaign",
         creator: "Creator Notification Campaign",
+        retailer: "Retailer Outreach Campaign",
       };
       setName(typeNames[campaignType] || "New Campaign");
     } catch (err) {
@@ -251,6 +252,8 @@ export function CampaignTypeDialog({
         return <UserCheck className="h-5 w-5 text-emerald-600" />;
       case "creator":
         return <Layers className="h-5 w-5 text-violet-600" />;
+      case "retailer":
+        return <Store className="h-5 w-5 text-amber-600" />;
       default:
         return null;
     }
@@ -264,6 +267,8 @@ export function CampaignTypeDialog({
         return "Backer Campaign";
       case "creator":
         return "Creator Campaign";
+      case "retailer":
+        return "Retailer Campaign";
       default:
         return "Campaign";
     }
