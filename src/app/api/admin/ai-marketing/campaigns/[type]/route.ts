@@ -72,7 +72,10 @@ export async function GET(
           db.newsletterSubscriber.findMany({
             where: {
               isActive: true,
-              source: { not: { contains: "retailer" } },
+              OR: [
+                { source: null },
+                { source: { not: { contains: "retailer" }, mode: "insensitive" } },
+              ],
             },
             select: { id: true, email: true, name: true },
           }),
@@ -313,7 +316,10 @@ export async function POST(
           db.newsletterSubscriber.findMany({
             where: {
               isActive: true,
-              source: { not: { contains: "retailer" } },
+              OR: [
+                { source: null },
+                { source: { not: { contains: "retailer" }, mode: "insensitive" } },
+              ],
             },
             select: { email: true },
           }),
@@ -560,25 +566,27 @@ export async function POST(
       data: {
         name,
         subject: aiContent.subject,
-        preheader: aiContent.preheader,
-        bodyHtml: generateCampaignHtml(aiContent, projects),
-        bodyText: generateCampaignText(aiContent, projects),
+        htmlContent: generateCampaignHtml(aiContent, projects),
         status: scheduleFor ? "SCHEDULED" : "DRAFT",
         recipientCount: eligibleRecipients.length,
         targetAudience: type,
-        projectCategory: "all",
-        scheduledAt: scheduleFor ? new Date(scheduleFor) : null,
-        aiGenerated: true,
-        aiContent: {
-          ...aiContent as object,
-          subjectVariants: subjectVariants || undefined,
-          hasOptimalSchedule: !!optimalSchedule,
-          campaignType: type,
-          interestMatching: {
-            enabled: aiSettings.emailPersonalization,
-            matchedRecipients: matchedEligible.length,
-            highMatchRecipients: highMatchCount,
-            avgMatchScore: Math.round(avgMatchScore),
+        scheduledFor: scheduleFor ? new Date(scheduleFor) : null,
+        filters: {
+          preheader: aiContent.preheader,
+          bodyText: generateCampaignText(aiContent, projects),
+          projectCategory: "all",
+          aiGenerated: true,
+          aiContent: {
+            ...aiContent as object,
+            subjectVariants: subjectVariants || undefined,
+            hasOptimalSchedule: !!optimalSchedule,
+            campaignType: type,
+            interestMatching: {
+              enabled: aiSettings.emailPersonalization,
+              matchedRecipients: matchedEligible.length,
+              highMatchRecipients: highMatchCount,
+              avgMatchScore: Math.round(avgMatchScore),
+            },
           },
         },
       },

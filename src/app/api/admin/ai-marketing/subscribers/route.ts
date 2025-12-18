@@ -50,7 +50,15 @@ export async function GET(req: NextRequest) {
       creatorsCount,
       retailersCount,
     ] = await Promise.all([
-      db.newsletterSubscriber.count({ where: { isActive: true, source: { not: { contains: "retailer" } } } }),
+      db.newsletterSubscriber.count({
+        where: {
+          isActive: true,
+          OR: [
+            { source: null },
+            { source: { not: { contains: "retailer" }, mode: "insensitive" } },
+          ],
+        },
+      }),
       db.user.count({ where: { emailVerified: { not: null } } }),
       db.pledge.findMany({
         where: { status: "COMPLETED" },
@@ -83,7 +91,10 @@ export async function GET(req: NextRequest) {
       const nlSubs = await db.newsletterSubscriber.findMany({
         where: {
           isActive: true,
-          source: { not: { contains: "retailer" } },
+          OR: [
+            { source: null },
+            { source: { not: { contains: "retailer" }, mode: "insensitive" } },
+          ],
           ...searchFilter,
         },
         select: {
@@ -99,15 +110,23 @@ export async function GET(req: NextRequest) {
       });
 
       subscribers = subscribers.concat(
-        nlSubs.map((s: { id: string; email: string; name: string | null; source: string; subscribedAt: Date | null }) => ({
+        nlSubs.map((s: { id: string; email: string; name: string | null; source: string | null; subscribedAt: Date | null }) => ({
           ...s,
+          source: s.source || "imported",
           category: "newsletter",
         }))
       );
 
       if (category === "newsletter") {
         total = await db.newsletterSubscriber.count({
-          where: { isActive: true, source: { not: { contains: "retailer" } }, ...searchFilter },
+          where: {
+            isActive: true,
+            OR: [
+              { source: null },
+              { source: { not: { contains: "retailer" }, mode: "insensitive" } },
+            ],
+            ...searchFilter,
+          },
         });
       }
     }
