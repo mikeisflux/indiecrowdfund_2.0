@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -146,28 +147,55 @@ export async function POST(
     // Remove duplicates
     recipientEmails = Array.from(new Set(recipientEmails));
 
-    // In a real system, this would queue emails for sending via a job queue
-    // For now, we'll just log them and mark as sent
-    let sentCount = 0;
+    console.log(`Sending campaign "${campaign.name}" to ${recipientEmails.length} recipients`);
 
-    // Create email log entries for tracking
+    let sentCount = 0;
+    let failedCount = 0;
+
+    // Send emails via SendGrid and log them
     for (const email of recipientEmails) {
       try {
-        await db.emailLog.create({
-          data: {
-            email,
-            subject: campaign.subject,
-            templateId: campaign.id,
-            status: "sent",
-            sentAt: new Date(),
-            type: "WEEKLY_DISCOVERY", // Marketing campaign type
-          },
+        // Actually send the email via SendGrid
+        const result = await sendEmail({
+          to: email,
+          subject: campaign.subject,
+          html: campaign.htmlContent,
         });
-        sentCount++;
+
+        if (result.success) {
+          // Log successful send
+          await db.emailLog.create({
+            data: {
+              email,
+              subject: campaign.subject,
+              templateId: campaign.id,
+              status: "sent",
+              sentAt: new Date(),
+              type: "WEEKLY_DISCOVERY",
+            },
+          });
+          sentCount++;
+        } else {
+          // Log failed send
+          await db.emailLog.create({
+            data: {
+              email,
+              subject: campaign.subject,
+              templateId: campaign.id,
+              status: "failed",
+              type: "WEEKLY_DISCOVERY",
+            },
+          });
+          failedCount++;
+          console.error(`Failed to send email to ${email}:`, result.error);
+        }
       } catch (err) {
-        console.error(`Failed to log email to ${email}:`, err);
+        failedCount++;
+        console.error(`Error sending email to ${email}:`, err);
       }
     }
+
+    console.log(`Campaign "${campaign.name}" complete: ${sentCount} sent, ${failedCount} failed`);
 
     // Update campaign as sent
     await db.emailCampaign.update({
