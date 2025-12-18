@@ -4,13 +4,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Home,
   Plus,
   ExternalLink,
   Settings,
   BarChart3,
   Users,
   DollarSign,
+  AlertCircle,
 } from "lucide-react";
 
 interface ConnectedProject {
@@ -25,35 +25,8 @@ interface ConnectedProject {
 
 interface ProjectsTabProps {
   projects?: ConnectedProject[];
+  hasActiveCampaign?: boolean;
 }
-
-// Demo data
-const demoProjects: ConnectedProject[] = [
-  {
-    id: "1",
-    title: "Flying Sparks Volumes 1-3",
-    platform: "indiecrowdfund",
-    status: "funded",
-    backers: 679,
-    raised: 48500,
-  },
-  {
-    id: "2",
-    title: "Flying Sparks Volume 4",
-    platform: "kickstarter",
-    status: "active",
-    backers: 342,
-    raised: 15200,
-  },
-  {
-    id: "3",
-    title: "Secret Project X",
-    platform: "indiecrowdfund",
-    status: "draft",
-    backers: 0,
-    raised: 0,
-  },
-];
 
 const platformLabels: Record<ConnectedProject["platform"], string> = {
   kickstarter: "KS",
@@ -67,22 +40,25 @@ const platformColors: Record<ConnectedProject["platform"], string> = {
   indiecrowdfund: "bg-teal-100 text-teal-700",
 };
 
-export function ProjectsTab({ projects = demoProjects }: ProjectsTabProps) {
+export function ProjectsTab({ projects = [], hasActiveCampaign = false }: ProjectsTabProps) {
+  if (!hasActiveCampaign) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Active Campaign</h3>
+            <p className="text-muted-foreground">
+              You must have an active campaign to see data here.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Launch Navigation */}
-      <div className="flex items-center gap-1 border-b pb-4">
-        <Home className="h-4 w-4 text-teal-600 mr-1" />
-        <span className="font-medium text-teal-600">Launch</span>
-        <div className="flex gap-1 ml-4">
-          <Button variant="ghost" size="sm">Dashboard</Button>
-          <Button variant="ghost" size="sm">Email Campaigns</Button>
-          <Button variant="ghost" size="sm">Teaser Pages</Button>
-          <Button variant="ghost" size="sm" className="text-teal-600 font-medium">Projects</Button>
-          <Button variant="ghost" size="sm">Members</Button>
-        </div>
-      </div>
-
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

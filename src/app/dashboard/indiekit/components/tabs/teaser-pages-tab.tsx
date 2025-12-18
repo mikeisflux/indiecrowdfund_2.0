@@ -4,13 +4,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Home,
   Plus,
   Eye,
   Edit,
   ExternalLink,
   FileText,
   Users,
+  AlertCircle,
 } from "lucide-react";
 
 interface TeaserPage {
@@ -25,44 +25,28 @@ interface TeaserPage {
 
 interface TeaserPagesTabProps {
   teaserPages?: TeaserPage[];
+  hasActiveCampaign?: boolean;
 }
 
-// Demo data
-const demoTeaserPages: TeaserPage[] = [
-  {
-    id: "1",
-    title: "Flying Sparks Volume 4",
-    status: "active",
-    url: "indiecrowdfund.co/teaser/flying-sparks-4",
-    signups: 342,
-    createdAt: "11/01/2024",
-  },
-  {
-    id: "2",
-    title: "Secret Project X",
-    status: "draft",
-    url: null,
-    signups: 0,
-    createdAt: "12/01/2024",
-  },
-];
+export function TeaserPagesTab({ teaserPages = [], hasActiveCampaign = false }: TeaserPagesTabProps) {
+  if (!hasActiveCampaign) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Active Campaign</h3>
+            <p className="text-muted-foreground">
+              You must have an active campaign to see data here.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-export function TeaserPagesTab({ teaserPages = demoTeaserPages }: TeaserPagesTabProps) {
   return (
     <div className="space-y-6">
-      {/* Launch Navigation */}
-      <div className="flex items-center gap-1 border-b pb-4">
-        <Home className="h-4 w-4 text-teal-600 mr-1" />
-        <span className="font-medium text-teal-600">Launch</span>
-        <div className="flex gap-1 ml-4">
-          <Button variant="ghost" size="sm">Dashboard</Button>
-          <Button variant="ghost" size="sm">Email Campaigns</Button>
-          <Button variant="ghost" size="sm" className="text-teal-600 font-medium">Teaser Pages</Button>
-          <Button variant="ghost" size="sm">Projects</Button>
-          <Button variant="ghost" size="sm">Members</Button>
-        </div>
-      </div>
-
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

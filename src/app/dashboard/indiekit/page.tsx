@@ -620,15 +620,15 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="teaser">
-                <TeaserPagesTab />
+                <TeaserPagesTab hasActiveCampaign={hasActiveCampaign} />
               </TabsContent>
 
               <TabsContent value="members">
-                <MembersTab />
+                <MembersTab hasActiveCampaign={hasActiveCampaign} />
               </TabsContent>
 
               <TabsContent value="projects">
-                <ProjectsTab />
+                <ProjectsTab hasActiveCampaign={hasActiveCampaign} />
               </TabsContent>
 
               <TabsContent value="segments">

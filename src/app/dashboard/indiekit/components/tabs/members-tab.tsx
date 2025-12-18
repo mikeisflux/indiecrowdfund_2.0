@@ -20,7 +20,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Home,
   Plus,
   Upload,
   Download,
@@ -32,6 +31,7 @@ import {
   XCircle,
   AlertCircle,
   MoreHorizontal,
+  Users,
 } from "lucide-react";
 
 interface Member {
@@ -46,51 +46,8 @@ interface Member {
 interface MembersTabProps {
   members?: Member[];
   totalMembers?: number;
+  hasActiveCampaign?: boolean;
 }
-
-// Demo data
-const demoMembers: Member[] = [
-  {
-    id: "1",
-    email: "john@email.com",
-    name: "John Smith",
-    source: "kickstarter",
-    joinedAt: "09/15/24",
-    status: "subscribed",
-  },
-  {
-    id: "2",
-    email: "jane@email.com",
-    name: "Jane Doe",
-    source: "teaser",
-    joinedAt: "10/01/24",
-    status: "subscribed",
-  },
-  {
-    id: "3",
-    email: "bob@email.com",
-    name: "Bob Wilson",
-    source: "import",
-    joinedAt: "08/20/24",
-    status: "subscribed",
-  },
-  {
-    id: "4",
-    email: "alice@email.com",
-    name: "Alice J.",
-    source: "preorder",
-    joinedAt: "11/05/24",
-    status: "unsubscribed",
-  },
-  {
-    id: "5",
-    email: "mike@email.com",
-    name: "Mike Brown",
-    source: "kickstarter",
-    joinedAt: "09/15/24",
-    status: "subscribed",
-  },
-];
 
 const sourceLabels: Record<Member["source"], string> = {
   kickstarter: "Kickstarter",
@@ -99,7 +56,7 @@ const sourceLabels: Record<Member["source"], string> = {
   preorder: "Pre-order",
 };
 
-export function MembersTab({ members = demoMembers, totalMembers = 1829 }: MembersTabProps) {
+export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign = false }: MembersTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredMembers = members.filter(
@@ -108,21 +65,24 @@ export function MembersTab({ members = demoMembers, totalMembers = 1829 }: Membe
       m.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  if (!hasActiveCampaign) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-12">
+            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Active Campaign</h3>
+            <p className="text-muted-foreground">
+              You must have an active campaign to see data here.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Launch Navigation */}
-      <div className="flex items-center gap-1 border-b pb-4">
-        <Home className="h-4 w-4 text-teal-600 mr-1" />
-        <span className="font-medium text-teal-600">Launch</span>
-        <div className="flex gap-1 ml-4">
-          <Button variant="ghost" size="sm">Dashboard</Button>
-          <Button variant="ghost" size="sm">Email Campaigns</Button>
-          <Button variant="ghost" size="sm">Teaser Pages</Button>
-          <Button variant="ghost" size="sm">Projects</Button>
-          <Button variant="ghost" size="sm" className="text-teal-600 font-medium">Members</Button>
-        </div>
-      </div>
-
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
