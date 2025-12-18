@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
           isActive: true,
           OR: [
             { source: null },
-            { source: { not: { contains: "retailer" }, mode: "insensitive" } },
+            { NOT: { source: { contains: "retailer", mode: "insensitive" } } },
           ],
         },
       }),
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
           isActive: true,
           OR: [
             { source: null },
-            { source: { not: { contains: "retailer" }, mode: "insensitive" } },
+            { NOT: { source: { contains: "retailer", mode: "insensitive" } } },
           ],
           ...searchFilter,
         },
@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
             isActive: true,
             OR: [
               { source: null },
-              { source: { not: { contains: "retailer" }, mode: "insensitive" } },
+              { NOT: { source: { contains: "retailer", mode: "insensitive" } } },
             ],
             ...searchFilter,
           },
