@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmailEditor } from "@/components/ui/email-editor";
-import { Loader2, Users, UserCheck, Layers, Send, Check, AlertCircle } from "lucide-react";
+import { Loader2, Users, UserCheck, Layers, Send, Check, AlertCircle, Upload, FileArchive } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
+import JSZip from "jszip";
 
 interface CampaignTypeConfig {
   type: string;
@@ -61,6 +62,9 @@ export function CampaignTypeDialog({
   const [subject, setSubject] = useState("");
   const [intro, setIntro] = useState("");
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const [importingCanva, setImportingCanva] = useState(false);
+  const [canvaFileName, setCanvaFileName] = useState<string | null>(null);
+  const canvaInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open && campaignType) {
@@ -74,6 +78,7 @@ export function CampaignTypeDialog({
       setSubject("");
       setIntro("");
       setSelectedProjects([]);
+      setCanvaFileName(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, campaignType]);
@@ -162,6 +167,80 @@ export function CampaignTypeDialog({
         ? prev.filter((id) => id !== projectId)
         : [...prev, projectId]
     );
+  };
+
+  const handleCanvaImport = async (file: File) => {
+    if (!file.name.endsWith(".zip")) {
+      setError("Please select a ZIP file exported from Canva");
+      return;
+    }
+
+    setImportingCanva(true);
+    setError(null);
+
+    try {
+      const zip = new JSZip();
+      const contents = await zip.loadAsync(file);
+
+      // Find HTML file (email.html or any .html file)
+      let htmlContent: string | null = null;
+      let foundImages: { name: string; data: string }[] = [];
+
+      for (const [filename, zipEntry] of Object.entries(contents.files)) {
+        if (zipEntry.dir) continue;
+
+        // Get HTML content
+        if (filename.endsWith(".html")) {
+          htmlContent = await zipEntry.async("string");
+        }
+
+        // Get images and convert to base64 data URLs
+        if (filename.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
+          const imageData = await zipEntry.async("base64");
+          const extension = filename.split(".").pop()?.toLowerCase() || "png";
+          const mimeType = extension === "jpg" ? "jpeg" : extension;
+          foundImages.push({
+            name: filename.split("/").pop() || filename,
+            data: `data:image/${mimeType};base64,${imageData}`,
+          });
+        }
+      }
+
+      if (!htmlContent) {
+        throw new Error("No HTML file found in the ZIP. Make sure you export the email as HTML from Canva.");
+      }
+
+      // Replace image references in HTML with base64 data URLs
+      let processedHtml = htmlContent;
+      for (const img of foundImages) {
+        // Replace various possible image reference formats
+        const imgName = img.name;
+        const patterns = [
+          new RegExp(`src=["'](?:images/)?${imgName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`, "gi"),
+          new RegExp(`src=["'][^"']*${imgName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`, "gi"),
+        ];
+        for (const pattern of patterns) {
+          processedHtml = processedHtml.replace(pattern, `src="${img.data}"`);
+        }
+      }
+
+      // Clean up HTML - extract body content if full HTML document
+      const bodyMatch = processedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      if (bodyMatch) {
+        processedHtml = bodyMatch[1].trim();
+      }
+
+      setIntro(processedHtml);
+      setCanvaFileName(file.name);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to import Canva file");
+    } finally {
+      setImportingCanva(false);
+      if (canvaInputRef.current) {
+        canvaInputRef.current.value = "";
+      }
+    }
   };
 
   const getTypeIcon = () => {
@@ -277,10 +356,49 @@ export function CampaignTypeDialog({
 
             {/* Intro Message with Rich Text Editor */}
             <div className="space-y-2">
-              <Label>Email Body Content (optional)</Label>
+              <div className="flex items-center justify-between">
+                <Label>Email Body Content (optional)</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={canvaInputRef}
+                    type="file"
+                    accept=".zip"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCanvaImport(file);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => canvaInputRef.current?.click()}
+                    disabled={importingCanva}
+                  >
+                    {importingCanva ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <FileArchive className="mr-2 h-4 w-4" />
+                        Import from Canva
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
               <p className="text-xs text-zinc-500 mb-2">
                 Design your email content below. Drag & drop or paste images directly. AI will add personalized project recommendations after your content.
               </p>
+              {canvaFileName && (
+                <div className="flex items-center gap-2 text-xs text-emerald-600 mb-2">
+                  <Check className="h-3 w-3" />
+                  Imported from: {canvaFileName}
+                </div>
+              )}
               <EmailEditor
                 value={intro}
                 onChange={setIntro}
