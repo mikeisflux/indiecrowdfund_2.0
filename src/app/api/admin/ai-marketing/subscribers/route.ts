@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
       });
 
       subscribers = subscribers.concat(
-        nlSubs.map(s => ({
+        nlSubs.map((s: { id: string; email: string; name: string | null; source: string; subscribedAt: Date | null }) => ({
           ...s,
           category: "newsletter",
         }))
@@ -272,7 +272,7 @@ export async function GET(req: NextRequest) {
       });
 
       subscribers = subscribers.concat(
-        retailerSubs.map(s => ({
+        retailerSubs.map((s: { id: string; email: string; name: string | null; source: string; subscribedAt: Date | null }) => ({
           ...s,
           category: "retailers",
         }))

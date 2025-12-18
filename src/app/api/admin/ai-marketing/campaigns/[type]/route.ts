@@ -87,7 +87,7 @@ export async function GET(
 
         // Count totals (excluding retailers and backers)
         const filteredVerifiedUsers = verifiedUsers.filter(u => !backerUserIdSet.has(u.id));
-        const filteredNewsletterSubs = newsletterSubs.filter(s => !backerEmailSet.has(s.email.toLowerCase()));
+        const filteredNewsletterSubs = newsletterSubs.filter((s: { email: string }) => !backerEmailSet.has(s.email.toLowerCase()));
 
         // Combine and dedupe by email (newsletter subscribers take priority)
         const emailSet = new Set<string>();
@@ -131,7 +131,7 @@ export async function GET(
           },
           select: { email: true },
         });
-        const retailerEmailSetForBackers = new Set(retailerEmailsForBackers.map(r => r.email.toLowerCase()));
+        const retailerEmailSetForBackers = new Set(retailerEmailsForBackers.map((r: { email: string }) => r.email.toLowerCase()));
 
         const allBackerUsers = await db.user.findMany({
           where: { id: { in: backerUserIds } },
@@ -328,8 +328,8 @@ export async function POST(
         // Exclude already registered users AND backers
         const userEmails = new Set(subscriberUsers.map(u => u.email.toLowerCase()));
         newsletterSubscriberEmails = nlSubscribers
-          .map(s => s.email.toLowerCase())
-          .filter(email => !userEmails.has(email) && !backerEmailSetForSub.has(email));
+          .map((s: { email: string }) => s.email.toLowerCase())
+          .filter((email: string) => !userEmails.has(email) && !backerEmailSetForSub.has(email));
         break;
 
       case "backer":
@@ -348,7 +348,7 @@ export async function POST(
           },
           select: { email: true },
         });
-        const retailerEmailSetForBackerPost = new Set(retailerEmailsForBackerPost.map(r => r.email.toLowerCase()));
+        const retailerEmailSetForBackerPost = new Set(retailerEmailsForBackerPost.map((r: { email: string }) => r.email.toLowerCase()));
 
         // Get backer user emails and filter out retailers
         const backerUsersForPost = await db.user.findMany({
@@ -378,7 +378,7 @@ export async function POST(
           },
           select: { email: true },
         });
-        newsletterSubscriberEmails = retailers.map((r) => r.email.toLowerCase());
+        newsletterSubscriberEmails = retailers.map((r: { email: string }) => r.email.toLowerCase());
         break;
 
       default:
