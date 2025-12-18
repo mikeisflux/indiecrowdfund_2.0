@@ -232,6 +232,71 @@ export async function GET(req: NextRequest) {
     // Count digital downloads distributed
     const digitalDownloads = surveyResponses.filter(sr => sr.isComplete).length;
 
+    // Calculate pledge level breakdown
+    const pledgeLevelCounts = new Map<string, number>();
+    pledges.filter(p => p.status === "COMPLETED").forEach(pledge => {
+      const level = pledge.reward?.title || "No Reward";
+      pledgeLevelCounts.set(level, (pledgeLevelCounts.get(level) || 0) + 1);
+    });
+    const pledgeLevelBreakdown = Array.from(pledgeLevelCounts.entries())
+      .map(([label, count]) => ({
+        label,
+        count,
+        percentage: totalBackers > 0 ? Math.round((count / totalBackers) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // Calculate survey status breakdown
+    const surveyStatusBreakdown = [
+      {
+        label: "Completed",
+        count: surveysCompleted,
+        percentage: totalBackers > 0 ? Math.round((surveysCompleted / totalBackers) * 100) : 0,
+        color: "bg-green-500",
+      },
+      {
+        label: "Pending",
+        count: surveysPending,
+        percentage: totalBackers > 0 ? Math.round((surveysPending / totalBackers) * 100) : 0,
+        color: "bg-yellow-500",
+      },
+    ];
+
+    // Calculate shipping region breakdown
+    const regionCounts = new Map<string, number>();
+    surveyResponses.forEach(sr => {
+      const address = sr.shippingAddress as { country?: string } | null;
+      const country = address?.country || "Unknown";
+      regionCounts.set(country, (regionCounts.get(country) || 0) + 1);
+    });
+    const shippingRegionBreakdown = Array.from(regionCounts.entries())
+      .map(([label, count]) => ({
+        label,
+        count,
+        percentage: surveyResponses.length > 0 ? Math.round((count / surveyResponses.length) * 100) : 0,
+        color: "bg-teal-500",
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10); // Top 10 regions
+
+    // Calculate payment status breakdown
+    const paymentCounts = {
+      completed: pledges.filter(p => p.status === "COMPLETED").length,
+      pending: pledges.filter(p => p.status === "PENDING").length,
+      failed: pledges.filter(p => p.status === "FAILED").length,
+      refunded: pledges.filter(p => p.status === "REFUNDED").length,
+    };
+    const totalPledges = pledges.length;
+    const paymentStatusBreakdown = [
+      { label: "Completed", count: paymentCounts.completed, percentage: totalPledges > 0 ? Math.round((paymentCounts.completed / totalPledges) * 100) : 0, color: "bg-green-500" },
+      { label: "Pending", count: paymentCounts.pending, percentage: totalPledges > 0 ? Math.round((paymentCounts.pending / totalPledges) * 100) : 0, color: "bg-yellow-500" },
+      { label: "Failed", count: paymentCounts.failed, percentage: totalPledges > 0 ? Math.round((paymentCounts.failed / totalPledges) * 100) : 0, color: "bg-red-500" },
+      { label: "Refunded", count: paymentCounts.refunded, percentage: totalPledges > 0 ? Math.round((paymentCounts.refunded / totalPledges) * 100) : 0, color: "bg-gray-500" },
+    ].filter(item => item.count > 0);
+
+    // Pre-order count
+    const preOrderBackers = pledges.filter(p => p.isPreOrder).length;
+
     const stats = {
       totalBackers,
       fulfilledBackers,
@@ -241,6 +306,11 @@ export async function GET(req: NextRequest) {
       addOnPurchases: addOnSales._sum.amount || 0,
       digitalDownloads,
       packagesShipped,
+      preOrderBackers,
+      pledgeLevelBreakdown,
+      surveyStatusBreakdown,
+      shippingRegionBreakdown,
+      paymentStatusBreakdown,
     };
 
     // Process backers for display

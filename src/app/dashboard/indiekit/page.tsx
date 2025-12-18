@@ -648,11 +648,15 @@ export default function IndieKitPage() {
                   totalBackers={stats?.totalBackers}
                   surveysDone={stats?.surveysCompleted}
                   preOrders={stats?.preOrderBackers}
+                  pledgeLevelBreakdown={stats?.pledgeLevelBreakdown}
+                  surveyStatusBreakdown={stats?.surveyStatusBreakdown}
+                  shippingRegionBreakdown={stats?.shippingRegionBreakdown}
+                  paymentStatusBreakdown={stats?.paymentStatusBreakdown}
                 />
               </TabsContent>
 
               <TabsContent value="support">
-                <SupportTab projectId={selectedProjectId} />
+                <SupportTab backers={backers} projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="survey-builder">

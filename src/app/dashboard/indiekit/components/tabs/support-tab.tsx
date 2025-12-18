@@ -35,8 +35,6 @@ import {
   Eye,
   Send,
   Link,
-  Copy,
-  HelpCircle,
   MoreHorizontal,
   Edit,
   History,
@@ -45,49 +43,56 @@ import {
   ExternalLink,
   CheckCircle2,
   Clock,
-  AlertTriangle,
 } from "lucide-react";
 
-interface SupportTicket {
+interface Backer {
   id: string;
-  pledgeId: string;
-  email: string;
+  backerNumber?: number;
   name: string;
-  subject: string;
-  status: "open" | "pending" | "resolved";
-  createdAt: string;
-  lastUpdate: string;
+  email: string;
+  avatar?: string;
+  pledgeAmount: number;
+  reward: string;
+  status: "not_pushed" | "push_errored" | "pushed" | "shipped";
+  surveyCompleted: boolean;
+  shippingAddress?: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state?: string;
+    postalCode?: string;
+    country: string;
+  };
+  items: { name: string; quantity: number }[];
 }
 
 interface SupportTabProps {
-  tickets?: SupportTicket[];
+  backers?: Backer[];
   projectId?: string;
 }
 
-const statusColors = {
-  open: "bg-yellow-100 text-yellow-700",
-  pending: "bg-blue-100 text-blue-700",
-  resolved: "bg-green-100 text-green-700",
+const surveyStatusColors = {
+  completed: "bg-green-100 text-green-700",
+  pending: "bg-yellow-100 text-yellow-700",
 };
 
-const statusIcons = {
-  open: <Clock className="h-3 w-3" />,
-  pending: <AlertTriangle className="h-3 w-3" />,
-  resolved: <CheckCircle2 className="h-3 w-3" />,
+const surveyStatusIcons = {
+  completed: <CheckCircle2 className="h-3 w-3" />,
+  pending: <Clock className="h-3 w-3" />,
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
+export function SupportTab({ backers = [], projectId }: SupportTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [selectedBacker, setSelectedBacker] = useState<Backer | null>(null);
   const [showBackerDialog, setShowBackerDialog] = useState(false);
   const [noteText, setNoteText] = useState("");
 
-  const filteredTickets = tickets.filter(
-    (ticket) =>
-      ticket.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.pledgeId.includes(searchQuery)
+  const filteredBackers = backers.filter(
+    (backer) =>
+      backer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      backer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      backer.id.includes(searchQuery) ||
+      (backer.backerNumber && backer.backerNumber.toString().includes(searchQuery))
   );
 
   return (
@@ -163,26 +168,37 @@ export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Pledge ID</TableHead>
+                    <TableHead>#</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Reward</TableHead>
+                    <TableHead>Survey</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTickets.length > 0 ? (
-                    filteredTickets.map((ticket) => (
+                  {filteredBackers.length > 0 ? (
+                    filteredBackers.slice(0, 20).map((backer) => (
                       <TableRow
-                        key={ticket.id}
+                        key={backer.id}
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => {
-                          setSelectedTicket(ticket);
+                          setSelectedBacker(backer);
                           setShowBackerDialog(true);
                         }}
                       >
-                        <TableCell className="font-mono">#{ticket.pledgeId}</TableCell>
-                        <TableCell>{ticket.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{ticket.email}</TableCell>
+                        <TableCell className="font-mono">#{backer.backerNumber || "—"}</TableCell>
+                        <TableCell>{backer.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{backer.email}</TableCell>
+                        <TableCell className="text-sm">{backer.reward}</TableCell>
+                        <TableCell>
+                          <Badge className={surveyStatusColors[backer.surveyCompleted ? "completed" : "pending"]}>
+                            <span className="flex items-center gap-1">
+                              {surveyStatusIcons[backer.surveyCompleted ? "completed" : "pending"]}
+                              {backer.surveyCompleted ? "Done" : "Pending"}
+                            </span>
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           <Button variant="ghost" size="icon">
                             <ExternalLink className="h-4 w-4" />
@@ -192,56 +208,61 @@ export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
                         No backers found matching your search
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
+              {filteredBackers.length > 20 && (
+                <div className="p-3 text-center text-sm text-muted-foreground border-t">
+                  Showing 20 of {filteredBackers.length} results. Refine your search for more specific results.
+                </div>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Recent Support Activity */}
+      {/* Recent Backers */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Support Activity</CardTitle>
-          <CardDescription>Recent backer inquiries and issues</CardDescription>
+          <CardTitle>Recent Backers</CardTitle>
+          <CardDescription>Latest backers to look up for support</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Pledge</TableHead>
+                <TableHead>#</TableHead>
                 <TableHead>Backer</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Update</TableHead>
+                <TableHead>Reward</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Survey</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell className="font-mono">#{ticket.pledgeId}</TableCell>
+              {backers.slice(0, 10).map((backer) => (
+                <TableRow key={backer.id}>
+                  <TableCell className="font-mono">#{backer.backerNumber || "—"}</TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{ticket.name}</p>
-                      <p className="text-xs text-muted-foreground">{ticket.email}</p>
+                      <p className="font-medium">{backer.name}</p>
+                      <p className="text-xs text-muted-foreground">{backer.email}</p>
                     </div>
                   </TableCell>
-                  <TableCell>{ticket.subject}</TableCell>
+                  <TableCell className="text-sm">{backer.reward}</TableCell>
+                  <TableCell>${backer.pledgeAmount.toLocaleString()}</TableCell>
                   <TableCell>
-                    <Badge className={statusColors[ticket.status]}>
+                    <Badge className={surveyStatusColors[backer.surveyCompleted ? "completed" : "pending"]}>
                       <span className="flex items-center gap-1">
-                        {statusIcons[ticket.status]}
-                        {ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
+                        {surveyStatusIcons[backer.surveyCompleted ? "completed" : "pending"]}
+                        {backer.surveyCompleted ? "Done" : "Pending"}
                       </span>
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{ticket.lastUpdate}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -251,7 +272,7 @@ export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => {
-                          setSelectedTicket(ticket);
+                          setSelectedBacker(backer);
                           setShowBackerDialog(true);
                         }}>
                           <Eye className="h-4 w-4 mr-2" />
@@ -283,6 +304,13 @@ export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
                   </TableCell>
                 </TableRow>
               ))}
+              {backers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No backers yet
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -293,10 +321,10 @@ export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              Pledge #{selectedTicket?.pledgeId}
+              Backer #{selectedBacker?.backerNumber || "—"}
             </DialogTitle>
             <DialogDescription>
-              {selectedTicket?.name} ({selectedTicket?.email})
+              {selectedBacker?.name} ({selectedBacker?.email})
             </DialogDescription>
           </DialogHeader>
 
@@ -308,19 +336,11 @@ export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
             </Button>
             <Button variant="outline" size="sm">
               <Send className="h-4 w-4 mr-2" />
-              Resend
+              Resend Survey
             </Button>
             <Button variant="outline" size="sm">
               <Link className="h-4 w-4 mr-2" />
-              <span className="text-xs font-mono truncate max-w-[120px]">
-                https://survey...
-              </span>
-            </Button>
-            <Button variant="outline" size="sm">
-              <Copy className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm">
-              <HelpCircle className="h-4 w-4" />
+              Copy Survey Link
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -355,19 +375,21 @@ export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
               <CardContent className="text-sm space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Pledge Level</span>
-                  <span>Collector&apos;s Edition</span>
+                  <span>{selectedBacker?.reward || "No Reward"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount</span>
-                  <span>$150.00</span>
+                  <span>${selectedBacker?.pledgeAmount?.toLocaleString() || "0"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Add-ons</span>
-                  <span>2 items</span>
+                  <span className="text-muted-foreground">Items</span>
+                  <span>{selectedBacker?.items?.length || 0} items</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Survey Status</span>
-                  <Badge className="bg-green-100 text-green-700">Completed</Badge>
+                  <Badge className={surveyStatusColors[selectedBacker?.surveyCompleted ? "completed" : "pending"]}>
+                    {selectedBacker?.surveyCompleted ? "Completed" : "Pending"}
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -376,14 +398,45 @@ export function SupportTab({ tickets = [], projectId }: SupportTabProps) {
                 <CardTitle className="text-sm">Shipping Info</CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-1">
-                <p>{selectedTicket?.name}</p>
-                <p className="text-muted-foreground">123 Main Street</p>
-                <p className="text-muted-foreground">Apt 4B</p>
-                <p className="text-muted-foreground">New York, NY 10001</p>
-                <p className="text-muted-foreground">United States</p>
+                {selectedBacker?.shippingAddress ? (
+                  <>
+                    <p>{selectedBacker.name}</p>
+                    <p className="text-muted-foreground">{selectedBacker.shippingAddress.line1}</p>
+                    {selectedBacker.shippingAddress.line2 && (
+                      <p className="text-muted-foreground">{selectedBacker.shippingAddress.line2}</p>
+                    )}
+                    <p className="text-muted-foreground">
+                      {selectedBacker.shippingAddress.city}
+                      {selectedBacker.shippingAddress.state && `, ${selectedBacker.shippingAddress.state}`}
+                      {selectedBacker.shippingAddress.postalCode && ` ${selectedBacker.shippingAddress.postalCode}`}
+                    </p>
+                    <p className="text-muted-foreground">{selectedBacker.shippingAddress.country}</p>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">No shipping address on file</p>
+                )}
               </CardContent>
             </Card>
           </div>
+
+          {/* Items */}
+          {selectedBacker?.items && selectedBacker.items.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Order Items</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm">
+                <ul className="space-y-1">
+                  {selectedBacker.items.map((item, idx) => (
+                    <li key={idx} className="flex justify-between">
+                      <span>{item.name}</span>
+                      <span className="text-muted-foreground">×{item.quantity}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Add Note */}
           <div className="space-y-2">
