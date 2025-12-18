@@ -100,7 +100,7 @@ export async function POST(
             select: { email: true },
           }),
         ]);
-        const subEmails = new Set(subscribers.map(s => s.email.toLowerCase()));
+        const subEmails = new Set<string>(subscribers.map((s: { email: string }) => s.email.toLowerCase()));
         verifiedUsers.forEach(u => subEmails.add(u.email.toLowerCase()));
         recipientEmails = Array.from(subEmails);
         break;
@@ -134,7 +134,7 @@ export async function POST(
           },
           select: { email: true },
         });
-        recipientEmails = retailers.map(r => r.email.toLowerCase());
+        recipientEmails = retailers.map((r: { email: string }) => r.email.toLowerCase());
         break;
 
       default:
@@ -147,7 +147,7 @@ export async function POST(
     }
 
     // Remove duplicates
-    recipientEmails = [...new Set(recipientEmails)];
+    recipientEmails = Array.from(new Set(recipientEmails));
 
     // In a real system, this would queue emails for sending via a job queue
     // For now, we'll just log them and mark as sent
