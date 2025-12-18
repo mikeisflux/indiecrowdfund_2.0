@@ -851,6 +851,7 @@ export default function AIMarketingPage() {
             setShowCampaignDialog={setShowCampaignDialog}
             onConfigureCampaignType={handleConfigureCampaignType}
             onImportCSV={() => setShowCSVImportDialog(true)}
+            onRefresh={loadData}
           />
         </TabsContent>
 

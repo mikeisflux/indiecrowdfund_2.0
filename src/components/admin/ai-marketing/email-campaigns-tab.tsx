@@ -1,6 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -9,6 +14,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Sparkles,
   Users,
@@ -27,7 +57,13 @@ import {
   AlertCircle,
   Play,
   Brain,
+  MoreHorizontal,
+  Pencil,
+  Copy,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface EmailStats {
   totalSent: number;
@@ -49,12 +85,31 @@ interface EmailCampaign {
   scheduledFor?: string | null;
 }
 
+interface CampaignDetails {
+  id: string;
+  name: string;
+  subject: string;
+  htmlContent: string;
+  targetAudience: string;
+  status: string;
+  scheduledFor: string | null;
+  sentAt: string | null;
+  recipientCount: number;
+  sentCount: number;
+  openCount: number;
+  clickCount: number;
+  bounceCount: number;
+  unsubscribeCount: number;
+  createdAt: string;
+}
+
 interface EmailCampaignsTabProps {
   emailStats: EmailStats | null;
   emailCampaigns: EmailCampaign[];
   setShowCampaignDialog: (show: boolean) => void;
   onConfigureCampaignType?: (type: "subscriber" | "backer" | "creator" | "retailer") => void;
   onImportCSV?: () => void;
+  onRefresh?: () => void;
 }
 
 export function EmailCampaignsTab({
@@ -63,9 +118,127 @@ export function EmailCampaignsTab({
   setShowCampaignDialog,
   onConfigureCampaignType,
   onImportCSV,
+  onRefresh,
 }: EmailCampaignsTabProps) {
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignDetails | null>(null);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<EmailCampaign | null>(null);
+  const [campaignToSend, setCampaignToSend] = useState<EmailCampaign | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editSubject, setEditSubject] = useState("");
+
+  // Fetch campaign details
+  const fetchCampaignDetails = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedCampaign(data.campaign);
+        setEditName(data.campaign.name);
+        setEditSubject(data.campaign.subject);
+        setShowPreviewDialog(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch campaign details:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Send campaign
+  const handleSendCampaign = async () => {
+    if (!campaignToSend) return;
+    setActionLoading(campaignToSend.id);
+    try {
+      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaignToSend.id}/send`, {
+        method: "POST",
+        headers: { ...getCSRFHeaders() },
+      });
+      if (response.ok) {
+        onRefresh?.();
+      }
+    } catch (error) {
+      console.error("Failed to send campaign:", error);
+    } finally {
+      setActionLoading(null);
+      setShowSendDialog(false);
+      setCampaignToSend(null);
+    }
+  };
+
+  // Delete campaign
+  const handleDeleteCampaign = async () => {
+    if (!campaignToDelete) return;
+    setActionLoading(campaignToDelete.id);
+    try {
+      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaignToDelete.id}`, {
+        method: "DELETE",
+        headers: { ...getCSRFHeaders() },
+      });
+      if (response.ok) {
+        onRefresh?.();
+      }
+    } catch (error) {
+      console.error("Failed to delete campaign:", error);
+    } finally {
+      setActionLoading(null);
+      setShowDeleteDialog(false);
+      setCampaignToDelete(null);
+    }
+  };
+
+  // Duplicate campaign
+  const handleDuplicateCampaign = async (campaign: EmailCampaign) => {
+    setActionLoading(campaign.id);
+    try {
+      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaign.id}/duplicate`, {
+        method: "POST",
+        headers: { ...getCSRFHeaders() },
+      });
+      if (response.ok) {
+        onRefresh?.();
+      }
+    } catch (error) {
+      console.error("Failed to duplicate campaign:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Save campaign edits
+  const handleSaveEdit = async () => {
+    if (!selectedCampaign) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${selectedCampaign.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          name: editName,
+          subject: editSubject,
+        }),
+      });
+      if (response.ok) {
+        setEditMode(false);
+        onRefresh?.();
+        setShowPreviewDialog(false);
+      }
+    } catch (error) {
+      console.error("Failed to save campaign:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="mt-6 space-y-6">
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-6">
@@ -97,6 +270,7 @@ export function EmailCampaignsTab({
         </Card>
       </div>
 
+      {/* Campaign Type Cards */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -220,6 +394,11 @@ export function EmailCampaignsTab({
                 View and manage all email campaigns with AI insights
               </CardDescription>
             </div>
+            {onRefresh && (
+              <Button variant="outline" size="sm" onClick={onRefresh}>
+                Refresh
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -245,17 +424,15 @@ export function EmailCampaignsTab({
                     <TableHead className="text-center">Recipients</TableHead>
                     <TableHead className="text-center">Opens</TableHead>
                     <TableHead className="text-center">Clicks</TableHead>
-                    <TableHead className="text-center">Conversions</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead className="w-[70px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {emailCampaigns.map((campaign) => (
                     <TableRow key={campaign.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="font-medium">{campaign.name}</div>
-                        </div>
+                        <div className="font-medium">{campaign.name}</div>
                       </TableCell>
                       <TableCell>
                         <CampaignStatusBadge status={campaign.status} />
@@ -284,17 +461,6 @@ export function EmailCampaignsTab({
                         <div className="flex items-center justify-center gap-1">
                           <MousePointer className="h-3.5 w-3.5 text-emerald-500" />
                           {campaign.clicks.toLocaleString()}
-                          {campaign.opens > 0 && (
-                            <span className="text-xs text-zinc-400">
-                              ({Math.round((campaign.clicks / campaign.opens) * 100)}%)
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <ShoppingCart className="h-3.5 w-3.5 text-amber-500" />
-                          {campaign.conversions.toLocaleString()}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -306,6 +472,64 @@ export function EmailCampaignsTab({
                               : "Draft"
                           }
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              disabled={actionLoading === campaign.id}
+                            >
+                              {actionLoading === campaign.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <MoreHorizontal className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => fetchCampaignDetails(campaign.id)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            {campaign.status.toUpperCase() === "DRAFT" && (
+                              <>
+                                <DropdownMenuItem onClick={() => {
+                                  fetchCampaignDetails(campaign.id);
+                                  setEditMode(true);
+                                }}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setCampaignToSend(campaign);
+                                  setShowSendDialog(true);
+                                }}>
+                                  <Send className="mr-2 h-4 w-4" />
+                                  Send Now
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuItem onClick={() => handleDuplicateCampaign(campaign)}>
+                              <Copy className="mr-2 h-4 w-4" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => {
+                                setCampaignToDelete(campaign);
+                                setShowDeleteDialog(true);
+                              }}
+                              disabled={campaign.status.toUpperCase() === "SENDING"}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -357,6 +581,182 @@ export function EmailCampaignsTab({
           </div>
         </CardContent>
       </Card>
+
+      {/* Campaign Preview/Edit Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={(open) => {
+        setShowPreviewDialog(open);
+        if (!open) {
+          setEditMode(false);
+          setSelectedCampaign(null);
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {editMode ? (
+                <>
+                  <Pencil className="h-5 w-5" />
+                  Edit Campaign
+                </>
+              ) : (
+                <>
+                  <Eye className="h-5 w-5" />
+                  Campaign Details
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedCampaign && (
+                <span className="flex items-center gap-2">
+                  <CampaignStatusBadge status={selectedCampaign.status} />
+                  <span className="text-zinc-400">|</span>
+                  <span>{selectedCampaign.recipientCount.toLocaleString()} recipients</span>
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedCampaign && (
+            <div className="space-y-4">
+              {editMode ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name">Campaign Name</Label>
+                    <Input
+                      id="edit-name"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-subject">Subject Line</Label>
+                    <Input
+                      id="edit-subject"
+                      value={editSubject}
+                      onChange={(e) => setEditSubject(e.target.value)}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-500">Name</p>
+                      <p className="font-medium">{selectedCampaign.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-500">Subject</p>
+                      <p>{selectedCampaign.subject}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-500">Audience</p>
+                      <p className="capitalize">{selectedCampaign.targetAudience || "All"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-500">Created</p>
+                      <p>{new Date(selectedCampaign.createdAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-4 gap-4 p-4 bg-zinc-50 rounded-lg">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold">{selectedCampaign.sentCount.toLocaleString()}</p>
+                      <p className="text-sm text-zinc-500">Sent</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-blue-600">{selectedCampaign.openCount.toLocaleString()}</p>
+                      <p className="text-sm text-zinc-500">Opens</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-emerald-600">{selectedCampaign.clickCount.toLocaleString()}</p>
+                      <p className="text-sm text-zinc-500">Clicks</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-red-600">{selectedCampaign.bounceCount.toLocaleString()}</p>
+                      <p className="text-sm text-zinc-500">Bounces</p>
+                    </div>
+                  </div>
+
+                  {/* Email Preview */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-zinc-500">Email Preview</p>
+                    <div className="border rounded-lg p-4 bg-white max-h-[300px] overflow-y-auto">
+                      <div dangerouslySetInnerHTML={{ __html: selectedCampaign.htmlContent }} />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            {editMode ? (
+              <>
+                <Button variant="outline" onClick={() => setEditMode(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Save Changes
+                </Button>
+              </>
+            ) : (
+              <>
+                {selectedCampaign?.status.toUpperCase() === "DRAFT" && (
+                  <Button variant="outline" onClick={() => setEditMode(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setShowPreviewDialog(false)}>
+                  Close
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Campaign</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{campaignToDelete?.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCampaign}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Send Confirmation Dialog */}
+      <AlertDialog open={showSendDialog} onOpenChange={setShowSendDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send Campaign Now</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to send &quot;{campaignToSend?.name}&quot; to {campaignToSend?.recipients.toLocaleString()} recipients? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSendCampaign}>
+              <Send className="mr-2 h-4 w-4" />
+              Send Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
