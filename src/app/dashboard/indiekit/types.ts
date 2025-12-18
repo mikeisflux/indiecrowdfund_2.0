@@ -7,6 +7,13 @@ export interface Project {
   status: string;
 }
 
+export interface CountBreakdown {
+  label: string;
+  count: number;
+  percentage: number;
+  color?: string;
+}
+
 export interface FulfillmentStats {
   totalBackers: number;
   fulfilledBackers: number;
@@ -27,6 +34,10 @@ export interface FulfillmentStats {
   preOrderRevenue: number;
   returningBackers: number;
   newBackers: number;
+  pledgeLevelBreakdown?: CountBreakdown[];
+  surveyStatusBreakdown?: CountBreakdown[];
+  shippingRegionBreakdown?: CountBreakdown[];
+  paymentStatusBreakdown?: CountBreakdown[];
 }
 
 export interface WorkflowStep {
