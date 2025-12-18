@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmailEditor } from "@/components/ui/email-editor";
-import { Loader2, Users, UserCheck, Layers, Send, Check, AlertCircle, Upload, FileArchive } from "lucide-react";
+import { Loader2, Users, UserCheck, Layers, Send, Check, AlertCircle, FileArchive } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import JSZip from "jszip";
 
@@ -184,7 +184,7 @@ export function CampaignTypeDialog({
 
       // Find HTML file (email.html or any .html file)
       let htmlContent: string | null = null;
-      let foundImages: { name: string; data: string }[] = [];
+      const foundImages: { name: string; data: string }[] = [];
 
       for (const [filename, zipEntry] of Object.entries(contents.files)) {
         if (zipEntry.dir) continue;
