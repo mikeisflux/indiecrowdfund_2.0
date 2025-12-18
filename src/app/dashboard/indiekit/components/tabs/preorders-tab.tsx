@@ -44,7 +44,9 @@ export function PreOrdersTab({ stats, hasActiveCampaign = false }: PreOrdersTabP
   const totalBackers = stats?.totalBackers || 0;
   const returningBackers = stats?.returningBackers || 0;
   const newBackers = stats?.newBackers || 0;
-  const totalRaised = stats?.totalRaised || 0;
+  // totalRaised available for future use
+  const _totalRaised = stats?.totalRaised || 0;
+  void _totalRaised;
 
   // Calculate percentages
   const returningPercent = totalBackers > 0 ? (returningBackers / totalBackers) * 100 : 0;

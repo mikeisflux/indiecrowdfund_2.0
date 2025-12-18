@@ -81,7 +81,9 @@ const surveyStatusIcons = {
   pending: <Clock className="h-3 w-3" />,
 };
 
-export function SupportTab({ backers = [], projectId }: SupportTabProps) {
+export function SupportTab({ backers = [], projectId: _projectId }: SupportTabProps) {
+  // projectId available for future API calls
+  void _projectId;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBacker, setSelectedBacker] = useState<Backer | null>(null);
   const [showBackerDialog, setShowBackerDialog] = useState(false);
