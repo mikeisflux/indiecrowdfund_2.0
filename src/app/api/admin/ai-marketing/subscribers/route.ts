@@ -43,6 +43,9 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit;
 
     // Get counts for each category
+    // For newsletter subscribers, we want all active subscribers EXCEPT those with "retailer" in source
+    const retailerFilter = { source: { contains: "retailer", mode: "insensitive" as const } };
+
     const [
       newsletterCount,
       verifiedUsersCount,
@@ -53,10 +56,7 @@ export async function GET(req: NextRequest) {
       db.newsletterSubscriber.count({
         where: {
           isActive: true,
-          OR: [
-            { source: null },
-            { NOT: { source: { contains: "retailer", mode: "insensitive" } } },
-          ],
+          NOT: retailerFilter,
         },
       }),
       db.user.count({ where: { emailVerified: { not: null } } }),
@@ -91,10 +91,7 @@ export async function GET(req: NextRequest) {
       const nlSubs = await db.newsletterSubscriber.findMany({
         where: {
           isActive: true,
-          OR: [
-            { source: null },
-            { NOT: { source: { contains: "retailer", mode: "insensitive" } } },
-          ],
+          NOT: retailerFilter,
           ...searchFilter,
         },
         select: {
@@ -121,10 +118,7 @@ export async function GET(req: NextRequest) {
         total = await db.newsletterSubscriber.count({
           where: {
             isActive: true,
-            OR: [
-              { source: null },
-              { NOT: { source: { contains: "retailer", mode: "insensitive" } } },
-            ],
+            NOT: retailerFilter,
             ...searchFilter,
           },
         });

@@ -72,10 +72,7 @@ export async function GET(
           db.newsletterSubscriber.findMany({
             where: {
               isActive: true,
-              OR: [
-                { source: null },
-                { NOT: { source: { contains: "retailer", mode: "insensitive" } } },
-              ],
+              NOT: { source: { contains: "retailer", mode: "insensitive" } },
             },
             select: { id: true, email: true, name: true },
           }),
@@ -316,10 +313,7 @@ export async function POST(
           db.newsletterSubscriber.findMany({
             where: {
               isActive: true,
-              OR: [
-                { source: null },
-                { NOT: { source: { contains: "retailer", mode: "insensitive" } } },
-              ],
+              NOT: { source: { contains: "retailer", mode: "insensitive" } },
             },
             select: { email: true },
           }),
