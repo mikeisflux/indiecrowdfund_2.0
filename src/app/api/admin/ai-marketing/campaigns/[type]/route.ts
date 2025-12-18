@@ -151,13 +151,13 @@ export async function GET(
         // Project creators
         recipients = await db.user.findMany({
           where: {
-            projects: { some: {} },
+            createdProjects: { some: {} },
           },
           select: { id: true, email: true, name: true },
           take: 100,
         });
         recipientCount = await db.user.count({
-          where: { projects: { some: {} } },
+          where: { createdProjects: { some: {} } },
         });
         description = "Notify project creators about platform updates and tips";
         break;
@@ -369,7 +369,7 @@ export async function POST(
 
       case "creator":
         const creators = await db.user.findMany({
-          where: { projects: { some: {} } },
+          where: { createdProjects: { some: {} } },
           select: { id: true },
         });
         recipientUserIds = creators.map((c) => c.id);

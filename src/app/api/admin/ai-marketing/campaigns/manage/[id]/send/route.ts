@@ -120,7 +120,7 @@ export async function POST(
 
       case "creator":
         const creators = await db.user.findMany({
-          where: { projects: { some: {} } },
+          where: { createdProjects: { some: {} } },
           select: { email: true },
         });
         recipientEmails = creators.map(c => c.email.toLowerCase());

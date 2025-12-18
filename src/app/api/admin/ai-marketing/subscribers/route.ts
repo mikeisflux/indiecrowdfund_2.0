@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
         select: { userId: true },
         distinct: ["userId"],
       }).then(pledges => pledges.length),
-      db.user.count({ where: { projects: { some: {} } } }),
+      db.user.count({ where: { createdProjects: { some: {} } } }),
       db.newsletterSubscriber.count({ where: { isActive: true, source: { contains: "retailer", mode: "insensitive" } } }),
     ]);
 
@@ -226,7 +226,7 @@ export async function GET(req: NextRequest) {
     if (category === "all" || category === "creators") {
       const creatorUsers = await db.user.findMany({
         where: {
-          projects: { some: {} },
+          createdProjects: { some: {} },
           ...(search ? {
             OR: [
               { email: { contains: search, mode: "insensitive" } },
@@ -259,7 +259,7 @@ export async function GET(req: NextRequest) {
       if (category === "creators") {
         total = await db.user.count({
           where: {
-            projects: { some: {} },
+            createdProjects: { some: {} },
             ...(search ? {
               OR: [
                 { email: { contains: search, mode: "insensitive" } },
