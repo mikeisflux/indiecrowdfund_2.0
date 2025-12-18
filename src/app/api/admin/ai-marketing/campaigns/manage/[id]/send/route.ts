@@ -160,6 +160,7 @@ export async function POST(
             templateId: campaign.id,
             status: "sent",
             sentAt: new Date(),
+            type: "WEEKLY_DISCOVERY", // Marketing campaign type
           },
         });
         sentCount++;
