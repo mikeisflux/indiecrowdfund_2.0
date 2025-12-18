@@ -126,6 +126,7 @@ export function EmailCampaignsTab({
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [campaignToDelete, setCampaignToDelete] = useState<EmailCampaign | null>(null);
   const [campaignToSend, setCampaignToSend] = useState<EmailCampaign | null>(null);
+  const [isResend, setIsResend] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -151,14 +152,15 @@ export function EmailCampaignsTab({
     }
   };
 
-  // Send campaign
+  // Send campaign (or resend)
   const handleSendCampaign = async () => {
     if (!campaignToSend) return;
     setActionLoading(campaignToSend.id);
     try {
       const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaignToSend.id}/send`, {
         method: "POST",
-        headers: { ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ resend: isResend }),
       });
       if (response.ok) {
         onRefresh?.();
@@ -169,6 +171,7 @@ export function EmailCampaignsTab({
       setActionLoading(null);
       setShowSendDialog(false);
       setCampaignToSend(null);
+      setIsResend(false);
     }
   };
 
@@ -505,12 +508,23 @@ export function EmailCampaignsTab({
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => {
                                   setCampaignToSend(campaign);
+                                  setIsResend(false);
                                   setShowSendDialog(true);
                                 }}>
                                   <Send className="mr-2 h-4 w-4" />
                                   Send Now
                                 </DropdownMenuItem>
                               </>
+                            )}
+                            {campaign.status.toUpperCase() === "SENT" && (
+                              <DropdownMenuItem onClick={() => {
+                                setCampaignToSend(campaign);
+                                setIsResend(true);
+                                setShowSendDialog(true);
+                              }}>
+                                <Send className="mr-2 h-4 w-4" />
+                                Resend Campaign
+                              </DropdownMenuItem>
                             )}
                             <DropdownMenuItem onClick={() => handleDuplicateCampaign(campaign)}>
                               <Copy className="mr-2 h-4 w-4" />
@@ -743,16 +757,24 @@ export function EmailCampaignsTab({
       <AlertDialog open={showSendDialog} onOpenChange={setShowSendDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Send Campaign Now</AlertDialogTitle>
+            <AlertDialogTitle>{isResend ? "Resend Campaign" : "Send Campaign Now"}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to send &quot;{campaignToSend?.name}&quot; to {campaignToSend?.recipients.toLocaleString()} recipients? This action cannot be undone.
+              {isResend ? (
+                <>
+                  Are you sure you want to <strong>resend</strong> &quot;{campaignToSend?.name}&quot; to {campaignToSend?.recipients.toLocaleString()} recipients? This will send emails to all recipients again, including those who already received it.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to send &quot;{campaignToSend?.name}&quot; to {campaignToSend?.recipients.toLocaleString()} recipients? This action cannot be undone.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleSendCampaign}>
               <Send className="mr-2 h-4 w-4" />
-              Send Now
+              {isResend ? "Resend Now" : "Send Now"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

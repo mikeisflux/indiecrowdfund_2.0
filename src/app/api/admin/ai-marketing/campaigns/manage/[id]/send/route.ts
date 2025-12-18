@@ -57,10 +57,14 @@ export async function POST(
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
+    // Check if resend is requested
+    const body = await request.json().catch(() => ({}));
+    const isResend = body?.resend === true;
+
     // Check status
-    if (campaign.status === "SENT") {
+    if (campaign.status === "SENT" && !isResend) {
       return NextResponse.json(
-        { error: "Campaign has already been sent" },
+        { error: "Campaign has already been sent. Use resend option to send again." },
         { status: 400 }
       );
     }
@@ -70,6 +74,11 @@ export async function POST(
         { error: "Campaign is already being sent" },
         { status: 400 }
       );
+    }
+
+    // Log if this is a resend
+    if (isResend) {
+      console.log(`Resending campaign "${campaign.name}" (previously sent at ${campaign.status === "SENT" ? "earlier" : "never"})`);
     }
 
     // Update status to SENDING
