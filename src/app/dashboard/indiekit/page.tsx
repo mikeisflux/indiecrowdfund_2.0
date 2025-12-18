@@ -187,6 +187,11 @@ export default function IndieKitPage() {
     return matchesSearch && matchesStatus;
   });
 
+  // Check if user has an active campaign (not just prelaunch pages)
+  const hasActiveCampaign = projects.some(p =>
+    ["ACTIVE", "FUNDED", "COMPLETED", "FULFILLING"].includes(p.status)
+  ) || backers.length > 0;
+
   // Toggle backer selection
   const toggleBackerSelection = (backerId: string) => {
     setSelectedBackers((prev) =>
@@ -563,6 +568,7 @@ export default function IndieKitPage() {
                   onSelectAllBackers={selectAllBackers}
                   onOpenBackerDetail={openBackerDetail}
                   onPushSelectedOrders={pushSelectedOrders}
+                  hasActiveCampaign={hasActiveCampaign}
                 />
               </TabsContent>
 
@@ -584,6 +590,7 @@ export default function IndieKitPage() {
                   packageGroups={packageGroups}
                   packageGroupFilter={packageGroupFilter}
                   onPackageGroupFilterChange={setPackageGroupFilter}
+                  hasActiveCampaign={hasActiveCampaign}
                 />
               </TabsContent>
 
@@ -602,7 +609,7 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="preorders">
-                <PreOrdersTab stats={stats} />
+                <PreOrdersTab stats={stats} hasActiveCampaign={hasActiveCampaign} />
               </TabsContent>
 
               <TabsContent value="emails">

@@ -70,6 +70,7 @@ interface BackersTabProps {
   onSelectAllBackers: () => void;
   onOpenBackerDetail: (backer: Backer) => void;
   onPushSelectedOrders: () => void;
+  hasActiveCampaign?: boolean;
 }
 
 export function BackersTab({
@@ -83,10 +84,28 @@ export function BackersTab({
   onSelectAllBackers,
   onOpenBackerDetail,
   onPushSelectedOrders,
+  hasActiveCampaign = true,
 }: BackersTabProps) {
   const [showChargeDialog, setShowChargeDialog] = useState(false);
   const [isCharging, setIsCharging] = useState(false);
   const [chargeProgress, setChargeProgress] = useState(0);
+
+  // Show message if no active campaign
+  if (!hasActiveCampaign) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Active Campaign</h3>
+            <p className="text-muted-foreground">
+              You must have an active campaign to see data here.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const filteredBackers = backers
     .filter((backer) => {

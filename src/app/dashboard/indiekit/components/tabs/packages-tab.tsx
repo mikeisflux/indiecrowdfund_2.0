@@ -57,26 +57,37 @@ interface PackagesTabProps {
   packageGroups: PackageGroup[];
   packageGroupFilter: string;
   onPackageGroupFilterChange: (filter: string) => void;
+  hasActiveCampaign?: boolean;
+  connectedServices?: ConnectedService[];
 }
 
 export function PackagesTab({
   packageGroups,
   packageGroupFilter,
   onPackageGroupFilterChange,
+  hasActiveCampaign = true,
+  connectedServices = [],
 }: PackagesTabProps) {
   const [segmentFilter, setSegmentFilter] = useState("ready_to_ship");
   const [searchGroupId, setSearchGroupId] = useState("");
-  const [lastRefreshed] = useState("Dec 15, 2024 10:30 AM");
+  const [lastRefreshed] = useState(new Date().toLocaleString());
 
-  // Demo connected service
-  const connectedServices: ConnectedService[] = [
-    {
-      id: "1",
-      name: "ShipStation",
-      accountId: "NDM Express #5581",
-      connectedAt: "12/20/24",
-    },
-  ];
+  // Show message if no active campaign
+  if (!hasActiveCampaign) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Active Campaign</h3>
+            <p className="text-muted-foreground">
+              You must have an active campaign to see data here.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Calculate totals for Process All actions
   const totalNotPushed = packageGroups.reduce((sum, g) => sum + g.statusCounts.notPushed, 0);
