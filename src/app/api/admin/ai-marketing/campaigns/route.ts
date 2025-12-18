@@ -32,7 +32,43 @@ async function requireAdmin() {
   return { user: session.user };
 }
 
-// GET - Fetch all campaigns
+// Helper to get recipient count by audience type
+async function getRecipientCountByAudience(audience: string): Promise<number> {
+  switch (audience) {
+    case "subscriber":
+      const [nlSubCount, verifiedCount] = await Promise.all([
+        db.newsletterSubscriber.count({
+          where: {
+            isActive: true,
+            NOT: { source: { contains: "retailer", mode: "insensitive" } },
+          },
+        }),
+        db.user.count({ where: { emailVerified: { not: null } } }),
+      ]);
+      return nlSubCount + verifiedCount;
+    case "backers":
+      const backerIds = await db.pledge.findMany({
+        where: { status: "COMPLETED" },
+        select: { userId: true },
+        distinct: ["userId"],
+      });
+      return backerIds.length;
+    case "creators":
+      return db.user.count({ where: { createdProjects: { some: {} } } });
+    case "retailer":
+      return db.newsletterSubscriber.count({
+        where: {
+          isActive: true,
+          source: { contains: "retailer", mode: "insensitive" },
+        },
+      });
+    case "all":
+    default:
+      return db.user.count({ where: { emailVerified: { not: null } } });
+  }
+}
+
+// GET - Fetch all campaigns with live recipient counts
 export async function GET() {
   try {
     const authResult = await requireAdmin();
@@ -45,7 +81,18 @@ export async function GET() {
       take: 50,
     });
 
-    return NextResponse.json({ campaigns });
+    // Recalculate recipient counts for each campaign based on current data
+    const campaignsWithCounts = await Promise.all(
+      campaigns.map(async (campaign: { targetAudience: string | null; [key: string]: unknown }) => {
+        const recipientCount = await getRecipientCountByAudience(campaign.targetAudience || "all");
+        return {
+          ...campaign,
+          recipientCount,
+        };
+      })
+    );
+
+    return NextResponse.json({ campaigns: campaignsWithCounts });
   } catch (error) {
     console.error("Error fetching campaigns:", error);
     return NextResponse.json(
@@ -144,6 +191,28 @@ export async function POST(request: Request) {
           where: {
             createdProjects: { some: {} }
           }
+        });
+        break;
+      case "subscriber":
+        // Newsletter subscribers (excluding retailers) + verified users
+        const [nlSubCount, verifiedCount] = await Promise.all([
+          db.newsletterSubscriber.count({
+            where: {
+              isActive: true,
+              NOT: { source: { contains: "retailer", mode: "insensitive" } },
+            },
+          }),
+          db.user.count({ where: { emailVerified: { not: null } } }),
+        ]);
+        // Estimate combined (some overlap expected)
+        recipientCount = nlSubCount + verifiedCount;
+        break;
+      case "retailer":
+        recipientCount = await db.newsletterSubscriber.count({
+          where: {
+            isActive: true,
+            source: { contains: "retailer", mode: "insensitive" },
+          },
         });
         break;
       default:

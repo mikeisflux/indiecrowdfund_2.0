@@ -42,23 +42,6 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = (page - 1) * limit;
 
-    // Debug: Get raw counts to diagnose the issue
-    const debugCounts = await Promise.all([
-      db.newsletterSubscriber.count(), // Total records
-      db.newsletterSubscriber.count({ where: { isActive: true } }), // Active only
-      db.newsletterSubscriber.count({ where: { isActive: false } }), // Inactive only
-      db.newsletterSubscriber.groupBy({
-        by: ["source"],
-        _count: true,
-      }), // By source
-    ]);
-    console.log("DEBUG Newsletter Subscriber counts:", {
-      total: debugCounts[0],
-      active: debugCounts[1],
-      inactive: debugCounts[2],
-      bySource: debugCounts[3],
-    });
-
     // Get counts for each category
     // For newsletter subscribers, we want all active subscribers EXCEPT those with "retailer" in source
     const retailerFilter = { source: { contains: "retailer", mode: "insensitive" as const } };

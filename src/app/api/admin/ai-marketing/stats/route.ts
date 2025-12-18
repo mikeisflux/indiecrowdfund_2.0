@@ -113,6 +113,7 @@ export async function GET() {
           id: true,
           name: true,
           status: true,
+          targetAudience: true,
           recipientCount: true,
           sentCount: true,
           openCount: true,
@@ -225,11 +226,50 @@ export async function GET() {
         };
       });
 
-    // Email campaigns formatted
-    const campaigns = emailCampaigns.map((c: {
+    // Helper to get recipient count by audience type
+    const getRecipientCount = async (audience: string): Promise<number> => {
+      switch (audience) {
+        case "subscriber": {
+          const [nlSubCount, verifiedCount] = await Promise.all([
+            db.newsletterSubscriber.count({
+              where: {
+                isActive: true,
+                NOT: { source: { contains: "retailer", mode: "insensitive" } },
+              },
+            }),
+            db.user.count({ where: { emailVerified: { not: null } } }),
+          ]);
+          return nlSubCount + verifiedCount;
+        }
+        case "backers": {
+          const backerIds = await db.pledge.findMany({
+            where: { status: "COMPLETED" },
+            select: { userId: true },
+            distinct: ["userId"],
+          });
+          return backerIds.length;
+        }
+        case "creators":
+          return db.user.count({ where: { createdProjects: { some: {} } } });
+        case "retailer":
+          return db.newsletterSubscriber.count({
+            where: {
+              isActive: true,
+              source: { contains: "retailer", mode: "insensitive" },
+            },
+          });
+        case "all":
+        default:
+          return db.user.count({ where: { emailVerified: { not: null } } });
+      }
+    };
+
+    // Email campaigns formatted with live recipient counts
+    const campaigns = await Promise.all(emailCampaigns.map(async (c: {
       id: string;
       name: string;
       status: string;
+      targetAudience: string | null;
       recipientCount: number | null;
       sentCount: number | null;
       openCount: number | null;
@@ -237,16 +277,20 @@ export async function GET() {
       scheduledFor: Date | null;
       sentAt: Date | null;
       createdAt: Date;
-    }) => ({
-      id: c.id,
-      name: c.name,
-      status: c.status.toLowerCase(),
-      recipients: c.recipientCount || 0,
-      opens: c.openCount || 0,
-      clicks: c.clickCount || 0,
-      conversions: 0, // Would need conversion tracking
-      sentAt: c.sentAt?.toISOString() || null,
-      scheduledFor: c.scheduledFor?.toISOString() || null
+    }) => {
+      // Recalculate recipient count based on target audience
+      const recipients = await getRecipientCount(c.targetAudience || "all");
+      return {
+        id: c.id,
+        name: c.name,
+        status: c.status.toLowerCase(),
+        recipients,
+        opens: c.openCount || 0,
+        clicks: c.clickCount || 0,
+        conversions: 0, // Would need conversion tracking
+        sentAt: c.sentAt?.toISOString() || null,
+        scheduledFor: c.scheduledFor?.toISOString() || null
+      };
     }));
 
     // User segments
