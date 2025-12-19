@@ -49,6 +49,24 @@ function replaceTemplateVariables(content: string, recipient: Recipient): string
   return result;
 }
 
+// Convert relative URLs to absolute URLs for images and links
+function convertRelativeUrls(html: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+
+  // Convert relative src attributes (images, etc.) to absolute URLs
+  let result = html.replace(/src="\/([^"]*)"/gi, `src="${baseUrl}/$1"`);
+  result = result.replace(/src='\/([^']*)'/gi, `src='${baseUrl}/$1'`);
+
+  // Convert relative href attributes to absolute URLs (but not anchors like #section)
+  result = result.replace(/href="\/([^#"][^"]*)"/gi, `href="${baseUrl}/$1"`);
+  result = result.replace(/href='\/([^#'][^']*)'/gi, `href='${baseUrl}/$1'`);
+
+  // Convert url() in inline styles (for background images)
+  result = result.replace(/url\(["']?\/([^"')]+)["']?\)/gi, `url("${baseUrl}/$1")`);
+
+  return result;
+}
+
 // Add tracking pixel and wrap links for click tracking
 function addEmailTracking(html: string, campaignId: string, recipientEmail: string): string {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
@@ -248,6 +266,9 @@ export async function POST(
         // Replace template variables with recipient data
         const personalizedSubject = replaceTemplateVariables(campaign.subject, recipient);
         let personalizedHtml = replaceTemplateVariables(campaign.htmlContent, recipient);
+
+        // Convert relative URLs to absolute URLs for images
+        personalizedHtml = convertRelativeUrls(personalizedHtml);
 
         // Add tracking pixel and click tracking
         personalizedHtml = addEmailTracking(personalizedHtml, campaign.id, recipient.email);

@@ -43,6 +43,24 @@ function replaceTemplateVariables(content: string, email: string, name: string |
   return result;
 }
 
+// Convert relative URLs to absolute URLs for images and links
+function convertRelativeUrls(html: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+
+  // Convert relative src attributes (images, etc.) to absolute URLs
+  let result = html.replace(/src="\/([^"]*)"/gi, `src="${baseUrl}/$1"`);
+  result = result.replace(/src='\/([^']*)'/gi, `src='${baseUrl}/$1'`);
+
+  // Convert relative href attributes to absolute URLs (but not anchors like #section)
+  result = result.replace(/href="\/([^#"][^"]*)"/gi, `href="${baseUrl}/$1"`);
+  result = result.replace(/href='\/([^#'][^']*)'/gi, `href='${baseUrl}/$1'`);
+
+  // Convert url() in inline styles (for background images)
+  result = result.replace(/url\(["']?\/([^"')]+)["']?\)/gi, `url("${baseUrl}/$1")`);
+
+  return result;
+}
+
 
 // POST - Send test email
 export async function POST(
@@ -86,7 +104,10 @@ export async function POST(
 
     // Replace template variables (same as regular send)
     const personalizedSubject = `[TEST] ${replaceTemplateVariables(campaign.subject, email, name || null)}`;
-    const personalizedHtml = replaceTemplateVariables(campaign.htmlContent, email, name || null);
+    let personalizedHtml = replaceTemplateVariables(campaign.htmlContent, email, name || null);
+
+    // Convert relative URLs to absolute URLs for images
+    personalizedHtml = convertRelativeUrls(personalizedHtml);
 
     console.log(`Test email HTML length: ${personalizedHtml.length} chars`);
 
