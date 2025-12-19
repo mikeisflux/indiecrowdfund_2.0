@@ -1358,7 +1358,9 @@ model PlatformSettings {
   smtpPassword          String?
   smtpFromEmail         String?
   smtpFromName          String?
+  smtpReplyToEmail      String?
   sendgridApiKey        String?
+  sendgridWebhookVerificationKey String?  // ECDSA public key for verifying SendGrid event webhooks
   mailgunApiKey         String?
   mailgunDomain         String?
   emailVerificationRequired Boolean @default(false)

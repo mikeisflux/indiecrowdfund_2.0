@@ -1,9 +1,17 @@
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import { SecureKeyInput } from "@/components/ui/secure-key-input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Copy, CheckCircle, ExternalLink, Shield, Webhook } from "lucide-react";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -22,6 +30,7 @@ interface EmailSettingsProps {
     fromEmail: string;
     fromName: string;
     sendgridApiKey: string;
+    sendgridWebhookVerificationKey: string;
     mailgunApiKey: string;
     mailgunDomain: string;
     replyToEmail: string;
@@ -35,6 +44,19 @@ interface EmailSettingsProps {
 }
 
 export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSettingsProps) {
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
+
+  const webhookUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/api/webhooks/email/events`
+    : "/api/webhooks/email/events";
+
+  const copyWebhookUrl = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopiedWebhook(true);
+    toast.success("Webhook URL copied!");
+    setTimeout(() => setCopiedWebhook(false), 2000);
+  };
+
   return (
     <TabsContent value="email" className="mt-6 space-y-6">
       <Card>
@@ -99,6 +121,91 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
           </div>
         </CardContent>
       </Card>
+
+      {/* SendGrid Webhook Security */}
+      {settings.provider === "sendgrid" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              SendGrid Event Webhook
+            </CardTitle>
+            <CardDescription>
+              Configure webhook to track email delivery, opens, clicks, bounces, and spam reports
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Webhook URL */}
+            <div className="space-y-2">
+              <Label>Webhook URL</Label>
+              <div className="flex gap-2">
+                <div className="flex-1 flex items-center rounded-md border bg-muted px-3 py-2">
+                  <Webhook className="h-4 w-4 text-muted-foreground mr-2" />
+                  <code className="text-sm flex-1 truncate">{webhookUrl}</code>
+                </div>
+                <Button variant="outline" size="icon" onClick={copyWebhookUrl}>
+                  {copiedWebhook ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Add this URL in SendGrid under Settings → Mail Settings → Event Webhook
+              </p>
+            </div>
+
+            {/* Verification Key */}
+            <div className="space-y-2">
+              <Label>Webhook Verification Key (ECDSA Public Key)</Label>
+              <SecureKeyInput
+                value={settings.sendgridWebhookVerificationKey}
+                onChange={(value) => onSettingsChange({ ...settings, sendgridWebhookVerificationKey: value })}
+                onSave={onSave}
+                hasExistingValue={settings.sendgridWebhookVerificationKey === "••••••••"}
+                placeholder="MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Find this in SendGrid → Settings → Mail Settings → Event Webhook → Edit → Show Verification Key
+              </p>
+            </div>
+
+            {/* Tracked Events */}
+            <div className="space-y-2">
+              <Label>Tracked Events</Label>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">Delivered</Badge>
+                <Badge variant="secondary">Opened</Badge>
+                <Badge variant="secondary">Clicked</Badge>
+                <Badge variant="secondary">Bounced</Badge>
+                <Badge variant="secondary">Dropped</Badge>
+                <Badge variant="secondary">Spam Reports</Badge>
+                <Badge variant="secondary">Unsubscribe</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enable these events in SendGrid when configuring your Event Webhook
+              </p>
+            </div>
+
+            {/* Setup Instructions */}
+            <Alert>
+              <Shield className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Security:</strong> The verification key ensures webhook requests are genuinely from SendGrid.
+                Without it, your webhook endpoint could be vulnerable to spoofed requests.
+                <Button
+                  variant="link"
+                  className="p-0 h-auto ml-1"
+                  onClick={() => window.open("https://docs.sendgrid.com/for-developers/tracking-events/getting-started-event-webhook-security-features", "_blank")}
+                >
+                  Learn more <ExternalLink className="h-3 w-3 ml-1" />
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

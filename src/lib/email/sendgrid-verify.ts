@@ -1,24 +1,44 @@
 import crypto from "crypto";
+import { db } from "@/lib/db";
 
-// SendGrid Event Webhook verification public key
-// This key is used to verify that webhook requests are actually from SendGrid
-const SENDGRID_WEBHOOK_PUBLIC_KEY = process.env.SENDGRID_WEBHOOK_PUBLIC_KEY ||
-  "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEkpY3KDzotZimSfj14SNdDSjqh5sNosBk5sTFk5hzez+TCeX4b1D+svbmG+Z/XvGagnKWllwbSY4rzSLXRKUSXw==";
+/**
+ * Get the SendGrid webhook verification key from database or env
+ */
+async function getWebhookVerificationKey(): Promise<string | null> {
+  try {
+    // First try database
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { sendgridWebhookVerificationKey: true },
+    });
+
+    if (settings?.sendgridWebhookVerificationKey) {
+      return settings.sendgridWebhookVerificationKey;
+    }
+
+    // Fallback to environment variable
+    return process.env.SENDGRID_WEBHOOK_PUBLIC_KEY || null;
+  } catch (error) {
+    console.error("Error fetching webhook verification key:", error);
+    // Fallback to environment variable
+    return process.env.SENDGRID_WEBHOOK_PUBLIC_KEY || null;
+  }
+}
 
 /**
  * Verify SendGrid Event Webhook signature
  *
- * @param publicKey - The ECDSA public key from SendGrid (base64 encoded)
  * @param payload - The raw request body as a string
  * @param signature - The X-Twilio-Email-Event-Webhook-Signature header value
  * @param timestamp - The X-Twilio-Email-Event-Webhook-Timestamp header value
+ * @param publicKey - The ECDSA public key from SendGrid (base64 encoded)
  * @returns boolean indicating if the signature is valid
  */
 export function verifySendGridSignature(
   payload: string,
   signature: string,
   timestamp: string,
-  publicKey: string = SENDGRID_WEBHOOK_PUBLIC_KEY
+  publicKey: string
 ): boolean {
   try {
     // Convert the public key from base64 to PEM format
@@ -57,18 +77,31 @@ export async function verifyAndParseSendGridWebhook(
   const signature = headers.get("X-Twilio-Email-Event-Webhook-Signature");
   const timestamp = headers.get("X-Twilio-Email-Event-Webhook-Timestamp");
 
+  // Get the verification key from database or env
+  const publicKey = await getWebhookVerificationKey();
+
   // If no signature headers, check if verification is required
   if (!signature || !timestamp) {
     // Allow requests without signature in development or if key not configured
-    if (process.env.NODE_ENV === "development" || !SENDGRID_WEBHOOK_PUBLIC_KEY) {
-      console.warn("SendGrid webhook signature verification skipped - headers missing");
+    if (process.env.NODE_ENV === "development" || !publicKey) {
+      console.warn("SendGrid webhook signature verification skipped - headers missing or no key configured");
       return { valid: true };
     }
     return { valid: false, error: "Missing signature headers" };
   }
 
+  // If we have headers but no public key configured, we can't verify
+  if (!publicKey) {
+    console.warn("SendGrid webhook signature verification skipped - no verification key configured");
+    // In production without a key, we should probably reject
+    if (process.env.NODE_ENV === "production") {
+      return { valid: false, error: "Webhook verification key not configured" };
+    }
+    return { valid: true };
+  }
+
   // Verify the signature
-  const isValid = verifySendGridSignature(body, signature, timestamp);
+  const isValid = verifySendGridSignature(body, signature, timestamp, publicKey);
 
   if (!isValid) {
     return { valid: false, error: "Invalid signature" };

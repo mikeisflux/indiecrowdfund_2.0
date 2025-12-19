@@ -82,6 +82,7 @@ export async function GET() {
       ccbillSalt: settings.ccbillSalt ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
+      sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
       mailgunApiKey: settings.mailgunApiKey ? "••••••••" : null,
       openaiApiKey: settings.openaiApiKey ? "••••••••" : null,
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
@@ -152,7 +153,7 @@ export async function PATCH(req: NextRequest) {
     // Filter out masked values and empty strings for secret fields (don't update if user hasn't changed them)
     const secretFields = [
       'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret',
-      'smtpPassword', 'sendgridApiKey', 'mailgunApiKey',
+      'smtpPassword', 'sendgridApiKey', 'sendgridWebhookVerificationKey', 'mailgunApiKey',
       'openaiApiKey', 'anthropicApiKey', 'googlePlacesApiKey',
       'facebookAppSecret', 'facebookPageAccessToken',
       'youtubeClientSecret', 'youtubeApiKey',
@@ -184,7 +185,9 @@ export async function PATCH(req: NextRequest) {
       ],
       email: [
         "emailProvider", "smtpHost", "smtpPort", "smtpUser", "smtpPassword",
-        "smtpFromEmail", "smtpFromName", "sendgridApiKey", "mailgunApiKey", "mailgunDomain",
+        "smtpFromEmail", "smtpFromName", "smtpReplyToEmail",
+        "sendgridApiKey", "sendgridWebhookVerificationKey",
+        "mailgunApiKey", "mailgunDomain",
         "emailVerificationRequired", "welcomeEmailEnabled", "pledgeConfirmationEnabled", "projectUpdateNotifications"
       ],
       social: [
@@ -273,6 +276,7 @@ export async function PATCH(req: NextRequest) {
       ccbillSalt: settings.ccbillSalt ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
+      sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
       mailgunApiKey: settings.mailgunApiKey ? "••••••••" : null,
       openaiApiKey: settings.openaiApiKey ? "••••••••" : null,
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
