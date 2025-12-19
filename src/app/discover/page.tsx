@@ -61,6 +61,7 @@ interface Project {
   backerCount: number;
   daysRemaining: number;
   isStaffPick: boolean;
+  projectUrl: string;
 }
 
 const SORT_OPTIONS = [
@@ -569,7 +570,7 @@ function ProjectCard({ project }: { project: Project }) {
   const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
 
   return (
-    <Link href={`/projects/${project.slug}`}>
+    <Link href={project.projectUrl}>
       <Card className="h-full overflow-hidden transition-all hover:shadow-lg">
         <div className="aspect-video bg-muted relative">
           {project.imageUrl ? (
@@ -637,7 +638,7 @@ function ProjectListItem({ project }: { project: Project }) {
   const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
 
   return (
-    <Link href={`/projects/${project.slug}`}>
+    <Link href={project.projectUrl}>
       <Card className="overflow-hidden transition-all hover:shadow-lg">
         <div className="flex flex-col sm:flex-row">
           <div className="aspect-video w-full sm:w-48 flex-shrink-0 bg-muted relative">

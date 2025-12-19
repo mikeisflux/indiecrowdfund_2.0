@@ -49,6 +49,7 @@ async function getFeaturedProjects() {
         creator: {
           select: {
             name: true,
+            vanityUrl: true,
           },
         },
       },
@@ -67,6 +68,11 @@ async function getFeaturedProjects() {
         daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
       }
 
+      // Build project URL - use vanity URL if creator has one
+      const projectUrl = project.creator.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+        : `/projects/${project.slug}`;
+
       return {
         id: project.id,
         slug: project.slug,
@@ -79,6 +85,7 @@ async function getFeaturedProjects() {
         currentAmount: project.currentAmount,
         backerCount: project.backerCount,
         daysRemaining,
+        projectUrl,
       };
     });
   } catch (error) {
@@ -141,6 +148,7 @@ async function getPrelaunchProjects() {
         creator: {
           select: {
             name: true,
+            vanityUrl: true,
           },
         },
         _count: {
@@ -155,17 +163,25 @@ async function getPrelaunchProjects() {
       take: 6,
     });
 
-    return projects.map((project) => ({
-      id: project.id,
-      slug: project.slug,
-      title: project.title,
-      subtitle: project.subtitle || "",
-      category: project.category,
-      imageUrl: project.imageUrl || "",
-      creator: project.creator.name || "Creator",
-      followerCount: project._count.followers,
-      launchDate: project.launchDate,
-    }));
+    return projects.map((project) => {
+      // Build project URL - use vanity URL if creator has one
+      const projectUrl = project.creator.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}/prelaunch`
+        : `/projects/${project.slug}/prelaunch`;
+
+      return {
+        id: project.id,
+        slug: project.slug,
+        title: project.title,
+        subtitle: project.subtitle || "",
+        category: project.category,
+        imageUrl: project.imageUrl || "",
+        creator: project.creator.name || "Creator",
+        followerCount: project._count.followers,
+        launchDate: project.launchDate,
+        projectUrl,
+      };
+    });
   } catch (error) {
     console.error("Error fetching prelaunch projects:", error);
     return [];
@@ -349,7 +365,7 @@ export default async function HomePage() {
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {featuredProjects.map((project) => (
-              <Link key={project.id} href={`/projects/${project.slug}`}>
+              <Link key={project.id} href={project.projectUrl}>
                 <Card className="overflow-hidden h-full transition-all hover:shadow-lg">
                   <div className="aspect-video bg-muted relative">
                     {project.imageUrl ? (
@@ -429,7 +445,7 @@ export default async function HomePage() {
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {prelaunchProjects.map((project) => (
-                <Link key={project.id} href={`/projects/${project.slug}/prelaunch`}>
+                <Link key={project.id} href={project.projectUrl}>
                   <Card className="overflow-hidden h-full transition-all hover:shadow-lg border-amber-200/50 dark:border-amber-800/30">
                     <div className="aspect-video bg-muted relative">
                       {project.imageUrl ? (

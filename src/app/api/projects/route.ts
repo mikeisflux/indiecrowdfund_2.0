@@ -91,6 +91,7 @@ export async function GET(req: NextRequest) {
               id: true,
               name: true,
               image: true,
+              vanityUrl: true,
             },
           },
           _count: {
@@ -115,6 +116,11 @@ export async function GET(req: NextRequest) {
         daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
       }
 
+      // Build project URL - use vanity URL if creator has one
+      const projectUrl = project.creator.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+        : `/projects/${project.slug}`;
+
       return {
         id: project.id,
         title: project.title,
@@ -131,6 +137,7 @@ export async function GET(req: NextRequest) {
         currentAmount: project.currentAmount,
         backerCount: project.backerCount,
         daysRemaining,
+        projectUrl,
       };
     });
 

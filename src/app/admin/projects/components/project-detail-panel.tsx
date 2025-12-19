@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,11 @@ import {
   Flag,
   AlertCircle,
   RotateCcw,
+  Link2,
 } from "lucide-react";
 import { Project } from "./types";
 import { getFlags, formatDate, formatDuration } from "./utils";
+import { SetVanityUrlDialog } from "./dialogs";
 
 interface ProjectDetailPanelProps {
   project: Project | null;
@@ -40,6 +43,14 @@ export function ProjectDetailPanel({
   onRequestChanges,
   isPrelaunch = false,
 }: ProjectDetailPanelProps) {
+  const [showVanityUrlDialog, setShowVanityUrlDialog] = useState(false);
+  const [currentVanityUrl, setCurrentVanityUrl] = useState<string | null>(null);
+
+  // Update vanity URL when project changes
+  useEffect(() => {
+    setCurrentVanityUrl(project?.creator?.vanityUrl || null);
+  }, [project?.id, project?.creator?.vanityUrl]);
+
   if (!project) {
     return (
       <Card className="h-[400px] flex items-center justify-center">
@@ -191,14 +202,27 @@ export function ProjectDetailPanel({
 
         {/* Action Buttons */}
         <div className="p-4 border-t bg-zinc-50 dark:bg-zinc-800/50">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-2">
             <Button variant="outline" className="flex-1" asChild>
               <a href={isPrelaunch ? `/projects/${project.slug}/prelaunch` : `/projects/${project.slug}`} target="_blank" rel="noopener noreferrer">
                 <Eye className="mr-2 h-4 w-4" />
                 {isPrelaunch ? "Preview Prelaunch Page" : "Preview Project"}
               </a>
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowVanityUrlDialog(true)}
+              className="flex-1"
+            >
+              <Link2 className="mr-2 h-4 w-4" />
+              {currentVanityUrl ? "Edit Vanity URL" : "Set Vanity URL"}
+            </Button>
           </div>
+          {currentVanityUrl && (
+            <p className="text-xs text-zinc-500 mb-4">
+              Vanity URL: <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">{currentVanityUrl}</code>
+            </p>
+          )}
 
           <div className="flex items-center gap-2">
             <Button
@@ -227,6 +251,18 @@ export function ProjectDetailPanel({
           </div>
         </div>
       </CardContent>
+
+      {/* Set Vanity URL Dialog */}
+      <SetVanityUrlDialog
+        open={showVanityUrlDialog}
+        onOpenChange={setShowVanityUrlDialog}
+        creatorId={project.creator.id}
+        creatorName={project.creator.name}
+        currentVanityUrl={currentVanityUrl}
+        projectSlug={project.slug}
+        projectTitle={project.title}
+        onSuccess={(newVanityUrl) => setCurrentVanityUrl(newVanityUrl)}
+      />
     </Card>
   );
 }
