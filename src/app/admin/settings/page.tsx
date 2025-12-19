@@ -58,10 +58,6 @@ interface PlatformSettings {
   sendgridApiKey: string | null;
   mailgunApiKey: string | null;
   mailgunDomain: string | null;
-  // AWS SES Settings
-  awsAccessKeyId: string | null;
-  awsSecretAccessKey: string | null;
-  awsSesRegion: string | null;
   // Social profile URLs
   twitterHandle: string | null;
   facebookUrl: string | null;
@@ -196,10 +192,6 @@ export default function SettingsPage() {
     sendgridApiKey: "",
     mailgunApiKey: "",
     mailgunDomain: "",
-    // AWS SES settings
-    awsAccessKeyId: "",
-    awsSecretAccessKey: "",
-    awsSesRegion: "us-east-1",
     // Local UI settings (not in DB)
     replyToEmail: "",
     emailVerificationRequired: true,
@@ -341,9 +333,6 @@ export default function SettingsPage() {
         sendgridApiKey: settings.sendgridApiKey || "",
         mailgunApiKey: settings.mailgunApiKey || "",
         mailgunDomain: settings.mailgunDomain || "",
-        awsAccessKeyId: settings.awsAccessKeyId || "",
-        awsSecretAccessKey: settings.awsSecretAccessKey || "",
-        awsSesRegion: settings.awsSesRegion || "us-east-1",
         emailVerificationRequired: settings.emailVerificationRequired || false,
         welcomeEmailEnabled: settings.welcomeEmailEnabled !== false,
         pledgeConfirmationEnabled: settings.pledgeConfirmationEnabled !== false,
@@ -560,9 +549,6 @@ export default function SettingsPage() {
             sendgridApiKey: emailSettings.sendgridApiKey,
             mailgunApiKey: emailSettings.mailgunApiKey,
             mailgunDomain: emailSettings.mailgunDomain,
-            awsAccessKeyId: emailSettings.awsAccessKeyId,
-            awsSecretAccessKey: emailSettings.awsSecretAccessKey,
-            awsSesRegion: emailSettings.awsSesRegion,
             emailVerificationRequired: emailSettings.emailVerificationRequired,
             welcomeEmailEnabled: emailSettings.welcomeEmailEnabled,
             pledgeConfirmationEnabled: emailSettings.pledgeConfirmationEnabled,

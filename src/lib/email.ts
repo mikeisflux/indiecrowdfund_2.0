@@ -1,5 +1,4 @@
 import sgMail from "@sendgrid/mail";
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import { db } from "@/lib/db";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
@@ -49,57 +48,6 @@ export async function isEmailVerificationRequired(): Promise<boolean> {
   return settings?.emailVerificationRequired ?? false;
 }
 
-// Send email via Amazon SES
-async function sendViaSES(
-  to: string,
-  subject: string,
-  html: string,
-  text: string,
-  fromEmail: string,
-  fromName: string,
-  awsConfig: { accessKeyId: string; secretAccessKey: string; region: string }
-): Promise<{ success: boolean; error?: string }> {
-  const sesClient = new SESClient({
-    region: awsConfig.region,
-    credentials: {
-      accessKeyId: awsConfig.accessKeyId,
-      secretAccessKey: awsConfig.secretAccessKey,
-    },
-  });
-
-  const command = new SendEmailCommand({
-    Source: `${fromName} <${fromEmail}>`,
-    Destination: {
-      ToAddresses: [to],
-    },
-    Message: {
-      Subject: {
-        Data: subject,
-        Charset: "UTF-8",
-      },
-      Body: {
-        Html: {
-          Data: html,
-          Charset: "UTF-8",
-        },
-        Text: {
-          Data: text,
-          Charset: "UTF-8",
-        },
-      },
-    },
-  });
-
-  try {
-    const response = await sesClient.send(command);
-    console.log("Email sent via SES, MessageId:", response.MessageId);
-    return { success: true };
-  } catch (error) {
-    console.error("SES Error:", error);
-    return { success: false, error: String(error) };
-  }
-}
-
 // Send email via SendGrid
 async function sendViaSendGrid(
   to: string,
@@ -144,30 +92,12 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   const fromName = settings?.smtpFromName || APP_NAME;
   const plainText = text || html.replace(/<[^>]*>/g, "");
 
-  // Get provider from settings (default to checking what's configured)
-  const provider = settings?.emailProvider || "auto";
-
-  // Get credentials from database settings first, fall back to environment variables
-  const awsAccessKey = settings?.awsAccessKeyId || process.env.AWS_ACCESS_KEY_ID;
-  const awsSecretKey = settings?.awsSecretAccessKey || process.env.AWS_SECRET_ACCESS_KEY;
-  const awsRegion = settings?.awsSesRegion || process.env.AWS_SES_REGION || "us-east-1";
+  // Get SendGrid API key from database settings or environment variables
   const sendgridApiKey = settings?.sendgridApiKey || process.env.SENDGRID_API_KEY;
 
   let result: { success: boolean; error?: string };
 
-  // Determine which provider to use based on settings or what's configured
-  const useSES = provider === "ses" || (provider === "auto" && awsAccessKey && awsSecretKey);
-  const useSendGrid = provider === "sendgrid" || (provider === "auto" && !useSES && sendgridApiKey);
-
-  if (useSES && awsAccessKey && awsSecretKey) {
-    // Use Amazon SES
-    console.log(`Sending email via SES to: ${to}, subject: ${subject}`);
-    result = await sendViaSES(to, subject, html, plainText, fromEmail, fromName, {
-      accessKeyId: awsAccessKey,
-      secretAccessKey: awsSecretKey,
-      region: awsRegion,
-    });
-  } else if (useSendGrid && sendgridApiKey) {
+  if (sendgridApiKey) {
     // Use SendGrid
     console.log(`Sending email via SendGrid to: ${to}, subject: ${subject}`);
     result = await sendViaSendGrid(to, subject, html, plainText, fromEmail, fromName, sendgridApiKey);

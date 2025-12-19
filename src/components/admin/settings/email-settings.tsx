@@ -24,9 +24,6 @@ interface EmailSettingsProps {
     sendgridApiKey: string;
     mailgunApiKey: string;
     mailgunDomain: string;
-    awsAccessKeyId: string;
-    awsSecretAccessKey: string;
-    awsSesRegion: string;
     replyToEmail: string;
     emailVerificationRequired: boolean;
     welcomeEmailEnabled: boolean;
@@ -58,7 +55,6 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="sendgrid">SendGrid</SelectItem>
-                  <SelectItem value="ses">Amazon SES</SelectItem>
                   <SelectItem value="mailgun">Mailgun</SelectItem>
                   <SelectItem value="postmark">Postmark</SelectItem>
                 </SelectContent>

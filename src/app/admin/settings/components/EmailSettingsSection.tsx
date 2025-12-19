@@ -37,65 +37,12 @@ export function EmailSettingsSection({ settings, onChange, onSave }: EmailSettin
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ses">Amazon SES (Recommended)</SelectItem>
                 <SelectItem value="sendgrid">SendGrid</SelectItem>
                 <SelectItem value="mailgun">Mailgun</SelectItem>
                 <SelectItem value="postmark">Postmark</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          {/* AWS SES Settings */}
-          {settings.provider === "ses" && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-4">
-              <div className="text-sm font-medium text-amber-800">Amazon SES Configuration</div>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>AWS Access Key ID</Label>
-                  <SecureKeyInput
-                    value={settings.awsAccessKeyId}
-                    onChange={(value) => onChange({ ...settings, awsAccessKeyId: value })}
-                    onSave={onSave}
-                    hasExistingValue={settings.awsAccessKeyId === "••••••••"}
-                    placeholder="AKIA..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>AWS Secret Access Key</Label>
-                  <SecureKeyInput
-                    value={settings.awsSecretAccessKey}
-                    onChange={(value) => onChange({ ...settings, awsSecretAccessKey: value })}
-                    onSave={onSave}
-                    hasExistingValue={settings.awsSecretAccessKey === "••••••••"}
-                    placeholder="Your secret key..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>AWS Region</Label>
-                  <Select
-                    value={settings.awsSesRegion || "us-east-1"}
-                    onValueChange={(v) => onChange({ ...settings, awsSesRegion: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
-                      <SelectItem value="us-east-2">US East (Ohio)</SelectItem>
-                      <SelectItem value="us-west-1">US West (N. California)</SelectItem>
-                      <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
-                      <SelectItem value="eu-west-1">EU (Ireland)</SelectItem>
-                      <SelectItem value="eu-west-2">EU (London)</SelectItem>
-                      <SelectItem value="eu-central-1">EU (Frankfurt)</SelectItem>
-                      <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
-                      <SelectItem value="ap-southeast-2">Asia Pacific (Sydney)</SelectItem>
-                      <SelectItem value="ap-northeast-1">Asia Pacific (Tokyo)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* SendGrid Settings */}
           {settings.provider === "sendgrid" && (
