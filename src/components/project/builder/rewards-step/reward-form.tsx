@@ -54,6 +54,7 @@ interface RewardFormProps {
   onSecretTokenChange: (token: string) => void;
   isSaving: boolean;
   isEditing: boolean;
+  projectId: string | null;
   projectSlug: string | null;
   onSave: () => void;
   onCancel: () => void;
@@ -80,6 +81,7 @@ export function RewardForm({
   onSecretTokenChange,
   isSaving,
   isEditing,
+  projectId,
   projectSlug,
   onSave,
   onCancel,

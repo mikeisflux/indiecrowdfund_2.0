@@ -140,7 +140,7 @@ export async function GET() {
         ...p,
         projectUrl: buildProjectUrl(p.slug, userVanityUrl),
       })),
-      collaboratingProjects: collaborations.map((c) => ({
+      collaboratingProjects: collaborations.map((c: typeof collaborations[number]) => ({
         id: c.project.id,
         title: c.project.title,
         slug: c.project.slug,
@@ -148,7 +148,7 @@ export async function GET() {
         status: c.project.status,
         projectUrl: buildProjectUrl(c.project.slug, c.project.creator?.vanityUrl),
       })),
-      pendingInvites: pendingInvites.map((c) => ({
+      pendingInvites: pendingInvites.map((c: typeof pendingInvites[number]) => ({
         inviteId: c.id,
         id: c.project.id,
         title: c.project.title,
