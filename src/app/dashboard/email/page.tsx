@@ -11,7 +11,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -25,18 +24,13 @@ import {
   Send,
   Star,
   Archive,
-  Trash2,
   Search,
   Filter,
   RefreshCw,
   Loader2,
   ChevronLeft,
-  Reply,
-  MoreHorizontal,
   Clock,
-  User,
   Tag,
-  CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
