@@ -100,6 +100,7 @@ export async function GET() {
       unreadNotifications,
       totalMedia,
       newBugReports,
+      pendingRetailers,
     ] = await Promise.all([
       // Total users count
       db.user.count(),
@@ -133,6 +134,13 @@ export async function GET() {
           status: { in: ["NEW", "ACKNOWLEDGED"] },
         },
       }),
+
+      // Pending retailer applications
+      db.retailer.count({
+        where: {
+          status: "PENDING",
+        },
+      }),
     ]);
 
     // Format large numbers
@@ -157,6 +165,7 @@ export async function GET() {
       media: formatCount(totalMedia),
       mediaRaw: totalMedia,
       bugReports: newBugReports,
+      retailers: pendingRetailers,
     });
   } catch (error) {
     console.error("Error fetching sidebar stats:", error);
