@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { validateCSRF } from "@/lib/csrf";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +20,12 @@ export async function GET() {
 
     const projectIds = creatorProjects.map((p) => p.id);
 
-    // Get published updates as "campaigns"
-    const updates = await db.projectUpdate.findMany({
+    // Get published updates as "campaigns" (BACKERS_ONLY updates = email campaigns)
+    const updates = await db.update.findMany({
       where: {
         projectId: { in: projectIds },
         status: "PUBLISHED",
-        notifyBackers: true,
+        visibility: "BACKERS_ONLY",
       },
       orderBy: { publishedAt: "desc" },
       take: 50,
@@ -64,12 +63,6 @@ export async function GET() {
 // POST - Create a new email campaign
 export async function POST(request: NextRequest) {
   try {
-    // Validate CSRF
-    const csrfValid = await validateCSRF(request);
-    if (!csrfValid) {
-      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 });
-    }
-
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -101,15 +94,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create as a project update
-    const update = await db.projectUpdate.create({
+    // Create as a project update (BACKERS_ONLY = email campaign)
+    const update = await db.update.create({
       data: {
         projectId: project.id,
         title: subject.trim(),
         content: content.trim(),
         status: "PUBLISHED",
-        notifyBackers: true,
-        isPublic: false, // Email campaigns are backer-only by default
+        visibility: "BACKERS_ONLY",
         publishedAt: new Date(),
       },
     });

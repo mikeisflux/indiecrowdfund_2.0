@@ -46,7 +46,7 @@ export async function GET(
       orderBy: { createdAt: "asc" },
     });
 
-    const formattedMessages = messages.map((msg) => ({
+    const formattedMessages = messages.map((msg: (typeof messages)[number]) => ({
       id: msg.id,
       threadId: params.threadId,
       content: msg.content,

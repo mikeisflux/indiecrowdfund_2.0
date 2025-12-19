@@ -192,6 +192,8 @@ export default function SettingsPage() {
     sendgridApiKey: "",
     mailgunApiKey: "",
     mailgunDomain: "",
+    // SendGrid webhook verification
+    sendgridWebhookVerificationKey: "",
     // Local UI settings (not in DB)
     replyToEmail: "",
     emailVerificationRequired: true,

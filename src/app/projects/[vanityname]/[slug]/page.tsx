@@ -726,7 +726,6 @@ export default function ProjectPage() {
             addons={addons}
             selectedAddons={selectedAddons}
             onToggleAddon={toggleAddon}
-            projectPath={projectPath}
           />
         )}
 
