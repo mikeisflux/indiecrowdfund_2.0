@@ -12,9 +12,15 @@ interface ActivityItem {
   projectId?: string;
   projectTitle?: string;
   projectSlug?: string;
+  projectUrl?: string;
   projectImage?: string | null;
   timestamp: Date;
   metadata?: Record<string, unknown>;
+}
+
+// Helper to build project URL with vanity URL
+function buildProjectUrl(slug: string, creatorVanityUrl?: string | null): string {
+  return creatorVanityUrl ? `/projects/${creatorVanityUrl}/${slug}` : `/projects/${slug}`;
 }
 
 export async function GET() {
@@ -61,6 +67,7 @@ export async function GET() {
             title: true,
             slug: true,
             imageUrl: true,
+            creator: { select: { vanityUrl: true } },
           },
         },
         reward: {
@@ -82,6 +89,7 @@ export async function GET() {
         projectId: pledge.project.id,
         projectTitle: pledge.project.title,
         projectSlug: pledge.project.slug,
+        projectUrl: buildProjectUrl(pledge.project.slug, pledge.project.creator?.vanityUrl),
         projectImage: pledge.project.imageUrl,
         timestamp: pledge.createdAt,
         metadata: { amount: pledge.amount },
@@ -106,6 +114,7 @@ export async function GET() {
               title: true,
               slug: true,
               imageUrl: true,
+              creator: { select: { vanityUrl: true } },
             },
           },
         },
@@ -122,6 +131,7 @@ export async function GET() {
           projectId: update.project.id,
           projectTitle: update.project.title,
           projectSlug: update.project.slug,
+          projectUrl: buildProjectUrl(update.project.slug, update.project.creator?.vanityUrl),
           projectImage: update.project.imageUrl,
           timestamp: update.publishedAt || new Date(),
           metadata: { visibility: update.visibility },
@@ -144,6 +154,7 @@ export async function GET() {
           fundedAt: true,
           goalAmount: true,
           currentAmount: true,
+          creator: { select: { vanityUrl: true } },
         },
         orderBy: { fundedAt: "desc" },
         take: 10,
@@ -159,6 +170,7 @@ export async function GET() {
             projectId: project.id,
             projectTitle: project.title,
             projectSlug: project.slug,
+            projectUrl: buildProjectUrl(project.slug, project.creator?.vanityUrl),
             projectImage: project.imageUrl,
             timestamp: project.fundedAt,
             metadata: {
@@ -198,6 +210,7 @@ export async function GET() {
             title: true,
             slug: true,
             imageUrl: true,
+            creator: { select: { vanityUrl: true } },
           },
         },
       },
@@ -214,6 +227,7 @@ export async function GET() {
         projectId: message.project.id,
         projectTitle: message.project.title,
         projectSlug: message.project.slug,
+        projectUrl: buildProjectUrl(message.project.slug, message.project.creator?.vanityUrl),
         projectImage: message.project.imageUrl,
         timestamp: message.createdAt,
         metadata: { read: message.read },

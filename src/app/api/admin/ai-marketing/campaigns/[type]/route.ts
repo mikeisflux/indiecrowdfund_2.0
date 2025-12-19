@@ -405,11 +405,13 @@ export async function POST(
       select: {
         id: true,
         title: true,
+        slug: true,
         description: true,
         category: true,
         subcategory: true,
         tags: true,
         goalAmount: true,
+        creator: { select: { vanityUrl: true } },
       },
     });
 
@@ -631,18 +633,22 @@ function generateCampaignHtml(
     }>;
     footer: string;
   },
-  projects: Array<{ id: string; title: string }>
+  projects: Array<{ id: string; title: string; slug: string; creator: { vanityUrl: string | null } | null }>
 ): string {
   const projectCards = aiContent.projectRecommendations
     .map((rec) => {
       const project = projects.find((p) => p.title === rec.projectTitle);
       if (!project) return "";
 
+      const projectUrl = project.creator?.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+        : `/projects/${project.slug}`;
+
       return `
       <div style="margin-bottom: 24px; padding: 20px; background: #f8f9fa; border-radius: 12px;">
         <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 18px;">${project.title}</h3>
         <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">${rec.recommendationReason}</p>
-        <a href="{{SITE_URL}}/projects/${project.id}"
+        <a href="{{SITE_URL}}${projectUrl}"
            style="display: inline-block; padding: 10px 20px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
           ${rec.callToAction}
         </a>
@@ -697,17 +703,21 @@ function generateCampaignText(
     }>;
     footer: string;
   },
-  projects: Array<{ id: string; title: string }>
+  projects: Array<{ id: string; title: string; slug: string; creator: { vanityUrl: string | null } | null }>
 ): string {
   const projectList = aiContent.projectRecommendations
     .map((rec) => {
       const project = projects.find((p) => p.title === rec.projectTitle);
       if (!project) return "";
 
+      const projectUrl = project.creator?.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+        : `/projects/${project.slug}`;
+
       return `
 ${project.title}
 ${rec.recommendationReason}
-View project: {{SITE_URL}}/projects/${project.id}
+View project: {{SITE_URL}}${projectUrl}
 `;
     })
     .join("\n---\n");
