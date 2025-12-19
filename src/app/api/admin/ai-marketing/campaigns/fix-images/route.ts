@@ -30,7 +30,8 @@ async function requireAdmin() {
 // Extract base64 images from HTML and save them as files
 async function processBase64Images(html: string): Promise<{ processedHtml: string; uploadedCount: number }> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
-  const uploadDir = join(process.cwd(), "public", "uploads", "email-campaigns");
+  // Match the same path structure as media upload API: public/uploads/{folder}/images/
+  const uploadDir = join(process.cwd(), "public", "uploads", "email-campaigns", "images");
 
   // Ensure upload directory exists
   await mkdir(uploadDir, { recursive: true });
@@ -64,14 +65,14 @@ async function processBase64Images(html: string): Promise<{ processedHtml: strin
       const imageBuffer = Buffer.from(m.base64Data, "base64");
       await writeFile(filePath, imageBuffer);
 
-      // Create public URL
-      const publicUrl = `${baseUrl}/uploads/email-campaigns/${filename}`;
+      // Create public URL - matches media upload pattern: /uploads/{folder}/images/{filename}
+      const publicUrl = `${baseUrl}/uploads/email-campaigns/images/${filename}`;
 
       // Replace in HTML
       processedHtml = processedHtml.replace(m.dataUrl, publicUrl);
       uploadedCount++;
 
-      console.log(`Uploaded image: ${filename}`);
+      console.log(`Uploaded image: ${filename} -> ${publicUrl}`);
     } catch (err) {
       console.error(`Failed to process image:`, err);
     }

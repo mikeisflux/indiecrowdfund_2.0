@@ -25,6 +25,7 @@ const csrfExemptRoutes = [
   "/api/stripe",
   "/api/health",
   "/api/track", // Analytics tracking endpoint
+  "/api/admin/ai-marketing/campaigns/fix-images", // One-time fix script
 ];
 
 // Generate a CSRF token
