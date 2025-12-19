@@ -29,6 +29,7 @@ import {
   Loader2,
   Zap,
   Sparkles,
+  Link2,
 } from "lucide-react";
 import {
   Project,
@@ -45,6 +46,7 @@ import {
   RejectDialog,
   DeactivateDialog,
   MakeLiveDialog,
+  SetVanityUrlDialog,
 } from "./components";
 
 export default function ProjectsPage() {
@@ -65,6 +67,10 @@ export default function ProjectsPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Prelaunch vanity URL state
+  const [showPrelaunchVanityDialog, setShowPrelaunchVanityDialog] = useState(false);
+  const [prelaunchVanityUrl, setPrelaunchVanityUrl] = useState<string | null>(null);
 
   // Review form state
   const [reviewNotes, setReviewNotes] = useState("");
@@ -201,6 +207,13 @@ export default function ProjectsPage() {
       fetchReviewHistory();
     }
   }, [activeTab, fetchActiveProjects, fetchProjects, fetchPrelaunchProjects, fetchPrelaunchReviewProjects, fetchReviewHistory]);
+
+  // Update prelaunch vanity URL when selected project changes in prelaunch tab
+  useEffect(() => {
+    if (activeTab === "prelaunch" && selectedProject) {
+      setPrelaunchVanityUrl(selectedProject.creator?.vanityUrl || null);
+    }
+  }, [activeTab, selectedProject]);
 
   const handleApprove = () => {
     setReviewAction("approve");
@@ -813,8 +826,34 @@ export default function ProjectsPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Page
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setShowPrelaunchVanityDialog(true)}
+                        >
+                          <Link2 className="mr-2 h-4 w-4" />
+                          {prelaunchVanityUrl ? "Edit Vanity URL" : "Set Vanity URL"}
+                        </Button>
                       </div>
+                      {prelaunchVanityUrl && (
+                        <p className="text-xs text-zinc-500 mt-2">
+                          Vanity URL: <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">{prelaunchVanityUrl}</code>
+                        </p>
+                      )}
                     </CardContent>
+
+                    {/* Set Vanity URL Dialog for Prelaunch */}
+                    <SetVanityUrlDialog
+                      open={showPrelaunchVanityDialog}
+                      onOpenChange={setShowPrelaunchVanityDialog}
+                      creatorId={selectedProject.creator.id}
+                      creatorName={selectedProject.creator.name}
+                      currentVanityUrl={prelaunchVanityUrl}
+                      projectSlug={selectedProject.slug}
+                      projectTitle={selectedProject.title}
+                      onSuccess={(newVanityUrl) => setPrelaunchVanityUrl(newVanityUrl)}
+                    />
                   </>
                 ) : (
                   <CardContent className="flex flex-col items-center justify-center py-16 text-center">
