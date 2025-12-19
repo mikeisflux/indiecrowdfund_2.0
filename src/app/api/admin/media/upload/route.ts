@@ -95,7 +95,9 @@ export async function POST(req: NextRequest) {
     else if (file.type.includes("pdf") || file.type.includes("document")) subDir = "documents";
 
     // Create upload directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), "public", "uploads", folder, subDir);
+    // Use 'uploads/' (not 'public/uploads/') so files are served via /api/uploads/ route
+    // This works in production where public/ is read-only after build
+    const uploadDir = path.join(process.cwd(), "uploads", folder, subDir);
     await mkdir(uploadDir, { recursive: true });
 
     // Write file to disk
@@ -104,8 +106,8 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
     await writeFile(filePath, buffer);
 
-    // Generate URL
-    const url = `/uploads/${folder}/${subDir}/${filename}`;
+    // Generate URL - use /api/uploads/ route to serve files
+    const url = `/api/uploads/${folder}/${subDir}/${filename}`;
 
     // Get image dimensions if applicable
     const width = null;

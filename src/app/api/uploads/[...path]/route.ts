@@ -3,13 +3,17 @@ import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 
-// MIME types for images
+// MIME types for supported files
 const MIME_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".png": "image/png",
   ".gif": "image/gif",
   ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".pdf": "application/pdf",
 };
 
 export async function GET(
