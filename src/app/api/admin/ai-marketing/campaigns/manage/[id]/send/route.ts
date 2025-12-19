@@ -5,6 +5,12 @@ import { sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
+// Recipient type with email and optional name
+interface Recipient {
+  email: string;
+  name: string | null;
+}
+
 // Helper to check admin role
 async function requireAdmin() {
   const session = await auth();
@@ -23,6 +29,24 @@ async function requireAdmin() {
   }
 
   return { user: session.user };
+}
+
+// Replace template variables in content
+function replaceTemplateVariables(content: string, recipient: Recipient): string {
+  let result = content;
+
+  // Replace user name - use first name or "there" if no name
+  const displayName = recipient.name
+    ? recipient.name.split(' ')[0] // First name only
+    : "there";
+
+  result = result.replace(/\{\{USER_NAME\}\}/gi, displayName);
+  result = result.replace(/\{\{NAME\}\}/gi, displayName);
+  result = result.replace(/\{\{FIRST_NAME\}\}/gi, displayName);
+  result = result.replace(/\{\{USER_EMAIL\}\}/gi, recipient.email);
+  result = result.replace(/\{\{EMAIL\}\}/gi, recipient.email);
+
+  return result;
 }
 
 // POST - Send campaign now
@@ -87,8 +111,8 @@ export async function POST(
       data: { status: "SENDING" },
     });
 
-    // Get recipients based on target audience
-    let recipientEmails: string[] = [];
+    // Get recipients based on target audience (with names)
+    const recipientMap = new Map<string, Recipient>();
     const audience = campaign.targetAudience || "all";
 
     switch (audience) {
@@ -100,16 +124,24 @@ export async function POST(
               isActive: true,
               NOT: { source: { contains: "retailer", mode: "insensitive" } },
             },
-            select: { email: true },
+            select: { email: true, name: true },
           }),
           db.user.findMany({
             where: { emailVerified: { not: null } },
-            select: { email: true },
+            select: { email: true, name: true },
           }),
         ]);
-        const subEmails = new Set<string>(subscribers.map((s: { email: string }) => s.email.toLowerCase()));
-        verifiedUsers.forEach(u => subEmails.add(u.email.toLowerCase()));
-        recipientEmails = Array.from(subEmails);
+        // Add subscribers
+        subscribers.forEach((s: { email: string; name: string | null }) => {
+          recipientMap.set(s.email.toLowerCase(), { email: s.email.toLowerCase(), name: s.name });
+        });
+        // Add/update with verified users (user names take priority)
+        verifiedUsers.forEach(u => {
+          const existing = recipientMap.get(u.email.toLowerCase());
+          if (!existing || (u.name && !existing.name)) {
+            recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
+          }
+        });
         break;
 
       case "backer":
@@ -120,17 +152,21 @@ export async function POST(
         });
         const backerUsers = await db.user.findMany({
           where: { id: { in: backerPledges.map(p => p.userId) } },
-          select: { email: true },
+          select: { email: true, name: true },
         });
-        recipientEmails = backerUsers.map(u => u.email.toLowerCase());
+        backerUsers.forEach(u => {
+          recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
+        });
         break;
 
       case "creator":
         const creators = await db.user.findMany({
           where: { createdProjects: { some: {} } },
-          select: { email: true },
+          select: { email: true, name: true },
         });
-        recipientEmails = creators.map(c => c.email.toLowerCase());
+        creators.forEach(c => {
+          recipientMap.set(c.email.toLowerCase(), { email: c.email.toLowerCase(), name: c.name });
+        });
         break;
 
       case "retailer":
@@ -139,31 +175,34 @@ export async function POST(
             isActive: true,
             source: { contains: "retailer", mode: "insensitive" },
           },
-          select: { email: true },
+          select: { email: true, name: true },
         });
-        recipientEmails = retailers.map((r: { email: string }) => r.email.toLowerCase());
+        retailers.forEach((r: { email: string; name: string | null }) => {
+          recipientMap.set(r.email.toLowerCase(), { email: r.email.toLowerCase(), name: r.name });
+        });
         break;
 
       default:
         // All verified users
         const allUsers = await db.user.findMany({
           where: { emailVerified: { not: null } },
-          select: { email: true },
+          select: { email: true, name: true },
         });
-        recipientEmails = allUsers.map(u => u.email.toLowerCase());
+        allUsers.forEach(u => {
+          recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
+        });
     }
 
-    // Remove duplicates
-    recipientEmails = Array.from(new Set(recipientEmails));
+    const recipients = Array.from(recipientMap.values());
 
-    console.log(`Sending campaign "${campaign.name}" to ${recipientEmails.length} recipients`);
+    console.log(`Sending campaign "${campaign.name}" to ${recipients.length} recipients`);
 
     let sentCount = 0;
     let failedCount = 0;
 
     // Send emails via SendGrid and log them
     let aborted = false;
-    for (const email of recipientEmails) {
+    for (const recipient of recipients) {
       // Check if campaign was aborted every 10 emails
       if (sentCount % 10 === 0 && sentCount > 0) {
         const currentCampaign = await db.emailCampaign.findUnique({
@@ -178,20 +217,24 @@ export async function POST(
       }
 
       try {
+        // Replace template variables with recipient data
+        const personalizedSubject = replaceTemplateVariables(campaign.subject, recipient);
+        const personalizedHtml = replaceTemplateVariables(campaign.htmlContent, recipient);
+
         // Actually send the email via SendGrid
         const result = await sendEmail({
-          to: email,
-          subject: campaign.subject,
-          html: campaign.htmlContent,
+          to: recipient.email,
+          subject: personalizedSubject,
+          html: personalizedHtml,
         });
 
         if (result.success) {
           // Log successful send
           await db.emailLog.create({
             data: {
-              recipientEmail: email,
-              subject: campaign.subject,
-              htmlContent: campaign.htmlContent,
+              recipientEmail: recipient.email,
+              subject: personalizedSubject,
+              htmlContent: personalizedHtml,
               sentAt: new Date(),
               type: "WEEKLY_DISCOVERY",
             },
@@ -199,11 +242,11 @@ export async function POST(
           sentCount++;
         } else {
           failedCount++;
-          console.error(`Failed to send email to ${email}:`, result.error);
+          console.error(`Failed to send email to ${recipient.email}:`, result.error);
         }
       } catch (err) {
         failedCount++;
-        console.error(`Error sending email to ${email}:`, err);
+        console.error(`Error sending email to ${recipient.email}:`, err);
       }
     }
 
@@ -217,7 +260,7 @@ export async function POST(
           status: "SENT",
           sentAt: new Date(),
           sentCount,
-          recipientCount: recipientEmails.length,
+          recipientCount: recipients.length,
         },
       });
     } else {
@@ -237,7 +280,7 @@ export async function POST(
         ? `Campaign "${campaign.name}" was aborted after sending ${sentCount} emails`
         : `Campaign "${campaign.name}" sent to ${sentCount} recipients`,
       sentCount,
-      totalRecipients: recipientEmails.length,
+      totalRecipients: recipients.length,
     });
   } catch (error) {
     console.error("Error sending campaign:", error);

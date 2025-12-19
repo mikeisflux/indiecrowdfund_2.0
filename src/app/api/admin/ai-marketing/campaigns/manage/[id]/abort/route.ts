@@ -73,7 +73,8 @@ export async function POST(
     // Restart PM2 to kill the running send process
     // Use setImmediate to send response before restart
     setImmediate(() => {
-      exec("pm2 restart indiecrowdfund", (error) => {
+      // Delete and restart properly to preserve npm start config
+      exec("cd /root/indiecrowdfund_2.0 && npx pm2 delete indiecrowdfund 2>/dev/null; npx pm2 start npm --name indiecrowdfund -- start", (error) => {
         if (error) {
           console.error("Failed to restart PM2:", error);
         }
