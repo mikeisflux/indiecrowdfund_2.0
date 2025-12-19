@@ -333,7 +333,7 @@ export default function SettingsPage() {
         fromEmail: settings.smtpFromEmail || "",
         fromName: settings.smtpFromName || "",
         sendgridApiKey: settings.sendgridApiKey || "",
-        sendgridWebhookVerificationKey: (settings as Record<string, unknown>).sendgridWebhookVerificationKey as string || "",
+        sendgridWebhookVerificationKey: (settings as unknown as Record<string, unknown>).sendgridWebhookVerificationKey as string || "",
         mailgunApiKey: settings.mailgunApiKey || "",
         mailgunDomain: settings.mailgunDomain || "",
         emailVerificationRequired: settings.emailVerificationRequired || false,
