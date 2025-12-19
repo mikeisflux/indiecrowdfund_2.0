@@ -124,7 +124,7 @@ export async function GET() {
 }
 
 // POST - Create a new backup
-export async function POST(_req: NextRequest) {
+export async function POST() {
   try {
     const authResult = await requireAdmin();
     if ("error" in authResult) {
