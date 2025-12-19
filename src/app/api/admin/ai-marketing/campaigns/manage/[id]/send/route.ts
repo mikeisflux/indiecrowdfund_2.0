@@ -162,7 +162,21 @@ export async function POST(
     let failedCount = 0;
 
     // Send emails via SendGrid and log them
+    let aborted = false;
     for (const email of recipientEmails) {
+      // Check if campaign was aborted every 10 emails
+      if (sentCount % 10 === 0 && sentCount > 0) {
+        const currentCampaign = await db.emailCampaign.findUnique({
+          where: { id },
+          select: { status: true },
+        });
+        if (currentCampaign?.status === "ABORTED") {
+          console.log(`Campaign "${campaign.name}" was aborted after ${sentCount} emails sent`);
+          aborted = true;
+          break;
+        }
+      }
+
       try {
         // Actually send the email via SendGrid
         const result = await sendEmail({
@@ -193,22 +207,35 @@ export async function POST(
       }
     }
 
-    console.log(`Campaign "${campaign.name}" complete: ${sentCount} sent, ${failedCount} failed`);
+    console.log(`Campaign "${campaign.name}" ${aborted ? "aborted" : "complete"}: ${sentCount} sent, ${failedCount} failed`);
 
-    // Update campaign as sent
-    await db.emailCampaign.update({
-      where: { id },
-      data: {
-        status: "SENT",
-        sentAt: new Date(),
-        sentCount,
-        recipientCount: recipientEmails.length,
-      },
-    });
+    // Update campaign status
+    if (!aborted) {
+      await db.emailCampaign.update({
+        where: { id },
+        data: {
+          status: "SENT",
+          sentAt: new Date(),
+          sentCount,
+          recipientCount: recipientEmails.length,
+        },
+      });
+    } else {
+      // Update sent count even if aborted
+      await db.emailCampaign.update({
+        where: { id },
+        data: {
+          sentCount,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Campaign "${campaign.name}" sent to ${sentCount} recipients`,
+      aborted,
+      message: aborted
+        ? `Campaign "${campaign.name}" was aborted after sending ${sentCount} emails`
+        : `Campaign "${campaign.name}" sent to ${sentCount} recipients`,
       sentCount,
       totalRecipients: recipientEmails.length,
     });

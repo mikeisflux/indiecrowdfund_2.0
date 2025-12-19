@@ -1,0 +1,77 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+// Helper to check admin role
+async function requireAdmin() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { error: "Unauthorized", status: 401 };
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
+  if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
+    return { error: "Forbidden - Admin access required", status: 403 };
+  }
+
+  return { user: session.user };
+}
+
+// POST - Abort sending campaign
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authResult = await requireAdmin();
+    if ("error" in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
+    const { id } = await params;
+
+    // Get campaign
+    const campaign = await db.emailCampaign.findUnique({
+      where: { id },
+      select: { id: true, name: true, status: true },
+    });
+
+    if (!campaign) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
+
+    // Can only abort campaigns that are currently sending
+    if (campaign.status !== "SENDING") {
+      return NextResponse.json(
+        { error: "Campaign is not currently sending" },
+        { status: 400 }
+      );
+    }
+
+    // Mark as aborted
+    await db.emailCampaign.update({
+      where: { id },
+      data: { status: "ABORTED" },
+    });
+
+    console.log(`Campaign "${campaign.name}" has been aborted`);
+
+    return NextResponse.json({
+      success: true,
+      message: `Campaign "${campaign.name}" has been aborted`,
+    });
+  } catch (error) {
+    console.error("Error aborting campaign:", error);
+    return NextResponse.json(
+      { error: "Failed to abort campaign" },
+      { status: 500 }
+    );
+  }
+}

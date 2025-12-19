@@ -62,6 +62,7 @@ import {
   Copy,
   Trash2,
   Loader2,
+  StopCircle,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 
@@ -209,6 +210,24 @@ export function EmailCampaignsTab({
       }
     } catch (error) {
       console.error("Failed to duplicate campaign:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Abort sending campaign
+  const handleAbortCampaign = async (campaign: EmailCampaign) => {
+    setActionLoading(campaign.id);
+    try {
+      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaign.id}/abort`, {
+        method: "POST",
+        headers: { ...getCSRFHeaders() },
+      });
+      if (response.ok) {
+        onRefresh?.();
+      }
+    } catch (error) {
+      console.error("Failed to abort campaign:", error);
     } finally {
       setActionLoading(null);
     }
@@ -524,6 +543,15 @@ export function EmailCampaignsTab({
                               }}>
                                 <Send className="mr-2 h-4 w-4" />
                                 Resend Campaign
+                              </DropdownMenuItem>
+                            )}
+                            {campaign.status.toUpperCase() === "SENDING" && (
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => handleAbortCampaign(campaign)}
+                              >
+                                <StopCircle className="mr-2 h-4 w-4" />
+                                Abort Sending
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem onClick={() => handleDuplicateCampaign(campaign)}>
