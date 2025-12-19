@@ -296,44 +296,52 @@ export function CampaignTypeDialog({
         }
       }
 
-      // Extract and inline styles from head into body for email compatibility
-      // Canva exports have styles in <head> that we need to preserve
-      let inlineStyles = "";
-      const styleMatch = processedHtml.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
-      if (styleMatch) {
-        inlineStyles = styleMatch.join("\n");
-      }
-
-      // Extract body content
-      const bodyMatch = processedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      // Extract styles and body content from Canva HTML
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
+      // Extract all style tags (could be in head or body)
+      const styleMatch = processedHtml.match(/<style[^>]*>[\s\S]*?<\/style>/gi);
+      const uniqueStyles = styleMatch ? [...new Set(styleMatch)].join("\n") : "";
+
+      // Try to extract just the body content
+      let bodyContent = "";
+      const bodyMatch = processedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+
       if (bodyMatch) {
-        // Wrap body content with base tag for URL resolution and the extracted styles
-        // The base tag ensures relative URLs resolve correctly in the iframe
-        processedHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <base href="${baseUrl}/">
-  ${inlineStyles}
-</head>
-<body style="margin:0;padding:0;">
-  <div class="canva-email-import">${bodyMatch[1].trim()}</div>
-</body>
-</html>`;
+        bodyContent = bodyMatch[1].trim();
       } else {
-        // No body tag found, wrap entire content
-        processedHtml = `<!DOCTYPE html>
+        // No body tag - try to extract content from html tag
+        const htmlMatch = processedHtml.match(/<html[^>]*>([\s\S]*?)<\/html>/i);
+        if (htmlMatch) {
+          // Remove head section if present
+          bodyContent = htmlMatch[1]
+            .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, "")
+            .trim();
+        } else {
+          // Use as-is but strip doctype and html/head/body tags
+          bodyContent = processedHtml
+            .replace(/<!DOCTYPE[^>]*>/gi, "")
+            .replace(/<\/?html[^>]*>/gi, "")
+            .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, "")
+            .replace(/<\/?body[^>]*>/gi, "")
+            .trim();
+        }
+      }
+
+      // Remove style tags from body content since we'll put them in head
+      bodyContent = bodyContent.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "").trim();
+
+      // Build final HTML with proper structure
+      processedHtml = `<!DOCTYPE html>
 <html>
 <head>
   <base href="${baseUrl}/">
-  ${inlineStyles}
+  ${uniqueStyles}
 </head>
 <body style="margin:0;padding:0;">
-  <div class="canva-email-import">${processedHtml}</div>
+  <div class="canva-email-import">${bodyContent}</div>
 </body>
 </html>`;
-      }
 
       // Log for debugging
       console.log("Base URL for images:", baseUrl);
