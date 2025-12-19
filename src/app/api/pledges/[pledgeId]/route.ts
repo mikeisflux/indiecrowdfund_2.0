@@ -32,6 +32,11 @@ export async function GET(
             status: true,
             currentAmount: true,
             goalAmount: true,
+            creator: {
+              select: {
+                vanityUrl: true,
+              },
+            },
           },
         },
         reward: {
@@ -61,6 +66,11 @@ export async function GET(
 
     const isFunded = pledge.project.currentAmount >= pledge.project.goalAmount || pledge.project.status === "FUNDED";
 
+    // Build project URL with vanity URL if available
+    const projectUrl = pledge.project.creator.vanityUrl
+      ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
+      : `/projects/${pledge.project.slug}`;
+
     return NextResponse.json({
       pledge: {
         id: pledge.id,
@@ -68,7 +78,15 @@ export async function GET(
         status: pledge.status,
         createdAt: pledge.createdAt,
         backerNumber: pledge.backerNumber,
-        project: pledge.project,
+        project: {
+          id: pledge.project.id,
+          title: pledge.project.title,
+          slug: pledge.project.slug,
+          status: pledge.project.status,
+          currentAmount: pledge.project.currentAmount,
+          goalAmount: pledge.project.goalAmount,
+          projectUrl,
+        },
         reward: pledge.reward,
         addons: pledge.addons.map((a: { addon: { id: string; title: string; amount: number }; quantity: number }) => ({
           id: a.addon.id,

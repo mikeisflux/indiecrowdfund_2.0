@@ -48,6 +48,7 @@ interface FollowedProject {
   };
   followedAt: string;
   isPrelaunch: boolean;
+  projectUrl: string;
 }
 
 interface FollowedCreator {
@@ -55,6 +56,7 @@ interface FollowedCreator {
   name: string | null;
   image: string | null;
   bio: string | null;
+  vanityUrl: string | null;
   projectCount: number;
   recentProjects: {
     id: string;
@@ -62,6 +64,7 @@ interface FollowedCreator {
     slug: string;
     imageUrl: string | null;
     status: string;
+    projectUrl: string;
   }[];
 }
 
@@ -378,7 +381,7 @@ export default function FollowingPage() {
                               </Badge>
                             </div>
                             <Link
-                              href={`/projects/${project.slug}`}
+                              href={project.projectUrl}
                               className="text-lg font-semibold hover:text-primary transition-colors"
                             >
                               {project.title}
@@ -389,7 +392,7 @@ export default function FollowingPage() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <Link href={`/projects/${project.slug}`}>
+                            <Link href={project.projectUrl}>
                               <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
                                 <ExternalLink className="h-4 w-4" />
                               </Button>
@@ -512,7 +515,7 @@ export default function FollowingPage() {
                                 {creator.recentProjects.map((project) => (
                                   <Link
                                     key={project.id}
-                                    href={`/projects/${project.slug}`}
+                                    href={project.projectUrl}
                                     className="block"
                                   >
                                     <div className="w-12 h-12 rounded bg-muted overflow-hidden hover:ring-2 hover:ring-primary/50 transition-all">

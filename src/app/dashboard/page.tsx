@@ -46,6 +46,7 @@ interface Project {
   slug: string;
   status: string;
   imageUrl: string | null;
+  projectUrl: string;
 }
 
 interface SelectedProject {
@@ -60,6 +61,7 @@ interface SelectedProject {
   daysRemaining: number;
   endDate: string | null;
   launchedAt: string | null;
+  projectUrl: string;
 }
 
 interface Stats {
@@ -350,7 +352,7 @@ export default function CreatorDashboard() {
           <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
             {project && (
               <>
-                <Link href={`/projects/${project.slug}`} className="flex-1 sm:flex-initial">
+                <Link href={project.projectUrl} className="flex-1 sm:flex-initial">
                   <Button variant="outline" size="sm" className="w-full sm:w-auto">
                     <Eye className="mr-2 h-4 w-4" />
                     <span className="hidden xs:inline">View</span>

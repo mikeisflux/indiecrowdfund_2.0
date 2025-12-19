@@ -53,6 +53,7 @@ export async function GET(request: Request) {
                 id: true,
                 name: true,
                 image: true,
+                vanityUrl: true,
               },
             },
           },
@@ -82,6 +83,7 @@ export async function GET(request: Request) {
             name: true,
             image: true,
             bio: true,
+            vanityUrl: true,
             _count: {
               select: {
                 createdProjects: true,
@@ -106,15 +108,33 @@ export async function GET(request: Request) {
       : [];
 
     return NextResponse.json({
-      followedProjects: followedProjects.map((f: typeof followedProjects[number]) => ({
-        ...f.project,
-        followedAt: f.createdAt,
-        isPrelaunch: f.isPrelaunch,
-      })),
+      followedProjects: followedProjects.map((f: typeof followedProjects[number]) => {
+        // Build project URL with vanity URL if available
+        const baseUrl = f.project.creator.vanityUrl
+          ? `/projects/${f.project.creator.vanityUrl}/${f.project.slug}`
+          : `/projects/${f.project.slug}`;
+        const projectUrl = f.isPrelaunch ? `${baseUrl}/prelaunch` : baseUrl;
+
+        return {
+          ...f.project,
+          followedAt: f.createdAt,
+          isPrelaunch: f.isPrelaunch,
+          projectUrl,
+        };
+      }),
       followedCreators: followedCreators.map((c) => ({
-        ...c,
+        id: c.id,
+        name: c.name,
+        image: c.image,
+        bio: c.bio,
+        vanityUrl: c.vanityUrl,
         projectCount: c._count.createdProjects,
-        recentProjects: c.createdProjects,
+        recentProjects: c.createdProjects.map((p) => ({
+          ...p,
+          projectUrl: c.vanityUrl
+            ? `/projects/${c.vanityUrl}/${p.slug}`
+            : `/projects/${p.slug}`,
+        })),
       })),
     });
   } catch (error) {

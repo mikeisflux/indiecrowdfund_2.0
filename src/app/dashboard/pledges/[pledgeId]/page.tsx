@@ -57,6 +57,7 @@ interface PledgeDetails {
     status: string;
     currentAmount: number;
     goalAmount: number;
+    projectUrl: string;
   };
   reward: {
     id: string;
@@ -334,7 +335,7 @@ export default function ManagePledgePage() {
           </div>
 
           {/* View Project Button */}
-          <Link href={`/projects/${pledge.project.slug}`}>
+          <Link href={pledge.project.projectUrl}>
             <Button variant="outline" className="w-full">
               <ExternalLink className="h-4 w-4 mr-2" />
               View Project
@@ -364,7 +365,7 @@ export default function ManagePledgePage() {
               <p className="text-sm text-muted-foreground mb-3">
                 Want to select a different reward tier or modify your add-ons? You can change your selection while the campaign is still active.
               </p>
-              <Link href={`/projects/${pledge.project.slug}/pledge?modify=${pledge.id}`}>
+              <Link href={`${pledge.project.projectUrl}/pledge?modify=${pledge.id}`}>
                 <Button variant="outline" className="w-full border-blue-300 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900">
                   <Edit className="h-4 w-4 mr-2" />
                   Change Reward or Add-ons
@@ -524,7 +525,7 @@ export default function ManagePledgePage() {
                 <p className="text-sm text-muted-foreground mb-3">
                   Want to add more items to your pledge? Browse available add-ons and increase your support. Additional items will be charged immediately.
                 </p>
-                <Link href={`/projects/${pledge.project.slug}/pledge?addItems=${pledge.id}`}>
+                <Link href={`${pledge.project.projectUrl}/pledge?addItems=${pledge.id}`}>
                   <Button variant="outline" className="w-full border-blue-300 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900">
                     <Package className="h-4 w-4 mr-2" />
                     Browse Add-ons
@@ -626,7 +627,7 @@ export default function ManagePledgePage() {
                 : "There was an issue processing your payment."}
             </p>
             {pledge.project.status === "LIVE" && (
-              <Link href={`/projects/${pledge.project.slug}/pledge`}>
+              <Link href={`${pledge.project.projectUrl}/pledge`}>
                 <Button>Back This Project Again</Button>
               </Link>
             )}

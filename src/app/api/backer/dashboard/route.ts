@@ -76,6 +76,7 @@ export async function GET() {
                   id: true,
                   name: true,
                   image: true,
+                  vanityUrl: true,
                 },
               },
               _count: {
@@ -122,6 +123,7 @@ export async function GET() {
                   id: true,
                   name: true,
                   image: true,
+                  vanityUrl: true,
                 },
               },
             },
@@ -231,6 +233,11 @@ export async function GET() {
         ));
       }
 
+      // Build project URL with vanity URL if available
+      const projectUrl = pledge.project.creator.vanityUrl
+        ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
+        : `/projects/${pledge.project.slug}`;
+
       return {
         id: pledge.project.id,
         title: pledge.project.title,
@@ -256,6 +263,7 @@ export async function GET() {
         surveyCompleted: pledge.surveyCompleted,
         updates: pledge.project._count.updates,
         backerCount: pledge.project.backerCount,
+        projectUrl,
       };
     });
 
@@ -271,6 +279,11 @@ export async function GET() {
           ));
         }
 
+        // Build project URL with vanity URL if available
+        const projectUrl = sp.project.creator.vanityUrl
+          ? `/projects/${sp.project.creator.vanityUrl}/${sp.project.slug}`
+          : `/projects/${sp.project.slug}`;
+
         return {
           id: sp.project.id,
           title: sp.project.title,
@@ -284,6 +297,7 @@ export async function GET() {
           currentAmount: sp.project.currentAmount,
           daysRemaining,
           category: sp.project.category,
+          projectUrl,
         };
       });
 

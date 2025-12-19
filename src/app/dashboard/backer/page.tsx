@@ -54,6 +54,7 @@ interface BackedProject {
   surveyCompleted: boolean;
   updates: number;
   backerCount: number;
+  projectUrl: string;
 }
 
 interface SavedProject {
@@ -67,6 +68,7 @@ interface SavedProject {
   currentAmount: number;
   daysRemaining: number;
   category: string;
+  projectUrl: string;
 }
 
 interface DashboardStats {
@@ -510,7 +512,7 @@ export default function BackerDashboard() {
                                   {getFulfillmentBadge(project.fulfillmentStatus)}
                                 </div>
                                 <Link
-                                  href={`/projects/${project.slug}`}
+                                  href={project.projectUrl}
                                   className="text-lg font-semibold hover:text-primary transition-colors"
                                 >
                                   {project.title}
@@ -519,7 +521,7 @@ export default function BackerDashboard() {
                                   by {project.creator.name}
                                 </p>
                               </div>
-                              <Link href={`/projects/${project.slug}`}>
+                              <Link href={project.projectUrl}>
                                 <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
                                   <ExternalLink className="h-4 w-4" />
                                 </Button>
@@ -581,7 +583,7 @@ export default function BackerDashboard() {
 
                             {/* Action Buttons */}
                             <div className="flex flex-wrap items-center gap-2 mt-4">
-                              <Link href={`/projects/${project.slug}`}>
+                              <Link href={project.projectUrl}>
                                 <Button variant="outline" size="sm" className="hover:border-primary/50">
                                   <ExternalLink className="mr-2 h-3 w-3" />
                                   View Project
@@ -660,7 +662,7 @@ export default function BackerDashboard() {
                           </div>
                           <CardContent className="p-4">
                             <Link
-                              href={`/projects/${project.slug}`}
+                              href={project.projectUrl}
                               className="mb-1 block font-semibold hover:text-primary transition-colors"
                             >
                               {project.title}
@@ -686,7 +688,7 @@ export default function BackerDashboard() {
                               </span>
                             </div>
 
-                            <Link href={`/projects/${project.slug}/pledge`}>
+                            <Link href={`${project.projectUrl}/pledge`}>
                               <Button className="mt-4 w-full bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90" size="sm">
                                 Back this project
                               </Button>

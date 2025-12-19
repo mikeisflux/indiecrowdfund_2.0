@@ -15,6 +15,13 @@ export async function GET(req: NextRequest) {
     const projectId = searchParams.get("projectId");
     const days = parseInt(searchParams.get("days") || "30");
 
+    // Get the creator's vanity URL
+    const creator = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { vanityUrl: true },
+    });
+    const creatorVanityUrl = creator?.vanityUrl || null;
+
     // Get user's own projects
     const ownProjects = await db.project.findMany({
       where: {
@@ -398,6 +405,13 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // Helper to build project URL with vanity URL if available
+    const buildProjectUrl = (slug: string) => {
+      return creatorVanityUrl
+        ? `/projects/${creatorVanityUrl}/${slug}`
+        : `/projects/${slug}`;
+    };
+
     return NextResponse.json({
       projects: projects.map(p => ({
         id: p.id,
@@ -405,6 +419,7 @@ export async function GET(req: NextRequest) {
         slug: p.slug,
         status: p.status,
         imageUrl: p.imageUrl,
+        projectUrl: buildProjectUrl(p.slug),
       })),
       selectedProject: {
         id: selectedProject.id,
@@ -418,6 +433,7 @@ export async function GET(req: NextRequest) {
         daysRemaining,
         endDate: selectedProject.endDate,
         launchedAt: selectedProject.launchedAt,
+        projectUrl: buildProjectUrl(selectedProject.slug),
       },
       stats: {
         todayPledges: Math.round(todayAmount * 100) / 100,
