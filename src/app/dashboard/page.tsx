@@ -480,6 +480,22 @@ export default function CreatorDashboard() {
                     <MessageSquare className="mr-2 h-4 w-4" />
                     Messages
                   </TabsTrigger>
+                  <Link href="/dashboard/email">
+                    <TabsTrigger value="email" asChild>
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-foreground">
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Email
+                      </div>
+                    </TabsTrigger>
+                  </Link>
+                  <Link href="/dashboard/email-marketing">
+                    <TabsTrigger value="email-marketing" asChild>
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-foreground">
+                        <DollarSign className="mr-2 h-4 w-4" />
+                        Marketing
+                      </div>
+                    </TabsTrigger>
+                  </Link>
                   <TabsTrigger value="fulfillment">
                     <Truck className="mr-2 h-4 w-4" />
                     Fulfillment

@@ -2,7 +2,7 @@
 
 import { getCSRFHeaders } from "@/lib/csrf";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Trash2, Copy, Link2, BarChart3, Share2, Rocket, Loader2, CheckCircle, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Copy, Link2, BarChart3, Share2, Rocket, Loader2, CheckCircle, ExternalLink, User, Lock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export function PromotionStep() {
@@ -23,15 +23,126 @@ export function PromotionStep() {
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [justPublished, setJustPublished] = useState(false);
 
+  // Vanity URL state
+  const [vanityUrl, setVanityUrl] = useState("");
+  const [vanityUrlInput, setVanityUrlInput] = useState("");
+  const [vanityUrlLocked, setVanityUrlLocked] = useState(false);
+  const [vanityUrlAvailable, setVanityUrlAvailable] = useState<boolean | null>(null);
+  const [vanityUrlError, setVanityUrlError] = useState("");
+  const [isCheckingVanity, setIsCheckingVanity] = useState(false);
+  const [isSavingVanity, setIsSavingVanity] = useState(false);
+
+  // Fetch user's vanity URL on mount
+  useEffect(() => {
+    const fetchVanityUrl = async () => {
+      try {
+        const response = await fetch("/api/user/vanity-url");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.vanityUrl) {
+            setVanityUrl(data.vanityUrl);
+            setVanityUrlInput(data.vanityUrl);
+            setVanityUrlLocked(true);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch vanity URL:", error);
+      }
+    };
+    fetchVanityUrl();
+  }, []);
+
+  // Debounced vanity URL availability check
+  const checkVanityAvailability = useCallback(async (url: string) => {
+    if (!url || url.length < 3) {
+      setVanityUrlAvailable(null);
+      setVanityUrlError("");
+      return;
+    }
+
+    setIsCheckingVanity(true);
+    setVanityUrlError("");
+
+    try {
+      const response = await fetch("/api/user/vanity-url", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ vanityUrl: url }),
+      });
+
+      const data = await response.json();
+      setVanityUrlAvailable(data.available);
+      if (!data.available && data.error) {
+        setVanityUrlError(data.error);
+      }
+    } catch (error) {
+      console.error("Failed to check vanity URL:", error);
+      setVanityUrlError("Failed to check availability");
+    } finally {
+      setIsCheckingVanity(false);
+    }
+  }, []);
+
+  // Debounce the availability check
+  useEffect(() => {
+    if (vanityUrlLocked) return;
+
+    const timer = setTimeout(() => {
+      if (vanityUrlInput && vanityUrlInput.length >= 3) {
+        checkVanityAvailability(vanityUrlInput);
+      } else {
+        setVanityUrlAvailable(null);
+        setVanityUrlError("");
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [vanityUrlInput, vanityUrlLocked, checkVanityAvailability]);
+
+  const saveVanityUrl = async () => {
+    if (!vanityUrlInput || vanityUrlInput.length < 3 || !vanityUrlAvailable) {
+      return;
+    }
+
+    setIsSavingVanity(true);
+
+    try {
+      const response = await fetch("/api/user/vanity-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ vanityUrl: vanityUrlInput }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save vanity URL");
+      }
+
+      setVanityUrl(data.vanityUrl);
+      setVanityUrlLocked(true);
+      toast.success("Your creator URL has been set! This cannot be changed.");
+    } catch (error) {
+      console.error("Failed to save vanity URL:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save vanity URL");
+    } finally {
+      setIsSavingVanity(false);
+    }
+  };
+
   const customTags = promotion.customReferralTags || [];
 
   // Use actual project slug from store, or generate a preview slug from title
   const displaySlug = projectSlug || (basics.title
     ? basics.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50)
     : "your-project");
-  const projectUrl = `/projects/${displaySlug}`;
+
+  // URL now uses vanity URL format: /projects/[vanityname]/[slug]
+  const displayVanityUrl = vanityUrl || vanityUrlInput || "your-username";
+  const projectUrl = `/projects/${displayVanityUrl}/${displaySlug}`;
   const prelaunchUrl = `${projectUrl}/prelaunch`;
   const hasActualSlug = !!projectSlug;
+  const hasVanityUrl = !!vanityUrl;
 
   // Get full URL for sharing (window.location.origin for current domain)
   const getFullUrl = (path: string) => {
@@ -42,6 +153,12 @@ export function PromotionStep() {
   };
 
   const publishPrelaunchPage = async () => {
+    // Require vanity URL to be set first
+    if (!vanityUrl) {
+      toast.error("Please set your creator URL first (above)");
+      return;
+    }
+
     if (!basics.title || basics.title.trim().length < 3) {
       toast.error("Please enter a project title first (in the Basics step)");
       return;
@@ -225,6 +342,108 @@ export function PromotionStep() {
 
   return (
     <div className="space-y-8">
+      {/* Creator URL (Vanity URL) */}
+      <Card className={!hasVanityUrl ? "border-amber-200 dark:border-amber-800" : ""}>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <User className="h-5 w-5" />
+            Creator URL
+            {hasVanityUrl && <Lock className="h-4 w-4 text-muted-foreground" />}
+          </CardTitle>
+          <CardDescription>
+            Your unique creator URL for all your projects. This is part of every project&apos;s URL.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!hasVanityUrl && (
+            <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="ml-2 text-amber-800 dark:text-amber-200">
+                <strong>Required:</strong> You must set your creator URL before you can publish a pre-launch page or submit your project for review.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="vanity-url">Your Creator URL</Label>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center rounded-md border bg-muted px-3 py-2">
+                <span className="text-sm text-muted-foreground">
+                  {typeof window !== "undefined" ? window.location.origin : ""}/projects/
+                </span>
+              </div>
+              <div className="relative flex-1">
+                <Input
+                  id="vanity-url"
+                  placeholder="your-username"
+                  value={vanityUrlInput}
+                  onChange={(e) => setVanityUrlInput(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+                  disabled={vanityUrlLocked}
+                  className={`pr-10 ${
+                    vanityUrlLocked ? "bg-muted" : ""
+                  } ${
+                    vanityUrlAvailable === true ? "border-green-500" : ""
+                  } ${
+                    vanityUrlAvailable === false ? "border-red-500" : ""
+                  }`}
+                />
+                {isCheckingVanity && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+                {!isCheckingVanity && vanityUrlAvailable === true && !vanityUrlLocked && (
+                  <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                )}
+                {!isCheckingVanity && vanityUrlAvailable === false && (
+                  <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                )}
+                {vanityUrlLocked && (
+                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+              <div className="rounded-md border bg-muted px-3 py-2">
+                <span className="text-sm text-muted-foreground">/project-slug</span>
+              </div>
+            </div>
+
+            {vanityUrlError && (
+              <p className="text-xs text-red-500">{vanityUrlError}</p>
+            )}
+
+            {vanityUrlLocked ? (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Your creator URL is permanently set and cannot be changed.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                3-30 characters. Lowercase letters, numbers, hyphens, and underscores only. Must start with a letter.
+                <strong className="text-amber-600 dark:text-amber-400"> Cannot be changed once set.</strong>
+              </p>
+            )}
+          </div>
+
+          {!vanityUrlLocked && (
+            <Button
+              onClick={saveVanityUrl}
+              disabled={isSavingVanity || !vanityUrlAvailable || vanityUrlInput.length < 3}
+              className="w-full"
+            >
+              {isSavingVanity ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Setting Creator URL...
+                </>
+              ) : (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Set Creator URL Permanently
+                </>
+              )}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Project URL */}
       <div className="space-y-2">
         <Label>Project URL</Label>
@@ -246,7 +465,9 @@ export function PromotionStep() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          This URL cannot be changed after launch
+          {hasVanityUrl
+            ? "This URL cannot be changed after launch"
+            : "Set your creator URL above to see the final project URL"}
         </p>
       </div>
 

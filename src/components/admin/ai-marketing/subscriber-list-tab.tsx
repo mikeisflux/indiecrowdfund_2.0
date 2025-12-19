@@ -53,6 +53,7 @@ interface Subscriber {
   source: string;
   subscribedAt: string | null;
   category: string;
+  tags: string[];
 }
 
 interface SubscriberCounts {
@@ -231,12 +232,13 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
 
   const exportCSV = () => {
     const csvContent = [
-      ["Email", "Name", "Source", "Category", "Subscribed At"].join(","),
+      ["Email", "Name", "Source", "Category", "Tags", "Subscribed At"].join(","),
       ...subscribers.map(s => [
         s.email,
         s.name || "",
         s.source,
         s.category,
+        (s.tags || []).join(";"),
         s.subscribedAt || "",
       ].map(field => `"${field}"`).join(",")),
     ].join("\n");
@@ -378,6 +380,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
                   <TableHead>Name</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead>Tags</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
@@ -385,13 +388,13 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <RefreshCw className="h-6 w-6 animate-spin mx-auto text-zinc-400" />
                     </TableCell>
                   </TableRow>
                 ) : subscribers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-zinc-500">
+                    <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
                       No subscribers found
                     </TableCell>
                   </TableRow>
@@ -413,6 +416,24 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
                           {categoryInfo[subscriber.category as keyof typeof categoryInfo]?.label ||
                             subscriber.category}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {subscriber.tags && subscriber.tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {subscriber.tags.slice(0, 3).map((tag) => (
+                              <Badge key={tag} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {subscriber.tags.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{subscriber.tags.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-zinc-400">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-zinc-500">
                         {formatDate(subscriber.subscribedAt)}
