@@ -34,7 +34,10 @@ import {
   ChevronRight,
   Plus,
   Pencil,
+  Copy,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -118,6 +121,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
   const [formData, setFormData] = useState({ email: "", name: "", source: "manual" });
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [removingDuplicates, setRemovingDuplicates] = useState(false);
 
   const fetchSubscribers = useCallback(async () => {
     setLoading(true);
@@ -252,6 +256,41 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
     URL.revokeObjectURL(url);
   };
 
+  const handleRemoveDuplicates = async () => {
+    if (!confirm("This will remove duplicate email addresses, keeping the oldest entry for each. Continue?")) {
+      return;
+    }
+
+    setRemovingDuplicates(true);
+    try {
+      const response = await fetch(
+        `/api/admin/ai-marketing/subscribers?action=remove-duplicates&category=${selectedCategory}`,
+        {
+          method: "DELETE",
+          headers: getCSRFHeaders(),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.removed > 0) {
+          toast.success(`Removed ${data.removed} duplicate subscribers`);
+          fetchSubscribers();
+        } else {
+          toast.info("No duplicates found");
+        }
+      } else {
+        toast.error(data.error || "Failed to remove duplicates");
+      }
+    } catch (error) {
+      console.error("Error removing duplicates:", error);
+      toast.error("Failed to remove duplicates");
+    } finally {
+      setRemovingDuplicates(false);
+    }
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
     return new Date(dateStr).toLocaleDateString();
@@ -347,6 +386,20 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
               <Button variant="outline" size="sm" onClick={exportCSV}>
                 <Download className="mr-2 h-4 w-4" />
                 Export
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRemoveDuplicates}
+                disabled={removingDuplicates || (selectedCategory !== "newsletter" && selectedCategory !== "retailers" && selectedCategory !== "all")}
+                title="Remove duplicate email addresses"
+              >
+                {removingDuplicates ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="mr-2 h-4 w-4" />
+                )}
+                Remove Duplicates
               </Button>
               <Button variant="outline" size="sm" onClick={fetchSubscribers}>
                 <RefreshCw className="h-4 w-4" />

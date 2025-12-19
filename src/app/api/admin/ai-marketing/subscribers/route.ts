@@ -452,7 +452,7 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE - Remove a newsletter subscriber
+// DELETE - Remove a newsletter subscriber or remove duplicates
 export async function DELETE(req: NextRequest) {
   try {
     const authResult = await requireAdmin();
@@ -466,12 +466,66 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const category = searchParams.get("category");
+    const action = searchParams.get("action");
 
+    // Handle remove duplicates action
+    if (action === "remove-duplicates") {
+      const targetCategory = category || "newsletter";
+
+      if (targetCategory === "newsletter" || targetCategory === "retailers" || targetCategory === "all") {
+        // Find all newsletter subscribers
+        const allSubscribers = await db.newsletterSubscriber.findMany({
+          where: { isActive: true },
+          select: { id: true, email: true, createdAt: true },
+          orderBy: { createdAt: "asc" }, // Keep oldest
+        });
+
+        // Find duplicates (same email, keep oldest)
+        const emailMap = new Map<string, string[]>();
+        for (const sub of allSubscribers) {
+          const email = sub.email.toLowerCase();
+          if (!emailMap.has(email)) {
+            emailMap.set(email, []);
+          }
+          emailMap.get(email)!.push(sub.id);
+        }
+
+        // Collect IDs to deactivate (all but first/oldest for each email)
+        const idsToDeactivate: string[] = [];
+        for (const [, ids] of emailMap) {
+          if (ids.length > 1) {
+            // Skip the first (oldest), deactivate the rest
+            idsToDeactivate.push(...ids.slice(1));
+          }
+        }
+
+        if (idsToDeactivate.length > 0) {
+          await db.newsletterSubscriber.updateMany({
+            where: { id: { in: idsToDeactivate } },
+            data: { isActive: false },
+          });
+        }
+
+        return NextResponse.json({
+          success: true,
+          removed: idsToDeactivate.length,
+          message: `Removed ${idsToDeactivate.length} duplicate subscribers`,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        removed: 0,
+        message: "No duplicates to remove in this category",
+      });
+    }
+
+    // Regular delete by ID
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    if (category === "newsletter") {
+    if (category === "newsletter" || category === "retailers") {
       await db.newsletterSubscriber.update({
         where: { id },
         data: { isActive: false },

@@ -44,6 +44,9 @@ import {
   Megaphone,
   AtSign,
   AlertTriangle,
+  Plus,
+  Pencil,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
@@ -55,6 +58,7 @@ interface Subscriber {
   name: string;
   status: "active" | "unsubscribed" | "bounced";
   source: string;
+  sourceType?: "follower" | "backer" | "import" | "manual";
   createdAt: string;
 }
 
@@ -100,6 +104,13 @@ export default function EmailMarketingPage() {
   // Email setup state
   const [hasEmailSetup, setHasEmailSetup] = useState<boolean | null>(null);
   const [creatorEmail, setCreatorEmail] = useState<string | null>(null);
+
+  // Add/Edit subscriber state
+  const [showSubscriberDialog, setShowSubscriberDialog] = useState(false);
+  const [editingSubscriber, setEditingSubscriber] = useState<Subscriber | null>(null);
+  const [subscriberName, setSubscriberName] = useState("");
+  const [subscriberEmail, setSubscriberEmail] = useState("");
+  const [isSavingSubscriber, setIsSavingSubscriber] = useState(false);
 
   // Check email setup on mount
   useEffect(() => {
@@ -275,6 +286,100 @@ export default function EmailMarketingPage() {
       console.error("Error deleting subscriber:", error);
       toast.error("Failed to delete subscriber");
     }
+  };
+
+  // Open add subscriber dialog
+  const openAddSubscriber = () => {
+    setEditingSubscriber(null);
+    setSubscriberName("");
+    setSubscriberEmail("");
+    setShowSubscriberDialog(true);
+  };
+
+  // Open edit subscriber dialog
+  const openEditSubscriber = (subscriber: Subscriber) => {
+    setEditingSubscriber(subscriber);
+    setSubscriberName(subscriber.name === "Unknown" ? "" : subscriber.name);
+    setSubscriberEmail(subscriber.email);
+    setShowSubscriberDialog(true);
+  };
+
+  // Save subscriber (add or edit)
+  const handleSaveSubscriber = async () => {
+    if (!subscriberEmail.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+
+    setIsSavingSubscriber(true);
+    try {
+      if (editingSubscriber) {
+        // Update existing subscriber
+        const res = await fetch(`/api/creator/email-marketing/subscribers/${editingSubscriber.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            name: subscriberName.trim() || null,
+            email: subscriberEmail.trim().toLowerCase(),
+          }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to update subscriber");
+        }
+
+        const data = await res.json();
+        setSubscribers((prev) =>
+          prev.map((s) =>
+            s.id === editingSubscriber.id
+              ? { ...s, name: data.subscriber.name || "Unknown", email: data.subscriber.email }
+              : s
+          )
+        );
+        toast.success("Subscriber updated");
+      } else {
+        // Add new subscriber
+        const res = await fetch("/api/creator/email-marketing/subscribers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            name: subscriberName.trim() || null,
+            email: subscriberEmail.trim().toLowerCase(),
+          }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to add subscriber");
+        }
+
+        const data = await res.json();
+        setSubscribers((prev) => [data.subscriber, ...prev]);
+        setStats((prev) => ({ ...prev, total: prev.total + 1, active: prev.active + 1 }));
+        toast.success("Subscriber added");
+      }
+
+      setShowSubscriberDialog(false);
+      setSubscriberName("");
+      setSubscriberEmail("");
+      setEditingSubscriber(null);
+    } catch (error) {
+      console.error("Error saving subscriber:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save subscriber");
+    } finally {
+      setIsSavingSubscriber(false);
+    }
+  };
+
+  // Check if subscriber can be edited (only manual/import subscribers)
+  const canEditSubscriber = (subscriber: Subscriber) => {
+    return subscriber.sourceType === "manual" || subscriber.sourceType === "import";
+  };
+
+  // Check if subscriber can be deleted (only manual/import subscribers)
+  const canDeleteSubscriber = (subscriber: Subscriber) => {
+    return subscriber.sourceType === "manual" || subscriber.sourceType === "import";
   };
 
   const getStatusBadge = (status: string) => {
@@ -562,7 +667,13 @@ export default function EmailMarketingPage() {
             {/* Subscribers Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Your Subscribers ({subscribers.length})</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Your Subscribers ({subscribers.length})</CardTitle>
+                  <Button onClick={openAddSubscriber}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Subscriber
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -576,6 +687,10 @@ export default function EmailMarketingPage() {
                     <p className="text-sm text-muted-foreground mt-1">
                       Upload a CSV or add subscribers manually
                     </p>
+                    <Button className="mt-4" onClick={openAddSubscriber}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Subscriber
+                    </Button>
                   </div>
                 ) : (
                   <Table>
@@ -586,7 +701,7 @@ export default function EmailMarketingPage() {
                         <TableHead>Status</TableHead>
                         <TableHead>Source</TableHead>
                         <TableHead>Added</TableHead>
-                        <TableHead className="w-12"></TableHead>
+                        <TableHead className="w-24"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -602,13 +717,28 @@ export default function EmailMarketingPage() {
                             {format(new Date(subscriber.createdAt), "MMM d, yyyy")}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteSubscriber(subscriber.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-muted-foreground" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              {canEditSubscriber(subscriber) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditSubscriber(subscriber)}
+                                  title="Edit subscriber"
+                                >
+                                  <Pencil className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              )}
+                              {canDeleteSubscriber(subscriber) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteSubscriber(subscriber.id)}
+                                  title="Delete subscriber"
+                                >
+                                  <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -617,6 +747,61 @@ export default function EmailMarketingPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Add/Edit Subscriber Dialog */}
+            <Dialog open={showSubscriberDialog} onOpenChange={setShowSubscriberDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingSubscriber ? "Edit Subscriber" : "Add Subscriber"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingSubscriber
+                      ? "Update the subscriber's information."
+                      : "Add a new subscriber to your mailing list."}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="subscriberName">Name (optional)</Label>
+                    <Input
+                      id="subscriberName"
+                      placeholder="John Doe"
+                      value={subscriberName}
+                      onChange={(e) => setSubscriberName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="subscriberEmail">Email *</Label>
+                    <Input
+                      id="subscriberEmail"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={subscriberEmail}
+                      onChange={(e) => setSubscriberEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowSubscriberDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveSubscriber} disabled={isSavingSubscriber}>
+                    {isSavingSubscriber ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : editingSubscriber ? (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    {editingSubscriber ? "Save Changes" : "Add Subscriber"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
 

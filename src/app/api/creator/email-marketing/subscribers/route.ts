@@ -1,16 +1,27 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET - Fetch creator's subscribers (from project followers)
+// Helper to get creator tag
+async function getCreatorTag(userId: string) {
+  const creator = await db.user.findUnique({
+    where: { id: userId },
+    select: { name: true, vanityUrl: true },
+  });
+  return creator?.vanityUrl || creator?.name || userId;
+}
+
+// GET - Fetch creator's subscribers (from project followers + manual imports)
 export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const creatorTag = await getCreatorTag(session.user.id);
 
     // Get all users who follow any of the creator's projects
     const creatorProjects = await db.project.findMany({
@@ -62,6 +73,16 @@ export async function GET() {
       distinct: ["userId"],
     });
 
+    // Get manually added/imported subscribers for this creator
+    const manualSubscribers = await db.newsletterSubscriber.findMany({
+      where: {
+        OR: [
+          { source: { startsWith: `creator_import:${creatorTag}` } },
+          { source: { startsWith: `creator_manual:${creatorTag}` } },
+        ],
+      },
+    });
+
     // Combine and deduplicate
     const subscriberMap = new Map<string, {
       id: string;
@@ -69,6 +90,7 @@ export async function GET() {
       name: string;
       status: "active" | "unsubscribed" | "bounced";
       source: string;
+      sourceType: "follower" | "backer" | "import" | "manual";
       createdAt: string;
     }>();
 
@@ -76,11 +98,12 @@ export async function GET() {
     for (const follower of followers) {
       if (follower.user.email && !subscriberMap.has(follower.user.email)) {
         subscriberMap.set(follower.user.email, {
-          id: follower.user.id,
+          id: `follower_${follower.user.id}`,
           email: follower.user.email,
           name: follower.user.name || "Unknown",
           status: "active",
           source: `Follower: ${follower.project.title}`,
+          sourceType: "follower",
           createdAt: follower.createdAt.toISOString(),
         });
       }
@@ -90,12 +113,29 @@ export async function GET() {
     for (const backer of backers) {
       if (backer.user.email && !subscriberMap.has(backer.user.email)) {
         subscriberMap.set(backer.user.email, {
-          id: backer.user.id,
+          id: `backer_${backer.user.id}`,
           email: backer.user.email,
           name: backer.user.name || "Unknown",
           status: "active",
           source: "Backer",
+          sourceType: "backer",
           createdAt: backer.user.createdAt.toISOString(),
+        });
+      }
+    }
+
+    // Add manual/imported subscribers
+    for (const sub of manualSubscribers) {
+      if (!subscriberMap.has(sub.email)) {
+        const isImport = sub.source?.includes("creator_import:");
+        subscriberMap.set(sub.email, {
+          id: sub.id,
+          email: sub.email,
+          name: sub.name || "Unknown",
+          status: sub.isActive ? "active" : "unsubscribed",
+          source: isImport ? "CSV Import" : "Manual",
+          sourceType: isImport ? "import" : "manual",
+          createdAt: sub.createdAt.toISOString(),
         });
       }
     }
@@ -105,7 +145,7 @@ export async function GET() {
     const stats = {
       total: subscribers.length,
       active: subscribers.filter((s) => s.status === "active").length,
-      unsubscribed: 0,
+      unsubscribed: subscribers.filter((s) => s.status === "unsubscribed").length,
       bounced: 0,
     };
 
@@ -114,6 +154,69 @@ export async function GET() {
     console.error("Error fetching subscribers:", error);
     return NextResponse.json(
       { error: "Failed to fetch subscribers" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Manually add a subscriber
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { email, name } = body;
+
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+    }
+
+    const emailLower = email.toLowerCase().trim();
+
+    // Check if already exists
+    const existing = await db.newsletterSubscriber.findUnique({
+      where: { email: emailLower },
+    });
+
+    if (existing) {
+      return NextResponse.json({ error: "Subscriber already exists" }, { status: 400 });
+    }
+
+    const creatorTag = await getCreatorTag(session.user.id);
+
+    const subscriber = await db.newsletterSubscriber.create({
+      data: {
+        email: emailLower,
+        name: name?.trim() || null,
+        source: `creator_manual:${creatorTag}`,
+        isActive: true,
+      },
+    });
+
+    return NextResponse.json({
+      subscriber: {
+        id: subscriber.id,
+        email: subscriber.email,
+        name: subscriber.name || "Unknown",
+        status: "active",
+        source: "Manual",
+        sourceType: "manual",
+        createdAt: subscriber.createdAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error("Error adding subscriber:", error);
+    return NextResponse.json(
+      { error: "Failed to add subscriber" },
       { status: 500 }
     );
   }
