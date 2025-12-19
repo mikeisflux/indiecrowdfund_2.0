@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 // PUT - Update creator's vanity URL
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { userId: string } }
 ) {
   try {
     const session = await auth();
@@ -50,7 +50,7 @@ export async function PUT(
       where: { vanityUrl: vanityUrl.toLowerCase() },
     });
 
-    if (existing && existing.id !== params.id) {
+    if (existing && existing.id !== params.userId) {
       return NextResponse.json(
         { error: "This vanity URL is already taken" },
         { status: 400 }
@@ -59,7 +59,7 @@ export async function PUT(
 
     // Update the user's vanity URL
     const updatedUser = await db.user.update({
-      where: { id: params.id },
+      where: { id: params.userId },
       data: { vanityUrl: vanityUrl.toLowerCase() },
       select: {
         id: true,
@@ -85,7 +85,7 @@ export async function PUT(
 // GET - Get creator's current vanity URL and preview
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { userId: string } }
 ) {
   try {
     const session = await auth();
@@ -99,7 +99,7 @@ export async function GET(
     }
 
     const user = await db.user.findUnique({
-      where: { id: params.id },
+      where: { id: params.userId },
       select: {
         id: true,
         name: true,

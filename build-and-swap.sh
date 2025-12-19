@@ -83,9 +83,11 @@ else
 fi
 
 # Step 6: Build new version to separate directory (zero-downtime)
+# NOTE: We call next build directly instead of npm run build because
+# npm run build includes "rm -rf .next" which would break the live site
 echo ""
 echo "🔨 Step 6: Building new version to .next-new (site stays live)..."
-BUILD_OUTPUT=$(NEXT_BUILD_OUTPUT=.next-new npm run build 2>&1)
+BUILD_OUTPUT=$(NEXT_BUILD_OUTPUT=.next-new npx next build 2>&1)
 BUILD_EXIT_CODE=$?
 
 if [ $BUILD_EXIT_CODE -eq 0 ]; then
