@@ -98,6 +98,16 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // Handle legacy edit URLs: /projects/slug/edit -> rewrite to /projects/_/slug/edit
+  const legacyEditMatch = pathname.match(/^\/projects\/([^\/]+)\/edit$/);
+  if (legacyEditMatch && legacyEditMatch[1] !== "_") {
+    const slug = legacyEditMatch[1];
+    const url = req.nextUrl.clone();
+    url.pathname = `/projects/_/${slug}/edit`;
+    url.search = req.nextUrl.search;
+    return NextResponse.rewrite(url);
+  }
+
   // Check for maintenance mode (set MAINTENANCE_MODE=true in env)
   const isMaintenanceMode = process.env.MAINTENANCE_MODE === "true";
 
