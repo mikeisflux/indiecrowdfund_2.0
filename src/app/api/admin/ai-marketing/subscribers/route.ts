@@ -492,12 +492,12 @@ export async function DELETE(req: NextRequest) {
 
         // Collect IDs to deactivate (all but first/oldest for each email)
         const idsToDeactivate: string[] = [];
-        for (const [, ids] of emailMap) {
+        emailMap.forEach((ids) => {
           if (ids.length > 1) {
             // Skip the first (oldest), deactivate the rest
             idsToDeactivate.push(...ids.slice(1));
           }
-        }
+        });
 
         if (idsToDeactivate.length > 0) {
           await db.newsletterSubscriber.updateMany({
