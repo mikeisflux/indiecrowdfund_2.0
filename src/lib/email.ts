@@ -86,7 +86,16 @@ async function sendViaSendGrid(
 }
 
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
+  console.log(`[Email] sendEmail called - to: ${to}, subject: ${subject}`);
+
   const settings = await getEmailSettings();
+  console.log(`[Email] Settings loaded:`, {
+    hasSettings: !!settings,
+    smtpFromEmail: settings?.smtpFromEmail,
+    smtpFromName: settings?.smtpFromName,
+    hasSendgridKey: !!settings?.sendgridApiKey,
+    sendgridKeyLength: settings?.sendgridApiKey?.length || 0,
+  });
 
   const fromEmail = settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
   const fromName = settings?.smtpFromName || APP_NAME;
@@ -94,18 +103,20 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
 
   // Get SendGrid API key from database settings or environment variables
   const sendgridApiKey = settings?.sendgridApiKey || process.env.SENDGRID_API_KEY;
+  console.log(`[Email] SendGrid key source: ${settings?.sendgridApiKey ? "database" : process.env.SENDGRID_API_KEY ? "env" : "none"}`);
 
   let result: { success: boolean; error?: string };
 
   if (sendgridApiKey) {
     // Use SendGrid
-    console.log(`Sending email via SendGrid to: ${to}, subject: ${subject}`);
+    console.log(`[Email] Sending email via SendGrid to: ${to}, from: ${fromEmail} (${fromName})`);
     result = await sendViaSendGrid(to, subject, html, plainText, fromEmail, fromName, sendgridApiKey);
+    console.log(`[Email] SendGrid result:`, result);
   } else {
-    console.warn("Email not configured - no email provider credentials found");
-    console.log("Would send email to:", to);
-    console.log("Subject:", subject);
-    return { success: false, error: "Email not configured" };
+    console.warn("[Email] NOT CONFIGURED - no SendGrid API key found in database or environment");
+    console.log("[Email] Would send email to:", to);
+    console.log("[Email] Subject:", subject);
+    return { success: false, error: "Email not configured - no SendGrid API key" };
   }
 
   if (result.success) {

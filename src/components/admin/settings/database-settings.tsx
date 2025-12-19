@@ -1,10 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   CheckCircle,
   Database,
@@ -19,8 +30,12 @@ import {
   CreditCard,
   Image as ImageIcon,
   Server,
-  ExternalLink,
+  Download,
+  Upload,
+  Trash2,
+  Plus,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface DatabaseStatus {
   status: "connected" | "disconnected";
@@ -39,11 +54,29 @@ interface DatabaseStatus {
   };
 }
 
+interface Backup {
+  id: string;
+  filename: string;
+  size: string;
+  sizeBytes: number;
+  createdAt: string;
+  createdAtFormatted: string;
+}
+
 export function DatabaseSettings() {
   const [data, setData] = useState<DatabaseStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Backup state
+  const [backups, setBackups] = useState<Backup[]>([]);
+  const [isLoadingBackups, setIsLoadingBackups] = useState(false);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [restoreConfirm, setRestoreConfirm] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchStatus = useCallback(async (showRefreshing = false) => {
     try {
@@ -70,9 +103,141 @@ export function DatabaseSettings() {
     }
   }, []);
 
+  const fetchBackups = useCallback(async () => {
+    try {
+      setIsLoadingBackups(true);
+      const response = await fetch("/api/admin/database/backup");
+      if (!response.ok) {
+        throw new Error("Failed to fetch backups");
+      }
+      const result = await response.json();
+      setBackups(result.backups || []);
+    } catch (err) {
+      console.error("Error fetching backups:", err);
+      toast.error("Failed to load backups");
+    } finally {
+      setIsLoadingBackups(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStatus();
-  }, [fetchStatus]);
+    fetchBackups();
+  }, [fetchStatus, fetchBackups]);
+
+  const createBackup = async () => {
+    try {
+      setIsCreatingBackup(true);
+      toast.info("Creating backup... This may take a moment.");
+
+      const response = await fetch("/api/admin/database/backup", {
+        method: "POST",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create backup");
+      }
+
+      toast.success(`Backup created: ${result.backup.filename} (${result.backup.size})`);
+      fetchBackups();
+    } catch (err) {
+      console.error("Error creating backup:", err);
+      toast.error(String(err));
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  const downloadBackup = (filename: string) => {
+    window.open(`/api/admin/database/backup/download?filename=${encodeURIComponent(filename)}`, "_blank");
+  };
+
+  const deleteBackup = async (filename: string) => {
+    try {
+      const response = await fetch(`/api/admin/database/backup?filename=${encodeURIComponent(filename)}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || "Failed to delete backup");
+      }
+
+      toast.success("Backup deleted");
+      fetchBackups();
+    } catch (err) {
+      console.error("Error deleting backup:", err);
+      toast.error(String(err));
+    } finally {
+      setDeleteConfirm(null);
+    }
+  };
+
+  const restoreBackup = async (filename: string) => {
+    try {
+      setIsRestoring(true);
+      toast.info("Restoring database... This may take a moment.");
+
+      const response = await fetch("/api/admin/database/backup/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to restore backup");
+      }
+
+      toast.success(`Database restored from ${filename} (${result.duration})`);
+    } catch (err) {
+      console.error("Error restoring backup:", err);
+      toast.error(String(err));
+    } finally {
+      setIsRestoring(false);
+      setRestoreConfirm(null);
+    }
+  };
+
+  const uploadBackup = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      toast.info("Uploading backup file...");
+
+      const response = await fetch("/api/admin/database/backup/restore", {
+        method: "PUT",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to upload backup");
+      }
+
+      toast.success(`Backup uploaded: ${result.backup.filename}`);
+      fetchBackups();
+    } catch (err) {
+      console.error("Error uploading backup:", err);
+      toast.error(String(err));
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadBackup(file);
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   if (isLoading) {
     return (
@@ -208,23 +373,124 @@ export function DatabaseSettings() {
         </CardContent>
       </Card>
 
+      {/* Backup Management */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Database Backups
+              </CardTitle>
+              <CardDescription>Create, download, and restore database backups</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload
+              </Button>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept=".sql,.sql.gz"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <Button
+                size="sm"
+                onClick={createBackup}
+                disabled={isCreatingBackup}
+              >
+                {isCreatingBackup ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                Create Backup
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingBackups ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : backups.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Database className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No backups found</p>
+              <p className="text-sm mt-1">Click &quot;Create Backup&quot; to create your first backup</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {backups.map((backup) => (
+                <div
+                  key={backup.id}
+                  className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Database className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-sm">{backup.filename}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {backup.size} • {backup.createdAtFormatted}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => downloadBackup(backup.filename)}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setRestoreConfirm(backup.filename)}
+                      disabled={isRestoring}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700"
+                      onClick={() => setDeleteConfirm(backup.filename)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Database Operations */}
       <Card>
         <CardHeader>
           <CardTitle>Database Operations</CardTitle>
-          <CardDescription>Manage database maintenance tasks</CardDescription>
+          <CardDescription>Manage database maintenance tasks (run via CLI)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Button variant="outline" className="h-auto flex-col gap-2 p-6" disabled>
               <Zap className="h-6 w-6" />
               <span>Run Migrations</span>
-              <span className="text-xs text-muted-foreground">Run via CLI: npx prisma migrate</span>
+              <span className="text-xs text-muted-foreground">npx prisma migrate deploy</span>
             </Button>
             <Button variant="outline" className="h-auto flex-col gap-2 p-6" disabled>
               <RefreshCw className="h-6 w-6" />
               <span>Sync Schema</span>
-              <span className="text-xs text-muted-foreground">Run via CLI: npx prisma db push</span>
+              <span className="text-xs text-muted-foreground">npx prisma db push</span>
             </Button>
             <Button variant="outline" className="h-auto flex-col gap-2 p-6 text-amber-600 hover:text-amber-700" disabled>
               <AlertTriangle className="h-6 w-6" />
@@ -235,78 +501,55 @@ export function DatabaseSettings() {
         </CardContent>
       </Card>
 
-      {/* Backup Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Backup Management</CardTitle>
-          <CardDescription>Database backup configuration and status</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border p-4 bg-muted/30">
-            <div className="flex items-start gap-3">
-              <Database className="h-5 w-5 text-primary mt-0.5" />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="font-medium">Infrastructure-Managed Backups</p>
-                  <Badge variant="secondary">Recommended</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {data?.backupInfo.message || "Database backups are typically managed by your hosting provider."}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Most cloud database providers (Vercel Postgres, Railway, PlanetScale, Supabase, etc.)
-                  include automatic point-in-time backups as part of their service.
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Backup?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deleteConfirm}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => deleteConfirm && deleteBackup(deleteConfirm)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border p-4">
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <ExternalLink className="h-4 w-4" />
-                Vercel Postgres
-              </h4>
-              <p className="text-sm text-muted-foreground mb-2">
-                Automatic daily backups with 7-day retention on Pro plans.
+      {/* Restore Confirmation Dialog */}
+      <AlertDialog open={!!restoreConfirm} onOpenChange={() => setRestoreConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Restore Database?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Are you sure you want to restore the database from <strong>{restoreConfirm}</strong>?
               </p>
-              <a
-                href="https://vercel.com/docs/storage/vercel-postgres"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline"
-              >
-                View Documentation →
-              </a>
-            </div>
-
-            <div className="rounded-lg border p-4">
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <ExternalLink className="h-4 w-4" />
-                Railway
-              </h4>
-              <p className="text-sm text-muted-foreground mb-2">
-                Automatic backups every 24 hours with configurable retention.
+              <p className="text-amber-600 font-medium">
+                Warning: This will overwrite your current database. It is strongly recommended to create a backup first.
               </p>
-              <a
-                href="https://docs.railway.app/databases/backups"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline"
-              >
-                View Documentation →
-              </a>
-            </div>
-          </div>
-
-          <div className="text-sm text-muted-foreground">
-            <p>
-              <strong>Manual Backup:</strong> For manual backups, use your database provider&apos;s dashboard
-              or run <code className="bg-muted px-1 py-0.5 rounded">pg_dump</code> from your terminal.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={() => restoreConfirm && restoreBackup(restoreConfirm)}
+            >
+              Restore Database
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TabsContent>
   );
 }
