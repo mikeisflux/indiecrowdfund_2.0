@@ -47,7 +47,9 @@ export async function GET() {
     });
 
     // Get user details for followers
-    const followerUserIds = followers.map((f) => f.userId).filter((id): id is string => id !== null);
+    const followerUserIds = followers
+      .map((f: { userId: string | null }) => f.userId)
+      .filter((id: string | null): id is string => id !== null);
     const followerUsers = await db.user.findMany({
       where: { id: { in: followerUserIds } },
       select: {
