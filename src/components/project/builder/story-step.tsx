@@ -12,7 +12,7 @@ import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Plus, Trash2, AlertTriangle, HelpCircle } from "lucide-react";
 
 export function StoryStep() {
-  const { story, updateStory } = useProjectStore();
+  const { story, updateStory, projectId } = useProjectStore();
   const [newFaqQuestion, setNewFaqQuestion] = useState("");
   const [newFaqAnswer, setNewFaqAnswer] = useState("");
 
@@ -49,6 +49,7 @@ export function StoryStep() {
           value={story.description || ""}
           onChange={(value) => updateStory({ description: value })}
           placeholder="Describe your project in detail. Include what you're creating, why it matters, and what makes it unique..."
+          projectId={projectId || undefined}
         />
       </div>
 

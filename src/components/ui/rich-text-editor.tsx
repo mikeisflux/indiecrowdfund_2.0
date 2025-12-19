@@ -151,33 +151,39 @@ export function RichTextEditor({
         return false;
       },
       // Handle drop - upload dropped images
-      handleDrop: (view, event) => {
+      handleDrop: (view, event, _slice, moved) => {
+        // Don't handle if this is an internal move within the editor
+        if (moved) return false;
+
         const files = event.dataTransfer?.files;
-        if (files && files.length > 0) {
-          for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            if (file.type.startsWith("image/")) {
-              event.preventDefault();
-              const coordinates = view.posAtCoords({
-                left: event.clientX,
-                top: event.clientY,
-              });
-              // Handle async upload without awaiting
-              uploadImage(file).then((url) => {
-                if (url && view.state && coordinates) {
-                  view.dispatch(
-                    view.state.tr.insert(
-                      coordinates.pos,
-                      view.state.schema.nodes.image.create({ src: url })
-                    )
-                  );
-                }
-              });
-              return true;
+        if (!files || files.length === 0) return false;
+
+        // Check if any dropped file is an image
+        const imageFiles = Array.from(files).filter(file => file.type.startsWith("image/"));
+        if (imageFiles.length === 0) return false;
+
+        // Prevent default immediately to stop browser from handling the drop
+        event.preventDefault();
+
+        const coordinates = view.posAtCoords({
+          left: event.clientX,
+          top: event.clientY,
+        });
+
+        // Upload all image files
+        for (const file of imageFiles) {
+          uploadImage(file).then((url) => {
+            if (url && view.state && coordinates) {
+              view.dispatch(
+                view.state.tr.insert(
+                  coordinates.pos,
+                  view.state.schema.nodes.image.create({ src: url })
+                )
+              );
             }
-          }
+          });
         }
-        return false;
+        return true;
       },
     },
     onUpdate: ({ editor }) => {

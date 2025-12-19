@@ -504,6 +504,7 @@ export function PromotionStep() {
                   updatePromotion({ prelaunchDescription: value })
                 }
                 placeholder="Give potential backers a sneak peek of what you're creating..."
+                projectId={projectId || undefined}
               />
             </div>
             <p className="text-sm text-muted-foreground">
