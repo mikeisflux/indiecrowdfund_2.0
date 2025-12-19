@@ -63,8 +63,9 @@ fi
 # Step 4: Run type check
 echo ""
 echo "🔍 Step 4: Running type check..."
-# Clean stale .next types first
-rm -rf .next/types
+# Clean stale .next cache completely to prevent stale type errors
+echo "   Cleaning .next cache..."
+rm -rf .next
 if npx tsc --noEmit 2>&1; then
     echo -e "${GREEN}   Type check passed${NC}"
 else
