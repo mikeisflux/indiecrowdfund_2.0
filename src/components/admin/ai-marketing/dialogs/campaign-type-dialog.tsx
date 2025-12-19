@@ -301,7 +301,7 @@ export function CampaignTypeDialog({
 
       // Extract all style tags (could be in head or body)
       const styleMatch = processedHtml.match(/<style[^>]*>[\s\S]*?<\/style>/gi);
-      const uniqueStyles = styleMatch ? [...new Set(styleMatch)].join("\n") : "";
+      const uniqueStyles = styleMatch ? Array.from(new Set(styleMatch)).join("\n") : "";
 
       // Try to extract just the body content
       let bodyContent = "";
