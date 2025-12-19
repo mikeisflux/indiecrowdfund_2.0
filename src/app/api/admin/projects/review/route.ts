@@ -299,6 +299,7 @@ export async function GET(req: NextRequest) {
               email: true,
               emailVerified: true,
               createdAt: true,
+              vanityUrl: true,
               _count: {
                 select: {
                   createdProjects: true,

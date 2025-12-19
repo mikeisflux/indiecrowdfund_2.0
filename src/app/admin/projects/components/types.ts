@@ -4,6 +4,7 @@ export interface Creator {
   email: string;
   emailVerified: Date | null;
   createdAt: string;
+  vanityUrl?: string | null;
   _count: {
     createdProjects: number;
   };

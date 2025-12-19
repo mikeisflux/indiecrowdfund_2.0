@@ -23,9 +23,11 @@ import {
   Loader2,
   FileSearch,
   Hash,
+  Link2,
 } from "lucide-react";
 import { Project } from "./types";
 import { formatDuration } from "./utils";
+import { SetVanityUrlDialog } from "./dialogs";
 
 interface ActiveProjectPanelProps {
   project: Project | null;
@@ -48,14 +50,17 @@ export function ActiveProjectPanel({
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [backfillMessage, setBackfillMessage] = useState<string | null>(null);
+  const [showVanityUrlDialog, setShowVanityUrlDialog] = useState(false);
+  const [currentVanityUrl, setCurrentVanityUrl] = useState<string | null>(null);
 
-  // Clear messages when project changes
+  // Clear messages and update vanity URL when project changes
   useEffect(() => {
     setSyncMessage(null);
     setProcessMessage(null);
     setVerifyMessage(null);
     setBackfillMessage(null);
-  }, [project?.id]);
+    setCurrentVanityUrl(project?.creator?.vanityUrl || null);
+  }, [project?.id, project?.creator?.vanityUrl]);
 
   const handleProcessPledges = async () => {
     if (!project) return;
@@ -313,7 +318,20 @@ export function ActiveProjectPanel({
               )}
               {isBackfilling ? "Assigning..." : "Assign Backer #s"}
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowVanityUrlDialog(true)}
+              className="flex-1"
+            >
+              <Link2 className="mr-2 h-4 w-4" />
+              {currentVanityUrl ? "Edit Vanity URL" : "Set Vanity URL"}
+            </Button>
           </div>
+          {currentVanityUrl && (
+            <p className="text-xs text-zinc-500 mb-2">
+              Vanity URL: <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">{currentVanityUrl}</code>
+            </p>
+          )}
           {backfillMessage && (
             <p className={`text-sm mb-2 ${backfillMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
               {backfillMessage}
@@ -376,6 +394,18 @@ export function ActiveProjectPanel({
           </div>
         </div>
       </CardContent>
+
+      {/* Set Vanity URL Dialog */}
+      <SetVanityUrlDialog
+        open={showVanityUrlDialog}
+        onOpenChange={setShowVanityUrlDialog}
+        creatorId={project.creator.id}
+        creatorName={project.creator.name}
+        currentVanityUrl={currentVanityUrl}
+        projectSlug={project.slug}
+        projectTitle={project.title}
+        onSuccess={(newVanityUrl) => setCurrentVanityUrl(newVanityUrl)}
+      />
     </Card>
   );
 }
