@@ -32,6 +32,7 @@ interface ProjectSummary {
   slug: string;
   imageUrl: string | null;
   status: string;
+  projectUrl?: string;
 }
 
 interface UserProfileData {
@@ -187,7 +188,7 @@ export function UserProfileDropdown() {
                   {profileData.backedProjects.slice(0, 4).map((project) => (
                     <Link
                       key={project.id}
-                      href={`/projects/${project.slug}`}
+                      href={project.projectUrl || `/projects/${project.slug}`}
                       className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
                     >
                       <div className="h-9 w-9 rounded bg-muted overflow-hidden flex-shrink-0">
@@ -235,7 +236,7 @@ export function UserProfileDropdown() {
                   {profileData?.createdProjects && profileData.createdProjects.length > 0 ? (
                     <div className="space-y-1">
                       {profileData.createdProjects.slice(0, 3).map((project) => {
-                        const href = `/projects/${project.slug}/edit`;
+                        const href = project.projectUrl ? `${project.projectUrl}/edit` : `/projects/${project.slug}/edit`;
                         const isDraft = project.status === "DRAFT" || project.status === "SUBMITTED";
                         return (
                           <Link

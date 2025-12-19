@@ -359,7 +359,7 @@ export default function CreatorDashboard() {
                     <span className="xs:hidden">View</span>
                   </Button>
                 </Link>
-                <Link href={`/projects/${project.slug}/edit`} className="flex-1 sm:flex-initial">
+                <Link href={`${project.projectUrl}/edit`} className="flex-1 sm:flex-initial">
                   <Button variant="outline" size="sm" className="w-full sm:w-auto">
                     <Settings className="mr-2 h-4 w-4" />
                     <span className="hidden xs:inline">Edit</span>

@@ -42,6 +42,7 @@ export interface UserPledge {
     slug: string;
     imageUrl: string | null;
     status: string;
+    creatorVanityUrl?: string | null;
   };
   reward: {
     id: string;

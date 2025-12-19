@@ -204,7 +204,7 @@ export function ProjectDetailPanel({
         <div className="p-4 border-t bg-zinc-50 dark:bg-zinc-800/50">
           <div className="flex items-center gap-2 mb-2">
             <Button variant="outline" className="flex-1" asChild>
-              <a href={isPrelaunch ? `/projects/${project.slug}/prelaunch` : `/projects/${project.slug}`} target="_blank" rel="noopener noreferrer">
+              <a href={currentVanityUrl ? (isPrelaunch ? `/projects/${currentVanityUrl}/${project.slug}/prelaunch` : `/projects/${currentVanityUrl}/${project.slug}`) : (isPrelaunch ? `/projects/${project.slug}/prelaunch` : `/projects/${project.slug}`)} target="_blank" rel="noopener noreferrer">
                 <Eye className="mr-2 h-4 w-4" />
                 {isPrelaunch ? "Preview Prelaunch Page" : "Preview Project"}
               </a>

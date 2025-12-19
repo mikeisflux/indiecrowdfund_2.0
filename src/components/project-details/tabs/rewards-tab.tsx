@@ -11,7 +11,7 @@ import { RewardData, AddonData } from "../types";
 import { formatMoney, formatDeliveryDate } from "../utils";
 
 interface RewardsTabProps {
-  projectSlug: string;
+  projectPath: string;
   tiers: RewardData[];
   addons: AddonData[];
   selectedAddons: string[];
@@ -19,7 +19,7 @@ interface RewardsTabProps {
 }
 
 export function RewardsTab({
-  projectSlug,
+  projectPath,
   tiers,
   addons,
   selectedAddons,
@@ -221,7 +221,7 @@ export function RewardsTab({
                           Reward no longer available
                         </Button>
                       ) : (
-                        <Link href={`/projects/${projectSlug}/pledge?reward=${reward.id}`}>
+                        <Link href={`${projectPath}/pledge?reward=${reward.id}`}>
                           <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white font-medium">
                             Pledge {formatMoney(reward.amount)}
                           </Button>

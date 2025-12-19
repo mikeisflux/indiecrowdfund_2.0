@@ -88,6 +88,16 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // Handle legacy prelaunch URLs: /projects/slug/prelaunch -> rewrite to /projects/_/slug/prelaunch
+  const legacyPrelaunchMatch = pathname.match(/^\/projects\/([^\/]+)\/prelaunch$/);
+  if (legacyPrelaunchMatch && legacyPrelaunchMatch[1] !== "_") {
+    const slug = legacyPrelaunchMatch[1];
+    const url = req.nextUrl.clone();
+    url.pathname = `/projects/_/${slug}/prelaunch`;
+    url.search = req.nextUrl.search;
+    return NextResponse.rewrite(url);
+  }
+
   // Check for maintenance mode (set MAINTENANCE_MODE=true in env)
   const isMaintenanceMode = process.env.MAINTENANCE_MODE === "true";
 

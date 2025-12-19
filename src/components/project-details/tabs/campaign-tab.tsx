@@ -16,9 +16,10 @@ import { processStoryHtml, formatDeliveryDate } from "../utils";
 interface CampaignTabProps {
   project: ProjectData;
   tiers: RewardData[];
+  projectPath: string;
 }
 
-export function CampaignTab({ project, tiers }: CampaignTabProps) {
+export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
   const [pledgeAmount, setPledgeAmount] = useState("1");
   const [activeStorySection, setActiveStorySection] = useState<string>("");
   const storyContentRef = useRef<HTMLDivElement>(null);
@@ -177,7 +178,7 @@ export function CampaignTab({ project, tiers }: CampaignTabProps) {
               </p>
             </div>
 
-            <Link href={`/projects/${project.slug}/pledge?amount=${pledgeAmount}`}>
+            <Link href={`${projectPath}/pledge?amount=${pledgeAmount}`}>
               <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
                 Continue
               </Button>
@@ -282,7 +283,7 @@ export function CampaignTab({ project, tiers }: CampaignTabProps) {
                 </div>
 
                 {!isSoldOut && (
-                  <Link href={`/projects/${project.slug}/pledge?reward=${reward.id}`}>
+                  <Link href={`${projectPath}/pledge?reward=${reward.id}`}>
                     <Button className="w-full mt-4 bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
                       Select
                     </Button>

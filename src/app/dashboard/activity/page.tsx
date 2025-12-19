@@ -34,6 +34,7 @@ interface ActivityItem {
   projectId?: string;
   projectTitle?: string;
   projectSlug?: string;
+  projectUrl?: string;
   projectImage?: string | null;
   timestamp: string;
   metadata?: Record<string, unknown>;
@@ -382,9 +383,9 @@ export default function ActivityPage() {
                                 </div>
 
                                 {/* Project thumbnail */}
-                                {activity.projectSlug && (
+                                {(activity.projectUrl || activity.projectSlug) && (
                                   <Link
-                                    href={`/projects/${activity.projectSlug}`}
+                                    href={activity.projectUrl || `/projects/${activity.projectSlug}`}
                                     className="flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
                                   >
                                     <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden relative">
@@ -406,9 +407,9 @@ export default function ActivityPage() {
                               </div>
 
                               {/* Action button */}
-                              {activity.projectSlug && (
+                              {(activity.projectUrl || activity.projectSlug) && (
                                 <div className="mt-3">
-                                  <Link href={`/projects/${activity.projectSlug}`}>
+                                  <Link href={activity.projectUrl || `/projects/${activity.projectSlug}`}>
                                     <Button
                                       variant="ghost"
                                       size="sm"

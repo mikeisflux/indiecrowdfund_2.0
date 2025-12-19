@@ -727,12 +727,12 @@ export default function ProjectPage() {
       {/* Main Content */}
       <section ref={contentSectionRef} className="container py-8">
         {activeTab === "campaign" && (
-          <CampaignTab project={project} tiers={tiers} />
+          <CampaignTab project={project} tiers={tiers} projectPath={projectPath} />
         )}
 
         {activeTab === "rewards" && (
           <RewardsTab
-            projectSlug={slug}
+            projectPath={projectPath}
             tiers={tiers}
             addons={addons}
             selectedAddons={selectedAddons}

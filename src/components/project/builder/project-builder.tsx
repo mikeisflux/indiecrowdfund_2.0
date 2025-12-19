@@ -288,9 +288,9 @@ export function ProjectBuilder() {
       toast.success("Your project is now live!");
       setProjectStatus("LIVE");
       reset();
-      // Use the actual project slug from the API response or form state
-      const projectSlug = result.project?.slug || basics.slug;
-      router.push(`/projects/${projectSlug}`);
+      // Use the projectUrl from API response if available, otherwise fallback to slug
+      const projectUrl = result.project?.projectUrl || `/projects/${result.project?.slug || basics.slug}`;
+      router.push(projectUrl);
     } catch (error) {
       console.error("Launch project error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to launch");

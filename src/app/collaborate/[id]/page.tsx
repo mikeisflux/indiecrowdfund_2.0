@@ -14,6 +14,7 @@ interface CollaborationData {
   id: string;
   projectTitle: string;
   projectSlug: string;
+  projectUrl?: string;
   inviterName: string;
   title: string | null;
   permissions: {
@@ -33,7 +34,7 @@ export default function CollaboratePage() {
   const [loading, setLoading] = useState(true);
   const [responding, setResponding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ accepted: boolean; projectSlug?: string } | null>(null);
+  const [success, setSuccess] = useState<{ accepted: boolean; projectSlug?: string; projectUrl?: string } | null>(null);
 
   // Extract id from params with null safety
   const collaborationId = params?.id as string | undefined;
@@ -89,6 +90,7 @@ export default function CollaboratePage() {
       setSuccess({
         accepted: action === "accept",
         projectSlug: data.projectSlug,
+        projectUrl: data.projectUrl,
       });
     } catch {
       setError("Failed to respond to invitation");
@@ -144,8 +146,8 @@ export default function CollaboratePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-3">
-            {success.accepted && success.projectSlug ? (
-              <Link href={`/projects/${success.projectSlug}`}>
+            {success.accepted && (success.projectUrl || success.projectSlug) ? (
+              <Link href={success.projectUrl || `/projects/${success.projectSlug}`}>
                 <Button>View Project</Button>
               </Link>
             ) : (
@@ -172,7 +174,7 @@ export default function CollaboratePage() {
           </CardHeader>
           <CardContent className="text-center">
             {collaboration?.status === "ACCEPTED" ? (
-              <Link href={`/projects/${collaboration.projectSlug}`}>
+              <Link href={collaboration.projectUrl || `/projects/${collaboration.projectSlug}`}>
                 <Button>View Project</Button>
               </Link>
             ) : (

@@ -821,7 +821,7 @@ export default function ProjectsPage() {
                           variant="outline"
                           size="sm"
                           className="flex-1"
-                          onClick={() => window.open(`/projects/${selectedProject.slug}/prelaunch`, "_blank")}
+                          onClick={() => window.open(prelaunchVanityUrl ? `/projects/${prelaunchVanityUrl}/${selectedProject.slug}/prelaunch` : `/projects/${selectedProject.slug}/prelaunch`, "_blank")}
                         >
                           <Eye className="mr-2 h-4 w-4" />
                           View Page

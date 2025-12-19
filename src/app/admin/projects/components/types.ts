@@ -56,6 +56,7 @@ export interface ReviewHistory {
     creator: {
       name: string | null;
       email: string;
+      vanityUrl?: string | null;
     };
   };
   reviewer: {

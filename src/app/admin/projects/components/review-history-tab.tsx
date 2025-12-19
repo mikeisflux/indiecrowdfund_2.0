@@ -62,7 +62,7 @@ export function ReviewHistoryTab({ reviewHistory }: ReviewHistoryTabProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <a
-                      href={`/projects/${review.project.slug}`}
+                      href={review.project.creator.vanityUrl ? `/projects/${review.project.creator.vanityUrl}/${review.project.slug}` : `/projects/${review.project.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium hover:underline truncate"

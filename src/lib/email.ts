@@ -499,9 +499,11 @@ export async function sendPledgeConfirmationEmail(
     state: string | null;
     postalCode: string | null;
     country: string | null;
-  } | null
+  } | null,
+  projectUrlPath?: string
 ) {
-  const projectUrl = `${APP_URL}/projects/${projectSlug}`;
+  // Use provided projectUrlPath if available (for vanity URLs), otherwise fallback to legacy format
+  const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/projects/${projectSlug}`;
   const dashboardUrl = `${APP_URL}/dashboard`;
 
   // Ensure image URL is absolute

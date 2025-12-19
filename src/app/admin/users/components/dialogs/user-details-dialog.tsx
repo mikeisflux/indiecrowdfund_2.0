@@ -162,7 +162,7 @@ export function UserDetailsDialog({
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <a
-                              href={`/projects/${pledge.project.slug}`}
+                              href={pledge.project.creatorVanityUrl ? `/projects/${pledge.project.creatorVanityUrl}/${pledge.project.slug}` : `/projects/${pledge.project.slug}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="font-medium hover:underline"
