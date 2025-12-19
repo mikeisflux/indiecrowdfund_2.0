@@ -24,6 +24,9 @@ interface EmailSettingsProps {
     sendgridApiKey: string;
     mailgunApiKey: string;
     mailgunDomain: string;
+    awsAccessKeyId: string;
+    awsSecretAccessKey: string;
+    awsSesRegion: string;
     replyToEmail: string;
     emailVerificationRequired: boolean;
     welcomeEmailEnabled: boolean;

@@ -58,6 +58,10 @@ interface PlatformSettings {
   sendgridApiKey: string | null;
   mailgunApiKey: string | null;
   mailgunDomain: string | null;
+  // AWS SES Settings
+  awsAccessKeyId: string | null;
+  awsSecretAccessKey: string | null;
+  awsSesRegion: string | null;
   // Social profile URLs
   twitterHandle: string | null;
   facebookUrl: string | null;
