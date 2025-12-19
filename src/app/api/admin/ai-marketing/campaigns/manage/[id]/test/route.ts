@@ -43,6 +43,7 @@ function replaceTemplateVariables(content: string, email: string, name: string |
   return result;
 }
 
+
 // POST - Send test email
 export async function POST(
   request: Request,
@@ -83,9 +84,11 @@ export async function POST(
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
-    // Replace template variables
+    // Replace template variables (same as regular send)
     const personalizedSubject = `[TEST] ${replaceTemplateVariables(campaign.subject, email, name || null)}`;
     const personalizedHtml = replaceTemplateVariables(campaign.htmlContent, email, name || null);
+
+    console.log(`Test email HTML length: ${personalizedHtml.length} chars`);
 
     console.log(`Sending test email for campaign "${campaign.name}" to ${email}`);
 
