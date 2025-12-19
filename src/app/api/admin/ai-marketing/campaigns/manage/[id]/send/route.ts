@@ -175,26 +175,15 @@ export async function POST(
           // Log successful send
           await db.emailLog.create({
             data: {
-              email,
+              recipientEmail: email,
               subject: campaign.subject,
-              templateId: campaign.id,
-              status: "sent",
+              htmlContent: campaign.htmlContent,
               sentAt: new Date(),
               type: "WEEKLY_DISCOVERY",
             },
           });
           sentCount++;
         } else {
-          // Log failed send
-          await db.emailLog.create({
-            data: {
-              email,
-              subject: campaign.subject,
-              templateId: campaign.id,
-              status: "failed",
-              type: "WEEKLY_DISCOVERY",
-            },
-          });
           failedCount++;
           console.error(`Failed to send email to ${email}:`, result.error);
         }
