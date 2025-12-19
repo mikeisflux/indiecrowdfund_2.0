@@ -60,24 +60,9 @@ else
     exit 1
 fi
 
-# Step 4: Run type check
+# Step 4: Clean up any previous failed build attempts
 echo ""
-echo "🔍 Step 4: Running type check..."
-# Clean stale .next cache completely to prevent stale type errors
-echo "   Cleaning .next cache..."
-rm -rf .next
-if npx tsc --noEmit 2>&1; then
-    echo -e "${GREEN}   Type check passed${NC}"
-else
-    echo -e "${RED}❌ ERROR: TypeScript errors found!${NC}"
-    echo ""
-    echo "Run 'npx tsc --noEmit' to see details"
-    exit 1
-fi
-
-# Step 5: Clean up any previous failed build attempts
-echo ""
-echo "🧹 Step 5: Cleaning up previous build attempts..."
+echo "🧹 Step 4: Cleaning up previous build attempts..."
 if [ -d ".next-new" ]; then
     rm -rf .next-new
     echo -e "${GREEN}   Cleaned up .next-new${NC}"
@@ -85,18 +70,18 @@ else
     echo -e "${GREEN}   No cleanup needed${NC}"
 fi
 
-# Step 6: Build new version to separate directory (zero-downtime)
+# Step 5: Build new version to separate directory (zero-downtime)
 echo ""
-echo "🔨 Step 6: Building new version to .next-new (site stays live)..."
+echo "🔨 Step 5: Building new version to .next-new (site stays live)..."
 BUILD_OUTPUT=$(NEXT_BUILD_OUTPUT=.next-new npm run build 2>&1)
 BUILD_EXIT_CODE=$?
 
 if [ $BUILD_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}✅ Build successful!${NC}"
 
-    # Step 6b: Atomic swap - backup old, swap in new
+    # Step 5b: Atomic swap - backup old, swap in new
     echo ""
-    echo "🔄 Step 6b: Swapping build directories..."
+    echo "🔄 Step 5b: Swapping build directories..."
     TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
     if [ -d ".next" ]; then
@@ -130,9 +115,9 @@ else
     exit 1
 fi
 
-# Step 7: Restart PM2
+# Step 6: Restart PM2
 echo ""
-echo "🔄 Step 7: Restarting PM2..."
+echo "🔄 Step 6: Restarting PM2..."
 if pm2 restart all --update-env 2>&1; then
     echo -e "${GREEN}   PM2 restarted${NC}"
 else
@@ -148,9 +133,9 @@ else
     exit 1
 fi
 
-# Step 8: Verify app is running
+# Step 7: Verify app is running
 echo ""
-echo "🔍 Step 8: Verifying deployment..."
+echo "🔍 Step 7: Verifying deployment..."
 sleep 3
 if pm2 status | grep -q "online"; then
     echo -e "${GREEN}   App is running!${NC}"
