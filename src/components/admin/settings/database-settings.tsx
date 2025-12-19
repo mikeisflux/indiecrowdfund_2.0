@@ -1,5 +1,6 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -131,6 +132,7 @@ export function DatabaseSettings() {
 
       const response = await fetch("/api/admin/database/backup", {
         method: "POST",
+        headers: getCSRFHeaders(),
       });
 
       const result = await response.json();
@@ -157,6 +159,7 @@ export function DatabaseSettings() {
     try {
       const response = await fetch(`/api/admin/database/backup?filename=${encodeURIComponent(filename)}`, {
         method: "DELETE",
+        headers: getCSRFHeaders(),
       });
 
       if (!response.ok) {
@@ -181,7 +184,7 @@ export function DatabaseSettings() {
 
       const response = await fetch("/api/admin/database/backup/restore", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ filename }),
       });
 
@@ -210,6 +213,7 @@ export function DatabaseSettings() {
 
       const response = await fetch("/api/admin/database/backup/restore", {
         method: "PUT",
+        headers: getCSRFHeaders(),
         body: formData,
       });
 
