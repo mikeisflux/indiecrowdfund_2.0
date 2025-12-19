@@ -124,7 +124,7 @@ export async function GET() {
 }
 
 // POST - Create a new backup
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   try {
     const authResult = await requireAdmin();
     if ("error" in authResult) {
@@ -162,7 +162,6 @@ export async function POST(req: NextRequest) {
       PGPASSWORD: dbConfig.password,
     };
 
-    const sslOption = dbConfig.sslmode ? `?sslmode=${dbConfig.sslmode}` : "";
     const pgDumpCmd = `pg_dump -h "${dbConfig.host}" -p "${dbConfig.port}" -U "${dbConfig.user}" -d "${dbConfig.database}" --no-owner --no-acl -f "${filePath}"`;
 
     // Run pg_dump
