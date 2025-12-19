@@ -125,8 +125,15 @@ export function EmailCampaignsTab({
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
+  const [showTestDialog, setShowTestDialog] = useState(false);
   const [campaignToDelete, setCampaignToDelete] = useState<EmailCampaign | null>(null);
   const [campaignToSend, setCampaignToSend] = useState<EmailCampaign | null>(null);
+  const [campaignToTest, setCampaignToTest] = useState<EmailCampaign | null>(null);
+  const [testEmail, setTestEmail] = useState("");
+  const [testName, setTestName] = useState("");
+  const [testSending, setTestSending] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [testSuccess, setTestSuccess] = useState(false);
   const [isResend, setIsResend] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -230,6 +237,53 @@ export function EmailCampaignsTab({
       console.error("Failed to abort campaign:", error);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Open test dialog
+  const openTestDialog = (campaign: EmailCampaign) => {
+    setCampaignToTest(campaign);
+    setTestEmail("");
+    setTestName("");
+    setTestError(null);
+    setTestSuccess(false);
+    setShowTestDialog(true);
+  };
+
+  // Send test email
+  const handleSendTest = async () => {
+    if (!campaignToTest) return;
+    if (!testEmail.trim()) {
+      setTestError("Email is required");
+      return;
+    }
+
+    setTestSending(true);
+    setTestError(null);
+    setTestSuccess(false);
+
+    try {
+      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaignToTest.id}/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ email: testEmail, name: testName }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send test email");
+      }
+
+      setTestSuccess(true);
+      setTimeout(() => {
+        setShowTestDialog(false);
+        setCampaignToTest(null);
+      }, 2000);
+    } catch (error) {
+      setTestError(error instanceof Error ? error.message : "Failed to send test email");
+    } finally {
+      setTestSending(false);
     }
   };
 
@@ -554,6 +608,10 @@ export function EmailCampaignsTab({
                                 Abort Sending
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem onClick={() => openTestDialog(campaign)}>
+                              <Send className="mr-2 h-4 w-4" />
+                              Send Test
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDuplicateCampaign(campaign)}>
                               <Copy className="mr-2 h-4 w-4" />
                               Duplicate
@@ -807,6 +865,66 @@ export function EmailCampaignsTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Send Test Dialog */}
+      <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Test Email</DialogTitle>
+            <DialogDescription>
+              Send a test version of &quot;{campaignToTest?.name}&quot; to a specific email address.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="test-email">Email Address *</Label>
+              <Input
+                id="test-email"
+                type="email"
+                placeholder="test@example.com"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="test-name">Recipient Name (for personalization)</Label>
+              <Input
+                id="test-name"
+                placeholder="John Doe"
+                value={testName}
+                onChange={(e) => setTestName(e.target.value)}
+              />
+              <p className="text-xs text-zinc-500">
+                Leave blank to test fallback text (e.g., &quot;Hi there&quot;)
+              </p>
+            </div>
+            {testError && (
+              <p className="text-sm text-red-600">{testError}</p>
+            )}
+            {testSuccess && (
+              <p className="text-sm text-emerald-600">Test email sent successfully!</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTestDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendTest} disabled={testSending || testSuccess}>
+              {testSending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Test
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
