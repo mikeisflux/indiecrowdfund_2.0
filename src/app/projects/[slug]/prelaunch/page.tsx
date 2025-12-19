@@ -25,6 +25,9 @@ import {
   Copy,
 } from "lucide-react";
 import { toast } from "sonner";
+import { UserProfileDropdown } from "@/components/user-profile-dropdown";
+import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Social share icons
 const FacebookIcon = () => (
@@ -140,9 +143,9 @@ export default function PrelaunchPage() {
 
   const handleSubscribe = async () => {
     if (!session?.user) {
-      // Redirect to sign in page with return URL
+      // Redirect to login page with return URL
       const returnUrl = encodeURIComponent(window.location.pathname);
-      window.location.href = `/auth/signin?callbackUrl=${returnUrl}`;
+      window.location.href = `/login?callbackUrl=${returnUrl}`;
       return;
     }
 
@@ -226,6 +229,25 @@ export default function PrelaunchPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+              IndieCrowdfund
+            </Link>
+            <Link href="/discover" className="hidden sm:block text-sm font-medium hover:text-primary">
+              Discover
+            </Link>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {session?.user && <NotificationsDropdown />}
+            <UserProfileDropdown />
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
       <div className="relative">
         {/* Background Image with Overlay */}
@@ -245,7 +267,7 @@ export default function PrelaunchPage() {
         </div>
 
         {/* Content */}
-        <div className="relative mx-auto max-w-4xl px-4 pt-20 pb-12">
+        <div className="relative mx-auto max-w-4xl px-4 pt-12 pb-12">
           {/* Pre-launch Badge */}
           <div className="flex justify-center mb-6">
             <Badge className="bg-emerald-500 text-white px-4 py-1.5 text-sm">

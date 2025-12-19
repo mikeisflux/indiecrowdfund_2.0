@@ -27,7 +27,6 @@ import {
   ArrowDownRight,
   MoreHorizontal,
   Settings,
-  Bell,
   BarChart3,
   MessageSquare,
   Package,
@@ -39,6 +38,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
+import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 
 interface Project {
   id: string;
@@ -259,12 +259,13 @@ export default function CreatorDashboard() {
               <Badge variant="secondary">Creator Dashboard</Badge>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon">
-                <Settings className="h-5 w-5" />
-              </Button>
+              <NotificationsDropdown />
+              <Link href="/dashboard/settings">
+                <Button variant="ghost" size="icon">
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </Link>
+              <UserProfileDropdown />
             </div>
           </div>
         </header>
@@ -313,9 +314,7 @@ export default function CreatorDashboard() {
             <Badge variant="secondary">Creator Dashboard</Badge>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
+            <NotificationsDropdown />
             <Link href="/dashboard/settings">
               <Button variant="ghost" size="icon">
                 <Settings className="h-5 w-5" />
