@@ -24,7 +24,7 @@ import {
   AlertCircle,
   Shield,
 } from "lucide-react";
-import { formatTimeRemaining, getDaysRemaining, getHoursRemaining } from "@/lib/utils";
+import { getDaysRemaining, getHoursRemaining } from "@/lib/utils";
 
 interface Reward {
   id: string;
