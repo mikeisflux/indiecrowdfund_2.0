@@ -49,6 +49,34 @@ function replaceTemplateVariables(content: string, recipient: Recipient): string
   return result;
 }
 
+// Add tracking pixel and wrap links for click tracking
+function addEmailTracking(html: string, campaignId: string, recipientEmail: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+  const encodedEmail = Buffer.from(recipientEmail).toString("base64");
+
+  // Add tracking pixel before closing body tag
+  const trackingPixel = `<img src="${baseUrl}/api/email/track/open?c=${campaignId}&e=${encodedEmail}" width="1" height="1" style="display:none;" alt="" />`;
+
+  let result = html;
+
+  // Add tracking pixel before </body> or at end if no body tag
+  if (result.includes("</body>")) {
+    result = result.replace("</body>", `${trackingPixel}</body>`);
+  } else {
+    result = result + trackingPixel;
+  }
+
+  // Optionally wrap links for click tracking (only external links to our site)
+  // This wraps href links that point to our domain
+  const linkRegex = /href="(https?:\/\/(?:www\.)?indiecrowdfund\.com[^"]*)"/gi;
+  result = result.replace(linkRegex, (match, url) => {
+    const encodedUrl = Buffer.from(url).toString("base64");
+    return `href="${baseUrl}/api/email/track/click?c=${campaignId}&e=${encodedEmail}&url=${encodedUrl}"`;
+  });
+
+  return result;
+}
+
 // POST - Send campaign now
 export async function POST(
   request: Request,
@@ -219,7 +247,10 @@ export async function POST(
       try {
         // Replace template variables with recipient data
         const personalizedSubject = replaceTemplateVariables(campaign.subject, recipient);
-        const personalizedHtml = replaceTemplateVariables(campaign.htmlContent, recipient);
+        let personalizedHtml = replaceTemplateVariables(campaign.htmlContent, recipient);
+
+        // Add tracking pixel and click tracking
+        personalizedHtml = addEmailTracking(personalizedHtml, campaign.id, recipient.email);
 
         // Actually send the email via SendGrid
         const result = await sendEmail({

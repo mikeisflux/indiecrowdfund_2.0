@@ -32,7 +32,18 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Plus,
+  Pencil,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 interface Subscriber {
@@ -99,6 +110,14 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  // CRUD dialog state
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
+  const [editingSubscriber, setEditingSubscriber] = useState<Subscriber | null>(null);
+  const [formData, setFormData] = useState({ email: "", name: "", source: "manual" });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
   const fetchSubscribers = useCallback(async () => {
     setLoading(true);
     try {
@@ -147,6 +166,66 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
       }
     } catch (error) {
       console.error("Error deleting subscriber:", error);
+    }
+  };
+
+  const openCreateDialog = () => {
+    setDialogMode("create");
+    setEditingSubscriber(null);
+    setFormData({ email: "", name: "", source: "manual" });
+    setFormError(null);
+    setShowDialog(true);
+  };
+
+  const openEditDialog = (subscriber: Subscriber) => {
+    setDialogMode("edit");
+    setEditingSubscriber(subscriber);
+    setFormData({
+      email: subscriber.email,
+      name: subscriber.name || "",
+      source: subscriber.source,
+    });
+    setFormError(null);
+    setShowDialog(true);
+  };
+
+  const handleSave = async () => {
+    if (!formData.email.trim()) {
+      setFormError("Email is required");
+      return;
+    }
+
+    setSaving(true);
+    setFormError(null);
+
+    try {
+      const url = "/api/admin/ai-marketing/subscribers";
+      const method = dialogMode === "create" ? "POST" : "PATCH";
+      const body = dialogMode === "create"
+        ? formData
+        : { id: editingSubscriber?.id, ...formData };
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save subscriber");
+      }
+
+      setShowDialog(false);
+      fetchSubscribers();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Failed to save subscriber");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -255,6 +334,10 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button size="sm" onClick={openCreateDialog}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Subscriber
+              </Button>
               <Button variant="outline" size="sm" onClick={onImportCSV}>
                 <Upload className="mr-2 h-4 w-4" />
                 Import CSV
@@ -335,7 +418,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
                         {formatDate(subscriber.subscribedAt)}
                       </TableCell>
                       <TableCell>
-                        {subscriber.category === "newsletter" && (
+                        {(subscriber.category === "newsletter" || subscriber.category === "retailers") && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -343,6 +426,10 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditDialog(subscriber)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-600"
                                 onClick={() => handleDelete(subscriber.id, subscriber.category)}
@@ -389,6 +476,70 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Create/Edit Subscriber Dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {dialogMode === "create" ? "Add Subscriber" : "Edit Subscriber"}
+            </DialogTitle>
+            <DialogDescription>
+              {dialogMode === "create"
+                ? "Add a new subscriber to your newsletter list."
+                : "Update subscriber information."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">Name (optional)</Label>
+              <Input
+                id="name"
+                placeholder="John Doe"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="source">Source</Label>
+              <Input
+                id="source"
+                placeholder="manual, csv-import, etc."
+                value={formData.source}
+                onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+              />
+            </div>
+            {formError && (
+              <p className="text-sm text-red-600">{formError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                dialogMode === "create" ? "Add Subscriber" : "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

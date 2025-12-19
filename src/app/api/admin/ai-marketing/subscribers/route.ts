@@ -328,6 +328,130 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// POST - Create a new newsletter subscriber
+export async function POST(req: NextRequest) {
+  try {
+    const authResult = await requireAdmin();
+    if ("error" in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
+    }
+
+    const body = await req.json();
+    const { email, name, source } = body;
+
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+    }
+
+    // Check if subscriber already exists
+    const existing = await db.newsletterSubscriber.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    if (existing) {
+      if (existing.isActive) {
+        return NextResponse.json({ error: "Subscriber already exists" }, { status: 409 });
+      }
+      // Reactivate if previously deactivated
+      const updated = await db.newsletterSubscriber.update({
+        where: { id: existing.id },
+        data: {
+          isActive: true,
+          name: name || existing.name,
+          source: source || existing.source || "manual",
+        },
+      });
+      return NextResponse.json({ success: true, subscriber: updated, reactivated: true });
+    }
+
+    // Create new subscriber
+    const subscriber = await db.newsletterSubscriber.create({
+      data: {
+        email: email.toLowerCase(),
+        name: name || null,
+        source: source || "manual",
+        isActive: true,
+        subscribedAt: new Date(),
+      },
+    });
+
+    return NextResponse.json({ success: true, subscriber });
+  } catch (error) {
+    console.error("Error creating subscriber:", error);
+    return NextResponse.json(
+      { error: "Failed to create subscriber" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update a newsletter subscriber
+export async function PATCH(req: NextRequest) {
+  try {
+    const authResult = await requireAdmin();
+    if ("error" in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
+    }
+
+    const body = await req.json();
+    const { id, email, name, source, isActive } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    // Check if subscriber exists
+    const existing = await db.newsletterSubscriber.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Subscriber not found" }, { status: 404 });
+    }
+
+    // If email is changing, check it's not already taken
+    if (email && email.toLowerCase() !== existing.email) {
+      const emailExists = await db.newsletterSubscriber.findUnique({
+        where: { email: email.toLowerCase() },
+      });
+      if (emailExists) {
+        return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+      }
+    }
+
+    // Update subscriber
+    const subscriber = await db.newsletterSubscriber.update({
+      where: { id },
+      data: {
+        ...(email && { email: email.toLowerCase() }),
+        ...(name !== undefined && { name }),
+        ...(source && { source }),
+        ...(isActive !== undefined && { isActive }),
+      },
+    });
+
+    return NextResponse.json({ success: true, subscriber });
+  } catch (error) {
+    console.error("Error updating subscriber:", error);
+    return NextResponse.json(
+      { error: "Failed to update subscriber" },
+      { status: 500 }
+    );
+  }
+}
+
 // DELETE - Remove a newsletter subscriber
 export async function DELETE(req: NextRequest) {
   try {
