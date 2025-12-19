@@ -31,21 +31,13 @@ export async function GET() {
 
     const projectIds = creatorProjects.map((p) => p.id);
 
-    // Get followers from ProjectFollower table
+    // Get followers from ProjectFollower table (note: user relation not defined in schema)
     const followers = await db.projectFollower.findMany({
       where: {
         projectId: { in: projectIds },
+        userId: { not: null }, // Only get followers with user accounts
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            image: true,
-            createdAt: true,
-          },
-        },
         project: {
           select: {
             title: true,
@@ -53,6 +45,19 @@ export async function GET() {
         },
       },
     });
+
+    // Get user details for followers
+    const followerUserIds = followers.map((f) => f.userId).filter((id): id is string => id !== null);
+    const followerUsers = await db.user.findMany({
+      where: { id: { in: followerUserIds } },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true,
+      },
+    });
+    const followerUserMap = new Map(followerUsers.map((u) => [u.id, u]));
 
     // Also get backers
     const backers = await db.pledge.findMany({
@@ -96,11 +101,12 @@ export async function GET() {
 
     // Add followers
     for (const follower of followers) {
-      if (follower.user.email && !subscriberMap.has(follower.user.email)) {
-        subscriberMap.set(follower.user.email, {
-          id: `follower_${follower.user.id}`,
-          email: follower.user.email,
-          name: follower.user.name || "Unknown",
+      const user = follower.userId ? followerUserMap.get(follower.userId) : null;
+      if (user?.email && !subscriberMap.has(user.email)) {
+        subscriberMap.set(user.email, {
+          id: `follower_${user.id}`,
+          email: user.email,
+          name: user.name || "Unknown",
           status: "active",
           source: `Follower: ${follower.project.title}`,
           sourceType: "follower",
