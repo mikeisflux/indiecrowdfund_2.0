@@ -535,7 +535,7 @@ export function EmailCampaignsTab({
                                 </DropdownMenuItem>
                               </>
                             )}
-                            {(campaign.status.toUpperCase() === "SENT" || campaign.status.toUpperCase() === "ABORTED") && (
+                            {(campaign.status.toUpperCase() === "SENT" || campaign.status.toUpperCase() === "CANCELLED") && (
                               <DropdownMenuItem onClick={() => {
                                 setCampaignToSend(campaign);
                                 setIsResend(true);

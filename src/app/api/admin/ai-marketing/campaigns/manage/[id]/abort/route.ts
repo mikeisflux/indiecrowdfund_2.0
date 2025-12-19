@@ -56,10 +56,10 @@ export async function POST(
       );
     }
 
-    // Mark as aborted
+    // Mark as cancelled
     await db.emailCampaign.update({
       where: { id },
-      data: { status: "ABORTED" },
+      data: { status: "CANCELLED" },
     });
 
     console.log(`Campaign "${campaign.name}" has been aborted - restarting server to stop send`);

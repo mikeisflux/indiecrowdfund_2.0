@@ -170,7 +170,7 @@ export async function POST(
           where: { id },
           select: { status: true },
         });
-        if (currentCampaign?.status === "ABORTED") {
+        if (currentCampaign?.status === "CANCELLED") {
           console.log(`Campaign "${campaign.name}" was aborted after ${sentCount} emails sent`);
           aborted = true;
           break;
