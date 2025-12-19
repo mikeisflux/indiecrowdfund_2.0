@@ -876,16 +876,28 @@ async function schedulePaymentRetry(pledgeId: string, failureReason: string) {
     const pledgeWithProject = await db.pledge.findUnique({
       where: { id: pledgeId },
       include: {
-        project: { select: { title: true, slug: true } },
+        project: {
+          select: {
+            title: true,
+            slug: true,
+            creator: { select: { vanityUrl: true } },
+          },
+        },
       },
     });
 
     if (pledgeWithProject) {
+      // Build project URL with vanity URL if available
+      const projectUrlPath = pledgeWithProject.project.creator?.vanityUrl
+        ? `/projects/${pledgeWithProject.project.creator.vanityUrl}/${pledgeWithProject.project.slug}`
+        : undefined;
+
       await notifyPledgeFailed(
         pledgeWithProject.projectId,
         pledgeWithProject.userId,
         pledgeWithProject.project.title,
-        pledgeWithProject.project.slug
+        pledgeWithProject.project.slug,
+        projectUrlPath
       );
     }
   } else {

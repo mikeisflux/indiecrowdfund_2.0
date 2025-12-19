@@ -840,7 +840,14 @@ export async function notifyBackerPledgeConfirmed(
     where: { id: pledgeId },
     include: {
       project: {
-        select: { id: true, title: true, slug: true, imageUrl: true, currency: true },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          imageUrl: true,
+          currency: true,
+          creator: { select: { vanityUrl: true } },
+        },
       },
       reward: {
         select: { title: true, amount: true },
@@ -882,6 +889,11 @@ export async function notifyBackerPledgeConfirmed(
     country: pledge.shippingCountry || null,
   };
 
+  // Build project URL with vanity URL if available
+  const projectUrlPath = pledge.project.creator?.vanityUrl
+    ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
+    : undefined;
+
   try {
     const result = await sendPledgeConfirmationEmail(
       pledge.user.email,
@@ -894,7 +906,8 @@ export async function notifyBackerPledgeConfirmed(
       pledge.project.imageUrl,
       pledge.project.currency,
       addons,
-      shippingInfo
+      shippingInfo,
+      projectUrlPath
     );
 
     if (result.success) {

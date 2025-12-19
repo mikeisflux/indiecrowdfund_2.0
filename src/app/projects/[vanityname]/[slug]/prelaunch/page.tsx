@@ -91,13 +91,20 @@ export default function PrelaunchPage() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [followerCount, setFollowerCount] = useState<number | null>(null);
 
-  // Build the project path for vanity URL format
-  const projectPath = `/projects/${vanityname}/${slug}`;
+  // Check if this is a legacy slug-only URL (vanityname = "_" from middleware rewrite)
+  const isLegacyUrl = vanityname === "_";
+
+  // Build the project path - use slug-only format for legacy URLs
+  const projectPath = isLegacyUrl ? `/projects/${slug}` : `/projects/${vanityname}/${slug}`;
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const response = await fetch(`/api/projects/vanity/${vanityname}/${slug}`);
+        // Use appropriate API based on URL format
+        const apiUrl = isLegacyUrl
+          ? `/api/projects/slug/${slug}`
+          : `/api/projects/vanity/${vanityname}/${slug}`;
+        const response = await fetch(apiUrl);
         if (!response.ok) {
           if (response.status === 404) {
             setError("Project not found");
@@ -144,7 +151,7 @@ export default function PrelaunchPage() {
     };
 
     fetchProject();
-  }, [vanityname, slug, session?.user?.id, projectPath]);
+  }, [vanityname, slug, session?.user?.id, projectPath, isLegacyUrl]);
 
   const handleSubscribe = async () => {
     if (!session?.user) {

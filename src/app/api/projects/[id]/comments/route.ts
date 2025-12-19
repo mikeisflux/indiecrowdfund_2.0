@@ -323,10 +323,19 @@ export async function POST(
       // Get project details for the notification
       const projectDetails = await db.project.findUnique({
         where: { id: projectId },
-        select: { title: true, slug: true },
+        select: {
+          title: true,
+          slug: true,
+          creator: { select: { vanityUrl: true } },
+        },
       });
 
       if (projectDetails) {
+        // Build project URL with vanity URL if available
+        const projectUrlPath = projectDetails.creator?.vanityUrl
+          ? `/projects/${projectDetails.creator.vanityUrl}/${projectDetails.slug}`
+          : undefined;
+
         // Non-blocking notification - don't fail the request if notification fails
         notifyCommentReply(
           parentComment.userId,
@@ -334,7 +343,8 @@ export async function POST(
           projectId,
           projectDetails.title,
           projectDetails.slug,
-          content.trim()
+          content.trim(),
+          projectUrlPath
         ).catch((err) => {
           console.error("Failed to send comment reply notification:", err);
         });
