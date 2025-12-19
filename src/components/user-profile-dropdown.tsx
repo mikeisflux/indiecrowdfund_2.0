@@ -236,7 +236,7 @@ export function UserProfileDropdown() {
                   {profileData?.createdProjects && profileData.createdProjects.length > 0 ? (
                     <div className="space-y-1">
                       {profileData.createdProjects.slice(0, 3).map((project) => {
-                        const href = project.projectUrl ? `${project.projectUrl}/edit` : `/projects/${project.slug}/edit`;
+                        const href = `/dashboard/projects/${project.id}`;
                         const isDraft = project.status === "DRAFT" || project.status === "SUBMITTED";
                         return (
                           <Link

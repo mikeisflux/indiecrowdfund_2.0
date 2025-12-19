@@ -23,7 +23,7 @@ export async function GET(
             title: true,
             slug: true,
             creator: {
-              select: { name: true },
+              select: { name: true, vanityUrl: true },
             },
           },
         },
@@ -57,10 +57,16 @@ export async function GET(
       );
     }
 
+    // Build project URL with vanity URL if available
+    const projectUrl = collaborator.project.creator.vanityUrl
+      ? `/projects/${collaborator.project.creator.vanityUrl}/${collaborator.project.slug}`
+      : `/projects/${collaborator.project.slug}`;
+
     return NextResponse.json({
       id: collaborator.id,
       projectTitle: collaborator.project.title,
       projectSlug: collaborator.project.slug,
+      projectUrl,
       inviterName: collaborator.project.creator.name || "Project Creator",
       title: collaborator.title,
       permissions: {

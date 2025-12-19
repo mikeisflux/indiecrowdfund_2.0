@@ -57,10 +57,10 @@ export async function createNotification(params: CreateNotificationParams) {
 async function sendProjectFundedEmail(
   email: string,
   projectTitle: string,
-  projectSlug: string,
+  projectUrlPath: string,
   imageUrl?: string | null
 ) {
-  const projectUrl = `${APP_URL}/projects/${projectSlug}`;
+  const projectUrl = `${APP_URL}${projectUrlPath}`;
 
   const html = `
     <!DOCTYPE html>
@@ -124,6 +124,9 @@ export async function notifyProjectFunded(projectId: string) {
       title: true,
       slug: true,
       imageUrl: true,
+      creator: {
+        select: { vanityUrl: true },
+      },
       pledges: {
         select: { userId: true },
         distinct: ["userId"],
@@ -133,13 +136,18 @@ export async function notifyProjectFunded(projectId: string) {
 
   if (!project) return;
 
+  // Build project URL with vanity URL if available
+  const projectUrlPath = project.creator?.vanityUrl
+    ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+    : `/projects/${project.slug}`;
+
   // Notify all unique backers
   const notifications = project.pledges.map((pledge: { userId: string }) => ({
     userId: pledge.userId,
     type: "PROJECT_FUNDED" as NotificationType,
     title: "Project Funded!",
     message: `"${project.title}" has reached its funding goal!`,
-    actionUrl: `/projects/${project.slug}`,
+    actionUrl: projectUrlPath,
     projectId,
   }));
 
@@ -163,7 +171,7 @@ export async function notifyProjectFunded(projectId: string) {
       const batch = uniqueEmails.slice(i, i + batchSize);
       await Promise.all(
         batch.map((email) =>
-          sendProjectFundedEmail(email, project.title, project.slug, project.imageUrl)
+          sendProjectFundedEmail(email, project.title, projectUrlPath, project.imageUrl)
         )
       );
     }
@@ -180,11 +188,11 @@ export async function notifyProjectFunded(projectId: string) {
 async function sendProjectLaunchEmail(
   email: string,
   projectTitle: string,
-  projectSlug: string,
+  projectUrlPath: string,
   creatorName: string,
   imageUrl?: string | null
 ) {
-  const projectUrl = `${APP_URL}/projects/${projectSlug}`;
+  const projectUrl = `${APP_URL}${projectUrlPath}`;
 
   const html = `
     <!DOCTYPE html>
@@ -249,7 +257,7 @@ export async function notifyProjectLaunched(projectId: string) {
       imageUrl: true,
       creatorId: true,
       creator: {
-        select: { name: true },
+        select: { name: true, vanityUrl: true },
       },
       followers: {
         select: { userId: true, email: true },
@@ -258,6 +266,11 @@ export async function notifyProjectLaunched(projectId: string) {
   });
 
   if (!project) return;
+
+  // Build project URL with vanity URL if available
+  const projectUrlPath = project.creator?.vanityUrl
+    ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+    : `/projects/${project.slug}`;
 
   // Collect emails to send - both from user accounts and direct email followers
   const emailsToSend: string[] = [];
@@ -290,7 +303,7 @@ export async function notifyProjectLaunched(projectId: string) {
       type: "PROJECT_LAUNCHED" as NotificationType,
       title: "Project Launched!",
       message: `"${project.title}" is now live!`,
-      actionUrl: `/projects/${project.slug}`,
+      actionUrl: projectUrlPath,
       projectId,
     }));
 
@@ -304,7 +317,7 @@ export async function notifyProjectLaunched(projectId: string) {
     type: "PROJECT_LAUNCHED",
     title: "Your project is live!",
     message: `"${project.title}" has been launched successfully.`,
-    actionUrl: `/projects/${project.slug}`,
+    actionUrl: projectUrlPath,
     projectId,
   });
 
@@ -321,7 +334,7 @@ export async function notifyProjectLaunched(projectId: string) {
         sendProjectLaunchEmail(
           email,
           project.title,
-          project.slug,
+          projectUrlPath,
           creatorName,
           project.imageUrl
         )
@@ -346,17 +359,26 @@ export async function notifyPledgeReceived(
 ) {
   const project = await db.project.findUnique({
     where: { id: projectId },
-    select: { title: true, slug: true },
+    select: {
+      title: true,
+      slug: true,
+      creator: { select: { vanityUrl: true } },
+    },
   });
 
   if (!project) return;
+
+  // Build project URL with vanity URL if available
+  const projectUrlPath = project.creator?.vanityUrl
+    ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+    : `/projects/${project.slug}`;
 
   await createNotification({
     userId: creatorId,
     type: "PLEDGE_RECEIVED",
     title: "New Pledge!",
     message: `${backerName} backed "${project.title}" for $${amount.toFixed(2)}`,
-    actionUrl: `/projects/${project.slug}`,
+    actionUrl: projectUrlPath,
     projectId,
   });
 }
@@ -368,14 +390,20 @@ export async function notifyPledgeFailed(
   projectId: string,
   userId: string,
   projectTitle: string,
-  projectSlug: string
+  projectSlug: string,
+  projectUrlPath?: string
 ) {
+  // Use provided projectUrlPath or fallback to legacy slug-based URL
+  const pledgeUrl = projectUrlPath
+    ? `${projectUrlPath}/pledge`
+    : `/projects/${projectSlug}/pledge`;
+
   await createNotification({
     userId,
     type: "PLEDGE_FAILED",
     title: "Pledge Failed",
     message: `Your pledge for "${projectTitle}" could not be processed. Please update your payment method.`,
-    actionUrl: `/projects/${projectSlug}/pledge`,
+    actionUrl: pledgeUrl,
     projectId,
   });
 }
@@ -386,11 +414,11 @@ export async function notifyPledgeFailed(
 async function sendProjectUpdateEmail(
   email: string,
   projectTitle: string,
-  projectSlug: string,
+  projectUrlPath: string,
   updateTitle: string,
   creatorName: string
 ) {
-  const projectUrl = `${APP_URL}/projects/${projectSlug}`;
+  const projectUrl = `${APP_URL}${projectUrlPath}`;
 
   const html = `
     <!DOCTYPE html>
@@ -451,7 +479,7 @@ export async function notifyProjectUpdate(
       slug: true,
       creatorId: true,
       creator: {
-        select: { name: true },
+        select: { name: true, vanityUrl: true },
       },
       pledges: {
         select: { userId: true },
@@ -464,6 +492,11 @@ export async function notifyProjectUpdate(
   });
 
   if (!project) return;
+
+  // Build project URL with vanity URL if available
+  const projectUrlPath = project.creator?.vanityUrl
+    ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+    : `/projects/${project.slug}`;
 
   // Combine backers and followers (unique users except creator)
   const userIds = new Set<string>();
@@ -478,7 +511,7 @@ export async function notifyProjectUpdate(
     type: "PROJECT_UPDATE" as NotificationType,
     title: "New Update",
     message: `"${project.title}" posted: ${updateTitle}`,
-    actionUrl: `/projects/${project.slug}`,
+    actionUrl: projectUrlPath,
     projectId,
     senderId: project.creatorId,
   }));
@@ -527,7 +560,7 @@ export async function notifyProjectUpdate(
         sendProjectUpdateEmail(
           email,
           project.title,
-          project.slug,
+          projectUrlPath,
           updateTitle,
           creatorName
         )
@@ -576,10 +609,10 @@ async function sendCommentReplyEmail(
   userName: string,
   replierName: string,
   projectTitle: string,
-  projectSlug: string,
+  projectUrlPath: string,
   replyContent: string
 ) {
-  const commentsUrl = `${APP_URL}/projects/${projectSlug}?tab=comments`;
+  const commentsUrl = `${APP_URL}${projectUrlPath}?tab=comments`;
 
   const html = `
     <!DOCTYPE html>
@@ -634,15 +667,21 @@ export async function notifyCommentReply(
   projectId: string,
   projectTitle: string,
   projectSlug: string,
-  replyContent?: string
+  replyContent?: string,
+  projectUrlPath?: string
 ) {
+  // Use provided projectUrlPath or fallback to legacy slug-based URL
+  const commentsUrl = projectUrlPath
+    ? `${projectUrlPath}?tab=comments`
+    : `/projects/${projectSlug}?tab=comments`;
+
   // Create in-app notification
   await createNotification({
     userId,
     type: "COMMENT_REPLY",
     title: "New Reply",
     message: `${replierName} replied to your comment on "${projectTitle}"`,
-    actionUrl: `/projects/${projectSlug}?tab=comments`,
+    actionUrl: commentsUrl,
     projectId,
   });
 
@@ -659,7 +698,7 @@ export async function notifyCommentReply(
         user.name || "there",
         replierName,
         projectTitle,
-        projectSlug,
+        projectUrlPath || `/projects/${projectSlug}`,
         replyContent
       );
       console.log(`Sent comment reply email to ${user.email}`);
@@ -679,14 +718,18 @@ export async function notifyCollaboratorInvite(
   projectId: string,
   projectTitle: string,
   projectSlug: string,
-  inviterId: string
+  inviterId: string,
+  projectUrlPath?: string
 ) {
+  // Use provided projectUrlPath or fallback to legacy slug-based URL
+  const actionUrl = projectUrlPath || `/projects/${projectSlug}`;
+
   await createNotification({
     userId,
     type: "COLLABORATOR_INVITE",
     title: "Collaboration Invite",
     message: `${inviterName} has invited you to collaborate on "${projectTitle}"`,
-    actionUrl: `/projects/${projectSlug}`,
+    actionUrl,
     projectId,
     senderId: inviterId,
   });
@@ -893,6 +936,9 @@ export async function notifyProjectEnded(projectId: string) {
       creatorId: true,
       currentAmount: true,
       goalAmount: true,
+      creator: {
+        select: { vanityUrl: true },
+      },
       pledges: {
         select: { userId: true },
         distinct: ["userId"],
@@ -901,6 +947,11 @@ export async function notifyProjectEnded(projectId: string) {
   });
 
   if (!project) return;
+
+  // Build project URL with vanity URL if available
+  const projectUrlPath = project.creator?.vanityUrl
+    ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+    : `/projects/${project.slug}`;
 
   const funded = project.currentAmount >= project.goalAmount;
   const message = funded
@@ -912,7 +963,7 @@ export async function notifyProjectEnded(projectId: string) {
     type: "PROJECT_ENDED" as NotificationType,
     title: funded ? "Campaign Successful!" : "Campaign Ended",
     message,
-    actionUrl: `/projects/${project.slug}`,
+    actionUrl: projectUrlPath,
     projectId,
   }));
 
@@ -928,7 +979,7 @@ export async function notifyProjectEnded(projectId: string) {
     message: funded
       ? `"${project.title}" reached its goal!`
       : `"${project.title}" ended without reaching its goal.`,
-    actionUrl: `/projects/${project.slug}`,
+    actionUrl: projectUrlPath,
     projectId,
   });
 }
@@ -940,7 +991,8 @@ export async function notifyPledgeShipped(
   pledgeId: string,
   projectTitle: string,
   projectSlug: string,
-  trackingNumber?: string
+  trackingNumber?: string,
+  projectUrlPath?: string
 ) {
   const pledge = await db.pledge.findUnique({
     where: { id: pledgeId },
@@ -949,6 +1001,9 @@ export async function notifyPledgeShipped(
 
   if (!pledge) return;
 
+  // Use provided projectUrlPath or fallback to legacy slug-based URL
+  const actionUrl = projectUrlPath || `/projects/${projectSlug}`;
+
   await createNotification({
     userId: pledge.userId,
     type: "PLEDGE_SHIPPED",
@@ -956,7 +1011,7 @@ export async function notifyPledgeShipped(
     message: trackingNumber
       ? `Your rewards from "${projectTitle}" have shipped! Tracking: ${trackingNumber}`
       : `Your rewards from "${projectTitle}" have shipped!`,
-    actionUrl: `/projects/${projectSlug}`,
+    actionUrl,
     projectId: pledge.projectId,
   });
 }
@@ -967,7 +1022,8 @@ export async function notifyPledgeShipped(
 export async function notifyPledgeDelivered(
   pledgeId: string,
   projectTitle: string,
-  projectSlug: string
+  projectSlug: string,
+  projectUrlPath?: string
 ) {
   const pledge = await db.pledge.findUnique({
     where: { id: pledgeId },
@@ -976,12 +1032,15 @@ export async function notifyPledgeDelivered(
 
   if (!pledge) return;
 
+  // Use provided projectUrlPath or fallback to legacy slug-based URL
+  const actionUrl = projectUrlPath || `/projects/${projectSlug}`;
+
   await createNotification({
     userId: pledge.userId,
     type: "PLEDGE_DELIVERED",
     title: "Your Pledge Delivered!",
     message: `Your rewards from "${projectTitle}" have been delivered!`,
-    actionUrl: `/projects/${projectSlug}`,
+    actionUrl,
     projectId: pledge.projectId,
   });
 }
@@ -995,14 +1054,20 @@ export async function notifyNewComment(
   projectId: string,
   projectTitle: string,
   projectSlug: string,
-  commenterId: string
+  commenterId: string,
+  projectUrlPath?: string
 ) {
+  // Use provided projectUrlPath or fallback to legacy slug-based URL
+  const actionUrl = projectUrlPath
+    ? `${projectUrlPath}#comments`
+    : `/projects/${projectSlug}#comments`;
+
   await createNotification({
     userId: creatorId,
     type: "COMMENT_NEW",
     title: "New Comment",
     message: `${commenterName} commented on "${projectTitle}"`,
-    actionUrl: `/projects/${projectSlug}#comments`,
+    actionUrl,
     projectId,
     senderId: commenterId,
   });

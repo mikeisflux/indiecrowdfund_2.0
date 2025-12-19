@@ -27,7 +27,14 @@ export async function POST(
       where: { id },
       include: {
         project: {
-          select: { title: true, slug: true, creatorId: true },
+          select: {
+            title: true,
+            slug: true,
+            creatorId: true,
+            creator: {
+              select: { vanityUrl: true },
+            },
+          },
         },
       },
     });
@@ -69,6 +76,11 @@ export async function POST(
       );
     }
 
+    // Build project URL with vanity URL if available
+    const projectUrl = collaborator.project.creator.vanityUrl
+      ? `/projects/${collaborator.project.creator.vanityUrl}/${collaborator.project.slug}`
+      : `/projects/${collaborator.project.slug}`;
+
     if (action === "accept") {
       // Accept the collaboration
       await db.projectCollaborator.update({
@@ -86,7 +98,7 @@ export async function POST(
           type: "COLLABORATOR_ACCEPTED",
           title: "Collaboration accepted",
           message: `${session.user.name || session.user.email} has accepted your invitation to collaborate on "${collaborator.project.title}"`,
-          actionUrl: `/projects/${collaborator.project.slug}`,
+          actionUrl: projectUrl,
           projectId: collaborator.projectId,
           senderId: session.user.id,
         },
@@ -96,6 +108,7 @@ export async function POST(
         success: true,
         message: "You have accepted the collaboration invitation",
         projectSlug: collaborator.project.slug,
+        projectUrl,
       });
     } else {
       // Decline the collaboration
@@ -113,7 +126,7 @@ export async function POST(
           type: "COLLABORATOR_DECLINED",
           title: "Collaboration declined",
           message: `${session.user.name || session.user.email} has declined your invitation to collaborate on "${collaborator.project.title}"`,
-          actionUrl: `/projects/${collaborator.project.slug}`,
+          actionUrl: projectUrl,
           projectId: collaborator.projectId,
           senderId: session.user.id,
         },

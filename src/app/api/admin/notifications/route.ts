@@ -71,9 +71,10 @@ export async function GET(request: Request) {
         select: {
           id: true,
           title: true,
+          slug: true,
           status: true,
           createdAt: true,
-          creator: { select: { name: true } },
+          creator: { select: { name: true, vanityUrl: true } },
         },
       }),
 
@@ -184,6 +185,10 @@ export async function GET(request: Request) {
       } else if (project.status === "LIVE") {
         const notifId = `project-live-${project.id}`;
         if (!type || type === "project") {
+          // Build project URL with vanity URL if available
+          const projectUrl = project.creator?.vanityUrl
+            ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+            : `/projects/${project.slug}`;
           notifications.push({
             id: notifId,
             type: "project",
@@ -191,7 +196,7 @@ export async function GET(request: Request) {
             message: `"${project.title}" is now live on the platform`,
             read: readNotifications.has(notifId),
             createdAt: project.createdAt,
-            actionUrl: `/projects/${project.id}`,
+            actionUrl: projectUrl,
             metadata: { projectId: project.id },
           });
         }
@@ -203,6 +208,10 @@ export async function GET(request: Request) {
     for (const project of fundedProjects) {
       const notifId = `project-funded-${project.id}`;
       if (!type || type === "project") {
+        // Build project URL with vanity URL if available
+        const projectUrl = project.creator?.vanityUrl
+          ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+          : `/projects/${project.slug}`;
         notifications.push({
           id: notifId,
           type: "project",
@@ -210,7 +219,7 @@ export async function GET(request: Request) {
           message: `"${project.title}" reached its funding goal`,
           read: readNotifications.has(notifId),
           createdAt: project.createdAt,
-          actionUrl: `/projects/${project.id}`,
+          actionUrl: projectUrl,
           metadata: { projectId: project.id },
         });
       }
