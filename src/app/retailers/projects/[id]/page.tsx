@@ -24,6 +24,7 @@ import {
   AlertCircle,
   Shield,
 } from "lucide-react";
+import { formatTimeRemaining, getDaysRemaining, getHoursRemaining } from "@/lib/utils";
 
 interface Reward {
   id: string;
@@ -271,8 +272,17 @@ export default function RetailerProjectDetailPage() {
                   <p className="text-sm text-zinc-500">backers</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{project.daysLeft}</p>
-                  <p className="text-sm text-zinc-500">days left</p>
+                  {project.endDate && getDaysRemaining(new Date(project.endDate)) < 2 ? (
+                    <>
+                      <p className="text-2xl font-bold">{getHoursRemaining(new Date(project.endDate))}</p>
+                      <p className="text-sm text-zinc-500">hours left</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold">{project.daysLeft}</p>
+                      <p className="text-sm text-zinc-500">days left</p>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="h-3 bg-zinc-100 rounded-full overflow-hidden">

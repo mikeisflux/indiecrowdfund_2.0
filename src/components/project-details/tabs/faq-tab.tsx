@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChevronRight, ChevronDown, Heart, Clock, Bookmark } from "lucide-react";
 import { SimilarProject } from "../types";
+import { formatTimeRemaining } from "@/lib/utils";
 
 interface FaqTabProps {
   faqs: { question: string; answer: string }[];
@@ -100,7 +101,7 @@ export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
                     <p className="text-xs text-muted-foreground">{project.creator}</p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                       <Clock className="h-3 w-3" />
-                      <span>{project.daysLeft} days left</span>
+                      <span>{project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysLeft} days left`}</span>
                       <span>•</span>
                       <span>{project.fundedPercent}% funded</span>
                     </div>

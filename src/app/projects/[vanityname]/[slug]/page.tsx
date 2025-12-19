@@ -51,6 +51,7 @@ import {
   CommentsTab,
   CommunityTab,
 } from "@/components/project-details";
+import { getDaysRemaining, getHoursRemaining } from "@/lib/utils";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -567,10 +568,19 @@ export default function ProjectPage() {
                 <p className="text-sm text-muted-foreground">backers</p>
               </div>
 
-              {/* Days remaining */}
+              {/* Days/Hours remaining */}
               <div>
-                <p className="text-2xl font-bold">{project.daysRemaining}</p>
-                <p className="text-sm text-muted-foreground">days to go</p>
+                {project.endDate && getDaysRemaining(new Date(project.endDate)) < 2 ? (
+                  <>
+                    <p className="text-2xl font-bold">{getHoursRemaining(new Date(project.endDate))}</p>
+                    <p className="text-sm text-muted-foreground">hours to go</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold">{project.daysRemaining}</p>
+                    <p className="text-sm text-muted-foreground">days to go</p>
+                  </>
+                )}
               </div>
 
               {/* Back button */}

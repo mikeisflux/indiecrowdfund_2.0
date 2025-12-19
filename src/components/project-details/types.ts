@@ -93,6 +93,7 @@ export interface SimilarProject {
   creator: string;
   imageUrl: string;
   daysLeft: number;
+  endDate: string | null;
   fundedPercent: number;
   isProjectWeLove: boolean;
 }

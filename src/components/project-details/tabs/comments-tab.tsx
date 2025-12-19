@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Heart, Clock, Pin, Bookmark, Loader2, MessageSquare, X } from "lucide-react";
 import { CommentData, CommentReply, SimilarProject, TabValue } from "../types";
 import { formatRelativeTime } from "../utils";
+import { formatTimeRemaining } from "@/lib/utils";
 
 interface CommentsTabProps {
   projectId: string;
@@ -429,7 +430,7 @@ export function CommentsTab({
                     <p className="text-xs text-muted-foreground">{proj.creator}</p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                       <Clock className="h-3 w-3" />
-                      <span>{proj.daysLeft} days left</span>
+                      <span>{proj.endDate ? formatTimeRemaining(new Date(proj.endDate)) : `${proj.daysLeft} days left`}</span>
                       <span>•</span>
                       <span>{proj.fundedPercent}% funded</span>
                     </div>

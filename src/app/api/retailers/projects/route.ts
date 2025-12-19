@@ -122,6 +122,7 @@ export async function GET(req: NextRequest) {
       return {
         ...project,
         daysLeft,
+        endDate: project.endDate?.toISOString() || null,
         rewards: rewardsWithPrices,
       };
     });

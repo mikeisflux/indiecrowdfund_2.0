@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { PROJECT_CATEGORIES } from "@/types";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
+import { formatTimeRemaining } from "@/lib/utils";
 
 // Project type from API
 interface Project {
@@ -60,6 +61,7 @@ interface Project {
   currentAmount: number;
   backerCount: number;
   daysRemaining: number;
+  endDate: string | null;
   isStaffPick: boolean;
   projectUrl: string;
 }
@@ -624,7 +626,7 @@ function ProjectCard({ project }: { project: Project }) {
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {project.daysRemaining}d
+                {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining}d`}
               </span>
             </div>
           </div>
@@ -697,7 +699,7 @@ function ProjectListItem({ project }: { project: Project }) {
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {project.daysRemaining} days left
+                  {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining} days left`}
                 </span>
               </div>
             </div>

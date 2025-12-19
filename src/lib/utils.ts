@@ -34,6 +34,36 @@ export function getDaysRemaining(endDate: Date): number {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
+export function getHoursRemaining(endDate: Date): number {
+  const now = new Date();
+  const diff = endDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60)));
+}
+
+export function formatTimeRemaining(daysOrEndDate: number | Date, endDate?: Date): string {
+  let days: number;
+  let hours: number;
+
+  if (typeof daysOrEndDate === "number") {
+    days = daysOrEndDate;
+    hours = endDate ? getHoursRemaining(endDate) : days * 24;
+  } else {
+    days = getDaysRemaining(daysOrEndDate);
+    hours = getHoursRemaining(daysOrEndDate);
+  }
+
+  if (days <= 0) {
+    return "Ended";
+  }
+
+  if (days < 2) {
+    // Show hours when less than 2 days
+    return `${hours} hour${hours !== 1 ? "s" : ""} left`;
+  }
+
+  return `${days} day${days !== 1 ? "s" : ""} left`;
+}
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()

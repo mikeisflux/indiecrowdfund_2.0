@@ -36,6 +36,7 @@ import {
   Percent,
   ArrowUpDown,
 } from "lucide-react";
+import { formatTimeRemaining } from "@/lib/utils";
 
 interface Project {
   id: string;
@@ -47,6 +48,7 @@ interface Project {
   currentAmount: number;
   backerCount: number;
   daysLeft: number;
+  endDate: string | null;
   retailerDiscount: number;
   retailerMinQuantity: number;
   retailerMaxQuantity: number | null;
@@ -320,7 +322,7 @@ export default function RetailerProjectsPage() {
                     {project.daysLeft <= 7 && (
                       <Badge className="absolute top-3 right-3 bg-red-500 text-white">
                         <Clock className="h-3 w-3 mr-1" />
-                        {project.daysLeft} days left
+                        {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysLeft} days left`}
                       </Badge>
                     )}
                   </div>
@@ -418,7 +420,7 @@ export default function RetailerProjectsPage() {
                             {project.daysLeft <= 7 && (
                               <Badge className="bg-red-100 text-red-700">
                                 <Clock className="h-3 w-3 mr-1" />
-                                {project.daysLeft} days left
+                                {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysLeft} days left`}
                               </Badge>
                             )}
                           </div>
@@ -443,7 +445,7 @@ export default function RetailerProjectsPage() {
                             </div>
                             <div className="flex items-center gap-1 text-zinc-500">
                               <Calendar className="h-4 w-4" />
-                              <span>{project.daysLeft} days left</span>
+                              <span>{project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysLeft} days left`}</span>
                             </div>
                           </div>
                         </div>

@@ -28,6 +28,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useSession } from "@/components/providers/auth-provider";
+import { formatTimeRemaining } from "@/lib/utils";
 
 interface FollowedProject {
   id: string;
@@ -169,12 +170,9 @@ export default function FollowingPage() {
     }
   };
 
-  const getDaysRemaining = (endDate: string | null) => {
+  const getTimeRemaining = (endDate: string | null) => {
     if (!endDate) return null;
-    const end = new Date(endDate);
-    const now = new Date();
-    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? diff : 0;
+    return formatTimeRemaining(new Date(endDate));
   };
 
   if (loading) {
@@ -343,7 +341,7 @@ export default function FollowingPage() {
             ) : (
               followedProjects.map((project) => {
                 const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
-                const daysRemaining = getDaysRemaining(project.endDate);
+                const timeRemaining = getTimeRemaining(project.endDate);
 
                 return (
                   <Card
@@ -421,7 +419,7 @@ export default function FollowingPage() {
                                 </span>
                               </span>
                               <span className="text-muted-foreground">
-                                {daysRemaining !== null ? `${daysRemaining} days left` : ""}
+                                {timeRemaining || ""}
                               </span>
                             </div>
                             <Progress value={Math.min(fundingPercent, 100)} className="h-2" />

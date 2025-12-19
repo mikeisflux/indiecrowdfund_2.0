@@ -30,6 +30,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
+import { formatTimeRemaining } from "@/lib/utils";
 
 // Force dynamic rendering to ensure database is available
 export const dynamic = "force-dynamic";
@@ -85,6 +86,7 @@ async function getFeaturedProjects() {
         currentAmount: project.currentAmount,
         backerCount: project.backerCount,
         daysRemaining,
+        endDate: project.endDate?.toISOString() || null,
         projectUrl,
       };
     });
@@ -411,7 +413,7 @@ export default async function HomePage() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {project.daysRemaining}d
+                          {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining}d`}
                         </span>
                       </div>
                     </div>

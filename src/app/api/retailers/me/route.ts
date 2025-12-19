@@ -139,7 +139,7 @@ export async function GET() {
         const fundingPercent = project.goalAmount
           ? Math.round((project.currentAmount / project.goalAmount) * 100)
           : 0;
-        return { ...project, daysLeft, fundingPercent };
+        return { ...project, daysLeft, endDate: project.endDate?.toISOString() || null, fundingPercent };
       });
 
       return NextResponse.json({
@@ -302,6 +302,7 @@ export async function GET() {
       return {
         ...project,
         daysLeft,
+        endDate: project.endDate?.toISOString() || null,
         fundingPercent,
       };
     });

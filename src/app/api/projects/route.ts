@@ -137,6 +137,7 @@ export async function GET(req: NextRequest) {
         currentAmount: project.currentAmount,
         backerCount: project.backerCount,
         daysRemaining,
+        endDate: project.endDate?.toISOString() || null,
         projectUrl,
       };
     });

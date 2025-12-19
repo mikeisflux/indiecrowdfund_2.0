@@ -29,6 +29,7 @@ import {
   Calendar,
   ArrowUpRight,
 } from "lucide-react";
+import { formatTimeRemaining } from "@/lib/utils";
 
 interface RetailerData {
   businessName: string;
@@ -57,6 +58,7 @@ interface FeaturedProject {
   imageUrl: string;
   category: string;
   daysLeft: number;
+  endDate: string | null;
   fundingPercent: number;
   retailerDiscount: number;
 }
@@ -470,7 +472,7 @@ export default function RetailerDashboardPage() {
                       </span>
                       <span className="text-zinc-500 flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {project.daysLeft} days left
+                        {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysLeft} days left`}
                       </span>
                     </div>
                     <div className="mt-3 h-2 bg-zinc-100 rounded-full overflow-hidden">

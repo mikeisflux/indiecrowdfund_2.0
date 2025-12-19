@@ -251,6 +251,7 @@ export async function GET() {
         goalAmount: pledge.project.goalAmount,
         currentAmount: pledge.project.currentAmount,
         daysRemaining,
+        endDate: pledge.project.endDate?.toISOString() || null,
         pledge: {
           id: pledge.id,
           amount: pledge.amount,
@@ -296,6 +297,7 @@ export async function GET() {
           goalAmount: sp.project.goalAmount,
           currentAmount: sp.project.currentAmount,
           daysRemaining,
+          endDate: sp.project.endDate?.toISOString() || null,
           category: sp.project.category,
           projectUrl,
         };

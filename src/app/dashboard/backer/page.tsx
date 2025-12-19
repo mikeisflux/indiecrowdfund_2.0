@@ -31,6 +31,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
+import { formatTimeRemaining } from "@/lib/utils";
 
 interface BackedProject {
   id: string;
@@ -42,6 +43,7 @@ interface BackedProject {
   goalAmount: number;
   currentAmount: number;
   daysRemaining: number;
+  endDate: string | null;
   pledge: {
     id: string;
     amount: number;
@@ -67,6 +69,7 @@ interface SavedProject {
   goalAmount: number;
   currentAmount: number;
   daysRemaining: number;
+  endDate: string | null;
   category: string;
   projectUrl: string;
 }
@@ -568,7 +571,9 @@ export default function BackerDashboard() {
                                   </span>
                                 </span>
                                 <span className="text-muted-foreground">
-                                  {project.daysRemaining > 0
+                                  {project.endDate
+                                    ? formatTimeRemaining(new Date(project.endDate))
+                                    : project.daysRemaining > 0
                                     ? `${project.daysRemaining} days left`
                                     : "Campaign ended"}
                                 </span>
@@ -682,7 +687,9 @@ export default function BackerDashboard() {
                                 {fundingPercent.toFixed(0)}% funded
                               </span>
                               <span className="text-muted-foreground">
-                                {project.daysRemaining > 0
+                                {project.endDate
+                                  ? formatTimeRemaining(new Date(project.endDate))
+                                  : project.daysRemaining > 0
                                   ? `${project.daysRemaining} days left`
                                   : "Ended"}
                               </span>
