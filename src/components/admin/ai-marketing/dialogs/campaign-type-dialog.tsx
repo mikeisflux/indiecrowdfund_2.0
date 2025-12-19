@@ -185,7 +185,7 @@ export function CampaignTypeDialog({
 
       // Find HTML file (email.html or any .html file)
       let htmlContent: string | null = null;
-      const foundImages: { name: string; data: string }[] = [];
+      const foundImages: { name: string; blob: Blob; extension: string }[] = [];
 
       for (const [filename, zipEntry] of Object.entries(contents.files)) {
         if (zipEntry.dir) continue;
@@ -195,14 +195,14 @@ export function CampaignTypeDialog({
           htmlContent = await zipEntry.async("string");
         }
 
-        // Get images and convert to base64 data URLs
+        // Get images as blobs for upload
         if (filename.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
-          const imageData = await zipEntry.async("base64");
+          const imageBlob = await zipEntry.async("blob");
           const extension = filename.split(".").pop()?.toLowerCase() || "png";
-          const mimeType = extension === "jpg" ? "jpeg" : extension;
           foundImages.push({
             name: filename.split("/").pop() || filename,
-            data: `data:image/${mimeType};base64,${imageData}`,
+            blob: imageBlob,
+            extension,
           });
         }
       }
@@ -211,9 +211,36 @@ export function CampaignTypeDialog({
         throw new Error("No HTML file found in the ZIP. Make sure you export the email as HTML from Canva.");
       }
 
-      // Replace image references in HTML with base64 data URLs
-      let processedHtml = htmlContent;
+      // Upload images to server and get public URLs
+      const uploadedImages: { name: string; url: string }[] = [];
       for (const img of foundImages) {
+        try {
+          const formData = new FormData();
+          const mimeType = img.extension === "jpg" ? "image/jpeg" : `image/${img.extension}`;
+          const imageFile = new File([img.blob], img.name, { type: mimeType });
+          formData.append("file", imageFile);
+          formData.append("folder", "email-campaigns");
+
+          const response = await fetch("/api/admin/media/upload", {
+            method: "POST",
+            headers: { ...getCSRFHeaders() },
+            body: formData,
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.file?.url) {
+              uploadedImages.push({ name: img.name, url: data.file.url });
+            }
+          }
+        } catch (uploadErr) {
+          console.error(`Failed to upload image ${img.name}:`, uploadErr);
+        }
+      }
+
+      // Replace image references in HTML with uploaded public URLs
+      let processedHtml = htmlContent;
+      for (const img of uploadedImages) {
         // Replace various possible image reference formats
         const imgName = img.name;
         const patterns = [
@@ -221,7 +248,7 @@ export function CampaignTypeDialog({
           new RegExp(`src=["'][^"']*${imgName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`, "gi"),
         ];
         for (const pattern of patterns) {
-          processedHtml = processedHtml.replace(pattern, `src="${img.data}"`);
+          processedHtml = processedHtml.replace(pattern, `src="${img.url}"`);
         }
       }
 

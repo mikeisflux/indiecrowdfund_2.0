@@ -109,8 +109,6 @@ export async function POST(
     // Convert relative URLs to absolute URLs for images
     personalizedHtml = convertRelativeUrls(personalizedHtml);
 
-    console.log(`Test email HTML length: ${personalizedHtml.length} chars`);
-
     console.log(`Sending test email for campaign "${campaign.name}" to ${email}`);
 
     // Send the test email
