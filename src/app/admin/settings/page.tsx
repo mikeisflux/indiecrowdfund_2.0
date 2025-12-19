@@ -549,6 +549,7 @@ export default function SettingsPage() {
             smtpFromEmail: emailSettings.fromEmail,
             smtpFromName: emailSettings.fromName,
             sendgridApiKey: emailSettings.sendgridApiKey,
+            sendgridWebhookVerificationKey: emailSettings.sendgridWebhookVerificationKey,
             mailgunApiKey: emailSettings.mailgunApiKey,
             mailgunDomain: emailSettings.mailgunDomain,
             emailVerificationRequired: emailSettings.emailVerificationRequired,
