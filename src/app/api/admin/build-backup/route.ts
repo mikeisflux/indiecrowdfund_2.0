@@ -20,7 +20,7 @@ async function checkAdminAccess() {
     select: { role: true },
   });
 
-  if (user?.role !== "ADMIN") {
+  if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
     return { error: "Forbidden - Admin access required", status: 403 };
   }
 

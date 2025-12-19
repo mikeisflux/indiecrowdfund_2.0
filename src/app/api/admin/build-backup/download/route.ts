@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       select: { role: true },
     });
 
-    if (user?.role !== "ADMIN") {
+    if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
       return NextResponse.json(
         { error: "Forbidden - Admin access required" },
         { status: 403 }
