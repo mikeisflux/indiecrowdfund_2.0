@@ -46,7 +46,7 @@ async function findCreatorByEmail(toEmail: string) {
   const [handle, domain] = emailParts;
 
   // Check if this is an @indiecrowdfund.com email
-  if (domain === "indiecrowdfund.com" || domain === "inbox.indiecrowdfund.com") {
+  if (domain === "indiecrowdfund.com" || domain === "inbox.indiecrowdfund.com" || domain === "mail.indiecrowdfund.com") {
     const creator = await db.user.findUnique({
       where: { creatorEmailHandle: handle },
       select: {
