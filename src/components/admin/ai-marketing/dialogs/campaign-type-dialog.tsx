@@ -251,27 +251,54 @@ export function CampaignTypeDialog({
         // Escape special regex characters in the filename/path
         const escapeName = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+        // Get filename without extension for matching
+        const nameWithoutExt = img.name.replace(/\.[^.]+$/, '');
+
         // Try multiple patterns that Canva might use:
-        // 1. Full path: images/filename.png
-        // 2. Just filename: filename.png
-        // 3. With or without quotes
-        // 4. Various folder structures
         const patterns = [
           // Match full path from ZIP
           new RegExp(`(src=["'])${escapeName(img.path)}(["'])`, "gi"),
-          // Match just filename with any prefix
+          // Match just filename with any prefix path
           new RegExp(`(src=["'][^"']*/)${escapeName(img.name)}(["'])`, "gi"),
-          // Match just filename
+          // Match just filename at start
           new RegExp(`(src=["'])${escapeName(img.name)}(["'])`, "gi"),
           // Match with images/ prefix
           new RegExp(`(src=["'])images/${escapeName(img.name)}(["'])`, "gi"),
+          // Match URL-encoded paths
+          new RegExp(`(src=["'])${escapeName(encodeURIComponent(img.path))}(["'])`, "gi"),
+          new RegExp(`(src=["'])${escapeName(encodeURIComponent(img.name))}(["'])`, "gi"),
           // Match url() in CSS/inline styles
           new RegExp(`(url\\(["']?)${escapeName(img.path)}(["']?\\))`, "gi"),
           new RegExp(`(url\\(["']?)${escapeName(img.name)}(["']?\\))`, "gi"),
+          // Match background-image style
+          new RegExp(`(background-image:\\s*url\\(["']?)${escapeName(img.path)}(["']?\\))`, "gi"),
+          new RegExp(`(background-image:\\s*url\\(["']?)${escapeName(img.name)}(["']?\\))`, "gi"),
+          // Match partial filename (without extension) - common in Canva exports
+          new RegExp(`(src=["'][^"']*)${escapeName(nameWithoutExt)}\\.[a-z]+(?=["'])`, "gi"),
         ];
 
         for (const pattern of patterns) {
+          const before = processedHtml;
           processedHtml = processedHtml.replace(pattern, `$1${img.url}$2`);
+          if (before !== processedHtml) {
+            console.log(`Replaced pattern for ${img.name}`);
+          }
+        }
+
+        // Fallback: Simple string replacement for any remaining references
+        // This catches cases the regex might miss
+        const simplePatterns = [
+          img.path,
+          img.name,
+          `images/${img.name}`,
+          encodeURIComponent(img.name),
+        ];
+
+        for (const simplePattern of simplePatterns) {
+          if (processedHtml.includes(simplePattern)) {
+            processedHtml = processedHtml.split(simplePattern).join(img.url);
+            console.log(`Simple replacement for ${simplePattern}`);
+          }
         }
       }
 
@@ -281,10 +308,10 @@ export function CampaignTypeDialog({
         processedHtml = bodyMatch[1].trim();
       }
 
-      // Also handle inline styles that might reference the images
-      // And ensure any remaining relative paths are flagged
-      console.log("Processed HTML:", processedHtml.substring(0, 500));
+      // Log for debugging
+      console.log("Processed HTML preview:", processedHtml.substring(0, 1000));
       console.log("Uploaded images:", uploadedImages);
+      console.log("Found images in ZIP:", foundImages.map(i => i.path));
 
       setIntro(processedHtml);
       setCanvaFileName(file.name);
