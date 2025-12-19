@@ -302,16 +302,26 @@ export function CampaignTypeDialog({
         }
       }
 
-      // Clean up HTML - extract body content if full HTML document
+      // Extract and inline styles from head into body for email compatibility
+      // Canva exports have styles in <head> that we need to preserve
+      let inlineStyles = "";
+      const styleMatch = processedHtml.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
+      if (styleMatch) {
+        inlineStyles = styleMatch.join("\n");
+      }
+
+      // Extract body content
       const bodyMatch = processedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
       if (bodyMatch) {
-        processedHtml = bodyMatch[1].trim();
+        // Wrap body content with the extracted styles for email rendering
+        processedHtml = `<div class="canva-email-import">${inlineStyles}${bodyMatch[1].trim()}</div>`;
       }
 
       // Log for debugging
       console.log("Processed HTML preview:", processedHtml.substring(0, 1000));
       console.log("Uploaded images:", uploadedImages);
       console.log("Found images in ZIP:", foundImages.map(i => i.path));
+      console.log("Extracted styles:", inlineStyles.substring(0, 500));
 
       setIntro(processedHtml);
       setCanvaFileName(file.name);
@@ -481,17 +491,47 @@ export function CampaignTypeDialog({
                 Design your email content below. Drag & drop or paste images directly. AI will add personalized project recommendations after your content.
               </p>
               {canvaFileName && (
-                <div className="flex items-center gap-2 text-xs text-emerald-600 mb-2">
-                  <Check className="h-3 w-3" />
-                  Imported from: {canvaFileName}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-xs text-emerald-600">
+                    <Check className="h-3 w-3" />
+                    Imported from: {canvaFileName}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setCanvaFileName(null);
+                      setIntro("");
+                    }}
+                    className="text-xs text-zinc-500"
+                  >
+                    Clear import
+                  </Button>
                 </div>
               )}
-              <EmailEditor
-                value={intro}
-                onChange={setIntro}
-                placeholder="Start designing your email... Drag & drop images, add formatting, and create beautiful HTML emails."
-                minHeight="200px"
-              />
+              {canvaFileName ? (
+                // Show raw HTML preview for Canva imports (preserves tables & styles)
+                <div className="border rounded-md overflow-hidden">
+                  <div className="bg-muted/30 px-3 py-2 border-b text-xs text-muted-foreground">
+                    Email Preview (Canva HTML)
+                  </div>
+                  <iframe
+                    srcDoc={intro}
+                    className="w-full bg-white"
+                    style={{ minHeight: "300px", border: "none" }}
+                    title="Email Preview"
+                    sandbox="allow-same-origin"
+                  />
+                </div>
+              ) : (
+                <EmailEditor
+                  value={intro}
+                  onChange={setIntro}
+                  placeholder="Start designing your email... Drag & drop images, add formatting, and create beautiful HTML emails."
+                  minHeight="200px"
+                />
+              )}
             </div>
 
             {/* Project Selection */}
