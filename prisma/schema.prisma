@@ -26,6 +26,9 @@ model User {
   showNameOnly      Boolean   @default(false)
   role              UserRole  @default(USER)
   retailerAccess    Boolean   @default(false)
+
+  // Creator email address (e.g., "mike" for mike@indiecrowdfund.com)
+  creatorEmailHandle String?  @unique
   stripeCustomerId  String?   @unique  // Stripe Customer ID for payment methods
 
   // ID Verification
@@ -62,6 +65,7 @@ model User {
 
   @@index([email])
   @@index([vanityUrl])
+  @@index([creatorEmailHandle])
 }
 
 enum UserRole {

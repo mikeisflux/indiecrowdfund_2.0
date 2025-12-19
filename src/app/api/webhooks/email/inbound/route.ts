@@ -36,6 +36,36 @@ function parseEmailAddress(address: string): { email: string; name?: string } {
   return { email: address.trim().toLowerCase() };
 }
 
+// Find creator by their email handle (e.g., mike@indiecrowdfund.com -> find user with creatorEmailHandle = "mike")
+async function findCreatorByEmail(toEmail: string) {
+  const emailLower = toEmail.toLowerCase();
+  const emailParts = emailLower.split("@");
+
+  if (emailParts.length !== 2) return null;
+
+  const [handle, domain] = emailParts;
+
+  // Check if this is an @indiecrowdfund.com email
+  if (domain === "indiecrowdfund.com" || domain === "inbox.indiecrowdfund.com") {
+    const creator = await db.user.findUnique({
+      where: { creatorEmailHandle: handle },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        creatorEmailHandle: true,
+      },
+    });
+
+    if (creator) {
+      console.log(`[Inbound Email] Found creator ${creator.name} for ${toEmail}`);
+      return creator;
+    }
+  }
+
+  return null;
+}
+
 // Find matching mailbox for the recipient email
 async function findMailboxForEmail(toEmail: string) {
   // Try exact match first
@@ -148,7 +178,49 @@ export async function POST(request: NextRequest) {
     // Get the actual recipient email (prefer envelope for accuracy)
     const recipientEmail = emailData.envelope?.to?.[0] || toParsed.email;
 
-    // Find matching mailbox
+    // Prepare body content - ensure we have content
+    const finalBodyHtml = emailData.html || (emailData.text ? emailData.text.replace(/\n/g, "<br>") : "");
+    const finalBodyText = emailData.text || "";
+
+    // First, check if this is a creator email (e.g., mike@indiecrowdfund.com)
+    const creator = await findCreatorByEmail(recipientEmail);
+
+    if (creator) {
+      // This email is for a creator - store as a Message
+      console.log(`[Inbound Email] Routing to creator ${creator.name} (${creator.id})`);
+
+      // Try to find the sender as a user in our system
+      const sender = await db.user.findUnique({
+        where: { email: fromParsed.email.toLowerCase() },
+        select: { id: true, name: true },
+      });
+
+      // If no sender found in our system, create an anonymous record
+      // For now, we'll store the message with the creator as recipient
+      // The sender info will be in the message content
+
+      const message = await db.message.create({
+        data: {
+          senderId: sender?.id || creator.id, // Use creator as fallback sender for external emails
+          recipientId: creator.id,
+          subject: emailData.subject,
+          content: `From: ${fromParsed.name || fromParsed.email} <${fromParsed.email}>\n\n${finalBodyText || finalBodyHtml.replace(/<[^>]*>/g, "")}`,
+          read: false,
+        },
+      });
+
+      console.log(`[Inbound Email] Created message ${message.id} for creator ${creator.id}`);
+
+      return NextResponse.json({
+        success: true,
+        type: "creator_message",
+        messageId: message.id,
+        creatorId: creator.id,
+        creatorEmail: `${creator.creatorEmailHandle}@indiecrowdfund.com`,
+      });
+    }
+
+    // Not a creator email - route to admin mailbox
     const mailbox = await findMailboxForEmail(recipientEmail);
 
     if (!mailbox) {
@@ -156,7 +228,7 @@ export async function POST(request: NextRequest) {
       // Still return 200 to prevent SendGrid from retrying
       return NextResponse.json({
         success: false,
-        reason: "No matching mailbox found",
+        reason: "No matching mailbox or creator found",
         recipient: recipientEmail,
       });
     }
@@ -168,11 +240,7 @@ export async function POST(request: NextRequest) {
       .toLowerCase();
     const threadId = `thread_${Buffer.from(subjectForThread).toString("base64").slice(0, 32)}`;
 
-    // Prepare body content - ensure we have content
-    const finalBodyHtml = emailData.html || (emailData.text ? emailData.text.replace(/\n/g, "<br>") : "");
-    const finalBodyText = emailData.text || null;
-
-    // Store the email
+    // Store the email in admin mailbox
     const email = await db.adminEmail.create({
       data: {
         mailboxId: mailbox.id,
@@ -184,7 +252,7 @@ export async function POST(request: NextRequest) {
         bccEmails: [],
         subject: emailData.subject,
         bodyHtml: finalBodyHtml,
-        bodyText: finalBodyText,
+        bodyText: finalBodyText || null,
         folder: "INBOX",
         status: "DELIVERED",
         isRead: false,
@@ -197,6 +265,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      type: "admin_mailbox",
       emailId: email.id,
       mailboxId: mailbox.id,
       mailboxName: mailbox.name,

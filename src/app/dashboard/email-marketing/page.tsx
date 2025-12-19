@@ -42,6 +42,8 @@ import {
   Download,
   BarChart3,
   Megaphone,
+  AtSign,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
@@ -94,6 +96,27 @@ export default function EmailMarketingPage() {
   const [campaignSubject, setCampaignSubject] = useState("");
   const [campaignContent, setCampaignContent] = useState("");
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
+
+  // Email setup state
+  const [hasEmailSetup, setHasEmailSetup] = useState<boolean | null>(null);
+  const [creatorEmail, setCreatorEmail] = useState<string | null>(null);
+
+  // Check email setup on mount
+  useEffect(() => {
+    const checkEmailSetup = async () => {
+      try {
+        const res = await fetch("/api/creator/email/setup");
+        if (res.ok) {
+          const data = await res.json();
+          setHasEmailSetup(data.hasEmailSetup);
+          setCreatorEmail(data.fullEmail);
+        }
+      } catch (error) {
+        console.error("Error checking email setup:", error);
+      }
+    };
+    checkEmailSetup();
+  }, []);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -275,6 +298,58 @@ export default function EmailMarketingPage() {
     }
   };
 
+  // Show email setup required screen
+  if (hasEmailSetup === false) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b bg-background sticky top-0 z-50">
+          <div className="container flex h-14 items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/dashboard" className="text-xl font-bold text-primary">
+                IndieCrowdfund
+              </Link>
+              <span className="text-muted-foreground">/</span>
+              <h1 className="font-semibold flex items-center gap-2">
+                <Megaphone className="h-5 w-5" />
+                Email Marketing
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <NotificationsDropdown />
+              <UserProfileDropdown />
+            </div>
+          </div>
+        </header>
+
+        <div className="container py-12">
+          <Card className="max-w-lg mx-auto">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 p-4 bg-amber-100 dark:bg-amber-900/30 rounded-full w-fit">
+                <AlertTriangle className="h-12 w-12 text-amber-600" />
+              </div>
+              <CardTitle>Email Setup Required</CardTitle>
+              <CardDescription>
+                Before you can use email marketing, you need to set up your creator email address.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-muted-foreground mb-6">
+                Your personalized @indiecrowdfund.com email address allows you to send campaigns
+                and receive replies from your subscribers.
+              </p>
+              <Button asChild>
+                <Link href="/dashboard/email">
+                  <AtSign className="h-4 w-4 mr-2" />
+                  Set Up Email Address
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -291,6 +366,12 @@ export default function EmailMarketingPage() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            {creatorEmail && (
+              <Badge variant="outline" className="hidden sm:flex items-center gap-1">
+                <AtSign className="h-3 w-3" />
+                {creatorEmail}
+              </Badge>
+            )}
             <NotificationsDropdown />
             <UserProfileDropdown />
           </div>

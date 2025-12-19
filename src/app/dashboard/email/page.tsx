@@ -5,12 +5,13 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,6 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Mail,
   Inbox,
@@ -31,6 +40,9 @@ import {
   ChevronLeft,
   Clock,
   Tag,
+  AtSign,
+  CheckCircle,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
@@ -71,6 +83,14 @@ interface EmailMessage {
 
 type FilterType = "all" | "unread" | "starred" | "archived";
 
+interface EmailSetupState {
+  hasEmailSetup: boolean;
+  emailHandle: string | null;
+  fullEmail: string | null;
+  isCreator: boolean;
+  suggestedHandle: string;
+}
+
 export default function CreatorEmailInbox() {
   const [threads, setThreads] = useState<EmailThread[]>([]);
   const [selectedThread, setSelectedThread] = useState<EmailThread | null>(null);
@@ -81,6 +101,89 @@ export default function CreatorEmailInbox() {
   const [searchQuery, setSearchQuery] = useState("");
   const [replyContent, setReplyContent] = useState("");
   const [isSending, setIsSending] = useState(false);
+
+  // Email setup state
+  const [emailSetup, setEmailSetup] = useState<EmailSetupState | null>(null);
+  const [checkingSetup, setCheckingSetup] = useState(true);
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
+  const [emailHandle, setEmailHandle] = useState("");
+  const [settingUpEmail, setSettingUpEmail] = useState(false);
+  const [setupComplete, setSetupComplete] = useState(false);
+
+  // Check email setup on mount
+  useEffect(() => {
+    const checkEmailSetup = async () => {
+      try {
+        const res = await fetch("/api/creator/email/setup");
+        if (res.ok) {
+          const data = await res.json();
+          setEmailSetup(data);
+          if (data.suggestedHandle) {
+            setEmailHandle(data.suggestedHandle);
+          }
+          if (!data.hasEmailSetup) {
+            setShowSetupDialog(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking email setup:", error);
+      } finally {
+        setCheckingSetup(false);
+      }
+    };
+    checkEmailSetup();
+  }, []);
+
+  // Handle email setup submission
+  const handleSetupEmail = async () => {
+    if (!emailHandle.trim()) {
+      toast.error("Please enter an email handle");
+      return;
+    }
+
+    setSettingUpEmail(true);
+    try {
+      const res = await fetch("/api/creator/email/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ handle: emailHandle }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || "Failed to set up email");
+        return;
+      }
+
+      setEmailSetup((prev) => prev ? {
+        ...prev,
+        hasEmailSetup: true,
+        emailHandle: data.emailHandle,
+        fullEmail: data.fullEmail,
+      } : null);
+      setSetupComplete(true);
+      toast.success("Email address created successfully!");
+
+      // Close dialog after a short delay to show success
+      setTimeout(() => {
+        setShowSetupDialog(false);
+        setSetupComplete(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Error setting up email:", error);
+      toast.error("Failed to set up email");
+    } finally {
+      setSettingUpEmail(false);
+    }
+  };
+
+  const copyEmailToClipboard = () => {
+    if (emailSetup?.fullEmail) {
+      navigator.clipboard.writeText(emailSetup.fullEmail);
+      toast.success("Email address copied!");
+    }
+  };
 
   // Fetch email threads
   const fetchThreads = useCallback(async () => {
@@ -225,8 +328,95 @@ export default function CreatorEmailInbox() {
 
   const unreadCount = threads.filter((t) => t.status === "unread").length;
 
+  // Show loading state while checking setup
+  if (checkingSetup) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
+      {/* Email Setup Dialog */}
+      <Dialog open={showSetupDialog} onOpenChange={(open) => {
+        // Prevent closing if email not set up yet
+        if (!emailSetup?.hasEmailSetup && !open) return;
+        setShowSetupDialog(open);
+      }}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => {
+          if (!emailSetup?.hasEmailSetup) e.preventDefault();
+        }}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AtSign className="h-5 w-5 text-primary" />
+              {setupComplete ? "Email Address Created!" : "Set Up Your Creator Email"}
+            </DialogTitle>
+            <DialogDescription>
+              {setupComplete
+                ? "Your personalized email address is ready to use."
+                : "Create your own @indiecrowdfund.com email address to receive messages from backers."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {setupComplete ? (
+            <div className="py-6">
+              <div className="flex items-center justify-center gap-3 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-800 dark:text-green-200">
+                    {emailSetup?.fullEmail}
+                  </p>
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    Ready to receive emails!
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="emailHandle">Your Email Handle</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="emailHandle"
+                      value={emailHandle}
+                      onChange={(e) => setEmailHandle(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
+                      placeholder="yourname"
+                      className="flex-1"
+                    />
+                    <span className="text-muted-foreground whitespace-nowrap">@indiecrowdfund.com</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Use letters, numbers, dots, hyphens, or underscores. 3-30 characters.
+                  </p>
+                </div>
+
+                {emailHandle && (
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">Your email will be:</p>
+                    <p className="font-medium">{emailHandle}@indiecrowdfund.com</p>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  onClick={handleSetupEmail}
+                  disabled={settingUpEmail || !emailHandle.trim()}
+                  className="w-full sm:w-auto"
+                >
+                  {settingUpEmail && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Create Email Address
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="border-b bg-background sticky top-0 z-50">
         <div className="container flex h-14 items-center justify-between">
@@ -246,6 +436,18 @@ export default function CreatorEmailInbox() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            {emailSetup?.fullEmail && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyEmailToClipboard}
+                className="hidden sm:flex items-center gap-2"
+              >
+                <AtSign className="h-4 w-4" />
+                {emailSetup.fullEmail}
+                <Copy className="h-3 w-3" />
+              </Button>
+            )}
             <NotificationsDropdown />
             <UserProfileDropdown />
           </div>
