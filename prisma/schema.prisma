@@ -1351,7 +1351,7 @@ model PlatformSettings {
   autoPayouts           Boolean  @default(false)
 
   // Email Settings
-  emailProvider         String   @default("smtp")
+  emailProvider         String   @default("sendgrid")
   smtpHost              String?
   smtpPort              Int      @default(587)
   smtpUser              String?
