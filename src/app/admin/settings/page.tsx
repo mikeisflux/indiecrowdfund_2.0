@@ -180,7 +180,7 @@ export default function SettingsPage() {
   }, [paymentSettings]);
 
   const [emailSettings, setEmailSettings] = useState({
-    provider: "smtp",
+    provider: "sendgrid",
     // SMTP settings
     smtpHost: "",
     smtpPort: "587",
@@ -192,6 +192,10 @@ export default function SettingsPage() {
     sendgridApiKey: "",
     mailgunApiKey: "",
     mailgunDomain: "",
+    // AWS SES settings
+    awsAccessKeyId: "",
+    awsSecretAccessKey: "",
+    awsSesRegion: "us-east-1",
     // Local UI settings (not in DB)
     replyToEmail: "",
     emailVerificationRequired: true,
@@ -323,7 +327,7 @@ export default function SettingsPage() {
 
       setEmailSettings((prev) => ({
         ...prev,
-        provider: settings.emailProvider || "smtp",
+        provider: settings.emailProvider || "sendgrid",
         smtpHost: settings.smtpHost || "",
         smtpPort: String(settings.smtpPort || 587),
         smtpUser: settings.smtpUser || "",
@@ -333,6 +337,9 @@ export default function SettingsPage() {
         sendgridApiKey: settings.sendgridApiKey || "",
         mailgunApiKey: settings.mailgunApiKey || "",
         mailgunDomain: settings.mailgunDomain || "",
+        awsAccessKeyId: settings.awsAccessKeyId || "",
+        awsSecretAccessKey: settings.awsSecretAccessKey || "",
+        awsSesRegion: settings.awsSesRegion || "us-east-1",
         emailVerificationRequired: settings.emailVerificationRequired || false,
         welcomeEmailEnabled: settings.welcomeEmailEnabled !== false,
         pledgeConfirmationEnabled: settings.pledgeConfirmationEnabled !== false,
@@ -549,6 +556,9 @@ export default function SettingsPage() {
             sendgridApiKey: emailSettings.sendgridApiKey,
             mailgunApiKey: emailSettings.mailgunApiKey,
             mailgunDomain: emailSettings.mailgunDomain,
+            awsAccessKeyId: emailSettings.awsAccessKeyId,
+            awsSecretAccessKey: emailSettings.awsSecretAccessKey,
+            awsSesRegion: emailSettings.awsSesRegion,
             emailVerificationRequired: emailSettings.emailVerificationRequired,
             welcomeEmailEnabled: emailSettings.welcomeEmailEnabled,
             pledgeConfirmationEnabled: emailSettings.pledgeConfirmationEnabled,
