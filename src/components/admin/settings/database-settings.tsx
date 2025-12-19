@@ -34,6 +34,7 @@ import {
   Upload,
   Trash2,
   Plus,
+  HardDrive,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -63,6 +64,13 @@ interface Backup {
   createdAtFormatted: string;
 }
 
+interface BuildBackup {
+  name: string;
+  timestamp: string;
+  size: string;
+  createdAt: string;
+}
+
 export function DatabaseSettings() {
   const [data, setData] = useState<DatabaseStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,6 +85,11 @@ export function DatabaseSettings() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [restoreConfirm, setRestoreConfirm] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Build backup state
+  const [buildBackups, setBuildBackups] = useState<BuildBackup[]>([]);
+  const [isLoadingBuildBackups, setIsLoadingBuildBackups] = useState(false);
+  const [deleteBuildConfirm, setDeleteBuildConfirm] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async (showRefreshing = false) => {
     try {
@@ -120,10 +133,28 @@ export function DatabaseSettings() {
     }
   }, []);
 
+  const fetchBuildBackups = useCallback(async () => {
+    try {
+      setIsLoadingBuildBackups(true);
+      const response = await fetch("/api/admin/build-backup");
+      if (!response.ok) {
+        throw new Error("Failed to fetch build backups");
+      }
+      const result = await response.json();
+      setBuildBackups(result.backups || []);
+    } catch (err) {
+      console.error("Error fetching build backups:", err);
+      // Don't show error toast as this is not critical
+    } finally {
+      setIsLoadingBuildBackups(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStatus();
     fetchBackups();
-  }, [fetchStatus, fetchBackups]);
+    fetchBuildBackups();
+  }, [fetchStatus, fetchBackups, fetchBuildBackups]);
 
   const createBackup = async () => {
     try {
@@ -239,6 +270,32 @@ export function DatabaseSettings() {
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const downloadBuildBackup = (name: string) => {
+    window.open(`/api/admin/build-backup/download?name=${encodeURIComponent(name)}`, "_blank");
+  };
+
+  const deleteBuildBackup = async (name: string) => {
+    try {
+      const response = await fetch(`/api/admin/build-backup?name=${encodeURIComponent(name)}`, {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || "Failed to delete build backup");
+      }
+
+      toast.success("Build backup deleted");
+      fetchBuildBackups();
+    } catch (err) {
+      console.error("Error deleting build backup:", err);
+      toast.error(String(err));
+    } finally {
+      setDeleteBuildConfirm(null);
     }
   };
 
@@ -477,6 +534,84 @@ export function DatabaseSettings() {
         </CardContent>
       </Card>
 
+      {/* Build Backups */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <HardDrive className="h-5 w-5" />
+                Website Build Backups
+              </CardTitle>
+              <CardDescription>Download .next build backups created during deployments</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchBuildBackups()}
+              disabled={isLoadingBuildBackups}
+            >
+              {isLoadingBuildBackups ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="ml-2">Refresh</span>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingBuildBackups ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : buildBackups.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <HardDrive className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No build backups found</p>
+              <p className="text-sm mt-1">Build backups are created automatically during deployments</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {buildBackups.map((backup) => (
+                <div
+                  key={backup.name}
+                  className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <HardDrive className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-sm">{backup.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {backup.size} • {backup.createdAt}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => downloadBuildBackup(backup.name)}
+                      title="Download as tar.gz"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700"
+                      onClick={() => setDeleteBuildConfirm(backup.name)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Database Operations */}
       <Card>
         <CardHeader>
@@ -549,6 +684,27 @@ export function DatabaseSettings() {
               onClick={() => restoreConfirm && restoreBackup(restoreConfirm)}
             >
               Restore Database
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Build Backup Confirmation Dialog */}
+      <AlertDialog open={!!deleteBuildConfirm} onOpenChange={() => setDeleteBuildConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Build Backup?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deleteBuildConfirm}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => deleteBuildConfirm && deleteBuildBackup(deleteBuildConfirm)}
+            >
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
