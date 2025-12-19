@@ -1,4 +1,5 @@
 import sgMail from "@sendgrid/mail";
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import { db } from "@/lib/db";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
@@ -48,26 +49,71 @@ export async function isEmailVerificationRequired(): Promise<boolean> {
   return settings?.emailVerificationRequired ?? false;
 }
 
-export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
-  const settings = await getEmailSettings();
+// Send email via Amazon SES
+async function sendViaSES(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+  fromEmail: string,
+  fromName: string
+): Promise<{ success: boolean; error?: string }> {
+  const region = process.env.AWS_SES_REGION || process.env.AWS_REGION || "us-east-1";
 
-  // Check for SendGrid API key (from DB settings or env)
-  const sendgridApiKey = settings?.sendgridApiKey || process.env.SENDGRID_API_KEY;
-  const fromEmail = settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
-  const fromName = settings?.smtpFromName || APP_NAME;
+  const sesClient = new SESClient({
+    region,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+    },
+  });
 
-  if (!sendgridApiKey) {
-    console.warn("Email not configured - SendGrid API key is missing");
-    console.log("Would send email to:", to);
-    console.log("Subject:", subject);
-    return { success: false, error: "Email not configured" };
-  }
+  const command = new SendEmailCommand({
+    Source: `${fromName} <${fromEmail}>`,
+    Destination: {
+      ToAddresses: [to],
+    },
+    Message: {
+      Subject: {
+        Data: subject,
+        Charset: "UTF-8",
+      },
+      Body: {
+        Html: {
+          Data: html,
+          Charset: "UTF-8",
+        },
+        Text: {
+          Data: text,
+          Charset: "UTF-8",
+        },
+      },
+    },
+  });
 
   try {
-    sgMail.setApiKey(sendgridApiKey);
+    const response = await sesClient.send(command);
+    console.log("Email sent via SES, MessageId:", response.MessageId);
+    return { success: true };
+  } catch (error) {
+    console.error("SES Error:", error);
+    return { success: false, error: String(error) };
+  }
+}
 
-    console.log(`Sending email to: ${to}, subject: ${subject}, from: ${fromEmail}`);
+// Send email via SendGrid
+async function sendViaSendGrid(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+  fromEmail: string,
+  fromName: string,
+  apiKey: string
+): Promise<{ success: boolean; error?: string }> {
+  sgMail.setApiKey(apiKey);
 
+  try {
     const response = await sgMail.send({
       to,
       from: {
@@ -76,20 +122,60 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       },
       subject,
       html,
-      text: text || html.replace(/<[^>]*>/g, ""),
+      text,
     });
 
-    console.log("Email sent successfully, status:", response[0]?.statusCode);
+    console.log("Email sent via SendGrid, status:", response[0]?.statusCode);
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("SendGrid Error:");
+    if (error && typeof error === "object" && "response" in error) {
+      const sgError = error as { response?: { body?: unknown; statusCode?: number } };
+      console.error("SendGrid status code:", sgError.response?.statusCode);
+      console.error("SendGrid response body:", JSON.stringify(sgError.response?.body, null, 2));
+    }
+    return { success: false, error: String(error) };
+  }
+}
 
+export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
+  const settings = await getEmailSettings();
+
+  const fromEmail = settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
+  const fromName = settings?.smtpFromName || APP_NAME;
+  const plainText = text || html.replace(/<[^>]*>/g, "");
+
+  // Determine which email provider to use
+  // Priority: AWS SES (if configured) > SendGrid
+  const awsAccessKey = process.env.AWS_ACCESS_KEY_ID;
+  const awsSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
+  const sendgridApiKey = settings?.sendgridApiKey || process.env.SENDGRID_API_KEY;
+
+  let result: { success: boolean; error?: string };
+
+  if (awsAccessKey && awsSecretKey) {
+    // Use Amazon SES
+    console.log(`Sending email via SES to: ${to}, subject: ${subject}`);
+    result = await sendViaSES(to, subject, html, plainText, fromEmail, fromName);
+  } else if (sendgridApiKey) {
+    // Fall back to SendGrid
+    console.log(`Sending email via SendGrid to: ${to}, subject: ${subject}`);
+    result = await sendViaSendGrid(to, subject, html, plainText, fromEmail, fromName, sendgridApiKey);
+  } else {
+    console.warn("Email not configured - no email provider credentials found");
+    console.log("Would send email to:", to);
+    console.log("Subject:", subject);
+    return { success: false, error: "Email not configured" };
+  }
+
+  if (result.success) {
     // Save a copy to admin email system (sent folder)
     try {
-      // Find or create the mailbox for the sender
       let mailbox = await db.mailbox.findFirst({
         where: { email: fromEmail },
       });
 
       if (!mailbox) {
-        // Create the mailbox if it doesn't exist
         mailbox = await db.mailbox.create({
           data: {
             name: fromName,
@@ -102,7 +188,6 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
         console.log(`Created mailbox for ${fromEmail}`);
       }
 
-      // Save the email to the sent folder
       await db.adminEmail.create({
         data: {
           mailboxId: mailbox.id,
@@ -111,7 +196,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
           toEmail: to,
           subject: subject,
           bodyHtml: html,
-          bodyText: text || html.replace(/<[^>]*>/g, ""),
+          bodyText: plainText,
           folder: "SENT",
           status: "SENT",
           isRead: true,
@@ -120,25 +205,11 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       });
       console.log(`Saved outgoing email to admin sent folder`);
     } catch (saveError) {
-      // Don't fail the email send if saving to admin fails
       console.error("Failed to save email to admin sent folder:", saveError);
     }
-
-    return { success: true };
-  } catch (error: unknown) {
-    console.error("Error sending email via SendGrid:");
-
-    // Log detailed SendGrid error information
-    if (error && typeof error === "object" && "response" in error) {
-      const sgError = error as { response?: { body?: unknown; statusCode?: number } };
-      console.error("SendGrid status code:", sgError.response?.statusCode);
-      console.error("SendGrid response body:", JSON.stringify(sgError.response?.body, null, 2));
-    } else {
-      console.error("Error details:", error);
-    }
-
-    return { success: false, error: "Failed to send email" };
   }
+
+  return result;
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
