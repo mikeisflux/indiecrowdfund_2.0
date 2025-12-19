@@ -45,7 +45,6 @@ export async function GET() {
     for (const entry of entries) {
       if (entry.isDirectory() && entry.name.startsWith(".next-backup-")) {
         const backupPath = path.join(BUILD_DIR, entry.name);
-        const stats = await fs.stat(backupPath);
 
         // Parse timestamp from directory name: .next-backup-YYYYMMDD_HHMMSS
         const timestampMatch = entry.name.match(/\.next-backup-(\d{8})_(\d{6})/);
