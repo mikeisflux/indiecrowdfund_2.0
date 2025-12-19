@@ -24,7 +24,7 @@ import {
   AlertCircle,
   Shield,
 } from "lucide-react";
-import { getDaysRemaining, getHoursRemaining } from "@/lib/utils";
+import { CountdownTimer } from "@/components/ui/countdown-timer";
 
 interface Reward {
   id: string;
@@ -272,11 +272,13 @@ export default function RetailerProjectDetailPage() {
                   <p className="text-sm text-zinc-500">backers</p>
                 </div>
                 <div className="text-center">
-                  {project.endDate && getDaysRemaining(new Date(project.endDate)) < 2 ? (
-                    <>
-                      <p className="text-2xl font-bold">{getHoursRemaining(new Date(project.endDate))}</p>
-                      <p className="text-sm text-zinc-500">hours left</p>
-                    </>
+                  {project.endDate ? (
+                    <CountdownTimer
+                      endDate={project.endDate}
+                      showIcon={false}
+                      showConfetti={false}
+                      variant="stacked"
+                    />
                   ) : (
                     <>
                       <p className="text-2xl font-bold">{project.daysLeft}</p>

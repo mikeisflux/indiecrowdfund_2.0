@@ -51,7 +51,7 @@ import {
   CommentsTab,
   CommunityTab,
 } from "@/components/project-details";
-import { getDaysRemaining, getHoursRemaining } from "@/lib/utils";
+import { CountdownTimer } from "@/components/ui/countdown-timer";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -568,20 +568,20 @@ export default function ProjectPage() {
                 <p className="text-sm text-muted-foreground">backers</p>
               </div>
 
-              {/* Days/Hours remaining */}
-              <div>
-                {project.endDate && getDaysRemaining(new Date(project.endDate)) < 2 ? (
-                  <>
-                    <p className="text-2xl font-bold">{getHoursRemaining(new Date(project.endDate))}</p>
-                    <p className="text-sm text-muted-foreground">hours to go</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-2xl font-bold">{project.daysRemaining}</p>
-                    <p className="text-sm text-muted-foreground">days to go</p>
-                  </>
-                )}
-              </div>
+              {/* Time remaining with live countdown */}
+              {project.endDate ? (
+                <CountdownTimer
+                  endDate={project.endDate}
+                  showIcon={false}
+                  showConfetti={true}
+                  variant="stacked"
+                />
+              ) : (
+                <div>
+                  <p className="text-2xl font-bold">{project.daysRemaining}</p>
+                  <p className="text-sm text-muted-foreground">days to go</p>
+                </div>
+              )}
 
               {/* Back button */}
               {existingPledge && existingPledge.status !== "CHECKOUT_IN_PROGRESS" ? (

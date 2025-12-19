@@ -112,6 +112,16 @@ export function GlobalSearch({
     }
   }, [open]);
 
+  const handleSelect = useCallback((result: SearchResult) => {
+    // Add to recent searches
+    setRecentSearches((prev) => {
+      const filtered = prev.filter((s) => s !== result.title);
+      return [result.title, ...filtered].slice(0, 5);
+    });
+    onSelect?.(result);
+    onOpenChange(false);
+  }, [onSelect, onOpenChange]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "ArrowDown") {
@@ -129,18 +139,8 @@ export function GlobalSearch({
         }
       }
     },
-    [filteredResults, selectedIndex]
+    [filteredResults, selectedIndex, handleSelect]
   );
-
-  const handleSelect = (result: SearchResult) => {
-    // Add to recent searches
-    setRecentSearches((prev) => {
-      const filtered = prev.filter((s) => s !== result.title);
-      return [result.title, ...filtered].slice(0, 5);
-    });
-    onSelect?.(result);
-    onOpenChange(false);
-  };
 
   const handleQuickAction = (action: string) => {
     onNavigate?.(action);
