@@ -230,14 +230,21 @@ export function CampaignTypeDialog({
 
           if (response.ok) {
             const data = await response.json();
+            console.log(`Upload response for ${img.name}:`, data);
             if (data.file?.url) {
-              // Make URL absolute for emails
+              // Make URL absolute for emails - MUST include full origin for iframe/email rendering
               const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-              const absoluteUrl = data.file.url.startsWith("http")
-                ? data.file.url
-                : `${baseUrl}${data.file.url}`;
+              const serverUrl = data.file.url;
+              const absoluteUrl = serverUrl.startsWith("http")
+                ? serverUrl
+                : `${baseUrl}${serverUrl}`;
+              console.log(`Image URL: serverUrl="${serverUrl}", baseUrl="${baseUrl}", absoluteUrl="${absoluteUrl}"`);
               uploadedImages.push({ name: img.name, path: img.path, url: absoluteUrl });
+            } else {
+              console.warn(`Upload succeeded but no URL in response for ${img.name}:`, data);
             }
+          } else {
+            console.error(`Upload failed for ${img.name}:`, await response.text());
           }
         } catch (uploadErr) {
           console.error(`Failed to upload image ${img.name}:`, uploadErr);
@@ -247,58 +254,45 @@ export function CampaignTypeDialog({
       // Replace image references in HTML with uploaded public URLs
       let processedHtml = htmlContent;
 
+      // Build a mapping of all possible old references to new URLs
+      const imageReplacements: Array<{ oldRef: string; newUrl: string }> = [];
+
       for (const img of uploadedImages) {
-        // Escape special regex characters in the filename/path
-        const escapeName = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-        // Get filename without extension for matching
+        // Get filename without extension for partial matching
         const nameWithoutExt = img.name.replace(/\.[^.]+$/, '');
+        const extension = img.name.split('.').pop() || '';
 
-        // Try multiple patterns that Canva might use:
-        const patterns = [
-          // Match full path from ZIP
-          new RegExp(`(src=["'])${escapeName(img.path)}(["'])`, "gi"),
-          // Match just filename with any prefix path
-          new RegExp(`(src=["'][^"']*/)${escapeName(img.name)}(["'])`, "gi"),
-          // Match just filename at start
-          new RegExp(`(src=["'])${escapeName(img.name)}(["'])`, "gi"),
-          // Match with images/ prefix
-          new RegExp(`(src=["'])images/${escapeName(img.name)}(["'])`, "gi"),
-          // Match URL-encoded paths
-          new RegExp(`(src=["'])${escapeName(encodeURIComponent(img.path))}(["'])`, "gi"),
-          new RegExp(`(src=["'])${escapeName(encodeURIComponent(img.name))}(["'])`, "gi"),
-          // Match url() in CSS/inline styles
-          new RegExp(`(url\\(["']?)${escapeName(img.path)}(["']?\\))`, "gi"),
-          new RegExp(`(url\\(["']?)${escapeName(img.name)}(["']?\\))`, "gi"),
-          // Match background-image style
-          new RegExp(`(background-image:\\s*url\\(["']?)${escapeName(img.path)}(["']?\\))`, "gi"),
-          new RegExp(`(background-image:\\s*url\\(["']?)${escapeName(img.name)}(["']?\\))`, "gi"),
-          // Match partial filename (without extension) - common in Canva exports
-          new RegExp(`(src=["'][^"']*)${escapeName(nameWithoutExt)}\\.[a-z]+(?=["'])`, "gi"),
+        // All possible ways Canva might reference this image (sorted by specificity)
+        const possibleRefs = [
+          img.path,                          // images/filename.png
+          `images/${img.name}`,              // images/filename.png (explicit)
+          `./${img.path}`,                   // ./images/filename.png
+          img.name,                          // filename.png
+          `./${img.name}`,                   // ./filename.png
+          encodeURIComponent(img.path),
+          encodeURIComponent(img.name),
+          `${nameWithoutExt}.${extension}`,  // with extension
         ];
 
-        for (const pattern of patterns) {
-          const before = processedHtml;
-          processedHtml = processedHtml.replace(pattern, `$1${img.url}$2`);
-          if (before !== processedHtml) {
-            console.log(`Replaced pattern for ${img.name}`);
+        for (const ref of possibleRefs) {
+          if (ref) {
+            imageReplacements.push({ oldRef: ref, newUrl: img.url });
           }
         }
 
-        // Fallback: Simple string replacement for any remaining references
-        // This catches cases the regex might miss
-        const simplePatterns = [
-          img.path,
-          img.name,
-          `images/${img.name}`,
-          encodeURIComponent(img.name),
-        ];
+        console.log(`Prepared replacements for ${img.name} -> ${img.url}`);
+      }
 
-        for (const simplePattern of simplePatterns) {
-          if (processedHtml.includes(simplePattern)) {
-            processedHtml = processedHtml.split(simplePattern).join(img.url);
-            console.log(`Simple replacement for ${simplePattern}`);
-          }
+      // Sort by length descending to replace longer/more specific paths first
+      imageReplacements.sort((a, b) => b.oldRef.length - a.oldRef.length);
+
+      // Simple string replacement - the most reliable approach
+      // This handles all cases: src attributes, url() in CSS, etc.
+      for (const { oldRef, newUrl } of imageReplacements) {
+        if (processedHtml.includes(oldRef)) {
+          // Use global string replacement
+          processedHtml = processedHtml.split(oldRef).join(newUrl);
+          console.log(`Replaced: ${oldRef} -> ${newUrl}`);
         }
       }
 
@@ -312,16 +306,40 @@ export function CampaignTypeDialog({
 
       // Extract body content
       const bodyMatch = processedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+
       if (bodyMatch) {
-        // Wrap body content with the extracted styles for email rendering
-        processedHtml = `<div class="canva-email-import">${inlineStyles}${bodyMatch[1].trim()}</div>`;
+        // Wrap body content with base tag for URL resolution and the extracted styles
+        // The base tag ensures relative URLs resolve correctly in the iframe
+        processedHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <base href="${baseUrl}/">
+  ${inlineStyles}
+</head>
+<body style="margin:0;padding:0;">
+  <div class="canva-email-import">${bodyMatch[1].trim()}</div>
+</body>
+</html>`;
+      } else {
+        // No body tag found, wrap entire content
+        processedHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <base href="${baseUrl}/">
+  ${inlineStyles}
+</head>
+<body style="margin:0;padding:0;">
+  <div class="canva-email-import">${processedHtml}</div>
+</body>
+</html>`;
       }
 
       // Log for debugging
-      console.log("Processed HTML preview:", processedHtml.substring(0, 1000));
-      console.log("Uploaded images:", uploadedImages);
+      console.log("Base URL for images:", baseUrl);
+      console.log("Uploaded images with URLs:", uploadedImages.map(i => ({ name: i.name, url: i.url })));
+      console.log("Processed HTML preview:", processedHtml.substring(0, 1500));
       console.log("Found images in ZIP:", foundImages.map(i => i.path));
-      console.log("Extracted styles:", inlineStyles.substring(0, 500));
 
       setIntro(processedHtml);
       setCanvaFileName(file.name);
