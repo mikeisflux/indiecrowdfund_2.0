@@ -83,6 +83,8 @@ export async function GET() {
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       mailgunApiKey: settings.mailgunApiKey ? "••••••••" : null,
+      awsAccessKeyId: settings.awsAccessKeyId ? "••••••••" : null,
+      awsSecretAccessKey: settings.awsSecretAccessKey ? "••••••••" : null,
       openaiApiKey: settings.openaiApiKey ? "••••••••" : null,
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
       googlePlacesApiKey: settings.googlePlacesApiKey ? "••••••••" : null,
@@ -153,6 +155,7 @@ export async function PATCH(req: NextRequest) {
     const secretFields = [
       'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret',
       'smtpPassword', 'sendgridApiKey', 'mailgunApiKey',
+      'awsAccessKeyId', 'awsSecretAccessKey',
       'openaiApiKey', 'anthropicApiKey', 'googlePlacesApiKey',
       'facebookAppSecret', 'facebookPageAccessToken',
       'youtubeClientSecret', 'youtubeApiKey',
@@ -185,6 +188,7 @@ export async function PATCH(req: NextRequest) {
       email: [
         "emailProvider", "smtpHost", "smtpPort", "smtpUser", "smtpPassword",
         "smtpFromEmail", "smtpFromName", "sendgridApiKey", "mailgunApiKey", "mailgunDomain",
+        "awsAccessKeyId", "awsSecretAccessKey", "awsSesRegion",
         "emailVerificationRequired", "welcomeEmailEnabled", "pledgeConfirmationEnabled", "projectUpdateNotifications"
       ],
       social: [
@@ -274,6 +278,8 @@ export async function PATCH(req: NextRequest) {
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       mailgunApiKey: settings.mailgunApiKey ? "••••••••" : null,
+      awsAccessKeyId: settings.awsAccessKeyId ? "••••••••" : null,
+      awsSecretAccessKey: settings.awsSecretAccessKey ? "••••••••" : null,
       openaiApiKey: settings.openaiApiKey ? "••••••••" : null,
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
       googlePlacesApiKey: settings.googlePlacesApiKey ? "••••••••" : null,

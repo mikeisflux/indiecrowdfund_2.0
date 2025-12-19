@@ -56,15 +56,14 @@ async function sendViaSES(
   html: string,
   text: string,
   fromEmail: string,
-  fromName: string
+  fromName: string,
+  awsConfig: { accessKeyId: string; secretAccessKey: string; region: string }
 ): Promise<{ success: boolean; error?: string }> {
-  const region = process.env.AWS_SES_REGION || process.env.AWS_REGION || "us-east-1";
-
   const sesClient = new SESClient({
-    region,
+    region: awsConfig.region,
     credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+      accessKeyId: awsConfig.accessKeyId,
+      secretAccessKey: awsConfig.secretAccessKey,
     },
   });
 
@@ -145,20 +144,31 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   const fromName = settings?.smtpFromName || APP_NAME;
   const plainText = text || html.replace(/<[^>]*>/g, "");
 
-  // Determine which email provider to use
-  // Priority: AWS SES (if configured) > SendGrid
-  const awsAccessKey = process.env.AWS_ACCESS_KEY_ID;
-  const awsSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
+  // Get provider from settings (default to checking what's configured)
+  const provider = settings?.emailProvider || "auto";
+
+  // Get credentials from database settings first, fall back to environment variables
+  const awsAccessKey = settings?.awsAccessKeyId || process.env.AWS_ACCESS_KEY_ID;
+  const awsSecretKey = settings?.awsSecretAccessKey || process.env.AWS_SECRET_ACCESS_KEY;
+  const awsRegion = settings?.awsSesRegion || process.env.AWS_SES_REGION || "us-east-1";
   const sendgridApiKey = settings?.sendgridApiKey || process.env.SENDGRID_API_KEY;
 
   let result: { success: boolean; error?: string };
 
-  if (awsAccessKey && awsSecretKey) {
+  // Determine which provider to use based on settings or what's configured
+  const useSES = provider === "ses" || (provider === "auto" && awsAccessKey && awsSecretKey);
+  const useSendGrid = provider === "sendgrid" || (provider === "auto" && !useSES && sendgridApiKey);
+
+  if (useSES && awsAccessKey && awsSecretKey) {
     // Use Amazon SES
     console.log(`Sending email via SES to: ${to}, subject: ${subject}`);
-    result = await sendViaSES(to, subject, html, plainText, fromEmail, fromName);
-  } else if (sendgridApiKey) {
-    // Fall back to SendGrid
+    result = await sendViaSES(to, subject, html, plainText, fromEmail, fromName, {
+      accessKeyId: awsAccessKey,
+      secretAccessKey: awsSecretKey,
+      region: awsRegion,
+    });
+  } else if (useSendGrid && sendgridApiKey) {
+    // Use SendGrid
     console.log(`Sending email via SendGrid to: ${to}, subject: ${subject}`);
     result = await sendViaSendGrid(to, subject, html, plainText, fromEmail, fromName, sendgridApiKey);
   } else {

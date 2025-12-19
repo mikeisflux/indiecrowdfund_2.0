@@ -24,29 +24,83 @@ export function EmailSettingsSection({ settings, onChange, onSave }: EmailSettin
       <Card>
         <CardHeader>
           <CardTitle>Email Provider</CardTitle>
-          <CardDescription>Configure SendGrid for transactional emails</CardDescription>
+          <CardDescription>Configure your email provider for transactional emails</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Email Provider</Label>
-              <Select
-                value={settings.provider}
-                onValueChange={(v) => onChange({ ...settings, provider: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sendgrid">SendGrid</SelectItem>
-                  <SelectItem value="ses">Amazon SES</SelectItem>
-                  <SelectItem value="mailgun">Mailgun</SelectItem>
-                  <SelectItem value="postmark">Postmark</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-2">
+            <Label>Email Provider</Label>
+            <Select
+              value={settings.provider}
+              onValueChange={(v) => onChange({ ...settings, provider: v })}
+            >
+              <SelectTrigger className="w-[250px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ses">Amazon SES (Recommended)</SelectItem>
+                <SelectItem value="sendgrid">SendGrid</SelectItem>
+                <SelectItem value="mailgun">Mailgun</SelectItem>
+                <SelectItem value="postmark">Postmark</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* AWS SES Settings */}
+          {settings.provider === "ses" && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-4">
+              <div className="text-sm font-medium text-amber-800">Amazon SES Configuration</div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>AWS Access Key ID</Label>
+                  <SecureKeyInput
+                    value={settings.awsAccessKeyId}
+                    onChange={(value) => onChange({ ...settings, awsAccessKeyId: value })}
+                    onSave={onSave}
+                    hasExistingValue={settings.awsAccessKeyId === "••••••••"}
+                    placeholder="AKIA..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>AWS Secret Access Key</Label>
+                  <SecureKeyInput
+                    value={settings.awsSecretAccessKey}
+                    onChange={(value) => onChange({ ...settings, awsSecretAccessKey: value })}
+                    onSave={onSave}
+                    hasExistingValue={settings.awsSecretAccessKey === "••••••••"}
+                    placeholder="Your secret key..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>AWS Region</Label>
+                  <Select
+                    value={settings.awsSesRegion || "us-east-1"}
+                    onValueChange={(v) => onChange({ ...settings, awsSesRegion: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                      <SelectItem value="us-east-2">US East (Ohio)</SelectItem>
+                      <SelectItem value="us-west-1">US West (N. California)</SelectItem>
+                      <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                      <SelectItem value="eu-west-1">EU (Ireland)</SelectItem>
+                      <SelectItem value="eu-west-2">EU (London)</SelectItem>
+                      <SelectItem value="eu-central-1">EU (Frankfurt)</SelectItem>
+                      <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                      <SelectItem value="ap-southeast-2">Asia Pacific (Sydney)</SelectItem>
+                      <SelectItem value="ap-northeast-1">Asia Pacific (Tokyo)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* SendGrid Settings */}
+          {settings.provider === "sendgrid" && (
             <div className="space-y-2">
-              <Label>API Key</Label>
+              <Label>SendGrid API Key</Label>
               <SecureKeyInput
                 value={settings.sendgridApiKey}
                 onChange={(value) => onChange({ ...settings, sendgridApiKey: value })}
@@ -55,7 +109,31 @@ export function EmailSettingsSection({ settings, onChange, onSave }: EmailSettin
                 placeholder="SG.xxx..."
               />
             </div>
-          </div>
+          )}
+
+          {/* Mailgun Settings */}
+          {settings.provider === "mailgun" && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Mailgun API Key</Label>
+                <SecureKeyInput
+                  value={settings.mailgunApiKey}
+                  onChange={(value) => onChange({ ...settings, mailgunApiKey: value })}
+                  onSave={onSave}
+                  hasExistingValue={settings.mailgunApiKey === "••••••••"}
+                  placeholder="key-xxx..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Mailgun Domain</Label>
+                <Input
+                  value={settings.mailgunDomain}
+                  onChange={(e) => onChange({ ...settings, mailgunDomain: e.target.value })}
+                  placeholder="mg.yourdomain.com"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
@@ -64,13 +142,16 @@ export function EmailSettingsSection({ settings, onChange, onSave }: EmailSettin
                 type="email"
                 value={settings.fromEmail}
                 onChange={(e) => onChange({ ...settings, fromEmail: e.target.value })}
+                placeholder="noreply@yourdomain.com"
               />
+              <p className="text-xs text-zinc-500">Must be verified in your email provider</p>
             </div>
             <div className="space-y-2">
               <Label>From Name</Label>
               <Input
                 value={settings.fromName}
                 onChange={(e) => onChange({ ...settings, fromName: e.target.value })}
+                placeholder="IndieCrowdfund"
               />
             </div>
             <div className="space-y-2">
@@ -79,6 +160,7 @@ export function EmailSettingsSection({ settings, onChange, onSave }: EmailSettin
                 type="email"
                 value={settings.replyToEmail}
                 onChange={(e) => onChange({ ...settings, replyToEmail: e.target.value })}
+                placeholder="support@yourdomain.com"
               />
             </div>
           </div>

@@ -1361,6 +1361,10 @@ model PlatformSettings {
   sendgridApiKey        String?
   mailgunApiKey         String?
   mailgunDomain         String?
+  // AWS SES Settings
+  awsAccessKeyId        String?
+  awsSecretAccessKey    String?
+  awsSesRegion          String?  @default("us-east-1")
   emailVerificationRequired Boolean @default(false)
   welcomeEmailEnabled   Boolean  @default(true)
   pledgeConfirmationEnabled Boolean @default(true)

@@ -38,6 +38,10 @@ export interface EmailSettings {
   sendgridApiKey: string;
   mailgunApiKey: string;
   mailgunDomain: string;
+  // AWS SES Settings
+  awsAccessKeyId: string;
+  awsSecretAccessKey: string;
+  awsSesRegion: string;
   // Local UI settings
   replyToEmail: string;
   emailVerificationRequired: boolean;
