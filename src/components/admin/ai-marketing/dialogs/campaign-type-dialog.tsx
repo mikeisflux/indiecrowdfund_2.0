@@ -185,7 +185,7 @@ export function CampaignTypeDialog({
 
       // Find HTML file (email.html or any .html file)
       let htmlContent: string | null = null;
-      const foundImages: { name: string; blob: Blob; extension: string }[] = [];
+      const foundImages: { name: string; path: string; blob: Blob; extension: string }[] = [];
 
       for (const [filename, zipEntry] of Object.entries(contents.files)) {
         if (zipEntry.dir) continue;
@@ -195,12 +195,13 @@ export function CampaignTypeDialog({
           htmlContent = await zipEntry.async("string");
         }
 
-        // Get images as blobs for upload
+        // Get images as blobs for upload - store the full path as well
         if (filename.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
           const imageBlob = await zipEntry.async("blob");
           const extension = filename.split(".").pop()?.toLowerCase() || "png";
           foundImages.push({
             name: filename.split("/").pop() || filename,
+            path: filename, // Keep full path from ZIP
             blob: imageBlob,
             extension,
           });
@@ -212,7 +213,7 @@ export function CampaignTypeDialog({
       }
 
       // Upload images to server and get public URLs
-      const uploadedImages: { name: string; url: string }[] = [];
+      const uploadedImages: { name: string; path: string; url: string }[] = [];
       for (const img of foundImages) {
         try {
           const formData = new FormData();
@@ -230,7 +231,12 @@ export function CampaignTypeDialog({
           if (response.ok) {
             const data = await response.json();
             if (data.file?.url) {
-              uploadedImages.push({ name: img.name, url: data.file.url });
+              // Make URL absolute for emails
+              const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+              const absoluteUrl = data.file.url.startsWith("http")
+                ? data.file.url
+                : `${baseUrl}${data.file.url}`;
+              uploadedImages.push({ name: img.name, path: img.path, url: absoluteUrl });
             }
           }
         } catch (uploadErr) {
@@ -240,15 +246,32 @@ export function CampaignTypeDialog({
 
       // Replace image references in HTML with uploaded public URLs
       let processedHtml = htmlContent;
+
       for (const img of uploadedImages) {
-        // Replace various possible image reference formats
-        const imgName = img.name;
+        // Escape special regex characters in the filename/path
+        const escapeName = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // Try multiple patterns that Canva might use:
+        // 1. Full path: images/filename.png
+        // 2. Just filename: filename.png
+        // 3. With or without quotes
+        // 4. Various folder structures
         const patterns = [
-          new RegExp(`src=["'](?:images/)?${imgName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`, "gi"),
-          new RegExp(`src=["'][^"']*${imgName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`, "gi"),
+          // Match full path from ZIP
+          new RegExp(`(src=["'])${escapeName(img.path)}(["'])`, "gi"),
+          // Match just filename with any prefix
+          new RegExp(`(src=["'][^"']*/)${escapeName(img.name)}(["'])`, "gi"),
+          // Match just filename
+          new RegExp(`(src=["'])${escapeName(img.name)}(["'])`, "gi"),
+          // Match with images/ prefix
+          new RegExp(`(src=["'])images/${escapeName(img.name)}(["'])`, "gi"),
+          // Match url() in CSS/inline styles
+          new RegExp(`(url\\(["']?)${escapeName(img.path)}(["']?\\))`, "gi"),
+          new RegExp(`(url\\(["']?)${escapeName(img.name)}(["']?\\))`, "gi"),
         ];
+
         for (const pattern of patterns) {
-          processedHtml = processedHtml.replace(pattern, `src="${img.url}"`);
+          processedHtml = processedHtml.replace(pattern, `$1${img.url}$2`);
         }
       }
 
@@ -257,6 +280,11 @@ export function CampaignTypeDialog({
       if (bodyMatch) {
         processedHtml = bodyMatch[1].trim();
       }
+
+      // Also handle inline styles that might reference the images
+      // And ensure any remaining relative paths are flagged
+      console.log("Processed HTML:", processedHtml.substring(0, 500));
+      console.log("Uploaded images:", uploadedImages);
 
       setIntro(processedHtml);
       setCanvaFileName(file.name);

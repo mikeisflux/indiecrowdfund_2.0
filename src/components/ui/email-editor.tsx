@@ -66,7 +66,13 @@ export function EmailEditor({
       }
 
       const data = await response.json();
-      return data.file?.url || null;
+      const url = data.file?.url;
+      if (!url) return null;
+
+      // Make URL absolute for emails
+      if (url.startsWith("http")) return url;
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+      return `${baseUrl}${url}`;
     } catch (error) {
       console.error("Error uploading image:", error);
       return null;
