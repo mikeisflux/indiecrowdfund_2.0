@@ -91,10 +91,13 @@ export default function ProjectPage() {
   const tiers = rewards.filter((r) => r.type === "TIER");
   const fundingPercentage = (project.currentAmount / project.goalAmount) * 100;
 
-  // Build the project URL path for this vanity URL format
-  const projectPath = `/projects/${vanityname}/${slug}`;
+  // Check if this is a legacy slug-only URL (vanityname = "_" from middleware rewrite)
+  const isLegacyUrl = vanityname === "_";
 
-  // Fetch project data using the vanity URL API
+  // Build the project URL path - use slug-only format for legacy URLs
+  const projectPath = isLegacyUrl ? `/projects/${slug}` : `/projects/${vanityname}/${slug}`;
+
+  // Fetch project data - use appropriate API based on URL format
   useEffect(() => {
     async function fetchProject() {
       if (!slug || !vanityname) return;
@@ -103,8 +106,12 @@ export default function ProjectPage() {
         setLoading(true);
         setError(null);
 
-        // Use the new API that supports vanity URL lookup
-        const response = await fetch(`/api/projects/vanity/${vanityname}/${slug}`);
+        // Use slug-only API for legacy URLs, vanity API for new URLs
+        const apiUrl = isLegacyUrl
+          ? `/api/projects/slug/${slug}`
+          : `/api/projects/vanity/${vanityname}/${slug}`;
+
+        const response = await fetch(apiUrl);
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -128,7 +135,7 @@ export default function ProjectPage() {
     }
 
     fetchProject();
-  }, [slug, vanityname]);
+  }, [slug, vanityname, isLegacyUrl]);
 
   // Check if user has an existing pledge for this project
   useEffect(() => {
@@ -195,7 +202,11 @@ export default function ProjectPage() {
 
     const pollStats = async () => {
       try {
-        const response = await fetch(`/api/projects/vanity/${vanityname}/${slug}/stats`, {
+        // Use appropriate stats API based on URL format
+        const statsUrl = isLegacyUrl
+          ? `/api/projects/slug/${slug}/stats`
+          : `/api/projects/vanity/${vanityname}/${slug}/stats`;
+        const response = await fetch(statsUrl, {
           cache: "no-store",
         });
         if (response.ok) {
@@ -237,7 +248,7 @@ export default function ProjectPage() {
       clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [slug, vanityname, loading, error]);
+  }, [slug, vanityname, loading, error, isLegacyUrl]);
 
   // Scroll handler for sticky header
   useEffect(() => {

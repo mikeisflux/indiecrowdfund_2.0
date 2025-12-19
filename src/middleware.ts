@@ -67,6 +67,27 @@ function getCSPHeader(): string {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Handle legacy project URLs: /projects/slug -> rewrite to /projects/_/slug
+  // This allows slug-only URLs to work alongside the new /projects/vanityname/slug format
+  const legacyProjectMatch = pathname.match(/^\/projects\/([^\/]+)$/);
+  if (legacyProjectMatch && legacyProjectMatch[1] !== "new" && legacyProjectMatch[1] !== "_") {
+    const slug = legacyProjectMatch[1];
+    // Rewrite to a lookup route that will handle the slug-only URL
+    const url = req.nextUrl.clone();
+    url.pathname = `/projects/_/${slug}`;
+    return NextResponse.rewrite(url);
+  }
+
+  // Handle legacy pledge URLs: /projects/slug/pledge -> rewrite to /projects/_/slug/pledge
+  const legacyPledgeMatch = pathname.match(/^\/projects\/([^\/]+)\/pledge$/);
+  if (legacyPledgeMatch && legacyPledgeMatch[1] !== "_") {
+    const slug = legacyPledgeMatch[1];
+    const url = req.nextUrl.clone();
+    url.pathname = `/projects/_/${slug}/pledge`;
+    url.search = req.nextUrl.search; // Preserve query params
+    return NextResponse.rewrite(url);
+  }
+
   // Check for maintenance mode (set MAINTENANCE_MODE=true in env)
   const isMaintenanceMode = process.env.MAINTENANCE_MODE === "true";
 
