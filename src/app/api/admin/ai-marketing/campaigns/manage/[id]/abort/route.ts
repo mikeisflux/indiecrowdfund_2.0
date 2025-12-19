@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { exec } from "child_process";
 
 export const dynamic = "force-dynamic";
 
@@ -61,12 +62,25 @@ export async function POST(
       data: { status: "ABORTED" },
     });
 
-    console.log(`Campaign "${campaign.name}" has been aborted`);
+    console.log(`Campaign "${campaign.name}" has been aborted - restarting server to stop send`);
 
-    return NextResponse.json({
+    // Send response first, then restart
+    const response = NextResponse.json({
       success: true,
       message: `Campaign "${campaign.name}" has been aborted`,
     });
+
+    // Restart PM2 to kill the running send process
+    // Use setImmediate to send response before restart
+    setImmediate(() => {
+      exec("pm2 restart indiecrowdfund", (error) => {
+        if (error) {
+          console.error("Failed to restart PM2:", error);
+        }
+      });
+    });
+
+    return response;
   } catch (error) {
     console.error("Error aborting campaign:", error);
     return NextResponse.json(
