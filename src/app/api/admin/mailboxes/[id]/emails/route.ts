@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -209,22 +210,17 @@ export async function POST(
     // If sendNow is true, actually send the email via the email service
     if (sendNow && folder !== "DRAFTS") {
       try {
-        // Call the email sending API
-        const sendResponse = await fetch(
-          new URL("/api/admin/email", request.url).toString(),
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              to: toEmail,
-              subject,
-              body: bodyText || bodyHtml.replace(/<[^>]*>/g, ""),
-              html: bodyHtml,
-            }),
-          }
-        );
+        // Send email directly using the email library
+        console.log(`[Admin Email] Sending email to ${toEmail}, subject: ${subject}`);
+        const sendResult = await sendEmail({
+          to: toEmail,
+          subject,
+          html: bodyHtml,
+          text: bodyText || bodyHtml.replace(/<[^>]*>/g, ""),
+        });
 
-        if (sendResponse.ok) {
+        if (sendResult.success) {
+          console.log(`[Admin Email] Email sent successfully to ${toEmail}`);
           await db.adminEmail.update({
             where: { id: email.id },
             data: {
@@ -233,12 +229,14 @@ export async function POST(
             },
           });
         } else {
+          console.error(`[Admin Email] Failed to send email: ${sendResult.error}`);
           await db.adminEmail.update({
             where: { id: email.id },
             data: { status: "FAILED" },
           });
         }
-      } catch {
+      } catch (sendError) {
+        console.error(`[Admin Email] Exception sending email:`, sendError);
         await db.adminEmail.update({
           where: { id: email.id },
           data: { status: "FAILED" },
