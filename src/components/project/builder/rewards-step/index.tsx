@@ -37,6 +37,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     reorderRewards,
     projectStatus,
     projectId,
+    projectSlug,
     endReward,
   } = useProjectStore();
 
@@ -714,7 +715,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
         onSecretTokenChange={setSecretToken}
         isSaving={isSaving}
         isEditing={editingRewardIndex !== null}
-        projectId={projectId}
+        projectSlug={projectSlug}
         onSave={handleSaveReward}
         onCancel={handleCancelRewardForm}
         onCreateItem={openCreateItemDialog}

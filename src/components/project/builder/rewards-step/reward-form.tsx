@@ -54,7 +54,7 @@ interface RewardFormProps {
   onSecretTokenChange: (token: string) => void;
   isSaving: boolean;
   isEditing: boolean;
-  projectId: string | null;
+  projectSlug: string | null;
   onSave: () => void;
   onCancel: () => void;
   onCreateItem: () => void;
@@ -80,7 +80,7 @@ export function RewardForm({
   onSecretTokenChange,
   isSaving,
   isEditing,
-  projectId,
+  projectSlug,
   onSave,
   onCancel,
   onCreateItem,
@@ -89,8 +89,8 @@ export function RewardForm({
 
   const handleCopySecretLink = () => {
     const token = secretToken || currentReward.secretToken;
-    if (token && typeof window !== "undefined") {
-      const url = `${window.location.origin}/projects/${projectId}/pledge?secret=${token}`;
+    if (token && typeof window !== "undefined" && projectSlug) {
+      const url = `${window.location.origin}/projects/${projectSlug}/pledge?secret=${token}`;
       navigator.clipboard.writeText(url);
       setIsCopied(true);
       toast.success("Link copied to clipboard!");
@@ -327,9 +327,9 @@ export function RewardForm({
                     </p>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 bg-background border rounded px-3 py-2 text-sm font-mono overflow-x-auto">
-                        {typeof window !== "undefined"
-                          ? `${window.location.origin}/projects/${projectId}/pledge?secret=${secretToken || currentReward.secretToken || "generating..."}`
-                          : `[your-domain]/projects/${projectId}/pledge?secret=${secretToken || currentReward.secretToken || "generating..."}`
+                        {typeof window !== "undefined" && projectSlug
+                          ? `${window.location.origin}/projects/${projectSlug}/pledge?secret=${secretToken || currentReward.secretToken || "generating..."}`
+                          : `[your-domain]/projects/${projectSlug || "[slug]"}/pledge?secret=${secretToken || currentReward.secretToken || "generating..."}`
                         }
                       </code>
                       <Button
