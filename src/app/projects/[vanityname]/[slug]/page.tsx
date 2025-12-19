@@ -50,7 +50,7 @@ import {
   UpdatesTab,
   CommentsTab,
   CommunityTab,
-} from "@/app/projects/[slug]/components";
+} from "@/components/project-details";
 
 export default function ProjectPage() {
   const params = useParams();
