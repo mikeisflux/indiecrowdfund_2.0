@@ -13,6 +13,13 @@ export async function GET() {
 
     const userId = session.user.id;
 
+    // Get user's vanity URL for created projects
+    const currentUser = await db.user.findUnique({
+      where: { id: userId },
+      select: { vanityUrl: true },
+    });
+    const userVanityUrl = currentUser?.vanityUrl;
+
     // Fetch backed projects (projects user has pledged to)
     const backedPledges = await db.pledge.findMany({
       where: {
@@ -27,6 +34,7 @@ export async function GET() {
             slug: true,
             imageUrl: true,
             status: true,
+            creator: { select: { vanityUrl: true } },
           },
         },
       },
@@ -72,6 +80,7 @@ export async function GET() {
             slug: true,
             imageUrl: true,
             status: true,
+            creator: { select: { vanityUrl: true } },
           },
         },
       },
@@ -106,6 +115,7 @@ export async function GET() {
             slug: true,
             imageUrl: true,
             status: true,
+            creator: { select: { vanityUrl: true } },
           },
         },
       },
@@ -113,13 +123,39 @@ export async function GET() {
       take: 5,
     }) : [];
 
+    // Helper to build project URL with vanity URL
+    const buildProjectUrl = (slug: string, creatorVanityUrl?: string | null) =>
+      creatorVanityUrl ? `/projects/${creatorVanityUrl}/${slug}` : `/projects/${slug}`;
+
     return NextResponse.json({
-      backedProjects: backedPledges.map((p: { project: { id: string; title: string; slug: string; imageUrl: string | null; status: string } }) => p.project),
-      createdProjects,
-      collaboratingProjects: collaborations.map((c: { project: { id: string; title: string; slug: string; imageUrl: string | null; status: string } }) => c.project),
-      pendingInvites: pendingInvites.map((c: { id: string; project: { id: string; title: string; slug: string; imageUrl: string | null; status: string } }) => ({
+      backedProjects: backedPledges.map((p) => ({
+        id: p.project.id,
+        title: p.project.title,
+        slug: p.project.slug,
+        imageUrl: p.project.imageUrl,
+        status: p.project.status,
+        projectUrl: buildProjectUrl(p.project.slug, p.project.creator?.vanityUrl),
+      })),
+      createdProjects: createdProjects.map((p) => ({
+        ...p,
+        projectUrl: buildProjectUrl(p.slug, userVanityUrl),
+      })),
+      collaboratingProjects: collaborations.map((c) => ({
+        id: c.project.id,
+        title: c.project.title,
+        slug: c.project.slug,
+        imageUrl: c.project.imageUrl,
+        status: c.project.status,
+        projectUrl: buildProjectUrl(c.project.slug, c.project.creator?.vanityUrl),
+      })),
+      pendingInvites: pendingInvites.map((c) => ({
         inviteId: c.id,
-        ...c.project,
+        id: c.project.id,
+        title: c.project.title,
+        slug: c.project.slug,
+        imageUrl: c.project.imageUrl,
+        status: c.project.status,
+        projectUrl: buildProjectUrl(c.project.slug, c.project.creator?.vanityUrl),
       })),
     });
   } catch (error) {

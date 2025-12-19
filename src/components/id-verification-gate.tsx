@@ -30,6 +30,7 @@ import {
 
 interface IDVerificationGateProps {
   projectId: string;
+  projectUrl: string; // Full project URL path (e.g., /projects/vanityname/slug)
   children: React.ReactNode;
 }
 
@@ -54,7 +55,7 @@ interface UserVerification {
   };
 }
 
-export function IDVerificationGate({ projectId, children }: IDVerificationGateProps) {
+export function IDVerificationGate({ projectId, projectUrl, children }: IDVerificationGateProps) {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -102,7 +103,7 @@ export function IDVerificationGate({ projectId, children }: IDVerificationGatePr
   // Start verification process
   const startVerification = async () => {
     if (!session?.user) {
-      router.push(`/login?callbackUrl=/projects/${projectId}`);
+      router.push(`/login?callbackUrl=${encodeURIComponent(projectUrl)}`);
       return;
     }
 
@@ -191,7 +192,7 @@ export function IDVerificationGate({ projectId, children }: IDVerificationGatePr
                 <div className="space-y-3">
                   <Button
                     className="w-full"
-                    onClick={() => router.push(`/login?callbackUrl=/projects/${projectId}`)}
+                    onClick={() => router.push(`/login?callbackUrl=${encodeURIComponent(projectUrl)}`)}
                   >
                     <Lock className="mr-2 h-4 w-4" />
                     Sign In to Verify
