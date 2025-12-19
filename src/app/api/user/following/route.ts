@@ -129,7 +129,7 @@ export async function GET(request: Request) {
         bio: c.bio,
         vanityUrl: c.vanityUrl,
         projectCount: c._count.createdProjects,
-        recentProjects: c.createdProjects.map((p) => ({
+        recentProjects: c.createdProjects.map((p: { id: string; title: string; slug: string; imageUrl: string | null; status: string }) => ({
           ...p,
           projectUrl: c.vanityUrl
             ? `/projects/${c.vanityUrl}/${p.slug}`
