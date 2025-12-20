@@ -580,10 +580,17 @@ export async function GET(req: NextRequest) {
     // Sort all timeline entries by date (newest first) and deduplicate
     const sortedTimeline = timelineEntries
       .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime())
-      .slice(0, 50) // Limit to 50 entries
-      .map(({ sortDate: _sortDate, ...entry }) => entry); // Remove sortDate from output
+      .slice(0, 50); // Limit to 50 entries
 
-    const formattedTimeline = sortedTimeline;
+    // Remove sortDate from output (it was only used for sorting)
+    const formattedTimeline = sortedTimeline.map((item) => ({
+      id: item.id,
+      type: item.type,
+      time: item.time,
+      title: item.title,
+      detail: item.detail,
+      date: item.date,
+    }));
 
     // Format digital files
     type DigitalFileType = { id: string; name: string; fileSize: number; mimeType: string | null; createdAt: Date; distributedCount: number; totalEligible: number };
