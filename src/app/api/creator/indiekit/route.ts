@@ -581,7 +581,7 @@ export async function GET(req: NextRequest) {
     const sortedTimeline = timelineEntries
       .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime())
       .slice(0, 50) // Limit to 50 entries
-      .map(({ sortDate, ...entry }) => entry); // Remove sortDate from output
+      .map(({ sortDate: _sortDate, ...entry }) => entry); // Remove sortDate from output
 
     const formattedTimeline = sortedTimeline;
 
