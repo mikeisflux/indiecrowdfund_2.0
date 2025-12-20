@@ -55,23 +55,42 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
       },
     });
 
-    // Get count of funded projects
-    const fundedProjects = await db.project.count({
+    // Get all projects that have been LIVE or FUNDED to check funding status
+    // Projects funded = projects where currentAmount >= goalAmount
+    const allActiveProjects = await db.project.findMany({
       where: {
-        status: "FUNDED",
+        status: {
+          in: ["LIVE", "FUNDED"],
+        },
+      },
+      select: {
+        id: true,
+        currentAmount: true,
+        goalAmount: true,
+        endDate: true,
+        status: true,
       },
     });
 
-    // Calculate success rate (funded / (funded + failed))
-    const failedProjects = await db.project.count({
-      where: {
-        status: "FAILED",
-      },
-    });
+    // Count projects that met their funding goal
+    const projectsFundedCount = allActiveProjects.filter(
+      (p) => p.currentAmount >= p.goalAmount
+    ).length;
 
-    const totalCompleted = fundedProjects + failedProjects;
-    const successRate = totalCompleted > 0
-      ? Math.round((fundedProjects / totalCompleted) * 100)
+    // Calculate success rate based on ended projects
+    // An "ended" project is one where endDate < now
+    const now = new Date();
+    const endedProjects = allActiveProjects.filter(
+      (p) => p.endDate && new Date(p.endDate) < now
+    );
+
+    const successfulEndedProjects = endedProjects.filter(
+      (p) => p.currentAmount >= p.goalAmount
+    ).length;
+
+    const totalEndedProjects = endedProjects.length;
+    const successRate = totalEndedProjects > 0
+      ? Math.round((successfulEndedProjects / totalEndedProjects) * 100)
       : 0;
 
     // Get total registered users (backer pool)
@@ -79,7 +98,7 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
 
     return {
       totalPledged: pledgeStats._sum.amount || 0,
-      projectsFunded: fundedProjects,
+      projectsFunded: projectsFundedCount,
       successRate,
       backerPool: totalUsers,
     };
