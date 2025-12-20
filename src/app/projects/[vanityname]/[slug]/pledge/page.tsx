@@ -1327,14 +1327,37 @@ export default function PledgePage() {
                 {/* Confirm payment method heading */}
                 <div>
                   <h2 className="text-xl font-semibold mb-3">Confirm your payment method</h2>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    We won&apos;t charge you at this time. If the project reaches its funding goal, your payment method will
-                    be charged when the campaign ends. You&apos;ll receive a confirmation email when your pledge is successfully processed.
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-                    Any shipping costs and applicable taxes will be charged separately, when the creator is ready to
-                    begin fulfillment.
-                  </p>
+                  {isAddItemsMode ? (
+                    // Add-items mode - always charged immediately
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Your payment method will be charged immediately for these additional items.
+                      You&apos;ll receive a confirmation email when your purchase is successfully processed.
+                    </p>
+                  ) : project && project.currentAmount >= project.goalAmount ? (
+                    // Campaign already funded - charged immediately
+                    <>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        This project has already reached its funding goal! Your payment method will be charged immediately
+                        when you complete your pledge. You&apos;ll receive a confirmation email when your pledge is successfully processed.
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                        Any shipping costs and applicable taxes will be charged separately, when the creator is ready to
+                        begin fulfillment.
+                      </p>
+                    </>
+                  ) : (
+                    // Campaign not yet funded - card saved for later
+                    <>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        We won&apos;t charge you at this time. If the project reaches its funding goal, your payment method will
+                        be charged when the campaign ends. You&apos;ll receive a confirmation email when your pledge is successfully processed.
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                        Any shipping costs and applicable taxes will be charged separately, when the creator is ready to
+                        begin fulfillment.
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 {/* Collection plan */}
