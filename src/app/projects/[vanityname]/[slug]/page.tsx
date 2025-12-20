@@ -91,6 +91,7 @@ export default function ProjectPage() {
 
   const tiers = rewards.filter((r) => r.type === "TIER");
   const fundingPercentage = (project.currentAmount / project.goalAmount) * 100;
+  const hasEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
 
   // Check if this is a legacy slug-only URL (vanityname = "_" from middleware rewrite)
   const isLegacyUrl = vanityname === "_";
@@ -427,7 +428,11 @@ export default function ProjectPage() {
               <span className="font-medium truncate max-w-md">{project.title}</span>
             </div>
             <div className="flex items-center gap-3">
-              {existingPledge ? (
+              {hasEnded ? (
+                <Button className="bg-[#05ce78]/50 text-white cursor-not-allowed" disabled>
+                  No longer available
+                </Button>
+              ) : existingPledge ? (
                 <Link href="/dashboard/backer">
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                     <CheckCircle className="mr-2 h-4 w-4" />
@@ -618,6 +623,10 @@ export default function ProjectPage() {
                     </Button>
                   </Link>
                 </div>
+              ) : hasEnded ? (
+                <Button className="w-full bg-[#05ce78]/50 text-white font-medium cursor-not-allowed" size="lg" disabled>
+                  No longer available
+                </Button>
               ) : (
                 <Link href={`${projectPath}/pledge`} className="block">
                   <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white font-medium" size="lg">
