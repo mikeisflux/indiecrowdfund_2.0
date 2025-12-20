@@ -218,11 +218,14 @@ export async function GET() {
       };
     });
 
-    // Process backed projects - deduplicate by project ID (keep the most recent pledge per project)
+    // Process backed projects - deduplicate by project ID
+    // Prefer COMPLETED over PENDING, then keep the most recent
     const pledgesByProject = new Map<string, typeof pledges[0]>();
     pledges.forEach((pledge) => {
       const existing = pledgesByProject.get(pledge.project.id);
-      if (!existing || new Date(pledge.createdAt) > new Date(existing.createdAt)) {
+      if (!existing ||
+          (pledge.status === "COMPLETED" && existing.status !== "COMPLETED") ||
+          (pledge.status === existing.status && new Date(pledge.createdAt) > new Date(existing.createdAt))) {
         pledgesByProject.set(pledge.project.id, pledge);
       }
     });
