@@ -5,6 +5,60 @@ import { getStripeInstance } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Self-healing function to fix pledges stuck in PENDING status
+ * This can happen if the Stripe webhook didn't fire or failed
+ */
+async function healStuckPendingPledge(pledgeId: string, stripePaymentIntentId: string): Promise<boolean> {
+  try {
+    const stripe = await getStripeInstance();
+    if (!stripe) return false;
+
+    const paymentIntent = await stripe.paymentIntents.retrieve(stripePaymentIntentId);
+
+    if (paymentIntent.status === "succeeded") {
+      // Payment succeeded but webhook didn't update pledge - fix it now
+      const paymentMethodId = typeof paymentIntent.payment_method === "string"
+        ? paymentIntent.payment_method
+        : paymentIntent.payment_method?.id;
+
+      // Calculate backer number if not already assigned
+      const pledge = await db.pledge.findUnique({
+        where: { id: pledgeId },
+        select: { projectId: true, backerNumber: true },
+      });
+
+      let backerNumber = pledge?.backerNumber;
+      if (!backerNumber && pledge?.projectId) {
+        const existingBackerCount = await db.pledge.count({
+          where: {
+            projectId: pledge.projectId,
+            backerNumber: { not: null },
+          },
+        });
+        backerNumber = existingBackerCount + 1;
+      }
+
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          status: "COMPLETED",
+          stripePaymentMethodId: paymentMethodId,
+          backerNumber,
+        },
+      });
+
+      console.log(`[AddItems] Self-healed pledge ${pledgeId} - updated to COMPLETED`);
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error(`[AddItems] Failed to heal pledge ${pledgeId}:`, error);
+    return false;
+  }
+}
+
 // POST - Add additional items to a completed pledge
 export async function POST(
   req: NextRequest,
@@ -72,11 +126,24 @@ export async function POST(
     }
 
     // Verify pledge is completed
+    // If PENDING with a PaymentIntent, try to heal it by checking Stripe
     if (pledge.status !== "COMPLETED") {
-      return NextResponse.json(
-        { error: "Can only add items to completed pledges" },
-        { status: 400 }
-      );
+      if (pledge.status === "PENDING" && pledge.stripePaymentIntentId) {
+        // Try to heal stuck pledge by checking PaymentIntent status in Stripe
+        const healed = await healStuckPendingPledge(pledgeId, pledge.stripePaymentIntentId);
+        if (!healed) {
+          return NextResponse.json(
+            { error: "Your pledge payment may still be processing. Please try again in a few moments." },
+            { status: 400 }
+          );
+        }
+        // Pledge was healed, continue with adding items
+      } else {
+        return NextResponse.json(
+          { error: "Can only add items to completed pledges" },
+          { status: 400 }
+        );
+      }
     }
 
     // Verify project is still live
