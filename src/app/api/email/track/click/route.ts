@@ -3,6 +3,11 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// Cookie name for tracking campaign attribution
+const CAMPAIGN_COOKIE_NAME = "ec_source";
+// Attribution window: 7 days in seconds
+const ATTRIBUTION_WINDOW = 7 * 24 * 60 * 60;
+
 // GET - Track email link click and redirect
 export async function GET(request: Request) {
   try {
@@ -16,21 +21,76 @@ export async function GET(request: Request) {
     }
 
     const decodedUrl = Buffer.from(url, "base64").toString("utf-8");
+    let decodedEmail: string | null = null;
 
-    if (campaignId) {
-      // Update campaign click count
-      await db.emailCampaign.update({
-        where: { id: campaignId },
-        data: { clickCount: { increment: 1 } },
-      });
-
-      if (emailId) {
-        const email = Buffer.from(emailId, "base64").toString("utf-8");
-        console.log(`Email link clicked: campaign=${campaignId}, email=${email}, url=${decodedUrl}`);
+    if (emailId) {
+      try {
+        decodedEmail = Buffer.from(emailId, "base64").toString("utf-8");
+      } catch {
+        // Invalid base64, ignore
       }
     }
 
-    // Redirect to the actual URL
+    if (campaignId) {
+      // Get IP and user agent for tracking
+      const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0] ||
+                        request.headers.get("x-real-ip") ||
+                        "unknown";
+      const userAgent = request.headers.get("user-agent") || undefined;
+
+      // Try to find user by email if provided
+      let userId: string | null = null;
+      if (decodedEmail) {
+        const user = await db.user.findUnique({
+          where: { email: decodedEmail.toLowerCase() },
+          select: { id: true }
+        });
+        userId = user?.id || null;
+      }
+
+      // Update campaign click count and create click record
+      await Promise.all([
+        db.emailCampaign.update({
+          where: { id: campaignId },
+          data: { clickCount: { increment: 1 } },
+        }),
+        db.emailCampaignClick.create({
+          data: {
+            campaignId,
+            email: decodedEmail,
+            userId,
+            url: decodedUrl,
+            ipAddress,
+            userAgent,
+          }
+        })
+      ]);
+
+      console.log(`Email link clicked: campaign=${campaignId}, email=${decodedEmail || "unknown"}, url=${decodedUrl}`);
+
+      // Set attribution cookie for conversion tracking
+      // This cookie will be checked when a pledge is made
+      const response = NextResponse.redirect(decodedUrl);
+
+      // Store campaign info in cookie for attribution
+      const attributionData = JSON.stringify({
+        campaignId,
+        email: decodedEmail,
+        clickedAt: new Date().toISOString()
+      });
+
+      response.cookies.set(CAMPAIGN_COOKIE_NAME, Buffer.from(attributionData).toString("base64"), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: ATTRIBUTION_WINDOW,
+        path: "/"
+      });
+
+      return response;
+    }
+
+    // No campaign tracking, just redirect
     return NextResponse.redirect(decodedUrl);
   } catch (error) {
     console.error("Error tracking email click:", error);

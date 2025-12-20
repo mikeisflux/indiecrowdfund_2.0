@@ -16,6 +16,7 @@ interface RewardsTabProps {
   addons: AddonData[];
   selectedAddons: string[];
   onToggleAddon: (addonId: string) => void;
+  projectEnded?: boolean; // True when project end date has passed
 }
 
 export function RewardsTab({
@@ -24,10 +25,17 @@ export function RewardsTab({
   addons,
   selectedAddons,
   onToggleAddon,
+  projectEnded = false,
 }: RewardsTabProps) {
   const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
-  const availableRewards = tiers.filter((r) => r.quantityAvailable === null || r.quantityClaimed < r.quantityAvailable);
-  const soldOutRewards = tiers.filter((r) => r.quantityAvailable !== null && r.quantityClaimed >= r.quantityAvailable);
+
+  // If project has ended, all rewards are unavailable
+  const availableRewards = projectEnded
+    ? []
+    : tiers.filter((r) => r.quantityAvailable === null || r.quantityClaimed < r.quantityAvailable);
+  const soldOutRewards = projectEnded
+    ? tiers
+    : tiers.filter((r) => r.quantityAvailable !== null && r.quantityClaimed >= r.quantityAvailable);
 
   const scrollToReward = (rewardId: string) => {
     setSelectedRewardId(rewardId);
@@ -124,6 +132,7 @@ export function RewardsTab({
         {tiers.map((reward) => {
           const isLimited = reward.quantityAvailable !== null;
           const isSoldOut = isLimited && reward.quantityClaimed >= reward.quantityAvailable!;
+          const isUnavailable = isSoldOut || projectEnded;
 
           return (
             <div
@@ -135,7 +144,7 @@ export function RewardsTab({
               <div className="lg:col-span-5">
                 <div className="sticky top-20">
                   <Card
-                    className={`overflow-hidden cursor-pointer transition-all ${isSoldOut ? "opacity-60" : ""} ${
+                    className={`overflow-hidden cursor-pointer transition-all ${isUnavailable ? "opacity-60" : ""} ${
                       selectedRewardId === reward.id
                         ? "ring-2 ring-[#05ce78] ring-offset-2"
                         : "hover:ring-1 hover:ring-muted-foreground/20"
@@ -216,9 +225,9 @@ export function RewardsTab({
                       </div>
 
                       {/* Pledge Button */}
-                      {isSoldOut ? (
+                      {isUnavailable ? (
                         <Button className="w-full" disabled>
-                          Reward no longer available
+                          No longer available
                         </Button>
                       ) : (
                         <Link href={`${projectPath}/pledge?reward=${reward.id}`}>

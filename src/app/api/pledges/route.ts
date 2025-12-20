@@ -3,6 +3,10 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { createStripePayment } from "@/lib/payments/stripe";
+import { cookies } from "next/headers";
+
+// Cookie name for campaign attribution (must match click tracking)
+const CAMPAIGN_COOKIE_NAME = "ec_source";
 
 // Addon with quantity schema
 const addonWithQuantitySchema = z.object({
@@ -62,6 +66,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if project has ended
+    if (project.endDate && new Date(project.endDate) < new Date()) {
+      return NextResponse.json(
+        { error: "This campaign has ended and is no longer accepting pledges" },
+        { status: 400 }
+      );
+    }
+
     // Check reward availability (skip if pledging without reward)
     let reward = null;
     if (data.rewardId && data.rewardId !== "no-reward") {
@@ -91,12 +103,30 @@ export async function POST(req: NextRequest) {
     // Use the new addons format if provided, otherwise convert legacy addonIds
     const addonsWithQuantity = data.addons || data.addonIds.map(id => ({ id, quantity: 1 }));
 
+    // Check for campaign attribution cookie
+    let sourceCampaignId: string | undefined;
+    try {
+      const cookieStore = await cookies();
+      const attributionCookie = cookieStore.get(CAMPAIGN_COOKIE_NAME);
+      if (attributionCookie?.value) {
+        const attributionData = JSON.parse(
+          Buffer.from(attributionCookie.value, "base64").toString("utf-8")
+        );
+        sourceCampaignId = attributionData.campaignId;
+        console.log(`Pledge attribution: campaign=${sourceCampaignId}`);
+      }
+    } catch (e) {
+      // Cookie parsing failed, continue without attribution
+      console.warn("Failed to parse campaign attribution cookie:", e);
+    }
+
     const result = await createStripePayment({
       projectId: data.projectId,
       rewardId: data.rewardId,
       addons: addonsWithQuantity,
       amount: data.amount,
       userId: session.user.id,
+      sourceCampaignId,
     });
 
     return NextResponse.json({

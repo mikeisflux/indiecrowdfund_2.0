@@ -59,6 +59,7 @@ interface ProjectData {
   estimatedDelivery: string;
   currentAmount: number;
   goalAmount: number;
+  endDate: string | null;
   creator: { id: string; name: string; location: string; image: string };
 }
 
@@ -530,6 +531,7 @@ export default function PledgePage() {
         estimatedDelivery: projectData.estimatedDelivery || "",
         currentAmount: projectData.currentAmount || 0,
         goalAmount: projectData.goalAmount || 0,
+        endDate: projectData.endDate || null,
         creator: {
           id: projectData.creator?.id || "",
           name: projectData.creator?.name || "Creator",
@@ -537,6 +539,14 @@ export default function PledgePage() {
           image: projectData.creator?.image || "",
         },
       };
+
+      // Check if project has ended
+      if (formattedProject.endDate && new Date(formattedProject.endDate) < new Date()) {
+        setError("This campaign has ended and is no longer accepting pledges.");
+        setIsLoading(false);
+        return;
+      }
+
       setProject(formattedProject);
 
       const rewards = responseData.rewards || [];

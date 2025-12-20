@@ -24,6 +24,9 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
   const [activeStorySection, setActiveStorySection] = useState<string>("");
   const storyContentRef = useRef<HTMLDivElement>(null);
 
+  // Check if project has ended
+  const projectEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
+
   // Process the story HTML to extract headings and add IDs
   const { processedDescription, storyNavItems } = useMemo(() => {
     if (!project.description) {
@@ -178,11 +181,17 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
               </p>
             </div>
 
-            <Link href={`${projectPath}/pledge?amount=${pledgeAmount}`}>
-              <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
-                Continue
+            {projectEnded ? (
+              <Button className="w-full" disabled>
+                Campaign has ended
               </Button>
-            </Link>
+            ) : (
+              <Link href={`${projectPath}/pledge?amount=${pledgeAmount}`}>
+                <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
+                  Continue
+                </Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
 
@@ -277,17 +286,21 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
                       <span className="text-muted-foreground">• {remaining} left</span>
                     )}
                   </div>
-                  {isSoldOut && (
-                    <Badge variant="secondary">Sold out</Badge>
+                  {(isSoldOut || projectEnded) && (
+                    <Badge variant="secondary">{projectEnded ? "Campaign ended" : "Sold out"}</Badge>
                   )}
                 </div>
 
-                {!isSoldOut && (
+                {!isSoldOut && !projectEnded ? (
                   <Link href={`${projectPath}/pledge?reward=${reward.id}`}>
                     <Button className="w-full mt-4 bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
                       Select
                     </Button>
                   </Link>
+                ) : (
+                  <Button className="w-full mt-4" disabled>
+                    No longer available
+                  </Button>
                 )}
               </CardContent>
             </Card>

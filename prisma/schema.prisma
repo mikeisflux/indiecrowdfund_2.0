@@ -59,6 +59,7 @@ model User {
   mediaFiles        MediaFile[]
   apiKeys           ApiKey[]
   backerNotes       BackerNote[]
+  emailCampaignClicks EmailCampaignClick[]
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -419,6 +420,10 @@ model Pledge {
   // Email tracking
   confirmationEmailSent Boolean      @default(false)
 
+  // Conversion tracking - which email campaign led to this pledge
+  sourceCampaignId      String?
+  sourceCampaign        EmailCampaign? @relation("CampaignConversions", fields: [sourceCampaignId], references: [id])
+
   // Relations
   user                  User         @relation(fields: [userId], references: [id])
   project               Project      @relation(fields: [projectId], references: [id])
@@ -433,6 +438,7 @@ model Pledge {
   @@index([userId])
   @@index([rewardId])
   @@index([status, nextRetryAt])  // For retry job queries
+  @@index([sourceCampaignId])
 }
 
 model PledgeAddon {
@@ -1682,13 +1688,41 @@ model EmailCampaign {
   clickCount    Int              @default(0)
   bounceCount   Int              @default(0)
   unsubscribeCount Int           @default(0)
+  conversionCount Int            @default(0)  // Pledges attributed to this campaign
 
   createdBy     String?
 
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
+  // Relations
+  clicks        EmailCampaignClick[]
+  conversions   Pledge[]         @relation("CampaignConversions")
+
   @@index([status])
+}
+
+// Track individual email link clicks for conversion attribution
+model EmailCampaignClick {
+  id          String    @id @default(cuid())
+  campaignId  String
+  email       String?   // Email address that was sent to
+  userId      String?   // User ID if logged in or matched
+  url         String    // The URL they clicked
+  ipAddress   String?   // For matching anonymous users
+  userAgent   String?   // Browser info
+  clickedAt   DateTime  @default(now())
+  converted   Boolean   @default(false)
+  convertedAt DateTime?
+  pledgeId    String?   // If converted, link to the pledge
+
+  campaign    EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@index([campaignId])
+  @@index([email])
+  @@index([userId])
+  @@index([clickedAt])
 }
 
 enum CampaignStatus {

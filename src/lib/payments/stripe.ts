@@ -15,6 +15,58 @@ const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_INTERVAL_DAYS = 3;
 
 /**
+ * Track email campaign conversion when a pledge is completed
+ * Updates the campaign's conversion count and marks clicks as converted
+ */
+async function trackCampaignConversion(pledgeId: string, sourceCampaignId: string) {
+  try {
+    // Update campaign conversion count
+    await db.emailCampaign.update({
+      where: { id: sourceCampaignId },
+      data: { conversionCount: { increment: 1 } },
+    });
+
+    // Find and mark the most recent click from this campaign as converted
+    // Use the pledge's user to find their click
+    const pledge = await db.pledge.findUnique({
+      where: { id: pledgeId },
+      select: { userId: true, user: { select: { email: true } } },
+    });
+
+    if (pledge) {
+      // Find the most recent unconverted click for this user/campaign
+      const click = await db.emailCampaignClick.findFirst({
+        where: {
+          campaignId: sourceCampaignId,
+          converted: false,
+          OR: [
+            { userId: pledge.userId },
+            { email: pledge.user.email },
+          ],
+        },
+        orderBy: { clickedAt: "desc" },
+      });
+
+      if (click) {
+        await db.emailCampaignClick.update({
+          where: { id: click.id },
+          data: {
+            converted: true,
+            convertedAt: new Date(),
+            pledgeId,
+          },
+        });
+      }
+    }
+
+    console.log(`[Conversion] Tracked conversion for campaign ${sourceCampaignId}, pledge ${pledgeId}`);
+  } catch (error) {
+    // Don't fail the pledge completion if conversion tracking fails
+    console.error(`[Conversion] Failed to track conversion:`, error);
+  }
+}
+
+/**
  * Get app URL with HTTPS enforced for live mode Stripe
  * Stripe live mode requires all redirect URLs to use HTTPS
  */
@@ -185,6 +237,7 @@ interface CreatePaymentParams {
   addons: AddonWithQuantity[]; // Addons with quantities
   amount: number;
   userId: string;
+  sourceCampaignId?: string; // Campaign that led to this pledge (for conversion tracking)
 }
 
 interface StripeConnectParams {
@@ -288,6 +341,7 @@ export async function createStripePayment({
   addons,
   amount,
   userId,
+  sourceCampaignId,
 }: CreatePaymentParams) {
   const stripeClient = await getStripeInstance();
 
@@ -478,6 +532,7 @@ export async function createStripePayment({
       status: "PENDING",
       stripeCustomerId: customerId,
       chargedImmediately: isCampaignFunded,
+      sourceCampaignId, // Campaign attribution for conversion tracking
     },
   });
 
@@ -624,6 +679,10 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
             lastFailureReason: null,
           },
         });
+        // Track conversion if this pledge came from an email campaign
+        if (pledge.sourceCampaignId) {
+          await trackCampaignConversion(pledgeId, pledge.sourceCampaignId);
+        }
         return true;
       } else if (existingIntent.status === "processing") {
         // Payment is in progress - don't create another one
@@ -655,6 +714,10 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
                 lastFailureReason: null,
               },
             });
+            // Track conversion if this pledge came from an email campaign
+            if (pledge.sourceCampaignId) {
+              await trackCampaignConversion(pledgeId, pledge.sourceCampaignId);
+            }
             return true;
           }
         } catch {
@@ -810,6 +873,11 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
           backerNumber,
         },
       });
+
+      // Track conversion if this pledge came from an email campaign
+      if (pledge.sourceCampaignId) {
+        await trackCampaignConversion(pledgeId, pledge.sourceCampaignId);
+      }
 
       // Send confirmation email to backer
       try {
@@ -1066,7 +1134,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   // Check if pledge is already completed (idempotency - webhook may fire after direct update)
   const existingPledge = await db.pledge.findUnique({
     where: { id: pledgeId },
-    select: { status: true, projectId: true, backerNumber: true },
+    select: { status: true, projectId: true, backerNumber: true, sourceCampaignId: true },
   });
 
   if (existingPledge?.status === "COMPLETED") {
@@ -1112,6 +1180,11 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       user: true,
     },
   });
+
+  // Track conversion if this pledge came from an email campaign
+  if (existingPledge?.sourceCampaignId) {
+    await trackCampaignConversion(pledgeId, existingPledge.sourceCampaignId);
+  }
 
   // Only update project funding if this was an immediate charge (chargedImmediately = true)
   // Pledges made via SetupIntent (chargedImmediately = false) were already counted

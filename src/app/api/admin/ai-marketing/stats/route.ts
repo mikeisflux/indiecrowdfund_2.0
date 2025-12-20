@@ -118,6 +118,7 @@ export async function GET() {
           sentCount: true,
           openCount: true,
           clickCount: true,
+          conversionCount: true,
           scheduledFor: true,
           sentAt: true,
           createdAt: true,
@@ -274,6 +275,7 @@ export async function GET() {
       sentCount: number | null;
       openCount: number | null;
       clickCount: number | null;
+      conversionCount: number | null;
       scheduledFor: Date | null;
       sentAt: Date | null;
       createdAt: Date;
@@ -287,7 +289,7 @@ export async function GET() {
         recipients,
         opens: c.openCount || 0,
         clicks: c.clickCount || 0,
-        conversions: 0, // Would need conversion tracking
+        conversions: c.conversionCount || 0,
         sentAt: c.sentAt?.toISOString() || null,
         scheduledFor: c.scheduledFor?.toISOString() || null
       };
