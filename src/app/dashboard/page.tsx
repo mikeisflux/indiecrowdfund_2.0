@@ -342,13 +342,17 @@ export default function CreatorDashboard() {
               ))}
             </SelectContent>
           </Select>
-          {project && (
-            <Badge
-              variant={project.status === "LIVE" ? "default" : "secondary"}
-            >
-              {project.status}
-            </Badge>
-          )}
+          {project && (() => {
+            const hasEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
+            const displayStatus = hasEnded && project.status === "LIVE" ? "ENDED" : project.status;
+            return (
+              <Badge
+                variant={displayStatus === "LIVE" ? "default" : displayStatus === "ENDED" ? "destructive" : "secondary"}
+              >
+                {displayStatus}
+              </Badge>
+            );
+          })()}
           <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
             {project && (
               <>
