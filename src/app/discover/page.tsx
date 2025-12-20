@@ -43,6 +43,8 @@ import {
   X,
   Menu,
   Loader2,
+  Bell,
+  CalendarClock,
 } from "lucide-react";
 import { PROJECT_CATEGORIES } from "@/types";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
@@ -60,9 +62,12 @@ interface Project {
   goalAmount: number;
   currentAmount: number;
   backerCount: number;
+  followerCount?: number;
   daysRemaining: number;
   endDate: string | null;
+  launchDate?: string | null;
   isStaffPick: boolean;
+  isPrelaunch?: boolean;
   projectUrl: string;
 }
 
@@ -72,6 +77,11 @@ const SORT_OPTIONS = [
   { value: "most-funded", label: "Most Funded" },
   { value: "ending-soon", label: "Ending Soon" },
   { value: "most-backed", label: "Most Backed" },
+];
+
+const PROJECT_TYPE_OPTIONS = [
+  { value: "live", label: "Live Projects" },
+  { value: "upcoming", label: "Upcoming Projects" },
 ];
 
 export default function DiscoverPage() {
@@ -110,6 +120,9 @@ function DiscoverContent() {
   const [search, setSearch] = useState(searchParams?.get("q") || "");
   const [category, setCategory] = useState(searchParams?.get("category") || "");
   const [sort, setSort] = useState(searchParams?.get("sort") || "trending");
+  const [projectType, setProjectType] = useState(
+    searchParams?.get("prelaunch") === "true" ? "upcoming" : "live"
+  );
   const [showStaffPicks, setShowStaffPicks] = useState(
     searchParams?.get("staffPicks") === "true"
   );
@@ -130,6 +143,7 @@ function DiscoverContent() {
       if (search) params.set("q", search);
       if (category) params.set("category", category);
       if (sort) params.set("sort", sort);
+      if (projectType === "upcoming") params.set("prelaunch", "true");
       if (showStaffPicks) params.set("staffPicks", "true");
       params.set("limit", "12");
       params.set("offset", reset ? "0" : String(offset));
@@ -162,13 +176,13 @@ function DiscoverContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [search, category, sort, showStaffPicks, showFunded, offset]);
+  }, [search, category, sort, projectType, showStaffPicks, showFunded, offset]);
 
   // Initial fetch and refetch when filters change
   useEffect(() => {
     fetchProjects(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, category, sort, showStaffPicks, showFunded]);
+  }, [search, category, sort, projectType, showStaffPicks, showFunded]);
 
   const loadMore = () => {
     if (!isLoading && hasMore) {
@@ -198,6 +212,7 @@ function DiscoverContent() {
     setSearch("");
     setCategory("");
     setSort("trending");
+    setProjectType("live");
     setShowStaffPicks(false);
     setShowFunded(true);
     router.push("/discover");
@@ -206,6 +221,7 @@ function DiscoverContent() {
   const activeFilterCount =
     (search ? 1 : 0) +
     (category ? 1 : 0) +
+    (projectType === "upcoming" ? 1 : 0) +
     (showStaffPicks ? 1 : 0) +
     (!showFunded ? 1 : 0);
 
@@ -320,6 +336,26 @@ function DiscoverContent() {
                 }}
               />
             </div>
+
+            {/* Project Type Select (Live vs Upcoming) */}
+            <Select
+              value={projectType}
+              onValueChange={(value) => {
+                setProjectType(value);
+                updateFilters({ prelaunch: value === "upcoming" ? "true" : null });
+              }}
+            >
+              <SelectTrigger className="w-[170px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PROJECT_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             {/* Category Select */}
             <Select
@@ -477,6 +513,19 @@ function DiscoverContent() {
                   </button>
                 </Badge>
               )}
+              {projectType === "upcoming" && (
+                <Badge variant="secondary" className="gap-1">
+                  Upcoming projects
+                  <button
+                    onClick={() => {
+                      setProjectType("live");
+                      updateFilters({ prelaunch: null });
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
               {showStaffPicks && (
                 <Badge variant="secondary" className="gap-1">
                   Staff picks
@@ -570,10 +619,18 @@ function DiscoverContent() {
 
 function ProjectCard({ project }: { project: Project }) {
   const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
+  const isPrelaunch = project.isPrelaunch;
+
+  // Format launch date for prelaunch projects
+  const formatLaunchDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return "Coming soon";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
 
   return (
     <Link href={project.projectUrl}>
-      <Card className="h-full overflow-hidden transition-all hover:shadow-lg">
+      <Card className={`h-full overflow-hidden transition-all hover:shadow-lg ${isPrelaunch ? "border-amber-200/50 dark:border-amber-800/30" : ""}`}>
         <div className="aspect-video bg-muted relative">
           {project.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -587,9 +644,8 @@ function ProjectCard({ project }: { project: Project }) {
               <Play className="h-12 w-12 text-muted-foreground/50" />
             </div>
           )}
-          <Badge className="absolute left-3 top-3">
-            {PROJECT_CATEGORIES.find((c) => c.value === project.category)?.label ||
-              project.category}
+          <Badge className={`absolute left-3 top-3 ${isPrelaunch ? "bg-amber-500" : ""}`}>
+            {isPrelaunch ? "Coming Soon" : (PROJECT_CATEGORIES.find((c) => c.value === project.category)?.label || project.category)}
           </Badge>
           {project.isStaffPick && (
             <Badge className="absolute right-3 top-3" variant="secondary">
@@ -608,28 +664,47 @@ function ProjectCard({ project }: { project: Project }) {
           </p>
         </CardContent>
         <CardFooter className="flex-col items-start gap-3 border-t pt-4">
-          <Progress value={Math.min(fundingPercent, 100)} className="h-2" />
-          <div className="flex w-full items-center justify-between text-sm">
-            <div>
-              <span className="font-semibold text-primary">
-                ${project.currentAmount.toLocaleString()}
-              </span>
-              <span className="text-muted-foreground">
-                {" "}
-                / ${project.goalAmount.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {project.backerCount}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining}d`}
-              </span>
-            </div>
-          </div>
+          {isPrelaunch ? (
+            <>
+              {/* Prelaunch - show follower count and launch date */}
+              <div className="flex w-full items-center justify-between text-sm">
+                <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                  <Bell className="h-4 w-4" />
+                  <span className="font-medium">{project.followerCount || 0} followers</span>
+                </div>
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <CalendarClock className="h-4 w-4" />
+                  <span>Launches {formatLaunchDate(project.launchDate)}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Live project - show funding progress */}
+              <Progress value={Math.min(fundingPercent, 100)} className="h-2" />
+              <div className="flex w-full items-center justify-between text-sm">
+                <div>
+                  <span className="font-semibold text-primary">
+                    ${project.currentAmount.toLocaleString()}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    / ${project.goalAmount.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {project.backerCount}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining}d`}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         </CardFooter>
       </Card>
     </Link>
@@ -638,10 +713,18 @@ function ProjectCard({ project }: { project: Project }) {
 
 function ProjectListItem({ project }: { project: Project }) {
   const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
+  const isPrelaunch = project.isPrelaunch;
+
+  // Format launch date for prelaunch projects
+  const formatLaunchDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return "Coming soon";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
 
   return (
     <Link href={project.projectUrl}>
-      <Card className="overflow-hidden transition-all hover:shadow-lg">
+      <Card className={`overflow-hidden transition-all hover:shadow-lg ${isPrelaunch ? "border-amber-200/50 dark:border-amber-800/30" : ""}`}>
         <div className="flex flex-col sm:flex-row">
           <div className="aspect-video w-full sm:w-48 flex-shrink-0 bg-muted relative">
             {project.imageUrl ? (
@@ -661,10 +744,14 @@ function ProjectListItem({ project }: { project: Project }) {
             <div className="mb-2 flex items-start justify-between gap-4">
               <div>
                 <div className="mb-1 flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    {PROJECT_CATEGORIES.find((c) => c.value === project.category)
-                      ?.label || project.category}
-                  </Badge>
+                  {isPrelaunch ? (
+                    <Badge className="text-xs bg-amber-500">Coming Soon</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs">
+                      {PROJECT_CATEGORIES.find((c) => c.value === project.category)
+                        ?.label || project.category}
+                    </Badge>
+                  )}
                   {project.isStaffPick && (
                     <Badge variant="secondary" className="text-xs">
                       <Sparkles className="mr-1 h-3 w-3" />
@@ -675,33 +762,54 @@ function ProjectListItem({ project }: { project: Project }) {
                 <h3 className="font-semibold">{project.title}</h3>
                 <p className="text-sm text-muted-foreground">{project.subtitle}</p>
               </div>
-              <div className="text-right">
-                <p className="font-semibold text-primary">
-                  ${project.currentAmount.toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  of ${project.goalAmount.toLocaleString()}
-                </p>
-              </div>
+              {isPrelaunch ? (
+                <div className="text-right">
+                  <p className="font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <Bell className="h-4 w-4" />
+                    {project.followerCount || 0} followers
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                    <CalendarClock className="h-3 w-3" />
+                    Launches {formatLaunchDate(project.launchDate)}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-right">
+                  <p className="font-semibold text-primary">
+                    ${project.currentAmount.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    of ${project.goalAmount.toLocaleString()}
+                  </p>
+                </div>
+              )}
             </div>
             <div className="mt-auto flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
                 by {project.creator.name}
               </p>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <TrendingUp className="h-4 w-4" />
-                  {Math.round(fundingPercent)}% funded
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  {project.backerCount}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining} days left`}
-                </span>
-              </div>
+              {isPrelaunch ? (
+                <div className="text-sm text-muted-foreground">
+                  <span className="text-amber-600 dark:text-amber-400 font-medium">
+                    Follow to get notified
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <TrendingUp className="h-4 w-4" />
+                    {Math.round(fundingPercent)}% funded
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    {project.backerCount}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining} days left`}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

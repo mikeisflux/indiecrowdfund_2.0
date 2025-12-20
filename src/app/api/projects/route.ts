@@ -28,37 +28,47 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
     const status = searchParams.get("status");
+    const prelaunch = searchParams.get("prelaunch") === "true";
     const search = searchParams.get("q");
     const sort = searchParams.get("sort") || "trending";
-    // const staffPicks = searchParams.get("staffPicks") === "true"; // Not implemented yet
+    const staffPicks = searchParams.get("staffPicks") === "true";
     const limit = parseInt(searchParams.get("limit") || "12");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    // Build where clause
-    const where: Record<string, unknown> = {};
+    // Build where clause - start with AND conditions
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {};
 
     if (category) {
       where.category = category;
     }
 
-    if (status) {
+    // Handle prelaunch vs live projects
+    if (prelaunch) {
+      // Show prelaunch projects (coming soon)
+      where.prelaunchActive = true;
+      where.status = { not: "LIVE" }; // Exclude projects that are already live
+    } else if (status) {
       where.status = status;
     } else {
       // Default to showing live projects
       where.status = "LIVE";
     }
 
+    // Staff picks filter
+    if (staffPicks) {
+      where.isStaffPick = true;
+    }
+
+    // Search filter - needs to be combined properly with other conditions
     if (search) {
       where.OR = [
         { title: { contains: search, mode: "insensitive" } },
         { subtitle: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
       ];
     }
 
-    // Note: isStaffPick feature not implemented yet
-    // if (staffPicks) {
-    //   where.isStaffPick = true;
-    // }
 
     // Build orderBy based on sort param
     let orderBy: Record<string, string> | Record<string, string>[];
@@ -116,10 +126,15 @@ export async function GET(req: NextRequest) {
         daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
       }
 
+      // Determine if this is a prelaunch project
+      const isPrelaunch = project.prelaunchActive && project.status !== "LIVE";
+
       // Build project URL - use vanity URL if creator has one
-      const projectUrl = project.creator.vanityUrl
+      // For prelaunch projects, link to the prelaunch page
+      const basePath = project.creator.vanityUrl
         ? `/projects/${project.creator.vanityUrl}/${project.slug}`
         : `/projects/${project.slug}`;
+      const projectUrl = isPrelaunch ? `${basePath}/prelaunch` : basePath;
 
       return {
         id: project.id,
@@ -136,8 +151,12 @@ export async function GET(req: NextRequest) {
         goalAmount: project.goalAmount,
         currentAmount: project.currentAmount,
         backerCount: project.backerCount,
+        followerCount: project.followerCount,
         daysRemaining,
         endDate: project.endDate?.toISOString() || null,
+        launchDate: project.launchDate?.toISOString() || null,
+        isStaffPick: project.isStaffPick,
+        isPrelaunch,
         projectUrl,
       };
     });
