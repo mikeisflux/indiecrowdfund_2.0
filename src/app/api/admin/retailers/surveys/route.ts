@@ -1,15 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+interface SurveyRecord {
+  id: string;
+  retailerId: string;
+  retailerPledgeId: string;
+  rating: number | null;
+  feedback: string | null;
+  productQuality: number | null;
+  shippingSpeed: number | null;
+  packaging: number | null;
+  communication: number | null;
+  overallExperience: number | null;
+  wouldRecommend: boolean | null;
+  sentAt: Date | null;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  retailer: {
+    id: string;
+    businessName: string;
+    contactName: string;
+    email: string;
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== "ADMIN") {
+    const session = await auth();
+
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify user is admin
+    const user = await db.user.findUnique({ where: { id: session.user.id } });
+    if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -53,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     // Get the retailer pledge info for each survey
     const surveysWithOrderInfo = await Promise.all(
-      surveys.map(async (survey) => {
+      surveys.map(async (survey: SurveyRecord) => {
         const retailerPledge = await db.retailerPledge.findFirst({
           where: { id: survey.retailerPledgeId },
           include: {
