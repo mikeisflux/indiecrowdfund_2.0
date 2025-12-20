@@ -20,20 +20,16 @@ export async function GET() {
     });
 
     // Fetch all backer data in parallel
-    // For backwards compatibility with pledges created before confirmationEmailSent feature
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-
     const [
       pledges,
       savedProjects,
       monthlyPledges,
     ] = await Promise.all([
       // Get user's pledges with full project and reward info
-      // Include COMPLETED pledges and PENDING pledges that are "committed"
-      // A pledge is considered committed if:
-      // 1. It has a saved payment method, OR
-      // 2. It's confirmed (confirmationEmailSent), OR
-      // 3. It's old (>5 min) and has a SetupIntent (backwards compatibility)
+      // Include COMPLETED pledges and PENDING pledges that went through checkout
+      // A pledge is considered valid if:
+      // 1. Status is COMPLETED, OR
+      // 2. Status is PENDING and has any Stripe reference (indicates checkout was attempted)
       db.pledge.findMany({
         where: {
           userId,
@@ -50,11 +46,14 @@ export async function GET() {
               confirmationEmailSent: true,
             },
             {
-              // Old pending pledges with SetupIntent (backwards compatibility)
-              // Webhook might have failed to save payment method
+              // Pending with SetupIntent (save card for later flow)
               status: "PENDING",
               stripeSetupIntentId: { not: null },
-              createdAt: { lt: fiveMinutesAgo },
+            },
+            {
+              // Pending with PaymentIntent (immediate payment flow)
+              status: "PENDING",
+              stripePaymentIntentId: { not: null },
             },
           ],
         },
@@ -133,7 +132,7 @@ export async function GET() {
       }),
 
       // Get monthly spending data (last 6 months)
-      // Include both COMPLETED and committed PENDING pledges
+      // Include both COMPLETED and valid PENDING pledges
       db.pledge.findMany({
         where: {
           userId,
@@ -153,7 +152,10 @@ export async function GET() {
             {
               status: "PENDING",
               stripeSetupIntentId: { not: null },
-              createdAt: { lt: fiveMinutesAgo },
+            },
+            {
+              status: "PENDING",
+              stripePaymentIntentId: { not: null },
             },
           ],
         },

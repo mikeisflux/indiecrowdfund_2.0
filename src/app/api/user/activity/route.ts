@@ -54,7 +54,7 @@ export async function GET() {
     // Combine and deduplicate project IDs
     const relevantProjectIds = Array.from(new Set([...backedProjectIds, ...followedProjectIds]));
 
-    // Get recent pledges by user - only meaningful pledges (completed or with saved payment)
+    // Get recent pledges by user - pledges that went through checkout
     // and deduplicate by project to avoid showing multiple entries for the same project
     const pledges = await db.pledge.findMany({
       where: {
@@ -68,6 +68,14 @@ export async function GET() {
           {
             status: "PENDING",
             confirmationEmailSent: true,
+          },
+          {
+            status: "PENDING",
+            stripeSetupIntentId: { not: null },
+          },
+          {
+            status: "PENDING",
+            stripePaymentIntentId: { not: null },
           },
         ],
       },
