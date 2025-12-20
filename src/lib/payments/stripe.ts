@@ -532,7 +532,8 @@ export async function createStripePayment({
       status: "PENDING",
       stripeCustomerId: customerId,
       chargedImmediately: isCampaignFunded,
-      sourceCampaignId, // Campaign attribution for conversion tracking
+      // Only include sourceCampaignId if it has a value (requires migration)
+      ...(sourceCampaignId ? { sourceCampaignId } : {}),
     },
   });
 

@@ -105,24 +105,10 @@ export async function GET() {
         }
       }),
 
-      // Email campaigns
+      // Email campaigns - fetch all fields to handle missing conversionCount gracefully
       db.emailCampaign.findMany({
         take: 10,
         orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          targetAudience: true,
-          recipientCount: true,
-          sentCount: true,
-          openCount: true,
-          clickCount: true,
-          conversionCount: true,
-          scheduledFor: true,
-          sentAt: true,
-          createdAt: true,
-        }
       }),
 
       // User segments - aggregate by activity
@@ -266,20 +252,8 @@ export async function GET() {
     };
 
     // Email campaigns formatted with live recipient counts
-    const campaigns = await Promise.all(emailCampaigns.map(async (c: {
-      id: string;
-      name: string;
-      status: string;
-      targetAudience: string | null;
-      recipientCount: number | null;
-      sentCount: number | null;
-      openCount: number | null;
-      clickCount: number | null;
-      conversionCount: number | null;
-      scheduledFor: Date | null;
-      sentAt: Date | null;
-      createdAt: Date;
-    }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const campaigns = await Promise.all(emailCampaigns.map(async (c: any) => {
       // Recalculate recipient count based on target audience
       const recipients = await getRecipientCount(c.targetAudience || "all");
       return {
@@ -289,7 +263,7 @@ export async function GET() {
         recipients,
         opens: c.openCount || 0,
         clicks: c.clickCount || 0,
-        conversions: c.conversionCount || 0,
+        conversions: c.conversionCount || 0, // May be undefined before migration
         sentAt: c.sentAt?.toISOString() || null,
         scheduledFor: c.scheduledFor?.toISOString() || null
       };

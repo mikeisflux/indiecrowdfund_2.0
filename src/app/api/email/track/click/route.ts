@@ -48,13 +48,15 @@ export async function GET(request: Request) {
         userId = user?.id || null;
       }
 
-      // Update campaign click count and create click record
-      await Promise.all([
-        db.emailCampaign.update({
-          where: { id: campaignId },
-          data: { clickCount: { increment: 1 } },
-        }),
-        db.emailCampaignClick.create({
+      // Update campaign click count
+      await db.emailCampaign.update({
+        where: { id: campaignId },
+        data: { clickCount: { increment: 1 } },
+      });
+
+      // Try to create detailed click record (requires migration)
+      try {
+        await db.emailCampaignClick.create({
           data: {
             campaignId,
             email: decodedEmail,
@@ -63,8 +65,10 @@ export async function GET(request: Request) {
             ipAddress,
             userAgent,
           }
-        })
-      ]);
+        });
+      } catch {
+        // EmailCampaignClick table may not exist yet, continue without detailed tracking
+      }
 
       console.log(`Email link clicked: campaign=${campaignId}, email=${decodedEmail || "unknown"}, url=${decodedUrl}`);
 
