@@ -55,6 +55,11 @@ import {
   Copy,
   Check,
   AlertTriangle,
+  Star,
+  MessageSquare,
+  Package,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 
 // Retailer interface
@@ -102,6 +107,56 @@ interface Pagination {
   totalPages: number;
 }
 
+interface SatisfactionSurvey {
+  id: string;
+  retailerId: string;
+  retailerPledgeId: string;
+  rating: number | null;
+  feedback: string | null;
+  productQuality: number | null;
+  shippingSpeed: number | null;
+  packaging: number | null;
+  communication: number | null;
+  overallExperience: number | null;
+  wouldRecommend: boolean | null;
+  sentAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  retailer: {
+    id: string;
+    businessName: string;
+    contactName: string;
+    email: string;
+  };
+  order: {
+    id: string;
+    quantity: number;
+    unitPrice: number;
+    totalAmount: number;
+    status: string;
+    invoiceNumber: string | null;
+    project: {
+      id: string;
+      title: string;
+      vanityUrl: string | null;
+      slug: string;
+      imageUrl: string | null;
+    } | null;
+    reward: {
+      id: string;
+      title: string;
+      price: number;
+    } | null;
+  } | null;
+}
+
+interface SurveyStats {
+  total: number;
+  completed: number;
+  pending: number;
+  avgRating: number;
+}
+
 function getRetailerStatusBadge(status: string) {
   switch (status) {
     case "PENDING":
@@ -132,6 +187,21 @@ function getBusinessTypeBadge(type: string) {
   return <Badge variant="outline">{typeLabels[type] || type}</Badge>;
 }
 
+function StarRating({ rating, size = "sm" }: { rating: number | null; size?: "sm" | "lg" }) {
+  if (rating === null) return <span className="text-zinc-400">-</span>;
+  const stars = [];
+  const starSize = size === "lg" ? "h-5 w-5" : "h-4 w-4";
+  for (let i = 1; i <= 5; i++) {
+    stars.push(
+      <Star
+        key={i}
+        className={`${starSize} ${i <= rating ? "fill-amber-400 text-amber-400" : "text-zinc-300"}`}
+      />
+    );
+  }
+  return <div className="flex items-center gap-0.5">{stars}</div>;
+}
+
 export default function RetailersPage() {
   const [retailers, setRetailers] = useState<Retailer[]>([]);
   const [stats, setStats] = useState<RetailerStats>({
@@ -160,6 +230,25 @@ export default function RetailersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
+  // Satisfaction surveys state
+  const [surveys, setSurveys] = useState<SatisfactionSurvey[]>([]);
+  const [surveyStats, setSurveyStats] = useState<SurveyStats>({
+    total: 0,
+    completed: 0,
+    pending: 0,
+    avgRating: 0,
+  });
+  const [surveyPagination, setSurveyPagination] = useState<Pagination>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+  });
+  const [surveyFilter, setSurveyFilter] = useState("all");
+  const [isSurveysLoading, setIsSurveysLoading] = useState(false);
+  const [selectedSurvey, setSelectedSurvey] = useState<SatisfactionSurvey | null>(null);
+  const [isSurveyDetailOpen, setIsSurveyDetailOpen] = useState(false);
+
   const fetchRetailers = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -186,6 +275,33 @@ export default function RetailersPage() {
   useEffect(() => {
     fetchRetailers();
   }, [fetchRetailers]);
+
+  const fetchSurveys = useCallback(async () => {
+    setIsSurveysLoading(true);
+    try {
+      const params = new URLSearchParams({
+        status: surveyFilter,
+        page: surveyPagination.page.toString(),
+        limit: surveyPagination.limit.toString(),
+      });
+
+      const response = await fetch(`/api/admin/retailers/surveys?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSurveys(data.surveys);
+        setSurveyStats(data.stats);
+        setSurveyPagination(data.pagination);
+      }
+    } catch (error) {
+      console.error("Error fetching surveys:", error);
+    } finally {
+      setIsSurveysLoading(false);
+    }
+  }, [surveyFilter, surveyPagination.page, surveyPagination.limit]);
+
+  useEffect(() => {
+    fetchSurveys();
+  }, [fetchSurveys]);
 
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
@@ -515,6 +631,405 @@ export default function RetailersPage() {
           </div>
         </div>
       )}
+
+      {/* Satisfaction Surveys Section */}
+      <div className="mt-12 pt-8 border-t">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Satisfaction Surveys
+            </h2>
+            <p className="text-zinc-500 text-sm">
+              Feedback from retailers after receiving their orders
+            </p>
+          </div>
+          <Button onClick={fetchSurveys} variant="outline" size="sm">
+            <RefreshCw className={`h-4 w-4 mr-2 ${isSurveysLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Survey Stats */}
+        <div className="grid gap-4 md:grid-cols-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-2xl font-bold">{surveyStats.total}</p>
+              <p className="text-xs text-zinc-500">Total Surveys</p>
+            </CardContent>
+          </Card>
+          <Card className="border-emerald-200 bg-emerald-50">
+            <CardContent className="p-4">
+              <p className="text-2xl font-bold text-emerald-600">{surveyStats.completed}</p>
+              <p className="text-xs text-zinc-500">Completed</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-2xl font-bold text-amber-600">{surveyStats.pending}</p>
+              <p className="text-xs text-zinc-500">Awaiting Response</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <p className="text-2xl font-bold">{surveyStats.avgRating.toFixed(1)}</p>
+                <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+              </div>
+              <p className="text-xs text-zinc-500">Average Rating</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Survey Filter */}
+        <div className="flex items-center gap-4 mb-4">
+          <Select value={surveyFilter} onValueChange={(value) => {
+            setSurveyFilter(value);
+            setSurveyPagination((prev) => ({ ...prev, page: 1 }));
+          }}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter surveys" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Surveys</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Surveys Table */}
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-zinc-50 dark:bg-zinc-800">
+                    <th className="p-4 text-left text-sm font-medium">Retailer</th>
+                    <th className="p-4 text-left text-sm font-medium">Campaign</th>
+                    <th className="p-4 text-left text-sm font-medium">Order</th>
+                    <th className="p-4 text-left text-sm font-medium">Rating</th>
+                    <th className="p-4 text-left text-sm font-medium">Recommend?</th>
+                    <th className="p-4 text-left text-sm font-medium">Status</th>
+                    <th className="p-4 text-left text-sm font-medium">Date</th>
+                    <th className="p-4 text-left text-sm font-medium w-20">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isSurveysLoading ? (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-zinc-500">
+                        <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+                        Loading surveys...
+                      </td>
+                    </tr>
+                  ) : surveys.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-zinc-500">
+                        <MessageSquare className="h-8 w-8 mx-auto mb-2 text-zinc-300" />
+                        No satisfaction surveys found
+                      </td>
+                    </tr>
+                  ) : (
+                    surveys.map((survey) => (
+                      <tr key={survey.id} className="border-b hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                        <td className="p-4">
+                          <div>
+                            <p className="font-medium">{survey.retailer.businessName}</p>
+                            <p className="text-sm text-zinc-500">{survey.retailer.contactName}</p>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          {survey.order?.project ? (
+                            <div className="flex items-center gap-2">
+                              {survey.order.project.imageUrl && (
+                                <img
+                                  src={survey.order.project.imageUrl}
+                                  alt=""
+                                  className="h-8 w-8 rounded object-cover"
+                                />
+                              )}
+                              <span className="text-sm font-medium truncate max-w-[150px]">
+                                {survey.order.project.title}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-zinc-400">-</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {survey.order ? (
+                            <div>
+                              <p className="text-sm font-medium">
+                                {survey.order.quantity}x {survey.order.reward?.title || "Item"}
+                              </p>
+                              <p className="text-xs text-zinc-500">
+                                ${survey.order.totalAmount.toFixed(2)}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-zinc-400">-</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <StarRating rating={survey.rating} />
+                        </td>
+                        <td className="p-4">
+                          {survey.wouldRecommend === null ? (
+                            <span className="text-zinc-400">-</span>
+                          ) : survey.wouldRecommend ? (
+                            <Badge className="bg-emerald-100 text-emerald-700">
+                              <ThumbsUp className="h-3 w-3 mr-1" /> Yes
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-700">
+                              <ThumbsDown className="h-3 w-3 mr-1" /> No
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {survey.completedAt ? (
+                            <Badge className="bg-emerald-100 text-emerald-700">
+                              <CheckCircle className="h-3 w-3 mr-1" /> Completed
+                            </Badge>
+                          ) : survey.sentAt ? (
+                            <Badge className="bg-amber-100 text-amber-700">
+                              <Clock className="h-3 w-3 mr-1" /> Pending
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">Not Sent</Badge>
+                          )}
+                        </td>
+                        <td className="p-4 text-sm text-zinc-500">
+                          {survey.completedAt
+                            ? new Date(survey.completedAt).toLocaleDateString()
+                            : survey.sentAt
+                            ? new Date(survey.sentAt).toLocaleDateString()
+                            : "-"}
+                        </td>
+                        <td className="p-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedSurvey(survey);
+                              setIsSurveyDetailOpen(true);
+                            }}
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Survey Pagination */}
+        {surveyPagination.totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-zinc-500">
+              Showing {(surveyPagination.page - 1) * surveyPagination.limit + 1} to{" "}
+              {Math.min(surveyPagination.page * surveyPagination.limit, surveyPagination.total)} of{" "}
+              {surveyPagination.total} surveys
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSurveyPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
+                disabled={surveyPagination.page === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm">
+                Page {surveyPagination.page} of {surveyPagination.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSurveyPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
+                disabled={surveyPagination.page === surveyPagination.totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Survey Detail Dialog */}
+      <Dialog open={isSurveyDetailOpen} onOpenChange={setIsSurveyDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selectedSurvey && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100">
+                      <Star className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <div>
+                      <DialogTitle>Survey Response</DialogTitle>
+                      <DialogDescription>
+                        From {selectedSurvey.retailer.businessName}
+                      </DialogDescription>
+                    </div>
+                  </div>
+                  {selectedSurvey.completedAt ? (
+                    <Badge className="bg-emerald-100 text-emerald-700">Completed</Badge>
+                  ) : (
+                    <Badge className="bg-amber-100 text-amber-700">Pending</Badge>
+                  )}
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-6 py-4">
+                {/* Overall Rating */}
+                <div className="text-center p-6 bg-zinc-50 rounded-lg">
+                  <p className="text-sm text-zinc-500 mb-2">Overall Rating</p>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <StarRating rating={selectedSurvey.rating} size="lg" />
+                  </div>
+                  {selectedSurvey.rating && (
+                    <p className="text-2xl font-bold">{selectedSurvey.rating}/5</p>
+                  )}
+                </div>
+
+                {/* Would Recommend */}
+                {selectedSurvey.wouldRecommend !== null && (
+                  <div className={`p-4 rounded-lg ${selectedSurvey.wouldRecommend ? "bg-emerald-50" : "bg-red-50"}`}>
+                    <div className="flex items-center gap-2">
+                      {selectedSurvey.wouldRecommend ? (
+                        <>
+                          <ThumbsUp className="h-5 w-5 text-emerald-600" />
+                          <span className="font-medium text-emerald-800">Would recommend to other retailers</span>
+                        </>
+                      ) : (
+                        <>
+                          <ThumbsDown className="h-5 w-5 text-red-600" />
+                          <span className="font-medium text-red-800">Would not recommend</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Category Ratings */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Category Ratings</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+                      <span className="text-sm">Product Quality</span>
+                      <StarRating rating={selectedSurvey.productQuality} />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+                      <span className="text-sm">Shipping Speed</span>
+                      <StarRating rating={selectedSurvey.shippingSpeed} />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+                      <span className="text-sm">Packaging</span>
+                      <StarRating rating={selectedSurvey.packaging} />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+                      <span className="text-sm">Communication</span>
+                      <StarRating rating={selectedSurvey.communication} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Feedback */}
+                {selectedSurvey.feedback && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2">Feedback</h3>
+                    <div className="p-4 bg-zinc-50 rounded-lg">
+                      <p className="text-sm text-zinc-700 whitespace-pre-wrap">{selectedSurvey.feedback}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Order Details */}
+                {selectedSurvey.order && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <Package className="h-4 w-4" /> Order Details
+                    </h3>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                          {selectedSurvey.order.project?.imageUrl && (
+                            <img
+                              src={selectedSurvey.order.project.imageUrl}
+                              alt=""
+                              className="h-16 w-16 rounded object-cover"
+                            />
+                          )}
+                          <div className="flex-1">
+                            <p className="font-medium">{selectedSurvey.order.project?.title || "Unknown Project"}</p>
+                            <p className="text-sm text-zinc-500">
+                              {selectedSurvey.order.quantity}x {selectedSurvey.order.reward?.title || "Item"}
+                            </p>
+                            <p className="text-sm font-medium mt-1">
+                              ${selectedSurvey.order.totalAmount.toFixed(2)}
+                            </p>
+                          </div>
+                          <Badge variant="outline">{selectedSurvey.order.status}</Badge>
+                        </div>
+                        {selectedSurvey.order.invoiceNumber && (
+                          <p className="text-xs text-zinc-500 mt-2">
+                            Invoice: {selectedSurvey.order.invoiceNumber}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Retailer Info */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Store className="h-4 w-4" /> Retailer
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-zinc-500">Business</p>
+                      <p className="font-medium">{selectedSurvey.retailer.businessName}</p>
+                    </div>
+                    <div>
+                      <p className="text-zinc-500">Contact</p>
+                      <p className="font-medium">{selectedSurvey.retailer.contactName}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-zinc-500">Email</p>
+                      <a href={`mailto:${selectedSurvey.retailer.email}`} className="font-medium text-emerald-600 hover:underline">
+                        {selectedSurvey.retailer.email}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Timestamps */}
+                <div className="text-xs text-zinc-500 border-t pt-4">
+                  <div className="flex justify-between">
+                    <span>Survey sent: {selectedSurvey.sentAt ? new Date(selectedSurvey.sentAt).toLocaleString() : "Not sent"}</span>
+                    <span>Completed: {selectedSurvey.completedAt ? new Date(selectedSurvey.completedAt).toLocaleString() : "Pending"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsSurveyDetailOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Retailer Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
