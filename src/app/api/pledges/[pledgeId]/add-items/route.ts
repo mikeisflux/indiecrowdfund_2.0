@@ -40,7 +40,7 @@ export async function POST(
       );
     }
 
-    // Get the pledge with project info
+    // Get the pledge with project info and creator's Stripe config
     const pledge = await db.pledge.findFirst({
       where: {
         id: pledgeId,
@@ -52,7 +52,16 @@ export async function POST(
             id: true,
             status: true,
             creatorId: true,
-            stripeConnectId: true,
+            stripeAccountId: true,
+            creator: {
+              select: {
+                stripeConfig: {
+                  select: {
+                    stripeAccountId: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -78,11 +87,12 @@ export async function POST(
       );
     }
 
-    // Validate addons exist and belong to this project
-    const validAddons = await db.addon.findMany({
+    // Validate addons exist and belong to this project (addons are rewards with type ADDON)
+    const validAddons = await db.reward.findMany({
       where: {
         id: { in: addonIdList },
         projectId: pledge.projectId,
+        type: "ADDON",
       },
     });
 
@@ -158,35 +168,23 @@ export async function POST(
       },
     };
 
+    // Get the creator's Stripe account ID (prefer from stripeConfig, fallback to project field)
+    const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
+
     // If creator has Stripe Connect, send funds directly to them
-    if (pledge.project.stripeConnectId) {
+    if (stripeAccountId) {
       const feePercent = 0.05; // 5% platform fee
       const applicationFee = Math.round(amount * 100 * feePercent);
       paymentIntentParams.application_fee_amount = applicationFee;
       paymentIntentParams.transfer_data = {
-        destination: pledge.project.stripeConnectId,
+        destination: stripeAccountId,
       };
     }
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
 
-    // Store the additional items purchase info in the pledge metadata
-    // We'll complete the addon associations when the payment succeeds via webhook
-    await db.pledge.update({
-      where: { id: pledge.id },
-      data: {
-        // Store pending additional items info
-        metadata: {
-          ...(typeof pledge.metadata === "object" && pledge.metadata !== null ? pledge.metadata : {}),
-          pendingAdditionalItems: {
-            paymentIntentId: paymentIntent.id,
-            addons: addonsWithQuantity,
-            amount,
-            createdAt: new Date().toISOString(),
-          },
-        },
-      },
-    });
+    // Note: The addon data is stored in the PaymentIntent metadata (line 157 above)
+    // The webhook handler will use this to complete the addon associations when payment succeeds
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,

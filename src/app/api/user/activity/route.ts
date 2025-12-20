@@ -54,13 +54,28 @@ export async function GET() {
     // Combine and deduplicate project IDs
     const relevantProjectIds = Array.from(new Set([...backedProjectIds, ...followedProjectIds]));
 
-    // Get recent pledges by user
+    // Get recent pledges by user - only meaningful pledges (completed or with saved payment)
+    // and deduplicate by project to avoid showing multiple entries for the same project
     const pledges = await db.pledge.findMany({
-      where: { userId },
+      where: {
+        userId,
+        OR: [
+          { status: "COMPLETED" },
+          {
+            status: "PENDING",
+            stripePaymentMethodId: { not: null },
+          },
+          {
+            status: "PENDING",
+            confirmationEmailSent: true,
+          },
+        ],
+      },
       select: {
         id: true,
         amount: true,
         createdAt: true,
+        status: true,
         project: {
           select: {
             id: true,
@@ -77,15 +92,32 @@ export async function GET() {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 20,
+      take: 50, // Get more to allow for deduplication
     });
 
-    for (const pledge of pledges) {
+    // Deduplicate pledges by project - keep only the most recent pledge per project
+    const pledgesByProject = new Map<string, typeof pledges[0]>();
+    pledges.forEach((pledge) => {
+      const existing = pledgesByProject.get(pledge.project.id);
+      // Prefer COMPLETED over PENDING, then most recent
+      if (!existing ||
+          (pledge.status === "COMPLETED" && existing.status !== "COMPLETED") ||
+          (pledge.status === existing.status && new Date(pledge.createdAt) > new Date(existing.createdAt))) {
+        pledgesByProject.set(pledge.project.id, pledge);
+      }
+    });
+
+    // Take only the 20 most recent unique pledges
+    const uniquePledges = Array.from(pledgesByProject.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 20);
+
+    for (const pledge of uniquePledges) {
       activities.push({
         id: `pledge-${pledge.id}`,
         type: "pledge",
         title: `You backed ${pledge.project.title}`,
-        description: `Pledged $${pledge.amount} for "${pledge.reward.title}"`,
+        description: `Pledged $${pledge.amount} for "${pledge.reward?.title || "No reward"}"`,
         projectId: pledge.project.id,
         projectTitle: pledge.project.title,
         projectSlug: pledge.project.slug,
