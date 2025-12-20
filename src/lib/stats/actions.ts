@@ -135,11 +135,11 @@ async function fetchRetailerStatsUncached(): Promise<RetailerStats> {
       },
     });
 
-    // Get total retailer order value (from paid retailer pledges)
+    // Get total retailer order value (from all retailer pledges)
     const retailerOrders = await db.retailerPledge.aggregate({
       where: {
         status: {
-          in: ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"],
+          in: ["PENDING", "INVOICED", "PAID", "PROCESSING", "SHIPPED", "DELIVERED"],
         },
       },
       _sum: {
@@ -147,38 +147,41 @@ async function fetchRetailerStatsUncached(): Promise<RetailerStats> {
       },
     });
 
-    // Get count of products available to retailers
-    // (rewards from live projects that allow retailer pledges)
+    // Get count of products available - all rewards and addons from LIVE campaigns
     const productsAvailable = await db.reward.count({
       where: {
-        type: "TIER",
         project: {
           status: "LIVE",
-          allowRetailerPledges: true,
         },
       },
     });
 
-    // Satisfaction rate - this would typically come from a survey system
-    // For now, we'll calculate based on successful deliveries vs issues
-    const deliveredOrders = await db.retailerPledge.count({
-      where: {
-        status: "DELIVERED",
-      },
-    });
+    // Satisfaction rate - from retailer satisfaction surveys after delivery
+    // Count surveys with positive ratings (4-5 stars) vs total completed surveys
+    let satisfactionRate = 98; // Default until we have survey data
 
-    const problemOrders = await db.retailerPledge.count({
-      where: {
-        status: {
-          in: ["CANCELLED", "REFUNDED"],
-        },
-      },
-    });
+    try {
+      // Check if RetailerSatisfactionSurvey model exists
+      if (db.retailerSatisfactionSurvey && typeof db.retailerSatisfactionSurvey.count === 'function') {
+        const totalSurveys = await db.retailerSatisfactionSurvey.count({
+          where: {
+            completedAt: { not: null },
+          },
+        });
 
-    const totalProcessedOrders = deliveredOrders + problemOrders;
-    const satisfactionRate = totalProcessedOrders > 0
-      ? Math.round((deliveredOrders / totalProcessedOrders) * 100)
-      : 98; // Default to 98% if no data
+        if (totalSurveys > 0) {
+          const positiveSurveys = await db.retailerSatisfactionSurvey.count({
+            where: {
+              completedAt: { not: null },
+              rating: { gte: 4 }, // 4-5 star ratings are considered satisfied
+            },
+          });
+          satisfactionRate = Math.round((positiveSurveys / totalSurveys) * 100);
+        }
+      }
+    } catch {
+      // RetailerSatisfactionSurvey model doesn't exist yet, use default
+    }
 
     return {
       certifiedRetailers,

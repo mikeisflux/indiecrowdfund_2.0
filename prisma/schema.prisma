@@ -1235,6 +1235,7 @@ model Retailer {
 
   // Relations
   pledges               RetailerPledge[]
+  satisfactionSurveys   RetailerSatisfactionSurvey[]
 
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
@@ -1325,6 +1326,43 @@ enum RetailerPledgeStatus {
   DELIVERED
   CANCELLED
   REFUNDED
+}
+
+// Retailer Satisfaction Survey - sent after marking shipment received
+model RetailerSatisfactionSurvey {
+  id                    String    @id @default(cuid())
+  retailerId            String
+  retailerPledgeId      String    @unique
+
+  // Rating (1-5 stars)
+  rating                Int?
+
+  // Feedback
+  feedback              String?   @db.Text
+
+  // Categories
+  productQuality        Int?      // 1-5 rating
+  shippingSpeed         Int?      // 1-5 rating
+  packaging             Int?      // 1-5 rating
+  communication         Int?      // 1-5 rating
+  overallExperience     Int?      // 1-5 rating
+
+  // Would recommend?
+  wouldRecommend        Boolean?
+
+  // Status
+  sentAt                DateTime?
+  completedAt           DateTime?
+
+  // Relations
+  retailer              Retailer  @relation(fields: [retailerId], references: [id])
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([retailerId])
+  @@index([completedAt])
+  @@index([rating])
 }
 
 // ============================================
