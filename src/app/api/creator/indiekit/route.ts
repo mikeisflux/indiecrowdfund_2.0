@@ -472,7 +472,8 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // Format timeline entries
+    // Format timeline entries from multiple sources
+    // Start with FulfillmentActivity records
     const activityTypeMap: Record<string, string> = {
       SURVEY_SENT: "survey_reminder", SURVEY_REMINDER: "survey_reminder", SURVEY_COMPLETED: "survey_completed",
       ORDERS_LOCKED: "orders_pushed", ADDRESSES_LOCKED: "address_updated", CARDS_CHARGED: "cards_charged",
@@ -484,18 +485,105 @@ export async function GET(req: NextRequest) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
 
+    // Helper to format date label
+    const formatDateLabel = (date: Date) => {
+      const dateOnly = new Date(date);
+      dateOnly.setHours(0, 0, 0, 0);
+      if (dateOnly.getTime() === today.getTime()) return "TODAY";
+      if (dateOnly.getTime() === yesterday.getTime()) return "YESTERDAY";
+      return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }).toUpperCase();
+    };
+
+    // Helper to format time
+    const formatTime = (date: Date) => {
+      return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    };
+
+    // Build timeline from multiple sources
+    type TimelineEntry = {
+      id: string;
+      type: string;
+      time: string;
+      title: string;
+      detail: string;
+      date: string;
+      sortDate: Date;
+    };
+
+    const timelineEntries: TimelineEntry[] = [];
+
+    // Add FulfillmentActivity records if any exist
     type ActivityType = { id: string; type: string; createdAt: Date; title: string; description: string | null };
-    const formattedTimeline = recentActivity.map((activity: ActivityType) => {
-      const activityDate = new Date(activity.createdAt); activityDate.setHours(0, 0, 0, 0);
-      let dateLabel = activity.createdAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }).toUpperCase();
-      if (activityDate.getTime() === today.getTime()) dateLabel = "TODAY";
-      else if (activityDate.getTime() === yesterday.getTime()) dateLabel = "YESTERDAY";
-      return {
-        id: activity.id, type: activityTypeMap[activity.type] || "comment",
-        time: activity.createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
-        title: activity.title, detail: activity.description || "", date: dateLabel,
-      };
+    recentActivity.forEach((activity: ActivityType) => {
+      timelineEntries.push({
+        id: activity.id,
+        type: activityTypeMap[activity.type] || "comment",
+        time: formatTime(activity.createdAt),
+        title: activity.title,
+        detail: activity.description || "",
+        date: formatDateLabel(activity.createdAt),
+        sortDate: activity.createdAt,
+      });
     });
+
+    // Add recent pledge activity (new backers)
+    const recentPledges = pledges
+      .filter(p => p.status === "COMPLETED")
+      .slice(0, 30); // Last 30 pledges
+
+    recentPledges.forEach(pledge => {
+      timelineEntries.push({
+        id: `pledge-${pledge.id}`,
+        type: "cards_charged",
+        time: formatTime(pledge.createdAt),
+        title: "New Backer",
+        detail: `${pledge.user.name || "Anonymous"} backed ${pledge.reward?.title || "the project"} for $${pledge.amount.toFixed(2)}`,
+        date: formatDateLabel(pledge.createdAt),
+        sortDate: pledge.createdAt,
+      });
+    });
+
+    // Add survey completion activity
+    surveyResponses
+      .filter(sr => sr.isComplete && sr.completedAt)
+      .slice(0, 20)
+      .forEach(sr => {
+        const pledge = pledges.find(p => p.id === sr.pledgeId);
+        const completedAt = sr.completedAt as Date;
+        timelineEntries.push({
+          id: `survey-${sr.id}`,
+          type: "survey_completed",
+          time: formatTime(completedAt),
+          title: "Survey Completed",
+          detail: `${pledge?.user.name || "A backer"} completed their survey`,
+          date: formatDateLabel(completedAt),
+          sortDate: completedAt,
+        });
+      });
+
+    // Add email campaign activity
+    emailCampaignsData
+      .filter((c: { sentAt: Date | null }) => c.sentAt)
+      .slice(0, 10)
+      .forEach((campaign: { id: string; name: string; sentAt: Date; recipientCount: number }) => {
+        timelineEntries.push({
+          id: `email-${campaign.id}`,
+          type: "survey_reminder",
+          time: formatTime(campaign.sentAt),
+          title: "Email Campaign Sent",
+          detail: `"${campaign.name}" sent to ${campaign.recipientCount} backers`,
+          date: formatDateLabel(campaign.sentAt),
+          sortDate: campaign.sentAt,
+        });
+      });
+
+    // Sort all timeline entries by date (newest first) and deduplicate
+    const sortedTimeline = timelineEntries
+      .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime())
+      .slice(0, 50) // Limit to 50 entries
+      .map(({ sortDate, ...entry }) => entry); // Remove sortDate from output
+
+    const formattedTimeline = sortedTimeline;
 
     // Format digital files
     type DigitalFileType = { id: string; name: string; fileSize: number; mimeType: string | null; createdAt: Date; distributedCount: number; totalEligible: number };
