@@ -108,18 +108,18 @@ async function findMailboxForEmail(toEmail: string) {
   return mailbox;
 }
 
-// POST - Handle incoming email from SendGrid Inbound Parse
+// POST - Handle incoming email from Mailgun/SendGrid Inbound Parse
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get("content-type") || "";
 
     let emailData: ParsedEmail;
 
-    if (contentType.includes("multipart/form-data")) {
-      // Parse multipart form data (SendGrid default)
+    if (contentType.includes("multipart/form-data") || contentType.includes("application/x-www-form-urlencoded")) {
+      // Parse form data (Mailgun and SendGrid both use this)
       const formData = await request.formData();
 
-      // Debug: Log all form fields received from SendGrid
+      // Debug: Log all form fields received
       const formFields: Record<string, string> = {};
       formData.forEach((value, key) => {
         if (typeof value === "string") {
@@ -128,18 +128,20 @@ export async function POST(request: NextRequest) {
           formFields[key] = `[File: ${value.name}]`;
         }
       });
+      console.log("[Inbound Email] Received form fields:", Object.keys(formFields).join(", "));
 
-      const toRaw = formData.get("to") as string || "";
-      const fromRaw = formData.get("from") as string || "";
+      // Mailgun uses "recipient" and "sender", SendGrid uses "to" and "from"
+      const toRaw = (formData.get("recipient") as string) || (formData.get("to") as string) || "";
+      const fromRaw = (formData.get("sender") as string) || (formData.get("from") as string) || "";
       const envelopeRaw = formData.get("envelope") as string;
 
-      // Get email body - try multiple field names
-      const textBody = (formData.get("text") as string) ||
-                       (formData.get("body-plain") as string) ||
-                       (formData.get("stripped-text") as string) || "";
-      const htmlBody = (formData.get("html") as string) ||
-                       (formData.get("body-html") as string) ||
-                       (formData.get("stripped-html") as string) || "";
+      // Get email body - try multiple field names (Mailgun and SendGrid variants)
+      const textBody = (formData.get("body-plain") as string) ||
+                       (formData.get("stripped-text") as string) ||
+                       (formData.get("text") as string) || "";
+      const htmlBody = (formData.get("body-html") as string) ||
+                       (formData.get("stripped-html") as string) ||
+                       (formData.get("html") as string) || "";
 
       let envelope: EmailEnvelope | undefined;
       try {
@@ -150,18 +152,22 @@ export async function POST(request: NextRequest) {
         // Ignore envelope parse errors
       }
 
+      // Mailgun uses "attachment-count", SendGrid uses "attachments"
+      const attachmentCount = (formData.get("attachment-count") as string) ||
+                              (formData.get("attachments") as string) || "0";
+
       emailData = {
         to: toRaw,
         from: fromRaw,
         subject: (formData.get("subject") as string) || "(No Subject)",
         text: textBody || undefined,
         html: htmlBody || undefined,
-        cc: (formData.get("cc") as string) || undefined,
-        attachments: parseInt((formData.get("attachments") as string) || "0", 10),
+        cc: (formData.get("cc") as string) || (formData.get("Cc") as string) || undefined,
+        attachments: parseInt(attachmentCount, 10),
         envelope,
       };
     } else if (contentType.includes("application/json")) {
-      // Parse JSON (if SendGrid is configured for JSON)
+      // Parse JSON
       emailData = await request.json();
     } else {
       console.error("Unsupported content type for inbound email:", contentType);
@@ -285,7 +291,7 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     message: "Inbound email webhook is active",
-    provider: "SendGrid Inbound Parse",
+    provider: "Mailgun/SendGrid Inbound Parse",
     endpoint: "/api/webhooks/email/inbound",
   });
 }
