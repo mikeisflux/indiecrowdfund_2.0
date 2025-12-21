@@ -6,7 +6,20 @@ import path from "path";
 
 export const dynamic = "force-dynamic";
 
-const BUILD_DIR = process.env.APP_ROOT || "/home/user/indiecrowdfund_2.0";
+// Determine build directory - check common locations
+function getBuildDir(): string {
+  // Prefer explicit env var
+  if (process.env.APP_ROOT) return process.env.APP_ROOT;
+
+  // Try to determine from __dirname or process.cwd()
+  const cwd = process.cwd();
+  if (cwd.includes("indiecrowdfund")) return cwd;
+
+  // Fallback to common paths
+  return "/root/indiecrowdfund_2.0";
+}
+
+const BUILD_DIR = getBuildDir();
 
 // Helper to check admin access
 async function checkAdminAccess() {
@@ -39,7 +52,17 @@ export async function GET() {
     }
 
     // Find all .next-backup-* directories
-    const entries = await fs.readdir(BUILD_DIR, { withFileTypes: true });
+    let entries;
+    try {
+      entries = await fs.readdir(BUILD_DIR, { withFileTypes: true });
+    } catch (dirError) {
+      console.error(`Cannot read build directory: ${BUILD_DIR}`, dirError);
+      return NextResponse.json({
+        backups: [],
+        buildDir: BUILD_DIR,
+        error: `Build directory not accessible: ${BUILD_DIR}`,
+      });
+    }
     const backups: { name: string; timestamp: string; size: string; createdAt: string }[] = [];
 
     for (const entry of entries) {
