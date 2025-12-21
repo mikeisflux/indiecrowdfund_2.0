@@ -62,7 +62,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
       <Card>
         <CardHeader>
           <CardTitle>Email Provider</CardTitle>
-          <CardDescription>Configure SendGrid for transactional emails</CardDescription>
+          <CardDescription>Configure your email provider for transactional emails (Mailgun recommended)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
@@ -82,17 +82,49 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>API Key</Label>
-              <SecureKeyInput
-                value={settings.sendgridApiKey}
-                onChange={(value) => onSettingsChange({ ...settings, sendgridApiKey: value })}
-                onSave={onSave}
-                hasExistingValue={settings.sendgridApiKey === "••••••••"}
-                placeholder="SG.xxx..."
-              />
-            </div>
+
+            {settings.provider === "sendgrid" && (
+              <div className="space-y-2">
+                <Label>SendGrid API Key</Label>
+                <SecureKeyInput
+                  value={settings.sendgridApiKey}
+                  onChange={(value) => onSettingsChange({ ...settings, sendgridApiKey: value })}
+                  onSave={onSave}
+                  hasExistingValue={settings.sendgridApiKey === "••••••••"}
+                  placeholder="SG.xxx..."
+                />
+              </div>
+            )}
+
+            {settings.provider === "mailgun" && (
+              <>
+                <div className="space-y-2">
+                  <Label>Mailgun API Key</Label>
+                  <SecureKeyInput
+                    value={settings.mailgunApiKey}
+                    onChange={(value) => onSettingsChange({ ...settings, mailgunApiKey: value })}
+                    onSave={onSave}
+                    hasExistingValue={settings.mailgunApiKey === "••••••••"}
+                    placeholder="key-xxx..."
+                  />
+                </div>
+              </>
+            )}
           </div>
+
+          {settings.provider === "mailgun" && (
+            <div className="space-y-2">
+              <Label>Mailgun Domain</Label>
+              <Input
+                value={settings.mailgunDomain}
+                onChange={(e) => onSettingsChange({ ...settings, mailgunDomain: e.target.value })}
+                placeholder="indiecrowdfund.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                Your verified sending domain in Mailgun (e.g., indiecrowdfund.com or mg.indiecrowdfund.com)
+              </p>
+            </div>
+          )}
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">

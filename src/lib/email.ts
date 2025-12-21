@@ -1,4 +1,6 @@
 import sgMail from "@sendgrid/mail";
+import Mailgun from "mailgun.js";
+import formData from "form-data";
 import { db } from "@/lib/db";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
@@ -85,6 +87,40 @@ async function sendViaSendGrid(
   }
 }
 
+// Send email via Mailgun
+async function sendViaMailgun(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+  fromEmail: string,
+  fromName: string,
+  apiKey: string,
+  domain: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const mailgun = new Mailgun(formData);
+    const mg = mailgun.client({
+      username: "api",
+      key: apiKey,
+    });
+
+    const response = await mg.messages.create(domain, {
+      from: `${fromName} <${fromEmail}>`,
+      to: [to],
+      subject,
+      text,
+      html,
+    });
+
+    console.log("Email sent via Mailgun, id:", response.id);
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Mailgun Error:", error);
+    return { success: false, error: String(error) };
+  }
+}
+
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   console.log(`[Email] sendEmail called - to: ${to}, subject: ${subject}`);
 
@@ -93,30 +129,38 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
     hasSettings: !!settings,
     smtpFromEmail: settings?.smtpFromEmail,
     smtpFromName: settings?.smtpFromName,
+    hasMailgunKey: !!settings?.mailgunApiKey,
+    hasMailgunDomain: !!settings?.mailgunDomain,
     hasSendgridKey: !!settings?.sendgridApiKey,
-    sendgridKeyLength: settings?.sendgridApiKey?.length || 0,
   });
 
   const fromEmail = settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
   const fromName = settings?.smtpFromName || APP_NAME;
   const plainText = text || html.replace(/<[^>]*>/g, "");
 
-  // Get SendGrid API key from database settings or environment variables
+  // Get email provider credentials from database settings or environment variables
+  const mailgunApiKey = settings?.mailgunApiKey || process.env.MAILGUN_API_KEY;
+  const mailgunDomain = settings?.mailgunDomain || process.env.MAILGUN_DOMAIN;
   const sendgridApiKey = settings?.sendgridApiKey || process.env.SENDGRID_API_KEY;
-  console.log(`[Email] SendGrid key source: ${settings?.sendgridApiKey ? "database" : process.env.SENDGRID_API_KEY ? "env" : "none"}`);
 
   let result: { success: boolean; error?: string };
 
-  if (sendgridApiKey) {
-    // Use SendGrid
+  // Prefer Mailgun if configured, otherwise fall back to SendGrid
+  if (mailgunApiKey && mailgunDomain) {
+    // Use Mailgun
+    console.log(`[Email] Sending email via Mailgun to: ${to}, from: ${fromEmail} (${fromName}), domain: ${mailgunDomain}`);
+    result = await sendViaMailgun(to, subject, html, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain);
+    console.log(`[Email] Mailgun result:`, result);
+  } else if (sendgridApiKey) {
+    // Use SendGrid as fallback
     console.log(`[Email] Sending email via SendGrid to: ${to}, from: ${fromEmail} (${fromName})`);
     result = await sendViaSendGrid(to, subject, html, plainText, fromEmail, fromName, sendgridApiKey);
     console.log(`[Email] SendGrid result:`, result);
   } else {
-    console.warn("[Email] NOT CONFIGURED - no SendGrid API key found in database or environment");
+    console.warn("[Email] NOT CONFIGURED - no Mailgun or SendGrid API key found");
     console.log("[Email] Would send email to:", to);
     console.log("[Email] Subject:", subject);
-    return { success: false, error: "Email not configured - no SendGrid API key" };
+    return { success: false, error: "Email not configured - no Mailgun or SendGrid API key" };
   }
 
   if (result.success) {
