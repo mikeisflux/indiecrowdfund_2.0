@@ -127,16 +127,20 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   const settings = await getEmailSettings();
   console.log(`[Email] Settings loaded:`, {
     hasSettings: !!settings,
+    emailProvider: settings?.emailProvider,
     smtpFromEmail: settings?.smtpFromEmail,
     smtpFromName: settings?.smtpFromName,
     hasMailgunKey: !!settings?.mailgunApiKey,
-    hasMailgunDomain: !!settings?.mailgunDomain,
+    mailgunDomain: settings?.mailgunDomain,
     hasSendgridKey: !!settings?.sendgridApiKey,
   });
 
   const fromEmail = settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
   const fromName = settings?.smtpFromName || APP_NAME;
   const plainText = text || html.replace(/<[^>]*>/g, "");
+
+  // Get email provider from settings (defaults to sendgrid for backward compatibility)
+  const emailProvider = settings?.emailProvider || "sendgrid";
 
   // Get email provider credentials from database settings or environment variables
   const mailgunApiKey = settings?.mailgunApiKey || process.env.MAILGUN_API_KEY;
@@ -145,22 +149,39 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
 
   let result: { success: boolean; error?: string };
 
-  // Prefer Mailgun if configured, otherwise fall back to SendGrid
-  if (mailgunApiKey && mailgunDomain) {
-    // Use Mailgun
+  // Use the provider that's selected in admin settings
+  if (emailProvider === "mailgun") {
+    // Mailgun is explicitly selected
+    if (!mailgunApiKey || !mailgunDomain) {
+      console.error("[Email] Mailgun selected but credentials incomplete - API key:", !!mailgunApiKey, ", Domain:", !!mailgunDomain);
+      return { success: false, error: "Mailgun selected but API key or domain is missing" };
+    }
     console.log(`[Email] Sending email via Mailgun to: ${to}, from: ${fromEmail} (${fromName}), domain: ${mailgunDomain}`);
     result = await sendViaMailgun(to, subject, html, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain);
     console.log(`[Email] Mailgun result:`, result);
-  } else if (sendgridApiKey) {
-    // Use SendGrid as fallback
+  } else if (emailProvider === "sendgrid") {
+    // SendGrid is explicitly selected
+    if (!sendgridApiKey) {
+      console.error("[Email] SendGrid selected but API key is missing");
+      return { success: false, error: "SendGrid selected but API key is missing" };
+    }
     console.log(`[Email] Sending email via SendGrid to: ${to}, from: ${fromEmail} (${fromName})`);
     result = await sendViaSendGrid(to, subject, html, plainText, fromEmail, fromName, sendgridApiKey);
     console.log(`[Email] SendGrid result:`, result);
   } else {
-    console.warn("[Email] NOT CONFIGURED - no Mailgun or SendGrid API key found");
-    console.log("[Email] Would send email to:", to);
-    console.log("[Email] Subject:", subject);
-    return { success: false, error: "Email not configured - no Mailgun or SendGrid API key" };
+    // Try Mailgun first if configured, then SendGrid
+    if (mailgunApiKey && mailgunDomain) {
+      console.log(`[Email] Sending email via Mailgun (auto) to: ${to}, from: ${fromEmail} (${fromName}), domain: ${mailgunDomain}`);
+      result = await sendViaMailgun(to, subject, html, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain);
+    } else if (sendgridApiKey) {
+      console.log(`[Email] Sending email via SendGrid (auto) to: ${to}, from: ${fromEmail} (${fromName})`);
+      result = await sendViaSendGrid(to, subject, html, plainText, fromEmail, fromName, sendgridApiKey);
+    } else {
+      console.warn("[Email] NOT CONFIGURED - no Mailgun or SendGrid API key found");
+      console.log("[Email] Would send email to:", to);
+      console.log("[Email] Subject:", subject);
+      return { success: false, error: "Email not configured - no Mailgun or SendGrid API key" };
+    }
   }
 
   if (result.success) {

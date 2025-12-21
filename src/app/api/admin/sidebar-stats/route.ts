@@ -23,13 +23,12 @@ async function calculateUnreadNotifications(adminId: string): Promise<number> {
       pendingProjects,
       recentUsers,
       largePledges,
-      flaggedProjects,
       bugReports,
     ] = await Promise.all([
-      // Pending projects
+      // Pending projects (SUBMITTED status = awaiting review)
       db.project.count({
         where: {
-          status: "PENDING",
+          status: "SUBMITTED",
           createdAt: { gte: oneWeekAgo },
           ...(allReadBefore ? { createdAt: { gte: allReadBefore } } : {}),
         },
@@ -53,18 +52,10 @@ async function calculateUnreadNotifications(adminId: string): Promise<number> {
         },
       }),
 
-      // Flagged projects
-      db.project.count({
-        where: {
-          aiModerationStatus: { in: ["FLAGGED", "PENDING"] },
-          ...(allReadBefore ? { updatedAt: { gte: allReadBefore } } : {}),
-        },
-      }),
-
-      // Open bug reports
+      // Bug reports (NEW or IN_PROGRESS status)
       db.bugReport.count({
         where: {
-          status: { in: ["OPEN", "IN_PROGRESS"] },
+          status: { in: ["NEW", "IN_PROGRESS"] },
           createdAt: { gte: oneWeekAgo },
           ...(allReadBefore ? { createdAt: { gte: allReadBefore } } : {}),
         },
@@ -72,7 +63,7 @@ async function calculateUnreadNotifications(adminId: string): Promise<number> {
     ]);
 
     // Total potential notifications
-    let total = pendingProjects + recentUsers + largePledges + flaggedProjects + bugReports;
+    let total = pendingProjects + recentUsers + largePledges + bugReports;
 
     // Subtract read ones (rough estimate - exact count would require generating all IDs)
     total = Math.max(0, total - readIds.size);

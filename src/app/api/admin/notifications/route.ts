@@ -58,7 +58,6 @@ export async function GET(request: Request) {
       recentUsers,
       largePledges,
       pendingProjects,
-      flaggedProjects,
       recentBugReports,
     ] = await Promise.all([
       // New projects submitted in last week
@@ -112,10 +111,10 @@ export async function GET(request: Request) {
         },
       }),
 
-      // Projects pending review
+      // Projects pending review (SUBMITTED status = awaiting review)
       db.project.findMany({
         where: {
-          status: "PENDING",
+          status: "SUBMITTED",
         },
         orderBy: { createdAt: "desc" },
         take: 10,
@@ -127,30 +126,11 @@ export async function GET(request: Request) {
         },
       }),
 
-      // Projects with moderation flags
-      db.project.findMany({
-        where: {
-          OR: [
-            { aiModerationStatus: "FLAGGED" },
-            { aiModerationStatus: "PENDING" },
-          ],
-        },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-        select: {
-          id: true,
-          title: true,
-          aiModerationStatus: true,
-          aiModerationResult: true,
-          createdAt: true,
-        },
-      }),
-
-      // Recent bug reports
+      // Recent bug reports (NEW or IN_PROGRESS status)
       db.bugReport.findMany({
         where: {
           createdAt: { gte: oneWeekAgo },
-          status: { in: ["OPEN", "IN_PROGRESS"] },
+          status: { in: ["NEW", "IN_PROGRESS"] },
         },
         orderBy: { createdAt: "desc" },
         take: 10,
@@ -168,7 +148,7 @@ export async function GET(request: Request) {
 
     // New project submissions
     for (const project of recentProjects) {
-      if (project.status === "PENDING" || project.status === "DRAFT") {
+      if (project.status === "SUBMITTED" || project.status === "DRAFT") {
         const notifId = `project-new-${project.id}`;
         if (!type || type === "project") {
           notifications.push({
@@ -257,24 +237,6 @@ export async function GET(request: Request) {
           createdAt: pledge.createdAt,
           actionUrl: pledge.project ? `/admin/projects/${pledge.project.id}` : undefined,
           metadata: { pledgeId: pledge.id, amount: pledge.amount },
-        });
-      }
-    }
-
-    // Flagged projects (security alerts)
-    for (const project of flaggedProjects) {
-      const notifId = `project-flagged-${project.id}`;
-      if (!type || type === "alert") {
-        const moderationResult = project.aiModerationResult as { riskLevel?: string; reason?: string } | null;
-        notifications.push({
-          id: notifId,
-          type: "alert",
-          title: project.aiModerationStatus === "FLAGGED" ? "High Risk Project Detected" : "Project Pending Review",
-          message: `"${project.title}" ${moderationResult?.reason || "needs moderation review"}`,
-          read: readNotifications.has(notifId),
-          createdAt: project.createdAt,
-          actionUrl: `/admin/moderation?projectId=${project.id}`,
-          metadata: { projectId: project.id, riskLevel: moderationResult?.riskLevel },
         });
       }
     }
