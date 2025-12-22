@@ -38,6 +38,7 @@ import {
   Info,
   Plus,
   Minus,
+  Coins,
 } from "lucide-react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { SHIPPING_COUNTRIES } from "@/types";
@@ -54,8 +55,9 @@ interface ProjectData {
   title: string;
   slug: string;
   imageUrl: string;
-  paymentProcessor: "STRIPE";
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN";
   hasAdultContent: boolean;
+  hasControversialContent?: boolean;
   estimatedDelivery: string;
   currentAmount: number;
   goalAmount: number;
@@ -312,6 +314,10 @@ export default function PledgePage() {
   const [intentType, setIntentType] = useState<"payment_intent" | "setup_intent">("setup_intent");
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [currentPledgeId, setCurrentPledgeId] = useState<string | null>(null);
+
+  // DivinityCoin payment state
+  const [divinityCoinBalance, setDivinityCoinBalance] = useState<number>(0);
+  const [divinityCoinReady, setDivinityCoinReady] = useState(false);
 
   // Handle success redirect (including after 3D Secure authentication)
   useEffect(() => {
@@ -654,6 +660,26 @@ export default function PledgePage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Fetch DivinityCoin balance when project uses DivinityCoin
+  useEffect(() => {
+    const fetchDivinityCoinBalance = async () => {
+      if (project?.paymentProcessor === "DIVINITYCOIN") {
+        try {
+          const response = await fetch("/api/divinitycoin/redeem");
+          if (response.ok) {
+            const data = await response.json();
+            setDivinityCoinBalance(data.balance || 0);
+          }
+          setDivinityCoinReady(true);
+        } catch (err) {
+          console.error("Failed to fetch DivinityCoin balance:", err);
+          setDivinityCoinReady(true);
+        }
+      }
+    };
+    fetchDivinityCoinBalance();
+  }, [project?.paymentProcessor]);
 
   const handleAddonToggle = (addonId: string) => {
     setSelectedAddons((prev) => {
@@ -1403,40 +1429,146 @@ export default function PledgePage() {
                       </div>
                     )}
 
-                    {/* Stripe Elements - show after creating pledge */}
-                    {clientSecret && stripePromise ? (
-                      <Elements
-                        stripe={stripePromise}
-                        options={{
-                          clientSecret,
-                          appearance: {
-                            theme: "stripe",
-                            variables: {
-                              colorPrimary: "#028858",
-                            },
-                          },
-                        }}
-                      >
-                        <StripePaymentForm
-                          onSuccess={handlePaymentSuccess}
-                          onError={handlePaymentError}
-                          agreedToTerms={agreedToTerms}
-                          isProcessing={isProcessing}
-                          setIsProcessing={setIsProcessing}
-                          total={total}
-                          intentType={intentType}
-                          pledgeId={currentPledgeId}
-                          projectPath={projectPath}
-                        />
-                      </Elements>
-                    ) : (
-                      /* Loading state while creating pledge and loading Stripe */
-                      <div className="space-y-4">
-                        <div className="flex flex-col items-center justify-center py-8">
-                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                          <p className="text-sm text-muted-foreground">Loading payment form...</p>
+                    {/* Payment Form - DivinityCoin or Stripe */}
+                    {project?.paymentProcessor === "DIVINITYCOIN" ? (
+                      /* DivinityCoin Payment */
+                      divinityCoinReady ? (
+                        <div className="space-y-4">
+                          {/* DivinityCoin Balance Card */}
+                          <div className="rounded-xl border-2 border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 via-white to-[#0066FF]/10 dark:from-[#0066FF]/10 dark:via-zinc-900 dark:to-[#0066FF]/5 p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-[#0066FF] flex items-center justify-center">
+                                  <span className="text-white font-bold text-sm">D</span>
+                                </div>
+                                <span className="font-semibold text-[#0066FF]">DivinityCoin</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Your Balance</span>
+                                <span className="font-semibold">${divinityCoinBalance.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Pledge Amount</span>
+                                <span className="font-semibold">${total.toFixed(2)}</span>
+                              </div>
+                              <div className="border-t pt-2 mt-2">
+                                <div className="flex justify-between">
+                                  <span className={divinityCoinBalance >= total ? "text-emerald-600" : "text-red-500"}>
+                                    {divinityCoinBalance >= total ? "Remaining Balance" : "Additional Needed"}
+                                  </span>
+                                  <span className={`font-bold ${divinityCoinBalance >= total ? "text-emerald-600" : "text-red-500"}`}>
+                                    ${Math.abs(divinityCoinBalance - total).toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {divinityCoinBalance < total && (
+                            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3">
+                              <p className="text-sm text-amber-800 dark:text-amber-200">
+                                You need ${(total - divinityCoinBalance).toFixed(2)} more in credits.{" "}
+                                <a
+                                  href="https://divinitycoin.com"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-semibold underline"
+                                >
+                                  Buy more credits →
+                                </a>
+                              </p>
+                            </div>
+                          )}
+
+                          <Button
+                            className="w-full bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium disabled:opacity-50"
+                            size="lg"
+                            onClick={async () => {
+                              if (!agreedToTerms || divinityCoinBalance < total) return;
+                              setIsProcessing(true);
+                              try {
+                                // Process DivinityCoin payment
+                                const response = await fetch("/api/divinitycoin/pay", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    pledgeId: currentPledgeId,
+                                    amount: total,
+                                  }),
+                                });
+                                const result = await response.json();
+                                if (!response.ok) {
+                                  throw new Error(result.error || "Payment failed");
+                                }
+                                setDivinityCoinBalance(result.newBalance);
+                                handlePaymentSuccess();
+                              } catch (err) {
+                                handlePaymentError(err instanceof Error ? err.message : "Payment failed");
+                              } finally {
+                                setIsProcessing(false);
+                              }
+                            }}
+                            disabled={!agreedToTerms || divinityCoinBalance < total || isProcessing}
+                          >
+                            {isProcessing ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <Coins className="w-4 h-4 mr-2" />
+                                Pay ${total.toFixed(2)} with DivinityCoin
+                              </>
+                            )}
+                          </Button>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex flex-col items-center justify-center py-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-[#0066FF] mb-3" />
+                            <p className="text-sm text-muted-foreground">Loading DivinityCoin...</p>
+                          </div>
+                        </div>
+                      )
+                    ) : (
+                      /* Stripe Payment */
+                      clientSecret && stripePromise ? (
+                        <Elements
+                          stripe={stripePromise}
+                          options={{
+                            clientSecret,
+                            appearance: {
+                              theme: "stripe",
+                              variables: {
+                                colorPrimary: "#028858",
+                              },
+                            },
+                          }}
+                        >
+                          <StripePaymentForm
+                            onSuccess={handlePaymentSuccess}
+                            onError={handlePaymentError}
+                            agreedToTerms={agreedToTerms}
+                            isProcessing={isProcessing}
+                            setIsProcessing={setIsProcessing}
+                            total={total}
+                            intentType={intentType}
+                            pledgeId={currentPledgeId}
+                            projectPath={projectPath}
+                          />
+                        </Elements>
+                      ) : (
+                        /* Loading state while creating pledge and loading Stripe */
+                        <div className="space-y-4">
+                          <div className="flex flex-col items-center justify-center py-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                            <p className="text-sm text-muted-foreground">Loading payment form...</p>
+                          </div>
+                        </div>
+                      )
                     )}
                   </CardContent>
                 </Card>

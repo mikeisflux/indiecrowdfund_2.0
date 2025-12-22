@@ -277,6 +277,7 @@ enum PrelaunchStatus {
 
 enum PaymentProcessor {
   STRIPE
+  DIVINITYCOIN
 }
 
 // ============================================
@@ -406,6 +407,9 @@ model Pledge {
   stripeSetupIntentId   String?      @unique
   stripePaymentMethodId String?
   stripeCustomerId      String?
+
+  // DivinityCoin fields
+  divinityCoinPaymentId String?      @unique
 
   // Payment retry tracking
   retryCount            Int          @default(0)
@@ -789,6 +793,21 @@ model DivinityCoinRedemption {
 
   @@index([userId])
   @@index([code])
+}
+
+// DivinityCoin transaction history
+model DivinityCoinTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  pledgeId        String?
+  amount          Float    // Positive for credits, negative for payments
+  type            String   // REDEMPTION, PAYMENT, REFUND
+  description     String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([pledgeId])
 }
 
 // ============================================
