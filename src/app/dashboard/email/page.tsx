@@ -43,7 +43,21 @@ import {
   AtSign,
   CheckCircle,
   Copy,
+  Plus,
+  Reply,
+  ReplyAll,
+  Forward,
+  Trash2,
+  MoreHorizontal,
+  X,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
@@ -101,6 +115,14 @@ export default function CreatorEmailInbox() {
   const [searchQuery, setSearchQuery] = useState("");
   const [replyContent, setReplyContent] = useState("");
   const [isSending, setIsSending] = useState(false);
+
+  // Compose dialog state
+  const [showComposeDialog, setShowComposeDialog] = useState(false);
+  const [composeMode, setComposeMode] = useState<"new" | "reply" | "replyAll" | "forward">("new");
+  const [composeTo, setComposeTo] = useState("");
+  const [composeSubject, setComposeSubject] = useState("");
+  const [composeContent, setComposeContent] = useState("");
+  const [isComposing, setIsComposing] = useState(false);
 
   // Email setup state
   const [emailSetup, setEmailSetup] = useState<EmailSetupState | null>(null);
@@ -317,6 +339,154 @@ export default function CreatorEmailInbox() {
     }
   };
 
+  // Delete thread
+  const deleteThread = async (threadId: string) => {
+    if (!confirm("Are you sure you want to delete this conversation? This cannot be undone.")) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/creator/email/threads/${threadId}/delete`, {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      setThreads((prev) => prev.filter((t) => t.id !== threadId));
+      if (selectedThread?.id === threadId) {
+        setSelectedThread(null);
+        setMessages([]);
+      }
+      toast.success("Conversation deleted");
+    } catch (error) {
+      console.error("Error deleting thread:", error);
+      toast.error("Failed to delete conversation");
+    }
+  };
+
+  // Open compose dialog for new email
+  const openComposeNew = () => {
+    setComposeMode("new");
+    setComposeTo("");
+    setComposeSubject("");
+    setComposeContent("");
+    setShowComposeDialog(true);
+  };
+
+  // Open compose dialog for reply
+  const openComposeReply = () => {
+    if (!selectedThread) return;
+    setComposeMode("reply");
+    setComposeTo(selectedThread.from.email);
+    setComposeSubject(`Re: ${selectedThread.subject}`);
+    setComposeContent("");
+    setShowComposeDialog(true);
+  };
+
+  // Open compose dialog for reply all (same as reply for now since it's 1-to-1)
+  const openComposeReplyAll = () => {
+    if (!selectedThread) return;
+    setComposeMode("replyAll");
+    setComposeTo(selectedThread.from.email);
+    setComposeSubject(`Re: ${selectedThread.subject}`);
+    setComposeContent("");
+    setShowComposeDialog(true);
+  };
+
+  // Open compose dialog for forward
+  const openComposeForward = () => {
+    if (!selectedThread) return;
+    setComposeMode("forward");
+    setComposeTo("");
+    setComposeSubject(`Fwd: ${selectedThread.subject}`);
+    // Build forwarded content from messages
+    const forwardedContent = messages
+      .map((msg) => {
+        const date = format(new Date(msg.createdAt), "MMM d, yyyy 'at' h:mm a");
+        return `--- From ${msg.sender.name} on ${date} ---\n${msg.content}`;
+      })
+      .join("\n\n");
+    setComposeContent(`\n\n---------- Forwarded message ----------\n${forwardedContent}`);
+    setShowComposeDialog(true);
+  };
+
+  // Send composed email
+  const handleSendComposed = async () => {
+    if (!composeTo.trim()) {
+      toast.error("Please enter a recipient email");
+      return;
+    }
+    if (!composeContent.trim()) {
+      toast.error("Please enter a message");
+      return;
+    }
+
+    setIsComposing(true);
+    try {
+      let res;
+      if (composeMode === "forward" && selectedThread) {
+        // Use forward endpoint
+        res = await fetch(`/api/creator/email/threads/${selectedThread.id}/forward`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            to: composeTo,
+            additionalMessage: composeContent.split("---------- Forwarded message ----------")[0].trim(),
+          }),
+        });
+      } else if ((composeMode === "reply" || composeMode === "replyAll") && selectedThread) {
+        // Use reply endpoint
+        res = await fetch(`/api/creator/email/threads/${selectedThread.id}/reply`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({ content: composeContent }),
+        });
+      } else {
+        // Use compose endpoint for new emails
+        res = await fetch("/api/creator/email/compose", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            to: composeTo,
+            subject: composeSubject,
+            content: composeContent,
+          }),
+        });
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to send email");
+      }
+
+      // If it was a reply, add the message to the current view
+      if ((composeMode === "reply" || composeMode === "replyAll") && selectedThread) {
+        const data = await res.json();
+        if (data.message) {
+          setMessages((prev) => [...prev, data.message]);
+          setThreads((prev) =>
+            prev.map((t) =>
+              t.id === selectedThread.id ? { ...t, status: "replied" as const } : t
+            )
+          );
+        }
+      }
+
+      toast.success(
+        composeMode === "new" ? "Email sent!" :
+        composeMode === "forward" ? "Email forwarded!" :
+        "Reply sent!"
+      );
+      setShowComposeDialog(false);
+      setComposeTo("");
+      setComposeSubject("");
+      setComposeContent("");
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to send email");
+    } finally {
+      setIsComposing(false);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -436,6 +606,10 @@ export default function CreatorEmailInbox() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button onClick={openComposeNew} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Compose
+            </Button>
             {emailSetup?.fullEmail && (
               <Button
                 variant="outline"
@@ -589,15 +763,52 @@ export default function CreatorEmailInbox() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => archiveThread(selectedThread.id)}
+                        variant="ghost"
+                        size="icon"
+                        onClick={openComposeReply}
+                        title="Reply"
                       >
-                        <Archive className="h-4 w-4 mr-2" />
-                        Archive
+                        <Reply className="h-4 w-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={openComposeReplyAll}
+                        title="Reply All"
+                      >
+                        <ReplyAll className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={openComposeForward}
+                        title="Forward"
+                      >
+                        <Forward className="h-4 w-4" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => archiveThread(selectedThread.id)}>
+                            <Archive className="h-4 w-4 mr-2" />
+                            Archive
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => deleteThread(selectedThread.id)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CardHeader>
@@ -672,6 +883,84 @@ export default function CreatorEmailInbox() {
           </Card>
         </div>
       </div>
+
+      {/* Compose Email Dialog */}
+      <Dialog open={showComposeDialog} onOpenChange={setShowComposeDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {composeMode === "new" && <Mail className="h-5 w-5 text-primary" />}
+              {composeMode === "reply" && <Reply className="h-5 w-5 text-primary" />}
+              {composeMode === "replyAll" && <ReplyAll className="h-5 w-5 text-primary" />}
+              {composeMode === "forward" && <Forward className="h-5 w-5 text-primary" />}
+              {composeMode === "new" ? "Compose Email" :
+               composeMode === "reply" ? "Reply" :
+               composeMode === "replyAll" ? "Reply All" :
+               "Forward Email"}
+            </DialogTitle>
+            <DialogDescription>
+              {composeMode === "new" ? "Send a new email to any platform user" :
+               composeMode === "forward" ? "Forward this conversation to someone else" :
+               "Send your reply"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* To */}
+            <div className="space-y-2">
+              <Label htmlFor="compose-to">To</Label>
+              <Input
+                id="compose-to"
+                type="email"
+                placeholder="recipient@example.com"
+                value={composeTo}
+                onChange={(e) => setComposeTo(e.target.value)}
+                disabled={composeMode === "reply" || composeMode === "replyAll"}
+              />
+            </div>
+
+            {/* Subject - only for new and forward */}
+            {(composeMode === "new" || composeMode === "forward") && (
+              <div className="space-y-2">
+                <Label htmlFor="compose-subject">Subject</Label>
+                <Input
+                  id="compose-subject"
+                  placeholder="Email subject..."
+                  value={composeSubject}
+                  onChange={(e) => setComposeSubject(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Message */}
+            <div className="space-y-2">
+              <Label htmlFor="compose-content">Message</Label>
+              <Textarea
+                id="compose-content"
+                placeholder="Write your message..."
+                value={composeContent}
+                onChange={(e) => setComposeContent(e.target.value)}
+                rows={10}
+                className="font-mono text-sm"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowComposeDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendComposed} disabled={isComposing}>
+              {isComposing ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              {composeMode === "forward" ? "Forward" : "Send"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
