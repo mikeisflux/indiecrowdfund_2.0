@@ -4886,6 +4886,14 @@ A:
 - **Card payments (Stripe)**: 2.9% + $0.30 per transaction + 3% platform fee
 - **DivinityCoin credits**: Platform receives 94% after 6% DivinityCoin fee, then 3% platform fee on your earnings
 
+**Example breakdown for $100 pledge with Stripe (card payment):**
+| Stage | Amount |
+|-------|--------|
+| Backer pays | $100.00 |
+| Stripe fee (2.9% + $0.30) | -$3.20 |
+| Platform fee (3%) | -$2.90 |
+| **You receive** | **~$93.90** |
+
 **Example breakdown for $100 pledge with DivinityCoin:**
 | Stage | Amount |
 |-------|--------|
