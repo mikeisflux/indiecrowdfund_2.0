@@ -57,8 +57,51 @@ import {
 import { formatDistanceToNow, format, addBusinessDays } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+// Project interface for DivinityCoin payouts
+interface Project {
+  id: string;
+  title: string;
+  slug: string;
+  imageUrl: string;
+  status: string;
+  fundedAt: Date;
+  goalAmount: number;
+  currentAmount: number;
+  backerCount: number;
+  paymentProcessor: string;
+  hasAdultContent?: boolean;
+  hasRiskyContent?: boolean;
+  creator: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  };
+  bankAccount: {
+    id: string;
+    bankName: string;
+    accountHolder: string;
+    accountLastFour: string;
+    routingNumber: string;
+    accountNumber: string;
+    accountType: string;
+    isVerified: boolean;
+  };
+  settlement: {
+    status: string;
+    amount: number;
+    dueDate: Date;
+    divinityFee: number;
+    platformFee: number;
+    initiatedAt?: Date;
+    completedAt?: Date;
+    failedAt?: Date;
+    failureReason?: string;
+  };
+}
+
 // Demo data for DivinityCoin projects
-const DEMO_PROJECTS = [
+const DEMO_PROJECTS: Project[] = [
   {
     id: "proj_1",
     title: "Crimson Shadows: A Dark Fantasy Graphic Novel",
@@ -245,8 +288,6 @@ const DEMO_PROJECTS = [
     },
   },
 ];
-
-type Project = typeof DEMO_PROJECTS[0];
 
 export default function DivinityPayoutsPage() {
   const [projects, setProjects] = useState<Project[]>(DEMO_PROJECTS);
