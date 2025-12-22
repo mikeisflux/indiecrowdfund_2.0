@@ -3,7 +3,7 @@
 ## Project Overview
 
 Build a modern crowdfunding platform similar to Kickstarter with the following key differences:
-- **Payment Processor**: CCBill (instead of Stripe)
+- **Payment Processors**: Stripe (primary) + DivinityCoin (universal credits)
 - **No Pay-Over-Time**: Single payment only (no installment options)
 - **Rewards-to-Addons**: Ability to copy rewards as optional add-ons
 
@@ -34,7 +34,7 @@ Build a modern crowdfunding platform similar to Kickstarter with the following k
 - **Database Hosting**: Vercel Postgres or Supabase
 - **File Storage**: AWS S3 or UploadThing
 - **Email**: SendGrid or Resend
-- **Payment Processing**: CCBill
+- **Payment Processing**: Stripe + DivinityCoin (universal credit system)
 - **Analytics Integration**: Google Analytics, Meta Pixel support
 
 ---
@@ -2005,13 +2005,17 @@ const worker = new Worker('recommendations', async (job) => {
 
 ---
 
-## Payment Processing: Stripe vs CCBill
+## Payment Processing: Stripe + DivinityCoin
 
 ### Overview
 
-Allow creators to choose between two payment processors based on their content type:
-- **Stripe**: For mainstream, non-adult content (lower fees, better UX)
-- **CCBill**: Required for adult or high-risk content (higher fees, specialized)
+IndieCrowdfund supports two payment methods:
+- **Stripe**: Primary payment processor for credit/debit cards (2.9% + $0.30 per transaction)
+- **DivinityCoin**: Universal credit system for cross-platform purchases (6% partner fee)
+
+#### Fee Structure
+- **Stripe**: 3% platform fee + 2.9% + $0.30 Stripe processing ≈ 6% total
+- **DivinityCoin**: 6% partner fee + 3% platform fee ≈ 9% total
 
 ### Payment Processor Selection Flow
 

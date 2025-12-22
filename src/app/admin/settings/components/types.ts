@@ -16,11 +16,12 @@ export interface PaymentSettings {
   stripePublicKey: string;
   stripeSecretKey: string;
   stripeWebhookSecret: string;
-  ccbillEnabled: boolean;
-  ccbillClientAccountNo: string;
-  ccbillSubAccount: string;
-  ccbillFlexId: string;
-  ccbillSalt: string;
+  // DivinityCoin - Credit redemption payment solution
+  divinityCoinEnabled: boolean;
+  divinityCoinApiKey: string;
+  divinityCoinWebhookSecret: string;
+  divinityCoinPartnerId: string;
+  divinityCoinSettlementFrequency: string;
   // Local UI settings
   autoPayouts: boolean;
   payoutThreshold: string;

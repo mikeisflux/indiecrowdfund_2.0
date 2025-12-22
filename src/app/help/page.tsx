@@ -56,9 +56,9 @@ const categories = [
     icon: CreditCard,
     articles: [
       "How fees are calculated",
+      "Stripe vs DivinityCoin payments",
       "When funds are released",
       "Accepted payment methods",
-      "Refunds and cancellations",
     ],
     href: "/fees",
   },

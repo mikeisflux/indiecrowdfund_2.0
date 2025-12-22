@@ -79,7 +79,8 @@ export async function GET() {
       stripePublishableKey: settings.stripePublishableKey ? "••••••••" : null,
       stripeSecretKey: settings.stripeSecretKey ? "••••••••" : null,
       stripeWebhookSecret: settings.stripeWebhookSecret ? "••••••••" : null,
-      ccbillSalt: settings.ccbillSalt ? "••••••••" : null,
+      divinityCoinApiKey: settings.divinityCoinApiKey ? "••••••••" : null,
+      divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
@@ -153,6 +154,7 @@ export async function PATCH(req: NextRequest) {
     // Filter out masked values and empty strings for secret fields (don't update if user hasn't changed them)
     const secretFields = [
       'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret',
+      'divinityCoinApiKey', 'divinityCoinWebhookSecret',
       'smtpPassword', 'sendgridApiKey', 'sendgridWebhookVerificationKey', 'mailgunApiKey',
       'openaiApiKey', 'anthropicApiKey', 'googlePlacesApiKey',
       'facebookAppSecret', 'facebookPageAccessToken',
@@ -181,7 +183,8 @@ export async function PATCH(req: NextRequest) {
       ],
       payments: [
         "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret",
-        "ccbillEnabled", "autoPayouts"
+        "divinityCoinEnabled", "divinityCoinApiKey", "divinityCoinWebhookSecret",
+        "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "autoPayouts"
       ],
       email: [
         "emailProvider", "smtpHost", "smtpPort", "smtpUser", "smtpPassword",
@@ -273,7 +276,8 @@ export async function PATCH(req: NextRequest) {
       stripePublishableKey: settings.stripePublishableKey ? "••••••••" : null,
       stripeSecretKey: settings.stripeSecretKey ? "••••••••" : null,
       stripeWebhookSecret: settings.stripeWebhookSecret ? "••••••••" : null,
-      ccbillSalt: settings.ccbillSalt ? "••••••••" : null,
+      divinityCoinApiKey: settings.divinityCoinApiKey ? "••••••••" : null,
+      divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,

@@ -43,11 +43,11 @@ interface PlatformSettings {
   stripePublishableKey: string | null;
   stripeSecretKey: string | null;
   stripeWebhookSecret: string | null;
-  ccbillEnabled: boolean;
-  ccbillClientAccountNo: string | null;
-  ccbillSubaccount: string | null;
-  ccbillFormName: string | null;
-  ccbillSalt: string | null;
+  divinityCoinEnabled: boolean;
+  divinityCoinApiKey: string | null;
+  divinityCoinWebhookSecret: string | null;
+  divinityCoinPartnerId: string | null;
+  divinityCoinSettlementFrequency: string;
   emailProvider: string;
   smtpHost: string | null;
   smtpPort: number;
@@ -162,11 +162,11 @@ export default function SettingsPage() {
     stripePublicKey: "",
     stripeSecretKey: "",
     stripeWebhookSecret: "",
-    ccbillEnabled: false,
-    ccbillClientAccountNo: "",
-    ccbillSubAccount: "",
-    ccbillFlexId: "",
-    ccbillSalt: "",
+    divinityCoinEnabled: false,
+    divinityCoinApiKey: "",
+    divinityCoinWebhookSecret: "",
+    divinityCoinPartnerId: "",
+    divinityCoinSettlementFrequency: "weekly",
     // Local UI settings (not in DB yet)
     autoPayouts: true,
     payoutThreshold: "100",
@@ -315,11 +315,11 @@ export default function SettingsPage() {
         stripePublicKey: settings.stripePublishableKey || "",
         stripeSecretKey: settings.stripeSecretKey || "",
         stripeWebhookSecret: settings.stripeWebhookSecret || "",
-        ccbillEnabled: settings.ccbillEnabled || false,
-        ccbillClientAccountNo: settings.ccbillClientAccountNo || "",
-        ccbillSubAccount: settings.ccbillSubaccount || "",
-        ccbillFlexId: settings.ccbillFormName || "",
-        ccbillSalt: settings.ccbillSalt || "",
+        divinityCoinEnabled: settings.divinityCoinEnabled || false,
+        divinityCoinApiKey: settings.divinityCoinApiKey || "",
+        divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret || "",
+        divinityCoinPartnerId: settings.divinityCoinPartnerId || "",
+        divinityCoinSettlementFrequency: settings.divinityCoinSettlementFrequency || "weekly",
         autoPayouts: settings.autoPayouts || false,
       }));
 
@@ -535,7 +535,11 @@ export default function SettingsPage() {
             stripePublishableKey: currentPaymentSettings.stripePublicKey,
             stripeSecretKey: currentPaymentSettings.stripeSecretKey,
             stripeWebhookSecret: currentPaymentSettings.stripeWebhookSecret,
-            ccbillEnabled: currentPaymentSettings.ccbillEnabled,
+            divinityCoinEnabled: currentPaymentSettings.divinityCoinEnabled,
+            divinityCoinApiKey: currentPaymentSettings.divinityCoinApiKey,
+            divinityCoinWebhookSecret: currentPaymentSettings.divinityCoinWebhookSecret,
+            divinityCoinPartnerId: currentPaymentSettings.divinityCoinPartnerId,
+            divinityCoinSettlementFrequency: currentPaymentSettings.divinityCoinSettlementFrequency,
             autoPayouts: currentPaymentSettings.autoPayouts,
           };
           break;

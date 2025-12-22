@@ -117,11 +117,11 @@ export function PaymentStep() {
 
   // Stripe fee calculations
   // Stripe: 2.9% + $0.30 per transaction
-  // Platform fee: 5%
+  // Platform fee: 3%
   const avgPledgeSize = 50; // Assume average pledge
   const numTransactions = goalAmount / avgPledgeSize;
   const stripeFee = goalAmount * 0.029 + numTransactions * 0.30;
-  const platformFee = goalAmount * 0.05;
+  const platformFee = goalAmount * 0.03;
   const totalFees = stripeFee + platformFee;
   const netAmount = goalAmount - totalFees;
 
@@ -409,7 +409,7 @@ export function PaymentStep() {
                   <span className="font-medium">{formatCurrency(stripeFee)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Platform fee (5%)</span>
+                  <span>Platform fee (3%)</span>
                   <span className="font-medium">{formatCurrency(platformFee)}</span>
                 </div>
                 <Separator className="my-2" />

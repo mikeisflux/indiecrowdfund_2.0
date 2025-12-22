@@ -1393,8 +1393,12 @@ model PlatformSettings {
   stripePublishableKey  String?
   stripeWebhookSecret   String?
 
-  // CCBill Settings
-  ccbillEnabled         Boolean  @default(false)
+  // DivinityCoin Settings - Universal credit redemption payment solution
+  divinityCoinEnabled   Boolean  @default(false)
+  divinityCoinApiKey    String?
+  divinityCoinWebhookSecret String?
+  divinityCoinPartnerId String?
+  divinityCoinSettlementFrequency String @default("weekly")
 
   // Payout Settings
   autoPayouts           Boolean  @default(false)

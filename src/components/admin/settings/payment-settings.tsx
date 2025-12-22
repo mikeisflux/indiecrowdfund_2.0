@@ -19,11 +19,12 @@ interface PaymentSettingsProps {
     stripePublicKey: string;
     stripeSecretKey: string;
     stripeWebhookSecret: string;
-    ccbillEnabled: boolean;
-    ccbillClientAccountNo: string;
-    ccbillSubAccount: string;
-    ccbillFlexId: string;
-    ccbillSalt: string;
+    // DivinityCoin - Credit redemption payment solution
+    divinityCoinEnabled: boolean;
+    divinityCoinApiKey: string;
+    divinityCoinWebhookSecret: string;
+    divinityCoinPartnerId: string;
+    divinityCoinSettlementFrequency: string;
     autoPayouts: boolean;
     payoutThreshold: string;
     payoutSchedule: string;
@@ -101,53 +102,89 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>CCBill Configuration</CardTitle>
-              <CardDescription>High-risk payment processor for adult/regulated content</CardDescription>
+              <CardTitle>DivinityCoin Configuration</CardTitle>
+              <CardDescription>Universal credit redemption system for supporting creators</CardDescription>
             </div>
-            <Badge variant={settings.ccbillEnabled ? "default" : "secondary"}>
-              {settings.ccbillEnabled ? "Enabled" : "Disabled"}
+            <Badge variant={settings.divinityCoinEnabled ? "default" : "secondary"}>
+              {settings.divinityCoinEnabled ? "Enabled" : "Disabled"}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label>Enable CCBill</Label>
-              <p className="text-sm text-zinc-500">Accept payments via CCBill FlexForms</p>
+              <Label>Enable DivinityCoin</Label>
+              <p className="text-sm text-zinc-500">Accept payments via DivinityCoin credits (6% total partner fee)</p>
             </div>
             <Switch
-              checked={settings.ccbillEnabled}
+              checked={settings.divinityCoinEnabled}
               onCheckedChange={(checked) =>
-                onSettingsChange({ ...settings, ccbillEnabled: checked })
+                onSettingsChange({ ...settings, divinityCoinEnabled: checked })
               }
             />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Sub Account ID</Label>
-              <Input
-                value={settings.ccbillSubAccount}
-                onChange={(e) => onSettingsChange({ ...settings, ccbillSubAccount: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>FlexForm ID</Label>
-              <Input
-                value={settings.ccbillFlexId}
-                onChange={(e) => onSettingsChange({ ...settings, ccbillFlexId: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Salt Key</Label>
+              <Label>API Key</Label>
               <SecureKeyInput
-                value={settings.ccbillSalt}
-                onChange={(value) => onSettingsChange({ ...settings, ccbillSalt: value })}
+                value={settings.divinityCoinApiKey}
+                onChange={(value) => onSettingsChange({ ...settings, divinityCoinApiKey: value })}
                 onSave={onSave}
-                hasExistingValue={settings.ccbillSalt === "••••••••"}
-                placeholder="Your CCBill salt..."
+                hasExistingValue={settings.divinityCoinApiKey === "••••••••"}
+                placeholder="Your DivinityCoin API key..."
               />
             </div>
+            <div className="space-y-2">
+              <Label>Partner ID</Label>
+              <Input
+                value={settings.divinityCoinPartnerId}
+                onChange={(e) => onSettingsChange({ ...settings, divinityCoinPartnerId: e.target.value })}
+                placeholder="partner_xyz..."
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Webhook Secret</Label>
+              <SecureKeyInput
+                value={settings.divinityCoinWebhookSecret}
+                onChange={(value) => onSettingsChange({ ...settings, divinityCoinWebhookSecret: value })}
+                onSave={onSave}
+                hasExistingValue={settings.divinityCoinWebhookSecret === "••••••••"}
+                placeholder="Your webhook secret..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Settlement Frequency</Label>
+              <Select
+                value={settings.divinityCoinSettlementFrequency || "weekly"}
+                onValueChange={(v) => onSettingsChange({ ...settings, divinityCoinSettlementFrequency: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly (Monday)</SelectItem>
+                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly (1st)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+            <p className="font-medium">DivinityCoin Fee Structure:</p>
+            <ul className="list-disc list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
+              <li>6% total partner fee (includes Stripe processing ~2.9% + $0.30)</li>
+              <li>Platform fee to creator: 3% (configurable)</li>
+              <li>Settlements processed via wire transfer to your bank</li>
+            </ul>
+            <a href="https://divinitycoin.com/developers" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              View DivinityCoin Developer Documentation →
+            </a>
           </div>
         </CardContent>
       </Card>

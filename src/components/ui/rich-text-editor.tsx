@@ -56,8 +56,20 @@ export function RichTextEditor({
         formData.append("projectId", projectId);
       }
 
+      // Get CSRF token from cookie for the upload request
+      const csrfToken = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("csrf_token="))
+        ?.split("=")[1];
+
+      const headers: HeadersInit = {};
+      if (csrfToken) {
+        headers["x-csrf-token"] = decodeURIComponent(csrfToken);
+      }
+
       const response = await fetch("/api/upload", {
         method: "POST",
+        headers,
         body: formData,
       });
 
