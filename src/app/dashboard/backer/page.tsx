@@ -8,6 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Heart,
   Package,
@@ -30,6 +40,8 @@ import {
   Gift,
   AlertCircle,
   Coins,
+  Ticket,
+  Loader2,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { formatTimeRemaining } from "@/lib/utils";
@@ -109,6 +121,54 @@ export default function BackerDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // DivinityCoin redemption state
+  const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
+  const [redeemCode, setRedeemCode] = useState("");
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
+  const [redeemSuccess, setRedeemSuccess] = useState<{ amount: number } | null>(null);
+  const [divinityCoinBalance, setDivinityCoinBalance] = useState(0);
+
+  const handleRedeemCode = async () => {
+    if (!redeemCode.trim()) {
+      setRedeemError("Please enter a redemption code");
+      return;
+    }
+
+    setRedeemLoading(true);
+    setRedeemError(null);
+    setRedeemSuccess(null);
+
+    try {
+      const response = await fetch("/api/divinitycoin/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: redeemCode.trim() }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to redeem code");
+      }
+
+      setRedeemSuccess({ amount: result.amount });
+      setDivinityCoinBalance((prev) => prev + result.amount);
+      setRedeemCode("");
+    } catch (err) {
+      setRedeemError(err instanceof Error ? err.message : "Failed to redeem code");
+    } finally {
+      setRedeemLoading(false);
+    }
+  };
+
+  const closeRedeemDialog = () => {
+    setRedeemDialogOpen(false);
+    setRedeemCode("");
+    setRedeemError(null);
+    setRedeemSuccess(null);
+  };
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -746,7 +806,9 @@ export default function BackerDashboard() {
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Your Credits</p>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-zinc-900 dark:text-white">$0.00</span>
+                    <span className="text-3xl font-bold text-zinc-900 dark:text-white">
+                      ${divinityCoinBalance.toFixed(2)}
+                    </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Ready to use</p>
                 </div>
@@ -756,18 +818,29 @@ export default function BackerDashboard() {
                   <span>Instant Delivery</span>
                 </div>
 
-                <a
-                  href="https://divinitycoin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <Button className="w-full bg-[#0066FF] hover:bg-[#0052CC] text-white">
-                    <Coins className="w-4 h-4 mr-2" />
-                    Buy Credits
-                    <ArrowUpRight className="w-3.5 h-3.5 ml-2" />
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href="https://divinitycoin.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <Button className="w-full bg-[#0066FF] hover:bg-[#0052CC] text-white" size="sm">
+                      <Coins className="w-4 h-4 mr-1" />
+                      Buy
+                      <ArrowUpRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </a>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-[#0066FF]/30 text-[#0066FF] hover:bg-[#0066FF]/10"
+                    onClick={() => setRedeemDialogOpen(true)}
+                  >
+                    <Ticket className="w-4 h-4 mr-1" />
+                    Redeem
                   </Button>
-                </a>
+                </div>
 
                 <p className="text-[10px] text-center text-muted-foreground">
                   Use credits across all partner platforms
@@ -877,6 +950,97 @@ export default function BackerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* DivinityCoin Redemption Dialog */}
+      <Dialog open={redeemDialogOpen} onOpenChange={closeRedeemDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-[#0066FF] flex items-center justify-center">
+                <span className="text-white font-bold">D</span>
+              </div>
+              <div>
+                <DialogTitle>Redeem DivinityCoin Credits</DialogTitle>
+                <DialogDescription>
+                  Enter your redemption code to add credits to your account
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {redeemSuccess ? (
+              <div className="text-center py-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-emerald-500" />
+                </div>
+                <h3 className="text-lg font-semibold mb-1">Credits Added!</h3>
+                <p className="text-3xl font-bold text-[#0066FF] mb-2">
+                  +${redeemSuccess.amount.toFixed(2)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Your new balance is ${divinityCoinBalance.toFixed(2)}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="redemption-code">Redemption Code</Label>
+                  <Input
+                    id="redemption-code"
+                    placeholder="XXXX-XXXX-XXXX-XXXX"
+                    value={redeemCode}
+                    onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
+                    className="font-mono text-center text-lg tracking-wider"
+                    disabled={redeemLoading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the code exactly as shown on your DivinityCoin gift card or email
+                  </p>
+                </div>
+
+                {redeemError && (
+                  <div className="flex items-center gap-2 text-sm text-red-500 bg-red-500/10 p-3 rounded-lg">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{redeemError}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            {redeemSuccess ? (
+              <Button onClick={closeRedeemDialog} className="w-full">
+                Done
+              </Button>
+            ) : (
+              <div className="flex gap-2 w-full">
+                <Button variant="outline" onClick={closeRedeemDialog} className="flex-1">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleRedeemCode}
+                  disabled={redeemLoading || !redeemCode.trim()}
+                  className="flex-1 bg-[#0066FF] hover:bg-[#0052CC]"
+                >
+                  {redeemLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Redeeming...
+                    </>
+                  ) : (
+                    <>
+                      <Ticket className="w-4 h-4 mr-2" />
+                      Redeem Code
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

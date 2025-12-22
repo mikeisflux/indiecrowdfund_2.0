@@ -54,6 +54,8 @@ model User {
   emailLogs         EmailLog[]
   stripeConfig      StripeConfig?
   divinityCoinBankAccount DivinityCoinBankAccount?
+  divinityCoinBalance Float @default(0)
+  divinityCoinRedemptions DivinityCoinRedemption[]
   idVerifications   IDVerification[]
   notifications     Notification[]
   bugReports        BugReport[]
@@ -773,6 +775,20 @@ enum DivinityCoinSettlementStatus {
   COMPLETED   // Successfully delivered
   FAILED      // Failed to process
   CANCELLED   // Cancelled by admin
+}
+
+// DivinityCoin credit redemption tracking
+model DivinityCoinRedemption {
+  id              String   @id @default(cuid())
+  code            String   @unique // The redemption code
+  userId          String
+  amount          Float    // Amount in USD
+  redeemedAt      DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([code])
 }
 
 // ============================================
