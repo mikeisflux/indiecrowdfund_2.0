@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
     });
 
     const statsMap: Record<string, { count: number; amount: number }> = {};
-    stats.forEach((s) => {
+    stats.forEach((s: { status: string; _count: number; _sum: { amount: number | null } }) => {
       statsMap[s.status] = {
         count: s._count,
         amount: s._sum.amount || 0,
