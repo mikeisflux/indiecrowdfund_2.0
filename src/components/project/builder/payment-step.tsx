@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle, RefreshCw, Loader2, Save } from "lucide-react";
+import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle, RefreshCw, Loader2, Save, Banknote, Lock, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 
@@ -36,6 +36,21 @@ export function PaymentStep() {
   const [isResetting, setIsResetting] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [emailSaved, setEmailSaved] = useState(false);
+
+  // DivinityCoin bank account state
+  const [bankAccount, setBankAccount] = useState({
+    bankName: "",
+    accountHolder: "",
+    accountNumber: "",
+    routingNumber: "",
+    accountType: "checking" as "checking" | "savings",
+  });
+  const [bankAccountStatus, setBankAccountStatus] = useState<{
+    saved: boolean;
+    loading: boolean;
+    lastFour: string | null;
+  }>({ saved: false, loading: true, lastFour: null });
+  const [isSavingBank, setIsSavingBank] = useState(false);
 
   // Save contact email to database immediately
   const handleSaveContactEmail = async () => {
@@ -76,6 +91,89 @@ export function PaymentStep() {
     }
   };
 
+  // Save DivinityCoin bank account
+  const handleSaveBankAccount = async () => {
+    if (!bankAccount.bankName || !bankAccount.accountHolder ||
+        !bankAccount.accountNumber || !bankAccount.routingNumber) {
+      toast.error("Please fill in all bank account fields");
+      return;
+    }
+
+    // Basic validation
+    if (bankAccount.routingNumber.length !== 9) {
+      toast.error("Routing number must be 9 digits");
+      return;
+    }
+
+    if (bankAccount.accountNumber.length < 4 || bankAccount.accountNumber.length > 17) {
+      toast.error("Please enter a valid account number");
+      return;
+    }
+
+    setIsSavingBank(true);
+    try {
+      const response = await fetch("/api/creator/bank-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify(bankAccount),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save bank account");
+      }
+
+      const data = await response.json();
+      setBankAccountStatus({
+        saved: true,
+        loading: false,
+        lastFour: data.lastFour,
+      });
+      // Clear sensitive fields from local state
+      setBankAccount(prev => ({
+        ...prev,
+        accountNumber: "",
+        routingNumber: "",
+      }));
+      toast.success("Bank account saved securely!");
+    } catch (error) {
+      console.error("Failed to save bank account:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save bank account");
+    } finally {
+      setIsSavingBank(false);
+    }
+  };
+
+  // Check DivinityCoin bank account status on mount
+  useEffect(() => {
+    async function checkBankAccountStatus() {
+      try {
+        const response = await fetch("/api/creator/bank-account");
+        if (response.ok) {
+          const data = await response.json();
+          setBankAccountStatus({
+            saved: data.exists,
+            loading: false,
+            lastFour: data.lastFour || null,
+          });
+          if (data.exists) {
+            setBankAccount(prev => ({
+              ...prev,
+              bankName: data.bankName || "",
+              accountHolder: data.accountHolder || "",
+              accountType: data.accountType || "checking",
+            }));
+          }
+        } else {
+          setBankAccountStatus({ saved: false, loading: false, lastFour: null });
+        }
+      } catch {
+        setBankAccountStatus({ saved: false, loading: false, lastFour: null });
+      }
+    }
+    checkBankAccountStatus();
+  }, []);
+
   // Check Stripe connection status on mount
   useEffect(() => {
     async function checkStripeStatus() {
@@ -114,6 +212,16 @@ export function PaymentStep() {
 
   const goalAmount = basics.goalAmount || 10000;
   const hasAdultContent = payment.hasAdultContent || payment.hasRiskyContent;
+
+  // If adult/risky content is selected, DivinityCoin is mandatory
+  const mustUseDivinityCoin = payment.hasAdultContent || payment.hasRiskyContent;
+
+  // Auto-switch to DivinityCoin if adult content is selected
+  useEffect(() => {
+    if (mustUseDivinityCoin && payment.paymentProcessor !== "DIVINITYCOIN") {
+      updatePayment({ paymentProcessor: "DIVINITYCOIN" });
+    }
+  }, [mustUseDivinityCoin, payment.paymentProcessor, updatePayment]);
 
   // Stripe fee calculations
   // Stripe: 2.9% + $0.30 per transaction
@@ -339,97 +447,213 @@ export function PaymentStep() {
 
       <Separator />
 
-      {/* Payment Processor - Stripe */}
+      {/* Payment Processor Selection */}
       <div className="space-y-4">
         <div>
           <h3 className="font-semibold">Payment Processing</h3>
           <p className="text-sm text-muted-foreground">
-            All payments are processed securely through Stripe
+            Select how you want to receive payments from backers
           </p>
         </div>
 
-        {/* Stripe Card */}
-        <Card className="border-2 border-primary/50">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-[#635BFF] flex items-center justify-center">
-                  <CreditCard className="h-5 w-5 text-white" />
-                </div>
-                Stripe Payments
-                <Badge variant="secondary" className="ml-2">
-                  Recommended
-                </Badge>
-              </CardTitle>
-            </div>
-            <CardDescription>
-              Industry-leading payment processing with low fees
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                <div className="text-sm">
-                  <span className="font-medium">Low fees</span>
-                  <p className="text-muted-foreground">2.9% + $0.30</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                <div className="text-sm">
-                  <span className="font-medium">Fast payouts</span>
-                  <p className="text-muted-foreground">2 business days</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                <div className="text-sm">
-                  <span className="font-medium">All major cards</span>
-                  <p className="text-muted-foreground">Visa, MC, Amex</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                <div className="text-sm">
-                  <span className="font-medium">Digital wallets</span>
-                  <p className="text-muted-foreground">Apple Pay, Google Pay</p>
-                </div>
-              </div>
-            </div>
+        {mustUseDivinityCoin && (
+          <Alert className="bg-amber-50/50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>DivinityCoin Required</AlertTitle>
+            <AlertDescription>
+              Projects with adult or controversial content must use DivinityCoin for payment processing.
+              Stripe does not process payments for this type of content.
+            </AlertDescription>
+          </Alert>
+        )}
 
-            {/* Fee Calculator */}
-            <div className="rounded-lg bg-muted/50 p-4 border">
-              <h4 className="font-medium mb-3">
-                Fee Breakdown for {formatCurrency(goalAmount)} Goal
-              </h4>
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Stripe Option */}
+          <Card
+            className={`cursor-pointer transition-all ${
+              payment.paymentProcessor === "STRIPE" ? "border-2 border-primary" : "border"
+            } ${mustUseDivinityCoin ? "opacity-50 cursor-not-allowed" : ""}`}
+            onClick={() => !mustUseDivinityCoin && updatePayment({ paymentProcessor: "STRIPE" })}
+          >
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-[#635BFF] flex items-center justify-center">
+                    <CreditCard className="h-5 w-5 text-white" />
+                  </div>
+                  Stripe
+                  {!mustUseDivinityCoin && (
+                    <Badge variant="secondary" className="ml-2">Recommended</Badge>
+                  )}
+                </CardTitle>
+                {payment.paymentProcessor === "STRIPE" && (
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                )}
+              </div>
+              <CardDescription>
+                {mustUseDivinityCoin
+                  ? "Not available for adult/controversial content"
+                  : "Industry-leading payment processing"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Stripe processing fee (~2.9% + $0.30/txn)</span>
-                  <span className="font-medium">{formatCurrency(stripeFee)}</span>
+                <div className="flex items-center gap-2">
+                  <Check className="h-3 w-3 text-green-500" />
+                  <span>~6% total fees (2.9% + $0.30 + 3% platform)</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Platform fee (3%)</span>
-                  <span className="font-medium">{formatCurrency(platformFee)}</span>
+                <div className="flex items-center gap-2">
+                  <Check className="h-3 w-3 text-green-500" />
+                  <span>Fast payouts via Stripe Connect</span>
                 </div>
-                <Separator className="my-2" />
-                <div className="flex justify-between font-semibold">
-                  <span>Total fees</span>
-                  <span className="text-amber-600">{formatCurrency(totalFees)}</span>
-                </div>
-                <div className="flex justify-between font-semibold text-lg">
-                  <span>You receive</span>
-                  <span className="text-green-600">{formatCurrency(netAmount)}</span>
+                <div className="flex items-center gap-2">
+                  <Check className="h-3 w-3 text-green-500" />
+                  <span>All major cards + Apple/Google Pay</span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* DivinityCoin Option */}
+          <Card
+            className={`cursor-pointer transition-all ${
+              payment.paymentProcessor === "DIVINITYCOIN" ? "border-2 border-primary" : "border"
+            }`}
+            onClick={() => updatePayment({ paymentProcessor: "DIVINITYCOIN" })}
+          >
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                    <Banknote className="h-5 w-5 text-white" />
+                  </div>
+                  DivinityCoin
+                  {mustUseDivinityCoin && (
+                    <Badge variant="default" className="ml-2 bg-amber-600">Required</Badge>
+                  )}
+                </CardTitle>
+                {payment.paymentProcessor === "DIVINITYCOIN" && (
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                )}
+              </div>
+              <CardDescription>
+                Universal credit system for all content types
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Check className="h-3 w-3 text-green-500" />
+                  <span>~9% total fees (6% partner + 3% platform)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-3 w-3 text-green-500" />
+                  <span>Settlements within 14 business days</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-3 w-3 text-green-500" />
+                  <span>Supports adult/controversial content</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Fee Calculator */}
+        {payment.paymentProcessor === "STRIPE" && (
+          <div className="rounded-lg bg-muted/50 p-4 border">
+            <h4 className="font-medium mb-3">
+              Stripe Fee Breakdown for {formatCurrency(goalAmount)} Goal
+            </h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Stripe processing fee (~2.9% + $0.30/txn)</span>
+                <span className="font-medium">{formatCurrency(stripeFee)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Platform fee (3%)</span>
+                <span className="font-medium">{formatCurrency(platformFee)}</span>
+              </div>
+              <Separator className="my-2" />
+              <div className="flex justify-between font-semibold">
+                <span>Total fees</span>
+                <span className="text-amber-600">{formatCurrency(totalFees)}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-lg">
+                <span>You receive</span>
+                <span className="text-green-600">{formatCurrency(netAmount)}</span>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        {payment.paymentProcessor === "DIVINITYCOIN" && (
+          <>
+          <Alert className="bg-gradient-to-r from-amber-50/80 to-orange-50/80 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200 dark:border-amber-800">
+            <Banknote className="h-4 w-4 text-amber-600" />
+            <AlertTitle>Why Choose DivinityCoin?</AlertTitle>
+            <AlertDescription className="mt-2 space-y-2 text-sm">
+              <p>
+                <strong>Content Freedom:</strong> Unlike traditional payment processors, DivinityCoin has no content restrictions.
+                Your campaign cannot be taken down or have payments frozen due to adult, mature, or controversial content in your project.
+              </p>
+              <p>
+                <strong>Protection from Processor Policies:</strong> Stripe and other traditional processors can refuse service
+                or freeze funds at any time based on their content policies. With DivinityCoin, your funds are secure and protected
+                from arbitrary policy changes.
+              </p>
+              <p>
+                <strong>Pre-funded Payments:</strong> Backers purchase DivinityCoin credits in advance, meaning when they pledge
+                to your campaign, the funds are already secured. This eliminates failed payment issues common with traditional
+                card processing.
+              </p>
+              <a
+                href="https://divinitycoin.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 hover:underline font-medium"
+              >
+                Learn more about DivinityCoin <ExternalLink className="h-3 w-3" />
+              </a>
+            </AlertDescription>
+          </Alert>
+
+          <div className="rounded-lg bg-muted/50 p-4 border">
+            <h4 className="font-medium mb-3">
+              DivinityCoin Fee Breakdown for {formatCurrency(goalAmount)} Goal
+            </h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>DivinityCoin partner fee (6%)</span>
+                <span className="font-medium">{formatCurrency(goalAmount * 0.06)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Platform fee (3%)</span>
+                <span className="font-medium">{formatCurrency((goalAmount - goalAmount * 0.06) * 0.03)}</span>
+              </div>
+              <Separator className="my-2" />
+              <div className="flex justify-between font-semibold">
+                <span>Total fees</span>
+                <span className="text-amber-600">
+                  {formatCurrency(goalAmount * 0.06 + (goalAmount - goalAmount * 0.06) * 0.03)}
+                </span>
+              </div>
+              <div className="flex justify-between font-semibold text-lg">
+                <span>You receive</span>
+                <span className="text-green-600">
+                  {formatCurrency(goalAmount - goalAmount * 0.06 - (goalAmount - goalAmount * 0.06) * 0.03)}
+                </span>
+              </div>
+            </div>
+          </div>
+          </>
+        )}
       </div>
 
       <Separator />
 
-      {/* Connect Stripe Account */}
+      {/* Connect Stripe Account - Only show when Stripe is selected */}
+      {payment.paymentProcessor === "STRIPE" && (
       <div className="space-y-4">
         <h3 className="font-semibold">Connect Your Stripe Account</h3>
 
@@ -545,6 +769,187 @@ export function PaymentStep() {
           </p>
         )}
       </div>
+      )}
+
+      {/* DivinityCoin Bank Account for Settlements - Only show when DivinityCoin is selected */}
+      {payment.paymentProcessor === "DIVINITYCOIN" && (
+      <>
+      <Separator />
+
+      <div className="space-y-4">
+        <div>
+          <h3 className="font-semibold flex items-center gap-2">
+            <Banknote className="h-5 w-5" />
+            DivinityCoin Settlement Account
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Enter your bank account details for DivinityCoin settlements. All data is encrypted and stored securely.
+          </p>
+        </div>
+
+        <Card className={bankAccountStatus.saved ? "border-green-500" : ""}>
+          <CardContent className="pt-6">
+            {bankAccountStatus.loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : bankAccountStatus.saved ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-green-500 flex items-center justify-center shrink-0">
+                      <CheckCircle className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Bank Account Connected</p>
+                      <p className="text-sm text-muted-foreground">
+                        {bankAccount.bankName} • Account ending in {bankAccountStatus.lastFour}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="default" className="bg-green-500">
+                    <Lock className="h-3 w-3 mr-1" />
+                    Secured
+                  </Badge>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBankAccountStatus(prev => ({ ...prev, saved: false }))}
+                >
+                  Update Bank Account
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                  <Lock className="h-4 w-4" />
+                  <AlertTitle>Secure & Encrypted</AlertTitle>
+                  <AlertDescription>
+                    Your bank account information is encrypted using AES-256 encryption before storage.
+                    We never store unencrypted account numbers.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-name">Bank Name</Label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="bank-name"
+                        placeholder="e.g., Chase Bank, Bank of America"
+                        value={bankAccount.bankName}
+                        onChange={(e) => setBankAccount(prev => ({ ...prev, bankName: e.target.value }))}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="account-holder">Account Holder Name</Label>
+                    <Input
+                      id="account-holder"
+                      placeholder="Name as it appears on account"
+                      value={bankAccount.accountHolder}
+                      onChange={(e) => setBankAccount(prev => ({ ...prev, accountHolder: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="routing-number">Routing Number</Label>
+                    <Input
+                      id="routing-number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={9}
+                      placeholder="9-digit routing number"
+                      value={bankAccount.routingNumber}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "").slice(0, 9);
+                        setBankAccount(prev => ({ ...prev, routingNumber: value }));
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      9 digits, found on the bottom left of your checks
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="account-number">Account Number</Label>
+                    <Input
+                      id="account-number"
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={17}
+                      placeholder="Your account number"
+                      value={bankAccount.accountNumber}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "").slice(0, 17);
+                        setBankAccount(prev => ({ ...prev, accountNumber: value }));
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Account Type</Label>
+                  <Select
+                    value={bankAccount.accountType}
+                    onValueChange={(value: "checking" | "savings") =>
+                      setBankAccount(prev => ({ ...prev, accountType: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="checking">Checking</SelectItem>
+                      <SelectItem value="savings">Savings</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <Button
+                    onClick={handleSaveBankAccount}
+                    disabled={isSavingBank}
+                  >
+                    {isSavingBank ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Encrypting & Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Save Bank Account
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  DivinityCoin settlements are processed within 14 business days after your campaign ends.{" "}
+                  <a
+                    href="https://divinitycoin.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline"
+                  >
+                    Learn more about DivinityCoin
+                  </a>
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      </>
+      )}
 
       <Separator />
 

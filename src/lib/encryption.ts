@@ -1,0 +1,87 @@
+import crypto from "crypto";
+
+// Use AES-256-GCM for authenticated encryption
+const ALGORITHM = "aes-256-gcm";
+const IV_LENGTH = 16;
+const TAG_LENGTH = 16;
+const SALT_LENGTH = 32;
+
+// Get encryption key from environment or generate from secret
+function getEncryptionKey(): Buffer {
+  const secret = process.env.BANK_ACCOUNT_ENCRYPTION_KEY;
+  if (!secret) {
+    throw new Error("BANK_ACCOUNT_ENCRYPTION_KEY environment variable is required");
+  }
+
+  // Derive a 32-byte key from the secret using PBKDF2
+  return crypto.pbkdf2Sync(secret, "indiecrowdfund-bank-salt", 100000, 32, "sha256");
+}
+
+/**
+ * Encrypts a string value using AES-256-GCM
+ * Returns base64-encoded string containing: salt + iv + authTag + encrypted data
+ */
+export function encrypt(plaintext: string): string {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const salt = crypto.randomBytes(SALT_LENGTH);
+
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  let encrypted = cipher.update(plaintext, "utf8", "base64");
+  encrypted += cipher.final("base64");
+  const authTag = cipher.getAuthTag();
+
+  // Combine all components: salt (32) + iv (16) + authTag (16) + encrypted data
+  const combined = Buffer.concat([
+    salt,
+    iv,
+    authTag,
+    Buffer.from(encrypted, "base64"),
+  ]);
+
+  return combined.toString("base64");
+}
+
+/**
+ * Decrypts a value that was encrypted with the encrypt function
+ */
+export function decrypt(encryptedData: string): string {
+  const key = getEncryptionKey();
+  const combined = Buffer.from(encryptedData, "base64");
+
+  // Extract components
+  const salt = combined.subarray(0, SALT_LENGTH);
+  const iv = combined.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+  const authTag = combined.subarray(SALT_LENGTH + IV_LENGTH, SALT_LENGTH + IV_LENGTH + TAG_LENGTH);
+  const encrypted = combined.subarray(SALT_LENGTH + IV_LENGTH + TAG_LENGTH);
+
+  // We included salt for future key derivation improvements
+  // Currently unused but kept for forward compatibility
+  void salt;
+
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+
+  let decrypted = decipher.update(encrypted);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+
+  return decrypted.toString("utf8");
+}
+
+/**
+ * Masks a value for display purposes (e.g., "1234" -> "••••1234")
+ */
+export function maskAccountNumber(accountNumber: string, visibleDigits: number = 4): string {
+  if (accountNumber.length <= visibleDigits) {
+    return accountNumber;
+  }
+  const masked = "•".repeat(accountNumber.length - visibleDigits);
+  return masked + accountNumber.slice(-visibleDigits);
+}
+
+/**
+ * Gets the last N digits of an account number for display
+ */
+export function getLastDigits(accountNumber: string, digits: number = 4): string {
+  return accountNumber.slice(-digits);
+}

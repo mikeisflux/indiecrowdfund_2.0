@@ -53,6 +53,7 @@ model User {
   interestProfile   UserInterestProfile?
   emailLogs         EmailLog[]
   stripeConfig      StripeConfig?
+  divinityCoinBankAccount DivinityCoinBankAccount?
   idVerifications   IDVerification[]
   notifications     Notification[]
   bugReports        BugReport[]
@@ -214,6 +215,7 @@ model Project {
   similarProjects       ProjectSimilarity[] @relation("SimilarProjects")
   followers             ProjectFollower[]
   retailerPledges       RetailerPledge[]
+  divinityCoinSettlements DivinityCoinSettlement[]
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
@@ -691,6 +693,86 @@ model StripeConfig {
   updatedAt       DateTime @updatedAt
 
   @@index([userId])
+}
+
+// DivinityCoin bank account for creator payouts
+model DivinityCoinBankAccount {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+
+  // Encrypted bank details (AES-256 encrypted)
+  bankNameEncrypted     String   @db.Text
+  accountHolderEncrypted String  @db.Text
+  accountNumberEncrypted String  @db.Text
+  routingNumberEncrypted String  @db.Text
+
+  // Non-sensitive display data
+  bankNameDisplay       String?  // e.g., "Chase Bank"
+  accountLastFour       String?  // e.g., "4567"
+  accountType           String   @default("checking") // checking or savings
+
+  // Verification status
+  isVerified            Boolean  @default(false)
+  verifiedAt            DateTime?
+  verificationMethod    String?  // e.g., "micro_deposits", "instant"
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settlements           DivinityCoinSettlement[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// DivinityCoin settlement tracking for admin payouts
+model DivinityCoinSettlement {
+  id                    String   @id @default(cuid())
+  bankAccountId         String
+
+  // Settlement details
+  amount                Float    // Amount in USD
+  currency              String   @default("USD")
+  status                DivinityCoinSettlementStatus @default(PENDING)
+
+  // Project reference (optional - for project-specific settlements)
+  projectId             String?
+  projectName           String?  // Denormalized for history
+
+  // DivinityCoin reference
+  divinitySettlementId  String?  @unique // External settlement ID from DivinityCoin
+  divinityBatchId       String?  // Batch ID if part of a batch settlement
+
+  // Processing details
+  initiatedAt           DateTime?
+  processedAt           DateTime?
+  completedAt           DateTime?
+  failedAt              DateTime?
+  failureReason         String?
+
+  // Admin notes
+  adminNotes            String?  @db.Text
+  processedBy           String?  // Admin user ID who processed it
+
+  bankAccount           DivinityCoinBankAccount @relation(fields: [bankAccountId], references: [id])
+  project               Project? @relation(fields: [projectId], references: [id])
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([bankAccountId])
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum DivinityCoinSettlementStatus {
+  PENDING     // Awaiting processing
+  INITIATED   // Wire transfer initiated
+  PROCESSING  // In progress
+  COMPLETED   // Successfully delivered
+  FAILED      // Failed to process
+  CANCELLED   // Cancelled by admin
 }
 
 // ============================================
