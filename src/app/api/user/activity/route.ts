@@ -259,16 +259,17 @@ export async function GET() {
     });
 
     for (const message of messages) {
+      // Handle messages with or without a project (creator inbox emails have no project)
       activities.push({
         id: `message-${message.id}`,
         type: "message",
         title: message.subject || "New message",
         description: `Message from ${message.sender.name || "Unknown"}`,
-        projectId: message.project.id,
-        projectTitle: message.project.title,
-        projectSlug: message.project.slug,
-        projectUrl: buildProjectUrl(message.project.slug, message.project.creator?.vanityUrl),
-        projectImage: message.project.imageUrl,
+        projectId: message.project?.id,
+        projectTitle: message.project?.title || "Inbox",
+        projectSlug: message.project?.slug,
+        projectUrl: message.project ? buildProjectUrl(message.project.slug, message.project.creator?.vanityUrl) : undefined,
+        projectImage: message.project?.imageUrl,
         timestamp: message.createdAt,
         metadata: { read: message.read },
       });

@@ -613,7 +613,7 @@ model Comment {
 
 model Message {
   id              String   @id @default(cuid())
-  projectId       String
+  projectId       String?  // Optional - null for creator inbox emails from external senders
   senderId        String
   recipientId     String
   subject         String?
@@ -621,7 +621,8 @@ model Message {
   read            Boolean  @default(false)
   isSpam          Boolean  @default(false)
 
-  project         Project  @relation(fields: [projectId], references: [id])
+  // Optional project relation - creator inbox emails don't have a project
+  project         Project?  @relation(fields: [projectId], references: [id])
   sender          User     @relation("MessageSender", fields: [senderId], references: [id])
   recipient       User     @relation("MessageRecipient", fields: [recipientId], references: [id])
 

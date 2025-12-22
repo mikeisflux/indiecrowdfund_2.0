@@ -201,16 +201,24 @@ export async function POST(request: NextRequest) {
         select: { id: true, name: true },
       });
 
-      // If no sender found in our system, create an anonymous record
-      // For now, we'll store the message with the creator as recipient
-      // The sender info will be in the message content
+      // Store the message with the creator as recipient
+      // If sender is external (not in our system), include their info in the content
+      // and use creator.id as senderId (self-message to inbox)
+      const isExternalSender = !sender;
+      const messageContent = isExternalSender
+        ? `From: ${fromParsed.name || fromParsed.email} <${fromParsed.email}>\n\n${finalBodyText || finalBodyHtml.replace(/<[^>]*>/g, "")}`
+        : finalBodyText || finalBodyHtml.replace(/<[^>]*>/g, "");
 
       const message = await db.message.create({
         data: {
-          senderId: sender?.id || creator.id, // Use creator as fallback sender for external emails
+          // For external senders, use creator as sender (like a self-delivered message to inbox)
+          // projectId is null for creator inbox emails (not tied to a specific project)
+          senderId: sender?.id || creator.id,
           recipientId: creator.id,
-          subject: emailData.subject,
-          content: `From: ${fromParsed.name || fromParsed.email} <${fromParsed.email}>\n\n${finalBodyText || finalBodyHtml.replace(/<[^>]*>/g, "")}`,
+          subject: isExternalSender
+            ? `[External] ${emailData.subject}`
+            : emailData.subject,
+          content: messageContent,
           read: false,
         },
       });
