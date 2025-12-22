@@ -2006,100 +2006,138 @@ const worker = new Worker('recommendations', async (job) => {
 
 ---
 
-## Payment Processing: Stripe vs Divinity Coin
+## Payment Processing: Stripe + DivinityCoin
 
 ### Overview
 
-Allow creators to choose between two payment processors based on their preferences and audience:
-- **Stripe**: Traditional fiat payments (credit/debit cards, bank transfers)
-- **Divinity Coin**: Cryptocurrency payments (DCN, BTC, ETH, and more)
+The platform accepts payments through two methods:
+- **Stripe**: Traditional fiat payments (credit/debit cards) - direct checkout
+- **DivinityCoin**: Credit-based universal creator currency system
 
-Creators can enable one or both payment methods to maximize their potential backer reach.
+Both payment methods ultimately settle to creators via **Stripe Connect**.
 
-### Payment Processor Selection Flow
+### How DivinityCoin Works
+
+DivinityCoin is a **universal creator credit system** (not a cryptocurrency). The complete money flow:
+
+```
+  USER                DIVINITYCOIN           PLATFORM              CREATOR
+   │                        │                    │                    │
+   │  1. Buys $100 credits  │                    │                    │
+   │───────────────────────►│                    │                    │
+   │                        │                    │                    │
+   │   (Stripe processes)   │                    │                    │
+   │                        │  Funds held        │                    │
+   │                        │                    │                    │
+   │  2. Redeems code       │                    │                    │
+   │────────────────────────┼───────────────────►│                    │
+   │                        │   (validates)      │                    │
+   │                        │◄──────────────────►│                    │
+   │                        │                    │                    │
+   │  3. Backs project      │                    │                    │
+   │────────────────────────┼───────────────────►│                    │
+   │                        │   (hold placed)    │                    │
+   │                        │◄──────────────────►│                    │
+   │                        │                    │                    │
+   │                        │                    │  4. Project funds  │
+   │                        │   (capture hold)   │                    │
+   │                        │◄──────────────────►│                    │
+   │                        │                    │  Creator earned    │
+   │                        │                    │  $100 in credits   │
+   │                        │                    │──────────────────►│
+   │                        │                    │                    │
+   │                        │  5. Settlement     │                    │
+   │                        │  (weekly/monthly)  │                    │
+   │                        │───────────────────►│                    │
+   │                        │  Wire $94 (net)    │                    │
+   │                        │  (after 6% fee)    │                    │
+   │                        │                    │                    │
+   │                        │                    │  6. Creator payout │
+   │                        │                    │  (Stripe Connect)  │
+   │                        │                    │───────────────────►│
+   │                        │                    │  $89.30            │
+   │                        │                    │  (after 5% fee)    │
+```
+
+### Fee Structure
+
+| Stage | Fee | Who Pays | Example ($100) |
+|-------|-----|----------|----------------|
+| DivinityCoin Partner Fee | 6% | Platform (from settlement) | $6.00 |
+| └ Stripe Processing | ~2.9% + $0.30 | (included in 6%) | ~$3.20 |
+| └ Platform Fee | ~2.8% | (included in 6%) | ~$2.80 |
+| Platform Fee on Earnings | 5% | Creator | $94 × 5% = $4.70 |
+| Stripe Connect Payout | ~0.25% | Creator | ~$0.25 |
+| **Creator Receives** | | | **~$89.05** |
+
+### Payment Method Selection UI
 
 ```typescript
-// Payment processor selection component
-interface PaymentProcessorSelectorProps {
-  projectId: string;
-  enabledProcessors?: ('stripe' | 'divinity')[];
+// Backer payment method selector during checkout
+interface PaymentMethodSelectorProps {
+  amount: number;
+  userCreditBalance: number;
+  onPayWithStripe: () => void;
+  onPayWithCredits: () => void;
 }
 
-export function PaymentProcessorSelector({
-  projectId,
-  enabledProcessors = [],
-}: PaymentProcessorSelectorProps) {
-  const [stripeEnabled, setStripeEnabled] = useState(enabledProcessors.includes('stripe'));
-  const [divinityEnabled, setDivinityEnabled] = useState(enabledProcessors.includes('divinity'));
+export function PaymentMethodSelector({
+  amount,
+  userCreditBalance,
+  onPayWithStripe,
+  onPayWithCredits,
+}: PaymentMethodSelectorProps) {
+  const hasEnoughCredits = userCreditBalance >= amount;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Payment Methods</h3>
-        <p className="text-gray-600 mb-4">
-          Select which payment methods you want to accept. You can enable both to maximize your reach.
-        </p>
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Choose Payment Method</h3>
+
+      {/* DivinityCoin Credits Option */}
+      <div className="border rounded-lg p-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h4 className="font-medium">DivinityCoin Credits</h4>
+            <p className="text-sm text-gray-600">
+              Balance: ${userCreditBalance.toFixed(2)}
+            </p>
+          </div>
+          <Button
+            onClick={onPayWithCredits}
+            disabled={!hasEnoughCredits}
+          >
+            {hasEnoughCredits ? 'Pay with Credits' : 'Insufficient Balance'}
+          </Button>
+        </div>
+        {!hasEnoughCredits && (
+          <a
+            href="https://divinitycoin.com"
+            target="_blank"
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Buy more credits at DivinityCoin.com
+          </a>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Stripe Option */}
-        <ProcessorCard
-          name="Stripe"
-          enabled={stripeEnabled}
-          onToggle={() => setStripeEnabled(!stripeEnabled)}
-          features={[
-            'Accept credit/debit cards',
-            'Fees: 2.9% + $0.30 per transaction',
-            'Fast payouts (2 business days)',
-            'Trusted by millions worldwide',
-            'Recommended for mainstream audience',
-          ]}
-          fees={{
-            percentage: 2.9,
-            fixed: 0.30,
-            exampleAmount: 100,
-            exampleFee: 3.20,
-            exampleNet: 96.80,
-          }}
-        />
-
-        {/* Divinity Coin Option */}
-        <ProcessorCard
-          name="Divinity Coin"
-          enabled={divinityEnabled}
-          onToggle={() => setDivinityEnabled(!divinityEnabled)}
-          features={[
-            'Accept DCN, BTC, ETH, and 50+ cryptocurrencies',
-            'Low network fees (~1%)',
-            'No chargebacks - payments are final',
-            'Borderless global payments',
-            'Instant settlement to your wallet',
-          ]}
-          fees={{
-            percentage: 1.0,
-            fixed: 0,
-            exampleAmount: 100,
-            exampleFee: 1.00,
-            exampleNet: 99.00,
-          }}
-        />
+      {/* Credit Redemption */}
+      <div className="border rounded-lg p-4">
+        <h4 className="font-medium">Have a DivinityCoin code?</h4>
+        <RedeemCodeForm onSuccess={() => window.location.reload()} />
       </div>
 
-      {!stripeEnabled && !divinityEnabled && (
-        <Alert variant="warning">
-          <AlertTitle>Payment Method Required</AlertTitle>
-          <AlertDescription>
-            You must enable at least one payment method to accept pledges.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Fee Comparison */}
-      <FeeComparison
-        goalAmount={10000}
-        stripeEnabled={stripeEnabled}
-        divinityEnabled={divinityEnabled}
-      />
+      {/* Stripe Option */}
+      <div className="border rounded-lg p-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h4 className="font-medium">Credit/Debit Card</h4>
+            <p className="text-sm text-gray-600">Pay directly via Stripe</p>
+          </div>
+          <Button onClick={onPayWithStripe}>
+            Pay ${amount.toFixed(2)}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2289,286 +2327,432 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 }
 ```
 
-### Divinity Coin Integration
+### DivinityCoin Integration
 
-**Setup Flow**:
+DivinityCoin is a credit-based payment system. Users buy credits on divinitycoin.com, receive a redemption code, and use credits on our platform.
+
+**API Base URL**: `https://api.divinitycoin.com`
+**Authentication**: `X-Internal-Key: YOUR_API_KEY` header
+
+#### SDK Installation
+
+```bash
+# Node.js / JavaScript
+npm install @divinitycoin/sdk
+
+# Python
+pip install divinitycoin
+
+# PHP
+composer require divinitycoin/sdk
+
+# Ruby
+gem install divinitycoin
+```
+
+#### API Endpoints
+
+**1. Validate & Redeem Code** - `POST /internal/validate`
 ```typescript
-// Divinity Coin wallet connection
-import { DivinityCoinAPI } from '@divinitycoin/sdk';
+// When user enters a DivinityCoin code
+interface ValidateCodeRequest {
+  code: string;           // 16-character code: "XXXX-XXXX-XXXX-XXXX"
+  platformUserId: string; // Your platform's user ID
+}
 
-const divinity = new DivinityCoinAPI({
-  apiKey: process.env.DIVINITY_API_KEY!,
-  environment: process.env.NODE_ENV === 'production' ? 'mainnet' : 'testnet',
+interface ValidateCodeResponse {
+  success: boolean;
+  amount: number;      // Credits added
+  newBalance: number;  // User's new total balance
+}
+
+// Example
+const response = await fetch('https://api.divinitycoin.com/internal/validate', {
+  method: 'POST',
+  headers: {
+    'X-Internal-Key': process.env.DIVINITYCOIN_API_KEY!,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    code: 'ABCD-1234-EFGH-5678',
+    platformUserId: user.id,
+  }),
 });
 
-export async function connectDivinityWallet(userId: string, walletAddress: string) {
-  // Verify wallet ownership
-  const verification = await divinity.verifyWallet({
-    address: walletAddress,
-    message: `Connect wallet to crowdfunding platform for user ${userId}`,
-  });
-
-  if (!verification.valid) {
-    throw new Error('Wallet verification failed');
-  }
-
-  // Save wallet configuration
-  await db.divinityConfig.create({
-    data: {
-      userId,
-      walletAddress,
-      supportedCurrencies: ['DCN', 'BTC', 'ETH', 'USDT', 'USDC'],
-      autoConvert: false,
-      isActive: true,
-    },
-  });
-
-  return { success: true };
-}
+const { success, amount, newBalance } = await response.json();
+// success: true, amount: 25.00, newBalance: 75.00
 ```
 
-**Payment Creation**:
+**2. Check Balance** - `POST /internal/balance`
 ```typescript
-// Create Divinity Coin payment for pledge
-export async function createDivinityPayment(pledgeData: {
-  projectId: string;
-  rewardId: string;
-  addonIds: string[];
+interface BalanceResponse {
+  platformUserId: string;
+  availableBalance: number;  // Credits available to spend
+  heldBalance: number;       // Credits held for pending pledges
+}
+
+const balance = await fetch('https://api.divinitycoin.com/internal/balance', {
+  method: 'POST',
+  headers: { 'X-Internal-Key': process.env.DIVINITYCOIN_API_KEY! },
+  body: JSON.stringify({ platformUserId: user.id }),
+}).then(r => r.json());
+// { availableBalance: 50.00, heldBalance: 10.00 }
+```
+
+**3. Place Hold** - `POST /internal/hold`
+```typescript
+// When user backs a project (before project is funded)
+interface HoldRequest {
+  platformUserId: string;
   amount: number;
-  userId: string;
-  preferredCurrency?: string;
-}) {
-  const { projectId, amount, userId, preferredCurrency = 'DCN' } = pledgeData;
+  pledgeId: string;      // Your pledge/order ID
+  projectId?: string;
+  expiresAt?: string;    // ISO date for hold expiration
+}
 
-  // Get project and creator's Divinity config
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    include: {
-      creator: {
-        include: { divinityConfig: true },
-      },
-    },
-  });
+interface HoldResponse {
+  success: boolean;
+  holdId: string;
+  amount: number;
+  expiresAt: string;
+}
 
-  if (!project?.creator.divinityConfig) {
-    throw new Error('Creator has not connected Divinity Coin');
-  }
-
-  // Create pending pledge
-  const pledge = await db.pledge.create({
-    data: {
-      ...pledgeData,
-      status: 'PENDING',
-      paymentProcessor: 'DIVINITY',
-    },
-  });
-
-  // Create payment invoice via Divinity Coin API
-  const invoice = await divinity.createInvoice({
-    amount: amount,
-    currency: 'USD', // Price in USD, backer pays in crypto
-    receiverAddress: project.creator.divinityConfig.walletAddress,
-    acceptedCurrencies: project.creator.divinityConfig.supportedCurrencies,
-    callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/divinity`,
-    successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/pledge/success?id=${pledge.id}`,
-    cancelUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/pledge/cancelled?id=${pledge.id}`,
-    metadata: {
-      pledgeId: pledge.id,
-      projectId,
-      userId,
-    },
-    expiresIn: 3600, // 1 hour to complete payment
-  });
-
-  // Update pledge with invoice ID
-  await db.pledge.update({
-    where: { id: pledge.id },
-    data: { divinityInvoiceId: invoice.id },
-  });
-
-  return {
-    invoiceId: invoice.id,
-    paymentUrl: invoice.paymentUrl,
-    qrCode: invoice.qrCode,
-    expiresAt: invoice.expiresAt,
-    acceptedCurrencies: invoice.acceptedCurrencies,
+const hold = await fetch('https://api.divinitycoin.com/internal/hold', {
+  method: 'POST',
+  headers: { 'X-Internal-Key': process.env.DIVINITYCOIN_API_KEY! },
+  body: JSON.stringify({
+    platformUserId: user.id,
+    amount: 50.00,
     pledgeId: pledge.id,
-  };
+    projectId: project.id,
+  }),
+}).then(r => r.json());
+// { success: true, holdId: "hold_xyz789", amount: 25.00 }
+```
+
+**4. Capture Hold** - `POST /internal/capture`
+```typescript
+// When project is successfully funded - capture the held credits
+interface CaptureRequest {
+  pledgeId: string;
+  creatorId: string;
+  creatorEmail?: string;
+  projectId?: string;
+  projectName?: string;
+}
+
+interface CaptureResponse {
+  success: boolean;
+  capturedAmount: number;
+  captureId: string;
+}
+
+const capture = await fetch('https://api.divinitycoin.com/internal/capture', {
+  method: 'POST',
+  headers: { 'X-Internal-Key': process.env.DIVINITYCOIN_API_KEY! },
+  body: JSON.stringify({
+    pledgeId: pledge.id,
+    creatorId: project.creatorId,
+    creatorEmail: project.creator.email,
+    projectId: project.id,
+    projectName: project.title,
+  }),
+}).then(r => r.json());
+// { success: true, capturedAmount: 25.00, captureId: "cap_abc123" }
+```
+
+**5. Release Hold** - `POST /internal/release`
+```typescript
+// When project fails or pledge is cancelled - return credits to user
+interface ReleaseResponse {
+  success: boolean;
+  releasedAmount: number;
+  newAvailableBalance: number;
+}
+
+const release = await fetch('https://api.divinitycoin.com/internal/release', {
+  method: 'POST',
+  headers: { 'X-Internal-Key': process.env.DIVINITYCOIN_API_KEY! },
+  body: JSON.stringify({ pledgeId: pledge.id }),
+}).then(r => r.json());
+// { success: true, releasedAmount: 25.00, newAvailableBalance: 75.00 }
+```
+
+**6. Health Check** - `GET /internal/health`
+```typescript
+// Verify API connectivity
+const health = await fetch('https://api.divinitycoin.com/internal/health', {
+  headers: { 'X-Internal-Key': process.env.DIVINITYCOIN_API_KEY! },
+}).then(r => r.json());
+// { status: "ok", timestamp: "2025-01-08T10:00:00Z" }
+```
+
+#### Error Codes
+
+| Code | Status | Description |
+|------|--------|-------------|
+| INVALID_CODE_FORMAT | 400 | Code is not 16 hex characters |
+| CODE_NOT_FOUND | 404 | No gift card matches this code |
+| ALREADY_REDEEMED | 409 | Code has already been used |
+| CODE_EXPIRED | 410 | Code is past expiration date |
+| CODE_REVOKED | 410 | Code was manually revoked |
+| RATE_LIMITED | 429 | Too many redemption attempts |
+| INSUFFICIENT_BALANCE | 400 | Not enough credits for operation |
+| HOLD_NOT_FOUND | 404 | No hold exists for this pledge |
+| HOLD_NOT_ACTIVE | 400 | Hold is not in active state |
+| INVALID_AMOUNT | 400 | Amount outside allowed range |
+
+#### Settlement & Payouts
+
+DivinityCoin settles with partners on a configurable schedule:
+- **Daily**: Every day at 00:00 UTC
+- **Weekly**: Every Monday at 00:00 UTC
+- **Biweekly**: Every other Monday
+- **Monthly**: 1st of month at 00:00 UTC
+
+**List Settlements** - `GET /internal/settlements`
+```typescript
+const settlements = await fetch(
+  'https://api.divinitycoin.com/internal/settlements?status=PAID&limit=20',
+  { headers: { 'X-Internal-Key': process.env.DIVINITYCOIN_API_KEY! } }
+).then(r => r.json());
+
+// Response:
+{
+  "settlements": [
+    {
+      "id": "settle_abc123",
+      "periodStart": "2025-01-01T00:00:00Z",
+      "periodEnd": "2025-01-07T23:59:59Z",
+      "grossAmount": 10000.00,
+      "partnerFee": 600.00,    // 6% fee
+      "netAmount": 9400.00,
+      "currency": "USD",
+      "captureCount": 47,
+      "status": "PAID",
+      "paidAt": "2025-01-10T14:30:00Z",
+      "paymentRef": "WIRE-20250108-001"
+    }
+  ],
+  "pagination": { "total": 52, "limit": 20, "offset": 0 }
 }
 ```
 
-**Webhook Handling**:
-```typescript
-// /api/webhooks/divinity
-export async function POST(req: Request) {
-  const body = await req.json();
-  const signature = req.headers.get('x-divinity-signature');
+#### Settlement Webhooks
 
-  // Verify webhook authenticity
-  const isValid = divinity.verifyWebhook(body, signature, process.env.DIVINITY_WEBHOOK_SECRET!);
+Configure webhook URL in DivinityCoin partner dashboard to receive settlement events.
+
+**Webhook Events**:
+- `settlement.created` - New settlement generated
+- `settlement.approved` - Settlement approved for payment
+- `settlement.processing` - Payment initiated
+- `settlement.paid` - Payment confirmed
+- `settlement.failed` - Payment failed
+
+**Webhook Payload**:
+```typescript
+{
+  "event": "settlement.paid",
+  "timestamp": "2025-01-10T14:30:00Z",
+  "data": {
+    "settlementId": "settle_abc123",
+    "partnerId": "partner_xyz",
+    "periodStart": "2025-01-01T00:00:00Z",
+    "periodEnd": "2025-01-07T23:59:59Z",
+    "grossAmount": 10000.00,
+    "partnerFee": 600.00,
+    "netAmount": 9400.00,
+    "captureCount": 47,
+    "currency": "USD",
+    "status": "PAID",
+    "paymentRef": "WIRE-20250108-001"
+  }
+}
+// Signature header: X-Webhook-Signature: sha256=<hmac-sha256>
+```
+
+**Webhook Verification**:
+```typescript
+import crypto from 'crypto';
+
+function verifyDivinityCoinWebhook(
+  payload: string,
+  signature: string,
+  secret: string
+): boolean {
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature.replace('sha256=', '')),
+    Buffer.from(expected)
+  );
+}
+
+// Webhook handler
+app.post('/api/webhooks/divinitycoin', async (req, res) => {
+  const signature = req.headers['x-webhook-signature'] as string;
+  const isValid = verifyDivinityCoinWebhook(
+    JSON.stringify(req.body),
+    signature,
+    process.env.DIVINITYCOIN_WEBHOOK_SECRET!
+  );
+
   if (!isValid) {
-    return Response.json({ error: 'Invalid signature' }, { status: 401 });
+    return res.status(401).send('Invalid signature');
   }
 
-  const { event, data } = body;
+  const { event, data } = req.body;
 
   switch (event) {
-    case 'invoice.paid':
-      await handleSuccessfulPayment(data);
+    case 'settlement.paid':
+      // Update internal records, credit creator balances
+      await handleSettlementPaid(data);
       break;
-    case 'invoice.expired':
-      await handleExpiredPayment(data);
-      break;
-    case 'invoice.underpaid':
-      await handleUnderpaidPayment(data);
+    case 'settlement.failed':
+      // Alert admin, retry logic
+      await handleSettlementFailed(data);
       break;
   }
 
-  return Response.json({ received: true });
-}
-
-async function handleSuccessfulPayment(data: DivinityPaymentData) {
-  const { invoiceId, transactionHash, amountPaid, currency, blockConfirmations } = data;
-
-  // Get pledge by invoice ID
-  const pledge = await db.pledge.findFirst({
-    where: { divinityInvoiceId: invoiceId },
-    include: { project: true, user: true, reward: true },
-  });
-
-  if (!pledge) return;
-
-  // Update pledge status
-  await db.pledge.update({
-    where: { id: pledge.id },
-    data: {
-      status: 'COMPLETED',
-      divinityTransactionHash: transactionHash,
-      divinityCurrency: currency,
-      divinityAmountPaid: amountPaid,
-    },
-  });
-
-  // Update project funding
-  await db.project.update({
-    where: { id: pledge.projectId },
-    data: {
-      currentAmount: { increment: pledge.amount },
-      backerCount: { increment: 1 },
-    },
-  });
-
-  // Send confirmation email
-  await sendPledgeConfirmationEmail(pledge);
-}
-```
-
-### Unified Payment Interface
-
-```typescript
-// Abstraction layer for both processors
-interface PaymentProcessor {
-  createPayment(params: PaymentParams): Promise<PaymentResult>;
-  handleWebhook(payload: any): Promise<void>;
-  processRefund(transactionId: string): Promise<void>;
-}
-
-class StripeProcessor implements PaymentProcessor {
-  async createPayment(params: PaymentParams): Promise<PaymentResult> {
-    // Stripe implementation
-  }
-
-  async handleWebhook(payload: any): Promise<void> {
-    // Stripe webhook handling
-  }
-
-  async processRefund(transactionId: string): Promise<void> {
-    // Stripe refund
-  }
-}
-
-class DivinityProcessor implements PaymentProcessor {
-  async createPayment(params: PaymentParams): Promise<PaymentResult> {
-    // Divinity Coin implementation - creates invoice
-  }
-
-  async handleWebhook(payload: any): Promise<void> {
-    // Divinity Coin webhook handling
-  }
-
-  async processRefund(transactionId: string): Promise<void> {
-    // Note: Crypto payments are non-refundable by default
-    // Manual refund must be initiated by creator
-    throw new Error('Crypto refunds must be processed manually by the creator');
-  }
-}
-
-// Factory to get correct processor
-export function getPaymentProcessor(
-  processorType: 'stripe' | 'divinity'
-): PaymentProcessor {
-  return processorType === 'stripe'
-    ? new StripeProcessor()
-    : new DivinityProcessor();
-}
+  res.status(200).send('OK');
+});
 ```
 
 ### Database Schema Updates
 
 ```prisma
-model Project {
-  // ... existing fields
+// ============================================
+// DIVINITYCOIN CREDITS & HOLDS
+// ============================================
 
-  // Payment processors enabled for this project
-  stripeEnabled       Boolean   @default(true)
-  divinityEnabled     Boolean   @default(false)
+model UserCreditBalance {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  availableBalance  Float    @default(0)
+  heldBalance       Float    @default(0)
+  lifetimeCredits   Float    @default(0)
 
-  // Stripe
-  stripeAccountId     String?
+  user              User     @relation(fields: [userId], references: [id])
 
-  // Divinity Coin
-  divinityWalletAddress String?
+  updatedAt         DateTime @updatedAt
 
-  // ... relations
+  @@index([userId])
 }
 
-enum PaymentProcessor {
-  STRIPE
-  DIVINITY
+model CreditRedemption {
+  id                String   @id @default(cuid())
+  userId            String
+  code              String   // Last 4 chars only for reference
+  amount            Float
+  redeemedAt        DateTime @default(now())
+
+  user              User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model CreditHold {
+  id                String   @id @default(cuid())
+  divinityHoldId    String   @unique  // holdId from DivinityCoin API
+  userId            String
+  pledgeId          String   @unique
+  amount            Float
+  status            CreditHoldStatus @default(ACTIVE)
+  expiresAt         DateTime?
+
+  user              User     @relation(fields: [userId], references: [id])
+  pledge            Pledge   @relation(fields: [pledgeId], references: [id])
+
+  createdAt         DateTime @default(now())
+  capturedAt        DateTime?
+  releasedAt        DateTime?
+
+  @@index([userId])
+  @@index([pledgeId])
+  @@index([status])
+}
+
+enum CreditHoldStatus {
+  ACTIVE
+  CAPTURED
+  RELEASED
+  EXPIRED
+}
+
+model CreditCapture {
+  id                String   @id @default(cuid())
+  divinityCaptureId String   @unique  // captureId from DivinityCoin API
+  holdId            String
+  creatorId         String
+  projectId         String
+  amount            Float
+  settlementId      String?  // Linked when settled
+
+  capturedAt        DateTime @default(now())
+  settledAt         DateTime?
+
+  @@index([creatorId])
+  @@index([projectId])
+  @@index([settlementId])
+}
+
+// ============================================
+// SETTLEMENTS
+// ============================================
+
+model PartnerSettlement {
+  id                String   @id @default(cuid())
+  divinitySettlementId String @unique
+  periodStart       DateTime
+  periodEnd         DateTime
+  grossAmount       Float
+  partnerFee        Float    // 6% DivinityCoin fee
+  netAmount         Float
+  captureCount      Int
+  status            SettlementStatus
+  paymentRef        String?  // Wire transfer reference
+  paidAt            DateTime?
+
+  createdAt         DateTime @default(now())
+
+  @@index([status])
+  @@index([periodEnd])
+}
+
+enum SettlementStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  PAID
+  FAILED
+}
+
+// ============================================
+// PLEDGE UPDATES
+// ============================================
+
+enum PaymentMethod {
+  STRIPE        // Direct card payment
+  CREDITS       // DivinityCoin credits
 }
 
 model Pledge {
   // ... existing fields
 
-  paymentProcessor      PaymentProcessor
+  paymentMethod       PaymentMethod
 
   // Stripe fields
   stripePaymentIntentId String?  @unique
   stripeChargeId        String?
 
-  // Divinity Coin fields
-  divinityInvoiceId       String?  @unique
-  divinityTransactionHash String?  @unique
-  divinityCurrency        String?  // BTC, ETH, DCN, etc.
-  divinityAmountPaid      Float?   // Amount paid in crypto
+  // DivinityCoin fields (when paid with credits)
+  creditHoldId          String?  @unique
 
   // ... relations
-}
-
-model DivinityConfig {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  walletAddress       String
-  supportedCurrencies String[] @default(["DCN", "BTC", "ETH", "USDT"])
-  autoConvert         Boolean  @default(false) // Auto-convert to stablecoin
-  isActive            Boolean  @default(true)
-
-  user                User     @relation(fields: [userId], references: [id])
-
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  @@index([userId])
+  creditHold            CreditHold?
 }
 ```
 
@@ -4264,10 +4448,10 @@ STRIPE_PUBLIC_KEY="pk_test_..."
 STRIPE_SECRET_KEY="sk_test_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
 
-# Divinity Coin
-DIVINITY_API_KEY="your-divinity-api-key"
-DIVINITY_WEBHOOK_SECRET="your-divinity-webhook-secret"
-DIVINITY_API_URL="https://api.divinitycoin.com"
+# DivinityCoin
+DIVINITYCOIN_API_KEY="your-divinitycoin-api-key"
+DIVINITYCOIN_WEBHOOK_SECRET="your-divinitycoin-webhook-secret"
+DIVINITYCOIN_API_URL="https://api.divinitycoin.com"
 
 # File Upload
 AWS_S3_BUCKET="your-bucket-name"
@@ -4678,7 +4862,7 @@ jobs:
 
 ### Technical Docs
 - API documentation (if public API)
-- Divinity Coin integration guide
+- DivinityCoin integration guide
 - Webhook setup guide
 - Analytics setup guide
 
@@ -4688,94 +4872,106 @@ jobs:
 
 ### For Creators
 
-**Q: What payment methods can I accept for my project?**
-A: You can accept both traditional payments (credit/debit cards via Stripe) and cryptocurrency payments (via Divinity Coin). You can enable one or both options to maximize your potential backer reach.
+**Q: What payment methods can backers use for my project?**
+A: Backers can pay using:
+- **Credit/Debit Card**: Direct payment via Stripe
+- **DivinityCoin Credits**: A universal creator currency - backers buy credits at divinitycoin.com and use them across all partner platforms
 
-**Q: How do I set up Stripe payments?**
-A: Navigate to your project's Payment settings and click "Connect Stripe Account." You'll be redirected to Stripe Connect to verify your identity and link your bank account. Once complete, you can accept card payments.
+**Q: How do I receive funds from pledges?**
+A: All payouts are processed via **Stripe Connect**:
+- **Card payments**: Processed immediately, deposited within 2 business days
+- **DivinityCoin credits**: Settled weekly/monthly, then paid to you via Stripe Connect
 
-**Q: How do I set up Divinity Coin (crypto) payments?**
-A: 1. Go to https://divinitycoin.com/developers to create an account and get your API credentials
-2. In your project settings, click "Connect Crypto Wallet"
-3. Enter your wallet address and API key
-4. Select which cryptocurrencies you want to accept (DCN, BTC, ETH, USDT, USDC, etc.)
-
-**Q: What are the fees for each payment method?**
+**Q: What are the fees?**
 A:
-- **Stripe**: 2.9% + $0.30 per transaction + 5% platform fee
-- **Divinity Coin**: ~1% network fee (varies by cryptocurrency) + 5% platform fee
-- Crypto payments generally have lower total fees and no chargebacks
+- **Card payments (Stripe)**: 2.9% + $0.30 per transaction + 5% platform fee
+- **DivinityCoin credits**: Platform receives 94% after 6% DivinityCoin fee, then 5% platform fee on your earnings
 
-**Q: When do I receive my funds?**
-A:
-- **Stripe**: Funds are deposited to your bank account within 2 business days after your campaign ends successfully
-- **Divinity Coin**: Crypto payments are sent directly to your wallet instantly upon confirmation. You can convert to fiat anytime via your exchange
+**Example breakdown for $100 pledge with DivinityCoin:**
+| Stage | Amount |
+|-------|--------|
+| Backer pays | $100.00 |
+| DivinityCoin fee (6%) | -$6.00 |
+| Platform receives | $94.00 |
+| Platform fee (5%) | -$4.70 |
+| Stripe Connect fee (~0.25%) | -$0.25 |
+| **You receive** | **~$89.05** |
 
-**Q: Can I get chargebacks on crypto payments?**
-A: No. Cryptocurrency transactions are final and irreversible. This protects you from fraudulent chargebacks. However, you should still honor legitimate refund requests manually.
+**Q: Do I need to set anything up for DivinityCoin?**
+A: No! DivinityCoin integration is handled at the platform level. You just need to connect your Stripe account to receive payouts.
 
-**Q: What currencies are supported for crypto payments?**
-A: Divinity Coin supports DCN (Divinity Coin), BTC (Bitcoin), ETH (Ethereum), USDT (Tether), USDC (USD Coin), and 50+ other cryptocurrencies. You can choose which ones to accept in your settings.
+**Q: When are DivinityCoin settlements paid?**
+A: DivinityCoin settles with the platform on a regular schedule (typically weekly). Once received, creator payouts are processed within 2 business days via Stripe Connect.
+
+**Q: What happens if a project fails?**
+A: For DivinityCoin credit pledges, the held credits are released back to the backer's balance. For card payments, refunds are processed via Stripe.
 
 ### For Backers
 
-**Q: What payment methods can I use to back a project?**
-A: Depending on what the creator has enabled, you can pay with:
-- **Card**: Credit or debit card (Visa, Mastercard, Amex, etc.) via Stripe
-- **Crypto**: Bitcoin, Ethereum, Divinity Coin, USDT, USDC, and more via Divinity Coin
+**Q: What payment methods can I use?**
+A: You have two options:
+1. **Credit/Debit Card**: Pay directly via Stripe at checkout
+2. **DivinityCoin Credits**: Use credits you've purchased at divinitycoin.com
 
-**Q: How do I pay with cryptocurrency?**
+**Q: What is DivinityCoin?**
+A: DivinityCoin is a universal creator currency. You buy credits once at [divinitycoin.com](https://divinitycoin.com) and can use them to support creators across all partner platforms.
+
+**Q: How do I use DivinityCoin credits?**
 A:
-1. Select your reward and add-ons
-2. Click "Pay with Crypto" at checkout
-3. Choose your preferred cryptocurrency
-4. You'll see a QR code and wallet address
-5. Send the exact amount from your wallet
-6. Wait for blockchain confirmation (usually 10-30 minutes)
-7. You'll be redirected to the success page automatically
+1. Buy credits at [divinitycoin.com](https://divinitycoin.com) (pay with your card via Stripe)
+2. You'll receive a redemption code (format: XXXX-XXXX-XXXX-XXXX)
+3. Enter the code on this platform to add credits to your balance
+4. Use your credits to back projects!
 
-**Q: How long do I have to complete a crypto payment?**
-A: You have 1 hour from when you initiate the payment to send your crypto. After that, the invoice expires and you'll need to start again.
-
-**Q: What happens if I send the wrong amount?**
+**Q: How do I redeem a DivinityCoin code?**
 A:
-- **Overpaid**: The excess will be credited or refunded by the creator
-- **Underpaid**: You'll receive a notification to send the remaining amount. Contact the creator if you need help.
+1. Go to your account settings or the checkout page
+2. Enter your 16-character code (e.g., ABCD-1234-EFGH-5678)
+3. Credits are instantly added to your balance
+4. You can now use them to back projects
 
-**Q: Can I get a refund for crypto payments?**
-A: Cryptocurrency transactions cannot be automatically reversed. If you need a refund, contact the project creator directly. They can manually send a refund to your wallet address.
+**Q: What happens to my credits when I back a project?**
+A: When you pledge using credits:
+1. Credits are "held" (reserved) for your pledge
+2. If the project funds successfully, credits are captured and sent to the creator
+3. If the project fails, credits are released back to your available balance
 
-**Q: What if I don't have any cryptocurrency?**
-A: You can purchase cryptocurrency from exchanges like Coinbase, Binance, or Kraken, then transfer it to a wallet to make your payment. Alternatively, use the traditional card payment option.
+**Q: Can I get a refund on DivinityCoin credits?**
+A:
+- **Unused credits**: Contact DivinityCoin support at divinitycoin.com for refund policies
+- **Pledged credits (project funded)**: Contact the creator directly for refund requests
+- **Pledged credits (project failed)**: Automatically returned to your balance
 
-**Q: Is paying with crypto secure?**
-A: Yes! Cryptocurrency payments are secured by blockchain technology. Your transaction is verified by thousands of computers worldwide. However, always double-check the wallet address before sending, as crypto transactions are irreversible.
+**Q: Do my DivinityCoin credits expire?**
+A: Check DivinityCoin's terms at divinitycoin.com for credit expiration policies.
 
-**Q: What wallets can I use to pay?**
-A: You can use any cryptocurrency wallet that supports the coins you want to pay with, including:
-- Hardware wallets (Ledger, Trezor)
-- Software wallets (MetaMask, Trust Wallet, Exodus)
-- Exchange wallets (Coinbase, Binance)
-- Mobile wallets
+**Q: Can I check my credit balance?**
+A: Yes! Your available balance and held balance are shown in your account dashboard and at checkout.
 
-**Q: Do I need to pay gas fees for crypto transactions?**
-A: Yes, blockchain networks require transaction fees (often called "gas"). These fees go to the network validators, not to the platform or creator. The fees vary based on network congestion.
+**Q: Why would I use DivinityCoin instead of a card?**
+A: Benefits of DivinityCoin credits:
+- **Support multiple creators**: Buy credits once, use across all partner platforms
+- **Gift credits**: Buy credits as a gift for someone else
+- **Budget control**: Pre-purchase credits to manage your backing budget
+- **Privacy**: Your payment details stay with DivinityCoin, not shared with each platform
 
-### Cryptocurrency Payment Best Practices
+### For Platform Admins
 
-**For Creators:**
-1. Consider accepting stablecoins (USDT, USDC) to avoid price volatility
-2. Use the auto-conversion feature to automatically convert to stablecoin
-3. Set up your wallet securely - use a hardware wallet for large amounts
-4. Monitor your dashboard for incoming payments
-5. Keep records of all transaction hashes for your accounting
+**Q: How does DivinityCoin integration work?**
+A:
+1. Partner with DivinityCoin and receive API credentials
+2. Integrate the API to validate codes, manage holds, and capture payments
+3. DivinityCoin handles all credit purchases and holds funds
+4. Receive weekly/monthly wire settlements (net of 6% fee)
+5. Pay creators via Stripe Connect from settled funds
 
-**For Backers:**
-1. Double-check the wallet address before sending
-2. Send the exact amount shown in the invoice
-3. Make sure you have enough for network fees
-4. Wait for the payment page to confirm before closing it
-5. Save your transaction hash as proof of payment
+**Q: What's the settlement process?**
+A:
+1. Backers pledge using credits → holds placed via API
+2. Project succeeds → captures sent via API
+3. DivinityCoin generates settlement (weekly/monthly)
+4. Wire transfer sent to platform (gross - 6% = net)
+5. Platform pays creators via Stripe Connect (net - 5% platform fee)
 
 ---
 
@@ -4784,9 +4980,9 @@ A: Yes, blockchain networks require transaction fees (often called "gas"). These
 Before starting development, clarify:
 
 1. **Payment Processing Details**:
-   - Will you support both Stripe and Divinity Coin?
-   - Which cryptocurrencies should be accepted? (DCN, BTC, ETH, USDT, USDC)
-   - Do creators need auto-conversion to stablecoin feature?
+   - DivinityCoin partner application submitted?
+   - API credentials received (production + sandbox)?
+   - Settlement frequency preference (weekly/monthly)?
 
 2. **Platform Fees**:
    - What percentage does the platform take?
@@ -4820,7 +5016,7 @@ Before starting development, clarify:
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL 14+
-- Divinity Coin API key (testnet for dev)
+- DivinityCoin API key (sandbox for dev)
 - AWS account (for S3)
 - SendGrid account (for emails)
 
@@ -4849,7 +5045,7 @@ npm run dev
 
 ### First Steps
 1. Create admin user
-2. Set up Stripe test mode and Divinity testnet accounts
+2. Set up Stripe test mode and DivinityCoin sandbox
 3. Create test project
 4. Test pledge flow end-to-end
 5. Verify webhooks work locally (use ngrok)
@@ -4859,7 +5055,7 @@ npm run dev
 ## Conclusion
 
 This specification provides a complete blueprint for building a modern crowdfunding platform with:
-- ✅ **Dual payment support** (Stripe for fiat + Divinity Coin for crypto)
+- ✅ **Dual payment support** (Stripe for cards + DivinityCoin for credits)
 - ✅ **No pay-over-time** (single payment only)
 - ✅ **Copy rewards to add-ons** functionality
 - ✅ **Comprehensive dashboard** and analytics
@@ -4892,4 +5088,4 @@ For questions or clarifications during development:
 **Document Version**: 2.0
 **Last Updated**: December 2025
 **Status**: Ready for Development
-**Changes in v2.0**: Replaced CCBill with Divinity Coin cryptocurrency payment integration. Platform now supports dual payment methods (Stripe for fiat, Divinity Coin for crypto).
+**Changes in v2.0**: Replaced CCBill with DivinityCoin credit-based payment system. Platform now supports dual payment methods (Stripe for direct card payments, DivinityCoin for universal creator credits).
