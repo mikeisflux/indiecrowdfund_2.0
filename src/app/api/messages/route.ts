@@ -128,7 +128,7 @@ export async function GET(req: NextRequest) {
     const conversationsMap = new Map<string, {
       id: string;
       otherUser: { id: string; name: string | null; image: string | null };
-      project: { id: string; title: string; slug: string; imageUrl: string | null };
+      project: { id: string; title: string; slug: string; imageUrl: string | null } | null;
       lastMessage: {
         id: string;
         content: string;
@@ -157,7 +157,8 @@ export async function GET(req: NextRequest) {
 
     for (const msg of allMessages) {
       const otherUser = msg.senderId === userId ? msg.recipient : msg.sender;
-      const key = `${otherUser.id}-${msg.projectId}`;
+      // Use "inbox" for messages without a project (creator inbox emails)
+      const key = `${otherUser.id}-${msg.projectId || "inbox"}`;
 
       if (!conversationsMap.has(key)) {
         conversationsMap.set(key, {
@@ -181,7 +182,8 @@ export async function GET(req: NextRequest) {
         where: {
           senderId: conv.otherUser.id,
           recipientId: userId,
-          projectId: conv.project.id,
+          // Handle messages without a project (creator inbox emails)
+          projectId: conv.project?.id || null,
           read: false,
           isSpam: false,
         },
