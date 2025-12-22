@@ -54,30 +54,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // TODO: Call DivinityCoin API to validate and redeem the code
-    // For now, we'll simulate the redemption process
-    // In production, this would call the DivinityCoin API
-
-    // Simulated validation - in production this calls DivinityCoin's API
-    // The API would return the amount associated with the code
-
-    // For demo purposes, parse amount from code pattern or use fixed amount
-    // Real implementation would validate against DivinityCoin's servers
-    const amount = 25.00; // Default demo amount
-
-    // Check if code has already been redeemed (store in database)
-    const existingRedemption = await db.divinityCoinRedemption.findUnique({
-      where: { code: cleanCode },
-    });
-
-    if (existingRedemption) {
+    if (!settings.divinityCoinApiKey) {
       return NextResponse.json(
-        { error: "This code has already been redeemed" },
-        { status: 400 }
+        { error: "DivinityCoin API key not configured" },
+        { status: 500 }
       );
     }
 
-    // Create redemption record
+    // Call DivinityCoin API to validate and redeem the code
+    const divinityResponse = await fetch("https://api.divinitycoin.com/internal/validate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Key": settings.divinityCoinApiKey,
+      },
+      body: JSON.stringify({
+        code: cleanCode,
+        platformUserId: session.user.id,
+      }),
+    });
+
+    const divinityResult = await divinityResponse.json();
+
+    if (!divinityResponse.ok) {
+      // Map DivinityCoin error codes to user-friendly messages
+      const errorMessages: Record<string, string> = {
+        INVALID_CODE_FORMAT: "Invalid code format",
+        CODE_NOT_FOUND: "This code does not exist",
+        ALREADY_REDEEMED: "This code has already been redeemed",
+        CODE_EXPIRED: "This code has expired",
+        CODE_REVOKED: "This code has been revoked",
+        RATE_LIMITED: "Too many attempts. Please try again later.",
+      };
+      const errorMessage = errorMessages[divinityResult.code] || divinityResult.error || "Failed to validate code";
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: divinityResponse.status }
+      );
+    }
+
+    const amount = divinityResult.amount;
+
+    // Create local redemption record for tracking
     await db.divinityCoinRedemption.create({
       data: {
         code: cleanCode,
@@ -87,19 +105,21 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Update user's DivinityCoin balance
-    await db.user.update({
+    // Update user's DivinityCoin balance with the amount from the API
+    const updatedUser = await db.user.update({
       where: { id: session.user.id },
       data: {
         divinityCoinBalance: {
           increment: amount,
         },
       },
+      select: { divinityCoinBalance: true },
     });
 
     return NextResponse.json({
       success: true,
       amount,
+      newBalance: updatedUser.divinityCoinBalance,
       message: `Successfully redeemed $${amount.toFixed(2)} in DivinityCoin credits`,
     });
   } catch (error) {
