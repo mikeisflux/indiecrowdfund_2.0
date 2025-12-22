@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { encrypt, decrypt, getLastDigits } from "@/lib/encryption";
+import { encrypt, getLastDigits } from "@/lib/encryption";
 
 // GET - Check if user has a bank account configured
 export async function GET() {
