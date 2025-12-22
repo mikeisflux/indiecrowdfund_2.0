@@ -2055,8 +2055,8 @@ DivinityCoin is a **universal creator credit system** (not a cryptocurrency). Th
    │                        │                    │  6. Creator payout │
    │                        │                    │  (Stripe Connect)  │
    │                        │                    │───────────────────►│
-   │                        │                    │  $89.30            │
-   │                        │                    │  (after 5% fee)    │
+   │                        │                    │  $91.18            │
+   │                        │                    │  (after 3% fee)    │
 ```
 
 ### Fee Structure
@@ -2066,9 +2066,9 @@ DivinityCoin is a **universal creator credit system** (not a cryptocurrency). Th
 | DivinityCoin Partner Fee | 6% | Platform (from settlement) | $6.00 |
 | └ Stripe Processing | ~2.9% + $0.30 | (included in 6%) | ~$3.20 |
 | └ Platform Fee | ~2.8% | (included in 6%) | ~$2.80 |
-| Platform Fee on Earnings | 5% | Creator | $94 × 5% = $4.70 |
-| Stripe Connect Payout | ~0.25% | Creator | ~$0.25 |
-| **Creator Receives** | | | **~$89.05** |
+| Platform Fee on Earnings | 3% | Creator | $94 × 3% = $2.82 |
+| Stripe Connect Payout | ~0.25% | Creator | ~$0.23 |
+| **Creator Receives** | | | **~$90.95** |
 
 ### Payment Method Selection UI
 
@@ -2223,8 +2223,8 @@ export async function createStripePayment(pledgeData: {
     },
   });
   
-  // Calculate platform fee (5%)
-  const platformFee = Math.round(amount * 0.05 * 100); // In cents
+  // Calculate platform fee (3%)
+  const platformFee = Math.round(amount * 0.03 * 100); // In cents
   const amountInCents = Math.round(amount * 100);
   
   // Create Payment Intent
@@ -2898,11 +2898,10 @@ async function handleDivinityWebhook(payload: DivinityWebhook) {
 #### Fee Structure Display
 - **Stripe fees**:
   - 2.9% + $0.30 per transaction
-  - Platform fee: 5%
-- **Divinity Coin fees**:
-  - ~1% network fee (varies by cryptocurrency)
-  - Platform fee: 5%
-  - No chargebacks (final transactions)
+  - Platform fee: 3%
+- **DivinityCoin credits**:
+  - 6% DivinityCoin partner fee (on settlement)
+  - Platform fee: 3%
 - Display net amount after fees in dashboard
 
 ---
@@ -4884,8 +4883,8 @@ A: All payouts are processed via **Stripe Connect**:
 
 **Q: What are the fees?**
 A:
-- **Card payments (Stripe)**: 2.9% + $0.30 per transaction + 5% platform fee
-- **DivinityCoin credits**: Platform receives 94% after 6% DivinityCoin fee, then 5% platform fee on your earnings
+- **Card payments (Stripe)**: 2.9% + $0.30 per transaction + 3% platform fee
+- **DivinityCoin credits**: Platform receives 94% after 6% DivinityCoin fee, then 3% platform fee on your earnings
 
 **Example breakdown for $100 pledge with DivinityCoin:**
 | Stage | Amount |
@@ -4893,9 +4892,9 @@ A:
 | Backer pays | $100.00 |
 | DivinityCoin fee (6%) | -$6.00 |
 | Platform receives | $94.00 |
-| Platform fee (5%) | -$4.70 |
-| Stripe Connect fee (~0.25%) | -$0.25 |
-| **You receive** | **~$89.05** |
+| Platform fee (3%) | -$2.82 |
+| Stripe Connect fee (~0.25%) | -$0.23 |
+| **You receive** | **~$90.95** |
 
 **Q: Do I need to set anything up for DivinityCoin?**
 A: No! DivinityCoin integration is handled at the platform level. You just need to connect your Stripe account to receive payouts.
@@ -4971,7 +4970,7 @@ A:
 2. Project succeeds → captures sent via API
 3. DivinityCoin generates settlement (weekly/monthly)
 4. Wire transfer sent to platform (gross - 6% = net)
-5. Platform pays creators via Stripe Connect (net - 5% platform fee)
+5. Platform pays creators via Stripe Connect (net - 3% platform fee)
 
 ---
 
