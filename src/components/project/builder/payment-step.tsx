@@ -457,8 +457,8 @@ export function PaymentStep() {
         </div>
 
         {mustUseDivinityCoin && (
-          <Alert className="bg-amber-50/50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-            <AlertTriangle className="h-4 w-4" />
+          <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
+            <AlertTriangle className="h-4 w-4 text-[#0066FF]" />
             <AlertTitle>DivinityCoin Required</AlertTitle>
             <AlertDescription>
               Projects with adult or controversial content must use DivinityCoin for payment processing.
@@ -524,12 +524,12 @@ export function PaymentStep() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-lg bg-[#0066FF] flex items-center justify-center">
                     <Banknote className="h-5 w-5 text-white" />
                   </div>
                   DivinityCoin
                   {mustUseDivinityCoin && (
-                    <Badge variant="default" className="ml-2 bg-amber-600">Required</Badge>
+                    <Badge variant="default" className="ml-2 bg-[#0066FF]">Required</Badge>
                   )}
                 </CardTitle>
                 {payment.paymentProcessor === "DIVINITYCOIN" && (
@@ -589,8 +589,8 @@ export function PaymentStep() {
 
         {payment.paymentProcessor === "DIVINITYCOIN" && (
           <>
-          <Alert className="bg-gradient-to-r from-amber-50/80 to-orange-50/80 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200 dark:border-amber-800">
-            <Banknote className="h-4 w-4 text-amber-600" />
+          <Alert className="bg-gradient-to-r from-blue-50/80 to-sky-50/80 dark:from-blue-900/20 dark:to-sky-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
+            <Banknote className="h-4 w-4 text-[#0066FF]" />
             <AlertTitle>Why Choose DivinityCoin?</AlertTitle>
             <AlertDescription className="mt-2 space-y-2 text-sm">
               <p>
@@ -611,7 +611,7 @@ export function PaymentStep() {
                 href="https://divinitycoin.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 hover:underline font-medium"
+                className="inline-flex items-center gap-1 text-[#0066FF] hover:text-[#0052CC] hover:underline font-medium"
               >
                 Learn more about DivinityCoin <ExternalLink className="h-3 w-3" />
               </a>
@@ -634,7 +634,7 @@ export function PaymentStep() {
               <Separator className="my-2" />
               <div className="flex justify-between font-semibold">
                 <span>Total fees</span>
-                <span className="text-amber-600">
+                <span className="text-[#0066FF]">
                   {formatCurrency(goalAmount * 0.06 + (goalAmount - goalAmount * 0.06) * 0.03)}
                 </span>
               </div>
