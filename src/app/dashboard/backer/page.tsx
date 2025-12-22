@@ -1,5 +1,6 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -143,7 +144,7 @@ export default function BackerDashboard() {
     try {
       const response = await fetch("/api/divinitycoin/redeem", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ code: redeemCode.trim() }),
       });
 

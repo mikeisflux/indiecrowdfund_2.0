@@ -1492,7 +1492,7 @@ export default function PledgePage() {
                                 // Process DivinityCoin payment
                                 const response = await fetch("/api/divinitycoin/pay", {
                                   method: "POST",
-                                  headers: { "Content-Type": "application/json" },
+                                  headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
                                   body: JSON.stringify({
                                     pledgeId: currentPledgeId,
                                     amount: total,
