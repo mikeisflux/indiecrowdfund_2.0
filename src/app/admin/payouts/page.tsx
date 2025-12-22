@@ -1,8 +1,6 @@
 "use client";
 
-import { getCSRFHeaders } from "@/lib/csrf";
-
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +18,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -54,7 +51,7 @@ import {
   Send,
   FileText,
 } from "lucide-react";
-import { formatDistanceToNow, format, addBusinessDays } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Project interface for DivinityCoin payouts
