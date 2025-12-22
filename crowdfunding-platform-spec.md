@@ -3,7 +3,7 @@
 ## Project Overview
 
 Build a modern crowdfunding platform similar to Kickstarter with the following key differences:
-- **Payment Processor**: CCBill (instead of Stripe)
+- **Payment Processors**: Stripe (for fiat/traditional payments) + Divinity Coin (for cryptocurrency payments)
 - **No Pay-Over-Time**: Single payment only (no installment options)
 - **Rewards-to-Addons**: Ability to copy rewards as optional add-ons
 
@@ -34,7 +34,7 @@ Build a modern crowdfunding platform similar to Kickstarter with the following k
 - **Database Hosting**: Vercel Postgres or Supabase
 - **File Storage**: AWS S3 or UploadThing
 - **Email**: SendGrid or Resend
-- **Payment Processing**: CCBill
+- **Payment Processing**: Stripe + Divinity Coin (cryptocurrency)
 - **Analytics Integration**: Google Analytics, Meta Pixel support
 
 ---
@@ -162,28 +162,28 @@ Build a modern crowdfunding platform similar to Kickstarter with the following k
 - **Tax Considerations** link and information
 
 - **Payment Processor Selection** (required)
-  - **Toggle: Stripe vs CCBill**
-  - **Content Type Declaration**:
-    - ☐ "My project contains adult content or age-restricted materials"
-    - ☐ "My project contains high-risk or controversial content"
-    - If ANY checked → CCBill required
-    - If NONE checked → Can choose Stripe or CCBill
-  
-  - **Stripe Option** (if no adult/sensitive content):
+  - **Toggle: Stripe vs Divinity Coin**
+  - **Payment Method Preference**:
+    - ☐ "Accept traditional payments (credit/debit cards) via Stripe"
+    - ☐ "Accept cryptocurrency payments via Divinity Coin"
+    - Creators can enable one or both payment methods
+
+  - **Stripe Option** (Traditional Payments):
     - "Recommended for most projects"
     - Lower fees (2.9% + $0.30)
     - Faster payouts
-    - More payment methods
-    - Better for international
+    - Accepts credit/debit cards
+    - Better for mainstream audience
     - "Connect Stripe Account" button
-  
-  - **CCBill Option**:
-    - "Required for adult content"
-    - Higher fees (10-15%)
-    - Specialized for high-risk
-    - Established for adult industry
-    - "Connect CCBill Account" button
-  
+
+  - **Divinity Coin Option** (Cryptocurrency Payments):
+    - "Accept crypto from global backers"
+    - Low fees (~1% network fee)
+    - No chargebacks
+    - Borderless payments
+    - Accepts DCN, BTC, ETH, and other cryptocurrencies
+    - "Connect Divinity Wallet" button
+
   - **Fee Comparison Display**:
     - Shows estimated fees based on funding goal
     - Side-by-side comparison
@@ -206,12 +206,12 @@ Build a modern crowdfunding platform similar to Kickstarter with the following k
   - Set payout schedule
   - Tax information collection
   
-  **If CCBill Selected**:
-  - CCBill merchant account number
-  - CCBill subaccount number
-  - Form name configuration
-  - Add card for refunds/chargebacks
-  - Disclaimer about CCBill fees
+  **If Divinity Coin Selected**:
+  - Divinity Coin wallet address
+  - API key from Divinity Coin developer portal
+  - Webhook secret for payment notifications
+  - Supported cryptocurrencies selection (DCN, BTC, ETH, etc.)
+  - Auto-conversion preference (convert to stablecoin or keep as crypto)
 
 - **Project Verification** (required for business/nonprofit)
   - Redirects to verification service
@@ -564,18 +564,19 @@ Creators can post updates to backers and followers:
 #### Payout Details (click row)
 - Breakdown of:
   - Gross pledged
-  - CCBill processing fees
+  - Divinity Coin processing fees (if crypto)
+  - Stripe processing fees (if fiat)
   - Platform fees
   - Net amount disbursed
-- Bank account sent to (last 4 digits)
-- Transaction ID
+- Bank account or wallet address sent to
+- Transaction ID / Blockchain TX hash
 - Status (Pending, Completed, Failed)
 
-#### CCBill Integration Notes
-- Payouts processed through CCBill
-- Fees structure displayed
-- Settlement timeline (CCBill's standard terms)
-- Chargeback reserve information
+#### Payment Processor Integration Notes
+- **Stripe Payouts**: Processed through Stripe Connect, 2-day settlement
+- **Divinity Coin Payouts**: Direct blockchain transfer to creator's wallet
+- Fees structure displayed for both processors
+- No chargebacks on cryptocurrency payments
 
 ---
 
@@ -2005,15 +2006,15 @@ const worker = new Worker('recommendations', async (job) => {
 
 ---
 
-## Payment Processing: Stripe vs CCBill
+## Payment Processing: Stripe vs Divinity Coin
 
 ### Overview
 
-Allow creators to choose between two payment processors based on their content type:
-- **Stripe**: For mainstream, non-adult content (lower fees, better UX)
-- **CCBill**: Required for adult or high-risk content (higher fees, specialized)
+Allow creators to choose between two payment processors based on their preferences and audience:
+- **Stripe**: Traditional fiat payments (credit/debit cards, bank transfers)
+- **Divinity Coin**: Cryptocurrency payments (DCN, BTC, ETH, and more)
 
-### Payment Processor Selection Flow
+Creators can enable one or both payment methods to maximize their potential backer reach.
 
 ### Payment Processor Selection Flow
 
@@ -2021,66 +2022,37 @@ Allow creators to choose between two payment processors based on their content t
 // Payment processor selection component
 interface PaymentProcessorSelectorProps {
   projectId: string;
-  currentProcessor?: 'stripe' | 'ccbill';
+  enabledProcessors?: ('stripe' | 'divinity')[];
 }
 
 export function PaymentProcessorSelector({
   projectId,
-  currentProcessor,
+  enabledProcessors = [],
 }: PaymentProcessorSelectorProps) {
-  const [hasAdultContent, setHasAdultContent] = useState(false);
-  const [hasRiskyContent, setHasRiskyContent] = useState(false);
-  const [selectedProcessor, setSelectedProcessor] = useState(currentProcessor);
-  
-  // Force CCBill if adult/risky content
-  const mustUseCCBill = hasAdultContent || hasRiskyContent;
-  
+  const [stripeEnabled, setStripeEnabled] = useState(enabledProcessors.includes('stripe'));
+  const [divinityEnabled, setDivinityEnabled] = useState(enabledProcessors.includes('divinity'));
+
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-4">Content Declaration</h3>
-        <div className="space-y-3">
-          <label className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={hasAdultContent}
-              onChange={(e) => setHasAdultContent(e.target.checked)}
-            />
-            <span>My project contains adult content or age-restricted materials</span>
-          </label>
-          <label className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={hasRiskyContent}
-              onChange={(e) => setHasRiskyContent(e.target.checked)}
-            />
-            <span>My project contains high-risk or controversial content</span>
-          </label>
-        </div>
+        <h3 className="text-lg font-semibold mb-4">Payment Methods</h3>
+        <p className="text-gray-600 mb-4">
+          Select which payment methods you want to accept. You can enable both to maximize your reach.
+        </p>
       </div>
-      
-      {mustUseCCBill && (
-        <Alert>
-          <AlertTitle>CCBill Required</AlertTitle>
-          <AlertDescription>
-            Due to your content type, you must use CCBill as your payment processor.
-          </AlertDescription>
-        </Alert>
-      )}
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Stripe Option */}
         <ProcessorCard
           name="Stripe"
-          disabled={mustUseCCBill}
-          selected={selectedProcessor === 'stripe'}
-          onSelect={() => setSelectedProcessor('stripe')}
+          enabled={stripeEnabled}
+          onToggle={() => setStripeEnabled(!stripeEnabled)}
           features={[
-            'Lower fees (2.9% + $0.30)',
-            'Faster payouts (2 days)',
-            'More payment methods',
-            'Better international support',
-            'Recommended for most projects',
+            'Accept credit/debit cards',
+            'Fees: 2.9% + $0.30 per transaction',
+            'Fast payouts (2 business days)',
+            'Trusted by millions worldwide',
+            'Recommended for mainstream audience',
           ]}
           fees={{
             percentage: 2.9,
@@ -2090,34 +2062,43 @@ export function PaymentProcessorSelector({
             exampleNet: 96.80,
           }}
         />
-        
-        {/* CCBill Option */}
+
+        {/* Divinity Coin Option */}
         <ProcessorCard
-          name="CCBill"
-          selected={selectedProcessor === 'ccbill'}
-          onSelect={() => setSelectedProcessor('ccbill')}
-          required={mustUseCCBill}
+          name="Divinity Coin"
+          enabled={divinityEnabled}
+          onToggle={() => setDivinityEnabled(!divinityEnabled)}
           features={[
-            'Accepts adult content',
-            'High-risk merchant friendly',
-            'Established in adult industry',
-            'Chargeback protection',
-            'Required for age-restricted content',
+            'Accept DCN, BTC, ETH, and 50+ cryptocurrencies',
+            'Low network fees (~1%)',
+            'No chargebacks - payments are final',
+            'Borderless global payments',
+            'Instant settlement to your wallet',
           ]}
           fees={{
-            percentage: 10.5,
+            percentage: 1.0,
             fixed: 0,
             exampleAmount: 100,
-            exampleFee: 10.50,
-            exampleNet: 89.50,
+            exampleFee: 1.00,
+            exampleNet: 99.00,
           }}
         />
       </div>
-      
+
+      {!stripeEnabled && !divinityEnabled && (
+        <Alert variant="warning">
+          <AlertTitle>Payment Method Required</AlertTitle>
+          <AlertDescription>
+            You must enable at least one payment method to accept pledges.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Fee Comparison */}
       <FeeComparison
         goalAmount={10000}
-        stripeEnabled={!mustUseCCBill}
+        stripeEnabled={stripeEnabled}
+        divinityEnabled={divinityEnabled}
       />
     </div>
   );
@@ -2308,9 +2289,179 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 }
 ```
 
-### CCBill Integration
+### Divinity Coin Integration
 
-*[Keep existing CCBill implementation from previous version]*
+**Setup Flow**:
+```typescript
+// Divinity Coin wallet connection
+import { DivinityCoinAPI } from '@divinitycoin/sdk';
+
+const divinity = new DivinityCoinAPI({
+  apiKey: process.env.DIVINITY_API_KEY!,
+  environment: process.env.NODE_ENV === 'production' ? 'mainnet' : 'testnet',
+});
+
+export async function connectDivinityWallet(userId: string, walletAddress: string) {
+  // Verify wallet ownership
+  const verification = await divinity.verifyWallet({
+    address: walletAddress,
+    message: `Connect wallet to crowdfunding platform for user ${userId}`,
+  });
+
+  if (!verification.valid) {
+    throw new Error('Wallet verification failed');
+  }
+
+  // Save wallet configuration
+  await db.divinityConfig.create({
+    data: {
+      userId,
+      walletAddress,
+      supportedCurrencies: ['DCN', 'BTC', 'ETH', 'USDT', 'USDC'],
+      autoConvert: false,
+      isActive: true,
+    },
+  });
+
+  return { success: true };
+}
+```
+
+**Payment Creation**:
+```typescript
+// Create Divinity Coin payment for pledge
+export async function createDivinityPayment(pledgeData: {
+  projectId: string;
+  rewardId: string;
+  addonIds: string[];
+  amount: number;
+  userId: string;
+  preferredCurrency?: string;
+}) {
+  const { projectId, amount, userId, preferredCurrency = 'DCN' } = pledgeData;
+
+  // Get project and creator's Divinity config
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    include: {
+      creator: {
+        include: { divinityConfig: true },
+      },
+    },
+  });
+
+  if (!project?.creator.divinityConfig) {
+    throw new Error('Creator has not connected Divinity Coin');
+  }
+
+  // Create pending pledge
+  const pledge = await db.pledge.create({
+    data: {
+      ...pledgeData,
+      status: 'PENDING',
+      paymentProcessor: 'DIVINITY',
+    },
+  });
+
+  // Create payment invoice via Divinity Coin API
+  const invoice = await divinity.createInvoice({
+    amount: amount,
+    currency: 'USD', // Price in USD, backer pays in crypto
+    receiverAddress: project.creator.divinityConfig.walletAddress,
+    acceptedCurrencies: project.creator.divinityConfig.supportedCurrencies,
+    callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/divinity`,
+    successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/pledge/success?id=${pledge.id}`,
+    cancelUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/pledge/cancelled?id=${pledge.id}`,
+    metadata: {
+      pledgeId: pledge.id,
+      projectId,
+      userId,
+    },
+    expiresIn: 3600, // 1 hour to complete payment
+  });
+
+  // Update pledge with invoice ID
+  await db.pledge.update({
+    where: { id: pledge.id },
+    data: { divinityInvoiceId: invoice.id },
+  });
+
+  return {
+    invoiceId: invoice.id,
+    paymentUrl: invoice.paymentUrl,
+    qrCode: invoice.qrCode,
+    expiresAt: invoice.expiresAt,
+    acceptedCurrencies: invoice.acceptedCurrencies,
+    pledgeId: pledge.id,
+  };
+}
+```
+
+**Webhook Handling**:
+```typescript
+// /api/webhooks/divinity
+export async function POST(req: Request) {
+  const body = await req.json();
+  const signature = req.headers.get('x-divinity-signature');
+
+  // Verify webhook authenticity
+  const isValid = divinity.verifyWebhook(body, signature, process.env.DIVINITY_WEBHOOK_SECRET!);
+  if (!isValid) {
+    return Response.json({ error: 'Invalid signature' }, { status: 401 });
+  }
+
+  const { event, data } = body;
+
+  switch (event) {
+    case 'invoice.paid':
+      await handleSuccessfulPayment(data);
+      break;
+    case 'invoice.expired':
+      await handleExpiredPayment(data);
+      break;
+    case 'invoice.underpaid':
+      await handleUnderpaidPayment(data);
+      break;
+  }
+
+  return Response.json({ received: true });
+}
+
+async function handleSuccessfulPayment(data: DivinityPaymentData) {
+  const { invoiceId, transactionHash, amountPaid, currency, blockConfirmations } = data;
+
+  // Get pledge by invoice ID
+  const pledge = await db.pledge.findFirst({
+    where: { divinityInvoiceId: invoiceId },
+    include: { project: true, user: true, reward: true },
+  });
+
+  if (!pledge) return;
+
+  // Update pledge status
+  await db.pledge.update({
+    where: { id: pledge.id },
+    data: {
+      status: 'COMPLETED',
+      divinityTransactionHash: transactionHash,
+      divinityCurrency: currency,
+      divinityAmountPaid: amountPaid,
+    },
+  });
+
+  // Update project funding
+  await db.project.update({
+    where: { id: pledge.projectId },
+    data: {
+      currentAmount: { increment: pledge.amount },
+      backerCount: { increment: 1 },
+    },
+  });
+
+  // Send confirmation email
+  await sendPledgeConfirmationEmail(pledge);
+}
+```
 
 ### Unified Payment Interface
 
@@ -2326,37 +2477,39 @@ class StripeProcessor implements PaymentProcessor {
   async createPayment(params: PaymentParams): Promise<PaymentResult> {
     // Stripe implementation
   }
-  
+
   async handleWebhook(payload: any): Promise<void> {
     // Stripe webhook handling
   }
-  
+
   async processRefund(transactionId: string): Promise<void> {
     // Stripe refund
   }
 }
 
-class CCBillProcessor implements PaymentProcessor {
+class DivinityProcessor implements PaymentProcessor {
   async createPayment(params: PaymentParams): Promise<PaymentResult> {
-    // CCBill implementation
+    // Divinity Coin implementation - creates invoice
   }
-  
+
   async handleWebhook(payload: any): Promise<void> {
-    // CCBill webhook handling
+    // Divinity Coin webhook handling
   }
-  
+
   async processRefund(transactionId: string): Promise<void> {
-    // CCBill refund
+    // Note: Crypto payments are non-refundable by default
+    // Manual refund must be initiated by creator
+    throw new Error('Crypto refunds must be processed manually by the creator');
   }
 }
 
 // Factory to get correct processor
 export function getPaymentProcessor(
-  processorType: 'stripe' | 'ccbill'
+  processorType: 'stripe' | 'divinity'
 ): PaymentProcessor {
-  return processorType === 'stripe' 
-    ? new StripeProcessor() 
-    : new CCBillProcessor();
+  return processorType === 'stripe'
+    ? new StripeProcessor()
+    : new DivinityProcessor();
 }
 ```
 
@@ -2365,156 +2518,207 @@ export function getPaymentProcessor(
 ```prisma
 model Project {
   // ... existing fields
-  
-  paymentProcessor  PaymentProcessor @default(STRIPE)
-  hasAdultContent   Boolean   @default(false)
-  hasRiskyContent   Boolean   @default(false)
-  
+
+  // Payment processors enabled for this project
+  stripeEnabled       Boolean   @default(true)
+  divinityEnabled     Boolean   @default(false)
+
   // Stripe
-  stripeAccountId   String?
-  
-  // CCBill
-  ccbillAccountNumber String?
-  ccbillSubaccount    String?
-  
+  stripeAccountId     String?
+
+  // Divinity Coin
+  divinityWalletAddress String?
+
   // ... relations
 }
 
 enum PaymentProcessor {
   STRIPE
-  CCBILL
+  DIVINITY
 }
 
 model Pledge {
   // ... existing fields
-  
+
   paymentProcessor      PaymentProcessor
-  
+
   // Stripe fields
   stripePaymentIntentId String?  @unique
   stripeChargeId        String?
-  
-  // CCBill fields
-  ccbillTransactionId   String?  @unique
-  ccbillSubscriptionId  String?  @unique
-  
+
+  // Divinity Coin fields
+  divinityInvoiceId       String?  @unique
+  divinityTransactionHash String?  @unique
+  divinityCurrency        String?  // BTC, ETH, DCN, etc.
+  divinityAmountPaid      Float?   // Amount paid in crypto
+
   // ... relations
+}
+
+model DivinityConfig {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  walletAddress       String
+  supportedCurrencies String[] @default(["DCN", "BTC", "ETH", "USDT"])
+  autoConvert         Boolean  @default(false) // Auto-convert to stablecoin
+  isActive            Boolean  @default(true)
+
+  user                User     @relation(fields: [userId], references: [id])
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
 }
 ```
 
 ---
 
 ## Key Functional Requirements (continued)
-1. **Merchant Account**:
-   - Creators must sign up for CCBill merchant account
-   - Store CCBill merchant credentials in platform
-   - Environment: Production vs Sandbox
+
+### Stripe Configuration (Fiat Payments)
+1. **Account Setup**:
+   - Creators connect via Stripe Connect (Express or Standard)
+   - Automatic identity verification through Stripe
+   - Environment: Production vs Test mode
 
 2. **Configuration**:
-   - CCBill Account Number
-   - CCBill Subaccount Number (for different projects/campaigns)
-   - Form Name (CCBill payment form)
-   - FlexForms integration (for embedded payment)
-   - API credentials for programmatic access
+   - Stripe Connect account ID
+   - Payout schedule preferences
+   - Tax information (collected by Stripe)
+
+### Divinity Coin Configuration (Crypto Payments)
+1. **Wallet Setup**:
+   - Creators connect their cryptocurrency wallet
+   - Verify wallet ownership via signature
+   - Get API credentials from https://divinitycoin.com/developers
+
+2. **Configuration**:
+   - Wallet address for receiving payments
+   - Supported cryptocurrencies (DCN, BTC, ETH, USDT, USDC, etc.)
+   - Auto-conversion settings (optional: convert to stablecoin)
+   - Webhook secret for payment notifications
 
 #### Payment Flow
 
-**For Backers**:
+**For Backers (Stripe - Traditional Payment)**:
 1. Select reward tier + optional add-ons
 2. Click "Back this project"
 3. Enter pledge amount (if custom amount allowed)
-4. Redirected to CCBill payment page OR embedded FlexForm
+4. Stripe checkout page opens (modal or redirect)
 5. Enter payment details:
    - Credit/Debit card
    - Billing address
    - Email
-6. CCBill processes payment
+6. Stripe processes payment
 7. Redirect back to platform with success/failure
 8. Show confirmation page
 
+**For Backers (Divinity Coin - Crypto Payment)**:
+1. Select reward tier + optional add-ons
+2. Click "Pay with Crypto"
+3. Choose preferred cryptocurrency (DCN, BTC, ETH, etc.)
+4. See payment invoice with:
+   - Amount in selected crypto
+   - QR code for wallet scanning
+   - Wallet address for manual transfer
+   - Countdown timer (payment expires in 1 hour)
+5. Send payment from wallet
+6. Wait for blockchain confirmation (1-6 confirmations depending on currency)
+7. Automatic redirect to success page
+8. Receive confirmation email with transaction hash
+
 **Technical Implementation**:
 ```typescript
-// CCBill payment initiation
-interface CCBillPaymentParams {
-  clientAccnum: string;        // Merchant account number
-  clientSubacc: string;         // Subaccount number
-  formName: string;             // Payment form name
-  initialPrice: number;         // Pledge amount
-  initialPeriod: number;        // Always 30 (one-time payment)
-  currencyCode: number;         // 840 for USD
-  customerId: string;           // User ID on platform
-  projectId: string;            // Project ID
-  rewardId: string;             // Reward tier ID
-  addons?: string[];            // Add-on IDs if any
-  successUrl: string;           // Redirect on success
-  declineUrl: string;           // Redirect on failure
+// Divinity Coin payment initiation
+interface DivinityPaymentParams {
+  amount: number;              // Amount in USD
+  walletAddress: string;       // Creator's wallet
+  acceptedCurrencies: string[]; // ['DCN', 'BTC', 'ETH']
+  pledgeId: string;            // Pledge reference
+  projectId: string;           // Project ID
+  userId: string;              // Backer ID
+  successUrl: string;          // Redirect on success
+  cancelUrl: string;           // Redirect on cancel
+  expiresIn: number;           // Seconds until expiry
 }
 
-// Create payment URL
-function createCCBillPaymentUrl(params: CCBillPaymentParams): string {
-  const baseUrl = 'https://api.ccbill.com/wap-frontflex/flexforms/';
-  const queryParams = new URLSearchParams({
-    clientAccnum: params.clientAccnum,
-    clientSubacc: params.clientSubacc,
-    formName: params.formName,
-    initialPrice: params.initialPrice.toFixed(2),
-    initialPeriod: '30',
-    currencyCode: params.currencyCode.toString(),
-    // ... other params
+// Create payment invoice
+async function createDivinityInvoice(params: DivinityPaymentParams): Promise<DivinityInvoice> {
+  const response = await fetch('https://api.divinitycoin.com/v1/invoices', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.DIVINITY_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      price_amount: params.amount,
+      price_currency: 'USD',
+      pay_currency: null, // Let backer choose
+      order_id: params.pledgeId,
+      order_description: `Pledge for project ${params.projectId}`,
+      ipn_callback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/divinity`,
+      success_url: params.successUrl,
+      cancel_url: params.cancelUrl,
+    }),
   });
-  return `${baseUrl}${params.formName}?${queryParams.toString()}`;
+
+  return response.json();
 }
 ```
 
-#### Webhook/Postback Handling
-- CCBill sends postbacks on payment events:
-  - NewSaleSuccess
-  - NewSaleFailure
-  - Refund
-  - Chargeback
-  - Cancellation
+#### Webhook/Callback Handling
 
-**Webhook endpoint**: `POST /api/webhooks/ccbill`
+**Divinity Coin Webhook Events**:
+- `invoice.created` - Invoice generated
+- `invoice.pending` - Payment detected, awaiting confirmations
+- `invoice.paid` - Payment confirmed
+- `invoice.expired` - Payment window expired
+- `invoice.underpaid` - Partial payment received
+
+**Webhook endpoint**: `POST /api/webhooks/divinity`
 
 ```typescript
-// Handle CCBill webhooks
-interface CCBillWebhook {
-  eventType: 'NewSaleSuccess' | 'NewSaleFailure' | 'Refund' | 'Chargeback';
-  subscriptionId: string;
-  clientAccnum: string;
-  clientSubacc: string;
-  timestamp: string;
-  transactionId: string;
-  amount: number;
-  currency: string;
-  // Custom parameters passed back
-  customerId: string;
-  projectId: string;
-  rewardId: string;
-  addons?: string;
+// Handle Divinity Coin webhooks
+interface DivinityWebhook {
+  event: 'invoice.paid' | 'invoice.expired' | 'invoice.underpaid' | 'invoice.pending';
+  data: {
+    invoiceId: string;
+    orderId: string; // Our pledgeId
+    payAmount: number;
+    payCurrency: string;
+    transactionHash: string;
+    confirmations: number;
+    status: string;
+  };
 }
 
-async function handleCCBillWebhook(payload: CCBillWebhook) {
-  // Verify webhook signature
+async function handleDivinityWebhook(payload: DivinityWebhook) {
+  // Verify webhook signature using HMAC
   // Update pledge status in database
-  // Send confirmation email
-  // Update project funding total
-  // Trigger analytics event
+  // For 'paid': Complete pledge, update funding
+  // For 'expired': Mark pledge as failed
+  // For 'underpaid': Notify backer of remaining amount
+  // Send confirmation email with blockchain explorer link
 }
 ```
 
 #### Security Considerations
-- Use CCBill's security token/hash for webhook verification
-- Store CCBill credentials encrypted in database
-- PCI compliance: Never store card details (CCBill handles)
-- Use HTTPS for all CCBill communication
+- Verify webhook signatures using HMAC-SHA256
+- Store API keys encrypted in database
+- Use HTTPS for all API communication
 - Implement rate limiting on payment endpoints
+- Monitor for unusual transaction patterns
+- Store transaction hashes for audit trail
 
 #### Fee Structure Display
-- Show CCBill processing fees to creators:
-  - Percentage fee (e.g., 10.5%)
-  - Per-transaction fee
-  - Currency conversion fees (if applicable)
+- **Stripe fees**:
+  - 2.9% + $0.30 per transaction
+  - Platform fee: 5%
+- **Divinity Coin fees**:
+  - ~1% network fee (varies by cryptocurrency)
+  - Platform fee: 5%
+  - No chargebacks (final transactions)
 - Display net amount after fees in dashboard
 
 ---
@@ -2728,7 +2932,7 @@ function RewardCard({ reward, onCopyToAddons }: RewardCardProps) {
    - Add-on 1: $15
    - Add-on 2: $10
    - **Total: $75**
-6. Proceed to CCBill payment with total amount
+6. Proceed to payment (choose Stripe or Divinity Coin)
 
 **Database Schema**:
 ```prisma
@@ -2742,7 +2946,8 @@ model Pledge {
   rewardAmount    Float    // Just the main reward amount
   addonsAmount    Float    // Sum of add-ons
   status          PledgeStatus
-  ccbillTransactionId String?
+  divinityInvoiceId String?
+  divinityTransactionHash String?
   
   user            User     @relation(fields: [userId], references: [id])
   project         Project  @relation(fields: [projectId], references: [id])
@@ -2790,7 +2995,7 @@ enum PledgeStatus {
 **Impact on UI**:
 - Remove any mentions of "over time" or "installments"
 - Simplify pledge flow to single payment step
-- CCBill configured for one-time payments only (initialPeriod = 30, no recurring)
+- All payments are one-time (no subscriptions or recurring)
 
 ---
 
@@ -2906,8 +3111,8 @@ model Project {
   contactEmail          String
   projectType           ProjectType
   bankAccountId         String?
-  ccbillAccountNumber   String?
-  ccbillSubaccount      String?
+  divinityWalletAddress String?
+  divinityApiKey        String?
   
   // Promotion
   prelaunchActive       Boolean   @default(false)
@@ -3054,8 +3259,9 @@ model Pledge {
   
   // Payment
   status                PledgeStatus
-  ccbillTransactionId   String?  @unique
-  ccbillSubscriptionId  String?  @unique
+  divinityInvoiceId       String?  @unique
+  divinityTransactionHash String?  @unique
+  divinityCurrency        String?
   
   // Survey
   surveyCompleted       Boolean  @default(false)
@@ -3093,11 +3299,11 @@ model Payout {
   projectId         String
   amount            Float
   grossAmount       Float
-  ccbillFees        Float
+  processorFees     Float    // Stripe or Divinity fees
   platformFees      Float
   type              PayoutType
   status            PayoutStatus
-  ccbillPayoutId    String?  @unique
+  payoutReference   String?  @unique  // Stripe payout ID or blockchain tx hash
   bankAccountLast4  String?
   
   project           Project  @relation(fields: [projectId], references: [id])
@@ -3273,22 +3479,23 @@ model StripeConfig {
   @@index([userId])
 }
 
-model CCBillConfig {
-  id                String  @id @default(cuid())
-  userId            String  @unique
-  accountNumber     String
-  subaccountNumber  String
-  formName          String
-  apiUsername       String
-  apiPassword       String  @db.Text // Encrypted
-  
-  isLive            Boolean @default(false) // Production vs Sandbox
-  
-  user              User    @relation(fields: [userId], references: [id])
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+model DivinityConfig {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  walletAddress       String
+  apiKey              String   @db.Text // Encrypted
+  webhookSecret       String   @db.Text // Encrypted
+  supportedCurrencies String[] @default(["DCN", "BTC", "ETH", "USDT", "USDC"])
+  autoConvert         Boolean  @default(false) // Auto-convert to stablecoin
+  convertTo           String?  // Target stablecoin (USDT, USDC)
+
+  isActive            Boolean  @default(true)
+
+  user                User     @relation(fields: [userId], references: [id])
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
   @@index([userId])
 }
 
@@ -3483,10 +3690,10 @@ enum EmailType {
 │   │   ├── /payment-intent   # POST create payment intent
 │   │   ├── /confirm          # POST confirm payment
 │   │   └── /webhook          # POST handle Stripe webhook
-│   ├── /ccbill
-│   │   ├── /initiate         # POST create CCBill payment URL
-│   │   ├── /success          # GET handle success redirect
-│   │   └── /webhook          # POST handle CCBill postback
+│   ├── /divinity
+│   │   ├── /create-invoice   # POST create Divinity payment invoice
+│   │   ├── /status           # GET check payment status
+│   │   └── /webhook          # POST handle Divinity webhook
 │   └── /select-processor     # POST select payment processor
 │
 ├── /recommendations
@@ -3527,7 +3734,8 @@ enum EmailType {
 │   └── /projects/[id]/video-plays      # GET video play data
 │
 └── /webhooks
-    └── /ccbill              # POST CCBill webhook handler
+    ├── /stripe              # POST Stripe webhook handler
+    └── /divinity            # POST Divinity Coin webhook handler
 ```
 
 ---
@@ -3583,10 +3791,13 @@ enum EmailType {
 │   ├── RewardSelection.tsx
 │   ├── AddonSelection.tsx
 │   ├── PledgeTotal.tsx
-│   └── CCBillPaymentButton.tsx
+│   ├── StripePaymentButton.tsx
+│   └── DivinityPaymentButton.tsx
 │
 ├── /payments
-│   ├── CCBillForm.tsx
+│   ├── StripeCheckout.tsx
+│   ├── DivinityCryptoPayment.tsx
+│   ├── PaymentMethodSelector.tsx
 │   ├── PaymentSuccess.tsx
 │   └── PaymentFailed.tsx
 │
@@ -3652,7 +3863,7 @@ enum EmailType {
    c. Add-ons → View copied add-ons, create new ones
    d. Story → Write description, risks, FAQs
    e. People → Set up profile, invite collaborators
-   f. Payment → Enter bank account, add CCBill config
+   f. Payment → Connect Stripe and/or Divinity Coin wallet
    g. Promotion → Generate URL, set up analytics
 4. Preview project
 5. Submit for review
@@ -3671,10 +3882,11 @@ enum EmailType {
 6. Select optional add-ons (checkboxes)
 7. See total update (reward + add-ons)
 8. Click "Continue to payment"
-9. Redirected to CCBill payment page
-10. Enter payment details
-11. CCBill processes payment
-12. Redirected back to success page
+9. Choose payment method:
+   - Stripe (card): Enter card details in checkout
+   - Divinity Coin (crypto): Select cryptocurrency and scan QR code
+10. Payment processed (instant for card, 1-6 confirmations for crypto)
+11. Redirected back to success page
 13. Receive confirmation email
 14. Pledge appears in project dashboard
 ```
@@ -3735,35 +3947,50 @@ enum EmailType {
 
 ---
 
-## CCBill Integration Details
+## Payment Integration Details
 
-### Setup Steps
+### Stripe Setup Steps (Fiat Payments)
 
 1. **Creator Registration**:
    - Creator signs up on platform
    - Prompted to set up payment processing
-   - Click "Connect CCBill Account"
-   - Redirected to onboarding flow
+   - Click "Connect Stripe Account"
+   - Redirected to Stripe Connect onboarding
 
-2. **CCBill Account Connection**:
-   - Enter CCBill Account Number
-   - Enter Subaccount Number (create in CCBill admin)
-   - Enter Form Name (payment form setup in CCBill)
-   - Test connection
-   - Save credentials (encrypted)
+2. **Stripe Connect Onboarding**:
+   - Verify identity through Stripe
+   - Link bank account for payouts
+   - Set payout schedule
+   - Complete tax information
 
-3. **Payment Form Configuration**:
-   - In CCBill admin, create FlexForm payment form
-   - Set up postback URL: `https://yourplatform.com/api/webhooks/ccbill`
-   - Configure approval/decline URLs
-   - Set pricing type: One-time payment
-   - Enable currency: USD (or multi-currency)
+3. **Webhook Configuration**:
+   - Platform automatically registers webhooks
+   - Events: `payment_intent.succeeded`, `payment_intent.failed`, `charge.refunded`
+
+### Divinity Coin Setup Steps (Crypto Payments)
+
+1. **Creator Registration**:
+   - Creator signs up on platform
+   - Click "Connect Crypto Wallet"
+   - Redirected to wallet connection flow
+
+2. **Wallet Connection**:
+   - Enter wallet address (supports multiple chains)
+   - Sign message to verify ownership
+   - Get API credentials from https://divinitycoin.com/developers
+   - Enter API key and webhook secret
+   - Select supported cryptocurrencies (DCN, BTC, ETH, etc.)
+
+3. **Webhook Configuration**:
+   - Set up webhook URL: `https://yourplatform.com/api/webhooks/divinity`
+   - Configure webhook secret for signature verification
+   - Events: `invoice.paid`, `invoice.expired`, `invoice.underpaid`
 
 ### Payment Flow Technical Details
 
-**Step 1: Initiate Payment**
+**Step 1: Initiate Payment (Stripe)**
 ```typescript
-// When backer clicks "Back this project"
+// When backer clicks "Pay with Card"
 const paymentData = {
   projectId: project.id,
   rewardId: selectedReward.id,
@@ -3772,30 +3999,57 @@ const paymentData = {
   userId: currentUser.id,
 };
 
-// Call API to generate CCBill payment URL
-const response = await fetch('/api/payments/ccbill/initiate', {
+// Call API to create Stripe payment intent
+const response = await fetch('/api/payments/stripe/payment-intent', {
   method: 'POST',
   body: JSON.stringify(paymentData),
 });
 
-const { paymentUrl } = await response.json();
+const { clientSecret, pledgeId } = await response.json();
 
-// Redirect to CCBill
-window.location.href = paymentUrl;
+// Use Stripe.js to complete payment
+const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_KEY);
+const { error } = await stripe.confirmPayment({
+  elements,
+  confirmParams: {
+    return_url: `${window.location.origin}/pledge/success?id=${pledgeId}`,
+  },
+});
 ```
 
-**Step 2: Generate CCBill URL**
+**Step 1: Initiate Payment (Divinity Coin)**
 ```typescript
-// /api/payments/ccbill/initiate
+// When backer clicks "Pay with Crypto"
+const paymentData = {
+  projectId: project.id,
+  rewardId: selectedReward.id,
+  addonIds: selectedAddons.map(a => a.id),
+  amount: calculateTotal(selectedReward, selectedAddons),
+  userId: currentUser.id,
+  preferredCurrency: 'DCN', // or BTC, ETH, etc.
+};
+
+// Call API to create Divinity invoice
+const response = await fetch('/api/payments/divinity/create-invoice', {
+  method: 'POST',
+  body: JSON.stringify(paymentData),
+});
+
+const { invoiceId, paymentUrl, qrCode, expiresAt } = await response.json();
+
+// Show crypto payment modal with QR code
+// or redirect to hosted payment page
+```
+
+**Step 2: Create Divinity Invoice**
+```typescript
+// /api/payments/divinity/create-invoice
 export async function POST(req: Request) {
   const { projectId, rewardId, addonIds, amount, userId } = await req.json();
-  
-  // Get project's CCBill config
-  const ccbillConfig = await getCCBillConfig(projectId);
-  
-  // Generate unique transaction ID
-  const transactionId = generateTransactionId();
-  
+
+  // Get project's Divinity config
+  const divinityConfig = await getDivinityConfig(projectId);
+
   // Create pending pledge in database
   const pledge = await db.pledge.create({
     data: {
@@ -3805,112 +4059,105 @@ export async function POST(req: Request) {
       addonIds,
       amount,
       status: 'PENDING',
+      paymentProcessor: 'DIVINITY',
     },
   });
-  
-  // Build CCBill payment URL
-  const paymentUrl = buildCCBillUrl({
-    clientAccnum: ccbillConfig.accountNumber,
-    clientSubacc: ccbillConfig.subaccountNumber,
-    formName: ccbillConfig.formName,
-    initialPrice: amount.toFixed(2),
-    initialPeriod: 30,
-    currencyCode: 840, // USD
-    // Custom parameters to pass back
-    customerId: userId,
-    projectId,
-    pledgeId: pledge.id,
-    // Redirect URLs
-    successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/pledge/success?id=${pledge.id}`,
-    declineUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/pledge/failed?id=${pledge.id}`,
+
+  // Create invoice via Divinity Coin API
+  const invoice = await fetch('https://api.divinitycoin.com/v1/invoices', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${divinityConfig.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      price_amount: amount,
+      price_currency: 'USD',
+      receive_currency: divinityConfig.supportedCurrencies,
+      order_id: pledge.id,
+      order_description: `Pledge for project`,
+      callback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/divinity`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/pledge/success?id=${pledge.id}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/pledge/cancelled?id=${pledge.id}`,
+    }),
+  }).then(r => r.json());
+
+  // Update pledge with invoice ID
+  await db.pledge.update({
+    where: { id: pledge.id },
+    data: { divinityInvoiceId: invoice.id },
   });
-  
-  return Response.json({ paymentUrl });
+
+  return Response.json({
+    invoiceId: invoice.id,
+    paymentUrl: invoice.payment_url,
+    qrCode: invoice.qr_code,
+    expiresAt: invoice.expires_at,
+    pledgeId: pledge.id,
+  });
 }
 ```
 
-**Step 3: Handle CCBill Webhook**
+**Step 3: Handle Divinity Coin Webhook**
 ```typescript
-// /api/webhooks/ccbill
+// /api/webhooks/divinity
 export async function POST(req: Request) {
-  const body = await req.text();
-  const params = new URLSearchParams(body);
-  
-  // Extract CCBill postback data
-  const eventType = params.get('eventType');
-  const subscriptionId = params.get('subscriptionId');
-  const transactionId = params.get('transactionId');
-  const pledgeId = params.get('pledgeId');
-  const amount = parseFloat(params.get('billedAmount') || '0');
-  
+  const body = await req.json();
+  const signature = req.headers.get('x-divinity-signature');
+
   // Verify webhook authenticity
-  const isValid = verifyCCBillWebhook(params);
+  const isValid = verifyDivinityWebhook(body, signature);
   if (!isValid) {
     return Response.json({ error: 'Invalid webhook' }, { status: 401 });
   }
-  
-  // Handle different event types
-  switch (eventType) {
-    case 'NewSaleSuccess':
-      await handleSuccessfulPayment(pledgeId, transactionId, subscriptionId);
+
+  const { event, data } = body;
+
+  switch (event) {
+    case 'invoice.paid':
+      await handleSuccessfulCryptoPayment(data);
       break;
-    case 'NewSaleFailure':
-      await handleFailedPayment(pledgeId);
+    case 'invoice.expired':
+      await handleExpiredPayment(data);
       break;
-    case 'Refund':
-      await handleRefund(pledgeId, transactionId);
-      break;
-    case 'Chargeback':
-      await handleChargeback(pledgeId, transactionId);
+    case 'invoice.underpaid':
+      await handleUnderpaidPayment(data);
       break;
   }
-  
+
   return Response.json({ success: true });
 }
 
-async function handleSuccessfulPayment(
-  pledgeId: string,
-  transactionId: string,
-  subscriptionId: string
-) {
+async function handleSuccessfulCryptoPayment(data: any) {
+  const { order_id: pledgeId, transaction_hash, pay_amount, pay_currency } = data;
+
   // Update pledge status
   const pledge = await db.pledge.update({
     where: { id: pledgeId },
     data: {
       status: 'COMPLETED',
-      ccbillTransactionId: transactionId,
-      ccbillSubscriptionId: subscriptionId,
+      divinityTransactionHash: transaction_hash,
+      divinityCurrency: pay_currency,
+      divinityAmountPaid: pay_amount,
     },
-    include: {
-      project: true,
-      user: true,
-      reward: true,
-    },
+    include: { project: true, user: true, reward: true },
   });
-  
+
   // Update project funding total
   await db.project.update({
     where: { id: pledge.projectId },
     data: {
-      currentAmount: {
-        increment: pledge.amount,
-      },
-      backerCount: {
-        increment: 1,
-      },
+      currentAmount: { increment: pledge.amount },
+      backerCount: { increment: 1 },
     },
   });
-  
+
   // Update reward quantity claimed
   await db.reward.update({
     where: { id: pledge.rewardId },
-    data: {
-      quantityClaimed: {
-        increment: 1,
-      },
-    },
+    data: { quantityClaimed: { increment: 1 } },
   });
-  
+
   // Record analytics event
   await db.analyticsEvent.create({
     data: {
@@ -3918,88 +4165,82 @@ async function handleSuccessfulPayment(
       eventType: 'PLEDGE_COMPLETED',
       amount: pledge.amount,
       userId: pledge.userId,
+      metadata: { paymentMethod: 'crypto', currency: pay_currency },
     },
   });
-  
-  // Send confirmation email
-  await sendPledgeConfirmationEmail(pledge);
-  
+
+  // Send confirmation email with blockchain explorer link
+  await sendCryptoPledgeConfirmationEmail(pledge, transaction_hash);
+
   // Notify project creator
   await notifyCreatorOfNewPledge(pledge);
 }
 ```
 
-### CCBill Security
+### Payment Security
 
-**Webhook Verification**:
+**Divinity Coin Webhook Verification**:
 ```typescript
-function verifyCCBillWebhook(params: URLSearchParams): boolean {
-  // Get the digest sent by CCBill
-  const receivedDigest = params.get('responseDigest');
-  
-  // Get your CCBill salt (from env)
-  const salt = process.env.CCBILL_WEBHOOK_SALT;
-  
-  // Build string to hash
-  const stringToHash = [
-    params.get('subscriptionId'),
-    params.get('clientAccnum'),
-    params.get('clientSubacc'),
-    params.get('timestamp'),
-    salt,
-  ].join('');
-  
-  // Generate MD5 hash
-  const expectedDigest = crypto
-    .createHash('md5')
-    .update(stringToHash)
-    .digest('hex')
-    .toUpperCase();
-  
-  // Compare
-  return receivedDigest === expectedDigest;
+import crypto from 'crypto';
+
+function verifyDivinityWebhook(body: any, signature: string | null): boolean {
+  if (!signature) return false;
+
+  // Get your webhook secret from env
+  const secret = process.env.DIVINITY_WEBHOOK_SECRET;
+
+  // Create HMAC hash of the body
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(body))
+    .digest('hex');
+
+  // Compare signatures
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
 }
 ```
 
 **Storing Credentials Securely**:
 ```typescript
-// Encrypt CCBill credentials before storing
+// Encrypt Divinity credentials before storing
 import { encrypt, decrypt } from '@/lib/encryption';
 
-async function saveCCBillConfig(userId: string, config: CCBillConfig) {
-  const encryptedApiPassword = encrypt(config.apiPassword);
-  
-  await db.ccBillConfig.create({
+async function saveDivinityConfig(userId: string, config: DivinityConfigInput) {
+  const encryptedApiKey = encrypt(config.apiKey);
+  const encryptedWebhookSecret = encrypt(config.webhookSecret);
+
+  await db.divinityConfig.create({
     data: {
       userId,
-      accountNumber: config.accountNumber,
-      subaccountNumber: config.subaccountNumber,
-      formName: config.formName,
-      apiUsername: config.apiUsername,
-      apiPassword: encryptedApiPassword,
-      isLive: config.isLive,
+      walletAddress: config.walletAddress,
+      apiKey: encryptedApiKey,
+      webhookSecret: encryptedWebhookSecret,
+      supportedCurrencies: config.supportedCurrencies,
+      autoConvert: config.autoConvert,
+      isActive: true,
     },
   });
 }
 
-async function getCCBillConfig(projectId: string) {
+async function getDivinityConfig(projectId: string) {
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: {
       creator: {
-        include: {
-          ccbillConfig: true,
-        },
+        include: { divinityConfig: true },
       },
     },
   });
-  
-  const config = project.creator.ccbillConfig;
-  const decryptedPassword = decrypt(config.apiPassword);
-  
+
+  const config = project.creator.divinityConfig;
+  const decryptedApiKey = decrypt(config.apiKey);
+
   return {
     ...config,
-    apiPassword: decryptedPassword,
+    apiKey: decryptedApiKey,
   };
 }
 ```
@@ -4023,9 +4264,10 @@ STRIPE_PUBLIC_KEY="pk_test_..."
 STRIPE_SECRET_KEY="sk_test_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
 
-# CCBill
-CCBILL_WEBHOOK_SALT="your-ccbill-salt"
-CCBILL_API_URL="https://api.ccbill.com"
+# Divinity Coin
+DIVINITY_API_KEY="your-divinity-api-key"
+DIVINITY_WEBHOOK_SECRET="your-divinity-webhook-secret"
+DIVINITY_API_URL="https://api.divinitycoin.com"
 
 # File Upload
 AWS_S3_BUCKET="your-bucket-name"
@@ -4091,9 +4333,9 @@ PREFERENCE_REBUILD_INTERVAL=86400
   - ✅ Payment Intent creation
   - ✅ Webhook handling
   - ✅ Refund processing
-- ✅ **CCBill integration**
-  - ✅ Account setup flow
-  - ✅ FlexForms integration
+- ✅ **Divinity Coin integration**
+  - ✅ Wallet connection flow
+  - ✅ Invoice creation
   - ✅ Webhook handling
   - ✅ Security implementation
 - ✅ Unified payment abstraction layer
@@ -4221,7 +4463,7 @@ PREFERENCE_REBUILD_INTERVAL=86400
 - ✅ Bug fixes
 - ✅ Load testing
 - ✅ Payment processor sandbox testing (both)
-- ✅ Production setup (Stripe + CCBill)
+- ✅ Production setup (Stripe + Divinity Coin)
 - ✅ Recommendation algorithm validation
 - ✅ Email deliverability testing
 - ✅ Soft launch with beta users
@@ -4237,13 +4479,13 @@ PREFERENCE_REBUILD_INTERVAL=86400
 - Reward creation and management
 - Copy reward to add-on functionality
 - Pledge calculation (reward + add-ons)
-- CCBill webhook signature verification
+- Divinity Coin webhook signature verification
 - Analytics data aggregation
 
 ### Integration Tests
 - Complete project creation flow
 - End-to-end pledge process
-- CCBill payment integration
+- Divinity Coin payment integration
 - Email delivery
 - File uploads
 - Database transactions
@@ -4260,7 +4502,7 @@ PREFERENCE_REBUILD_INTERVAL=86400
 - SQL injection
 - XSS vulnerabilities
 - CSRF protection
-- CCBill webhook spoofing
+- Divinity Coin webhook spoofing
 - Rate limiting
 
 ### Performance Tests
@@ -4275,8 +4517,8 @@ PREFERENCE_REBUILD_INTERVAL=86400
 ## Security Considerations
 
 ### Payment Security
-- Never store credit card data (CCBill handles)
-- Encrypt all CCBill credentials
+- Never store credit card data (Stripe handles)
+- Encrypt all API credentials (Stripe and Divinity Coin)
 - Verify all webhook signatures
 - Use HTTPS everywhere
 - Implement CSRF protection
@@ -4372,9 +4614,9 @@ jobs:
 ```
 
 ### Environment Setup
-1. Development: Local PostgreSQL, CCBill sandbox
-2. Staging: Vercel preview, Vercel Postgres, CCBill sandbox
-3. Production: Vercel production, Vercel Postgres, CCBill production
+1. Development: Local PostgreSQL, Stripe test mode, Divinity testnet
+2. Staging: Vercel preview, Vercel Postgres, Stripe test, Divinity testnet
+3. Production: Vercel production, Vercel Postgres, Stripe live, Divinity mainnet
 
 ---
 
@@ -4436,9 +4678,104 @@ jobs:
 
 ### Technical Docs
 - API documentation (if public API)
-- CCBill integration guide
+- Divinity Coin integration guide
 - Webhook setup guide
 - Analytics setup guide
+
+---
+
+## Payment System FAQs
+
+### For Creators
+
+**Q: What payment methods can I accept for my project?**
+A: You can accept both traditional payments (credit/debit cards via Stripe) and cryptocurrency payments (via Divinity Coin). You can enable one or both options to maximize your potential backer reach.
+
+**Q: How do I set up Stripe payments?**
+A: Navigate to your project's Payment settings and click "Connect Stripe Account." You'll be redirected to Stripe Connect to verify your identity and link your bank account. Once complete, you can accept card payments.
+
+**Q: How do I set up Divinity Coin (crypto) payments?**
+A: 1. Go to https://divinitycoin.com/developers to create an account and get your API credentials
+2. In your project settings, click "Connect Crypto Wallet"
+3. Enter your wallet address and API key
+4. Select which cryptocurrencies you want to accept (DCN, BTC, ETH, USDT, USDC, etc.)
+
+**Q: What are the fees for each payment method?**
+A:
+- **Stripe**: 2.9% + $0.30 per transaction + 5% platform fee
+- **Divinity Coin**: ~1% network fee (varies by cryptocurrency) + 5% platform fee
+- Crypto payments generally have lower total fees and no chargebacks
+
+**Q: When do I receive my funds?**
+A:
+- **Stripe**: Funds are deposited to your bank account within 2 business days after your campaign ends successfully
+- **Divinity Coin**: Crypto payments are sent directly to your wallet instantly upon confirmation. You can convert to fiat anytime via your exchange
+
+**Q: Can I get chargebacks on crypto payments?**
+A: No. Cryptocurrency transactions are final and irreversible. This protects you from fraudulent chargebacks. However, you should still honor legitimate refund requests manually.
+
+**Q: What currencies are supported for crypto payments?**
+A: Divinity Coin supports DCN (Divinity Coin), BTC (Bitcoin), ETH (Ethereum), USDT (Tether), USDC (USD Coin), and 50+ other cryptocurrencies. You can choose which ones to accept in your settings.
+
+### For Backers
+
+**Q: What payment methods can I use to back a project?**
+A: Depending on what the creator has enabled, you can pay with:
+- **Card**: Credit or debit card (Visa, Mastercard, Amex, etc.) via Stripe
+- **Crypto**: Bitcoin, Ethereum, Divinity Coin, USDT, USDC, and more via Divinity Coin
+
+**Q: How do I pay with cryptocurrency?**
+A:
+1. Select your reward and add-ons
+2. Click "Pay with Crypto" at checkout
+3. Choose your preferred cryptocurrency
+4. You'll see a QR code and wallet address
+5. Send the exact amount from your wallet
+6. Wait for blockchain confirmation (usually 10-30 minutes)
+7. You'll be redirected to the success page automatically
+
+**Q: How long do I have to complete a crypto payment?**
+A: You have 1 hour from when you initiate the payment to send your crypto. After that, the invoice expires and you'll need to start again.
+
+**Q: What happens if I send the wrong amount?**
+A:
+- **Overpaid**: The excess will be credited or refunded by the creator
+- **Underpaid**: You'll receive a notification to send the remaining amount. Contact the creator if you need help.
+
+**Q: Can I get a refund for crypto payments?**
+A: Cryptocurrency transactions cannot be automatically reversed. If you need a refund, contact the project creator directly. They can manually send a refund to your wallet address.
+
+**Q: What if I don't have any cryptocurrency?**
+A: You can purchase cryptocurrency from exchanges like Coinbase, Binance, or Kraken, then transfer it to a wallet to make your payment. Alternatively, use the traditional card payment option.
+
+**Q: Is paying with crypto secure?**
+A: Yes! Cryptocurrency payments are secured by blockchain technology. Your transaction is verified by thousands of computers worldwide. However, always double-check the wallet address before sending, as crypto transactions are irreversible.
+
+**Q: What wallets can I use to pay?**
+A: You can use any cryptocurrency wallet that supports the coins you want to pay with, including:
+- Hardware wallets (Ledger, Trezor)
+- Software wallets (MetaMask, Trust Wallet, Exodus)
+- Exchange wallets (Coinbase, Binance)
+- Mobile wallets
+
+**Q: Do I need to pay gas fees for crypto transactions?**
+A: Yes, blockchain networks require transaction fees (often called "gas"). These fees go to the network validators, not to the platform or creator. The fees vary based on network congestion.
+
+### Cryptocurrency Payment Best Practices
+
+**For Creators:**
+1. Consider accepting stablecoins (USDT, USDC) to avoid price volatility
+2. Use the auto-conversion feature to automatically convert to stablecoin
+3. Set up your wallet securely - use a hardware wallet for large amounts
+4. Monitor your dashboard for incoming payments
+5. Keep records of all transaction hashes for your accounting
+
+**For Backers:**
+1. Double-check the wallet address before sending
+2. Send the exact amount shown in the invoice
+3. Make sure you have enough for network fees
+4. Wait for the payment page to confirm before closing it
+5. Save your transaction hash as proof of payment
 
 ---
 
@@ -4446,10 +4783,10 @@ jobs:
 
 Before starting development, clarify:
 
-1. **CCBill Details**:
-   - Do you already have a CCBill merchant account?
-   - What are the expected transaction fees?
-   - Any specific CCBill features needed beyond basic payments?
+1. **Payment Processing Details**:
+   - Will you support both Stripe and Divinity Coin?
+   - Which cryptocurrencies should be accepted? (DCN, BTC, ETH, USDT, USDC)
+   - Do creators need auto-conversion to stablecoin feature?
 
 2. **Platform Fees**:
    - What percentage does the platform take?
@@ -4483,7 +4820,7 @@ Before starting development, clarify:
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL 14+
-- CCBill merchant account (sandbox for dev)
+- Divinity Coin API key (testnet for dev)
 - AWS account (for S3)
 - SendGrid account (for emails)
 
@@ -4512,7 +4849,7 @@ npm run dev
 
 ### First Steps
 1. Create admin user
-2. Set up CCBill sandbox account
+2. Set up Stripe test mode and Divinity testnet accounts
 3. Create test project
 4. Test pledge flow end-to-end
 5. Verify webhooks work locally (use ngrok)
@@ -4522,7 +4859,7 @@ npm run dev
 ## Conclusion
 
 This specification provides a complete blueprint for building a modern crowdfunding platform with:
-- ✅ **CCBill payment integration** (instead of Stripe)
+- ✅ **Dual payment support** (Stripe for fiat + Divinity Coin for crypto)
 - ✅ **No pay-over-time** (single payment only)
 - ✅ **Copy rewards to add-ons** functionality
 - ✅ **Comprehensive dashboard** and analytics
@@ -4537,8 +4874,8 @@ This document is ready to hand off to Claude Code or any development team to sta
 ## Appendix
 
 ### Useful Links
-- [CCBill API Documentation](https://ccbill.com/doc/webhooks)
-- [CCBill FlexForms Guide](https://ccbill.com/doc/flexforms)
+- [Divinity Coin Developer Portal](https://divinitycoin.com/developers)
+- [Stripe Documentation](https://stripe.com/docs)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [Shadcn/ui Components](https://ui.shadcn.com)
@@ -4552,6 +4889,7 @@ For questions or clarifications during development:
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: November 2025  
+**Document Version**: 2.0
+**Last Updated**: December 2025
 **Status**: Ready for Development
+**Changes in v2.0**: Replaced CCBill with Divinity Coin cryptocurrency payment integration. Platform now supports dual payment methods (Stripe for fiat, Divinity Coin for crypto).
