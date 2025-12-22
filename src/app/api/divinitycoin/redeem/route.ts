@@ -62,11 +62,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Call DivinityCoin API to validate and redeem the code
-    const divinityResponse = await fetch("https://api.divinitycoin.com/internal/validate", {
+    const divinityResponse = await fetch("https://divinitycoin.com/internal?action=validate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Internal-Key": settings.divinityCoinApiKey,
+        "Authorization": `Bearer ${settings.divinityCoinApiKey}`,
       },
       body: JSON.stringify({
         code: cleanCode,

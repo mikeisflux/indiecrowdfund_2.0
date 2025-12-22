@@ -35,11 +35,11 @@ export async function POST() {
     }
 
     // Call DivinityCoin API to get current balance
-    const divinityResponse = await fetch("https://api.divinitycoin.com/internal/balance", {
+    const divinityResponse = await fetch("https://divinitycoin.com/internal?action=balance", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Internal-Key": settings.divinityCoinApiKey,
+        "Authorization": `Bearer ${settings.divinityCoinApiKey}`,
       },
       body: JSON.stringify({
         platformUserId: session.user.id,
