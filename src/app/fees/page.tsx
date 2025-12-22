@@ -259,7 +259,7 @@ export default function FeesPage() {
                         <li>You receive $91.18 after our 3% platform fee</li>
                       </ol>
                       <a
-                        href="https://divinitycoin.com/developers"
+                        href="https://divinitycoin.com/"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center text-sm text-purple-600 hover:text-purple-700 font-medium"

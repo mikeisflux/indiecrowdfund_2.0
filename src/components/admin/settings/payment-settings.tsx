@@ -182,8 +182,8 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
               <li>Platform fee to creator: 3% (configurable)</li>
               <li>Settlements processed via wire transfer to your bank</li>
             </ul>
-            <a href="https://divinitycoin.com/developers" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              View DivinityCoin Developer Documentation →
+            <a href="https://divinitycoin.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Learn more about DivinityCoin →
             </a>
           </div>
         </CardContent>
