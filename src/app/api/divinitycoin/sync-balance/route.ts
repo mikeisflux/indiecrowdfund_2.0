@@ -47,15 +47,21 @@ export async function POST() {
     });
 
     if (!divinityResponse.ok) {
-      const errorData = await divinityResponse.json();
+      let errorMessage = "Failed to fetch balance from DivinityCoin";
+      try {
+        const errorData = await divinityResponse.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        // Response wasn't JSON
+      }
       return NextResponse.json(
-        { error: errorData.error || "Failed to fetch balance from DivinityCoin" },
+        { error: errorMessage },
         { status: divinityResponse.status }
       );
     }
 
     const divinityResult = await divinityResponse.json();
-    const newBalance = divinityResult.availableBalance;
+    const newBalance = divinityResult.availableBalance ?? 0;
 
     // Update local balance to match DivinityCoin
     await db.user.update({
