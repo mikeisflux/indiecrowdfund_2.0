@@ -29,6 +29,7 @@ import {
   Calendar,
   Gift,
   AlertCircle,
+  Coins,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { formatTimeRemaining } from "@/lib/utils";
@@ -712,6 +713,68 @@ export default function BackerDashboard() {
 
           {/* Sidebar - Analytics */}
           <div className="space-y-6">
+            {/* DivinityCoin Credits */}
+            <Card className="relative overflow-hidden border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 via-white to-[#0066FF]/10 dark:from-[#0066FF]/10 dark:via-zinc-900 dark:to-[#0066FF]/5">
+              {/* Decorative coin graphics */}
+              <div className="absolute -top-6 -right-6 w-24 h-24 opacity-10">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="50" cy="50" r="45" stroke="#0066FF" strokeWidth="4"/>
+                  <circle cx="50" cy="50" r="35" stroke="#0066FF" strokeWidth="2"/>
+                  <text x="50" y="58" textAnchor="middle" fill="#0066FF" fontSize="28" fontWeight="bold">D</text>
+                </svg>
+              </div>
+              <div className="absolute -bottom-4 -left-4 w-16 h-16 opacity-5">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="50" cy="50" r="45" fill="#0066FF"/>
+                </svg>
+              </div>
+
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#0066FF] flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">D</span>
+                    </div>
+                    <span className="font-semibold text-[#0066FF]">DivinityCoin</span>
+                  </div>
+                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">
+                    Active
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Your Credits</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold text-zinc-900 dark:text-white">$0.00</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Ready to use</p>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle className="w-3.5 h-3.5 text-[#0066FF]" />
+                  <span>Instant Delivery</span>
+                </div>
+
+                <a
+                  href="https://divinitycoin.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <Button className="w-full bg-[#0066FF] hover:bg-[#0052CC] text-white">
+                    <Coins className="w-4 h-4 mr-2" />
+                    Buy Credits
+                    <ArrowUpRight className="w-3.5 h-3.5 ml-2" />
+                  </Button>
+                </a>
+
+                <p className="text-[10px] text-center text-muted-foreground">
+                  Use credits across all partner platforms
+                </p>
+              </CardContent>
+            </Card>
+
             {/* Spending Analytics */}
             <Card className="bg-card/50 backdrop-blur border-border/50">
               <CardHeader>
