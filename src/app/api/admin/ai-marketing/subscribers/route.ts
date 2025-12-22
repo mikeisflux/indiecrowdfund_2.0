@@ -24,6 +24,27 @@ async function requireAdmin() {
   return { user: session.user };
 }
 
+// Helper to extract tags from source field
+function extractTags(source: string | null): string[] {
+  if (!source) return [];
+  const tags: string[] = [];
+
+  // Extract creator tag from "creator_import:creatorName" format
+  if (source.startsWith("creator_import:")) {
+    const creatorName = source.replace("creator_import:", "");
+    if (creatorName) {
+      tags.push(creatorName);
+    }
+  }
+
+  // Add other source-based tags
+  if (source.includes("retailer")) {
+    tags.push("retailer");
+  }
+
+  return tags;
+}
+
 // GET - Get all subscribers with categorization
 export async function GET(req: NextRequest) {
   try {
@@ -77,6 +98,7 @@ export async function GET(req: NextRequest) {
       source: string;
       subscribedAt: Date | null;
       category: string;
+      tags: string[];
     }> = [];
     let total = 0;
 
@@ -111,6 +133,7 @@ export async function GET(req: NextRequest) {
           ...s,
           source: s.source || "imported",
           category: "newsletter",
+          tags: extractTags(s.source),
         }))
       );
 
@@ -155,6 +178,7 @@ export async function GET(req: NextRequest) {
           source: "registered",
           subscribedAt: u.createdAt,
           category: "verified",
+          tags: [],
         }))
       );
 
@@ -209,6 +233,7 @@ export async function GET(req: NextRequest) {
           source: "backer",
           subscribedAt: u.createdAt,
           category: "backers",
+          tags: [],
         }))
       );
 
@@ -247,6 +272,7 @@ export async function GET(req: NextRequest) {
           source: "creator",
           subscribedAt: u.createdAt,
           category: "creators",
+          tags: [],
         }))
       );
 
@@ -288,6 +314,7 @@ export async function GET(req: NextRequest) {
         retailerSubs.map((s: { id: string; email: string; name: string | null; source: string; subscribedAt: Date | null }) => ({
           ...s,
           category: "retailers",
+          tags: extractTags(s.source),
         }))
       );
 
