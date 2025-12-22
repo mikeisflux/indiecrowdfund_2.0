@@ -43,6 +43,7 @@ import {
   Coins,
   Ticket,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { formatTimeRemaining } from "@/lib/utils";
@@ -130,6 +131,25 @@ export default function BackerDashboard() {
   const [redeemError, setRedeemError] = useState<string | null>(null);
   const [redeemSuccess, setRedeemSuccess] = useState<{ amount: number } | null>(null);
   const [divinityCoinBalance, setDivinityCoinBalance] = useState(0);
+  const [isSyncingBalance, setIsSyncingBalance] = useState(false);
+
+  const handleSyncBalance = async () => {
+    setIsSyncingBalance(true);
+    try {
+      const response = await fetch("/api/divinitycoin/sync-balance", {
+        method: "POST",
+        headers: { ...getCSRFHeaders() },
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setDivinityCoinBalance(result.balance);
+      }
+    } catch (err) {
+      console.error("Failed to sync balance:", err);
+    } finally {
+      setIsSyncingBalance(false);
+    }
+  };
 
   const handleRedeemCode = async () => {
     if (!redeemCode.trim()) {
@@ -805,7 +825,19 @@ export default function BackerDashboard() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Your Credits</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-muted-foreground">Your Credits</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSyncBalance}
+                      disabled={isSyncingBalance}
+                      className="h-6 px-2 text-xs text-muted-foreground hover:text-[#0066FF]"
+                    >
+                      <RefreshCw className={`w-3 h-3 mr-1 ${isSyncingBalance ? 'animate-spin' : ''}`} />
+                      {isSyncingBalance ? 'Syncing...' : 'Refresh'}
+                    </Button>
+                  </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-bold text-zinc-900 dark:text-white">
                       ${divinityCoinBalance.toFixed(2)}
