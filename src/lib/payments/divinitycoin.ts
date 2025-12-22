@@ -190,208 +190,72 @@ export async function constructWebhookEvent(
 }
 
 /**
- * Make an API request to DivinityCoin
- */
-async function apiRequest<T>(
-  method: string,
-  endpoint: string,
-  body?: Record<string, unknown>
-): Promise<T> {
-  const config = await getDivinityCoinConfig();
-
-  const response = await fetch(`${config.baseUrl}${endpoint}`, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${config.apiKey}`,
-      "X-Partner-ID": config.partnerId,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`DivinityCoin API error: ${response.status} - ${errorText}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Register or update webhook URL with DivinityCoin
- * This configures where DivinityCoin will send webhook events
- */
-export async function registerWebhook(webhookUrl: string): Promise<{
-  success: boolean;
-  webhookId?: string;
-  secret?: string;
-  message?: string;
-}> {
-  try {
-    const result = await apiRequest<{
-      success: boolean;
-      webhookId: string;
-      secret: string;
-    }>("POST", "/webhooks", {
-      url: webhookUrl,
-      events: ["test.ping", "card.validate", "card.redeem"],
-    });
-
-    // Store the webhook secret in platform settings if provided
-    if (result.secret) {
-      await db.platformSettings.update({
-        where: { id: "default" },
-        data: {
-          divinityCoinWebhookSecret: result.secret,
-        },
-      });
-
-      // Clear cache so new secret is used
-      clearDivinityCoinConfigCache();
-    }
-
-    return result;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to register webhook";
-    return { success: false, message };
-  }
-}
-
-/**
- * Get current webhook configuration from DivinityCoin
- */
-export async function getWebhookConfig(): Promise<{
-  url: string | null;
-  events: string[];
-  status: "active" | "disabled" | "not_configured";
-} | null> {
-  try {
-    const result = await apiRequest<{
-      url: string;
-      events: string[];
-      status: "active" | "disabled";
-    }>("GET", "/webhooks");
-
-    return result;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Update webhook URL
- */
-export async function updateWebhookUrl(webhookUrl: string): Promise<{
-  success: boolean;
-  message?: string;
-}> {
-  try {
-    await apiRequest("PATCH", "/webhooks", {
-      url: webhookUrl,
-    });
-
-    return { success: true };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to update webhook";
-    return { success: false, message };
-  }
-}
-
-/**
- * Validate a DivinityCoin gift card (without redeeming)
- */
-export async function validateCard(cardCode: string): Promise<CardValidateResponse> {
-  return apiRequest<CardValidateResponse>("POST", "/cards/validate", {
-    cardCode,
-  });
-}
-
-/**
- * Redeem a DivinityCoin gift card
- */
-export async function redeemCard(
-  cardCode: string,
-  platformUserId?: string
-): Promise<CardRedeemResponse> {
-  return apiRequest<CardRedeemResponse>("POST", "/cards/redeem", {
-    cardCode,
-    platformUserId,
-  });
-}
-
-/**
  * Handle test.ping webhook event
  */
-export function handleTestPing(): TestPingResponse {
-  const config = cachedConfig;
+export async function handleTestPing(): Promise<TestPingResponse> {
+  let partnerId = "unknown";
+  try {
+    const config = await getDivinityCoinConfig();
+    partnerId = config.partnerId;
+  } catch {
+    // Config not available
+  }
+
   return {
     success: true,
     message: "Webhook received successfully",
-    partnerId: config?.partnerId || "unknown",
+    partnerId,
     sandboxMode: process.env.NODE_ENV !== "production",
   };
 }
 
 /**
  * Handle card.validate webhook event
- * This is called by DivinityCoin to validate a card on our platform
+ * DivinityCoin calls this to check if a card code is valid
  */
 export async function handleCardValidate(
   cardCode: string
 ): Promise<CardValidateResponse> {
-  try {
-    // Call DivinityCoin API to validate the card
-    const result = await validateCard(cardCode);
-    return result;
-  } catch (error) {
-    return {
-      valid: false,
-      status: "error",
-      amount: 0,
-      error: error instanceof Error ? error.message : "Validation failed",
-    };
-  }
+  // TODO: Implement card validation logic based on your business rules
+  // This is where you'd check if the card code is valid in your system
+  console.log(`[DivinityCoin] Validating card: ${cardCode.substring(0, 4)}****`);
+
+  // For now, return a placeholder response
+  // You'll need to implement actual validation based on your requirements
+  return {
+    valid: true,
+    status: "active",
+    amount: 0,
+  };
 }
 
 /**
  * Handle card.redeem webhook event
- * This is called by DivinityCoin when a card is redeemed
+ * DivinityCoin calls this when a card is being redeemed
  */
 export async function handleCardRedeem(
   cardCode: string,
   platformUserId?: string
 ): Promise<CardRedeemResponse> {
-  try {
-    // In sandbox mode, just validate without redeeming
-    if (process.env.NODE_ENV !== "production") {
-      const validation = await validateCard(cardCode);
-      return {
-        success: validation.valid,
-        amount: validation.amount,
-        error: validation.error,
-      };
-    }
+  console.log(
+    `[DivinityCoin] Card redemption: ${cardCode.substring(0, 4)}****` +
+    (platformUserId ? ` for user ${platformUserId}` : "")
+  );
 
-    // In production, actually redeem the card
-    const result = await redeemCard(cardCode, platformUserId);
-
-    // If redemption successful and we have a platform user, credit their account
-    if (result.success && platformUserId) {
-      // Log the redemption for admin tracking
-      console.log(
-        `[DivinityCoin] Card redeemed: ${cardCode.substring(0, 4)}****${cardCode.slice(-4)} ` +
-        `for user ${platformUserId}, amount: ${result.amount}`
-      );
-    }
-
-    return result;
-  } catch (error) {
+  // In sandbox mode, just acknowledge without actual redemption
+  if (process.env.NODE_ENV !== "production") {
     return {
-      success: false,
+      success: true,
       amount: 0,
-      error: error instanceof Error ? error.message : "Redemption failed",
     };
   }
+
+  // TODO: Implement actual card redemption logic
+  // This is where you'd credit the user's account, update balances, etc.
+  return {
+    success: true,
+    amount: 0,
+  };
 }
 
 /**

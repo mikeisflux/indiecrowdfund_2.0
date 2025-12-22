@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { SecureKeyInput } from "@/components/ui/secure-key-input";
 import {
   Select,
@@ -13,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Copy, Check } from "lucide-react";
 import { PaymentSettings, SettingsSectionProps } from "./types";
 
 interface PaymentsSettingsSectionProps extends SettingsSectionProps<PaymentSettings> {
@@ -20,6 +23,23 @@ interface PaymentsSettingsSectionProps extends SettingsSectionProps<PaymentSetti
 }
 
 export function PaymentsSettingsSection({ settings, onChange, onSave }: PaymentsSettingsSectionProps) {
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
+
+  // Generate the webhook URL for DivinityCoin
+  const webhookUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/api/webhooks/divinitycoin`
+    : "/api/webhooks/divinitycoin";
+
+  const copyWebhookUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopiedWebhook(true);
+      setTimeout(() => setCopiedWebhook(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -131,6 +151,33 @@ export function PaymentsSettingsSection({ settings, onChange, onSave }: Payments
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label>Webhook URL</Label>
+            <p className="text-sm text-zinc-500 mb-2">
+              Enter this URL in DivinityCoin&apos;s partner dashboard to receive webhook events
+            </p>
+            <div className="flex gap-2">
+              <Input
+                value={webhookUrl}
+                readOnly
+                className="font-mono text-sm bg-zinc-50 dark:bg-zinc-900"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={copyWebhookUrl}
+                className="shrink-0"
+              >
+                {copiedWebhook ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Webhook Secret</Label>
@@ -139,7 +186,7 @@ export function PaymentsSettingsSection({ settings, onChange, onSave }: Payments
                 onChange={(value) => onChange({ ...settings, divinityCoinWebhookSecret: value })}
                 onSave={onSave}
                 hasExistingValue={settings.divinityCoinWebhookSecret === "••••••••"}
-                placeholder="Your webhook secret..."
+                placeholder="Secret provided by DivinityCoin..."
               />
             </div>
             <div className="space-y-2">
