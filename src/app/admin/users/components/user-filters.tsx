@@ -45,9 +45,10 @@ export function UserFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="creator">Creator</SelectItem>
-            <SelectItem value="backer">Backer</SelectItem>
+            <SelectItem value="USER">User</SelectItem>
+            <SelectItem value="COOL_KIDS">Cool Kids</SelectItem>
+            <SelectItem value="ADMIN">Admin</SelectItem>
+            <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
