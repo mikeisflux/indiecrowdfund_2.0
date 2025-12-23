@@ -5,15 +5,23 @@ import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 import crypto from "crypto";
+import sharp from "sharp";
 
 // Allowed image types
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const WEBP_QUALITY = 85;
 
-// Generate a unique filename
-function generateFilename(originalName: string): string {
-  const ext = path.extname(originalName).toLowerCase() || ".jpg";
+// Types that should be converted to WebP
+const CONVERT_TO_WEBP = ["image/jpeg", "image/png"];
+
+// Generate a unique filename with WebP extension for converted images
+function generateFilename(originalName: string, convertToWebP: boolean): string {
   const hash = crypto.randomBytes(16).toString("hex");
+  if (convertToWebP) {
+    return `${hash}.webp`;
+  }
+  const ext = path.extname(originalName).toLowerCase() || ".jpg";
   return `${hash}${ext}`;
 }
 
@@ -68,14 +76,36 @@ export async function POST(req: NextRequest) {
       await mkdir(uploadDir, { recursive: true });
     }
 
+    // Check if we should convert to WebP
+    const shouldConvert = CONVERT_TO_WEBP.includes(file.type);
+
     // Generate unique filename
-    const filename = generateFilename(file.name);
+    const filename = generateFilename(file.name, shouldConvert);
     const filePath = path.join(uploadDir, filename);
 
-    // Convert file to buffer and write
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+
+    // Convert to WebP if needed, otherwise write directly
+    let finalBuffer: Buffer;
+    let finalMimeType: string;
+    let finalSize: number;
+
+    if (shouldConvert) {
+      // Convert PNG/JPG to WebP using sharp
+      finalBuffer = await sharp(buffer)
+        .webp({ quality: WEBP_QUALITY })
+        .toBuffer();
+      finalMimeType = "image/webp";
+      finalSize = finalBuffer.length;
+    } else {
+      finalBuffer = buffer;
+      finalMimeType = file.type;
+      finalSize = file.size;
+    }
+
+    await writeFile(filePath, finalBuffer);
 
     // Return the API URL for serving the image
     const url = `/api/uploads/projects/${effectiveProjectId}/${uploadType}/${filename}`;
@@ -91,8 +121,8 @@ export async function POST(req: NextRequest) {
           uploaderId: session.user.id,
           filename,
           originalName: file.name,
-          mimeType: file.type,
-          size: file.size,
+          mimeType: finalMimeType,
+          size: finalSize,
           url,
           thumbnailUrl: url, // Use same URL for images
           width: null,

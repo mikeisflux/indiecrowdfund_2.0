@@ -4,6 +4,11 @@ import { db } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import sharp from "sharp";
+
+// WebP conversion settings
+const WEBP_QUALITY = 85;
+const CONVERT_TO_WEBP = ["image/jpeg", "image/png"];
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -84,8 +89,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if we should convert to WebP
+    const shouldConvert = CONVERT_TO_WEBP.includes(file.type);
+
     // Generate unique filename
-    const ext = path.extname(file.name);
+    const ext = shouldConvert ? ".webp" : path.extname(file.name);
     const filename = `${uuidv4()}${ext}`;
 
     // Determine upload directory based on file type
@@ -100,19 +108,52 @@ export async function POST(req: NextRequest) {
     const uploadDir = path.join(process.cwd(), "uploads", folder, subDir);
     await mkdir(uploadDir, { recursive: true });
 
-    // Write file to disk
-    const filePath = path.join(uploadDir, filename);
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+
+    // Convert to WebP if needed, otherwise write directly
+    let finalBuffer: Buffer;
+    let finalMimeType: string;
+    let finalSize: number;
+    let width: number | null = null;
+    let height: number | null = null;
+
+    if (shouldConvert) {
+      // Convert PNG/JPG to WebP using sharp and get dimensions
+      const sharpInstance = sharp(buffer);
+      const metadata = await sharpInstance.metadata();
+      width = metadata.width || null;
+      height = metadata.height || null;
+
+      finalBuffer = await sharpInstance
+        .webp({ quality: WEBP_QUALITY })
+        .toBuffer();
+      finalMimeType = "image/webp";
+      finalSize = finalBuffer.length;
+    } else {
+      finalBuffer = buffer;
+      finalMimeType = file.type;
+      finalSize = file.size;
+
+      // Get dimensions for non-converted images if applicable
+      if (file.type.startsWith("image") && !file.type.includes("svg")) {
+        try {
+          const metadata = await sharp(buffer).metadata();
+          width = metadata.width || null;
+          height = metadata.height || null;
+        } catch {
+          // Ignore dimension errors
+        }
+      }
+    }
+
+    // Write file to disk
+    const filePath = path.join(uploadDir, filename);
+    await writeFile(filePath, finalBuffer);
 
     // Generate URL - use /api/uploads/ route to serve files
     const url = `/api/uploads/${folder}/${subDir}/${filename}`;
-
-    // Get image dimensions if applicable
-    const width = null;
-    const height = null;
-    // Note: For production, you'd use a library like sharp to get dimensions
 
     // Create database record
     const mediaFile = await db.mediaFile.create({
@@ -120,8 +161,8 @@ export async function POST(req: NextRequest) {
         uploaderId: authResult.user.id,
         filename,
         originalName: file.name,
-        mimeType: file.type,
-        size: file.size,
+        mimeType: finalMimeType,
+        size: finalSize,
         url,
         thumbnailUrl: file.type.startsWith("image") ? url : null,
         width,
