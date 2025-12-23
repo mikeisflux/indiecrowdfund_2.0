@@ -10,7 +10,7 @@ const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUT
 /**
  * Generate a signed unsubscribe token for an email
  */
-export function generateUnsubscribeToken(email: string): string {
+function generateUnsubscribeToken(email: string): string {
   const data = `${email}:${UNSUBSCRIBE_SECRET}`;
   const hash = crypto.createHash("sha256").update(data).digest("hex").slice(0, 32);
   // Base64 encode email and hash together
@@ -21,7 +21,7 @@ export function generateUnsubscribeToken(email: string): string {
 /**
  * Verify and decode an unsubscribe token
  */
-export function verifyUnsubscribeToken(token: string): string | null {
+function verifyUnsubscribeToken(token: string): string | null {
   try {
     const decoded = Buffer.from(token, "base64url").toString("utf-8");
     const [email, hash] = decoded.split(":");
@@ -44,7 +44,7 @@ export function verifyUnsubscribeToken(token: string): string | null {
 /**
  * Generate the full unsubscribe URL for an email
  */
-export function getUnsubscribeUrl(email: string): string {
+function getUnsubscribeUrl(email: string): string {
   const token = generateUnsubscribeToken(email);
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   return `${baseUrl}/api/unsubscribe?token=${token}`;
@@ -169,7 +169,7 @@ async function unsubscribeEmail(email: string): Promise<{ success: boolean; erro
 /**
  * Check if an email is unsubscribed
  */
-export async function isEmailUnsubscribed(email: string): Promise<boolean> {
+async function isEmailUnsubscribed(email: string): Promise<boolean> {
   try {
     const normalizedEmail = email.toLowerCase().trim();
 
