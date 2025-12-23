@@ -176,10 +176,8 @@ export async function POST(
     return NextResponse.json({ itemQuestion });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid data", details: error.issues },
-        { status: 400 }
-      );
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     console.error("Error creating item question:", error);
     return NextResponse.json(
@@ -305,10 +303,8 @@ export async function PUT(
     return NextResponse.json({ itemQuestion: updatedQuestion });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid data", details: error.issues },
-        { status: 400 }
-      );
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     console.error("Error updating item question:", error);
     return NextResponse.json(

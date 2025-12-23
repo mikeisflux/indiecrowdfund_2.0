@@ -63,10 +63,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, id: bugReport.id });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: error.issues },
-        { status: 400 }
-      );
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     console.error("Error creating bug report:", error);
     return NextResponse.json(

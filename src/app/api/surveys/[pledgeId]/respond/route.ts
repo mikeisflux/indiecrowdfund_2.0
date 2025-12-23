@@ -355,10 +355,8 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid data", details: error.issues },
-        { status: 400 }
-      );
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     console.error("Error submitting survey response:", error);
     return NextResponse.json(

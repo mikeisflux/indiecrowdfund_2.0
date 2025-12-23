@@ -227,10 +227,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: error.issues },
-        { status: 400 }
-      );
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     console.error("IndieKit backers bulk action error:", error);
     return NextResponse.json(

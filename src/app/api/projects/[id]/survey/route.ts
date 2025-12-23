@@ -172,10 +172,8 @@ export async function POST(
     return NextResponse.json({ survey });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid data", details: error.issues },
-        { status: 400 }
-      );
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     console.error("Error creating survey:", error);
     return NextResponse.json(
@@ -254,10 +252,8 @@ export async function PUT(
     return NextResponse.json({ survey: updatedSurvey });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid data", details: error.issues },
-        { status: 400 }
-      );
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     console.error("Error updating survey:", error);
     return NextResponse.json(
