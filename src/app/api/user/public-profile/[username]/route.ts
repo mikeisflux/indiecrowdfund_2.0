@@ -22,12 +22,12 @@ interface PledgeData {
 }
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ username: string }> }
 ) {
   try {
     const { username } = await params;
-    const session = await auth();
+    await auth(); // Check auth status for isFollowing feature (used later)
 
     // Find user by vanityUrl or id
     const user = await db.user.findFirst({

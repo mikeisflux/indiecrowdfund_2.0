@@ -10,9 +10,11 @@
  */
 
 // Only import crypto on server-side
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 let crypto: typeof import("crypto") | null = null;
 if (typeof window === "undefined") {
-  // Dynamic import for server-side only
+  // Dynamic import for server-side only - require is needed for conditional import
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   crypto = require("crypto");
 }
 
