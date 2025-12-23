@@ -80,7 +80,7 @@ export async function POST(
     // Build forwarded content
     const originalSubject = originalMessages[0]?.subject || "No Subject";
     const forwardedContent = originalMessages
-      .map((msg) => {
+      .map((msg: typeof originalMessages[number]) => {
         const senderName = msg.sender.name || msg.sender.email;
         const date = msg.createdAt.toLocaleString();
         return `--- Forwarded from ${senderName} on ${date} ---\n${msg.content}`;
