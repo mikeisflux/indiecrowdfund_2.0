@@ -145,6 +145,71 @@ async function main() {
   }
   console.log(`  Updated ${projects.length} Project records`);
 
+  // Fix URLs embedded in Project description (story content)
+  console.log('Updating Project.description (story images)...');
+  const projectsWithStoryImages = await prisma.project.findMany({
+    where: {
+      OR: [
+        { description: { contains: '.png' } },
+        { description: { contains: '.jpg' } },
+        { description: { contains: '.jpeg' } }
+      ]
+    },
+    select: { id: true, description: true }
+  });
+
+  let storyUpdates = 0;
+  for (const project of projectsWithStoryImages) {
+    if (project.description) {
+      // Replace image URLs in the HTML content
+      const newDescription = project.description
+        .replace(/\/api\/uploads\/([^"'\s]+)\.(png|jpg|jpeg)/gi, '/api/uploads/$1.webp')
+        .replace(/\/uploads\/([^"'\s]+)\.(png|jpg|jpeg)/gi, '/uploads/$1.webp');
+
+      if (newDescription !== project.description) {
+        await prisma.project.update({
+          where: { id: project.id },
+          data: { description: newDescription }
+        });
+        storyUpdates++;
+        totalUpdates++;
+      }
+    }
+  }
+  console.log(`  Updated ${storyUpdates} Project descriptions with story images`);
+
+  // Fix URLs embedded in Reward description
+  console.log('Updating Reward.description (embedded images)...');
+  const rewardsWithImages = await prisma.reward.findMany({
+    where: {
+      OR: [
+        { description: { contains: '.png' } },
+        { description: { contains: '.jpg' } },
+        { description: { contains: '.jpeg' } }
+      ]
+    },
+    select: { id: true, description: true }
+  });
+
+  let rewardDescUpdates = 0;
+  for (const reward of rewardsWithImages) {
+    if (reward.description) {
+      const newDescription = reward.description
+        .replace(/\/api\/uploads\/([^"'\s]+)\.(png|jpg|jpeg)/gi, '/api/uploads/$1.webp')
+        .replace(/\/uploads\/([^"'\s]+)\.(png|jpg|jpeg)/gi, '/uploads/$1.webp');
+
+      if (newDescription !== reward.description) {
+        await prisma.reward.update({
+          where: { id: reward.id },
+          data: { description: newDescription }
+        });
+        rewardDescUpdates++;
+        totalUpdates++;
+      }
+    }
+  }
+  console.log(`  Updated ${rewardDescUpdates} Reward descriptions with embedded images`);
+
   console.log(`\nDone! Total records updated: ${totalUpdates}`);
 }
 
