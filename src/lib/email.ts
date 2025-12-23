@@ -16,6 +16,9 @@ interface SendEmailOptions {
   html: string;
   text?: string;
   skipUnsubscribeCheck?: boolean; // For transactional emails like password reset
+  replyTo?: string; // Custom reply-to address
+  fromEmail?: string; // Custom from email (e.g., creator email)
+  fromName?: string; // Custom from name
 }
 
 // Get email settings from database
@@ -117,7 +120,8 @@ async function sendViaSendGrid(
   text: string,
   fromEmail: string,
   fromName: string,
-  apiKey: string
+  apiKey: string,
+  replyTo?: string
 ): Promise<{ success: boolean; error?: string }> {
   sgMail.setApiKey(apiKey);
 
@@ -128,6 +132,7 @@ async function sendViaSendGrid(
         email: fromEmail,
         name: fromName,
       },
+      replyTo: replyTo || fromEmail,
       subject,
       html,
       text,
@@ -155,7 +160,8 @@ async function sendViaMailgun(
   fromEmail: string,
   fromName: string,
   apiKey: string,
-  domain: string
+  domain: string,
+  replyTo?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const mailgun = new Mailgun(formData);
@@ -167,6 +173,7 @@ async function sendViaMailgun(
     const response = await mg.messages.create(domain, {
       from: `${fromName} <${fromEmail}>`,
       to: [to],
+      "h:Reply-To": replyTo || fromEmail,
       subject,
       text,
       html,
@@ -180,7 +187,7 @@ async function sendViaMailgun(
   }
 }
 
-export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName }: SendEmailOptions) {
   console.log(`[Email] sendEmail called - to: ${to}, subject: ${subject}`);
 
   // Check if user has unsubscribed (unless this is a transactional email)
@@ -203,8 +210,9 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck 
     hasSendgridKey: !!settings?.sendgridApiKey,
   });
 
-  const fromEmail = settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
-  const fromName = settings?.smtpFromName || APP_NAME;
+  // Use custom from address if provided, otherwise fall back to settings/defaults
+  const fromEmail = customFromEmail || settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
+  const fromName = customFromName || settings?.smtpFromName || APP_NAME;
 
   // Add unsubscribe footer to emails (unless it's a transactional email that should skip)
   const finalHtml = skipUnsubscribeCheck ? html : addUnsubscribeFooter(html, to);
@@ -229,8 +237,8 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck 
       console.error("[Email] Mailgun selected but credentials incomplete - API key:", !!mailgunApiKey, ", Domain:", !!mailgunDomain);
       return { success: false, error: "Mailgun selected but API key or domain is missing" };
     }
-    console.log(`[Email] Sending email via Mailgun to: ${to}, from: ${fromEmail} (${fromName}), domain: ${mailgunDomain}`);
-    result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain);
+    console.log(`[Email] Sending email via Mailgun to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}`);
+    result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain, replyTo);
     console.log(`[Email] Mailgun result:`, result);
   } else if (emailProvider === "sendgrid") {
     // SendGrid is explicitly selected
@@ -238,17 +246,17 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck 
       console.error("[Email] SendGrid selected but API key is missing");
       return { success: false, error: "SendGrid selected but API key is missing" };
     }
-    console.log(`[Email] Sending email via SendGrid to: ${to}, from: ${fromEmail} (${fromName})`);
-    result = await sendViaSendGrid(to, subject, finalHtml, plainText, fromEmail, fromName, sendgridApiKey);
+    console.log(`[Email] Sending email via SendGrid to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}`);
+    result = await sendViaSendGrid(to, subject, finalHtml, plainText, fromEmail, fromName, sendgridApiKey, replyTo);
     console.log(`[Email] SendGrid result:`, result);
   } else {
     // Try Mailgun first if configured, then SendGrid
     if (mailgunApiKey && mailgunDomain) {
-      console.log(`[Email] Sending email via Mailgun (auto) to: ${to}, from: ${fromEmail} (${fromName}), domain: ${mailgunDomain}`);
-      result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain);
+      console.log(`[Email] Sending email via Mailgun (auto) to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}`);
+      result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain, replyTo);
     } else if (sendgridApiKey) {
-      console.log(`[Email] Sending email via SendGrid (auto) to: ${to}, from: ${fromEmail} (${fromName})`);
-      result = await sendViaSendGrid(to, subject, finalHtml, plainText, fromEmail, fromName, sendgridApiKey);
+      console.log(`[Email] Sending email via SendGrid (auto) to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}`);
+      result = await sendViaSendGrid(to, subject, finalHtml, plainText, fromEmail, fromName, sendgridApiKey, replyTo);
     } else {
       console.warn("[Email] NOT CONFIGURED - no Mailgun or SendGrid API key found");
       console.log("[Email] Would send email to:", to);

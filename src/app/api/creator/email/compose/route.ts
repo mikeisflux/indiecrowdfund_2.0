@@ -32,15 +32,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
-    // Get sender info
+    // Get sender info including their creator email handle
     const sender = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, creatorEmailHandle: true },
     });
 
     if (!sender) {
       return NextResponse.json({ error: "Sender not found" }, { status: 404 });
     }
+
+    // Check if creator has an email handle set up
+    if (!sender.creatorEmailHandle) {
+      return NextResponse.json(
+        { error: "You need to set up your creator email address first. Go to Settings > Creator Email to configure it." },
+        { status: 400 }
+      );
+    }
+
+    // Creator's email address (e.g., divinitycomics@indiecrowdfund.com)
+    const creatorEmail = `${sender.creatorEmailHandle}@indiecrowdfund.com`;
 
     // Can't send to yourself
     if (to.trim().toLowerCase() === sender.email?.toLowerCase()) {
@@ -102,12 +113,15 @@ export async function POST(request: NextRequest) {
       </html>
     `;
 
-    // Send the actual email
+    // Send the actual email from the creator's email address
     const result = await sendEmail({
       to: to.trim(),
       subject: emailSubject,
       html: htmlBody,
       text: content.trim(),
+      fromEmail: creatorEmail,
+      fromName: senderName,
+      replyTo: creatorEmail, // Replies go to the creator's email
     });
 
     if (!result.success) {
