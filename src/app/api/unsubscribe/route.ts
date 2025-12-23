@@ -8,17 +8,6 @@ export const dynamic = "force-dynamic";
 const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || "default-unsubscribe-secret";
 
 /**
- * Generate a signed unsubscribe token for an email
- */
-function generateUnsubscribeToken(email: string): string {
-  const data = `${email}:${UNSUBSCRIBE_SECRET}`;
-  const hash = crypto.createHash("sha256").update(data).digest("hex").slice(0, 32);
-  // Base64 encode email and hash together
-  const token = Buffer.from(`${email}:${hash}`).toString("base64url");
-  return token;
-}
-
-/**
  * Verify and decode an unsubscribe token
  */
 function verifyUnsubscribeToken(token: string): string | null {
@@ -39,15 +28,6 @@ function verifyUnsubscribeToken(token: string): string | null {
   } catch {
     return null;
   }
-}
-
-/**
- * Generate the full unsubscribe URL for an email
- */
-function getUnsubscribeUrl(email: string): string {
-  const token = generateUnsubscribeToken(email);
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  return `${baseUrl}/api/unsubscribe?token=${token}`;
 }
 
 // GET - Handle unsubscribe from email link (one-click)
@@ -163,28 +143,6 @@ async function unsubscribeEmail(email: string): Promise<{ success: boolean; erro
   } catch (error) {
     console.error("[Unsubscribe] Error:", error);
     return { success: false, error: "Database error while unsubscribing" };
-  }
-}
-
-/**
- * Check if an email is unsubscribed
- */
-async function isEmailUnsubscribed(email: string): Promise<boolean> {
-  try {
-    const normalizedEmail = email.toLowerCase().trim();
-
-    const user = await db.user.findUnique({
-      where: { email: normalizedEmail },
-      select: { emailUnsubscribedAt: true },
-    });
-
-    if (user?.emailUnsubscribedAt) {
-      return true;
-    }
-
-    return false;
-  } catch {
-    return false;
   }
 }
 
