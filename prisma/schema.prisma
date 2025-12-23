@@ -31,6 +31,9 @@ model User {
   creatorEmailHandle String?  @unique
   stripeCustomerId  String?   @unique  // Stripe Customer ID for payment methods
 
+  // Email preferences
+  emailUnsubscribedAt DateTime?  // Global email unsubscribe timestamp
+
   // ID Verification
   idVerified        Boolean   @default(false)
   idVerifiedAt      DateTime?

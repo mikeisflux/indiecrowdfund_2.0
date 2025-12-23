@@ -1,16 +1,21 @@
 import sgMail from "@sendgrid/mail";
 import Mailgun from "mailgun.js";
 import formData from "form-data";
+import crypto from "crypto";
 import { db } from "@/lib/db";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+// Secret key for signing unsubscribe tokens
+const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || "default-unsubscribe-secret";
 
 interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  skipUnsubscribeCheck?: boolean; // For transactional emails like password reset
 }
 
 // Get email settings from database
@@ -48,6 +53,60 @@ export async function isEmailTypeEnabled(emailType: "welcome" | "pledgeConfirmat
 export async function isEmailVerificationRequired(): Promise<boolean> {
   const settings = await getEmailSettings();
   return settings?.emailVerificationRequired ?? false;
+}
+
+// Generate a signed unsubscribe token for an email
+export function generateUnsubscribeToken(email: string): string {
+  const data = `${email}:${UNSUBSCRIBE_SECRET}`;
+  const hash = crypto.createHash("sha256").update(data).digest("hex").slice(0, 32);
+  const token = Buffer.from(`${email}:${hash}`).toString("base64url");
+  return token;
+}
+
+// Generate the full unsubscribe URL for an email
+export function getUnsubscribeUrl(email: string): string {
+  const token = generateUnsubscribeToken(email);
+  return `${APP_URL}/api/unsubscribe?token=${token}`;
+}
+
+// Check if an email is unsubscribed
+export async function isEmailUnsubscribed(email: string): Promise<boolean> {
+  try {
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await db.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { emailUnsubscribedAt: true },
+    });
+    return !!user?.emailUnsubscribedAt;
+  } catch {
+    return false;
+  }
+}
+
+// Add unsubscribe footer to HTML email
+function addUnsubscribeFooter(html: string, email: string): string {
+  const unsubscribeUrl = getUnsubscribeUrl(email);
+  const footer = `
+    <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; text-align: center; color: #999; font-size: 12px;">
+      <p style="margin: 0;">
+        You're receiving this email because you have an account on ${APP_NAME}.
+        <br>
+        <a href="${unsubscribeUrl}" style="color: #999; text-decoration: underline;">Unsubscribe from all emails</a>
+      </p>
+    </div>
+  `;
+
+  // Insert before closing </body> tag if it exists, otherwise append
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${footer}</body>`);
+  }
+  return html + footer;
+}
+
+// Add unsubscribe notice to plain text email
+function addUnsubscribeText(text: string, email: string): string {
+  const unsubscribeUrl = getUnsubscribeUrl(email);
+  return `${text}\n\n---\nTo unsubscribe from all emails: ${unsubscribeUrl}`;
 }
 
 // Send email via SendGrid
@@ -121,8 +180,17 @@ async function sendViaMailgun(
   }
 }
 
-export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck }: SendEmailOptions) {
   console.log(`[Email] sendEmail called - to: ${to}, subject: ${subject}`);
+
+  // Check if user has unsubscribed (unless this is a transactional email)
+  if (!skipUnsubscribeCheck) {
+    const unsubscribed = await isEmailUnsubscribed(to);
+    if (unsubscribed) {
+      console.log(`[Email] Skipping email - user has unsubscribed: ${to}`);
+      return { success: false, error: "User has unsubscribed from emails", skipped: true };
+    }
+  }
 
   const settings = await getEmailSettings();
   console.log(`[Email] Settings loaded:`, {
@@ -137,7 +205,12 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
 
   const fromEmail = settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
   const fromName = settings?.smtpFromName || APP_NAME;
-  const plainText = text || html.replace(/<[^>]*>/g, "");
+
+  // Add unsubscribe footer to emails (unless it's a transactional email that should skip)
+  const finalHtml = skipUnsubscribeCheck ? html : addUnsubscribeFooter(html, to);
+  const plainText = text
+    ? (skipUnsubscribeCheck ? text : addUnsubscribeText(text, to))
+    : finalHtml.replace(/<[^>]*>/g, "");
 
   // Get email provider from settings (defaults to sendgrid for backward compatibility)
   const emailProvider = settings?.emailProvider || "sendgrid";
@@ -157,7 +230,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       return { success: false, error: "Mailgun selected but API key or domain is missing" };
     }
     console.log(`[Email] Sending email via Mailgun to: ${to}, from: ${fromEmail} (${fromName}), domain: ${mailgunDomain}`);
-    result = await sendViaMailgun(to, subject, html, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain);
+    result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain);
     console.log(`[Email] Mailgun result:`, result);
   } else if (emailProvider === "sendgrid") {
     // SendGrid is explicitly selected
@@ -166,16 +239,16 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       return { success: false, error: "SendGrid selected but API key is missing" };
     }
     console.log(`[Email] Sending email via SendGrid to: ${to}, from: ${fromEmail} (${fromName})`);
-    result = await sendViaSendGrid(to, subject, html, plainText, fromEmail, fromName, sendgridApiKey);
+    result = await sendViaSendGrid(to, subject, finalHtml, plainText, fromEmail, fromName, sendgridApiKey);
     console.log(`[Email] SendGrid result:`, result);
   } else {
     // Try Mailgun first if configured, then SendGrid
     if (mailgunApiKey && mailgunDomain) {
       console.log(`[Email] Sending email via Mailgun (auto) to: ${to}, from: ${fromEmail} (${fromName}), domain: ${mailgunDomain}`);
-      result = await sendViaMailgun(to, subject, html, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain);
+      result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain);
     } else if (sendgridApiKey) {
       console.log(`[Email] Sending email via SendGrid (auto) to: ${to}, from: ${fromEmail} (${fromName})`);
-      result = await sendViaSendGrid(to, subject, html, plainText, fromEmail, fromName, sendgridApiKey);
+      result = await sendViaSendGrid(to, subject, finalHtml, plainText, fromEmail, fromName, sendgridApiKey);
     } else {
       console.warn("[Email] NOT CONFIGURED - no Mailgun or SendGrid API key found");
       console.log("[Email] Would send email to:", to);
@@ -211,7 +284,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
           fromName: fromName,
           toEmail: to,
           subject: subject,
-          bodyHtml: html,
+          bodyHtml: finalHtml,
           bodyText: plainText,
           folder: "SENT",
           status: "SENT",
@@ -271,10 +344,12 @@ export async function sendPasswordResetEmail(email: string, token: string) {
     </html>
   `;
 
+  // Password reset is a transactional email - always send even if unsubscribed
   return sendEmail({
     to: email,
     subject: `Reset your ${APP_NAME} password`,
     html,
+    skipUnsubscribeCheck: true,
   });
 }
 
@@ -816,10 +891,12 @@ export async function sendVerificationEmail(
     </html>
   `;
 
+  // Email verification is a transactional email - always send even if unsubscribed
   return sendEmail({
     to: email,
     subject: `Verify your ${APP_NAME} email address`,
     html,
+    skipUnsubscribeCheck: true,
   });
 }
 
