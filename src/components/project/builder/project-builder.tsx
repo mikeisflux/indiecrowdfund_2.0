@@ -84,7 +84,7 @@ export function ProjectBuilder() {
         type: reward.type || "TIER",
         title: reward.title,
         description: reward.description || "",
-        amount: reward.amount,
+        amount: Number(reward.amount) || 0,
         imageUrl: reward.imageUrl || undefined,
         estimatedDelivery: reward.estimatedDelivery
           ? new Date(reward.estimatedDelivery).toISOString()
@@ -92,7 +92,7 @@ export function ProjectBuilder() {
         shippingType: reward.shippingType || "NO_SHIPPING",
         shippingCountries: reward.shippingCountries || [],
         shippingCost: reward.shippingCost || {},
-        quantityAvailable: reward.quantityAvailable,
+        quantityAvailable: reward.quantityAvailable != null ? Number(reward.quantityAvailable) : null,
         isEnded: reward.isEnded || false,
         items: reward.items?.map((item) => {
           // Find the full item details from the items store
@@ -118,9 +118,9 @@ export function ProjectBuilder() {
         location: basics.location,
         imageUrl: basics.imageUrl || undefined,
         videoUrl: basics.videoUrl,
-        goalAmount: basics.goalAmount || 10000,
+        goalAmount: Number(basics.goalAmount) || 10000,
         durationType: basics.durationType || "FIXED_DAYS",
-        durationDays: basics.durationDays,
+        durationDays: basics.durationDays != null ? Number(basics.durationDays) : undefined,
         endDate: basics.endDate instanceof Date ? basics.endDate.toISOString() : basics.endDate,
         launchDate: basics.launchDate instanceof Date ? basics.launchDate.toISOString() : basics.launchDate,
 
@@ -137,8 +137,8 @@ export function ProjectBuilder() {
         hasRiskyContent: payment.hasRiskyContent || false,
         promoContentSfw: payment.promoContentSfw !== false,
         allowRetailerPledges: payment.allowRetailerPledges || false,
-        retailerDiscount: payment.retailerDiscount || 50,
-        retailerMinQuantity: payment.retailerMinQuantity || 5,
+        retailerDiscount: Number(payment.retailerDiscount) || 50,
+        retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
 
         // Promotion
         prelaunchActive: promotion.prelaunchActive || false,
