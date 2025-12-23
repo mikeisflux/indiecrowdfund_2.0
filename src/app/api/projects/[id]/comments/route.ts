@@ -20,7 +20,7 @@ type CommentWithUser = {
 
 // Batch fetch superbacker status for multiple users (fixes N+1 query)
 async function getSuperbakerStatus(userIds: string[]): Promise<Map<string, boolean>> {
-  const uniqueUserIds = [...new Set(userIds)];
+  const uniqueUserIds = Array.from(new Set(userIds));
 
   // Count completed pledges per user in a single query
   const pledgeCounts = await db.pledge.groupBy({
