@@ -150,7 +150,8 @@ export async function POST(
   } catch (error) {
     console.error("Create reward error:", error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues }, { status: 400 });
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     return NextResponse.json(
       { error: "Failed to create reward" },
@@ -271,7 +272,8 @@ export async function PATCH(
   } catch (error) {
     console.error("Update reward error:", error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues }, { status: 400 });
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     return NextResponse.json(
       { error: "Failed to update reward" },
