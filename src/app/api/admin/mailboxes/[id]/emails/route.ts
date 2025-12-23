@@ -42,8 +42,9 @@ export async function GET(
     const { id } = await params;
     const url = new URL(request.url);
     const folder = (url.searchParams.get("folder") || "INBOX") as EmailFolder;
-    const page = parseInt(url.searchParams.get("page") || "1");
-    const limit = parseInt(url.searchParams.get("limit") || "50");
+    // Validate pagination parameters
+    const page = Math.max(1, parseInt(url.searchParams.get("page") || "1") || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "50") || 50));
     const search = url.searchParams.get("search") || "";
     const unreadOnly = url.searchParams.get("unread") === "true";
     const starredOnly = url.searchParams.get("starred") === "true";

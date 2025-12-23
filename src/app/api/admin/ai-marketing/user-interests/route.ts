@@ -37,7 +37,8 @@ export async function GET(request: Request) {
     const action = searchParams.get("action");
     const userId = searchParams.get("userId");
     const projectId = searchParams.get("projectId");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    // Validate limit parameter
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
 
     // Get stats overview
     if (!action) {

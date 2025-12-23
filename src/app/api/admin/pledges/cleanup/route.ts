@@ -134,7 +134,8 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const hoursOld = parseInt(searchParams.get("hoursOld") || "24");
+    // Validate hoursOld parameter - default 24, min 1, max 720 (30 days)
+    const hoursOld = Math.min(720, Math.max(1, parseInt(searchParams.get("hoursOld") || "24") || 24));
 
     const cutoffTime = new Date(Date.now() - hoursOld * 60 * 60 * 1000);
 

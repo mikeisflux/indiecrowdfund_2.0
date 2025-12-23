@@ -9,7 +9,8 @@ export async function GET(req: NextRequest) {
     const session = await auth();
     const { searchParams } = new URL(req.url);
 
-    const limit = parseInt(searchParams.get("limit") || "12");
+    // Validate limit parameter
+    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "12") || 12));
     const excludeIds = searchParams.get("exclude")?.split(",") || [];
     const sessionId = searchParams.get("sessionId") || undefined;
     const currentPage = searchParams.get("page") || undefined;

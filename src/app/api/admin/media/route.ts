@@ -34,8 +34,9 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "24");
+    // Validate pagination parameters
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "24") || 24));
     const folder = searchParams.get("folder") || "all";
     const mimeType = searchParams.get("mimeType") || "all";
     const search = searchParams.get("search") || "";

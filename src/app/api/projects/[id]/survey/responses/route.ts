@@ -49,8 +49,9 @@ export async function GET(
     }
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    // Validate pagination parameters
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50") || 50));
     const filter = searchParams.get("filter") || "all"; // all, complete, incomplete
     const rewardId = searchParams.get("rewardId");
 

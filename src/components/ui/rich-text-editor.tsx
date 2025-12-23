@@ -6,6 +6,7 @@ import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect, useCallback, useState, useRef } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import {
@@ -82,7 +83,7 @@ export function RichTextEditor({
       return data.url || null;
     } catch (error) {
       console.error("Error uploading image:", error);
-      alert(error instanceof Error ? error.message : "Failed to upload image");
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
       return null;
     } finally {
       setIsUploading(false);

@@ -1,6 +1,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
+import { toast } from "sonner";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -138,11 +139,11 @@ export default function RetailerApplyPage() {
         setIsSubmitted(true);
       } else {
         const data = await response.json();
-        alert(data.error || data.message || "Failed to submit application");
+        toast.error(data.error || data.message || "Failed to submit application");
       }
     } catch (error) {
       console.error("Error submitting application:", error);
-      alert("Failed to submit application. Please try again.");
+      toast.error("Failed to submit application. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

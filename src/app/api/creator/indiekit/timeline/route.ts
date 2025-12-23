@@ -34,8 +34,9 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
-    const limit = parseInt(searchParams.get("limit") || "50");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    // Validate pagination parameters
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50") || 50));
+    const offset = Math.max(0, parseInt(searchParams.get("offset") || "0") || 0);
     const activityFilter = searchParams.get("filter") || "all";
     const dateRange = searchParams.get("dateRange") || "30days";
 

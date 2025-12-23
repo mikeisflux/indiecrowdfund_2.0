@@ -32,8 +32,9 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("q");
     const sort = searchParams.get("sort") || "trending";
     const staffPicks = searchParams.get("staffPicks") === "true";
-    const limit = parseInt(searchParams.get("limit") || "12");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    // Validate pagination parameters
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "12") || 12));
+    const offset = Math.max(0, parseInt(searchParams.get("offset") || "0") || 0);
 
     // Build where clause - start with AND conditions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

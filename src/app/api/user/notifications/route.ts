@@ -16,8 +16,9 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    // Validate pagination parameters
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
+    const offset = Math.max(0, parseInt(searchParams.get("offset") || "0") || 0);
     const unreadOnly = searchParams.get("unreadOnly") === "true";
 
     // Build where clause

@@ -1,6 +1,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
+import { toast } from "sonner";
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -234,12 +235,14 @@ export default function SurveyBuilderPage() {
       if (response.ok) {
         setShowSendDialog(false);
         await fetchSurvey();
+        toast.success("Survey sent to backers!");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to send survey");
+        toast.error(error.error || "Failed to send survey");
       }
     } catch (error) {
       console.error("Error sending survey:", error);
+      toast.error("Failed to send survey");
     }
   };
 

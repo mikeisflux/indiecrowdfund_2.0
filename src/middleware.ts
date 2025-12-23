@@ -46,9 +46,18 @@ function getSecuritySettings() {
 
 // Generate CSP header value
 function getCSPHeader(): string {
+  const isDev = process.env.NODE_ENV === "development";
+
+  // Script sources - only allow unsafe-eval in development (needed for hot reload)
+  // In production, we rely on Next.js bundled scripts being from 'self'
+  const scriptSrc = isDev
+    ? "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com"
+    : "'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com";
+
   const directives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com",
+    `script-src ${scriptSrc}`,
+    // Note: 'unsafe-inline' for styles is required for CSS-in-JS libraries (Tailwind, styled-components, etc.)
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https: http:",

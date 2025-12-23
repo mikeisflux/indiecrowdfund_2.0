@@ -34,7 +34,8 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "50");
+    // Validate limit parameter
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50") || 50));
     const eventType = searchParams.get("eventType");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");

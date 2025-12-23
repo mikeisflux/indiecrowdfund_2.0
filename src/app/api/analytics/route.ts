@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
-    const days = parseInt(searchParams.get("days") || "30");
+    // Validate days parameter - default 30, min 1, max 365
+    const days = Math.min(365, Math.max(1, parseInt(searchParams.get("days") || "30") || 30));
 
     if (!projectId) {
       return NextResponse.json(

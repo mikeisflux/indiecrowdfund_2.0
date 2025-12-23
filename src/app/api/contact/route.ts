@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import { db } from "@/lib/db";
+import { escapeHtml, escapeHtmlForEmail } from "@/lib/utils/api-params";
 
 // Schema for contact form validation
 const contactSchema = z.object({
@@ -38,27 +39,34 @@ export async function POST(req: NextRequest) {
       // Use default email if settings can't be fetched
     }
 
+    // Escape user input for safe HTML rendering
+    const safeName = escapeHtml(data.name);
+    const safeEmail = escapeHtml(data.email);
+    const safeSubject = escapeHtml(data.subject);
+    const safeMessage = escapeHtmlForEmail(data.message);
+    const safeCategory = escapeHtml(categoryLabels[data.category] || data.category);
+
     // Send email to support team
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">New Contact Form Submission</h2>
 
         <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p style="margin: 0 0 10px 0;"><strong>From:</strong> ${data.name}</p>
-          <p style="margin: 0 0 10px 0;"><strong>Email:</strong> ${data.email}</p>
-          <p style="margin: 0 0 10px 0;"><strong>Category:</strong> ${categoryLabels[data.category] || data.category}</p>
-          <p style="margin: 0;"><strong>Subject:</strong> ${data.subject}</p>
+          <p style="margin: 0 0 10px 0;"><strong>From:</strong> ${safeName}</p>
+          <p style="margin: 0 0 10px 0;"><strong>Email:</strong> ${safeEmail}</p>
+          <p style="margin: 0 0 10px 0;"><strong>Category:</strong> ${safeCategory}</p>
+          <p style="margin: 0;"><strong>Subject:</strong> ${safeSubject}</p>
         </div>
 
         <div style="margin: 20px 0;">
           <h3 style="color: #333;">Message:</h3>
-          <div style="background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px; white-space: pre-wrap;">${data.message}</div>
+          <div style="background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">${safeMessage}</div>
         </div>
 
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
 
         <p style="color: #666; font-size: 12px;">
-          Reply directly to this email to respond to ${data.name} at ${data.email}
+          Reply directly to this email to respond to ${safeName} at ${safeEmail}
         </p>
       </div>
     `;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -263,7 +264,7 @@ export default function AnalyticsPage() {
     }
 
     if (!csvContent) {
-      alert("No data available to export");
+      toast.error("No data available to export");
       return;
     }
 
@@ -274,6 +275,7 @@ export default function AnalyticsPage() {
     link.download = filename;
     link.click();
     URL.revokeObjectURL(link.href);
+    toast.success("Data exported successfully");
   };
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
+import { toast } from "sonner";
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -168,13 +169,14 @@ export default function BugReportsPage() {
         setResolutionNotes("");
         setNewStatus("");
         setNewPriority("");
+        toast.success("Bug report updated");
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to update bug report");
+        toast.error(data.error || "Failed to update bug report");
       }
     } catch (error) {
       console.error("Error updating bug report:", error);
-      alert("Failed to update bug report");
+      toast.error("Failed to update bug report");
     } finally {
       setIsSubmitting(false);
     }

@@ -2,6 +2,7 @@
 
 import { getCSRFHeaders } from "@/lib/csrf";
 import { fetchWithRetry } from "@/lib/fetch-utils";
+import { toast } from "sonner";
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
@@ -259,13 +260,14 @@ export default function ProjectsPage() {
         await fetchActiveProjects();
         setShowMakeLiveDialog(false);
         setSelectedProject(null);
+        toast.success("Project is now live!");
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to make project live");
+        toast.error(data.error || "Failed to make project live");
       }
     } catch (error) {
       console.error("Error making project live:", error);
-      alert("Failed to make project live");
+      toast.error("Failed to make project live");
     } finally {
       setIsSubmitting(false);
     }
@@ -293,13 +295,14 @@ export default function ProjectsPage() {
         await fetchProjects();
         setShowDeactivateDialog(false);
         setSelectedProject(null);
+        toast.success("Project deactivated");
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to deactivate project");
+        toast.error(data.error || "Failed to deactivate project");
       }
     } catch (error) {
       console.error("Error deactivating project:", error);
-      alert("Failed to deactivate project");
+      toast.error("Failed to deactivate project");
     } finally {
       setIsSubmitting(false);
     }
@@ -345,13 +348,14 @@ export default function ProjectsPage() {
         setReviewNotes("");
         setInternalNotes("");
         setRejectionReason("");
+        toast.success(`Review submitted: ${reviewAction}`);
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to submit review");
+        toast.error(data.error || "Failed to submit review");
       }
     } catch (error) {
       console.error("Error submitting review:", error);
-      alert("Failed to submit review");
+      toast.error("Failed to submit review");
     } finally {
       setIsSubmitting(false);
     }

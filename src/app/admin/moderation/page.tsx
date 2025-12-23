@@ -1,6 +1,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
+import { toast } from "sonner";
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -130,13 +131,14 @@ export default function ModerationPage() {
         setShowReportDialog(false);
         setSelectedReport(null);
         setModeratorNotes("");
+        toast.success("Report updated successfully");
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to update report");
+        toast.error(data.error || "Failed to update report");
       }
     } catch (error) {
       console.error("Error updating report:", error);
-      alert("Failed to update report");
+      toast.error("Failed to update report");
     } finally {
       setIsSubmitting(false);
     }

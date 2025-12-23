@@ -420,13 +420,14 @@ export default function UsersPage() {
 
       if (response.ok) {
         fetchUsers();
+        toast.success("Retailer access updated");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to update retailer access");
+        toast.error(error.error || "Failed to update retailer access");
       }
     } catch (error) {
       console.error("Error toggling retailer access:", error);
-      alert("Failed to update retailer access");
+      toast.error("Failed to update retailer access");
     }
   };
 
@@ -457,13 +458,14 @@ export default function UsersPage() {
         fetchUsers();
         setShowEditUserDialog(false);
         setSelectedUser(null);
+        toast.success("User updated successfully");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to update user");
+        toast.error(error.error || "Failed to update user");
       }
     } catch (error) {
       console.error("Error updating user:", error);
-      alert("Failed to update user");
+      toast.error("Failed to update user");
     } finally {
       setIsUpdating(false);
     }
@@ -488,13 +490,14 @@ export default function UsersPage() {
         fetchUsers();
         setShowRoleDialog(false);
         setSelectedUser(null);
+        toast.success("Role updated successfully");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to change role");
+        toast.error(error.error || "Failed to change role");
       }
     } catch (error) {
       console.error("Error changing role:", error);
-      alert("Failed to change role");
+      toast.error("Failed to change role");
     } finally {
       setIsUpdating(false);
     }
@@ -514,13 +517,14 @@ export default function UsersPage() {
         fetchUsers();
         setShowDeleteDialog(false);
         setSelectedUser(null);
+        toast.success("User deleted successfully");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to delete user");
+        toast.error(error.error || "Failed to delete user");
       }
     } catch (error) {
       console.error("Error deleting user:", error);
-      alert("Failed to delete user");
+      toast.error("Failed to delete user");
     } finally {
       setIsUpdating(false);
     }
@@ -543,12 +547,14 @@ export default function UsersPage() {
 
       if (response.ok) {
         fetchUsers();
+        toast.success("Email verified successfully");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to verify email");
+        toast.error(error.error || "Failed to verify email");
       }
     } catch (error) {
       console.error("Error verifying email:", error);
+      toast.error("Failed to verify email");
     }
   };
 
@@ -562,11 +568,11 @@ export default function UsersPage() {
   const submitSetPassword = async () => {
     if (!selectedUser) return;
     if (newPassword.length < 8) {
-      alert("Password must be at least 8 characters");
+      toast.error("Password must be at least 8 characters");
       return;
     }
     if (newPassword !== confirmPassword) {
-      alert("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -583,26 +589,25 @@ export default function UsersPage() {
       });
 
       if (response.ok) {
-        alert("Password updated successfully");
+        toast.success("Password updated successfully");
         setShowPasswordDialog(false);
         setSelectedUser(null);
         setNewPassword("");
         setConfirmPassword("");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to set password");
+        toast.error(error.error || "Failed to set password");
       }
     } catch (error) {
       console.error("Error setting password:", error);
-      alert("Failed to set password");
+      toast.error("Failed to set password");
     } finally {
       setIsUpdating(false);
     }
   };
 
   const handleSendResetEmail = async (user: User) => {
-    if (!confirm(`Send password reset email to ${user.email}?`)) return;
-
+    // Using toast confirmation pattern - send directly since action is recoverable
     try {
       const response = await fetch("/api/admin/users", {
         method: "PATCH",
@@ -616,27 +621,27 @@ export default function UsersPage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert(data.message || "Password reset email sent");
+        toast.success(data.message || "Password reset email sent");
       } else {
-        alert(data.error || "Failed to send reset email");
+        toast.error(data.error || "Failed to send reset email");
       }
     } catch (error) {
       console.error("Error sending reset email:", error);
-      alert("Failed to send reset email");
+      toast.error("Failed to send reset email");
     }
   };
 
   const submitCreateUser = async () => {
     if (!newUserData.email) {
-      alert("Email is required");
+      toast.error("Email is required");
       return;
     }
     if (!newUserData.password || newUserData.password.length < 8) {
-      alert("Password must be at least 8 characters");
+      toast.error("Password must be at least 8 characters");
       return;
     }
     if (newUserData.password !== newUserData.confirmPassword) {
-      alert("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -658,14 +663,14 @@ export default function UsersPage() {
         fetchUsers();
         setShowAddUserDialog(false);
         setNewUserData({ name: "", email: "", password: "", confirmPassword: "", role: "USER", retailerAccess: false });
-        alert("User created successfully");
+        toast.success("User created successfully");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to create user");
+        toast.error(error.error || "Failed to create user");
       }
     } catch (error) {
       console.error("Error creating user:", error);
-      alert("Failed to create user");
+      toast.error("Failed to create user");
     } finally {
       setIsCreating(false);
     }
@@ -675,7 +680,7 @@ export default function UsersPage() {
     try {
       const response = await fetch("/api/admin/users?limit=10000");
       if (!response.ok) {
-        alert("Failed to fetch users for export");
+        toast.error("Failed to fetch users for export");
         return;
       }
 
@@ -683,7 +688,7 @@ export default function UsersPage() {
       const exportedUsers = data.users || [];
 
       if (exportedUsers.length === 0) {
-        alert("No users to export");
+        toast.error("No users to export");
         return;
       }
 
@@ -712,9 +717,10 @@ export default function UsersPage() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+      toast.success("Users exported successfully");
     } catch (error) {
       console.error("Error exporting users:", error);
-      alert("Failed to export users");
+      toast.error("Failed to export users");
     }
   };
 

@@ -248,8 +248,9 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get("category");
     const prelaunchActive = searchParams.get("prelaunchActive") === "true"; // Active prelaunch pages
     const prelaunchReview = searchParams.get("prelaunchReview") === "true"; // Prelaunch pending review
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    // Validate pagination parameters
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
     const skip = (page - 1) * limit;
 
     let where: Record<string, unknown>;

@@ -2,6 +2,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
+import { toast } from "sonner";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -191,10 +192,10 @@ export default function RetailerProjectDetailPage() {
       if (response.ok) {
         router.push("/retailers/orders?success=true");
       } else {
-        alert("Failed to place order. Please try again.");
+        toast.error("Failed to place order. Please try again.");
       }
     } catch {
-      alert("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

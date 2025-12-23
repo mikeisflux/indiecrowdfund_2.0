@@ -38,13 +38,20 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+
+    // Validate and sanitize pagination parameters
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
+
     const status = searchParams.get("status") as PayoutStatus | null;
     const type = searchParams.get("type") as PayoutType | null;
     const search = searchParams.get("search");
-    const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortOrder = searchParams.get("sortOrder") || "desc";
+
+    // Whitelist allowed sort fields to prevent information disclosure
+    const allowedSortFields = ["createdAt", "amount", "status", "type", "sentAt"];
+    const requestedSortBy = searchParams.get("sortBy") || "createdAt";
+    const sortBy = allowedSortFields.includes(requestedSortBy) ? requestedSortBy : "createdAt";
+    const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
 
     const skip = (page - 1) * limit;
 

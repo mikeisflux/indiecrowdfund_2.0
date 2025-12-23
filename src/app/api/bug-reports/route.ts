@@ -99,10 +99,17 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const category = searchParams.get("category");
     const priority = searchParams.get("priority");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortOrder = searchParams.get("sortOrder") || "desc";
+
+    // Validate and sanitize pagination parameters
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
+
+    // Whitelist allowed sort fields
+    const allowedSortFields = ["createdAt", "status", "priority", "category", "severity"];
+    const requestedSortBy = searchParams.get("sortBy") || "createdAt";
+    const sortBy = allowedSortFields.includes(requestedSortBy) ? requestedSortBy : "createdAt";
+    const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
+
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {};
