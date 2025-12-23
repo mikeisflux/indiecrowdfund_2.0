@@ -7,6 +7,14 @@ import { db } from "@/lib/db";
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+// Email priority levels for the queue
+// Higher priority = processed first
+export const EMAIL_PRIORITY = {
+  SYSTEM: 10,    // Account creation, payment receipts, password reset - highest priority
+  CREATOR: 5,    // Creator emails, campaigns to backers - medium priority
+  AI_MARKETING: 1, // AI-generated marketing campaigns - lowest priority
+} as const;
+
 // Secret key for signing unsubscribe tokens
 const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || "default-unsubscribe-secret";
 
@@ -19,6 +27,7 @@ interface SendEmailOptions {
   replyTo?: string; // Custom reply-to address
   fromEmail?: string; // Custom from email (e.g., creator email)
   fromName?: string; // Custom from name
+  isCreatorEmail?: boolean; // True when sending from a creator's email handle
 }
 
 // Get email settings from database
@@ -187,7 +196,7 @@ async function sendViaMailgun(
   }
 }
 
-export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName, isCreatorEmail }: SendEmailOptions) {
   console.log(`[Email] sendEmail called - to: ${to}, subject: ${subject}`);
 
   // Check if user has unsubscribed (unless this is a transactional email)
@@ -277,12 +286,13 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
           data: {
             name: fromName,
             email: fromEmail,
-            description: "System outgoing emails",
-            isDefault: true,
+            description: isCreatorEmail ? "Creator email" : "System outgoing emails",
+            isDefault: !isCreatorEmail, // Only admin mailboxes can be default
             isActive: true,
+            isCreatorMailbox: isCreatorEmail || false,
           },
         });
-        console.log(`Created mailbox for ${fromEmail}`);
+        console.log(`Created ${isCreatorEmail ? "creator" : "system"} mailbox for ${fromEmail}`);
       }
 
       await db.adminEmail.create({
@@ -307,6 +317,173 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
   }
 
   return result;
+}
+
+// Queue an email for rate-limited sending (1 per second max)
+export async function queueEmail(options: SendEmailOptions & { priority?: number }): Promise<{ success: boolean; queueId?: string; error?: string }> {
+  const { to, subject, html, text, fromEmail, fromName, replyTo, isCreatorEmail, priority = 0 } = options;
+
+  try {
+    const queueEntry = await db.emailQueue.create({
+      data: {
+        toEmail: to,
+        subject,
+        bodyHtml: html,
+        bodyText: text || null,
+        fromEmail: fromEmail || null,
+        fromName: fromName || null,
+        replyTo: replyTo || null,
+        isCreatorEmail: isCreatorEmail || false,
+        priority,
+        status: "PENDING",
+      },
+    });
+
+    console.log(`[Email Queue] Added email to queue: ${queueEntry.id} -> ${to}`);
+    return { success: true, queueId: queueEntry.id };
+  } catch (error) {
+    console.error("[Email Queue] Failed to queue email:", error);
+    return { success: false, error: String(error) };
+  }
+}
+
+// Process a single email from the queue
+export async function processEmailQueue(): Promise<{ processed: number; errors: number }> {
+  let processed = 0;
+  let errors = 0;
+
+  try {
+    // Get the next pending email (oldest first, highest priority first)
+    const queueEntry = await db.emailQueue.findFirst({
+      where: {
+        status: "PENDING",
+      },
+      orderBy: [
+        { priority: "desc" },
+        { createdAt: "asc" },
+      ],
+    });
+
+    // Skip if already at max attempts
+    if (queueEntry && queueEntry.attempts >= queueEntry.maxAttempts) {
+      await db.emailQueue.update({
+        where: { id: queueEntry.id },
+        data: { status: "FAILED", error: "Max attempts reached" },
+      });
+      return { processed: 0, errors: 1 };
+    }
+
+    if (!queueEntry) {
+      return { processed: 0, errors: 0 };
+    }
+
+    // Mark as processing
+    await db.emailQueue.update({
+      where: { id: queueEntry.id },
+      data: {
+        status: "PROCESSING",
+        processedAt: new Date(),
+        attempts: { increment: 1 },
+      },
+    });
+
+    // Send the email
+    const result = await sendEmail({
+      to: queueEntry.toEmail,
+      subject: queueEntry.subject,
+      html: queueEntry.bodyHtml,
+      text: queueEntry.bodyText || undefined,
+      fromEmail: queueEntry.fromEmail || undefined,
+      fromName: queueEntry.fromName || undefined,
+      replyTo: queueEntry.replyTo || undefined,
+      isCreatorEmail: queueEntry.isCreatorEmail,
+    });
+
+    if (result.success) {
+      await db.emailQueue.update({
+        where: { id: queueEntry.id },
+        data: {
+          status: "SENT",
+          sentAt: new Date(),
+        },
+      });
+      processed = 1;
+      console.log(`[Email Queue] Successfully sent queued email: ${queueEntry.id}`);
+    } else {
+      const newAttempts = queueEntry.attempts + 1;
+      await db.emailQueue.update({
+        where: { id: queueEntry.id },
+        data: {
+          status: newAttempts >= queueEntry.maxAttempts ? "FAILED" : "PENDING",
+          error: result.error || "Unknown error",
+        },
+      });
+      errors = 1;
+      console.error(`[Email Queue] Failed to send queued email: ${queueEntry.id}`, result.error);
+    }
+  } catch (error) {
+    console.error("[Email Queue] Error processing queue:", error);
+    errors = 1;
+  }
+
+  return { processed, errors };
+}
+
+// Get queue stats
+export async function getEmailQueueStats(): Promise<{
+  pending: number;
+  processing: number;
+  sent: number;
+  failed: number;
+  enabled: boolean;
+  pausedAt: Date | null;
+}> {
+  const [pending, processing, sent, failed, settings] = await Promise.all([
+    db.emailQueue.count({ where: { status: "PENDING" } }),
+    db.emailQueue.count({ where: { status: "PROCESSING" } }),
+    db.emailQueue.count({ where: { status: "SENT" } }),
+    db.emailQueue.count({ where: { status: "FAILED" } }),
+    db.platformSettings.findUnique({ where: { id: "default" }, select: { emailQueueEnabled: true, emailQueuePausedAt: true } }),
+  ]);
+
+  return {
+    pending,
+    processing,
+    sent,
+    failed,
+    enabled: settings?.emailQueueEnabled ?? true,
+    pausedAt: settings?.emailQueuePausedAt ?? null,
+  };
+}
+
+// Check if email queue is enabled
+export async function isEmailQueueEnabled(): Promise<boolean> {
+  try {
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { emailQueueEnabled: true },
+    });
+    return settings?.emailQueueEnabled ?? true;
+  } catch {
+    return true; // Default to enabled if settings not found
+  }
+}
+
+// Enable/disable email queue processing
+export async function setEmailQueueEnabled(enabled: boolean): Promise<void> {
+  await db.platformSettings.upsert({
+    where: { id: "default" },
+    create: {
+      id: "default",
+      emailQueueEnabled: enabled,
+      emailQueuePausedAt: enabled ? null : new Date(),
+    },
+    update: {
+      emailQueueEnabled: enabled,
+      emailQueuePausedAt: enabled ? null : new Date(),
+    },
+  });
+  console.log(`[Email Queue] Queue ${enabled ? "enabled" : "disabled"}`);
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { queueEmail, EMAIL_PRIORITY } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -188,8 +188,8 @@ export async function POST(request: NextRequest) {
       </html>
     `;
 
-    // Send email to each backer
-    let sentCount = 0;
+    // Queue emails for each backer (rate-limited sending via queue)
+    let queuedCount = 0;
     const errors: string[] = [];
 
     // Get unique emails (avoid duplicates)
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
 
     for (const recipientEmail of uniqueEmails) {
       try {
-        const result = await sendEmail({
+        const result = await queueEmail({
           to: recipientEmail,
           subject: subject.trim(),
           html: htmlBody,
@@ -205,11 +205,13 @@ export async function POST(request: NextRequest) {
           fromEmail: creatorEmail,
           fromName: creatorName,
           replyTo: creatorEmail,
+          isCreatorEmail: true, // Mark as creator email for mailbox filtering
+          priority: EMAIL_PRIORITY.CREATOR, // Creator campaigns get priority 5
         });
 
         if (result.success) {
-          sentCount++;
-        } else if (result.error && !result.error.includes("unsubscribed")) {
+          queuedCount++;
+        } else {
           errors.push(`${recipientEmail}: ${result.error}`);
         }
       } catch (err) {
@@ -222,8 +224,8 @@ export async function POST(request: NextRequest) {
       data: {
         projectId: project.id,
         type: "SURVEY_SENT", // Reusing existing type for email sent
-        title: `Email campaign sent to ${sentCount} backers`,
-        description: `"${subject.trim()}" sent by ${creatorName}`,
+        title: `Email campaign queued for ${queuedCount} backers`,
+        description: `"${subject.trim()}" queued by ${creatorName}`,
       },
     });
 
@@ -231,16 +233,17 @@ export async function POST(request: NextRequest) {
       campaign: {
         id: update.id,
         subject: update.title,
-        status: "sent",
+        status: "queued",
         recipientCount: uniqueEmails.length,
-        sentCount,
+        queuedCount,
         errorCount: errors.length,
         openRate: 0,
         clickRate: 0,
         scheduledAt: null,
-        sentAt: update.publishedAt?.toISOString(),
+        queuedAt: new Date().toISOString(),
         createdAt: update.createdAt.toISOString(),
       },
+      message: `${queuedCount} emails queued for delivery. They will be sent at a rate of 1 per second.`,
       errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Return first 10 errors
     });
   } catch (error) {

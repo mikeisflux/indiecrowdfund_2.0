@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { queueEmail, EMAIL_PRIORITY } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -241,27 +241,13 @@ export async function POST(
 
     const recipients = Array.from(recipientMap.values());
 
-    console.log(`Sending campaign "${campaign.name}" to ${recipients.length} recipients`);
+    console.log(`Queueing campaign "${campaign.name}" to ${recipients.length} recipients`);
 
-    let sentCount = 0;
+    let queuedCount = 0;
     let failedCount = 0;
 
-    // Send emails via SendGrid and log them
-    let aborted = false;
+    // Queue emails for rate-limited sending
     for (const recipient of recipients) {
-      // Check if campaign was aborted every 10 emails
-      if (sentCount % 10 === 0 && sentCount > 0) {
-        const currentCampaign = await db.emailCampaign.findUnique({
-          where: { id },
-          select: { status: true },
-        });
-        if (currentCampaign?.status === "CANCELLED") {
-          console.log(`Campaign "${campaign.name}" was aborted after ${sentCount} emails sent`);
-          aborted = true;
-          break;
-        }
-      }
-
       try {
         // Replace template variables with recipient data
         const personalizedSubject = replaceTemplateVariables(campaign.subject, recipient);
@@ -273,15 +259,16 @@ export async function POST(
         // Add tracking pixel and click tracking
         personalizedHtml = addEmailTracking(personalizedHtml, campaign.id, recipient.email);
 
-        // Actually send the email via SendGrid
-        const result = await sendEmail({
+        // Queue the email with AI_MARKETING priority (lowest - 1)
+        const result = await queueEmail({
           to: recipient.email,
           subject: personalizedSubject,
           html: personalizedHtml,
+          priority: EMAIL_PRIORITY.AI_MARKETING, // Priority 1 - lowest
         });
 
         if (result.success) {
-          // Log successful send
+          // Log the queued email
           await db.emailLog.create({
             data: {
               recipientEmail: recipient.email,
@@ -291,51 +278,39 @@ export async function POST(
               type: "WEEKLY_DISCOVERY",
             },
           });
-          sentCount++;
+          queuedCount++;
         } else {
           failedCount++;
-          console.error(`Failed to send email to ${recipient.email}:`, result.error);
+          console.error(`Failed to queue email to ${recipient.email}:`, result.error);
         }
       } catch (err) {
         failedCount++;
-        console.error(`Error sending email to ${recipient.email}:`, err);
+        console.error(`Error queueing email to ${recipient.email}:`, err);
       }
     }
 
-    console.log(`Campaign "${campaign.name}" ${aborted ? "aborted" : "complete"}: ${sentCount} sent, ${failedCount} failed`);
+    console.log(`Campaign "${campaign.name}" queued: ${queuedCount} queued, ${failedCount} failed`);
 
-    // Update campaign status
-    if (!aborted) {
-      await db.emailCampaign.update({
-        where: { id },
-        data: {
-          status: "SENT",
-          sentAt: new Date(),
-          sentCount,
-          recipientCount: recipients.length,
-        },
-      });
-    } else {
-      // Update sent count even if aborted
-      await db.emailCampaign.update({
-        where: { id },
-        data: {
-          sentCount,
-        },
-      });
-    }
+    // Update campaign status to SENDING (emails are in queue, will be sent over time)
+    await db.emailCampaign.update({
+      where: { id },
+      data: {
+        status: "SENDING",
+        sentAt: new Date(),
+        sentCount: queuedCount, // Track as queued count for now
+        recipientCount: recipients.length,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      aborted,
-      message: aborted
-        ? `Campaign "${campaign.name}" was aborted after sending ${sentCount} emails`
-        : `Campaign "${campaign.name}" sent to ${sentCount} recipients`,
-      sentCount,
+      message: `Campaign "${campaign.name}" queued for ${queuedCount} recipients. Emails will be sent at 1 per second.`,
+      queuedCount,
+      failedCount,
       totalRecipients: recipients.length,
     });
   } catch (error) {
-    console.error("Error sending campaign:", error);
+    console.error("Error queueing campaign:", error);
 
     // Try to reset status if failed
     try {
@@ -349,7 +324,7 @@ export async function POST(
     }
 
     return NextResponse.json(
-      { error: "Failed to send campaign" },
+      { error: "Failed to queue campaign" },
       { status: 500 }
     );
   }

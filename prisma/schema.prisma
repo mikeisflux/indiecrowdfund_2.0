@@ -1541,6 +1541,10 @@ model PlatformSettings {
   pledgeConfirmationEnabled Boolean @default(true)
   projectUpdateNotifications Boolean @default(true)
 
+  // Email Queue Settings
+  emailQueueEnabled     Boolean  @default(true)  // Enable/disable email queue processing
+  emailQueuePausedAt    DateTime?  // Timestamp when queue was paused
+
   // Social Settings
   twitterHandle         String?
   facebookUrl           String?
@@ -1918,6 +1922,7 @@ model Mailbox {
 
   isDefault     Boolean       @default(false)
   isActive      Boolean       @default(true)
+  isCreatorMailbox Boolean    @default(false)  // True for auto-created creator mailboxes
 
   emails        AdminEmail[]
 
@@ -1925,6 +1930,43 @@ model Mailbox {
   updatedAt     DateTime      @updatedAt
 
   @@index([isActive])
+}
+
+// Email Queue for rate-limited sending (1 email per second max)
+model EmailQueue {
+  id            String           @id @default(cuid())
+
+  // Email details
+  toEmail       String
+  subject       String
+  bodyHtml      String           @db.Text
+  bodyText      String?          @db.Text
+  fromEmail     String?
+  fromName      String?
+  replyTo       String?
+  isCreatorEmail Boolean         @default(false)
+
+  // Queue status
+  status        EmailQueueStatus @default(PENDING)
+  priority      Int              @default(0)  // Higher = more urgent
+  attempts      Int              @default(0)
+  maxAttempts   Int              @default(3)
+  error         String?
+
+  // Timestamps
+  createdAt     DateTime         @default(now())
+  processedAt   DateTime?
+  sentAt        DateTime?
+
+  @@index([status, priority, createdAt])
+  @@index([createdAt])
+}
+
+enum EmailQueueStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
 }
 
 model AdminEmail {

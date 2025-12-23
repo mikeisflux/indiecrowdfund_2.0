@@ -46,7 +46,7 @@ async function requireAdmin() {
   return session.user;
 }
 
-// GET - List all mailboxes
+// GET - List all mailboxes (excluding creator mailboxes)
 export async function GET() {
   const admin = await requireAdmin();
   if (!admin) {
@@ -54,7 +54,22 @@ export async function GET() {
   }
 
   try {
+    // Get all creator email handles to filter out their mailboxes
+    const creators = await db.user.findMany({
+      where: { creatorEmailHandle: { not: null } },
+      select: { creatorEmailHandle: true },
+    });
+    const creatorEmails = creators
+      .map(c => c.creatorEmailHandle ? `${c.creatorEmailHandle}@indiecrowdfund.com` : null)
+      .filter((email): email is string => email !== null);
+
     const mailboxes = await db.mailbox.findMany({
+      where: {
+        AND: [
+          { isCreatorMailbox: false }, // Filter out mailboxes marked as creator
+          { email: { notIn: creatorEmails } }, // Filter out existing creator mailboxes by email
+        ],
+      },
       orderBy: [
         { isDefault: "desc" },
         { name: "asc" },

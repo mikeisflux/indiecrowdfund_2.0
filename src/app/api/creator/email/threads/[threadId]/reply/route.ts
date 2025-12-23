@@ -129,6 +129,7 @@ export async function POST(
       fromEmail: creatorEmail,
       fromName: creatorName,
       replyTo: creatorEmail,
+      isCreatorEmail: true, // Mark as creator email for mailbox filtering
     });
 
     if (!emailResult.success) {

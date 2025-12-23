@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
       fromEmail: creatorEmail,
       fromName: senderName,
       replyTo: creatorEmail, // Replies go to the creator's email
+      isCreatorEmail: true, // Mark as creator email for mailbox filtering
     });
 
     if (!result.success) {
