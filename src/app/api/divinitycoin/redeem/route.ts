@@ -1,13 +1,87 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+import crypto from "crypto";
+import { validateCSRFToken } from "@/lib/csrf";
+
+// Rate limiting for redemption attempts (stricter than payments)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 5; // Max 5 redemption attempts per minute
+
+// Failed attempt tracking to detect brute force
+const failedAttempts = new Map<string, { count: number; lockoutUntil: number }>();
+const MAX_FAILED_ATTEMPTS = 10; // Lock out after 10 failed attempts
+const LOCKOUT_DURATION_MS = 900000; // 15 minute lockout
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const userLimit = rateLimitMap.get(userId);
+
+  if (!userLimit || now > userLimit.resetTime) {
+    rateLimitMap.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+
+  if (userLimit.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return false;
+  }
+
+  userLimit.count++;
+  return true;
+}
+
+function checkLockout(userId: string): { locked: boolean; remainingMs: number } {
+  const now = Date.now();
+  const attempts = failedAttempts.get(userId);
+
+  if (!attempts) return { locked: false, remainingMs: 0 };
+
+  if (now < attempts.lockoutUntil) {
+    return { locked: true, remainingMs: attempts.lockoutUntil - now };
+  }
+
+  // Lockout expired, clear the record
+  failedAttempts.delete(userId);
+  return { locked: false, remainingMs: 0 };
+}
+
+function recordFailedAttempt(userId: string): void {
+  const now = Date.now();
+  const attempts = failedAttempts.get(userId) || { count: 0, lockoutUntil: 0 };
+
+  attempts.count++;
+
+  if (attempts.count >= MAX_FAILED_ATTEMPTS) {
+    attempts.lockoutUntil = now + LOCKOUT_DURATION_MS;
+    console.warn(`[DivinityCoin Redeem] User ${userId} locked out due to ${attempts.count} failed attempts`);
+  }
+
+  failedAttempts.set(userId, attempts);
+}
+
+function clearFailedAttempts(userId: string): void {
+  failedAttempts.delete(userId);
+}
 
 /**
  * POST /api/divinitycoin/redeem
  *
  * Redeem a DivinityCoin code and add credits to the user's account
+ *
+ * SECURITY MEASURES:
+ * - Rate limiting to prevent brute force code guessing
+ * - Lockout after repeated failed attempts
+ * - CSRF token validation
+ * - Atomic transaction for redemption + balance update
+ * - Local duplicate check before external API call
+ * - Comprehensive audit logging
  */
 export async function POST(req: NextRequest) {
+  const requestId = crypto.randomUUID();
+  const startTime = Date.now();
+
   try {
     const session = await auth();
 
@@ -15,6 +89,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "You must be logged in to redeem codes" },
         { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
+    // Check for lockout first
+    const lockoutStatus = checkLockout(userId);
+    if (lockoutStatus.locked) {
+      const minutesRemaining = Math.ceil(lockoutStatus.remainingMs / 60000);
+      console.warn(`[DivinityCoin Redeem] [${requestId}] User ${userId} is locked out`);
+      return NextResponse.json(
+        { error: `Too many failed attempts. Please try again in ${minutesRemaining} minutes.` },
+        { status: 429 }
+      );
+    }
+
+    // Rate limiting check
+    if (!checkRateLimit(userId)) {
+      console.warn(`[DivinityCoin Redeem] [${requestId}] Rate limit exceeded for user ${userId}`);
+      return NextResponse.json(
+        { error: "Too many redemption attempts. Please wait before trying again." },
+        { status: 429 }
+      );
+    }
+
+    // CSRF validation
+    const csrfToken = req.headers.get("x-csrf-token");
+    if (!csrfToken || !validateCSRFToken(csrfToken)) {
+      console.warn(`[DivinityCoin Redeem] [${requestId}] Invalid CSRF token for user ${userId}`);
+      return NextResponse.json(
+        { error: "Invalid request. Please refresh and try again." },
+        { status: 403 }
       );
     }
 
@@ -31,9 +137,36 @@ export async function POST(req: NextRequest) {
     // Clean up the code (remove dashes, spaces, etc.)
     const cleanCode = code.replace(/[-\s]/g, "").toUpperCase();
 
-    if (cleanCode.length < 8) {
+    if (cleanCode.length < 8 || cleanCode.length > 32) {
+      recordFailedAttempt(userId);
       return NextResponse.json(
         { error: "Invalid redemption code format" },
+        { status: 400 }
+      );
+    }
+
+    // Validate code contains only alphanumeric characters
+    if (!/^[A-Z0-9]+$/.test(cleanCode)) {
+      recordFailedAttempt(userId);
+      return NextResponse.json(
+        { error: "Invalid redemption code format" },
+        { status: 400 }
+      );
+    }
+
+    console.log(`[DivinityCoin Redeem] [${requestId}] Redemption attempt: user=${userId}, code=${cleanCode.substring(0, 4)}****`);
+
+    // Check if code was already redeemed locally FIRST (before external API)
+    const existingRedemption = await db.divinityCoinRedemption.findUnique({
+      where: { code: cleanCode },
+      select: { id: true, userId: true, redeemedAt: true },
+    });
+
+    if (existingRedemption) {
+      recordFailedAttempt(userId);
+      console.log(`[DivinityCoin Redeem] [${requestId}] Code already redeemed locally`);
+      return NextResponse.json(
+        { error: "This code has already been redeemed" },
         { status: 400 }
       );
     }
@@ -72,7 +205,8 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           code: cleanCode,
-          platformUserId: session.user.id,
+          platformUserId: userId,
+          requestId, // Include for cross-system audit trail
         }),
       });
 
@@ -81,7 +215,7 @@ export async function POST(req: NextRequest) {
       try {
         divinityResult = JSON.parse(responseText);
       } catch {
-        console.error("[DivinityCoin] Non-JSON response:", responseText);
+        console.error(`[DivinityCoin Redeem] [${requestId}] Non-JSON response:`, responseText);
         return NextResponse.json(
           { error: "Invalid response from DivinityCoin" },
           { status: 502 }
@@ -89,6 +223,8 @@ export async function POST(req: NextRequest) {
       }
 
       if (!divinityResponse.ok) {
+        recordFailedAttempt(userId);
+
         // Map DivinityCoin error codes to user-friendly messages
         const errorMessages: Record<string, string> = {
           INVALID_CODE_FORMAT: "Invalid code format",
@@ -99,13 +235,16 @@ export async function POST(req: NextRequest) {
           RATE_LIMITED: "Too many attempts. Please try again later.",
         };
         const errorMessage = errorMessages[divinityResult?.code] || divinityResult?.error || "Failed to validate code";
+
+        console.log(`[DivinityCoin Redeem] [${requestId}] API error: ${divinityResult?.code || "unknown"}`);
+
         return NextResponse.json(
           { error: errorMessage },
           { status: divinityResponse.status }
         );
       }
     } catch (fetchError) {
-      console.error("[DivinityCoin] Fetch error:", fetchError);
+      console.error(`[DivinityCoin Redeem] [${requestId}] Fetch error:`, fetchError);
       return NextResponse.json(
         { error: "Unable to connect to DivinityCoin" },
         { status: 503 }
@@ -114,42 +253,106 @@ export async function POST(req: NextRequest) {
 
     const amount = divinityResult.amount;
 
-    if (typeof amount !== "number" || amount <= 0) {
+    if (typeof amount !== "number" || amount <= 0 || amount > 100000) {
+      console.error(`[DivinityCoin Redeem] [${requestId}] Invalid amount from API: ${amount}`);
       return NextResponse.json(
         { error: "Invalid amount from DivinityCoin" },
         { status: 400 }
       );
     }
 
-    // Create local redemption record for tracking
-    await db.divinityCoinRedemption.create({
-      data: {
-        code: cleanCode,
-        userId: session.user.id,
-        amount,
-        redeemedAt: new Date(),
-      },
+    // Process redemption in atomic transaction
+    const result = await db.$transaction(async (tx) => {
+      // Double-check the code hasn't been redeemed (race condition protection)
+      const doubleCheck = await tx.divinityCoinRedemption.findUnique({
+        where: { code: cleanCode },
+      });
+
+      if (doubleCheck) {
+        throw new Error("CODE_ALREADY_REDEEMED");
+      }
+
+      // Get current balance for audit
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { divinityCoinBalance: true },
+      });
+
+      const previousBalance = user ? Number(user.divinityCoinBalance) : 0;
+
+      // Create redemption record
+      await tx.divinityCoinRedemption.create({
+        data: {
+          code: cleanCode,
+          userId: userId,
+          amount,
+          redeemedAt: new Date(),
+        },
+      });
+
+      // Update user's DivinityCoin balance
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          divinityCoinBalance: {
+            increment: amount,
+          },
+        },
+        select: { divinityCoinBalance: true },
+      });
+
+      // Create audit transaction record
+      await tx.divinityCoinTransaction.create({
+        data: {
+          userId: userId,
+          amount: amount, // Positive for credit
+          type: "REDEMPTION",
+          description: `Redeemed code ${cleanCode.substring(0, 4)}****`,
+          metadata: JSON.stringify({
+            requestId,
+            codePrefix: cleanCode.substring(0, 4),
+            previousBalance,
+            newBalance: Number(updatedUser.divinityCoinBalance),
+            timestamp: new Date().toISOString(),
+            ip: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown",
+            externalTransactionId: divinityResult.transactionId || null,
+          }),
+        },
+      });
+
+      return {
+        newBalance: Number(updatedUser.divinityCoinBalance),
+      };
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      timeout: 15000,
     });
 
-    // Update user's DivinityCoin balance with the amount from the API
-    const updatedUser = await db.user.update({
-      where: { id: session.user.id },
-      data: {
-        divinityCoinBalance: {
-          increment: amount,
-        },
-      },
-      select: { divinityCoinBalance: true },
-    });
+    // Clear failed attempts on successful redemption
+    clearFailedAttempts(userId);
+
+    const duration = Date.now() - startTime;
+    console.log(`[DivinityCoin Redeem] [${requestId}] Redemption successful: amount=${amount} in ${duration}ms`);
 
     return NextResponse.json({
       success: true,
       amount,
-      newBalance: updatedUser.divinityCoinBalance,
+      newBalance: result.newBalance,
       message: `Successfully redeemed $${amount.toFixed(2)} in DivinityCoin credits`,
     });
   } catch (error) {
-    console.error("[DivinityCoin Redeem] Error:", error);
+    const duration = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+    if (errorMessage === "CODE_ALREADY_REDEEMED") {
+      console.log(`[DivinityCoin Redeem] [${requestId}] Code already redeemed (race condition caught) in ${duration}ms`);
+      return NextResponse.json(
+        { error: "This code has already been redeemed" },
+        { status: 400 }
+      );
+    }
+
+    console.error(`[DivinityCoin Redeem] [${requestId}] Error after ${duration}ms:`, error);
     return NextResponse.json(
       { error: "Failed to redeem code. Please try again." },
       { status: 500 }

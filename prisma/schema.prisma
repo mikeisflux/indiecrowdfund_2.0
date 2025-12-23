@@ -61,6 +61,7 @@ model User {
   divinityCoinBankAccount DivinityCoinBankAccount?
   divinityCoinBalance Decimal @default(0) @db.Decimal(10, 2)
   divinityCoinRedemptions DivinityCoinRedemption[]
+  divinityCoinTransactions DivinityCoinTransaction[]
   idVerifications   IDVerification[]
   notifications     Notification[]
   bugReports        BugReport[]
@@ -809,7 +810,7 @@ model DivinityCoinRedemption {
   @@index([code])
 }
 
-// DivinityCoin transaction history
+// DivinityCoin transaction history with audit logging
 model DivinityCoinTransaction {
   id              String   @id @default(cuid())
   userId          String
@@ -817,11 +818,16 @@ model DivinityCoinTransaction {
   amount          Decimal  @db.Decimal(10, 2) // Positive for credits, negative for payments
   type            String   // REDEMPTION, PAYMENT, REFUND
   description     String?
+  metadata        String?  @db.Text // JSON audit data: requestId, IP, previous/new balance, timestamps
 
   createdAt       DateTime @default(now())
 
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([pledgeId])
+  @@index([createdAt])
+  @@index([type])
 }
 
 // ============================================
