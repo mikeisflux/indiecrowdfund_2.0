@@ -21,13 +21,11 @@ async function main() {
   console.log('Updating ProjectItem.imageUrl...');
   const projectItems = await prisma.projectItem.findMany({
     where: {
-      imageUrl: {
-        OR: [
-          { endsWith: '.png' },
-          { endsWith: '.jpg' },
-          { endsWith: '.jpeg' }
-        ]
-      }
+      OR: [
+        { imageUrl: { endsWith: '.png' } },
+        { imageUrl: { endsWith: '.jpg' } },
+        { imageUrl: { endsWith: '.jpeg' } }
+      ]
     }
   });
 
@@ -47,13 +45,11 @@ async function main() {
   console.log('Updating RewardItem.imageUrl...');
   const rewardItems = await prisma.rewardItem.findMany({
     where: {
-      imageUrl: {
-        OR: [
-          { endsWith: '.png' },
-          { endsWith: '.jpg' },
-          { endsWith: '.jpeg' }
-        ]
-      }
+      OR: [
+        { imageUrl: { endsWith: '.png' } },
+        { imageUrl: { endsWith: '.jpg' } },
+        { imageUrl: { endsWith: '.jpeg' } }
+      ]
     }
   });
 
@@ -73,13 +69,11 @@ async function main() {
   console.log('Updating Reward.imageUrl...');
   const rewards = await prisma.reward.findMany({
     where: {
-      imageUrl: {
-        OR: [
-          { endsWith: '.png' },
-          { endsWith: '.jpg' },
-          { endsWith: '.jpeg' }
-        ]
-      }
+      OR: [
+        { imageUrl: { endsWith: '.png' } },
+        { imageUrl: { endsWith: '.jpg' } },
+        { imageUrl: { endsWith: '.jpeg' } }
+      ]
     }
   });
 
@@ -131,13 +125,11 @@ async function main() {
   console.log('Updating Project.imageUrl...');
   const projects = await prisma.project.findMany({
     where: {
-      imageUrl: {
-        OR: [
-          { endsWith: '.png' },
-          { endsWith: '.jpg' },
-          { endsWith: '.jpeg' }
-        ]
-      }
+      OR: [
+        { imageUrl: { endsWith: '.png' } },
+        { imageUrl: { endsWith: '.jpg' } },
+        { imageUrl: { endsWith: '.jpeg' } }
+      ]
     }
   });
 
