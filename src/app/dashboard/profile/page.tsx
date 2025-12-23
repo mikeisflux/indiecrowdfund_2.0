@@ -232,15 +232,15 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
         <div className="container py-8 max-w-4xl">
-          <Skeleton className="h-48 w-full rounded-xl mb-6" />
-          <div className="flex items-end gap-6 -mt-16 mb-8 px-6">
-            <Skeleton className="h-32 w-32 rounded-full" />
-            <div className="space-y-2 pb-4">
+          <Skeleton className="h-48 md:h-64 w-full rounded-xl" />
+          <div className="px-6 md:px-8 pb-6">
+            <Skeleton className="h-32 w-32 rounded-full -mt-16 mb-4 ring-4 ring-background" />
+            <div className="space-y-2">
               <Skeleton className="h-8 w-48" />
               <Skeleton className="h-4 w-32" />
             </div>
           </div>
-          <div className="space-y-6">
+          <div className="space-y-6 px-6 md:px-8">
             <Skeleton className="h-64 w-full rounded-xl" />
             <Skeleton className="h-64 w-full rounded-xl" />
           </div>
@@ -316,7 +316,7 @@ export default function ProfilePage() {
 
       <div className="container py-8 max-w-4xl">
         {/* Hero Image Section */}
-        <div className="relative rounded-xl overflow-hidden mb-6 group">
+        <div className="relative rounded-xl overflow-hidden group">
           <div
             className="h-48 md:h-64 bg-gradient-to-br from-primary/20 via-purple-500/20 to-pink-500/20 relative"
             style={profile.heroImage ? { backgroundImage: `url(${profile.heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
@@ -347,10 +347,13 @@ export default function ProfilePage() {
               {profile.heroImage ? "Change Banner" : "Add Banner"}
             </Button>
           </div>
+        </div>
 
-          {/* Avatar */}
-          <div className="absolute -bottom-16 left-6 md:left-8">
-            <div className="relative group/avatar">
+        {/* Profile Header with Avatar */}
+        <div className="relative px-6 md:px-8 pb-6">
+          {/* Avatar - positioned to overlap hero */}
+          <div className="relative -mt-16 mb-4 inline-block">
+            <div className="relative">
               <Avatar className="h-32 w-32 ring-4 ring-background shadow-xl">
                 <AvatarImage src={profile.image || undefined} />
                 <AvatarFallback className="bg-gradient-to-br from-primary to-purple-500 text-white text-3xl">
@@ -364,29 +367,28 @@ export default function ProfilePage() {
                 accept="image/*"
                 onChange={(e) => handleFileSelect(e, "avatar")}
               />
-              <Button
-                variant="secondary"
-                size="icon"
-                className="absolute bottom-0 right-0 h-10 w-10 rounded-full shadow-lg opacity-0 group-hover/avatar:opacity-100 transition-opacity"
+              <button
+                className="absolute bottom-1 right-1 h-10 w-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg flex items-center justify-center transition-colors cursor-pointer"
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={uploadingAvatar}
+                type="button"
               >
                 {uploadingAvatar ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Camera className="h-4 w-4" />
                 )}
-              </Button>
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Profile Info Header */}
-        <div className="pl-6 md:pl-44 pb-6 pt-20 md:pt-0">
-          <h2 className="text-2xl font-bold">{profile.name || "Your Name"}</h2>
-          {profile.vanityUrl && (
-            <p className="text-muted-foreground">@{profile.vanityUrl}</p>
-          )}
+          {/* Name and username */}
+          <div>
+            <h2 className="text-2xl font-bold">{profile.name || "Your Name"}</h2>
+            {profile.vanityUrl && (
+              <p className="text-muted-foreground">@{profile.vanityUrl}</p>
+            )}
+          </div>
         </div>
 
         {error && (
