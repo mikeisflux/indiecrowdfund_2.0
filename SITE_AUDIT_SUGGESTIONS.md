@@ -18,7 +18,7 @@ This document provides a comprehensive audit of the IndieCrowdfund 2.0 crowdfund
 | **Database** | 🟠 MEDIUM-HIGH | 5 | Float currency, cascades |
 | **API Design** | 🟠 MEDIUM | 4 | Consistency, caching |
 | **Frontend/UX** | 🟡 MEDIUM | 3 | Accessibility, forms |
-| **Deployment** | 🔴 HIGH | 4 | nginx, CI/CD missing |
+| **Deployment** | 🟠 MEDIUM | 2 | nginx security headers |
 | **Performance** | 🟠 MEDIUM | 3 | N+1 queries, caching |
 
 ---
@@ -188,6 +188,22 @@ location /api/auth/ {
 ---
 
 ## 2. Database Schema Improvements
+
+### ⚠️ Important: Will These Changes Break My Data?
+
+| Change | Safe? | Affects Existing Records? | Notes |
+|--------|-------|---------------------------|-------|
+| Float → Decimal | ⚠️ Careful | Data converted during migration | Back up first, test on staging |
+| Change cascades | ✅ Safe | No | Only affects FUTURE deletes |
+| Add soft delete fields | ✅ Safe | No | Just adds new columns |
+| Add indexes | ✅ Safe | No | Only speeds up queries |
+
+**Before ANY database changes:**
+1. Back up your database: `pg_dump your_database > backup.sql`
+2. Test the migration on a copy of your database first
+3. Run during low-traffic hours
+
+---
 
 ### 2.1 Float Used for Currency (CRITICAL)
 
@@ -695,119 +711,70 @@ gzip_vary on;
 
 ## 6. Deployment & Infrastructure
 
-### 6.1 CI/CD Pipeline Missing (CRITICAL)
+*Note: This section is tailored for your setup using PM2 + crontab on your own server.*
 
-**Current state:** No automated testing, building, or deployment. All manual.
-
-**Recommendation:** Create GitHub Actions workflow:
-
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  test-and-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - run: npm ci
-      - run: npm run type-check
-      - run: npm run lint
-      - run: npm run build
-
-  deploy:
-    needs: test-and-build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to production
-        run: ssh user@server 'cd /app && git pull && npm ci && npm run build && pm2 restart all'
-```
-
----
-
-### 6.2 Docker Configuration Missing
-
-**Recommendation:** Create Dockerfile for consistent deployments:
-
-```dockerfile
-FROM node:18-alpine AS deps
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM node:18-alpine AS runtime
-WORKDIR /app
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package*.json ./
-USER nextjs
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
----
-
-### 6.3 PM2 Configuration Issues
+### 6.1 PM2 Configuration (Optional Improvement)
 
 **Location:** `ecosystem.config.js`
 
-**Current issues:**
-- Single instance (no clustering)
-- No health checks
-- No graceful shutdown handling
+**Current setup:** Running 1 instance of the app, which works fine for most sites.
 
-**Recommendation:**
+**Optional improvement - Clustering:**
+
+If your server has multiple CPU cores and you're seeing performance issues, you can run multiple copies of your app to handle more traffic. Check your CPU cores with:
+
+```bash
+nproc  # Shows number of CPU cores
+```
+
+If you have 4+ cores and want better performance:
+
 ```javascript
 module.exports = {
   apps: [{
     name: 'indiecrowdfund',
     script: 'npm',
     args: 'start',
-    instances: process.env.NODE_ENV === 'production' ? 'max' : 1,
-    exec_mode: 'cluster',
+    instances: 'max',        // One copy per CPU core
+    exec_mode: 'cluster',    // Required for multiple instances
     max_memory_restart: '1G',
-    kill_timeout: 5000,
-    wait_ready: true,
-    listen_timeout: 3000,
+    kill_timeout: 5000,      // Graceful shutdown time
   }]
 };
 ```
 
+**When to do this:** Only if you're seeing slow performance under load. Single instance is fine for most sites.
+
 ---
 
-### 6.4 Missing Cron Job in vercel.json
+### 6.2 Crontab Jobs
 
-**Current:** 4 cron jobs configured.
+**Your current setup uses crontab** which is the right approach for a self-hosted server.
 
-**Missing:** `/api/cron/cleanup-pledges` (exists in codebase but not in vercel.json)
+**Cron jobs that should exist (verify with `crontab -l`):**
 
-**Recommendation:** Add:
-```json
-{
-  "path": "/api/cron/cleanup-pledges",
-  "schedule": "0 1 * * *"
-}
+```bash
+# Email queue - runs every minute
+* * * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://yoursite.com/api/cron/email-queue
+
+# Payment retries - every 6 hours
+0 */6 * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://yoursite.com/api/cron/payment-retries
+
+# Process funded campaigns - every 5 minutes
+*/5 * * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://yoursite.com/api/cron/process-funded-campaigns
+
+# Email retries - every 4 hours
+0 */4 * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://yoursite.com/api/cron/email-retries
+
+# Cleanup pledges - daily at 1 AM (MAY BE MISSING - check if needed)
+0 1 * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://yoursite.com/api/cron/cleanup-pledges
 ```
 
+**Check if cleanup-pledges is in your crontab** - it exists in the codebase but may not be scheduled.
+
 ---
 
-### 6.5 Environment Variables Documentation
+### 6.3 Environment Variables Documentation
 
 **Current:** `.env.example` is incomplete.
 
@@ -821,6 +788,23 @@ module.exports = {
 - `LOG_LEVEL`
 - Rate limiting configuration
 - Session configuration
+
+---
+
+### 6.4 Automated Deployment (Nice-to-Have)
+
+**What it is:** Instead of manually running `git pull && npm run build && pm2 restart` every time you deploy, you can set up GitHub to do it automatically when you push code.
+
+**Current workflow (manual):**
+1. Push code to GitHub
+2. SSH into your server
+3. Run deploy commands manually
+
+**Automated workflow (optional):**
+1. Push code to GitHub
+2. GitHub automatically deploys to your server
+
+**This is NOT critical** - manual deployment works fine. Only set this up if you deploy frequently and want to save time. You can explore GitHub Actions when you're ready.
 
 ---
 
@@ -900,15 +884,14 @@ const where: Record<string, any> = {};
 | Implement API response caching | 8 hours | High |
 | Fix N+1 queries | 4 hours | Medium |
 
-### Phase 3: Infrastructure (Week 3)
+### Phase 3: Server & Crontab (Week 3)
 
 | Task | Effort | Impact |
 |------|--------|--------|
-| Create GitHub Actions CI/CD | 8 hours | Critical |
-| Create Dockerfile | 4 hours | High |
-| Update PM2 for clustering | 2 hours | High |
-| Add health check endpoint | 2 hours | Medium |
-| Add missing cron to vercel.json | 1 hour | Low |
+| Verify all cron jobs in crontab | 30 min | Medium |
+| Add cleanup-pledges cron if missing | 15 min | Low |
+| Consider PM2 clustering (optional) | 1 hour | Low |
+| Add nginx gzip compression | 30 min | Medium |
 
 ### Phase 4: UX & Accessibility (Week 4)
 
