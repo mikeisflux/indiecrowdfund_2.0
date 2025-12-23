@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { getCSRFHeaders } from "@/lib/csrf";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Subscriber {
   id: string;
@@ -123,6 +124,15 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
   const [saving, setSaving] = useState(false);
   const [removingDuplicates, setRemovingDuplicates] = useState(false);
 
+  // Confirmation dialog state
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; category: string }>({
+    open: false,
+    id: "",
+    category: "",
+  });
+  const [showDuplicatesConfirm, setShowDuplicatesConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const fetchSubscribers = useCallback(async () => {
     setLoading(true);
     try {
@@ -154,9 +164,9 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
     fetchSubscribers();
   }, [fetchSubscribers]);
 
-  const handleDelete = async (id: string, category: string) => {
-    if (!confirm("Are you sure you want to remove this subscriber?")) return;
-
+  const handleDelete = async () => {
+    const { id, category } = deleteConfirm;
+    setDeleting(true);
     try {
       const response = await fetch(
         `/api/admin/ai-marketing/subscribers?id=${id}&category=${category}`,
@@ -171,6 +181,8 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
       }
     } catch (error) {
       console.error("Error deleting subscriber:", error);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -257,10 +269,6 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
   };
 
   const handleRemoveDuplicates = async () => {
-    if (!confirm("This will remove duplicate email addresses, keeping the oldest entry for each. Continue?")) {
-      return;
-    }
-
     setRemovingDuplicates(true);
     try {
       const response = await fetch(
@@ -390,7 +398,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleRemoveDuplicates}
+                onClick={() => setShowDuplicatesConfirm(true)}
                 disabled={removingDuplicates || (selectedCategory !== "newsletter" && selectedCategory !== "retailers" && selectedCategory !== "all")}
                 title="Remove duplicate email addresses"
               >
@@ -506,7 +514,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-600"
-                                onClick={() => handleDelete(subscriber.id, subscriber.category)}
+                                onClick={() => setDeleteConfirm({ open: true, id: subscriber.id, category: subscriber.category })}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Remove
@@ -614,6 +622,30 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Subscriber Confirmation */}
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ ...deleteConfirm, open })}
+        title="Remove Subscriber?"
+        description="Are you sure you want to remove this subscriber? This action cannot be undone."
+        confirmText="Remove"
+        variant="destructive"
+        onConfirm={handleDelete}
+        loading={deleting}
+      />
+
+      {/* Remove Duplicates Confirmation */}
+      <ConfirmDialog
+        open={showDuplicatesConfirm}
+        onOpenChange={setShowDuplicatesConfirm}
+        title="Remove Duplicate Subscribers?"
+        description="This will remove duplicate email addresses, keeping the oldest entry for each. This action cannot be undone."
+        confirmText="Remove Duplicates"
+        variant="destructive"
+        onConfirm={handleRemoveDuplicates}
+        loading={removingDuplicates}
+      />
     </div>
   );
 }

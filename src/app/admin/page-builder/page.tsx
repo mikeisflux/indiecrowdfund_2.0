@@ -58,6 +58,7 @@ import {
   CheckCircle,
   AlertTriangle,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // Types
 type ComponentSettingValue = string | number | boolean | null | undefined | Array<{ value: string; label: string }>;
@@ -161,6 +162,12 @@ export default function PageBuilderPage() {
   const [newPageSlug, setNewPageSlug] = useState("");
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Unsaved changes confirmation dialog
+  const [unsavedChangesConfirm, setUnsavedChangesConfirm] = useState<{ open: boolean; targetPageId: string }>({
+    open: false,
+    targetPageId: "",
+  });
 
   // Fetch pages list
   const fetchPages = useCallback(async () => {
@@ -272,10 +279,15 @@ export default function PageBuilderPage() {
 
   const handlePageChange = (pageId: string) => {
     if (hasUnsavedChanges) {
-      const confirm = window.confirm("You have unsaved changes. Are you sure you want to switch pages?");
-      if (!confirm) return;
+      setUnsavedChangesConfirm({ open: true, targetPageId: pageId });
+      return;
     }
     setSelectedPageId(pageId);
+  };
+
+  const confirmPageChange = () => {
+    setSelectedPageId(unsavedChangesConfirm.targetPageId);
+    setHasUnsavedChanges(false);
   };
 
   const handleDragStart = (e: React.DragEvent, type: string) => {
@@ -824,6 +836,18 @@ export default function PageBuilderPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Unsaved Changes Confirmation */}
+      <ConfirmDialog
+        open={unsavedChangesConfirm.open}
+        onOpenChange={(open) => setUnsavedChangesConfirm({ ...unsavedChangesConfirm, open })}
+        title="Unsaved Changes"
+        description="You have unsaved changes. Are you sure you want to switch pages? Your changes will be lost."
+        confirmText="Switch Page"
+        cancelText="Stay Here"
+        variant="destructive"
+        onConfirm={confirmPageChange}
+      />
     </div>
   );
 }

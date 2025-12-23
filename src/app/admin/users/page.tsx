@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Store, RefreshCw, Download, UserPlus } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 
 import {
   User,
@@ -70,6 +72,24 @@ export default function UsersPage() {
   const [cancellingPledge, setCancellingPledge] = useState<string | null>(null);
   const [refundingPledge, setRefundingPledge] = useState<string | null>(null);
   const [resendingReceipt, setResendingReceipt] = useState<string | null>(null);
+
+  // Pledge action confirmation dialogs
+  const [cancelPledgeConfirm, setCancelPledgeConfirm] = useState<{ open: boolean; pledgeId: string }>({
+    open: false,
+    pledgeId: "",
+  });
+  const [refundPledgeConfirm, setRefundPledgeConfirm] = useState<{ open: boolean; pledgeId: string }>({
+    open: false,
+    pledgeId: "",
+  });
+  const [deletePledgeConfirm, setDeletePledgeConfirm] = useState<{ open: boolean; pledgeId: string }>({
+    open: false,
+    pledgeId: "",
+  });
+  const [resendReceiptConfirm, setResendReceiptConfirm] = useState<{ open: boolean; pledgeId: string }>({
+    open: false,
+    pledgeId: "",
+  });
 
   // API data state
   const [users, setUsers] = useState<User[]>([]);
@@ -249,9 +269,9 @@ export default function UsersPage() {
     setShowEmailPreview(true);
   };
 
-  const handleCancelPledge = async (pledgeId: string) => {
+  const handleCancelPledge = async () => {
     if (!selectedUser) return;
-    if (!confirm("Are you sure you want to cancel this pledge? This will remove the backer and amount from the campaign.")) return;
+    const pledgeId = cancelPledgeConfirm.pledgeId;
 
     setCancellingPledge(pledgeId);
     try {
@@ -263,22 +283,22 @@ export default function UsersPage() {
 
       if (response.ok) {
         await fetchUserPledges(selectedUser.id);
-        alert("Pledge cancelled successfully");
+        toast.success("Pledge cancelled successfully");
       } else {
-        const error = await response.json();
-        alert(error.error || "Failed to cancel pledge");
+        const err = await response.json();
+        toast.error(err.error || "Failed to cancel pledge");
       }
-    } catch (error) {
-      console.error("Failed to cancel pledge:", error);
-      alert("Failed to cancel pledge");
+    } catch (err) {
+      console.error("Failed to cancel pledge:", err);
+      toast.error("Failed to cancel pledge");
     } finally {
       setCancellingPledge(null);
     }
   };
 
-  const handleRefundPledge = async (pledgeId: string) => {
+  const handleRefundPledge = async () => {
     if (!selectedUser) return;
-    if (!confirm("Are you sure you want to refund this pledge? This will process a refund via Stripe and remove the backer from the campaign.")) return;
+    const pledgeId = refundPledgeConfirm.pledgeId;
 
     setRefundingPledge(pledgeId);
     try {
@@ -290,22 +310,22 @@ export default function UsersPage() {
 
       if (response.ok) {
         await fetchUserPledges(selectedUser.id);
-        alert("Pledge refunded successfully");
+        toast.success("Pledge refunded successfully");
       } else {
-        const error = await response.json();
-        alert(error.error || "Failed to refund pledge");
+        const err = await response.json();
+        toast.error(err.error || "Failed to refund pledge");
       }
-    } catch (error) {
-      console.error("Failed to refund pledge:", error);
-      alert("Failed to refund pledge");
+    } catch (err) {
+      console.error("Failed to refund pledge:", err);
+      toast.error("Failed to refund pledge");
     } finally {
       setRefundingPledge(null);
     }
   };
 
-  const handleDeletePledge = async (pledgeId: string) => {
+  const handleDeletePledge = async () => {
     if (!selectedUser) return;
-    if (!confirm("Are you sure you want to DELETE this pledge? This will permanently remove it from the database.")) return;
+    const pledgeId = deletePledgeConfirm.pledgeId;
 
     setCancellingPledge(pledgeId);
     try {
@@ -316,22 +336,22 @@ export default function UsersPage() {
 
       if (response.ok) {
         await fetchUserPledges(selectedUser.id);
-        alert("Pledge deleted successfully");
+        toast.success("Pledge deleted successfully");
       } else {
-        const error = await response.json();
-        alert(error.error || "Failed to delete pledge");
+        const err = await response.json();
+        toast.error(err.error || "Failed to delete pledge");
       }
-    } catch (error) {
-      console.error("Failed to delete pledge:", error);
-      alert("Failed to delete pledge");
+    } catch (err) {
+      console.error("Failed to delete pledge:", err);
+      toast.error("Failed to delete pledge");
     } finally {
       setCancellingPledge(null);
     }
   };
 
-  const handleResendReceipt = async (pledgeId: string) => {
+  const handleResendReceipt = async () => {
     if (!selectedUser) return;
-    if (!confirm("Resend the pledge receipt email to this backer?")) return;
+    const pledgeId = resendReceiptConfirm.pledgeId;
 
     setResendingReceipt(pledgeId);
     try {
@@ -344,17 +364,17 @@ export default function UsersPage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert(data.message || "Receipt email sent successfully");
+        toast.success(data.message || "Receipt email sent successfully");
         await Promise.all([
           fetchUserPledges(selectedUser.id),
           fetchUserEmails(selectedUser.id),
         ]);
       } else {
-        alert(data.error || "Failed to send receipt email");
+        toast.error(data.error || "Failed to send receipt email");
       }
-    } catch (error) {
-      console.error("Failed to resend receipt:", error);
-      alert("Failed to send receipt email");
+    } catch (err) {
+      console.error("Failed to resend receipt:", err);
+      toast.error("Failed to send receipt email");
     } finally {
       setResendingReceipt(null);
     }
@@ -805,10 +825,10 @@ export default function UsersPage() {
         cancellingPledge={cancellingPledge}
         refundingPledge={refundingPledge}
         resendingReceipt={resendingReceipt}
-        onCancelPledge={handleCancelPledge}
-        onRefundPledge={handleRefundPledge}
-        onDeletePledge={handleDeletePledge}
-        onResendReceipt={handleResendReceipt}
+        onCancelPledge={(pledgeId) => setCancelPledgeConfirm({ open: true, pledgeId })}
+        onRefundPledge={(pledgeId) => setRefundPledgeConfirm({ open: true, pledgeId })}
+        onDeletePledge={(pledgeId) => setDeletePledgeConfirm({ open: true, pledgeId })}
+        onResendReceipt={(pledgeId) => setResendReceiptConfirm({ open: true, pledgeId })}
         onViewEmail={handleViewEmail}
         onDownloadEmail={handleDownloadEmail}
         onEditUser={handleEditUser}
@@ -896,6 +916,50 @@ export default function UsersPage() {
           setNewUserData({ name: "", email: "", password: "", confirmPassword: "", role: "USER", retailerAccess: false });
         }}
         isCreating={isCreating}
+      />
+
+      {/* Pledge Action Confirmation Dialogs */}
+      <ConfirmDialog
+        open={cancelPledgeConfirm.open}
+        onOpenChange={(open) => setCancelPledgeConfirm({ ...cancelPledgeConfirm, open })}
+        title="Cancel Pledge?"
+        description="Are you sure you want to cancel this pledge? This will remove the backer and amount from the campaign."
+        confirmText="Cancel Pledge"
+        variant="destructive"
+        onConfirm={handleCancelPledge}
+        loading={cancellingPledge === cancelPledgeConfirm.pledgeId}
+      />
+
+      <ConfirmDialog
+        open={refundPledgeConfirm.open}
+        onOpenChange={(open) => setRefundPledgeConfirm({ ...refundPledgeConfirm, open })}
+        title="Refund Pledge?"
+        description="Are you sure you want to refund this pledge? This will process a refund via Stripe and remove the backer from the campaign."
+        confirmText="Refund"
+        variant="destructive"
+        onConfirm={handleRefundPledge}
+        loading={refundingPledge === refundPledgeConfirm.pledgeId}
+      />
+
+      <ConfirmDialog
+        open={deletePledgeConfirm.open}
+        onOpenChange={(open) => setDeletePledgeConfirm({ ...deletePledgeConfirm, open })}
+        title="Delete Pledge?"
+        description="Are you sure you want to DELETE this pledge? This will permanently remove it from the database. This action cannot be undone."
+        confirmText="Delete Permanently"
+        variant="destructive"
+        onConfirm={handleDeletePledge}
+        loading={cancellingPledge === deletePledgeConfirm.pledgeId}
+      />
+
+      <ConfirmDialog
+        open={resendReceiptConfirm.open}
+        onOpenChange={(open) => setResendReceiptConfirm({ ...resendReceiptConfirm, open })}
+        title="Resend Receipt?"
+        description="Resend the pledge receipt email to this backer?"
+        confirmText="Send Receipt"
+        onConfirm={handleResendReceipt}
+        loading={resendingReceipt === resendReceiptConfirm.pledgeId}
       />
     </div>
   );

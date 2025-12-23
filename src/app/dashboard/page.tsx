@@ -39,6 +39,8 @@ import {
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 
 interface Project {
   id: string;
@@ -128,6 +130,16 @@ export default function CreatorDashboard() {
   const [cancellingPledge, setCancellingPledge] = useState<string | null>(null);
   const [refundingPledge, setRefundingPledge] = useState<string | null>(null);
 
+  // Confirmation dialog state
+  const [cancelConfirm, setCancelConfirm] = useState<{ open: boolean; pledgeId: string }>({
+    open: false,
+    pledgeId: "",
+  });
+  const [refundConfirm, setRefundConfirm] = useState<{ open: boolean; pledgeId: string }>({
+    open: false,
+    pledgeId: "",
+  });
+
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -168,9 +180,8 @@ export default function CreatorDashboard() {
   };
 
   // Cancel a pending pledge (creator)
-  const handleCancelPledge = async (pledgeId: string) => {
-    if (!confirm("Are you sure you want to cancel this pledge? This will remove the backer and amount from your campaign.")) return;
-
+  const handleCancelPledge = async () => {
+    const pledgeId = cancelConfirm.pledgeId;
     setCancellingPledge(pledgeId);
     try {
       const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
@@ -182,23 +193,22 @@ export default function CreatorDashboard() {
       if (response.ok) {
         // Refresh dashboard data after cancellation
         await fetchDashboardData();
-        alert("Pledge cancelled successfully");
+        toast.success("Pledge cancelled successfully");
       } else {
-        const error = await response.json();
-        alert(error.error || "Failed to cancel pledge");
+        const err = await response.json();
+        toast.error(err.error || "Failed to cancel pledge");
       }
-    } catch (error) {
-      console.error("Failed to cancel pledge:", error);
-      alert("Failed to cancel pledge");
+    } catch (err) {
+      console.error("Failed to cancel pledge:", err);
+      toast.error("Failed to cancel pledge");
     } finally {
       setCancellingPledge(null);
     }
   };
 
   // Refund a completed pledge (creator)
-  const handleRefundPledge = async (pledgeId: string) => {
-    if (!confirm("Are you sure you want to refund this pledge? This will process a refund via Stripe and remove the backer from your campaign.")) return;
-
+  const handleRefundPledge = async () => {
+    const pledgeId = refundConfirm.pledgeId;
     setRefundingPledge(pledgeId);
     try {
       const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
@@ -210,14 +220,14 @@ export default function CreatorDashboard() {
       if (response.ok) {
         // Refresh dashboard data after refund
         await fetchDashboardData();
-        alert("Pledge refunded successfully");
+        toast.success("Pledge refunded successfully");
       } else {
-        const error = await response.json();
-        alert(error.error || "Failed to refund pledge");
+        const err = await response.json();
+        toast.error(err.error || "Failed to refund pledge");
       }
-    } catch (error) {
-      console.error("Failed to refund pledge:", error);
-      alert("Failed to refund pledge");
+    } catch (err) {
+      console.error("Failed to refund pledge:", err);
+      toast.error("Failed to refund pledge");
     } finally {
       setRefundingPledge(null);
     }
@@ -851,7 +861,7 @@ export default function CreatorDashboard() {
                                   size="sm"
                                   variant="outline"
                                   className="text-amber-600 border-amber-200 hover:bg-amber-50"
-                                  onClick={() => handleCancelPledge(backer.id)}
+                                  onClick={() => setCancelConfirm({ open: true, pledgeId: backer.id })}
                                   disabled={cancellingPledge === backer.id}
                                 >
                                   <XCircle className="h-3 w-3 mr-1" />
@@ -863,7 +873,7 @@ export default function CreatorDashboard() {
                                   size="sm"
                                   variant="outline"
                                   className="text-orange-600 border-orange-200 hover:bg-orange-50"
-                                  onClick={() => handleRefundPledge(backer.id)}
+                                  onClick={() => setRefundConfirm({ open: true, pledgeId: backer.id })}
                                   disabled={refundingPledge === backer.id}
                                 >
                                   <RefreshCw className={`h-3 w-3 mr-1 ${refundingPledge === backer.id ? "animate-spin" : ""}`} />
@@ -926,6 +936,30 @@ export default function CreatorDashboard() {
           </div>
         )}
       </div>
+
+      {/* Cancel Pledge Confirmation */}
+      <ConfirmDialog
+        open={cancelConfirm.open}
+        onOpenChange={(open) => setCancelConfirm({ ...cancelConfirm, open })}
+        title="Cancel Pledge?"
+        description="Are you sure you want to cancel this pledge? This will remove the backer and amount from your campaign."
+        confirmText="Cancel Pledge"
+        variant="destructive"
+        onConfirm={handleCancelPledge}
+        loading={cancellingPledge === cancelConfirm.pledgeId}
+      />
+
+      {/* Refund Pledge Confirmation */}
+      <ConfirmDialog
+        open={refundConfirm.open}
+        onOpenChange={(open) => setRefundConfirm({ ...refundConfirm, open })}
+        title="Refund Pledge?"
+        description="Are you sure you want to refund this pledge? This will process a refund via Stripe and remove the backer from your campaign."
+        confirmText="Refund"
+        variant="destructive"
+        onConfirm={handleRefundPledge}
+        loading={refundingPledge === refundConfirm.pledgeId}
+      />
     </div>
   );
 }

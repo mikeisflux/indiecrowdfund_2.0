@@ -40,6 +40,7 @@ import {
   RefreshCw,
   AlertCircle,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Reward {
   id: string;
@@ -135,6 +136,18 @@ export default function SurveyBuilderPage() {
   // Dialogs
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showLockDialog, setShowLockDialog] = useState(false);
+
+  // Delete confirmation dialogs
+  const [deleteItemConfirm, setDeleteItemConfirm] = useState<{ open: boolean; questionId: string }>({
+    open: false,
+    questionId: "",
+  });
+  const [deleteBackerConfirm, setDeleteBackerConfirm] = useState<{ open: boolean; questionId: string }>({
+    open: false,
+    questionId: "",
+  });
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
+  const [isDeletingBacker, setIsDeletingBacker] = useState(false);
 
   const fetchSurvey = useCallback(async () => {
     setIsLoading(true);
@@ -267,8 +280,9 @@ export default function SurveyBuilderPage() {
     }
   };
 
-  const deleteItemQuestion = async (questionId: string) => {
-    if (!confirm("Delete this item question?")) return;
+  const deleteItemQuestion = async () => {
+    const questionId = deleteItemConfirm.questionId;
+    setIsDeletingItem(true);
     try {
       const response = await fetch(
         `/api/projects/${projectId}/survey/item-questions?questionId=${questionId}`,
@@ -280,6 +294,8 @@ export default function SurveyBuilderPage() {
       }
     } catch (error) {
       console.error("Error deleting item question:", error);
+    } finally {
+      setIsDeletingItem(false);
     }
   };
 
@@ -305,8 +321,9 @@ export default function SurveyBuilderPage() {
     }
   };
 
-  const deleteBackerQuestion = async (questionId: string) => {
-    if (!confirm("Delete this question?")) return;
+  const deleteBackerQuestion = async () => {
+    const questionId = deleteBackerConfirm.questionId;
+    setIsDeletingBacker(true);
     try {
       const response = await fetch(
         `/api/projects/${projectId}/survey/backer-questions?questionId=${questionId}`,
@@ -318,6 +335,8 @@ export default function SurveyBuilderPage() {
       }
     } catch (error) {
       console.error("Error deleting backer question:", error);
+    } finally {
+      setIsDeletingBacker(false);
     }
   };
 
@@ -536,7 +555,7 @@ export default function SurveyBuilderPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => item.id && deleteItemQuestion(item.id)}
+                                  onClick={() => item.id && setDeleteItemConfirm({ open: true, questionId: item.id })}
                                 >
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
@@ -630,7 +649,7 @@ export default function SurveyBuilderPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => q.id && deleteBackerQuestion(q.id)}
+                                  onClick={() => q.id && setDeleteBackerConfirm({ open: true, questionId: q.id })}
                                 >
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
@@ -756,6 +775,30 @@ export default function SurveyBuilderPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Item Question Confirmation */}
+      <ConfirmDialog
+        open={deleteItemConfirm.open}
+        onOpenChange={(open) => setDeleteItemConfirm({ ...deleteItemConfirm, open })}
+        title="Delete Item Question?"
+        description="Are you sure you want to delete this item question? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={deleteItemQuestion}
+        loading={isDeletingItem}
+      />
+
+      {/* Delete Backer Question Confirmation */}
+      <ConfirmDialog
+        open={deleteBackerConfirm.open}
+        onOpenChange={(open) => setDeleteBackerConfirm({ ...deleteBackerConfirm, open })}
+        title="Delete Question?"
+        description="Are you sure you want to delete this question? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={deleteBackerQuestion}
+        loading={isDeletingBacker}
+      />
     </div>
   );
 }

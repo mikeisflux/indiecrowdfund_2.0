@@ -60,6 +60,7 @@ import {
 import { toast } from "sonner";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface EmailThread {
   id: string;
@@ -130,6 +131,13 @@ export default function CreatorEmailInbox() {
   const [emailHandle, setEmailHandle] = useState("");
   const [settingUpEmail, setSettingUpEmail] = useState(false);
   const [setupComplete, setSetupComplete] = useState(false);
+
+  // Delete confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; threadId: string }>({
+    open: false,
+    threadId: "",
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Check email setup on mount
   useEffect(() => {
@@ -339,10 +347,9 @@ export default function CreatorEmailInbox() {
   };
 
   // Delete thread
-  const deleteThread = async (threadId: string) => {
-    if (!confirm("Are you sure you want to delete this conversation? This cannot be undone.")) {
-      return;
-    }
+  const deleteThread = async () => {
+    const threadId = deleteConfirm.threadId;
+    setIsDeleting(true);
     try {
       const res = await fetch(`/api/creator/email/threads/${threadId}/delete`, {
         method: "DELETE",
@@ -358,6 +365,8 @@ export default function CreatorEmailInbox() {
     } catch (error) {
       console.error("Error deleting thread:", error);
       toast.error("Failed to delete conversation");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -800,7 +809,7 @@ export default function CreatorEmailInbox() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => deleteThread(selectedThread.id)}
+                            onClick={() => setDeleteConfirm({ open: true, threadId: selectedThread.id })}
                             className="text-red-600 focus:text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
@@ -960,6 +969,18 @@ export default function CreatorEmailInbox() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ ...deleteConfirm, open })}
+        title="Delete Conversation?"
+        description="Are you sure you want to delete this conversation? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={deleteThread}
+        loading={isDeleting}
+      />
     </div>
   );
 }

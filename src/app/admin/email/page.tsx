@@ -58,6 +58,7 @@ import {
   Forward,
   ReplyAll,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Mailbox {
   id: string;
@@ -136,6 +137,15 @@ export default function EmailPage() {
     body?: string;
     inReplyTo?: string;
   } | null>(null);
+
+  // Delete confirmation dialogs
+  const [deleteMailboxConfirm, setDeleteMailboxConfirm] = useState<{ open: boolean; mailbox: Mailbox | null }>({
+    open: false,
+    mailbox: null,
+  });
+  const [deleteEmailConfirm, setDeleteEmailConfirm] = useState(false);
+  const [isDeletingMailbox, setIsDeletingMailbox] = useState(false);
+  const [isDeletingEmail, setIsDeletingEmail] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -222,11 +232,11 @@ export default function EmailPage() {
     setIsEditingMailbox(true);
   };
 
-  const handleDeleteMailbox = async (mailbox: Mailbox) => {
-    if (!confirm(`Are you sure you want to delete "${mailbox.name}"? This will delete all emails in this mailbox.`)) {
-      return;
-    }
+  const handleDeleteMailbox = async () => {
+    const mailbox = deleteMailboxConfirm.mailbox;
+    if (!mailbox) return;
 
+    setIsDeletingMailbox(true);
     try {
       const response = await fetch(`/api/admin/mailboxes/${mailbox.id}?force=true`, {
         method: "DELETE",
@@ -239,6 +249,8 @@ export default function EmailPage() {
       }
     } catch (error) {
       console.error("Error deleting mailbox:", error);
+    } finally {
+      setIsDeletingMailbox(false);
     }
   };
 
@@ -332,8 +344,7 @@ export default function EmailPage() {
   const handleDeleteSelectedEmail = async () => {
     if (!selectedMailbox || !selectedEmail) return;
 
-    if (!confirm("Are you sure you want to delete this email?")) return;
-
+    setIsDeletingEmail(true);
     try {
       const response = await fetch(
         `/api/admin/mailboxes/${selectedMailbox.id}/emails/${selectedEmail.id}`,
@@ -345,6 +356,8 @@ export default function EmailPage() {
       }
     } catch (error) {
       console.error("Error deleting email:", error);
+    } finally {
+      setIsDeletingEmail(false);
     }
   };
 
@@ -475,7 +488,7 @@ export default function EmailPage() {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-red-600"
-                            onClick={() => handleDeleteMailbox(mailbox)}
+                            onClick={() => setDeleteMailboxConfirm({ open: true, mailbox })}
                           >
                             <Trash2 className="h-3 w-3 mr-2" />
                             Delete
@@ -704,7 +717,7 @@ export default function EmailPage() {
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={handleDeleteSelectedEmail}
+                    onClick={() => setDeleteEmailConfirm(true)}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
@@ -764,6 +777,30 @@ export default function EmailPage() {
           fetchMailboxes();
           setIsEditingMailbox(false);
         }}
+      />
+
+      {/* Delete Mailbox Confirmation */}
+      <ConfirmDialog
+        open={deleteMailboxConfirm.open}
+        onOpenChange={(open) => setDeleteMailboxConfirm({ ...deleteMailboxConfirm, open })}
+        title="Delete Mailbox?"
+        description={`Are you sure you want to delete "${deleteMailboxConfirm.mailbox?.name}"? This will delete all emails in this mailbox.`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleDeleteMailbox}
+        loading={isDeletingMailbox}
+      />
+
+      {/* Delete Email Confirmation */}
+      <ConfirmDialog
+        open={deleteEmailConfirm}
+        onOpenChange={setDeleteEmailConfirm}
+        title="Delete Email?"
+        description="Are you sure you want to delete this email? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleDeleteSelectedEmail}
+        loading={isDeletingEmail}
       />
     </div>
   );

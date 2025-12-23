@@ -22,6 +22,7 @@ import {
 import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle, RefreshCw, Loader2, Save, Banknote, Lock, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function PaymentStep() {
   const { payment, updatePayment, basics, projectId } = useProjectStore();
@@ -51,6 +52,7 @@ export function PaymentStep() {
     lastFour: string | null;
   }>({ saved: false, loading: true, lastFour: null });
   const [isSavingBank, setIsSavingBank] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Save contact email to database immediately
   const handleSaveContactEmail = async () => {
@@ -261,10 +263,6 @@ export function PaymentStep() {
   };
 
   const handleResetStripe = async () => {
-    if (!confirm("Are you sure you want to disconnect your Stripe account? You will need to reconnect it.")) {
-      return;
-    }
-
     setIsResetting(true);
     setConnectError(null);
     try {
@@ -673,7 +671,7 @@ export function PaymentStep() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleResetStripe}
+                    onClick={() => setShowResetConfirm(true)}
                     disabled={isResetting}
                     className="w-fit"
                   >
@@ -734,7 +732,7 @@ export function PaymentStep() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleResetStripe}
+                    onClick={() => setShowResetConfirm(true)}
                     disabled={isResetting}
                     className="text-muted-foreground hover:text-destructive"
                   >
@@ -1085,6 +1083,17 @@ export function PaymentStep() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={showResetConfirm}
+        onOpenChange={setShowResetConfirm}
+        title="Disconnect Stripe Account?"
+        description="Are you sure you want to disconnect your Stripe account? You will need to reconnect it to accept payments."
+        confirmText="Disconnect"
+        variant="destructive"
+        onConfirm={handleResetStripe}
+        loading={isResetting}
+      />
     </div>
   );
 }
