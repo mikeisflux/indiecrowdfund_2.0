@@ -167,30 +167,20 @@ async function updateDatabaseReferences(originalUrl, webpUrl) {
     console.error(`  Error updating Project.imageUrl:`, err.message);
   }
 
-  // Update Tier imageUrl
+  // Update RewardTier imageUrl (if exists)
   try {
-    const result = await prisma.tier.updateMany({
-      where: { imageUrl: originalUrl },
-      data: { imageUrl: webpUrl },
-    });
-    if (result.count > 0) {
-      updates.push(`Tier.imageUrl: ${result.count}`);
+    if (prisma.rewardTier) {
+      const result = await prisma.rewardTier.updateMany({
+        where: { imageUrl: originalUrl },
+        data: { imageUrl: webpUrl },
+      });
+      if (result.count > 0) {
+        updates.push(`RewardTier.imageUrl: ${result.count}`);
+      }
     }
   } catch (err) {
-    console.error(`  Error updating Tier.imageUrl:`, err.message);
-  }
-
-  // Update AddOn imageUrl
-  try {
-    const result = await prisma.addOn.updateMany({
-      where: { imageUrl: originalUrl },
-      data: { imageUrl: webpUrl },
-    });
-    if (result.count > 0) {
-      updates.push(`AddOn.imageUrl: ${result.count}`);
-    }
-  } catch (err) {
-    console.error(`  Error updating AddOn.imageUrl:`, err.message);
+    // Model might not exist or field might not exist
+    verbose(`RewardTier update skipped`);
   }
 
   // Update User image (avatar)
@@ -220,18 +210,7 @@ async function updateDatabaseReferences(originalUrl, webpUrl) {
     verbose(`ProjectGallery update skipped (may not exist)`);
   }
 
-  // Update Update thumbnailUrl
-  try {
-    const result = await prisma.update.updateMany({
-      where: { thumbnailUrl: originalUrl },
-      data: { thumbnailUrl: webpUrl },
-    });
-    if (result.count > 0) {
-      updates.push(`Update.thumbnailUrl: ${result.count}`);
-    }
-  } catch (err) {
-    console.error(`  Error updating Update.thumbnailUrl:`, err.message);
-  }
+  // Note: Update model doesn't have thumbnailUrl field - skipped
 
   // Update EmailTemplate imageUrl
   try {
