@@ -67,28 +67,37 @@ else
 fi
 
 # ============================================
-# SITE FILES BACKUP
+# SITE FILES BACKUP (source code only)
 # ============================================
 echo ""
-echo "[2/3] Backing up site files..."
+echo "[2/3] Backing up site source code..."
 
 SITE_FILE="${BACKUP_PATH}/site.tar.gz"
 
-# Exclude node_modules, .next, and other unnecessary directories
+# Only backup source code - exclude all generated/installed files
+# On restore: npm install && ./build-and-swap.sh
 tar -czf "${SITE_FILE}" \
-    --exclude='node_modules' \
-    --exclude='.next' \
-    --exclude='.next-backup-*' \
-    --exclude='.git' \
+    --exclude='*/node_modules' \
+    --exclude='*/node_modules/*' \
+    --exclude='*/.next' \
+    --exclude='*/.next/*' \
+    --exclude='*/.next-backup-*' \
+    --exclude='*/.git' \
+    --exclude='*/.git/*' \
     --exclude='*.log' \
-    --exclude='.turbo' \
-    --exclude='coverage' \
+    --exclude='*/.turbo' \
+    --exclude='*/coverage' \
+    --exclude='*/uploads' \
+    --exclude='*/public/uploads' \
+    --exclude='*/.env' \
+    --exclude='*/.env.local' \
     -C "$(dirname ${SITE_DIR})" \
     "$(basename ${SITE_DIR})" \
     2>/dev/null
 
 SITE_SIZE=$(du -h "${SITE_FILE}" | cut -f1)
 echo "  Site backup complete: ${SITE_SIZE}"
+echo "  (To restore: extract, copy .env, run 'npm install && ./build-and-swap.sh')"
 
 # ============================================
 # UPLOADS BACKUP (if separate)
