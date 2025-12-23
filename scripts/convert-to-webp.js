@@ -167,20 +167,43 @@ async function updateDatabaseReferences(originalUrl, webpUrl) {
     console.error(`  Error updating Project.imageUrl:`, err.message);
   }
 
-  // Update RewardTier imageUrl (if exists)
+  // Update ProjectItem imageUrl
   try {
-    if (prisma.rewardTier) {
-      const result = await prisma.rewardTier.updateMany({
-        where: { imageUrl: originalUrl },
-        data: { imageUrl: webpUrl },
-      });
-      if (result.count > 0) {
-        updates.push(`RewardTier.imageUrl: ${result.count}`);
-      }
+    const result = await prisma.projectItem.updateMany({
+      where: { imageUrl: originalUrl },
+      data: { imageUrl: webpUrl },
+    });
+    if (result.count > 0) {
+      updates.push(`ProjectItem.imageUrl: ${result.count}`);
     }
   } catch (err) {
-    // Model might not exist or field might not exist
-    verbose(`RewardTier update skipped`);
+    verbose(`ProjectItem update skipped`);
+  }
+
+  // Update RewardItem imageUrl
+  try {
+    const result = await prisma.rewardItem.updateMany({
+      where: { imageUrl: originalUrl },
+      data: { imageUrl: webpUrl },
+    });
+    if (result.count > 0) {
+      updates.push(`RewardItem.imageUrl: ${result.count}`);
+    }
+  } catch (err) {
+    verbose(`RewardItem update skipped`);
+  }
+
+  // Update Reward imageUrl
+  try {
+    const result = await prisma.reward.updateMany({
+      where: { imageUrl: originalUrl },
+      data: { imageUrl: webpUrl },
+    });
+    if (result.count > 0) {
+      updates.push(`Reward.imageUrl: ${result.count}`);
+    }
+  } catch (err) {
+    verbose(`Reward update skipped`);
   }
 
   // Update User image (avatar)
