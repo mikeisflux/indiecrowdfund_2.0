@@ -4,8 +4,11 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
-// Secret key for signing unsubscribe tokens
-const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || "default-unsubscribe-secret";
+// Secret key for signing unsubscribe tokens - requires proper secret in production
+const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+if (!UNSUBSCRIBE_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("UNSUBSCRIBE_SECRET or AUTH_SECRET environment variable is required in production");
+}
 
 /**
  * Verify and decode an unsubscribe token

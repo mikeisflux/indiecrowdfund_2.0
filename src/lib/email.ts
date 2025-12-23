@@ -15,8 +15,11 @@ export const EMAIL_PRIORITY = {
   AI_MARKETING: 1, // AI-generated marketing campaigns - lowest priority
 } as const;
 
-// Secret key for signing unsubscribe tokens
-const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || "default-unsubscribe-secret";
+// Secret key for signing unsubscribe tokens - requires proper secret in production
+const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+if (!UNSUBSCRIBE_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("UNSUBSCRIBE_SECRET or AUTH_SECRET environment variable is required in production");
+}
 
 interface SendEmailOptions {
   to: string;

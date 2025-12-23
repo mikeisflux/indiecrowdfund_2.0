@@ -57,7 +57,7 @@ model User {
   emailLogs         EmailLog[]
   stripeConfig      StripeConfig?
   divinityCoinBankAccount DivinityCoinBankAccount?
-  divinityCoinBalance Float @default(0)
+  divinityCoinBalance Decimal @default(0) @db.Decimal(10, 2)
   divinityCoinRedemptions DivinityCoinRedemption[]
   idVerifications   IDVerification[]
   notifications     Notification[]
@@ -69,10 +69,12 @@ model User {
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?  // Soft delete timestamp
 
   @@index([email])
   @@index([vanityUrl])
   @@index([creatorEmailHandle])
+  @@index([deletedAt])  // For soft delete filtering
 }
 
 enum UserRole {
@@ -150,7 +152,7 @@ model Project {
   location              String?
   imageUrl              String?
   videoUrl              String?
-  goalAmount            Float
+  goalAmount            Decimal       @db.Decimal(10, 2)
   currency              String        @default("USD")
 
   // Duration
@@ -195,7 +197,7 @@ model Project {
 
   // Status
   status                ProjectStatus @default(DRAFT)
-  currentAmount         Float         @default(0)
+  currentAmount         Decimal       @default(0) @db.Decimal(10, 2)
   backerCount           Int           @default(0)
   followerCount         Int           @default(0)
   isStaffPick           Boolean       @default(false)
@@ -226,11 +228,14 @@ model Project {
   updatedAt             DateTime      @updatedAt
   launchedAt            DateTime?
   fundedAt              DateTime?
+  deletedAt             DateTime?     // Soft delete timestamp
 
   @@index([creatorId])
   @@index([status])
   @@index([category])
   @@index([slug])
+  @@index([deletedAt])  // For soft delete filtering
+  @@index([status, deletedAt])  // Common query pattern
 }
 
 model ProjectFollower {
@@ -313,7 +318,7 @@ model Reward {
 
   title             String
   description       String       @db.Text
-  amount            Float
+  amount            Decimal      @db.Decimal(10, 2)
   imageUrl          String?
 
   // Delivery
@@ -396,10 +401,10 @@ model Pledge {
   backerNumber          Int?
 
   // Amounts
-  amount                Float
-  rewardAmount          Float
-  addonsAmount          Float        @default(0)
-  shippingAmount        Float        @default(0)
+  amount                Decimal      @db.Decimal(10, 2)
+  rewardAmount          Decimal      @db.Decimal(10, 2)
+  addonsAmount          Decimal      @default(0) @db.Decimal(10, 2)
+  shippingAmount        Decimal      @default(0) @db.Decimal(10, 2)
 
   // Payment
   status                PledgeStatus
@@ -444,12 +449,14 @@ model Pledge {
 
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
+  deletedAt             DateTime?    // Soft delete timestamp
 
   @@index([projectId, status])
   @@index([userId])
   @@index([rewardId])
   @@index([status, nextRetryAt])  // For retry job queries
   @@index([sourceCampaignId])
+  @@index([deletedAt])  // For soft delete filtering
 }
 
 model PledgeAddon {
@@ -457,7 +464,7 @@ model PledgeAddon {
   pledgeId  String
   addonId   String
   quantity  Int    @default(1)
-  amount    Float
+  amount    Decimal @db.Decimal(10, 2)
 
   pledge    Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
   addon     Reward @relation(fields: [addonId], references: [id])
@@ -489,10 +496,10 @@ enum FulfillmentStatus {
 model Payout {
   id                String       @id @default(cuid())
   projectId         String
-  amount            Float
-  grossAmount       Float
-  processorFees     Float
-  platformFees      Float
+  amount            Decimal      @db.Decimal(10, 2)
+  grossAmount       Decimal      @db.Decimal(10, 2)
+  processorFees     Decimal      @db.Decimal(10, 2)
+  platformFees      Decimal      @db.Decimal(10, 2)
   type              PayoutType
   status            PayoutStatus
   payoutId          String?      @unique
@@ -502,8 +509,10 @@ model Payout {
 
   sentAt            DateTime?
   createdAt         DateTime     @default(now())
+  deletedAt         DateTime?    // Soft delete timestamp
 
   @@index([projectId])
+  @@index([deletedAt])  // For soft delete filtering
 }
 
 enum PayoutType {
@@ -660,7 +669,7 @@ model AnalyticsEvent {
   customTag   String?
 
   // Data
-  amount      Float?
+  amount      Decimal?  @db.Decimal(10, 2)
   userId      String?
   metadata    Json?
 
@@ -740,7 +749,7 @@ model DivinityCoinSettlement {
   bankAccountId         String
 
   // Settlement details
-  amount                Float    // Amount in USD
+  amount                Decimal  @db.Decimal(10, 2) // Amount in USD
   currency              String   @default("USD")
   status                DivinityCoinSettlementStatus @default(PENDING)
 
@@ -789,7 +798,7 @@ model DivinityCoinRedemption {
   id              String   @id @default(cuid())
   code            String   @unique // The redemption code
   userId          String
-  amount          Float    // Amount in USD
+  amount          Decimal  @db.Decimal(10, 2) // Amount in USD
   redeemedAt      DateTime @default(now())
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -803,7 +812,7 @@ model DivinityCoinTransaction {
   id              String   @id @default(cuid())
   userId          String
   pledgeId        String?
-  amount          Float    // Positive for credits, negative for payments
+  amount          Decimal  @db.Decimal(10, 2) // Positive for credits, negative for payments
   type            String   // REDEMPTION, PAYMENT, REFUND
   description     String?
 
@@ -1224,7 +1233,7 @@ model ReferralTracker {
   date         DateTime @db.Date
   visits       Int      @default(0)
   pledges      Int      @default(0)
-  pledgeAmount Float    @default(0)
+  pledgeAmount Decimal  @default(0) @db.Decimal(10, 2)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -1374,10 +1383,10 @@ model RetailerPledge {
 
   // Order Details
   quantity              Int
-  unitPrice             Float
+  unitPrice             Decimal             @db.Decimal(10, 2)
   discountPercent       Float
-  totalAmount           Float
-  originalAmount        Float
+  totalAmount           Decimal             @db.Decimal(10, 2)
+  originalAmount        Decimal             @db.Decimal(10, 2)
 
   // Payment
   status                RetailerPledgeStatus @default(PENDING)
@@ -1388,7 +1397,7 @@ model RetailerPledge {
   // Shipping
   shippingAddress       Json?
   shippingMethod        String?
-  shippingCost          Float               @default(0)
+  shippingCost          Decimal             @default(0) @db.Decimal(10, 2)
   trackingNumber        String?
 
   // Fulfillment

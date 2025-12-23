@@ -3,32 +3,49 @@ import { db } from "@/lib/db";
 import { validateSession } from "@/lib/auth/session";
 import { notifyCommentReply } from "@/lib/notifications";
 
-// Helper to format a comment with user info
-async function formatComment(
-  comment: {
+type CommentWithUser = {
+  id: string;
+  userId: string;
+  content: string;
+  createdAt: Date;
+  user: { id: string; name: string | null; image: string | null };
+  replies?: Array<{
     id: string;
     userId: string;
     content: string;
     createdAt: Date;
     user: { id: string; name: string | null; image: string | null };
-    replies?: Array<{
-      id: string;
-      userId: string;
-      content: string;
-      createdAt: Date;
-      user: { id: string; name: string | null; image: string | null };
-    }>;
-  },
-  creatorId: string
-) {
-  // Check if user is superbacker (backed 25+ projects)
-  const backedProjectsCount = await db.pledge.count({
+  }>;
+};
+
+// Batch fetch superbacker status for multiple users (fixes N+1 query)
+async function getSuperbakerStatus(userIds: string[]): Promise<Map<string, boolean>> {
+  const uniqueUserIds = [...new Set(userIds)];
+
+  // Count completed pledges per user in a single query
+  const pledgeCounts = await db.pledge.groupBy({
+    by: ['userId'],
     where: {
-      userId: comment.userId,
+      userId: { in: uniqueUserIds },
       status: "COMPLETED",
     },
+    _count: { id: true },
   });
 
+  const statusMap = new Map<string, boolean>();
+  for (const userId of uniqueUserIds) {
+    const count = pledgeCounts.find(p => p.userId === userId)?._count.id || 0;
+    statusMap.set(userId, count >= 25);
+  }
+  return statusMap;
+}
+
+// Helper to format a comment with user info (using pre-fetched superbacker status)
+function formatComment(
+  comment: CommentWithUser,
+  creatorId: string,
+  superbackerMap: Map<string, boolean>
+) {
   const formatted: {
     id: string;
     userId: string;
@@ -57,33 +74,22 @@ async function formatComment(
     content: comment.content,
     createdAt: comment.createdAt.toISOString(),
     isCreator: comment.userId === creatorId,
-    isSuperbacker: backedProjectsCount >= 25,
+    isSuperbacker: superbackerMap.get(comment.userId) || false,
     isPinned: false,
   };
 
   // Format replies if present
   if (comment.replies && comment.replies.length > 0) {
-    formatted.replies = await Promise.all(
-      comment.replies.map(async (reply) => {
-        const replyBackedCount = await db.pledge.count({
-          where: {
-            userId: reply.userId,
-            status: "COMPLETED",
-          },
-        });
-
-        return {
-          id: reply.id,
-          userId: reply.userId,
-          author: reply.user.name || "Anonymous",
-          avatarUrl: reply.user.image,
-          content: reply.content,
-          createdAt: reply.createdAt.toISOString(),
-          isCreator: reply.userId === creatorId,
-          isSuperbacker: replyBackedCount >= 25,
-        };
-      })
-    );
+    formatted.replies = comment.replies.map((reply) => ({
+      id: reply.id,
+      userId: reply.userId,
+      author: reply.user.name || "Anonymous",
+      avatarUrl: reply.user.image,
+      content: reply.content,
+      createdAt: reply.createdAt.toISOString(),
+      isCreator: reply.userId === creatorId,
+      isSuperbacker: superbackerMap.get(reply.userId) || false,
+    }));
   }
 
   return formatted;
@@ -137,9 +143,23 @@ export async function GET(
       return NextResponse.json([]);
     }
 
+    // Collect all user IDs from comments and replies for batch superbacker lookup
+    const allUserIds: string[] = [];
+    for (const comment of comments) {
+      allUserIds.push(comment.userId);
+      if (comment.replies) {
+        for (const reply of comment.replies) {
+          allUserIds.push(reply.userId);
+        }
+      }
+    }
+
+    // Batch fetch superbacker status (single query instead of N+1)
+    const superbackerMap = await getSuperbakerStatus(allUserIds);
+
     // Format all comments with their replies
-    const formattedComments = await Promise.all(
-      comments.map((comment) => formatComment(comment, project.creatorId))
+    const formattedComments = comments.map((comment) =>
+      formatComment(comment, project.creatorId, superbackerMap)
     );
 
     return NextResponse.json(formattedComments);

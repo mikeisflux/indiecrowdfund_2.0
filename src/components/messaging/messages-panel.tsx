@@ -391,6 +391,7 @@ export function MessagesPanel({
               </div>
               <Button variant="ghost" size="icon" onClick={() => setSelectedConversation(null)}>
                 <X className="h-4 w-4" />
+                <span className="sr-only">Close conversation</span>
               </Button>
             </div>
 

@@ -3,8 +3,14 @@ import { jwtVerify } from "jose";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
+// Require RETAILER_JWT_SECRET in production - no weak fallback
+const RETAILER_JWT_SECRET = process.env.RETAILER_JWT_SECRET;
+if (!RETAILER_JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("RETAILER_JWT_SECRET environment variable is required in production");
+}
+
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.RETAILER_JWT_SECRET || "retailer-secret-key-change-in-production"
+  RETAILER_JWT_SECRET || "dev-only-secret-not-for-production"
 );
 
 interface RetailerTokenData {
