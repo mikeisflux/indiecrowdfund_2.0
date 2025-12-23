@@ -176,7 +176,8 @@ export function validateCSRFTokenForUser(token: string | null, userId: string): 
  */
 function cleanupExpiredTokens(): void {
   const now = Date.now();
-  for (const [token, data] of serverTokens.entries()) {
+  const entries = Array.from(serverTokens.entries());
+  for (const [token, data] of entries) {
     if (now > data.expiresAt) {
       serverTokens.delete(token);
     }

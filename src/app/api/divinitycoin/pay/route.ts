@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 import crypto from "crypto";
-import { getCSRFToken, validateCSRFToken } from "@/lib/csrf";
+import { validateCSRFToken } from "@/lib/csrf";
 
 // In-memory rate limiting (consider Redis for production clusters)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -25,6 +24,12 @@ function checkRateLimit(userId: string): boolean {
 
   userLimit.count++;
   return true;
+}
+
+interface TransactionResult {
+  alreadyPaid: boolean;
+  balance: number;
+  paymentId?: string;
 }
 
 /**
@@ -97,17 +102,18 @@ export async function POST(req: NextRequest) {
 
     console.log(`[DivinityCoin Pay] [${requestId}] Payment request: user=${userId}, pledge=${pledgeId}, amount=${amount}`);
 
-    // Process the payment in a SERIALIZABLE transaction to prevent race conditions
-    const result = await db.$transaction(async (tx) => {
+    // Process the payment in a transaction to prevent race conditions
+    const result: TransactionResult = await db.$transaction(async (tx) => {
       // First, lock the user row and get current balance (SELECT FOR UPDATE equivalent)
       // Using raw query for row-level locking
-      const [userRow] = await tx.$queryRaw<Array<{ id: string; divinityCoinBalance: Prisma.Decimal }>>`
+      const userRows = await tx.$queryRaw<Array<{ id: string; divinityCoinBalance: string }>>`
         SELECT id, "divinityCoinBalance"
         FROM "User"
         WHERE id = ${userId}
         FOR UPDATE
       `;
 
+      const userRow = userRows[0];
       if (!userRow) {
         throw new Error("USER_NOT_FOUND");
       }
@@ -120,12 +126,12 @@ export async function POST(req: NextRequest) {
       }
 
       // Get and lock the pledge
-      const [pledgeRow] = await tx.$queryRaw<Array<{
+      const pledgeRows = await tx.$queryRaw<Array<{
         id: string;
         userId: string;
         projectId: string;
         status: string;
-        amount: Prisma.Decimal;
+        amount: string;
       }>>`
         SELECT p.id, p."userId", p."projectId", p.status, p.amount
         FROM "Pledge" p
@@ -133,6 +139,7 @@ export async function POST(req: NextRequest) {
         FOR UPDATE
       `;
 
+      const pledgeRow = pledgeRows[0];
       if (!pledgeRow) {
         throw new Error("PLEDGE_NOT_FOUND");
       }
@@ -230,9 +237,6 @@ export async function POST(req: NextRequest) {
         balance: currentBalance - amount,
         paymentId,
       };
-    }, {
-      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      timeout: 15000, // 15 second timeout
     });
 
     const duration = Date.now() - startTime;

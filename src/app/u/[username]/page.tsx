@@ -81,7 +81,7 @@ interface PublicProfile {
 
 export default function PublicProfilePage() {
   const params = useParams();
-  const username = params.username as string;
+  const username = params?.username as string | undefined;
   const { data: session } = useSession();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,6 +89,12 @@ export default function PublicProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
+    if (!username) {
+      setError("User not found");
+      setLoading(false);
+      return;
+    }
+
     const fetchProfile = async () => {
       try {
         const res = await fetch(`/api/user/public-profile/${encodeURIComponent(username)}`);

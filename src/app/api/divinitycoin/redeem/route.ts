@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 import crypto from "crypto";
 import { validateCSRFToken } from "@/lib/csrf";
+
+interface RedemptionResult {
+  newBalance: number;
+}
 
 // Rate limiting for redemption attempts (stricter than payments)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -323,10 +326,7 @@ export async function POST(req: NextRequest) {
       return {
         newBalance: Number(updatedUser.divinityCoinBalance),
       };
-    }, {
-      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      timeout: 15000,
-    });
+    }) as RedemptionResult;
 
     // Clear failed attempts on successful redemption
     clearFailedAttempts(userId);
