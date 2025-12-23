@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
+
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 
 // POST - Forward a thread to another user
 export async function POST(
@@ -29,21 +32,35 @@ export async function POST(
       return NextResponse.json({ error: "Recipient email is required" }, { status: 400 });
     }
 
-    // Find recipient by email
-    const recipient = await db.user.findUnique({
-      where: { email: to.trim().toLowerCase() },
-      select: { id: true, name: true, email: true },
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(to.trim())) {
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+    }
+
+    // Get creator with email handle
+    const creator = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, name: true, email: true, creatorEmailHandle: true },
     });
 
-    if (!recipient) {
+    if (!creator) {
+      return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+    }
+
+    // Check if creator has an email handle set up
+    if (!creator.creatorEmailHandle) {
       return NextResponse.json(
-        { error: "Recipient not found. They must have an account on the platform." },
-        { status: 404 }
+        { error: "You need to set up your creator email address first." },
+        { status: 400 }
       );
     }
 
+    const creatorEmail = `${creator.creatorEmailHandle}@indiecrowdfund.com`;
+    const creatorName = creator.name || creator.email || "Creator";
+
     // Can't forward to yourself
-    if (recipient.id === session.user.id) {
+    if (to.trim().toLowerCase() === creator.email?.toLowerCase()) {
       return NextResponse.json(
         { error: "You cannot forward an email to yourself" },
         { status: 400 }
@@ -91,42 +108,105 @@ export async function POST(
       ? `${additionalMessage}\n\n${forwardedContent}`
       : forwardedContent;
 
-    // Create the forwarded message
-    const message = await db.message.create({
-      data: {
-        senderId: session.user.id,
-        recipientId: recipient.id,
-        projectId,
-        subject: `Fwd: ${originalSubject}`,
-        content: fullContent,
-        read: false,
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-        recipient: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
+    const subject = `Fwd: ${originalSubject}`;
+
+    // Build email HTML
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+          </div>
+
+          <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+            <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">
+              Forwarded message from <strong>${creatorName}</strong>
+            </p>
+          </div>
+
+          <div style="padding: 20px 0;">
+            ${fullContent.replace(/\n/g, '<br>')}
+          </div>
+
+          <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; text-align: center; color: #999; font-size: 12px;">
+            <p>This message was sent via ${APP_NAME}</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Send the actual email
+    const emailResult = await sendEmail({
+      to: to.trim(),
+      subject,
+      html: htmlBody,
+      text: fullContent,
+      fromEmail: creatorEmail,
+      fromName: creatorName,
+      replyTo: creatorEmail,
     });
+
+    if (!emailResult.success) {
+      console.error("Failed to send forwarded email:", emailResult.error);
+      return NextResponse.json(
+        { error: emailResult.error || "Failed to send email" },
+        { status: 500 }
+      );
+    }
+
+    // Also create an internal message record if recipient has an account
+    const recipient = await db.user.findUnique({
+      where: { email: to.trim().toLowerCase() },
+      select: { id: true, name: true, email: true },
+    });
+
+    let messageRecord = null;
+    if (recipient) {
+      messageRecord = await db.message.create({
+        data: {
+          senderId: session.user.id,
+          recipientId: recipient.id,
+          projectId,
+          subject,
+          content: fullContent,
+          read: false,
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            },
+          },
+          recipient: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      message: {
-        id: message.id,
-        subject: message.subject,
-        recipient: message.recipient,
-        createdAt: message.createdAt.toISOString(),
+      message: messageRecord ? {
+        id: messageRecord.id,
+        subject: messageRecord.subject,
+        recipient: messageRecord.recipient,
+        createdAt: messageRecord.createdAt.toISOString(),
+      } : {
+        subject,
+        recipient: { email: to.trim() },
+        createdAt: new Date().toISOString(),
       },
     });
   } catch (error) {
