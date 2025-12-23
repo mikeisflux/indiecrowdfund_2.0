@@ -350,19 +350,15 @@ export async function queueEmail(options: SendEmailOptions & { priority?: number
   }
 }
 
-// Process a single email from the queue (for backward compatibility)
+// Process a single email from the queue
+// Rate limited to max 1 email per second when called from the cron job
 export async function processEmailQueue(): Promise<{ processed: number; errors: number }> {
-  return processEmailBatch(1);
-}
-
-// Process a batch of emails from the queue in parallel
-export async function processEmailBatch(batchSize: number = 5): Promise<{ processed: number; errors: number }> {
   let processed = 0;
   let errors = 0;
 
   try {
-    // Get batch of pending emails (highest priority first, then oldest)
-    const queueEntries = await db.emailQueue.findMany({
+    // Get next pending email (highest priority first, then oldest)
+    const queueEntry = await db.emailQueue.findFirst({
       where: {
         status: "PENDING",
       },
@@ -370,88 +366,68 @@ export async function processEmailBatch(batchSize: number = 5): Promise<{ proces
         { priority: "desc" },
         { createdAt: "asc" },
       ],
-      take: batchSize,
     });
 
-    if (queueEntries.length === 0) {
+    if (!queueEntry) {
       return { processed: 0, errors: 0 };
     }
 
-    // Process all emails in parallel
-    const results = await Promise.allSettled(
-      queueEntries.map(async (queueEntry) => {
-        // Skip if already at max attempts
-        if (queueEntry.attempts >= queueEntry.maxAttempts) {
-          await db.emailQueue.update({
-            where: { id: queueEntry.id },
-            data: { status: "FAILED", error: "Max attempts reached" },
-          });
-          return { success: false, id: queueEntry.id };
-        }
+    // Skip if already at max attempts
+    if (queueEntry.attempts >= queueEntry.maxAttempts) {
+      await db.emailQueue.update({
+        where: { id: queueEntry.id },
+        data: { status: "FAILED", error: "Max attempts reached" },
+      });
+      return { processed: 0, errors: 1 };
+    }
 
-        // Mark as processing
-        await db.emailQueue.update({
-          where: { id: queueEntry.id },
-          data: {
-            status: "PROCESSING",
-            processedAt: new Date(),
-            attempts: { increment: 1 },
-          },
-        });
+    // Mark as processing
+    await db.emailQueue.update({
+      where: { id: queueEntry.id },
+      data: {
+        status: "PROCESSING",
+        processedAt: new Date(),
+        attempts: { increment: 1 },
+      },
+    });
 
-        // Send the email
-        const result = await sendEmail({
-          to: queueEntry.toEmail,
-          subject: queueEntry.subject,
-          html: queueEntry.bodyHtml,
-          text: queueEntry.bodyText || undefined,
-          fromEmail: queueEntry.fromEmail || undefined,
-          fromName: queueEntry.fromName || undefined,
-          replyTo: queueEntry.replyTo || undefined,
-          isCreatorEmail: queueEntry.isCreatorEmail,
-        });
+    // Send the email
+    const result = await sendEmail({
+      to: queueEntry.toEmail,
+      subject: queueEntry.subject,
+      html: queueEntry.bodyHtml,
+      text: queueEntry.bodyText || undefined,
+      fromEmail: queueEntry.fromEmail || undefined,
+      fromName: queueEntry.fromName || undefined,
+      replyTo: queueEntry.replyTo || undefined,
+      isCreatorEmail: queueEntry.isCreatorEmail,
+    });
 
-        if (result.success) {
-          await db.emailQueue.update({
-            where: { id: queueEntry.id },
-            data: {
-              status: "SENT",
-              sentAt: new Date(),
-            },
-          });
-          console.log(`[Email Queue] Successfully sent queued email: ${queueEntry.id}`);
-          return { success: true, id: queueEntry.id };
-        } else {
-          const newAttempts = queueEntry.attempts + 1;
-          await db.emailQueue.update({
-            where: { id: queueEntry.id },
-            data: {
-              status: newAttempts >= queueEntry.maxAttempts ? "FAILED" : "PENDING",
-              error: result.error || "Unknown error",
-            },
-          });
-          console.error(`[Email Queue] Failed to send queued email: ${queueEntry.id}`, result.error);
-          return { success: false, id: queueEntry.id };
-        }
-      })
-    );
-
-    // Count successes and failures
-    for (const result of results) {
-      if (result.status === "fulfilled") {
-        if (result.value.success) {
-          processed++;
-        } else {
-          errors++;
-        }
-      } else {
-        errors++;
-        console.error("[Email Queue] Batch processing error:", result.reason);
-      }
+    if (result.success) {
+      await db.emailQueue.update({
+        where: { id: queueEntry.id },
+        data: {
+          status: "SENT",
+          sentAt: new Date(),
+        },
+      });
+      console.log(`[Email Queue] Successfully sent queued email: ${queueEntry.id}`);
+      processed = 1;
+    } else {
+      const newAttempts = queueEntry.attempts + 1;
+      await db.emailQueue.update({
+        where: { id: queueEntry.id },
+        data: {
+          status: newAttempts >= queueEntry.maxAttempts ? "FAILED" : "PENDING",
+          error: result.error || "Unknown error",
+        },
+      });
+      console.error(`[Email Queue] Failed to send queued email: ${queueEntry.id}`, result.error);
+      errors = 1;
     }
   } catch (error) {
-    console.error("[Email Queue] Error processing batch:", error);
-    errors++;
+    console.error("[Email Queue] Error processing email:", error);
+    errors = 1;
   }
 
   return { processed, errors };

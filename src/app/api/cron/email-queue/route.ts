@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { processEmailBatch, getEmailQueueStats, isEmailQueueEnabled } from "@/lib/email";
+import { processEmailQueue, getEmailQueueStats, isEmailQueueEnabled } from "@/lib/email";
 
 // Cron job endpoint for processing the email queue
 //
-// Optimized for parallel batch processing while respecting rate limits
-// Processes up to 200 emails per run (20 batches x 10 emails)
+// Rate limited to max 1 email per second (60 emails/minute)
+// Sequential processing to respect email provider rate limits
 //
 // Schedule: Every minute
 //
@@ -19,10 +19,9 @@ import { processEmailBatch, getEmailQueueStats, isEmailQueueEnabled } from "@/li
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // Allow up to 60 seconds for processing
 
-// Configuration for batch processing
-const BATCH_SIZE = 10; // Process 10 emails in parallel per batch
-const BATCH_DELAY_MS = 2000; // 2 second delay between batches (for rate limiting)
-const MAX_BATCHES = 20; // Max 20 batches per run = 200 emails max
+// Configuration for rate limiting
+const EMAIL_DELAY_MS = 1000; // 1 second between emails (max 1 email/second)
+const MAX_EMAILS_PER_RUN = 55; // Max emails per minute run (leave buffer for processing time)
 
 export async function GET(req: NextRequest) {
   try {
@@ -67,26 +66,26 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Process emails in batches
-    // Each batch processes BATCH_SIZE emails in parallel
+    // Process emails one at a time with 1 second delay between each
+    // This ensures max 1 email per second rate limit
     let totalProcessed = 0;
     let totalErrors = 0;
-    let batchCount = 0;
+    let emailCount = 0;
 
-    while (batchCount < MAX_BATCHES) {
-      const result = await processEmailBatch(BATCH_SIZE);
+    while (emailCount < MAX_EMAILS_PER_RUN) {
+      const result = await processEmailQueue();
       totalProcessed += result.processed;
       totalErrors += result.errors;
-      batchCount++;
+      emailCount++;
 
       // If no more emails to process, stop early
       if (result.processed === 0 && result.errors === 0) {
         break;
       }
 
-      // Wait between batches to respect rate limits
-      if (batchCount < MAX_BATCHES) {
-        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      // Wait 1 second before processing next email (rate limit: 1 email/second)
+      if (emailCount < MAX_EMAILS_PER_RUN) {
+        await new Promise(resolve => setTimeout(resolve, EMAIL_DELAY_MS));
       }
     }
 
@@ -97,7 +96,7 @@ export async function GET(req: NextRequest) {
       success: true,
       processed: totalProcessed,
       errors: totalErrors,
-      batchesProcessed: batchCount,
+      emailsAttempted: emailCount,
       stats: finalStats,
       timestamp: new Date().toISOString(),
     });
