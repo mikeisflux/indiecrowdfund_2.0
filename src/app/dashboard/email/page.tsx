@@ -49,7 +49,6 @@ import {
   Forward,
   Trash2,
   MoreHorizontal,
-  X,
 } from "lucide-react";
 import {
   DropdownMenu,
