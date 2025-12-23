@@ -142,7 +142,7 @@ export function UserProfileDropdown() {
                   <Heart className="h-4 w-4 md:hidden" />
                   <span>Following</span>
                 </Link>
-                <Link href="/dashboard" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                <Link href="/dashboard/profile" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
                   <User className="h-4 w-4 md:hidden" />
                   <span>Profile</span>
                 </Link>

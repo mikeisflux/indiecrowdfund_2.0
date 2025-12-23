@@ -17,12 +17,14 @@ model User {
   emailVerified     DateTime?
   name              String?
   image             String?
+  heroImage         String?   // Profile banner/hero image
   password          String?
   bio               String?   @db.Text
   location          String?
   timezone          String?
   vanityUrl         String?   @unique
   websites          String[]
+  socialLinks       Json?     // { twitter: "", instagram: "", youtube: "", etc }
   showNameOnly      Boolean   @default(false)
   role              UserRole  @default(USER)
   retailerAccess    Boolean   @default(false)
