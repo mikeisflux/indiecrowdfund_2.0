@@ -409,12 +409,13 @@ export default function PledgePage() {
       }
     } else {
       // Normal flow - need reward or pledge without reward
-      if (step === "payment" && !clientSecret && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) {
+      // Check both clientSecret (for Stripe) and currentPledgeId (for DivinityCoin) to prevent duplicate pledges
+      if (step === "payment" && !clientSecret && !currentPledgeId && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) {
         createPledgeForPayment();
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, isProcessing, paymentError, isAddItemsMode, selectedAddons]);
+  }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, currentPledgeId, isProcessing, paymentError, isAddItemsMode, selectedAddons]);
 
   // Create additional items purchase for existing pledge
   const createAdditionalItemsPurchase = async () => {
@@ -463,7 +464,8 @@ export default function PledgePage() {
   // Create pledge and get Stripe client secret (called automatically when entering payment step)
   const createPledgeForPayment = async () => {
     if (!project || (!selectedReward && !pledgeWithoutReward)) return;
-    if (clientSecret) return; // Already have a client secret
+    if (clientSecret) return; // Already have a client secret (Stripe)
+    if (currentPledgeId) return; // Already have a pledge (DivinityCoin)
 
     setIsProcessing(true);
     setPaymentError(null);
