@@ -222,6 +222,8 @@ export async function POST(req: NextRequest) {
       amount: data.amount,
       userId: session.user.id,
       sourceCampaignId,
+      shippingAmount: data.shippingAmount || 0,
+      shippingCountry: data.shippingCountry,
     });
 
     return NextResponse.json({

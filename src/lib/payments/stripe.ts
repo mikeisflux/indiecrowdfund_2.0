@@ -238,6 +238,8 @@ interface CreatePaymentParams {
   amount: number;
   userId: string;
   sourceCampaignId?: string; // Campaign that led to this pledge (for conversion tracking)
+  shippingAmount?: number; // Shipping cost
+  shippingCountry?: string; // Country code for shipping
 }
 
 interface StripeConnectParams {
@@ -342,6 +344,8 @@ export async function createStripePayment({
   amount,
   userId,
   sourceCampaignId,
+  shippingAmount = 0,
+  shippingCountry,
 }: CreatePaymentParams) {
   const stripeClient = await getStripeInstance();
 
@@ -520,6 +524,34 @@ export async function createStripePayment({
     });
   }
 
+  // Get reward amount if a reward is selected
+  let rewardAmount = 0;
+  if (normalizedRewardId) {
+    const reward = await db.reward.findUnique({
+      where: { id: normalizedRewardId },
+      select: { amount: true },
+    });
+    rewardAmount = reward ? Number(reward.amount) : 0;
+  }
+
+  // Calculate addons amount
+  let addonsAmount = 0;
+  let addonPriceMap = new Map<string, number>();
+  if (addons.length > 0) {
+    const addonIds = addons.map(a => a.id);
+    const addonRecords = await db.reward.findMany({
+      where: {
+        id: { in: addonIds },
+        type: "ADDON",
+      },
+      select: { id: true, amount: true },
+    });
+    addonPriceMap = new Map(addonRecords.map(a => [a.id, Number(a.amount)]));
+    addonsAmount = addons.reduce((sum, addon) => {
+      return sum + (addonPriceMap.get(addon.id) || 0) * addon.quantity;
+    }, 0);
+  }
+
   // Create new pending pledge (no valid existing pledge found)
   const pledge = await db.pledge.create({
     data: {
@@ -527,7 +559,9 @@ export async function createStripePayment({
       projectId,
       rewardId: normalizedRewardId,
       amount,
-      rewardAmount: amount,
+      rewardAmount,
+      addonsAmount,
+      shippingAmount,
       paymentProcessor: "STRIPE",
       status: "PENDING",
       stripeCustomerId: customerId,
@@ -539,18 +573,6 @@ export async function createStripePayment({
 
   // Create addon records if any
   if (addons.length > 0) {
-    const addonIds = addons.map(a => a.id);
-    const addonRecords = await db.reward.findMany({
-      where: {
-        id: { in: addonIds },
-        type: "ADDON",
-      },
-      select: { id: true, amount: true },
-    });
-
-    // Create a map for quick lookup
-    const addonPriceMap = new Map(addonRecords.map(a => [a.id, a.amount]));
-
     await db.pledgeAddon.createMany({
       data: addons.map((addon) => ({
         pledgeId: pledge.id,
