@@ -54,21 +54,11 @@ export async function GET() {
   }
 
   try {
-    // Get all creator email handles to filter out their mailboxes
-    const creators = await db.user.findMany({
-      where: { creatorEmailHandle: { not: null } },
-      select: { creatorEmailHandle: true },
-    });
-    const creatorEmails = creators
-      .map(c => c.creatorEmailHandle ? `${c.creatorEmailHandle}@indiecrowdfund.com` : null)
-      .filter((email): email is string => email !== null);
-
+    // Only filter by the explicit isCreatorMailbox flag
+    // Don't filter by email pattern - admins can create mailboxes with any email
     const mailboxes = await db.mailbox.findMany({
       where: {
-        AND: [
-          { isCreatorMailbox: false }, // Filter out mailboxes marked as creator
-          { email: { notIn: creatorEmails } }, // Filter out existing creator mailboxes by email
-        ],
+        isCreatorMailbox: false, // Only exclude mailboxes explicitly marked as creator mailboxes
       },
       orderBy: [
         { isDefault: "desc" },
