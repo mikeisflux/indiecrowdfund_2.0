@@ -389,6 +389,35 @@ export async function createStripePayment({
   // Users can only have ONE pledge per project (they can edit it, but not create multiple)
   const normalizedRewardId = rewardId && rewardId !== "no-reward" ? rewardId : null;
 
+  // Calculate reward and addon amounts BEFORE checking for existing pledges
+  // This ensures we have correct values for both updating existing pledges and creating new ones
+  let rewardAmount = 0;
+  if (normalizedRewardId) {
+    const reward = await db.reward.findUnique({
+      where: { id: normalizedRewardId },
+      select: { amount: true },
+    });
+    rewardAmount = reward ? Number(reward.amount) : 0;
+  }
+
+  // Calculate addons amount
+  let addonsAmount = 0;
+  let addonPriceMap = new Map<string, number>();
+  if (addons.length > 0) {
+    const addonIds = addons.map(a => a.id);
+    const addonRecords = await db.reward.findMany({
+      where: {
+        id: { in: addonIds },
+        type: "ADDON",
+      },
+      select: { id: true, amount: true },
+    });
+    addonPriceMap = new Map(addonRecords.map(a => [a.id, Number(a.amount)]));
+    addonsAmount = addons.reduce((sum, addon) => {
+      return sum + (addonPriceMap.get(addon.id) || 0) * addon.quantity;
+    }, 0);
+  }
+
   // First check for completed pledges - these always block new pledges
   const existingCompletedPledge = await db.pledge.findFirst({
     where: {
@@ -444,12 +473,41 @@ export async function createStripePayment({
       try {
         const setupIntent = await stripeClient.setupIntents.retrieve(existingCheckoutInProgress.stripeSetupIntentId);
         if (setupIntent.status === "requires_payment_method" || setupIntent.status === "requires_confirmation") {
-          // Update the pledge with new amount/reward if different
-          if (existingCheckoutInProgress.amount !== amount || existingCheckoutInProgress.rewardId !== normalizedRewardId) {
+          // Update the pledge with new values if anything changed
+          const needsUpdate =
+            Number(existingCheckoutInProgress.amount) !== amount ||
+            existingCheckoutInProgress.rewardId !== normalizedRewardId ||
+            Number(existingCheckoutInProgress.addonsAmount) !== addonsAmount ||
+            Number(existingCheckoutInProgress.shippingAmount) !== shippingAmount;
+
+          if (needsUpdate) {
+            // Update pledge with correct values
             await db.pledge.update({
               where: { id: existingCheckoutInProgress.id },
-              data: { amount, rewardAmount: amount, rewardId: normalizedRewardId },
+              data: {
+                amount,
+                rewardAmount,
+                addonsAmount,
+                shippingAmount,
+                rewardId: normalizedRewardId,
+              },
             });
+
+            // Update addon records: delete old ones and create new ones
+            await db.pledgeAddon.deleteMany({
+              where: { pledgeId: existingCheckoutInProgress.id },
+            });
+
+            if (addons.length > 0) {
+              await db.pledgeAddon.createMany({
+                data: addons.map((addon) => ({
+                  pledgeId: existingCheckoutInProgress.id,
+                  addonId: addon.id,
+                  quantity: addon.quantity,
+                  amount: (addonPriceMap.get(addon.id) || 0) * addon.quantity,
+                })),
+              });
+            }
           }
           return {
             type: "setup_intent" as const,
@@ -474,6 +532,42 @@ export async function createStripePayment({
       try {
         const paymentIntent = await stripeClient.paymentIntents.retrieve(existingCheckoutInProgress.stripePaymentIntentId);
         if (paymentIntent.status === "requires_payment_method" || paymentIntent.status === "requires_confirmation") {
+          // Update the pledge with new values if anything changed
+          const needsUpdate =
+            Number(existingCheckoutInProgress.amount) !== amount ||
+            existingCheckoutInProgress.rewardId !== normalizedRewardId ||
+            Number(existingCheckoutInProgress.addonsAmount) !== addonsAmount ||
+            Number(existingCheckoutInProgress.shippingAmount) !== shippingAmount;
+
+          if (needsUpdate) {
+            // Update pledge with correct values
+            await db.pledge.update({
+              where: { id: existingCheckoutInProgress.id },
+              data: {
+                amount,
+                rewardAmount,
+                addonsAmount,
+                shippingAmount,
+                rewardId: normalizedRewardId,
+              },
+            });
+
+            // Update addon records: delete old ones and create new ones
+            await db.pledgeAddon.deleteMany({
+              where: { pledgeId: existingCheckoutInProgress.id },
+            });
+
+            if (addons.length > 0) {
+              await db.pledgeAddon.createMany({
+                data: addons.map((addon) => ({
+                  pledgeId: existingCheckoutInProgress.id,
+                  addonId: addon.id,
+                  quantity: addon.quantity,
+                  amount: (addonPriceMap.get(addon.id) || 0) * addon.quantity,
+                })),
+              });
+            }
+          }
           return {
             type: "payment_intent" as const,
             clientSecret: paymentIntent.client_secret,
@@ -522,34 +616,6 @@ export async function createStripePayment({
       where: { id: stalePendingPledge.id },
       data: { status: "CANCELLED", lastFailureReason: "Checkout abandoned, new pledge created" },
     });
-  }
-
-  // Get reward amount if a reward is selected
-  let rewardAmount = 0;
-  if (normalizedRewardId) {
-    const reward = await db.reward.findUnique({
-      where: { id: normalizedRewardId },
-      select: { amount: true },
-    });
-    rewardAmount = reward ? Number(reward.amount) : 0;
-  }
-
-  // Calculate addons amount
-  let addonsAmount = 0;
-  let addonPriceMap = new Map<string, number>();
-  if (addons.length > 0) {
-    const addonIds = addons.map(a => a.id);
-    const addonRecords = await db.reward.findMany({
-      where: {
-        id: { in: addonIds },
-        type: "ADDON",
-      },
-      select: { id: true, amount: true },
-    });
-    addonPriceMap = new Map(addonRecords.map(a => [a.id, Number(a.amount)]));
-    addonsAmount = addons.reduce((sum, addon) => {
-      return sum + (addonPriceMap.get(addon.id) || 0) * addon.quantity;
-    }, 0);
   }
 
   // Create new pending pledge (no valid existing pledge found)
