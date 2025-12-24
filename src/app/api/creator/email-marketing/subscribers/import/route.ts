@@ -104,49 +104,30 @@ export async function POST(request: NextRequest) {
         });
 
         if (existing) {
-          // Skip but don't count as error
+          // Email exists - add this creator's tag if not already present
+          const existingTags = existing.tags || [];
+          if (!existingTags.includes(creatorTag)) {
+            await db.newsletterSubscriber.update({
+              where: { email: row.email },
+              data: {
+                tags: [...existingTags, creatorTag],
+              },
+            });
+          }
+          // Skip counting as new import but tag was added
           continue;
         }
 
-        const sourceTag = `creator_import:${creatorTag}`;
-
-        // Create new subscriber with creator tag in source
+        // Create new subscriber with creator tag
         await db.newsletterSubscriber.create({
           data: {
             email: row.email,
             name: row.name || null,
-            source: sourceTag,
+            source: "creator_import",
+            tags: [creatorTag], // Tag with the creator account who uploaded
             isActive: true,
           },
         });
-
-        // Also clone to Admin AI Marketing newsletter (tagged by creator account)
-        // This allows admin to have a copy of all creator-uploaded emails
-        try {
-          await db.adminAIMarketingSubscriber.upsert({
-            where: {
-              email_creatorAccount: {
-                email: row.email,
-                creatorAccount: creatorTag,
-              },
-            },
-            create: {
-              email: row.email,
-              name: row.name || null,
-              creatorAccount: creatorTag,
-              creatorId: session.user.id,
-              originalSource: sourceTag,
-              isActive: true,
-            },
-            update: {
-              name: row.name || undefined,
-              isActive: true,
-            },
-          });
-        } catch {
-          // Silently ignore admin clone errors - don't affect creator import
-          console.error(`Failed to clone email to admin marketing: ${row.email}`);
-        }
 
         imported++;
       } catch (err) {
