@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Plus,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AccountSettingsTabProps {
   userName?: string;
@@ -76,7 +77,7 @@ export function AccountSettingsTab({
                   .toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => toast.info("Opening photo selector...")}>
               <Camera className="h-4 w-4 mr-2" />
               Change Photo
             </Button>
@@ -103,7 +104,7 @@ export function AccountSettingsTab({
             />
           </div>
 
-          <Button className="bg-teal-600 hover:bg-teal-700">Save Profile</Button>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Profile saved!")}>Save Profile</Button>
         </CardContent>
       </Card>
 
@@ -147,7 +148,15 @@ export function AccountSettingsTab({
             />
           </div>
 
-          <Button className="bg-teal-600 hover:bg-teal-700">Update Password</Button>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
+            if (newPassword !== confirmPassword) {
+              toast.error("Passwords don't match");
+            } else if (!currentPassword || !newPassword) {
+              toast.error("Please fill in all password fields");
+            } else {
+              toast.success("Password updated!");
+            }
+          }}>Update Password</Button>
         </CardContent>
       </Card>
 
@@ -226,7 +235,7 @@ export function AccountSettingsTab({
             </Label>
           </div>
 
-          <Button className="bg-teal-600 hover:bg-teal-700">Save Preferences</Button>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Preferences saved!")}>Save Preferences</Button>
         </CardContent>
       </Card>
 
@@ -252,9 +261,9 @@ export function AccountSettingsTab({
                     <p className="text-xs text-muted-foreground">Expires 12/25</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">Edit</Button>
+                <Button variant="outline" size="sm" onClick={() => toast.info("Opening card editor...")}>Edit</Button>
               </div>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={() => toast.info("Opening payment method dialog...")}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Payment Method
               </Button>
@@ -277,14 +286,14 @@ export function AccountSettingsTab({
                   <p className="font-medium">Two-Factor Authentication</p>
                   <p className="text-xs text-muted-foreground">Not enabled</p>
                 </div>
-                <Button variant="outline" size="sm">Enable</Button>
+                <Button variant="outline" size="sm" onClick={() => toast.info("Setting up two-factor authentication...")}>Enable</Button>
               </div>
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">Active Sessions</p>
                   <p className="text-xs text-muted-foreground">2 devices</p>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => toast.info("Opening session manager...")}>
                   Manage
                   <ExternalLink className="h-3 w-3 ml-1" />
                 </Button>

@@ -44,6 +44,7 @@ import {
   CheckCircle2,
   Clock,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Backer {
   id: string;
@@ -161,7 +162,7 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button className="bg-teal-600 hover:bg-teal-700">Search</Button>
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Searching backers...")}>Search</Button>
           </div>
 
           {/* Search Results */}
@@ -280,24 +281,24 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info(`Viewing survey as ${backer.name}...`)}>
                           <Eye className="h-4 w-4 mr-2" />
                           View as Backer
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Survey resent to ${backer.email}`)}>
                           <Send className="h-4 w-4 mr-2" />
                           Resend Survey
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info(`Editing order for ${backer.name}...`)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Order
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info(`Adding note for ${backer.name}...`)}>
                           <StickyNote className="h-4 w-4 mr-2" />
                           Add Note
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info(`Viewing changelog for ${backer.name}...`)}>
                           <History className="h-4 w-4 mr-2" />
                           View Changelog
                         </DropdownMenuItem>
@@ -332,15 +333,18 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
 
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2 py-2 border-y">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => toast.info(`Viewing survey as ${selectedBacker?.name}...`)}>
               <Eye className="h-4 w-4 mr-2" />
               View/Edit as Backer
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => toast.success(`Survey resent to ${selectedBacker?.email}`)}>
               <Send className="h-4 w-4 mr-2" />
               Resend Survey
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => {
+              navigator.clipboard.writeText(`https://example.com/survey/${selectedBacker?.id}`);
+              toast.success("Survey link copied to clipboard!");
+            }}>
               <Link className="h-4 w-4 mr-2" />
               Copy Survey Link
             </Button>
@@ -352,15 +356,15 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info(`Processing refund for ${selectedBacker?.name}...`)}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refund Order
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info(`Editing shipping address for ${selectedBacker?.name}...`)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Shipping Address
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info(`Viewing full changelog for ${selectedBacker?.name}...`)}>
                   <History className="h-4 w-4 mr-2" />
                   View Full Changelog
                 </DropdownMenuItem>
@@ -454,7 +458,14 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
             <Button variant="outline" onClick={() => setShowBackerDialog(false)}>
               Close
             </Button>
-            <Button className="bg-teal-600 hover:bg-teal-700">Save Note</Button>
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
+              if (noteText.trim()) {
+                toast.success(`Note saved for ${selectedBacker?.name}`);
+                setNoteText("");
+              } else {
+                toast.error("Please enter a note");
+              }
+            }}>Save Note</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

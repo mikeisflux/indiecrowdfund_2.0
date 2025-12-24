@@ -38,6 +38,7 @@ import {
   Archive,
   Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 type SettingsSection = "general" | "survey" | "shipping" | "payments" | "notifications" | "integrations" | "team" | "danger";
 
@@ -131,7 +132,7 @@ export function SettingsTab({
                     <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center">
                       <ImageIcon className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <Button variant="outline">Change Image</Button>
+                    <Button variant="outline" onClick={() => toast.info("Opening image selector...")}>Change Image</Button>
                   </div>
                 </div>
 
@@ -168,7 +169,7 @@ export function SettingsTab({
                   </Select>
                 </div>
 
-                <Button className="bg-teal-600 hover:bg-teal-700">Save Changes</Button>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("General settings saved!")}>Save Changes</Button>
               </CardContent>
             </Card>
           )}
@@ -208,7 +209,7 @@ export function SettingsTab({
                   </div>
                   <Switch defaultChecked />
                 </div>
-                <Button className="bg-teal-600 hover:bg-teal-700">Save Changes</Button>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Survey settings saved!")}>Save Changes</Button>
               </CardContent>
             </Card>
           )}
@@ -241,7 +242,7 @@ export function SettingsTab({
                   </div>
                   <Switch defaultChecked />
                 </div>
-                <Button className="bg-teal-600 hover:bg-teal-700">Save Changes</Button>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Shipping settings saved!")}>Save Changes</Button>
               </CardContent>
             </Card>
           )}
@@ -274,7 +275,7 @@ export function SettingsTab({
                   </div>
                   <Switch defaultChecked />
                 </div>
-                <Button className="bg-teal-600 hover:bg-teal-700">Save Changes</Button>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Payment settings saved!")}>Save Changes</Button>
               </CardContent>
             </Card>
           )}
@@ -314,7 +315,7 @@ export function SettingsTab({
                   </div>
                   <Switch defaultChecked />
                 </div>
-                <Button className="bg-teal-600 hover:bg-teal-700">Save Changes</Button>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Notification settings saved!")}>Save Changes</Button>
               </CardContent>
             </Card>
           )}
@@ -336,7 +337,7 @@ export function SettingsTab({
                       <p className="text-sm text-muted-foreground">Shipping label generation</p>
                     </div>
                   </div>
-                  <Button variant="outline">Connect</Button>
+                  <Button variant="outline" onClick={() => toast.info("Connecting to ShipStation...")}>Connect</Button>
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-3">
@@ -360,7 +361,7 @@ export function SettingsTab({
                       <p className="text-sm text-muted-foreground">Workflow automation</p>
                     </div>
                   </div>
-                  <Button variant="outline">Connect</Button>
+                  <Button variant="outline" onClick={() => toast.info("Connecting to Zapier...")}>Connect</Button>
                 </div>
               </CardContent>
             </Card>
@@ -395,9 +396,9 @@ export function SettingsTab({
                       <p className="text-sm text-muted-foreground">jane@example.com</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">Admin</Button>
+                  <Button variant="outline" size="sm" onClick={() => toast.info("Opening role editor...")}>Admin</Button>
                 </div>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={() => toast.info("Opening invite dialog...")}>
                   <Users className="h-4 w-4 mr-2" />
                   Invite Team Member
                 </Button>

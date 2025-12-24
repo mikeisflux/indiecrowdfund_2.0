@@ -24,6 +24,7 @@ import {
   Globe,
   AlertTriangle,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { ShippingService } from "../../types";
 
 interface ShippingZone {
@@ -160,10 +161,10 @@ export function ShippingTab({ shippingServices }: ShippingTabProps) {
                     <Check className="h-3 w-3 mr-1" />
                     Connected
                   </Badge>
-                  <Button variant="ghost" size="sm">Disconnect</Button>
+                  <Button variant="ghost" size="sm" onClick={() => toast.success(`Disconnected from ${service.name}`)}>Disconnect</Button>
                 </div>
               ) : (
-                <Button className="bg-teal-600 hover:bg-teal-700">
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info(`Connecting to ${service.name}...`)}>
                   <Link2 className="h-4 w-4 mr-2" />
                   Connect
                 </Button>
@@ -393,7 +394,10 @@ export function ShippingTab({ shippingServices }: ShippingTabProps) {
             <Button variant="outline" onClick={() => setShowZoneDialog(false)}>
               Cancel
             </Button>
-            <Button className="bg-teal-600 hover:bg-teal-700">
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
+              toast.success(editingZone?.id ? `Updated "${editingZone.name}" zone` : `Added "${editingZone?.name}" zone`);
+              setShowZoneDialog(false);
+            }}>
               {editingZone?.id ? "Save Changes" : "Add Zone"}
             </Button>
           </DialogFooter>

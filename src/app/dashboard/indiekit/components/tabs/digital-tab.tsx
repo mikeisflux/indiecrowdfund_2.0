@@ -25,6 +25,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { DigitalFile, DistributionRule, FulfillmentStats } from "../../types";
 
 interface DigitalTabProps {
@@ -53,10 +54,10 @@ export function DigitalTab({
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => toast.info("Opening documentation...")}>
             Learn More
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => toast.info("Opening downloads list...")}>
             <Eye className="h-4 w-4 mr-2" />
             View Downloads ({digitalFiles.length})
           </Button>
@@ -73,7 +74,7 @@ export function DigitalTab({
           <p className="text-sm text-muted-foreground mb-4">
             Send email notifications to backers receiving digital downloads.
           </p>
-          <Button className="bg-teal-600 hover:bg-teal-700">
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success(`Sending ${stats?.digitalDownloads || 0} notification emails...`)}>
             <Mail className="h-4 w-4 mr-2" />
             Blast {stats?.digitalDownloads || 0} Notification Emails
           </Button>
@@ -88,12 +89,13 @@ export function DigitalTab({
             <CardDescription>Configure automatic file distribution based on order contents</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={() => toast.info("Distribution rules help you automatically send files to backers based on their order contents.")}>
               <HelpCircle className="h-4 w-4" />
             </Button>
             <Button
               className="bg-teal-600 hover:bg-teal-700"
               disabled={distributionRules.filter(r => r.status === "not_started").length === 0}
+              onClick={() => toast.success(`Starting ${distributionRules.filter(r => r.status === "not_started").length} distributions...`)}
             >
               <Play className="h-4 w-4 mr-2" />
               Start all distributions ({distributionRules.filter(r => r.status === "not_started").length})
@@ -145,14 +147,14 @@ export function DigitalTab({
                         <p className="text-xs text-muted-foreground mt-1">{rule.startedAt}</p>
                       )}
                       {rule.status === "started" && (
-                        <Button variant="link" size="sm" className="text-teal-600 p-0 h-auto mt-1">
+                        <Button variant="link" size="sm" className="text-teal-600 p-0 h-auto mt-1" onClick={() => toast.info("Refreshing distribution status...")}>
                           Refresh
                         </Button>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" onClick={() => toast.success(`Deleted rule "${rule.name}"`)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -207,11 +209,11 @@ export function DigitalTab({
                     className="h-2 w-32 mt-2"
                   />
                   <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => toast.success(`Distributing "${file.name}" to ${file.totalEligible - file.distributedTo} remaining backers...`)}>
                       <Send className="h-4 w-4 mr-2" />
                       Distribute
                     </Button>
-                    <Button size="sm" variant="ghost">
+                    <Button size="sm" variant="ghost" onClick={() => toast.success(`Deleted "${file.name}"`)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
