@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { PROJECT_CATEGORIES } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,6 +92,7 @@ export function BasicsStep() {
 
       const response = await fetch("/api/upload", {
         method: "POST",
+        headers: getCSRFHeaders(),
         body: formData,
       });
 
