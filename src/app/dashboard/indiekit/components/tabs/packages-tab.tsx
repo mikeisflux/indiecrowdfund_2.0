@@ -44,6 +44,7 @@ import {
   Info,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 import type { PackageGroup } from "../../types";
 
 interface ConnectedService {
@@ -96,7 +97,7 @@ export function PackagesTab({
   return (
     <div className="space-y-6">
       {/* Back Button */}
-      <Button variant="ghost" size="sm" className="-mb-4">
+      <Button variant="ghost" size="sm" className="-mb-4" onClick={() => toast.info("Navigating back...")}>
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back
       </Button>
@@ -116,9 +117,9 @@ export function PackagesTab({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>ShipStation</DropdownMenuItem>
-              <DropdownMenuItem>CSV Export</DropdownMenuItem>
-              <DropdownMenuItem>Manual Fulfillment</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.success("Switched to ShipStation")}>ShipStation</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.success("Switched to CSV Export")}>CSV Export</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.success("Switched to Manual Fulfillment")}>Manual Fulfillment</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -218,7 +219,7 @@ export function PackagesTab({
               </div>
 
               <div className="flex justify-center">
-                <Button className="bg-teal-600 hover:bg-teal-700">
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening connection wizard...")}>
                   Get Started - Connect Service
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -260,7 +261,7 @@ export function PackagesTab({
                           {service.connectedAt}
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm" className="text-teal-600">
+                          <Button variant="ghost" size="sm" className="text-teal-600" onClick={() => toast.info(`Updating ${service.name} connection...`)}>
                             Update
                             <ExternalLink className="h-3 w-3 ml-1" />
                           </Button>
@@ -276,7 +277,7 @@ export function PackagesTab({
               )}
 
               <div className="flex justify-center mt-6">
-                <Button className="bg-teal-600 hover:bg-teal-700">
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening connection dialog...")}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add New Connection
                 </Button>
@@ -311,7 +312,7 @@ export function PackagesTab({
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
                 <p className="font-semibold">ShipStation</p>
                 <p className="text-sm text-muted-foreground">(NDM Express)</p>
-                <Button variant="link" className="text-teal-600 p-0 h-auto mt-2">
+                <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={() => toast.info("Updating order status from ShipStation...")}>
                   Update Order Status
                   <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
@@ -321,7 +322,7 @@ export function PackagesTab({
             {/* Add New Orders Box */}
             <Card>
               <CardContent className="pt-6">
-                <Button className="bg-teal-600 hover:bg-teal-700 w-full mb-2">
+                <Button className="bg-teal-600 hover:bg-teal-700 w-full mb-2" onClick={() => toast.success("Package groups refreshed!")}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh Package Groups
                 </Button>
@@ -341,7 +342,7 @@ export function PackagesTab({
                     value={searchGroupId}
                     onChange={(e) => setSearchGroupId(e.target.value)}
                   />
-                  <Button size="icon" className="bg-teal-600 hover:bg-teal-700">
+                  <Button size="icon" className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info(`Searching for package group #${searchGroupId}...`)}>
                     <Search className="h-4 w-4" />
                   </Button>
                 </div>
@@ -360,6 +361,7 @@ export function PackagesTab({
                 <Button
                   className="bg-teal-600 hover:bg-teal-700"
                   disabled={totalNotPushed === 0}
+                  onClick={() => toast.success(`Pushing ${totalNotPushed} orders to ShipStation...`)}
                 >
                   <Send className="h-4 w-4 mr-2" />
                   Push all {totalNotPushed} orders
@@ -367,11 +369,12 @@ export function PackagesTab({
                 <Button
                   className="bg-amber-600 hover:bg-amber-700"
                   disabled={totalErrored === 0}
+                  onClick={() => toast.success(`Re-pushing ${totalErrored} errored orders...`)}
                 >
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Re-push all {totalErrored} errored orders
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => toast.info("Updating order status...")}>
                   <RefreshCcw className="h-4 w-4 mr-2" />
                   Update Order Status
                 </Button>
@@ -450,7 +453,7 @@ export function PackagesTab({
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
                 <p className="font-semibold">ShipStation</p>
                 <p className="text-sm text-muted-foreground">(NDM Express)</p>
-                <Button variant="link" className="text-teal-600 p-0 h-auto mt-2">
+                <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={() => toast.info("Updating order status from ShipStation...")}>
                   Update Order Status
                   <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
@@ -460,7 +463,7 @@ export function PackagesTab({
             {/* Add New Orders Box */}
             <Card>
               <CardContent className="pt-6">
-                <Button className="bg-teal-600 hover:bg-teal-700 w-full mb-2">
+                <Button className="bg-teal-600 hover:bg-teal-700 w-full mb-2" onClick={() => toast.success("Package groups refreshed!")}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh Package Groups
                 </Button>
@@ -480,7 +483,7 @@ export function PackagesTab({
                     value={searchGroupId}
                     onChange={(e) => setSearchGroupId(e.target.value)}
                   />
-                  <Button size="icon" className="bg-teal-600 hover:bg-teal-700">
+                  <Button size="icon" className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info(`Searching for package group #${searchGroupId}...`)}>
                     <Search className="h-4 w-4" />
                   </Button>
                 </div>
@@ -528,11 +531,11 @@ export function PackagesTab({
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => toast.success("Groups refreshed!")}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh Groups
               </Button>
-              <Button className="bg-teal-600 hover:bg-teal-700">
+              <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening create group dialog...")}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Group
               </Button>
@@ -564,9 +567,9 @@ export function PackagesTab({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View This Group</DropdownMenuItem>
-                        <DropdownMenuItem>Export Orders</DropdownMenuItem>
-                        <DropdownMenuItem>Export Reports</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info(`Viewing group #${group.id}...`)}>View This Group</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Exporting orders for group #${group.id}...`)}>Export Orders</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Exporting reports for group #${group.id}...`)}>Export Reports</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -603,6 +606,7 @@ export function PackagesTab({
                       size="sm"
                       className="bg-teal-600 hover:bg-teal-700 w-full"
                       disabled={group.statusCounts.notPushed === 0}
+                      onClick={() => toast.success(`Sending ${group.statusCounts.notPushed} orders from group #${group.id} to ShipStation...`)}
                     >
                       <Send className="h-4 w-4 mr-2" />
                       Send {group.statusCounts.notPushed} to ShipStation
@@ -630,7 +634,7 @@ export function PackagesTab({
                                   <p className="text-xs text-red-600 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
                                     Not Valid for Customs
-                                    <button className="text-teal-600 underline ml-1">edit</button>
+                                    <button className="text-teal-600 underline ml-1" onClick={() => toast.info(`Editing customs info for ${item.name}...`)}>edit</button>
                                   </p>
                                 )}
                               </div>
@@ -654,7 +658,7 @@ export function PackagesTab({
 
                   {/* View Group Link */}
                   <div className="mt-4 text-center">
-                    <Button variant="link" className="text-teal-600">
+                    <Button variant="link" className="text-teal-600" onClick={() => toast.info(`Viewing group #${group.id}...`)}>
                       View This Group
                       <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
@@ -671,10 +675,10 @@ export function PackagesTab({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-48">
-                        <DropdownMenuItem>Export as CSV</DropdownMenuItem>
-                        <DropdownMenuItem>Export as Excel</DropdownMenuItem>
-                        <DropdownMenuItem>Export Packing Slips</DropdownMenuItem>
-                        <DropdownMenuItem>Export Shipping Labels</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Exporting group #${group.id} as CSV...`)}>Export as CSV</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Exporting group #${group.id} as Excel...`)}>Export as Excel</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Exporting packing slips for group #${group.id}...`)}>Export Packing Slips</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Exporting shipping labels for group #${group.id}...`)}>Export Shipping Labels</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
