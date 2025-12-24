@@ -182,14 +182,14 @@ export async function calculateUserInterests(userId: string): Promise<UserIntere
     .slice(0, 20)
     .map(([term]) => term);
 
-  // Calculate pledge statistics
-  const pledgeAmounts = pledges.map((p) => p.amount);
+  // Calculate pledge statistics - convert Decimals to numbers
+  const pledgeAmounts = pledges.map((p) => Number(p.amount));
   const avgPledgeAmount = pledgeAmounts.length > 0
     ? pledgeAmounts.reduce((a, b) => a + b, 0) / pledgeAmounts.length
     : 0;
 
-  // Calculate preferred goal range from backed projects
-  const backedGoals = pledges.map((p) => p.project.goalAmount);
+  // Calculate preferred goal range from backed projects - convert Decimals to numbers
+  const backedGoals = pledges.map((p) => Number(p.project.goalAmount));
   const preferredGoalRange = backedGoals.length >= 3
     ? {
         min: Math.min(...backedGoals) * 0.5,

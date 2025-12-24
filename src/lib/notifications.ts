@@ -377,7 +377,7 @@ export async function notifyPledgeReceived(
     userId: creatorId,
     type: "PLEDGE_RECEIVED",
     title: "New Pledge!",
-    message: `${backerName} backed "${project.title}" for $${amount.toFixed(2)}`,
+    message: `${backerName} backed "${project.title}" for $${Number(amount).toFixed(2)}`,
     actionUrl: projectUrlPath,
     projectId,
   });
@@ -872,11 +872,11 @@ export async function notifyBackerPledgeConfirmed(
     return;
   }
 
-  // Format addons for the email
-  const addons = pledge.addons?.map((addonEntry: { quantity: number; addon: { title: string; amount: number } }) => ({
+  // Format addons for the email - convert Decimal amounts to numbers
+  const addons = pledge.addons?.map((addonEntry: { quantity: number; addon: { title: string; amount: unknown } }) => ({
     title: addonEntry.addon.title,
     quantity: addonEntry.quantity,
-    amount: addonEntry.addon.amount * addonEntry.quantity,
+    amount: Number(addonEntry.addon.amount) * addonEntry.quantity,
   })) || [];
 
   // Get shipping info
@@ -900,7 +900,7 @@ export async function notifyBackerPledgeConfirmed(
       pledge.user.name || "Backer",
       pledge.project.title,
       pledge.project.slug,
-      pledge.amount,
+      Number(pledge.amount),
       pledge.reward?.title || null,
       chargedImmediately,
       pledge.project.imageUrl,
@@ -966,7 +966,7 @@ export async function notifyProjectEnded(projectId: string) {
     ? `/projects/${project.creator.vanityUrl}/${project.slug}`
     : `/projects/${project.slug}`;
 
-  const funded = project.currentAmount >= project.goalAmount;
+  const funded = Number(project.currentAmount) >= Number(project.goalAmount);
   const message = funded
     ? `"${project.title}" has successfully ended! Thanks for your support.`
     : `"${project.title}" has ended. Unfortunately, it did not reach its funding goal.`;
@@ -1168,7 +1168,7 @@ export async function processUnsentConfirmationEmails() {
         pledge.user.name || "Backer",
         pledge.project.title,
         pledge.project.slug,
-        pledge.amount,
+        Number(pledge.amount),
         pledge.reward?.title || null,
         pledge.chargedImmediately,
         pledge.project.imageUrl,

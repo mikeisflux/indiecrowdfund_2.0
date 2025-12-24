@@ -812,8 +812,8 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
     throw new Error("Creator has not connected Stripe");
   }
 
-  const amountInCents = Math.round(pledge.amount * 100);
-  const platformFee = Math.round(pledge.amount * 0.03 * 100);
+  const amountInCents = Math.round(Number(pledge.amount) * 100);
+  const platformFee = Math.round(Number(pledge.amount) * 0.03 * 100);
 
   try {
     // Generate idempotency key based on pledgeId AND retryCount
@@ -1218,7 +1218,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         pledge.projectId,
         pledge.project.creatorId,
         pledge.user.name || "A backer",
-        pledge.amount
+        Number(pledge.amount)
       );
     } catch (notifyError) {
       console.error(`[Webhook] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
@@ -1234,11 +1234,11 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 
   // Check if project is now funded (only relevant for immediate charges on funded campaigns)
   if (pledge.chargedImmediately) {
-    const projectIsFunded = updatedProject.currentAmount >= updatedProject.goalAmount;
+    const projectIsFunded = Number(updatedProject.currentAmount) >= Number(updatedProject.goalAmount);
 
     // Check if this pledge pushed it over the goal (for notification)
     const justReachedGoal = projectIsFunded &&
-      updatedProject.currentAmount - pledge.amount < updatedProject.goalAmount;
+      Number(updatedProject.currentAmount) - Number(pledge.amount) < Number(updatedProject.goalAmount);
 
     if (justReachedGoal) {
       // Project just reached its goal! Send notification (non-blocking)

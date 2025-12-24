@@ -193,8 +193,8 @@ export class RecommendationEngine {
         reasons.push(`High interest in ${project.category}`);
       }
 
-      // Funding progress
-      const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
+      // Funding progress - convert Decimals to numbers
+      const fundingPercent = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
       if (fundingPercent >= 50 && fundingPercent < 100) {
         score += 20;
         reasons.push("Nearly funded");
