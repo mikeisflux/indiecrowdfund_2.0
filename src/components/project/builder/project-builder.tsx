@@ -100,7 +100,8 @@ export function ProjectBuilder() {
           const fullItem = items.find((i) => i.id === item.id);
           return {
             id: item.id,
-            projectItemId: item.id,
+            // Preserve existing projectItemId reference, or null if none exists
+            projectItemId: (item as { projectItemId?: string | null }).projectItemId || null,
             title: fullItem?.title || item.title || "Item",
             description: fullItem?.description,
             imageUrl: fullItem?.imageUrl || undefined,
