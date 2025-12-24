@@ -562,10 +562,20 @@ export async function PATCH(
           data: updateData,
         });
 
-        // Get existing rewards with backer counts
+        // Get existing rewards with backer counts (only COMPLETED pledges count)
         const existingRewards = await tx.reward.findMany({
           where: { projectId: params.id },
-          include: { _count: { select: { pledges: true } } },
+          include: {
+            _count: {
+              select: {
+                pledges: {
+                  where: {
+                    status: "COMPLETED",
+                  },
+                },
+              },
+            },
+          },
         });
 
         // For launched projects, handle rewards differently

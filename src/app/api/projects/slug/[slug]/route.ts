@@ -38,7 +38,13 @@ export async function GET(
           include: {
             items: true,
             _count: {
-              select: { pledges: true },
+              select: {
+                pledges: {
+                  where: {
+                    status: "COMPLETED",
+                  },
+                },
+              },
             },
             // Get the first 5 backers for avatar display
             // Include COMPLETED and committed PENDING pledges
