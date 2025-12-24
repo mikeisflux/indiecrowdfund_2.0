@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -20,6 +21,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Plus,
   Upload,
   Download,
@@ -32,7 +41,10 @@ import {
   AlertCircle,
   MoreHorizontal,
   Users,
+  Loader2,
 } from "lucide-react";
+import { ImportEmailDialog, ExportDialog } from "../dialogs";
+import { toast } from "sonner";
 
 interface Member {
   id: string;
@@ -58,6 +70,42 @@ const sourceLabels: Record<Member["source"], string> = {
 
 export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign = false }: MembersTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [newMemberName, setNewMemberName] = useState("");
+  const [isAddingMember, setIsAddingMember] = useState(false);
+
+  const handleAddMember = async () => {
+    if (!newMemberEmail || !newMemberEmail.includes("@")) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setIsAddingMember(true);
+    try {
+      const response = await fetch("/api/creator/email-marketing/subscribers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newMemberEmail, name: newMemberName }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to add member");
+      }
+
+      toast.success("Member added successfully!");
+      setIsAddMemberDialogOpen(false);
+      setNewMemberEmail("");
+      setNewMemberName("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add member");
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
 
   const filteredMembers = members.filter(
     (m) =>
@@ -92,15 +140,15 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Import
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setIsExportDialogOpen(true)}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button className="bg-teal-600 hover:bg-teal-700">
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setIsAddMemberDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add
           </Button>
@@ -230,6 +278,84 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
           Bounced
         </span>
       </div>
+
+      {/* Import Dialog */}
+      <ImportEmailDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImport={(count) => {
+          toast.success(`Imported ${count} members`);
+        }}
+      />
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        exportType="backers"
+        totalRecords={totalMembers}
+        onExport={(options) => {
+          toast.success(`Exporting ${totalMembers} members as ${options.format.toUpperCase()}...`);
+        }}
+      />
+
+      {/* Add Member Dialog */}
+      <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-teal-600" />
+              Add Member
+            </DialogTitle>
+            <DialogDescription>
+              Add a new member to your email list manually.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                value={newMemberEmail}
+                onChange={(e) => setNewMemberEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">Name (optional)</Label>
+              <Input
+                id="name"
+                placeholder="John Doe"
+                value={newMemberName}
+                onChange={(e) => setNewMemberName(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={handleAddMember}
+              disabled={isAddingMember || !newMemberEmail}
+            >
+              {isAddingMember ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Member
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
