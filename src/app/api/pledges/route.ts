@@ -21,6 +21,8 @@ const createPledgeSchema = z.object({
   addonIds: z.array(z.string()).default([]),
   addons: z.array(addonWithQuantitySchema).optional(), // New format with quantities
   amount: z.number().positive(),
+  shippingAmount: z.number().min(0).optional(), // Shipping cost
+  shippingCountry: z.string().optional(), // Country code for shipping
   shippingAddress: z.object({
     name: z.string(),
     address1: z.string(),
@@ -157,6 +159,8 @@ export async function POST(req: NextRequest) {
       }, 0);
       const addonsAmount = isNaN(addonsAmountValue) ? 0 : addonsAmountValue;
 
+      const shippingAmount = data.shippingAmount || 0;
+
       console.log("[DivinityCoin Pledge] Creating NEW pledge:", {
         userId: session.user.id,
         projectId: data.projectId,
@@ -164,6 +168,8 @@ export async function POST(req: NextRequest) {
         amount: data.amount,
         rewardAmount,
         addonsAmount,
+        shippingAmount,
+        shippingCountry: data.shippingCountry,
       });
 
       // For DivinityCoin projects, create a pending pledge without Stripe
@@ -175,6 +181,7 @@ export async function POST(req: NextRequest) {
           amount: data.amount,
           rewardAmount,
           addonsAmount,
+          shippingAmount,
           status: "PENDING",
           paymentProcessor: "DIVINITYCOIN",
           ...(sourceCampaignId ? { sourceCampaignId } : {}),

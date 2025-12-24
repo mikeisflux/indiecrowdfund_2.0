@@ -485,6 +485,8 @@ export default function PledgePage() {
           rewardId: selectedReward?.id || null,
           addons: addonsWithQuantity,
           amount: total,
+          shippingAmount: totalShipping,
+          shippingCountry: shippingCountry,
         }),
       });
 
