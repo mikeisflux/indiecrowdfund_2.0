@@ -25,6 +25,11 @@ import { slugify } from "@/lib/utils";
 function getVideoEmbedUrl(url: string): string | null {
   if (!url) return null;
 
+  // Check if it's an uploaded video (local URL)
+  if (url.startsWith("/api/uploads/") || url.includes("/api/uploads/")) {
+    return null; // Return null so we know to use native video player
+  }
+
   // YouTube patterns
   const youtubeRegex = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
   const youtubeMatch = url.match(youtubeRegex);
@@ -42,11 +47,70 @@ function getVideoEmbedUrl(url: string): string | null {
   return null;
 }
 
+// Check if URL is an uploaded video
+function isUploadedVideo(url: string): boolean {
+  if (!url) return false;
+  return url.startsWith("/api/uploads/") || url.includes("/api/uploads/");
+}
+
 export function BasicsStep() {
   const { basics, updateBasics, projectId } = useProjectStore();
   const [slugInput, setSlugInput] = useState(basics.slug || "");
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [slugMessage, setSlugMessage] = useState("");
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+
+  // Handle video file upload
+  const handleVideoUpload = async (file: File) => {
+    if (!projectId) {
+      alert("Please save the project first before uploading a video");
+      return;
+    }
+
+    // Validate file type
+    const validTypes = ["video/mp4", "video/webm", "video/quicktime"];
+    if (!validTypes.includes(file.type)) {
+      alert("Please upload an MP4, WebM, or MOV video file");
+      return;
+    }
+
+    // Validate file size (100MB max)
+    const maxSize = 100 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert("Video file must be less than 100MB");
+      return;
+    }
+
+    setIsUploadingVideo(true);
+    setVideoUploadProgress(0);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("projectId", projectId);
+      formData.append("type", "video");
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to upload video");
+      }
+
+      const result = await response.json();
+      updateBasics({ videoUrl: result.url });
+    } catch (error) {
+      console.error("Video upload error:", error);
+      alert(error instanceof Error ? error.message : "Failed to upload video");
+    } finally {
+      setIsUploadingVideo(false);
+      setVideoUploadProgress(0);
+    }
+  };
 
   // Auto-generate slug from title when title changes (only if slug is empty)
   useEffect(() => {
@@ -371,7 +435,29 @@ export function BasicsStep() {
 
         <div className="space-y-4">
           {/* Video Preview or Upload Area */}
-          {videoEmbedUrl ? (
+          {isUploadedVideo(basics.videoUrl || "") ? (
+            // Native video player for uploaded videos
+            <div className="space-y-3">
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
+                <video
+                  src={basics.videoUrl || ""}
+                  className="absolute inset-0 w-full h-full object-contain"
+                  controls
+                  preload="metadata"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => updateBasics({ videoUrl: "" })}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ) : videoEmbedUrl ? (
+            // YouTube/Vimeo iframe embed
             <div className="space-y-3">
               <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
                 <iframe
@@ -390,15 +476,13 @@ export function BasicsStep() {
                   variant="ghost"
                   size="icon"
                   onClick={() => {
-                    const input = document.createElement("input");
-                    input.type = "text";
                     const url = prompt("Enter YouTube or Vimeo URL:", basics.videoUrl || "");
                     if (url !== null) {
                       updateBasics({ videoUrl: url });
                     }
                   }}
                 >
-                  <Upload className="h-4 w-4" />
+                  <Link className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
@@ -410,19 +494,51 @@ export function BasicsStep() {
               </div>
             </div>
           ) : (
+            // Empty state - show upload and URL options
             <div className="space-y-3">
               <div className="flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 p-6">
-                <Video className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <Input
-                  id="videoUrl"
-                  placeholder="Paste YouTube or Vimeo URL"
-                  value={basics.videoUrl || ""}
-                  onChange={(e) => updateBasics({ videoUrl: e.target.value })}
-                  className="max-w-sm"
-                />
-                <p className="text-xs text-muted-foreground mt-2">
-                  Supports YouTube and Vimeo links
-                </p>
+                {isUploadingVideo ? (
+                  <>
+                    <Loader2 className="h-12 w-12 text-muted-foreground/50 mb-4 animate-spin" />
+                    <p className="text-sm text-muted-foreground">Uploading video...</p>
+                  </>
+                ) : (
+                  <>
+                    <Video className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md">
+                      <Button
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = "video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov";
+                          input.onchange = (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (file) {
+                              handleVideoUpload(file);
+                            }
+                          };
+                          input.click();
+                        }}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Video
+                      </Button>
+                      <span className="text-xs text-muted-foreground">or</span>
+                      <Input
+                        id="videoUrl"
+                        placeholder="Paste YouTube/Vimeo URL"
+                        value={basics.videoUrl || ""}
+                        onChange={(e) => updateBasics({ videoUrl: e.target.value })}
+                        className="flex-1"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      Upload MP4, WebM, or MOV (max 100MB) or paste a YouTube/Vimeo link
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           )}
