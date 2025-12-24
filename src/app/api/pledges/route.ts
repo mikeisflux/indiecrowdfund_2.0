@@ -113,8 +113,9 @@ export async function POST(req: NextRequest) {
 
     // Check payment processor and route accordingly
     if (project.paymentProcessor === "DIVINITYCOIN") {
-      // Calculate reward amount
-      const rewardAmount = reward ? Number(reward.amount) : 0;
+      // Calculate reward amount - ensure it's a valid number
+      const rewardAmountValue = reward ? Number(reward.amount) : 0;
+      const rewardAmount = isNaN(rewardAmountValue) ? 0 : rewardAmountValue;
 
       // Calculate addons amount
       const addonIds = addonsWithQuantity.map(a => a.id);
@@ -123,9 +124,19 @@ export async function POST(req: NextRequest) {
         select: { id: true, amount: true },
       }) : [];
       const addonAmountMap = new Map(addonRecords.map(a => [a.id, Number(a.amount)]));
-      const addonsAmount = addonsWithQuantity.reduce((sum, addon) => {
+      const addonsAmountValue = addonsWithQuantity.reduce((sum, addon) => {
         return sum + (addonAmountMap.get(addon.id) || 0) * addon.quantity;
       }, 0);
+      const addonsAmount = isNaN(addonsAmountValue) ? 0 : addonsAmountValue;
+
+      console.log("[DivinityCoin Pledge] Creating pledge:", {
+        userId: session.user.id,
+        projectId: data.projectId,
+        rewardId: data.rewardId,
+        amount: data.amount,
+        rewardAmount,
+        addonsAmount,
+      });
 
       // For DivinityCoin projects, create a pending pledge without Stripe
       const pledge = await db.pledge.create({
@@ -134,11 +145,11 @@ export async function POST(req: NextRequest) {
           projectId: data.projectId,
           rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
           amount: data.amount,
-          rewardAmount: rewardAmount,
-          addonsAmount: addonsAmount,
+          rewardAmount,
+          addonsAmount,
           status: "PENDING",
           paymentProcessor: "DIVINITYCOIN",
-          sourceCampaignId,
+          ...(sourceCampaignId ? { sourceCampaignId } : {}),
         },
       });
 
