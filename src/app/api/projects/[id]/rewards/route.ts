@@ -336,7 +336,24 @@ export async function PATCH(
     }
 
     const body = await req.json();
+
+    // Debug: log shipping data received for PATCH
+    console.log("[Rewards API PATCH] Received shipping data:", {
+      rewardId: body.id,
+      shippingType: body.shippingType,
+      shippingCost: body.shippingCost,
+      shippingCountries: body.shippingCountries,
+    });
+
     const reward = rewardSchema.parse(body);
+
+    // Debug: log parsed shipping data
+    console.log("[Rewards API PATCH] Parsed shipping data:", {
+      rewardId: reward.id,
+      shippingType: reward.shippingType,
+      shippingCost: reward.shippingCost,
+      shippingCountries: reward.shippingCountries,
+    });
 
     if (!reward.id) {
       return NextResponse.json({ error: "Reward ID required for update" }, { status: 400 });
@@ -395,6 +412,14 @@ export async function PATCH(
           items: true,
         },
       });
+    });
+
+    // Debug: log saved shipping data
+    console.log("[Rewards API PATCH] Saved shipping data:", {
+      rewardId: updated.id,
+      shippingType: updated.shippingType,
+      shippingCost: updated.shippingCost,
+      shippingCountries: updated.shippingCountries,
     });
 
     return NextResponse.json({
