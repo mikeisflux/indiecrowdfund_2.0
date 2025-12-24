@@ -191,12 +191,13 @@ export function ProjectBuilder() {
       // For existing projects, use dedicated endpoints in parallel for reliability
       const savePromises: Promise<Response>[] = [];
 
-      // Save basics
-      savePromises.push(
-        fetch(`/api/projects/${projectId}/basics`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-          body: JSON.stringify({
+      // Save basics - for launched projects, only send allowed fields
+      const basicsPayload = isLive
+        ? {
+            imageUrl: basics.imageUrl || undefined,
+            videoUrl: basics.videoUrl,
+          }
+        : {
             title: basics.title,
             subtitle: basics.subtitle,
             slug: basics.slug || undefined,
@@ -212,7 +213,12 @@ export function ProjectBuilder() {
             durationDays: basics.durationDays != null ? Number(basics.durationDays) : undefined,
             endDate: basics.endDate instanceof Date ? basics.endDate.toISOString() : basics.endDate,
             launchDate: basics.launchDate instanceof Date ? basics.launchDate.toISOString() : basics.launchDate,
-          }),
+          };
+      savePromises.push(
+        fetch(`/api/projects/${projectId}/basics`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify(basicsPayload),
         })
       );
 
@@ -230,12 +236,14 @@ export function ProjectBuilder() {
         })
       );
 
-      // Save payment settings
-      savePromises.push(
-        fetch(`/api/projects/${projectId}/payment`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-          body: JSON.stringify({
+      // Save payment settings - for launched projects, only send retailer settings
+      const paymentPayload = isLive
+        ? {
+            allowRetailerPledges: payment.allowRetailerPledges || false,
+            retailerDiscount: Number(payment.retailerDiscount) || 50,
+            retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
+          }
+        : {
             projectType: payment.projectType || "INDIVIDUAL",
             hasAdultContent: payment.hasAdultContent || false,
             hasRiskyContent: payment.hasRiskyContent || false,
@@ -243,7 +251,12 @@ export function ProjectBuilder() {
             allowRetailerPledges: payment.allowRetailerPledges || false,
             retailerDiscount: Number(payment.retailerDiscount) || 50,
             retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
-          }),
+          };
+      savePromises.push(
+        fetch(`/api/projects/${projectId}/payment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify(paymentPayload),
         })
       );
 
@@ -271,17 +284,19 @@ export function ProjectBuilder() {
         })
       );
 
-      // Save prelaunch settings
-      savePromises.push(
-        fetch(`/api/projects/${projectId}/prelaunch`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-          body: JSON.stringify({
-            prelaunchActive: promotion.prelaunchActive || false,
-            prelaunchDescription: promotion.prelaunchDescription,
-          }),
-        })
-      );
+      // Save prelaunch settings (skip for launched projects - not applicable)
+      if (!isLive) {
+        savePromises.push(
+          fetch(`/api/projects/${projectId}/prelaunch`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+            body: JSON.stringify({
+              prelaunchActive: promotion.prelaunchActive || false,
+              prelaunchDescription: promotion.prelaunchDescription,
+            }),
+          })
+        );
+      }
 
       // Execute all saves in parallel
       const results = await Promise.allSettled(savePromises);

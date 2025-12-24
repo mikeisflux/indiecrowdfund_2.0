@@ -47,16 +47,23 @@ export async function POST(
 
     const { permission } = permissionCheck;
 
-    // Cannot edit basics on launched projects
-    if (permission.isLaunched) {
-      return NextResponse.json(
-        { error: "Cannot edit basics on a launched campaign" },
-        { status: 400 }
-      );
-    }
-
     const body = await req.json();
     const data = basicsSchema.parse(body);
+
+    // For launched projects, only allow certain fields to be updated
+    const launchedAllowedFields = ["videoUrl", "imageUrl"];
+
+    if (permission.isLaunched) {
+      const requestedFields = Object.keys(data).filter(key => data[key as keyof typeof data] !== undefined);
+      const disallowedFields = requestedFields.filter(f => !launchedAllowedFields.includes(f));
+
+      if (disallowedFields.length > 0) {
+        return NextResponse.json(
+          { error: `Cannot edit ${disallowedFields.join(", ")} on a launched campaign` },
+          { status: 400 }
+        );
+      }
+    }
 
     const updateData: Record<string, unknown> = {};
 

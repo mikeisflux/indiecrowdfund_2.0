@@ -33,16 +33,7 @@ export async function POST(
       );
     }
 
-    const { permission } = permissionCheck;
-
-    // Cannot edit promotion settings on launched projects
-    if (permission.isLaunched) {
-      return NextResponse.json(
-        { error: "Cannot edit promotion settings on a launched campaign" },
-        { status: 400 }
-      );
-    }
-
+    // Promotion settings (analytics, referral tags) can be edited even on launched projects
     const body = await req.json();
     const data = promotionSchema.parse(body);
 

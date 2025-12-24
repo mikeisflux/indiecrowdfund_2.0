@@ -35,12 +35,13 @@ export async function POST(
 
     const { permission } = permissionCheck;
 
-    // Cannot edit prelaunch on launched projects
+    // For launched projects, prelaunch settings are no longer relevant - return success silently
     if (permission.isLaunched) {
-      return NextResponse.json(
-        { error: "Cannot edit prelaunch settings on a launched campaign" },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: true,
+        message: "Prelaunch settings not applicable for launched campaigns",
+        project: { id: projectId },
+      });
     }
 
     const body = await req.json();

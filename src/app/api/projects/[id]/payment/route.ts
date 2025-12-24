@@ -39,16 +39,23 @@ export async function POST(
 
     const { permission } = permissionCheck;
 
-    // Cannot edit payment settings on launched projects
-    if (permission.isLaunched) {
-      return NextResponse.json(
-        { error: "Cannot edit payment settings on a launched campaign" },
-        { status: 400 }
-      );
-    }
-
     const body = await req.json();
     const data = paymentSchema.parse(body);
+
+    // For launched projects, only allow retailer settings to be updated
+    const launchedAllowedFields = ["allowRetailerPledges", "retailerDiscount", "retailerMinQuantity"];
+
+    if (permission.isLaunched) {
+      const requestedFields = Object.keys(data).filter(key => data[key as keyof typeof data] !== undefined);
+      const disallowedFields = requestedFields.filter(f => !launchedAllowedFields.includes(f));
+
+      if (disallowedFields.length > 0) {
+        return NextResponse.json(
+          { error: `Cannot edit ${disallowedFields.join(", ")} on a launched campaign` },
+          { status: 400 }
+        );
+      }
+    }
 
     const updateData: Record<string, unknown> = {};
 
