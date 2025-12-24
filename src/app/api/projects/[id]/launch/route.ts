@@ -49,11 +49,17 @@ export async function POST(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get the project
+    // Get the project with creator info for URL construction
     const project = await db.project.findUnique({
       where: { id: projectId },
       include: {
         rewards: true,
+        creator: {
+          select: {
+            vanityUrl: true,
+            username: true,
+          },
+        },
       },
     });
 
@@ -205,9 +211,16 @@ export async function POST(
     // Send launch notifications to followers and creator
     await notifyProjectLaunched(projectId);
 
+    // Construct the correct project URL using vanity name
+    const creatorVanity = project.creator?.vanityUrl || project.creator?.username || "projects";
+    const projectUrl = `/projects/${creatorVanity}/${project.slug}`;
+
     return NextResponse.json({
       success: true,
-      project: updatedProject,
+      project: {
+        ...updatedProject,
+        projectUrl,
+      },
       message: "Your project is now live!",
       endDate: endDate.toISOString(),
     });
