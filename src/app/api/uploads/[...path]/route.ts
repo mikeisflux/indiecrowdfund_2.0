@@ -37,13 +37,27 @@ export async function GET(
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
 
-    // Check if file exists
+    // Check if file exists, with fallback to .webp for legacy .png/.jpg references
+    let finalPath = resolvedPath;
+    let ext = path.extname(resolvedPath).toLowerCase();
+
     if (!existsSync(resolvedPath)) {
-      return NextResponse.json({ error: "File not found" }, { status: 404 });
+      // If requesting .png or .jpg but file doesn't exist, try .webp version
+      // (handles legacy URLs from before WebP conversion was added)
+      if (ext === ".png" || ext === ".jpg" || ext === ".jpeg") {
+        const webpPath = resolvedPath.replace(/\.(png|jpe?g)$/i, ".webp");
+        if (existsSync(webpPath)) {
+          finalPath = webpPath;
+          ext = ".webp";
+        } else {
+          return NextResponse.json({ error: "File not found" }, { status: 404 });
+        }
+      } else {
+        return NextResponse.json({ error: "File not found" }, { status: 404 });
+      }
     }
 
-    // Get file extension and MIME type
-    const ext = path.extname(resolvedPath).toLowerCase();
+    // Get MIME type
     const mimeType = MIME_TYPES[ext];
 
     if (!mimeType) {
@@ -51,7 +65,7 @@ export async function GET(
     }
 
     // Read and return the file
-    const fileBuffer = await readFile(resolvedPath);
+    const fileBuffer = await readFile(finalPath);
 
     return new NextResponse(fileBuffer, {
       headers: {
