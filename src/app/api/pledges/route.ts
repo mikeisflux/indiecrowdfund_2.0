@@ -113,6 +113,20 @@ export async function POST(req: NextRequest) {
 
     // Check payment processor and route accordingly
     if (project.paymentProcessor === "DIVINITYCOIN") {
+      // Calculate reward amount
+      const rewardAmount = reward ? Number(reward.amount) : 0;
+
+      // Calculate addons amount
+      const addonIds = addonsWithQuantity.map(a => a.id);
+      const addonRecords = addonIds.length > 0 ? await db.reward.findMany({
+        where: { id: { in: addonIds } },
+        select: { id: true, amount: true },
+      }) : [];
+      const addonAmountMap = new Map(addonRecords.map(a => [a.id, Number(a.amount)]));
+      const addonsAmount = addonsWithQuantity.reduce((sum, addon) => {
+        return sum + (addonAmountMap.get(addon.id) || 0) * addon.quantity;
+      }, 0);
+
       // For DivinityCoin projects, create a pending pledge without Stripe
       const pledge = await db.pledge.create({
         data: {
@@ -120,7 +134,10 @@ export async function POST(req: NextRequest) {
           projectId: data.projectId,
           rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
           amount: data.amount,
+          rewardAmount: rewardAmount,
+          addonsAmount: addonsAmount,
           status: "PENDING",
+          paymentProcessor: "DIVINITYCOIN",
           sourceCampaignId,
         },
       });
@@ -132,6 +149,7 @@ export async function POST(req: NextRequest) {
             pledgeId: pledge.id,
             addonId: addon.id,
             quantity: addon.quantity,
+            amount: (addonAmountMap.get(addon.id) || 0) * addon.quantity,
           })),
         });
       }
