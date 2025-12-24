@@ -116,7 +116,7 @@ export default async function ProjectLayout({ params, children }: Props) {
       },
     });
 
-    if (projectBySlug?.creator.vanityUrl) {
+    if (projectBySlug?.creator?.vanityUrl) {
       redirect(`/projects/${projectBySlug.creator.vanityUrl}/${slug}`);
     }
 

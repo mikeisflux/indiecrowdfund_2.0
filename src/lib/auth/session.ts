@@ -123,7 +123,7 @@ export const validateSession = cache(async (): Promise<Session | null> => {
     // Only log unexpected errors
     const isDynamicServerError =
       (error instanceof Error && error.message?.includes("Dynamic server usage")) ||
-      (error && typeof error === "object" && "digest" in error && error.digest === "DYNAMIC_SERVER_USAGE");
+      (error && typeof error === "object" && "digest" in error && (error as { digest?: string }).digest === "DYNAMIC_SERVER_USAGE");
 
     if (isDynamicServerError) {
       return null;
