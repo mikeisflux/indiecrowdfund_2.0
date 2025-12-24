@@ -40,23 +40,27 @@ export async function GET(
 
 const rewardSchema = z.object({
   id: z.string().optional(),
-  type: z.enum(["TIER", "ADDON"]),
+  type: z.enum(["TIER", "ADDON"]).default("TIER"),
   title: z.string().min(1),
   description: z.string().optional().default(""),
   amount: z.number().min(0),
   imageUrl: z.string().optional().nullable(),
   estimatedDelivery: z.string().optional().nullable(),
-  shippingType: z.enum(["NO_SHIPPING", "WORLDWIDE", "SELECTED_COUNTRIES"]),
+  shippingType: z.enum(["NO_SHIPPING", "WORLDWIDE", "SELECTED_COUNTRIES"]).default("NO_SHIPPING"),
   shippingCountries: z.array(z.string()).optional().default([]),
-  shippingCost: z.record(z.string(), z.number()).optional().default({}),
+  // Accept both object and number for shippingCost (some clients send just a number)
+  shippingCost: z.union([
+    z.record(z.string(), z.number()),
+    z.number().transform((n) => ({ default: n })),
+  ]).optional().default({}),
   quantityAvailable: z.number().optional().nullable(),
   visibility: z.enum(["PUBLIC", "SECRET"]).optional().default("PUBLIC"),
   secretToken: z.string().optional().nullable(),
   isEnded: z.boolean().optional().default(false),
   items: z.array(z.object({
     id: z.string().optional(),
-    projectItemId: z.string().optional(), // Reference to ProjectItem
-    title: z.string(),
+    projectItemId: z.string().optional().nullable(), // Reference to ProjectItem
+    title: z.string().default("Item"),
     description: z.string().optional().nullable(),
     imageUrl: z.string().optional().nullable(),
   })).optional().default([]),
@@ -160,10 +164,14 @@ export async function POST(
     console.error("Create reward error:", error);
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      console.error("Zod validation error:", errorMessage);
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
+    // Log the actual error message for debugging
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Database/other error:", errorMsg);
     return NextResponse.json(
-      { error: "Failed to create reward" },
+      { error: `Failed to create reward: ${errorMsg}` },
       { status: 500 }
     );
   }
@@ -285,10 +293,14 @@ export async function PATCH(
     console.error("Update reward error:", error);
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      console.error("Zod validation error:", errorMessage);
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
+    // Log the actual error message for debugging
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Database/other error:", errorMsg);
     return NextResponse.json(
-      { error: "Failed to update reward" },
+      { error: `Failed to update reward: ${errorMsg}` },
       { status: 500 }
     );
   }
