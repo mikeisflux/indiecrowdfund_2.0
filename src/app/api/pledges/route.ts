@@ -91,15 +91,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create payment via Stripe
-    const stripeConfig = project.creator.stripeConfig;
-    if (!stripeConfig?.isOnboarded) {
-      return NextResponse.json(
-        { error: "Creator payment not configured" },
-        { status: 400 }
-      );
-    }
-
     // Use the new addons format if provided, otherwise convert legacy addonIds
     const addonsWithQuantity = data.addons || data.addonIds.map(id => ({ id, quantity: 1 }));
 
@@ -118,6 +109,46 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       // Cookie parsing failed, continue without attribution
       console.warn("Failed to parse campaign attribution cookie:", e);
+    }
+
+    // Check payment processor and route accordingly
+    if (project.paymentProcessor === "DIVINITYCOIN") {
+      // For DivinityCoin projects, create a pending pledge without Stripe
+      const pledge = await db.pledge.create({
+        data: {
+          userId: session.user.id,
+          projectId: data.projectId,
+          rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
+          amount: data.amount,
+          status: "PENDING",
+          sourceCampaignId,
+        },
+      });
+
+      // Create addon purchases if any
+      if (addonsWithQuantity.length > 0) {
+        await db.pledgeAddon.createMany({
+          data: addonsWithQuantity.map(addon => ({
+            pledgeId: pledge.id,
+            addonId: addon.id,
+            quantity: addon.quantity,
+          })),
+        });
+      }
+
+      return NextResponse.json({
+        paymentMethod: "DIVINITYCOIN",
+        pledgeId: pledge.id,
+      });
+    }
+
+    // For Stripe projects, verify creator has Stripe configured
+    const stripeConfig = project.creator.stripeConfig;
+    if (!stripeConfig?.isOnboarded) {
+      return NextResponse.json(
+        { error: "Creator payment not configured" },
+        { status: 400 }
+      );
     }
 
     const result = await createStripePayment({

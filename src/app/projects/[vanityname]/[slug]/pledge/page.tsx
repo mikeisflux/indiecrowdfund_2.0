@@ -492,7 +492,16 @@ export default function PledgePage() {
         throw new Error(data.error || "Failed to create pledge");
       }
 
-      // Validate response has required fields
+      // Store pledgeId for payment processing
+      setCurrentPledgeId(data.pledgeId);
+
+      // For DivinityCoin, we don't need Stripe elements
+      if (data.paymentMethod === "DIVINITYCOIN") {
+        setIsProcessing(false);
+        return;
+      }
+
+      // For Stripe, validate response has required fields
       if (!data.clientSecret) {
         throw new Error("Invalid payment response - missing client secret");
       }
@@ -500,7 +509,6 @@ export default function PledgePage() {
       // Set the client secret and intent type to show Stripe Elements
       setClientSecret(data.clientSecret);
       setIntentType(data.type || "setup_intent");
-      setCurrentPledgeId(data.pledgeId); // Store pledgeId for confirmation email
       setIsProcessing(false);
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create pledge");

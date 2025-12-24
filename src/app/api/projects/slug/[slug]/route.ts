@@ -139,6 +139,7 @@ export async function GET(
       daysRemaining,
       // Payment settings
       projectType: project.projectType,
+      paymentProcessor: project.paymentProcessor,
       hasAdultContent: project.hasAdultContent,
       hasRiskyContent: project.hasRiskyContent,
       promoContentSfw: project.promoContentSfw,
