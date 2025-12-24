@@ -68,14 +68,16 @@ export function PaymentStep() {
 
     setIsSavingEmail(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}`, {
-        method: "PATCH",
+      // Use dedicated contact-email endpoint for reliable saving
+      const response = await fetch(`/api/projects/${projectId}/contact-email`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ contactEmail: payment.contactEmail }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || "Failed to save email");
       }
 
@@ -145,6 +147,26 @@ export function PaymentStep() {
       setIsSavingBank(false);
     }
   };
+
+  // Load current contact email from database on mount
+  useEffect(() => {
+    async function loadContactEmail() {
+      if (!projectId) return;
+      try {
+        const response = await fetch(`/api/projects/${projectId}/contact-email`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.contactEmail && data.contactEmail !== payment.contactEmail) {
+            updatePayment({ contactEmail: data.contactEmail, contactEmailConfirmed: true });
+            setEmailSaved(true);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load contact email:", error);
+      }
+    }
+    loadContactEmail();
+  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check DivinityCoin bank account status on mount
   useEffect(() => {
