@@ -48,7 +48,17 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ pledges });
+    // Convert Decimal fields to numbers for JSON serialization
+    const serializedPledges = pledges.map(pledge => ({
+      ...pledge,
+      amount: Number(pledge.amount),
+      reward: pledge.reward ? {
+        ...pledge.reward,
+        amount: Number(pledge.reward.amount),
+      } : null,
+    }));
+
+    return NextResponse.json({ pledges: serializedPledges });
   } catch (error) {
     console.error("Error fetching user pledges:", error);
     return NextResponse.json(

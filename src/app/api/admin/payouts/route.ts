@@ -140,8 +140,8 @@ export async function GET(request: NextRequest) {
         processing: totalProcessing,
         completed: totalCompleted,
         failed: totalFailed,
-        pendingAmount: pendingAmount._sum.amount || 0,
-        completedAmount: completedAmount._sum.amount || 0,
+        pendingAmount: Number(pendingAmount._sum.amount || 0),
+        completedAmount: Number(completedAmount._sum.amount || 0),
       },
     });
   } catch (error) {
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate amounts
-    const grossAmount = project.pledges.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0);
+    const grossAmount = project.pledges.reduce((sum: number, p: { amount: number }) => sum + Number(p.amount), 0);
     const platformFeeRate = 0.03; // 3% platform fee
     const processorFeeRate = 0.029 + 0.30; // 2.9% + $0.30 per transaction (Stripe standard)
 

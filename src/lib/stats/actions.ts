@@ -97,7 +97,7 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
     const totalUsers = await db.user.count();
 
     return {
-      totalPledged: pledgeStats._sum.amount || 0,
+      totalPledged: Number(pledgeStats._sum.amount || 0),
       projectsFunded: projectsFundedCount,
       successRate,
       backerPool: totalUsers,
@@ -185,7 +185,7 @@ async function fetchRetailerStatsUncached(): Promise<RetailerStats> {
 
     return {
       certifiedRetailers,
-      retailerOrdersTotal: retailerOrders._sum.totalAmount || 0,
+      retailerOrdersTotal: Number(retailerOrders._sum.totalAmount || 0),
       productsAvailable,
       satisfactionRate,
     };

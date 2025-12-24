@@ -26,7 +26,7 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      balance: user?.divinityCoinBalance ?? 0,
+      balance: Number(user?.divinityCoinBalance ?? 0),
     });
   } catch (error) {
     console.error("[DivinityCoin Sync] Error:", error);

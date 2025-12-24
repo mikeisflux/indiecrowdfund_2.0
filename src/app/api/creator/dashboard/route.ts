@@ -294,12 +294,12 @@ export async function GET(req: NextRequest) {
 
     // Calculate average pledge
     const avgPledge = selectedProject.backerCount > 0
-      ? selectedProject.currentAmount / selectedProject.backerCount
+      ? Number(selectedProject.currentAmount) / selectedProject.backerCount
       : 0;
 
     // Calculate today vs yesterday change
-    const todayAmount = todayPledges._sum.amount || 0;
-    const yesterdayAmount = yesterdayPledges._sum.amount || 0;
+    const todayAmount = Number(todayPledges._sum.amount || 0);
+    const yesterdayAmount = Number(yesterdayPledges._sum.amount || 0);
     const dailyChange = yesterdayAmount > 0
       ? ((todayAmount - yesterdayAmount) / yesterdayAmount) * 100
       : todayAmount > 0 ? 100 : 0;
@@ -319,7 +319,7 @@ export async function GET(req: NextRequest) {
       const dateStr = pledge.createdAt.toISOString().split("T")[0];
       const existing = fundingByDate.get(dateStr);
       if (existing) {
-        existing.amount += pledge.amount;
+        existing.amount += Number(pledge.amount);
       }
     });
 
@@ -336,7 +336,7 @@ export async function GET(req: NextRequest) {
 
     // Process reward stats
     const processedRewardStats = rewardStats.map((reward) => {
-      const totalPledged = reward.pledges.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0);
+      const totalPledged = reward.pledges.reduce((sum: number, p: { amount: number }) => sum + Number(p.amount), 0);
       const remaining = reward.quantityAvailable !== null
         ? reward.quantityAvailable - reward.quantityClaimed
         : null;
@@ -344,7 +344,7 @@ export async function GET(req: NextRequest) {
       return {
         id: reward.id,
         title: reward.title,
-        amount: reward.amount,
+        amount: Number(reward.amount),
         backers: reward._count.pledges,
         total: Math.round(totalPledged * 100) / 100,
         remaining,
@@ -357,7 +357,7 @@ export async function GET(req: NextRequest) {
       const existing = referrerMap.get(r.referrer) || { visits: 0, pledges: 0, amount: 0 };
       existing.visits += r.visits;
       existing.pledges += r.pledges;
-      existing.amount += r.pledgeAmount;
+      existing.amount += Number(r.pledgeAmount);
       referrerMap.set(r.referrer, existing);
     });
 
@@ -400,7 +400,7 @@ export async function GET(req: NextRequest) {
         name: pledge.user.name || "Anonymous",
         email: pledge.user.email,
         image: pledge.user.image,
-        amount: pledge.amount,
+        amount: Number(pledge.amount),
         reward: pledge.reward?.title || "No Reward",
         time: timeAgo,
       };
@@ -428,8 +428,8 @@ export async function GET(req: NextRequest) {
         slug: selectedProject.slug,
         status: selectedProject.status,
         imageUrl: selectedProject.imageUrl,
-        goalAmount: selectedProject.goalAmount,
-        currentAmount: selectedProject.currentAmount,
+        goalAmount: Number(selectedProject.goalAmount),
+        currentAmount: Number(selectedProject.currentAmount),
         backerCount: selectedProject.backerCount,
         daysRemaining,
         endDate: selectedProject.endDate,

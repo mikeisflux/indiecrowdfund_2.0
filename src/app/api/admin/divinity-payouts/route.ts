@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
     stats.forEach((s: { status: string; _count: number; _sum: { amount: number | null } }) => {
       statsMap[s.status] = {
         count: s._count,
-        amount: s._sum.amount || 0,
+        amount: Number(s._sum.amount || 0),
       };
     });
 

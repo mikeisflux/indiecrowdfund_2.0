@@ -121,18 +121,19 @@ export async function GET() {
       .slice(0, 20);
 
     for (const pledge of uniquePledges) {
+      const pledgeAmount = Number(pledge.amount);
       activities.push({
         id: `pledge-${pledge.id}`,
         type: "pledge",
         title: `You backed ${pledge.project.title}`,
-        description: `Pledged $${pledge.amount} for "${pledge.reward?.title || "No reward"}"`,
+        description: `Pledged $${pledgeAmount} for "${pledge.reward?.title || "No reward"}"`,
         projectId: pledge.project.id,
         projectTitle: pledge.project.title,
         projectSlug: pledge.project.slug,
         projectUrl: buildProjectUrl(pledge.project.slug, pledge.project.creator?.vanityUrl),
         projectImage: pledge.project.imageUrl,
         timestamp: pledge.createdAt,
-        metadata: { amount: pledge.amount },
+        metadata: { amount: pledgeAmount },
       });
     }
 
@@ -202,11 +203,13 @@ export async function GET() {
 
       for (const project of fundedProjects) {
         if (project.fundedAt) {
+          const goalAmount = Number(project.goalAmount);
+          const currentAmount = Number(project.currentAmount);
           activities.push({
             id: `funded-${project.id}`,
             type: "project_funded",
             title: `${project.title} was funded!`,
-            description: `Reached $${project.currentAmount.toLocaleString()} of $${project.goalAmount.toLocaleString()} goal`,
+            description: `Reached $${currentAmount.toLocaleString()} of $${goalAmount.toLocaleString()} goal`,
             projectId: project.id,
             projectTitle: project.title,
             projectSlug: project.slug,
@@ -214,8 +217,8 @@ export async function GET() {
             projectImage: project.imageUrl,
             timestamp: project.fundedAt,
             metadata: {
-              goalAmount: project.goalAmount,
-              currentAmount: project.currentAmount,
+              goalAmount,
+              currentAmount,
             },
           });
         }

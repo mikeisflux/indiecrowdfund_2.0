@@ -94,14 +94,14 @@ export async function GET(req: NextRequest) {
       ...analytics,
       dailyPledges: dailyPledges.map((d: { createdAt: Date; _sum: { amount: number | null }; _count: number }) => ({
         date: d.createdAt,
-        amount: d._sum.amount || 0,
+        amount: Number(d._sum.amount || 0),
         count: d._count,
       })),
       rewardBreakdown: rewardBreakdown.map((r: { rewardId: string | null; _sum: { amount: number | null }; _count: number }) => ({
         rewardId: r.rewardId,
         title: r.rewardId ? rewardMap.get(r.rewardId)?.title || "Unknown" : "No Reward",
-        tierAmount: r.rewardId ? rewardMap.get(r.rewardId)?.amount || 0 : 0,
-        totalPledged: r._sum.amount || 0,
+        tierAmount: r.rewardId ? Number(rewardMap.get(r.rewardId)?.amount || 0) : 0,
+        totalPledged: Number(r._sum.amount || 0),
         backerCount: r._count,
       })),
       hourlyActivity: hourlyActivity.map((h: { eventType: string; _count: number }) => ({

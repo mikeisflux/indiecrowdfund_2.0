@@ -137,8 +137,8 @@ export async function GET() {
       ? ((newUsersThisMonth - newUsersPrevMonth) / newUsersPrevMonth * 100).toFixed(1)
       : newUsersThisMonth > 0 ? 100 : 0;
 
-    const revenueThisMonth = pledgesThisMonth._sum.amount || 0;
-    const revenuePrevMonth = pledgesPrevMonth._sum.amount || 0;
+    const revenueThisMonth = Number(pledgesThisMonth._sum.amount || 0);
+    const revenuePrevMonth = Number(pledgesPrevMonth._sum.amount || 0);
     const revenueGrowth = revenuePrevMonth > 0
       ? ((revenueThisMonth - revenuePrevMonth) / revenuePrevMonth * 100).toFixed(1)
       : revenueThisMonth > 0 ? 100 : 0;
@@ -176,7 +176,7 @@ export async function GET() {
         projectsThisMonth,
         totalPledges,
         completedPledgeCount: completedPledges._count,
-        totalRevenue: completedPledges._sum.amount || 0,
+        totalRevenue: Number(completedPledges._sum.amount || 0),
         revenueThisMonth,
         revenueGrowth: Number(revenueGrowth),
         pendingReports,
@@ -190,8 +190,8 @@ export async function GET() {
           title: p.title,
           status: p.status,
           category: p.category,
-          goalAmount: p.goalAmount,
-          currentAmount: p.currentAmount,
+          goalAmount: Number(p.goalAmount),
+          currentAmount: Number(p.currentAmount),
           createdAt: p.createdAt,
           creator: {
             name: p.creator.name,

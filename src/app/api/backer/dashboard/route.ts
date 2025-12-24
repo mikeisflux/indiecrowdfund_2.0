@@ -169,10 +169,10 @@ export async function GET() {
 
     // Calculate stats
     const totalBacked = pledges.length;
-    const totalPledged = pledges.reduce((sum, p) => sum + p.amount, 0);
+    const totalPledged = pledges.reduce((sum, p) => sum + Number(p.amount), 0);
     const projectsFunded = pledges.filter(
       (p) => p.project.status === "FUNDED" ||
-             (p.project.currentAmount >= p.project.goalAmount)
+             (Number(p.project.currentAmount) >= Number(p.project.goalAmount))
     ).length;
     const successRate = totalBacked > 0 ? (projectsFunded / totalBacked) * 100 : 0;
     const avgContribution = totalBacked > 0 ? totalPledged / totalBacked : 0;
@@ -205,7 +205,7 @@ export async function GET() {
       const date = new Date(pledge.createdAt);
       const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
       if (monthlySpendingMap.has(monthKey)) {
-        monthlySpendingMap.set(monthKey, (monthlySpendingMap.get(monthKey) || 0) + pledge.amount);
+        monthlySpendingMap.set(monthKey, (monthlySpendingMap.get(monthKey) || 0) + Number(pledge.amount));
       }
     });
 
@@ -253,13 +253,13 @@ export async function GET() {
           avatar: pledge.project.creator.image,
         },
         status: pledge.project.status,
-        goalAmount: pledge.project.goalAmount,
-        currentAmount: pledge.project.currentAmount,
+        goalAmount: Number(pledge.project.goalAmount),
+        currentAmount: Number(pledge.project.currentAmount),
         daysRemaining,
         endDate: pledge.project.endDate?.toISOString() || null,
         pledge: {
           id: pledge.id,
-          amount: pledge.amount,
+          amount: Number(pledge.amount),
           reward: pledge.reward?.title || "No reward",
           pledgedAt: pledge.createdAt,
           status: pledge.status,
@@ -299,8 +299,8 @@ export async function GET() {
             name: sp.project.creator.name || "Unknown Creator",
           },
           status: sp.project.status,
-          goalAmount: sp.project.goalAmount,
-          currentAmount: sp.project.currentAmount,
+          goalAmount: Number(sp.project.goalAmount),
+          currentAmount: Number(sp.project.currentAmount),
           daysRemaining,
           endDate: sp.project.endDate?.toISOString() || null,
           category: sp.project.category,
@@ -311,7 +311,7 @@ export async function GET() {
     return NextResponse.json({
       user: {
         name: user?.name || null,
-        divinityCoinBalance: user?.divinityCoinBalance || 0,
+        divinityCoinBalance: Number(user?.divinityCoinBalance || 0),
       },
       backedProjects,
       savedProjects: processedSavedProjects,

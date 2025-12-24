@@ -117,11 +117,14 @@ export async function GET(req: NextRequest) {
       // Calculate retailer prices for rewards
       const rewardsWithPrices = project.rewards.map((reward: { amount: number } & Record<string, unknown>) => ({
         ...reward,
-        retailerPrice: reward.amount * (1 - project.retailerDiscount / 100),
+        amount: Number(reward.amount),
+        retailerPrice: Number(reward.amount) * (1 - project.retailerDiscount / 100),
       }));
 
       return {
         ...project,
+        goalAmount: Number(project.goalAmount),
+        currentAmount: Number(project.currentAmount),
         daysLeft,
         endDate: project.endDate?.toISOString() || null,
         rewards: rewardsWithPrices,

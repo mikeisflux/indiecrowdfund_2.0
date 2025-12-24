@@ -83,7 +83,7 @@ export async function GET(
     return NextResponse.json({
       pledge: {
         id: typedPledge.id,
-        amount: typedPledge.amount,
+        amount: Number(typedPledge.amount),
         status: typedPledge.status,
         createdAt: typedPledge.createdAt,
         user: typedPledge.user,
