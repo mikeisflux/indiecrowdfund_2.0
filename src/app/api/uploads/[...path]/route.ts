@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, stat } from "fs/promises";
-import { existsSync, createReadStream } from "fs";
+import { existsSync } from "fs";
 import path from "path";
 
 // Base uploads directory - use env var or fallback to project directory
