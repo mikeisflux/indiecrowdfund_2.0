@@ -3,8 +3,8 @@ import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 
-// Base uploads directory - use env var or fallback to /uploads for production
-const UPLOADS_BASE = process.env.UPLOADS_DIR || "/uploads";
+// Base uploads directory - use env var or fallback to project directory
+const UPLOADS_BASE = process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads");
 
 // MIME types for supported files
 const MIME_TYPES: Record<string, string> = {

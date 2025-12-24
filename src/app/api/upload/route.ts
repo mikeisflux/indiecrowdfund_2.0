@@ -7,8 +7,8 @@ import path from "path";
 import crypto from "crypto";
 import sharp from "sharp";
 
-// Base uploads directory - use env var or fallback to /uploads for production
-const UPLOADS_BASE = process.env.UPLOADS_DIR || "/uploads";
+// Base uploads directory - use env var or fallback to project directory
+const UPLOADS_BASE = process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads");
 
 // Allowed image types
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
