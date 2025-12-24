@@ -32,7 +32,7 @@ export async function GET(
     }
 
     return NextResponse.json({
-      currentAmount: project.currentAmount,
+      currentAmount: Number(project.currentAmount),
       backerCount: project.backerCount,
     });
   } catch (error) {

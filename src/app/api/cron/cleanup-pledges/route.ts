@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       success: true,
       count: updated.count,
       message: `Marked ${updated.count} stale pledges as CANCELLED`,
-      totalAmountCleared: stalePledges.reduce((sum, p) => sum + p.amount, 0),
+      totalAmountCleared: stalePledges.reduce((sum, p) => sum + Number(p.amount), 0),
     });
   } catch (error) {
     console.error("[Cron] Error in pledge cleanup:", error);

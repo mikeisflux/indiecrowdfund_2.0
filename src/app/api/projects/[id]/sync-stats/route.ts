@@ -97,11 +97,11 @@ export async function POST(
 
     return NextResponse.json({
       message: "Stats synced successfully",
-      previousAmount: project.currentAmount,
+      previousAmount: Number(project.currentAmount),
       previousBackerCount: project.backerCount,
-      currentAmount: updatedProject.currentAmount,
+      currentAmount: Number(updatedProject.currentAmount),
       backerCount: updatedProject.backerCount,
-      goalAmount: updatedProject.goalAmount,
+      goalAmount: Number(updatedProject.goalAmount),
       updated: true,
     });
   } catch (error) {

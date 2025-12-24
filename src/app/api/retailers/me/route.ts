@@ -136,10 +136,12 @@ export async function GET() {
         const daysLeft = endDate
           ? Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
           : 0;
-        const fundingPercent = project.goalAmount
-          ? Math.round((project.currentAmount / project.goalAmount) * 100)
+        const goalAmountNum = Number(project.goalAmount);
+        const currentAmountNum = Number(project.currentAmount);
+        const fundingPercent = goalAmountNum
+          ? Math.round((currentAmountNum / goalAmountNum) * 100)
           : 0;
-        return { ...project, daysLeft, endDate: project.endDate?.toISOString() || null, fundingPercent };
+        return { ...project, goalAmount: goalAmountNum, currentAmount: currentAmountNum, retailerDiscount: Number(project.retailerDiscount) || 0, daysLeft, endDate: project.endDate?.toISOString() || null, fundingPercent };
       });
 
       return NextResponse.json({
@@ -157,13 +159,13 @@ export async function GET() {
           totalRetailers,
           activeRetailers,
         },
-        recentOrders: recentOrders.map((order: { id: string; project: { title: string; imageUrl: string | null }; retailer: { businessName: string }; quantity: number; totalAmount: number; originalAmount: number; status: string; fulfillmentStatus: string; createdAt: Date }) => ({
+        recentOrders: recentOrders.map((order: { id: string; project: { title: string; imageUrl: string | null }; retailer: { businessName: string }; quantity: number; totalAmount: unknown; originalAmount: unknown; status: string; fulfillmentStatus: string; createdAt: Date }) => ({
           id: order.id,
           projectTitle: order.project.title,
           projectImage: order.project.imageUrl,
           quantity: order.quantity,
-          totalAmount: order.totalAmount,
-          originalAmount: order.originalAmount,
+          totalAmount: Number(order.totalAmount),
+          originalAmount: Number(order.originalAmount),
           status: order.status,
           fulfillmentStatus: order.fulfillmentStatus,
           createdAt: order.createdAt.toISOString(),
@@ -243,7 +245,7 @@ export async function GET() {
       }),
     ]);
 
-    const calculatedSavings = (totalSavings._sum.originalAmount || 0) - (totalSpent._sum.totalAmount || 0);
+    const calculatedSavings = Number(totalSavings._sum.originalAmount || 0) - Number(totalSpent._sum.totalAmount || 0);
 
     // Get recent orders
     const recentOrders = await db.retailerPledge.findMany({
@@ -290,17 +292,22 @@ export async function GET() {
     });
 
     // Calculate days left for featured projects
-    const projectsWithDaysLeft = featuredProjects.map((project: { endDate: Date | null; goalAmount: number; currentAmount: number; id: string; title: string; imageUrl: string | null; retailerDiscount: number | null }) => {
+    const projectsWithDaysLeft = featuredProjects.map((project: { endDate: Date | null; goalAmount: unknown; currentAmount: unknown; id: string; title: string; imageUrl: string | null; retailerDiscount: unknown }) => {
       const endDate = project.endDate ? new Date(project.endDate) : null;
       const daysLeft = endDate
         ? Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
         : 0;
-      const fundingPercent = project.goalAmount
-        ? Math.round((project.currentAmount / project.goalAmount) * 100)
+      const goalAmountNum = Number(project.goalAmount);
+      const currentAmountNum = Number(project.currentAmount);
+      const fundingPercent = goalAmountNum
+        ? Math.round((currentAmountNum / goalAmountNum) * 100)
         : 0;
 
       return {
         ...project,
+        goalAmount: goalAmountNum,
+        currentAmount: currentAmountNum,
+        retailerDiscount: Number(project.retailerDiscount) || 0,
         daysLeft,
         endDate: project.endDate?.toISOString() || null,
         fundingPercent,
@@ -316,13 +323,13 @@ export async function GET() {
         totalSavings: calculatedSavings,
         activeProjects,
       },
-      recentOrders: recentOrders.map((order: { id: string; project: { title: string; imageUrl: string | null }; quantity: number; totalAmount: number; originalAmount: number; status: string; fulfillmentStatus: string; createdAt: Date }) => ({
+      recentOrders: recentOrders.map((order: { id: string; project: { title: string; imageUrl: string | null }; quantity: number; totalAmount: unknown; originalAmount: unknown; status: string; fulfillmentStatus: string; createdAt: Date }) => ({
         id: order.id,
         projectTitle: order.project.title,
         projectImage: order.project.imageUrl,
         quantity: order.quantity,
-        totalAmount: order.totalAmount,
-        originalAmount: order.originalAmount,
+        totalAmount: Number(order.totalAmount),
+        originalAmount: Number(order.originalAmount),
         status: order.status,
         fulfillmentStatus: order.fulfillmentStatus,
         createdAt: order.createdAt.toISOString(),

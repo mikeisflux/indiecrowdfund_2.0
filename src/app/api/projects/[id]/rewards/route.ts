@@ -20,8 +20,14 @@ export async function GET(
       orderBy: { amount: "asc" },
     });
 
+    // Convert Decimal fields to numbers for JSON serialization
+    const serializedRewards = rewards.map(reward => ({
+      ...reward,
+      amount: Number(reward.amount),
+    }));
+
     return NextResponse.json({
-      rewards,
+      rewards: serializedRewards,
     });
   } catch (error) {
     console.error("Fetch rewards error:", error);
@@ -145,7 +151,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      reward: created,
+      reward: {
+        ...created,
+        amount: Number(created.amount),
+      },
     });
   } catch (error) {
     console.error("Create reward error:", error);
@@ -267,7 +276,10 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      reward: updated,
+      reward: {
+        ...updated,
+        amount: Number(updated.amount),
+      },
     });
   } catch (error) {
     console.error("Update reward error:", error);

@@ -125,9 +125,9 @@ export async function GET(req: NextRequest) {
         ? ((currentVisits - previousVisits) / previousVisits * 100)
         : currentVisits > 0 ? 100 : 0;
 
-      const revenueGrowth = (previousPledges._sum.amount || 0) > 0
-        ? (((currentPledges._sum.amount || 0) - (previousPledges._sum.amount || 0)) / (previousPledges._sum.amount || 1) * 100)
-        : (currentPledges._sum.amount || 0) > 0 ? 100 : 0;
+      const revenueGrowth = Number(previousPledges._sum.amount || 0) > 0
+        ? ((Number(currentPledges._sum.amount || 0) - Number(previousPledges._sum.amount || 0)) / Number(previousPledges._sum.amount || 1) * 100)
+        : Number(currentPledges._sum.amount || 0) > 0 ? 100 : 0;
 
       const userGrowth = previousUsers > 0
         ? ((currentUsers - previousUsers) / previousUsers * 100)
@@ -141,8 +141,8 @@ export async function GET(req: NextRequest) {
             growth: visitGrowth.toFixed(1)
           },
           revenue: {
-            current: currentPledges._sum.amount || 0,
-            previous: previousPledges._sum.amount || 0,
+            current: Number(currentPledges._sum.amount) || 0,
+            previous: Number(previousPledges._sum.amount) || 0,
             growth: revenueGrowth.toFixed(1),
             count: currentPledges._count
           },
@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
         projectsByCategory: projectsByCategory.map(p => ({
           category: p.category,
           count: p._count,
-          totalFunding: p._sum.currentAmount || 0
+          totalFunding: Number(p._sum.currentAmount) || 0
         }))
       });
     }
@@ -206,7 +206,7 @@ export async function GET(req: NextRequest) {
       completedPledges.forEach(pledge => {
         const dateKey = pledge.createdAt.toISOString().split('T')[0];
         const existing = pledgesByDay.get(dateKey) || { total: 0, count: 0 };
-        existing.total += pledge.amount;
+        existing.total += Number(pledge.amount);
         existing.count += 1;
         pledgesByDay.set(dateKey, existing);
       });
@@ -226,7 +226,7 @@ export async function GET(req: NextRequest) {
           byStatus: pledgesByStatus.map(p => ({
             status: p.status,
             count: p._count,
-            total: p._sum.amount || 0
+            total: Number(p._sum.amount) || 0
           }))
         }
       });
@@ -348,7 +348,7 @@ export async function GET(req: NextRequest) {
       };
 
       fundingProgress.forEach(p => {
-        const progress = (p.currentAmount / p.goalAmount) * 100;
+        const progress = (Number(p.currentAmount) / Number(p.goalAmount)) * 100;
         if (progress >= 100) fundingDistribution["100%+"]++;
         else if (progress >= 75) fundingDistribution["75-100%"]++;
         else if (progress >= 50) fundingDistribution["50-75%"]++;

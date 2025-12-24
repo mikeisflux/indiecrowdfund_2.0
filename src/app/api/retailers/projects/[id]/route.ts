@@ -92,15 +92,23 @@ export async function GET(
       ? Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
       : 0;
 
-    // Calculate retailer prices for rewards
-    const rewardsWithPrices = project.rewards.map((reward: { amount: number } & Record<string, unknown>) => ({
-      ...reward,
-      retailerPrice: reward.amount * (1 - project.retailerDiscount / 100),
-    }));
+    // Calculate retailer prices for rewards - convert Decimals to numbers
+    const discountNum = Number(project.retailerDiscount);
+    const rewardsWithPrices = project.rewards.map((reward: { amount: unknown } & Record<string, unknown>) => {
+      const amountNum = Number(reward.amount);
+      return {
+        ...reward,
+        amount: amountNum,
+        retailerPrice: amountNum * (1 - discountNum / 100),
+      };
+    });
 
     return NextResponse.json({
       project: {
         ...project,
+        goalAmount: Number(project.goalAmount),
+        currentAmount: Number(project.currentAmount),
+        retailerDiscount: discountNum,
         daysLeft,
         endDate: project.endDate?.toISOString(),
         rewards: rewardsWithPrices,

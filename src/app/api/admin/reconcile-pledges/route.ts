@@ -352,9 +352,9 @@ async function reconcileProject(
       }
 
       // Check amount mismatch
-      if (Math.abs(stripeData.amount - dbPledge.amount) > 0.01) {
+      if (Math.abs(stripeData.amount - Number(dbPledge.amount)) > 0.01) {
         details.amountMismatch.push(
-          `${pledgeId}: Stripe=$${stripeData.amount}, DB=$${dbPledge.amount}`
+          `${pledgeId}: Stripe=$${stripeData.amount}, DB=$${Number(dbPledge.amount)}`
         );
       }
     }
@@ -440,7 +440,7 @@ async function reconcileProject(
     projectId: project.id,
     projectTitle: project.title,
     database: {
-      currentAmount: project.currentAmount,
+      currentAmount: Number(project.currentAmount),
       backerCount: project.backerCount,
       pledgeCount: dbPledges.length,
     },

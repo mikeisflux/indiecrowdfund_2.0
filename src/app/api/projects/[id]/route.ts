@@ -328,7 +328,18 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ project });
+    // Convert Decimal fields to numbers for JSON serialization
+    const serializedProject = {
+      ...project,
+      goalAmount: Number(project.goalAmount),
+      currentAmount: Number(project.currentAmount),
+      rewards: project.rewards.map(reward => ({
+        ...reward,
+        amount: Number(reward.amount),
+      })),
+    };
+
+    return NextResponse.json({ project: serializedProject });
   } catch (error) {
     console.error("Get project error:", error);
     return NextResponse.json(

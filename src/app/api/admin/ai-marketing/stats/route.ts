@@ -281,7 +281,7 @@ export async function GET() {
         where: { userId: { in: repeatBackerIds }, status: "COMPLETED" },
         _sum: { amount: true },
       });
-      const totalRepeatSpend = repeatBackerTotals.reduce((sum, r) => sum + (r._sum.amount || 0), 0);
+      const totalRepeatSpend = repeatBackerTotals.reduce((sum, r) => sum + Number(r._sum.amount || 0), 0);
       repeatBackerAvgSpend = (totalRepeatSpend / repeatBackers.length / 100).toFixed(2);
     }
 
@@ -298,7 +298,7 @@ export async function GET() {
         where: { status: "COMPLETED" },
       });
       if (uniqueBackers.length > 0 && totalPledgeAmount._sum.amount) {
-        allUserAvgSpend = (totalPledgeAmount._sum.amount / uniqueBackers.length / 100).toFixed(2);
+        allUserAvgSpend = (Number(totalPledgeAmount._sum.amount) / uniqueBackers.length / 100).toFixed(2);
       }
     }
 
@@ -307,7 +307,7 @@ export async function GET() {
         name: "High-Value Backers",
         count: highValueBackers.length,
         avgSpend: highValueBackers.length > 0
-          ? (highValueBackers.reduce((sum, h) => sum + (h._sum.amount || 0), 0) / highValueBackers.length / 100).toFixed(2)
+          ? (highValueBackers.reduce((sum, h) => sum + Number(h._sum.amount || 0), 0) / highValueBackers.length / 100).toFixed(2)
           : "0",
         criteria: "Pledged >$100 total"
       },

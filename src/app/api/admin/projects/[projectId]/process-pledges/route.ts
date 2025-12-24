@@ -140,16 +140,19 @@ export async function GET(
       };
     });
 
+    // Convert Decimal fields to numbers for JSON serialization
+    const goalAmountNum = Number(project.goalAmount);
+    const currentAmountNum = Number(project.currentAmount);
     return NextResponse.json({
       project: {
         id: project.id,
         title: project.title,
-        goalAmount: project.goalAmount,
-        currentAmount: project.currentAmount,
+        goalAmount: goalAmountNum,
+        currentAmount: currentAmountNum,
         backerCount: project.backerCount,
         status: project.status,
         isFunded: projectIsFunded,
-        fundingPercent: Math.round((project.currentAmount / project.goalAmount) * 100),
+        fundingPercent: Math.round((currentAmountNum / goalAmountNum) * 100),
       },
       creator: {
         id: project.creator.id,
@@ -343,7 +346,7 @@ async function verifyPaymentIntents(projectId: string) {
       const detail = {
         pledgeId: pledge.id,
         user: pledge.user.name || pledge.user.email || "Unknown",
-        amount: pledge.amount,
+        amount: Number(pledge.amount),
         paymentIntentId: pledge.stripePaymentIntentId!,
         stripeStatus: paymentIntent.status,
         action: "",

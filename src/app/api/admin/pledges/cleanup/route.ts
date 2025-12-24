@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         count: stalePledges.length,
         pledges: stalePledges.map((p) => ({
           id: p.id,
-          amount: p.amount,
+          amount: Number(p.amount),
           createdAt: p.createdAt,
           ageHours: Math.round((Date.now() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60)),
           project: p.project.title,
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       count: updated.count,
       pledges: stalePledges.map((p) => ({
         id: p.id,
-        amount: p.amount,
+        amount: Number(p.amount),
         createdAt: p.createdAt,
         project: p.project.title,
         user: {
@@ -173,7 +173,7 @@ export async function GET(req: NextRequest) {
     });
 
     const staleCount = stalePledges.length;
-    const totalStaleAmount = stalePledges.reduce((sum, p) => sum + p.amount, 0);
+    const totalStaleAmount = stalePledges.reduce((sum, p) => sum + Number(p.amount), 0);
 
     return NextResponse.json({
       success: true,
@@ -186,7 +186,7 @@ export async function GET(req: NextRequest) {
       },
       pledges: stalePledges.map((p) => ({
         id: p.id,
-        amount: p.amount,
+        amount: Number(p.amount),
         createdAt: p.createdAt,
         ageHours: Math.round((Date.now() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60)),
         project: {

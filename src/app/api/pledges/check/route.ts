@@ -77,12 +77,12 @@ export async function GET(req: NextRequest) {
           isFunded,
           pledge: {
             id: activePledge.id,
-            amount: activePledge.amount,
+            amount: Number(activePledge.amount),
             status: "CHECKOUT_IN_PROGRESS",
             reward: activePledge.reward ? {
               id: activePledge.reward.id,
               title: activePledge.reward.title,
-              amount: activePledge.reward.amount,
+              amount: Number(activePledge.reward.amount),
             } : null,
             createdAt: activePledge.createdAt,
             canCancel: true,
@@ -97,12 +97,12 @@ export async function GET(req: NextRequest) {
         isFunded,
         pledge: {
           id: activePledge.id,
-          amount: activePledge.amount,
+          amount: Number(activePledge.amount),
           status: activePledge.status,
           reward: activePledge.reward ? {
             id: activePledge.reward.id,
             title: activePledge.reward.title,
-            amount: activePledge.reward.amount,
+            amount: Number(activePledge.reward.amount),
           } : null,
           createdAt: activePledge.createdAt,
           // Can only cancel if project is NOT funded and pledge is pending
@@ -149,12 +149,12 @@ export async function GET(req: NextRequest) {
         isFunded,
         pledge: {
           id: pendingCheckout.id,
-          amount: pendingCheckout.amount,
+          amount: Number(pendingCheckout.amount),
           status: "CHECKOUT_IN_PROGRESS",
           reward: pendingCheckout.reward ? {
             id: pendingCheckout.reward.id,
             title: pendingCheckout.reward.title,
-            amount: pendingCheckout.reward.amount,
+            amount: Number(pendingCheckout.reward.amount),
           } : null,
           createdAt: pendingCheckout.createdAt,
           canCancel: true, // Can cancel checkout in progress

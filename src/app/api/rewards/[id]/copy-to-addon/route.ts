@@ -72,7 +72,13 @@ export async function POST(
       include: { items: true },
     });
 
-    return NextResponse.json({ addon }, { status: 201 });
+    // Convert Decimal fields to numbers for JSON serialization
+    return NextResponse.json({
+      addon: {
+        ...addon,
+        amount: Number(addon.amount),
+      }
+    }, { status: 201 });
   } catch (error) {
     console.error("Copy to addon error:", error);
     return NextResponse.json(

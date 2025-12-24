@@ -231,7 +231,7 @@ export async function POST(
           backerName: pledge?.user.name || "Unknown",
           backerEmail: pledge?.user.email || "Unknown",
           rewardTitle: pledge?.reward.title || "Unknown",
-          pledgeAmount: pledge?.amount || 0,
+          pledgeAmount: Number(pledge?.amount) || 0,
           isComplete: response.isComplete,
           completedAt: response.completedAt,
           itemResponses: response.itemResponses,

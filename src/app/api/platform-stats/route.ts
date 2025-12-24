@@ -40,7 +40,7 @@ export async function GET() {
         },
       },
     }).catch(() => ({ _sum: { currentAmount: 0 } }));
-    const totalRaised = fundedProjects?._sum?.currentAmount || 0;
+    const totalRaised = Number(fundedProjects?._sum?.currentAmount) || 0;
 
     // Get total backers (unique users who have pledged)
     const totalBackers = await db.pledge.groupBy({

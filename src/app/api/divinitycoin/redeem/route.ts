@@ -393,7 +393,7 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      balance: user?.divinityCoinBalance || 0,
+      balance: Number(user?.divinityCoinBalance) || 0,
       redemptions: user?.divinityCoinRedemptions || [],
     });
   } catch (error) {

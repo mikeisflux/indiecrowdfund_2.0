@@ -90,12 +90,15 @@ export async function GET(
     }
 
     // No caching - always return fresh data
+    // Convert Decimal fields to numbers for JSON serialization
+    const currentAmountNum = Number(currentAmount);
+    const goalAmountNum = Number(project.goalAmount);
     return NextResponse.json(
       {
-        currentAmount,
+        currentAmount: currentAmountNum,
         backerCount,
-        goalAmount: project.goalAmount,
-        fundingPercentage: (currentAmount / project.goalAmount) * 100,
+        goalAmount: goalAmountNum,
+        fundingPercentage: (currentAmountNum / goalAmountNum) * 100,
         status: project.status,
       },
       {

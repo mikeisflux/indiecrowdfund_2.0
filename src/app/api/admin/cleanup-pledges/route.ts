@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
       total: pledges.length,
       pledges: pledges.map((p) => ({
         id: p.id,
-        amount: p.amount,
+        amount: Number(p.amount),
         status: p.status,
         createdAt: p.createdAt,
         stripePaymentMethodId: p.stripePaymentMethodId,
@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
       duplicatesFound: duplicates.length,
       duplicates: duplicates.map((p) => ({
         id: p.id,
-        amount: p.amount,
+        amount: Number(p.amount),
         status: p.status,
         createdAt: p.createdAt,
         stripePaymentMethodId: p.stripePaymentMethodId,
