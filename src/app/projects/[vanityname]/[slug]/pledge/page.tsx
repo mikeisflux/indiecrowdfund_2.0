@@ -368,6 +368,7 @@ export default function PledgePage() {
   ): number => {
     if (shippingType === "NO_SHIPPING") return 0;
     if (typeof shippingCost === "number") return shippingCost;
+    if (!shippingCost) return 0;
     if (shippingType === "WORLDWIDE") {
       return shippingCost["WORLDWIDE"] || 0;
     }

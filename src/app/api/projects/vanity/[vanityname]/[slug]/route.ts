@@ -214,7 +214,7 @@ export async function GET(
       estimatedDelivery: Date | null;
       shippingType: string;
       shippingCountries: string[];
-      shippingCost: number | null;
+      shippingCost: Record<string, number> | null;
       quantityAvailable: number | null;
       quantityClaimed: number;
       visibility: string;
@@ -258,7 +258,7 @@ export async function GET(
       shippingType: r.shippingType,
       shippingCountries: r.shippingCountries || [],
       shippingLocation: r.shippingCountries.length > 0 ? r.shippingCountries.join(", ") : "Worldwide",
-      shippingCost: Number(r.shippingCost) || 0,
+      shippingCost: (r.shippingCost as Record<string, number>) || {},
       quantityAvailable: r.quantityAvailable,
       quantityClaimed: r.quantityClaimed || 0,
       backerCount: r._count?.pledges || 0,

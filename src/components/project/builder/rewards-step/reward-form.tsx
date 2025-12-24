@@ -584,12 +584,12 @@ export function RewardForm({
                           type="number"
                           className="pl-8"
                           placeholder="0.00"
-                          value={currentReward.shippingCost["WORLDWIDE"] || ""}
+                          value={(currentReward.shippingCost || {})["WORLDWIDE"] || ""}
                           onChange={(e) =>
                             onRewardChange({
                               ...currentReward,
                               shippingCost: {
-                                ...currentReward.shippingCost,
+                                ...(currentReward.shippingCost || {}),
                                 WORLDWIDE: parseFloat(e.target.value) || 0,
                               },
                             })
@@ -625,12 +625,12 @@ export function RewardForm({
                                     type="number"
                                     className="pl-7 h-9"
                                     placeholder="0.00"
-                                    value={currentReward.shippingCost[countryCode] || ""}
+                                    value={(currentReward.shippingCost || {})[countryCode] || ""}
                                     onChange={(e) =>
                                       onRewardChange({
                                         ...currentReward,
                                         shippingCost: {
-                                          ...currentReward.shippingCost,
+                                          ...(currentReward.shippingCost || {}),
                                           [countryCode]: parseFloat(e.target.value) || 0,
                                         },
                                       })
