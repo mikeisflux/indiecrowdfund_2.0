@@ -74,7 +74,7 @@ export async function GET(
     return NextResponse.json({
       pledge: {
         id: pledge.id,
-        amount: pledge.amount,
+        amount: Number(pledge.amount),
         status: pledge.status,
         createdAt: pledge.createdAt,
         backerNumber: pledge.backerNumber,
@@ -83,15 +83,19 @@ export async function GET(
           title: pledge.project.title,
           slug: pledge.project.slug,
           status: pledge.project.status,
-          currentAmount: pledge.project.currentAmount,
-          goalAmount: pledge.project.goalAmount,
+          currentAmount: Number(pledge.project.currentAmount),
+          goalAmount: Number(pledge.project.goalAmount),
           projectUrl,
         },
-        reward: pledge.reward,
+        reward: pledge.reward ? {
+          id: pledge.reward.id,
+          title: pledge.reward.title,
+          amount: Number(pledge.reward.amount),
+        } : null,
         addons: pledge.addons.map((a: { addon: { id: string; title: string; amount: number }; quantity: number }) => ({
           id: a.addon.id,
           title: a.addon.title,
-          amount: a.addon.amount,
+          amount: Number(a.addon.amount),
           quantity: a.quantity,
         })),
         canCancel: !isFunded && pledge.status === "PENDING",
@@ -351,7 +355,7 @@ export async function PATCH(
       }
 
       const additionalAmount = parseFloat(amount);
-      const newTotal = pledge.amount + additionalAmount;
+      const newTotal = Number(pledge.amount) + additionalAmount;
 
       // If project is funded, charge immediately
       if (isFunded && pledge.project.creator.stripeConfig?.stripeAccountId) {
