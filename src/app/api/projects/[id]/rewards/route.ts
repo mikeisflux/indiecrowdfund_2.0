@@ -66,7 +66,7 @@ const rewardSchema = z.object({
   })).optional().default([]),
 });
 
-// Create a new reward
+// Create or update a reward (upsert - handles both POST for new and updates for existing)
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -122,7 +122,68 @@ export async function POST(
       secretToken = null;
     }
 
-    // Create reward with items (linking to ProjectItem via projectItemId)
+    // If reward has an ID, this is an update
+    if (reward.id) {
+      // Verify reward belongs to this project
+      const existingReward = await db.reward.findFirst({
+        where: { id: reward.id, projectId },
+        include: { items: true },
+      });
+
+      if (!existingReward) {
+        return NextResponse.json({ error: "Reward not found" }, { status: 404 });
+      }
+
+      // Update reward and manage items
+      const updated = await db.$transaction(async (tx) => {
+        // Delete existing items
+        await tx.rewardItem.deleteMany({
+          where: { rewardId: reward.id },
+        });
+
+        // Update reward and create new items
+        return tx.reward.update({
+          where: { id: reward.id },
+          data: {
+            type: reward.type,
+            title: reward.title,
+            description: reward.description || "",
+            amount: reward.amount,
+            imageUrl: reward.imageUrl || null,
+            estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
+            shippingType: reward.shippingType,
+            shippingCountries: reward.shippingCountries,
+            shippingCost: reward.shippingCost,
+            quantityAvailable: reward.quantityAvailable,
+            visibility: reward.visibility,
+            secretToken,
+            isEnded: reward.isEnded,
+            items: {
+              create: reward.items.map(item => ({
+                projectItemId: item.projectItemId || null,
+                title: item.title,
+                description: item.description || null,
+                imageUrl: item.imageUrl || null,
+              })),
+            },
+          },
+          include: {
+            items: true,
+          },
+        });
+      });
+
+      console.log(`Reward updated: ${reward.id} for project ${projectId}`);
+      return NextResponse.json({
+        success: true,
+        reward: {
+          ...updated,
+          amount: Number(updated.amount),
+        },
+      });
+    }
+
+    // Otherwise, create new reward
     const created = await db.reward.create({
       data: {
         projectId,
@@ -141,7 +202,7 @@ export async function POST(
         isEnded: reward.isEnded,
         items: {
           create: reward.items.map(item => ({
-            projectItemId: item.projectItemId || null, // Link to ProjectItem
+            projectItemId: item.projectItemId || null,
             title: item.title,
             description: item.description || null,
             imageUrl: item.imageUrl || null,
@@ -153,6 +214,7 @@ export async function POST(
       },
     });
 
+    console.log(`Reward created: ${created.id} for project ${projectId}`);
     return NextResponse.json({
       success: true,
       reward: {

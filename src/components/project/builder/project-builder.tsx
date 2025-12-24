@@ -291,10 +291,10 @@ export function ProjectBuilder() {
         // Don't throw - partial success is better than complete failure
       }
 
-      // Handle rewards with dedicated endpoint - save all in parallel
+      // Handle rewards with dedicated endpoint - save all in parallel (POST handles both create and update)
       const rewardPromises = transformedRewards.map((reward) =>
         fetch(`/api/projects/${projectId}/rewards`, {
-          method: reward.id ? "PATCH" : "POST",
+          method: "POST",
           headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify(reward),
         })
