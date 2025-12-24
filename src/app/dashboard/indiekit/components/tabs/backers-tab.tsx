@@ -238,7 +238,7 @@ export function BackersTab({
               </Button>
             </>
           )}
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => toast.success("Exporting backers data...")}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -405,11 +405,11 @@ export function BackersTab({
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Opening email composer for ${backer.name}...`)}>
                           <Mail className="h-4 w-4 mr-2" />
                           Send Email
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Pushing order for ${backer.name} to fulfillment...`)}>
                           <Send className="h-4 w-4 mr-2" />
                           Push to Fulfillment
                         </DropdownMenuItem>

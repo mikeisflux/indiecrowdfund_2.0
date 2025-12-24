@@ -53,7 +53,26 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { bankName, accountHolder, accountNumber, routingNumber, accountType } = body;
+    const { bankName, accountHolder, accountNumber, routingNumber, accountType, projectId } = body;
+
+    // If projectId is provided, verify the user is the project owner (not just a collaborator)
+    if (projectId) {
+      const project = await db.project.findUnique({
+        where: { id: projectId },
+        select: { creatorId: true },
+      });
+
+      if (!project) {
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      }
+
+      if (project.creatorId !== session.user.id) {
+        return NextResponse.json(
+          { error: "Only the project owner can modify bank account settings" },
+          { status: 403 }
+        );
+      }
+    }
 
     // Validation
     if (!bankName || !accountHolder || !accountNumber || !routingNumber) {
@@ -119,6 +138,21 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Error saving bank account:", error);
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes("BANK_ACCOUNT_ENCRYPTION_KEY")) {
+        return NextResponse.json(
+          { error: "Server configuration error: encryption key not set" },
+          { status: 500 }
+        );
+      }
+      if (error.message.includes("Unique constraint")) {
+        return NextResponse.json(
+          { error: "Bank account already exists for this user" },
+          { status: 400 }
+        );
+      }
+    }
     return NextResponse.json(
       { error: "Failed to save bank account" },
       { status: 500 }

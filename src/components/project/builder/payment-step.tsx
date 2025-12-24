@@ -117,7 +117,7 @@ export function PaymentStep() {
       const response = await fetch("/api/creator/bank-account", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify(bankAccount),
+        body: JSON.stringify({ ...bankAccount, projectId }),
       });
 
       if (!response.ok) {

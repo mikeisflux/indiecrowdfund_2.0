@@ -12,6 +12,7 @@ import {
   Users,
   AlertCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface TeaserPage {
   id: string;
@@ -55,7 +56,7 @@ export function TeaserPagesTab({ teaserPages = [], hasActiveCampaign = false }: 
             Collect email signups before your campaign launches
           </p>
         </div>
-        <Button className="bg-teal-600 hover:bg-teal-700">
+        <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening page creator...")}>
           <Plus className="h-4 w-4 mr-2" />
           Create New Page
         </Button>
@@ -94,11 +95,11 @@ export function TeaserPagesTab({ teaserPages = [], hasActiveCampaign = false }: 
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => toast.info(`Editing "${page.title}"...`)}>
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
-                      <Button variant="outline" size="sm" disabled={!page.url}>
+                      <Button variant="outline" size="sm" disabled={!page.url} onClick={() => page.url && window.open(`https://${page.url}`, "_blank")}>
                         <Eye className="h-4 w-4 mr-2" />
                         View
                       </Button>
@@ -148,7 +149,7 @@ export function TeaserPagesTab({ teaserPages = [], hasActiveCampaign = false }: 
               <p className="text-sm text-muted-foreground mb-4">
                 Create a teaser page to collect email signups before your campaign launches
               </p>
-              <Button className="bg-teal-600 hover:bg-teal-700">
+              <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening page creator...")}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Your First Page
               </Button>

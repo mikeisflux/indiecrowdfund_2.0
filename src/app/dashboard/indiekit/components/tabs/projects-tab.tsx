@@ -12,6 +12,7 @@ import {
   DollarSign,
   AlertCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ConnectedProject {
   id: string;
@@ -67,7 +68,7 @@ export function ProjectsTab({ projects = [], hasActiveCampaign = false }: Projec
             Manage your crowdfunding projects and their integrations
           </p>
         </div>
-        <Button className="bg-teal-600 hover:bg-teal-700">
+        <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening project connection wizard...")}>
           <Plus className="h-4 w-4 mr-2" />
           Add Project
         </Button>
@@ -122,15 +123,15 @@ export function ProjectsTab({ projects = [], hasActiveCampaign = false }: Projec
 
               {/* Actions */}
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => toast.info(`Opening analytics for "${project.title}"...`)}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Analytics
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => toast.info(`Opening settings for "${project.title}"...`)}>
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => toast.info(`Opening "${project.title}" in new tab...`)}>
                   <ExternalLink className="h-4 w-4" />
                 </Button>
               </div>
@@ -148,7 +149,7 @@ export function ProjectsTab({ projects = [], hasActiveCampaign = false }: Projec
             <p className="text-sm text-muted-foreground mb-4">
               Import from Kickstarter, Indiegogo, or create a new project
             </p>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => toast.info("Opening project connection wizard...")}>
               <Plus className="h-4 w-4 mr-2" />
               Add Project
             </Button>
@@ -166,7 +167,7 @@ export function ProjectsTab({ projects = [], hasActiveCampaign = false }: Projec
             <p className="text-sm text-muted-foreground mb-4">
               Connect your crowdfunding projects to manage fulfillment and communicate with backers
             </p>
-            <Button className="bg-teal-600 hover:bg-teal-700">
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening project connection wizard...")}>
               <Plus className="h-4 w-4 mr-2" />
               Connect Your First Project
             </Button>

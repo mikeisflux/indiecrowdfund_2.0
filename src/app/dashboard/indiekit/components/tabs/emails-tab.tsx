@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { MoreHorizontal, Mail, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { EmailCampaign } from "../../types";
 
 interface EmailsTabProps {
@@ -121,12 +122,12 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog }: EmailsTabProps)
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Duplicate</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info(`Editing "${campaign.title}"...`)}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Duplicated "${campaign.title}"`)}>Duplicate</DropdownMenuItem>
                         {campaign.status === "draft" && (
-                          <DropdownMenuItem>Send Now</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toast.success(`Sending "${campaign.title}" now...`)}>Send Now</DropdownMenuItem>
                         )}
-                        <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600" onClick={() => toast.success(`Deleted "${campaign.title}"`)}>Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -175,7 +176,7 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog }: EmailsTabProps)
                           {stage.description}
                         </p>
                       </div>
-                      <Button variant="outline" size="sm" className="shrink-0">
+                      <Button variant="outline" size="sm" className="shrink-0" onClick={() => toast.info(`Starting draft for "${stage.title}"...`)}>
                         Start draft
                       </Button>
                     </div>

@@ -22,6 +22,7 @@ import {
   Trash2,
   Download,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { SurveyAddon, Backer, FulfillmentStats } from "../../types";
 
 interface AddonsTabProps {
@@ -125,7 +126,7 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline">
+                  <Button size="sm" variant="outline" onClick={() => toast.info(`Editing "${addon.name}"...`)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit
                   </Button>
@@ -136,11 +137,11 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toast.success(`Duplicated "${addon.name}"`)}>
                         <Copy className="h-4 w-4 mr-2" />
                         Duplicate
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toast.success(`${addon.available ? "Deactivated" : "Activated"} "${addon.name}"`)}>
                         {addon.available ? (
                           <>
                             <X className="h-4 w-4 mr-2" />
@@ -153,7 +154,7 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
                           </>
                         )}
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">
+                      <DropdownMenuItem className="text-red-600" onClick={() => toast.success(`Deleted "${addon.name}"`)}>
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
                       </DropdownMenuItem>

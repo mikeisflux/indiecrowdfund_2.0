@@ -28,6 +28,7 @@ import {
   Copy,
   Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Segment {
   id: string;
@@ -76,7 +77,7 @@ export function SegmentsTab({ segments = [], projectId }: SegmentsTabProps) {
             </p>
           </div>
         </div>
-        <Button className="bg-teal-600 hover:bg-teal-700">
+        <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening segment creator...")}>
           <Plus className="h-4 w-4 mr-2" />
           Create Segment
         </Button>
@@ -164,23 +165,23 @@ export function SegmentsTab({ segments = [], projectId }: SegmentsTabProps) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info(`Viewing ${segment.backerCount} backers in "${segment.name}"...`)}>
                           <Users className="h-4 w-4 mr-2" />
                           View Backers
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info(`Opening email composer for "${segment.name}"...`)}>
                           <Mail className="h-4 w-4 mr-2" />
                           Send Email
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info(`Editing segment "${segment.name}"...`)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Segment
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success(`Duplicated segment "${segment.name}"`)}>
                           <Copy className="h-4 w-4 mr-2" />
                           Duplicate
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem className="text-red-600" onClick={() => toast.success(`Deleted segment "${segment.name}"`)}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
@@ -209,37 +210,37 @@ export function SegmentsTab({ segments = [], projectId }: SegmentsTabProps) {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <Button variant="outline" className="justify-start h-auto py-3">
+            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'Survey Incomplete' segment")}>
               <div className="text-left">
                 <p className="font-medium">Survey Incomplete</p>
                 <p className="text-xs text-muted-foreground">Backers who haven&apos;t completed their survey</p>
               </div>
             </Button>
-            <Button variant="outline" className="justify-start h-auto py-3">
+            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'Payment Failed' segment")}>
               <div className="text-left">
                 <p className="font-medium">Payment Failed</p>
                 <p className="text-xs text-muted-foreground">Backers with failed payment attempts</p>
               </div>
             </Button>
-            <Button variant="outline" className="justify-start h-auto py-3">
+            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'International Shipping' segment")}>
               <div className="text-left">
                 <p className="font-medium">International Shipping</p>
                 <p className="text-xs text-muted-foreground">Backers outside the US</p>
               </div>
             </Button>
-            <Button variant="outline" className="justify-start h-auto py-3">
+            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'High Value Backers' segment")}>
               <div className="text-left">
                 <p className="font-medium">High Value Backers</p>
                 <p className="text-xs text-muted-foreground">Backers with pledges over $100</p>
               </div>
             </Button>
-            <Button variant="outline" className="justify-start h-auto py-3">
+            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'With Add-ons' segment")}>
               <div className="text-left">
                 <p className="font-medium">With Add-ons</p>
                 <p className="text-xs text-muted-foreground">Backers who purchased add-ons</p>
               </div>
             </Button>
-            <Button variant="outline" className="justify-start h-auto py-3">
+            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'Ready to Ship' segment")}>
               <div className="text-left">
                 <p className="font-medium">Ready to Ship</p>
                 <p className="text-xs text-muted-foreground">Backers ready for fulfillment</p>

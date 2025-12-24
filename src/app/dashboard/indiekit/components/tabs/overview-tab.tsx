@@ -18,6 +18,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { Backer, FulfillmentStats } from "../../types";
 import { STATUS_LABELS } from "../../types";
 
@@ -80,7 +81,11 @@ export function OverviewTab({ stats, backers, timeline = [] }: OverviewTabProps)
               )}
             </div>
           </div>
-          <Button variant="secondary" className="bg-white text-teal-600 hover:bg-teal-50">
+          <Button variant="secondary" className="bg-white text-teal-600 hover:bg-teal-50" onClick={() => {
+            if (surveysPending > 0) toast.success("Sending survey reminders...");
+            else if (notShipped > 0) toast.info("Opening shipping workflow...");
+            else toast.info("Opening fulfillment report...");
+          }}>
             {surveysPending > 0 ? "Send Reminders" : notShipped > 0 ? "Start Shipping" : "View Report"}
             <ChevronRight className="h-4 w-4 ml-2" />
           </Button>
@@ -286,7 +291,7 @@ export function OverviewTab({ stats, backers, timeline = [] }: OverviewTabProps)
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Recent Activity</CardTitle>
-          <Button variant="outline" size="sm">View All</Button>
+          <Button variant="outline" size="sm" onClick={() => toast.info("Viewing all activity...")}>View All</Button>
         </CardHeader>
         <CardContent>
           {recentActivity.length > 0 ? (

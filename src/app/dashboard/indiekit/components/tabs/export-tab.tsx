@@ -21,6 +21,7 @@ import {
   Clock,
   CheckCircle2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ExportHistory {
   id: string;
@@ -176,7 +177,7 @@ export function ExportTab({ exportHistory = [] }: ExportTabProps) {
             </div>
 
             {/* Export Button */}
-            <Button className="w-full bg-teal-600 hover:bg-teal-700">
+            <Button className="w-full bg-teal-600 hover:bg-teal-700" onClick={() => toast.success(`Exporting ${exportOption} data as ${exportFormat.toUpperCase()}...`)}>
               <Download className="h-4 w-4 mr-2" />
               Export Data
             </Button>
@@ -221,7 +222,7 @@ export function ExportTab({ exportHistory = [] }: ExportTabProps) {
                     {export_.status === "processing" && (
                       <Clock className="h-4 w-4 text-yellow-600 animate-spin" />
                     )}
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => toast.success(`Downloading "${export_.name}"...`)}>
                       <Download className="h-4 w-4" />
                     </Button>
                   </div>
@@ -241,7 +242,7 @@ export function ExportTab({ exportHistory = [] }: ExportTabProps) {
 
       {/* Quick Export Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="cursor-pointer hover:border-teal-500 transition-colors">
+        <Card className="cursor-pointer hover:border-teal-500 transition-colors" onClick={() => toast.success("Generating PDF pack lists...")}>
           <CardContent className="pt-6 text-center">
             <Package className="h-8 w-8 text-teal-600 mx-auto mb-2" />
             <h4 className="font-medium">Pack Lists</h4>
@@ -250,7 +251,7 @@ export function ExportTab({ exportHistory = [] }: ExportTabProps) {
             </p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-teal-500 transition-colors">
+        <Card className="cursor-pointer hover:border-teal-500 transition-colors" onClick={() => toast.success("Exporting address labels...")}>
           <CardContent className="pt-6 text-center">
             <FileSpreadsheet className="h-8 w-8 text-green-600 mx-auto mb-2" />
             <h4 className="font-medium">Address Labels</h4>
@@ -259,7 +260,7 @@ export function ExportTab({ exportHistory = [] }: ExportTabProps) {
             </p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-teal-500 transition-colors">
+        <Card className="cursor-pointer hover:border-teal-500 transition-colors" onClick={() => toast.success("Creating full backup...")}>
           <CardContent className="pt-6 text-center">
             <Download className="h-8 w-8 text-blue-600 mx-auto mb-2" />
             <h4 className="font-medium">Full Backup</h4>

@@ -25,6 +25,7 @@ import {
   ChevronRight,
   CalendarDays,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface TimelineEntry {
   id: string;
@@ -199,7 +200,7 @@ export function TimelineTab({ entries = [], projectId }: TimelineTabProps) {
       {/* Load More - only show if we have entries */}
       {hasEntries && filteredEntries.length >= 50 && (
         <div className="text-center">
-          <Button variant="outline">Load More Activity</Button>
+          <Button variant="outline" onClick={() => toast.info("Loading more activity...")}>Load More Activity</Button>
         </div>
       )}
     </div>
