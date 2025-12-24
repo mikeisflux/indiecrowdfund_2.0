@@ -92,6 +92,7 @@ export async function PUT(
       useSSL,
       isDefault,
       isActive,
+      isCreatorMailbox,
     } = body;
 
     const existing = await db.mailbox.findUnique({
@@ -140,6 +141,7 @@ export async function PUT(
         ...(useSSL !== undefined && { useSSL }),
         ...(isDefault !== undefined && { isDefault }),
         ...(isActive !== undefined && { isActive }),
+        ...(isCreatorMailbox !== undefined && { isCreatorMailbox }),
       },
     });
 

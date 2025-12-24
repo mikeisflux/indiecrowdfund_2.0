@@ -138,6 +138,7 @@ export async function POST(request: NextRequest) {
       password,
       useSSL,
       isDefault,
+      isCreatorMailbox,
     } = body;
 
     if (!name || !email) {
@@ -181,6 +182,7 @@ export async function POST(request: NextRequest) {
         password: password || null,
         useSSL: useSSL !== undefined ? useSSL : true,
         isDefault: isDefault || false,
+        isCreatorMailbox: isCreatorMailbox || false,
       },
     });
 

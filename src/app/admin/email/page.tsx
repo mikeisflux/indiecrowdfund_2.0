@@ -68,6 +68,7 @@ interface Mailbox {
   color?: string;
   isDefault: boolean;
   isActive: boolean;
+  isCreatorMailbox: boolean;
   unreadCount: number;
   totalEmails: number;
   folders?: Record<string, number>;
@@ -1033,6 +1034,7 @@ function MailboxDialog({
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("#3B82F6");
   const [isDefault, setIsDefault] = useState(false);
+  const [isCreatorMailbox, setIsCreatorMailbox] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1043,12 +1045,14 @@ function MailboxDialog({
       setDescription(mailbox.description || "");
       setColor(mailbox.color || "#3B82F6");
       setIsDefault(mailbox.isDefault);
+      setIsCreatorMailbox(mailbox.isCreatorMailbox || false);
     } else {
       setName("");
       setEmail("");
       setDescription("");
       setColor("#3B82F6");
       setIsDefault(false);
+      setIsCreatorMailbox(false);
     }
   }, [mailbox, open]);
 
@@ -1075,6 +1079,7 @@ function MailboxDialog({
           description: description || null,
           color,
           isDefault,
+          isCreatorMailbox,
         }),
       });
 
@@ -1176,6 +1181,19 @@ function MailboxDialog({
             />
             <Label htmlFor="isDefault" className="text-sm font-normal">
               Set as default mailbox
+            </Label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isCreatorMailbox"
+              checked={isCreatorMailbox}
+              onChange={(e) => setIsCreatorMailbox(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300"
+            />
+            <Label htmlFor="isCreatorMailbox" className="text-sm font-normal">
+              Creator mailbox (hide from Email Center)
             </Label>
           </div>
         </div>
