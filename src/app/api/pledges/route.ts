@@ -113,6 +113,34 @@ export async function POST(req: NextRequest) {
 
     // Check payment processor and route accordingly
     if (project.paymentProcessor === "DIVINITYCOIN") {
+      // Check for existing pledge to prevent duplicates
+      const existingPledge = await db.pledge.findFirst({
+        where: {
+          userId: session.user.id,
+          projectId: data.projectId,
+          paymentProcessor: "DIVINITYCOIN",
+          status: { in: ["PENDING", "COMPLETED"] },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      // If there's an existing PENDING pledge, return it instead of creating a new one
+      if (existingPledge?.status === "PENDING") {
+        console.log("[DivinityCoin Pledge] Returning existing PENDING pledge:", existingPledge.id);
+        return NextResponse.json({
+          paymentMethod: "DIVINITYCOIN",
+          pledgeId: existingPledge.id,
+        });
+      }
+
+      // If there's a COMPLETED pledge, user has already backed this project
+      if (existingPledge?.status === "COMPLETED") {
+        return NextResponse.json(
+          { error: "You have already backed this project" },
+          { status: 400 }
+        );
+      }
+
       // Calculate reward amount - ensure it's a valid number
       const rewardAmountValue = reward ? Number(reward.amount) : 0;
       const rewardAmount = isNaN(rewardAmountValue) ? 0 : rewardAmountValue;
@@ -129,7 +157,7 @@ export async function POST(req: NextRequest) {
       }, 0);
       const addonsAmount = isNaN(addonsAmountValue) ? 0 : addonsAmountValue;
 
-      console.log("[DivinityCoin Pledge] Creating pledge:", {
+      console.log("[DivinityCoin Pledge] Creating NEW pledge:", {
         userId: session.user.id,
         projectId: data.projectId,
         rewardId: data.rewardId,
