@@ -25,6 +25,35 @@ function generateFilename(originalName: string, convertToWebP: boolean): string 
   return `${hash}${ext}`;
 }
 
+// Check if user can upload to a project (creator or collaborator with edit permission)
+async function canUploadToProject(projectId: string, userId: string): Promise<boolean> {
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: { creatorId: true },
+  });
+
+  if (!project) {
+    return false;
+  }
+
+  // Creator can always upload
+  if (project.creatorId === userId) {
+    return true;
+  }
+
+  // Check if user is a collaborator with edit permission
+  const collaborator = await db.projectCollaborator.findFirst({
+    where: {
+      projectId,
+      userId,
+      status: "ACCEPTED",
+      canEditProject: true,
+    },
+  });
+
+  return !!collaborator;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -40,6 +69,17 @@ export async function POST(req: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    // If projectId is provided, verify user has permission to upload to this project
+    if (projectId && projectId !== "temp") {
+      const canUpload = await canUploadToProject(projectId, session.user.id);
+      if (!canUpload) {
+        return NextResponse.json(
+          { error: "You don't have permission to upload to this project" },
+          { status: 403 }
+        );
+      }
     }
 
     // Use "temp" folder if no projectId yet (new unsaved projects)
