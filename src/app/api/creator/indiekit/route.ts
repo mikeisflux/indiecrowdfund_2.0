@@ -302,8 +302,8 @@ export async function GET(req: NextRequest) {
       fulfilledBackers,
       surveysCompleted,
       surveysPending,
-      totalRaised: selectedProject.currentAmount,
-      addOnPurchases: addOnSales._sum.amount || 0,
+      totalRaised: Number(selectedProject.currentAmount),
+      addOnPurchases: Number(addOnSales._sum.amount || 0),
       digitalDownloads,
       packagesShipped,
       preOrderBackers,
@@ -350,7 +350,7 @@ export async function GET(req: NextRequest) {
         name: pledge.user.name || "Anonymous",
         email: pledge.user.email || "",
         avatar: pledge.user.image || undefined,
-        pledgeAmount: pledge.amount,
+        pledgeAmount: Number(pledge.amount),
         reward: pledge.reward?.title || "No Reward",
         status,
         surveyCompleted: surveyResponse?.isComplete || false,
@@ -532,12 +532,13 @@ export async function GET(req: NextRequest) {
       .slice(0, 30); // Last 30 pledges
 
     recentPledges.forEach(pledge => {
+      const pledgeAmount = Number(pledge.amount);
       timelineEntries.push({
         id: `pledge-${pledge.id}`,
         type: "cards_charged",
         time: formatTime(pledge.createdAt),
         title: "New Backer",
-        detail: `${pledge.user.name || "Anonymous"} backed ${pledge.reward?.title || "the project"} for $${pledge.amount.toFixed(2)}`,
+        detail: `${pledge.user.name || "Anonymous"} backed ${pledge.reward?.title || "the project"} for $${pledgeAmount.toFixed(2)}`,
         date: formatDateLabel(pledge.createdAt),
         sortDate: pledge.createdAt,
       });
