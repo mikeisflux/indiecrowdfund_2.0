@@ -62,11 +62,17 @@ export async function GET(
       ? `/projects/${collaborator.project.creator.vanityUrl}/${collaborator.project.slug}`
       : `/projects/${collaborator.project.slug}`;
 
+    // Build edit URL for collaborators with edit permission
+    const editUrl = collaborator.canEditProject
+      ? `${projectUrl}/edit`
+      : null;
+
     return NextResponse.json({
       id: collaborator.id,
       projectTitle: collaborator.project.title,
       projectSlug: collaborator.project.slug,
       projectUrl,
+      editUrl,
       inviterName: collaborator.project.creator.name || "Project Creator",
       title: collaborator.title,
       permissions: {

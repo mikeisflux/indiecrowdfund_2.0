@@ -81,6 +81,11 @@ export async function POST(
       ? `/projects/${collaborator.project.creator.vanityUrl}/${collaborator.project.slug}`
       : `/projects/${collaborator.project.slug}`;
 
+    // Build edit URL for collaborators with edit permission
+    const editUrl = collaborator.canEditProject
+      ? `${projectUrl}/edit`
+      : null;
+
     if (action === "accept") {
       // Accept the collaboration
       await db.projectCollaborator.update({
@@ -109,6 +114,8 @@ export async function POST(
         message: "You have accepted the collaboration invitation",
         projectSlug: collaborator.project.slug,
         projectUrl,
+        editUrl,
+        canEditProject: collaborator.canEditProject,
       });
     } else {
       // Decline the collaboration

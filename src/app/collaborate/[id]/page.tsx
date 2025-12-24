@@ -15,6 +15,7 @@ interface CollaborationData {
   projectTitle: string;
   projectSlug: string;
   projectUrl?: string;
+  editUrl?: string | null;
   inviterName: string;
   title: string | null;
   permissions: {
@@ -34,7 +35,7 @@ export default function CollaboratePage() {
   const [loading, setLoading] = useState(true);
   const [responding, setResponding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ accepted: boolean; projectSlug?: string; projectUrl?: string } | null>(null);
+  const [success, setSuccess] = useState<{ accepted: boolean; projectSlug?: string; projectUrl?: string; editUrl?: string; canEditProject?: boolean } | null>(null);
 
   // Extract id from params with null safety
   const collaborationId = params?.id as string | undefined;
@@ -91,6 +92,8 @@ export default function CollaboratePage() {
         accepted: action === "accept",
         projectSlug: data.projectSlug,
         projectUrl: data.projectUrl,
+        editUrl: data.editUrl,
+        canEditProject: data.canEditProject,
       });
     } catch {
       setError("Failed to respond to invitation");
@@ -146,7 +149,11 @@ export default function CollaboratePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-3">
-            {success.accepted && (success.projectUrl || success.projectSlug) ? (
+            {success.accepted && success.canEditProject && success.editUrl ? (
+              <Link href={success.editUrl}>
+                <Button>Go to Editor</Button>
+              </Link>
+            ) : success.accepted && (success.projectUrl || success.projectSlug) ? (
               <Link href={success.projectUrl || `/projects/${success.projectSlug}`}>
                 <Button>View Project</Button>
               </Link>
@@ -173,7 +180,11 @@ export default function CollaboratePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            {collaboration?.status === "ACCEPTED" ? (
+            {collaboration?.status === "ACCEPTED" && collaboration.permissions.canEditProject && collaboration.editUrl ? (
+              <Link href={collaboration.editUrl}>
+                <Button>Go to Editor</Button>
+              </Link>
+            ) : collaboration?.status === "ACCEPTED" ? (
               <Link href={collaboration.projectUrl || `/projects/${collaboration.projectSlug}`}>
                 <Button>View Project</Button>
               </Link>
