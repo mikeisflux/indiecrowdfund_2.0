@@ -155,6 +155,9 @@ export default function EditProjectPage() {
         }
 
         // Load rewards (tiers and addons)
+        // First, get all loaded items for fallback title matching
+        const loadedItems = useProjectStore.getState().items;
+
         const allRewards = [...rewards, ...addons];
         for (const reward of allRewards) {
           // Add the reward
@@ -175,13 +178,23 @@ export default function EditProjectPage() {
             quantityClaimed: reward.quantityClaimed || 0,
             backerCount: reward.backerCount || 0,
             visibility: reward.visibility || "PUBLIC",
-            items: (reward.items || []).map((item: { id: string; projectItemId?: string; title: string; imageUrl?: string; quantity?: number }) => ({
-              id: item.projectItemId || item.id, // Use projectItemId to match global items, fallback to id
-              projectItemId: item.projectItemId, // Preserve projectItemId for future reference
-              title: item.title,
-              imageUrl: item.imageUrl || "",
-              quantity: item.quantity || 1,
-            })),
+            items: (reward.items || []).map((item: { id: string; projectItemId?: string; title: string; imageUrl?: string; quantity?: number }) => {
+              // If projectItemId exists, use it. Otherwise, try to find matching global item by title
+              let matchedProjectItemId = item.projectItemId;
+              if (!matchedProjectItemId) {
+                const matchingItem = loadedItems.find(i => i.title.toLowerCase() === item.title.toLowerCase());
+                if (matchingItem?.id) {
+                  matchedProjectItemId = matchingItem.id;
+                }
+              }
+              return {
+                id: matchedProjectItemId || item.id, // Use matched projectItemId, fallback to original id
+                projectItemId: matchedProjectItemId, // Set projectItemId for future reference
+                title: item.title,
+                imageUrl: item.imageUrl || "",
+                quantity: item.quantity || 1,
+              };
+            }),
             isEnded: reward.isEnded || false,
             endedAt: reward.endedAt ? new Date(reward.endedAt) : undefined,
           });

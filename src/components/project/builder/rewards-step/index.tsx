@@ -304,8 +304,23 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const openEditRewardForm = (index: number) => {
     const reward = rewards[index];
     setCurrentReward(reward);
-    // Use projectItemId if available (from API), otherwise fall back to id (for local state)
-    setSelectedItemIds(reward.items.map((i) => i.projectItemId || i.id || "").filter(Boolean));
+    // Use projectItemId if available (from API), otherwise try to match by title, then fall back to id
+    const selectedIds = reward.items.map((rewardItem) => {
+      // First try projectItemId
+      if (rewardItem.projectItemId) {
+        return rewardItem.projectItemId;
+      }
+      // Then try to find matching global item by title (case-insensitive)
+      const matchingGlobalItem = items.find(
+        globalItem => globalItem.title.toLowerCase() === rewardItem.title.toLowerCase()
+      );
+      if (matchingGlobalItem?.id) {
+        return matchingGlobalItem.id;
+      }
+      // Fall back to the item's own id
+      return rewardItem.id || "";
+    }).filter(Boolean);
+    setSelectedItemIds(selectedIds);
     setEditingRewardIndex(index);
     setQuantityType(reward.quantityAvailable ? "limited" : "unlimited");
     setAudienceType(reward.visibility === "SECRET" ? "secret" : "all");
