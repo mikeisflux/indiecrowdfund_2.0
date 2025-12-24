@@ -438,7 +438,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Count individual items within the reward
-        pledge.reward.items?.forEach((item) => {
+        pledge.reward.items?.forEach((item: { id: string; title: string }) => {
           const itemKey = `item_${item.id}`;
           const existingItem = itemCounts.get(itemKey);
           if (existingItem) {
@@ -454,7 +454,7 @@ export async function GET(req: NextRequest) {
       }
 
       // Count addons (with quantity)
-      pledge.addons?.forEach((pledgeAddon) => {
+      pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string } }) => {
         const addonKey = `addon_${pledgeAddon.addon.id}`;
         const existing = itemCounts.get(addonKey);
         if (existing) {
