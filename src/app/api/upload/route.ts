@@ -7,6 +7,9 @@ import path from "path";
 import crypto from "crypto";
 import sharp from "sharp";
 
+// Base uploads directory - use env var or fallback to /uploads for production
+const UPLOADS_BASE = process.env.UPLOADS_DIR || "/uploads";
+
 // Allowed image types
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -104,8 +107,7 @@ export async function POST(req: NextRequest) {
     // Create directory structure: /uploads/projects/{projectId}/{type}/
     const uploadType = type || "misc";
     const uploadDir = path.join(
-      process.cwd(),
-      "uploads",
+      UPLOADS_BASE,
       "projects",
       effectiveProjectId,
       uploadType

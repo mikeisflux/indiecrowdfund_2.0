@@ -3,6 +3,9 @@ import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 
+// Base uploads directory - use env var or fallback to /uploads for production
+const UPLOADS_BASE = process.env.UPLOADS_DIR || "/uploads";
+
 // MIME types for supported files
 const MIME_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -25,10 +28,10 @@ export async function GET(
 
     // Reconstruct the file path
     const relativePath = pathSegments.join("/");
-    const filePath = path.join(process.cwd(), "uploads", relativePath);
+    const filePath = path.join(UPLOADS_BASE, relativePath);
 
     // Security: Ensure we're only serving from uploads directory
-    const uploadsDir = path.join(process.cwd(), "uploads");
+    const uploadsDir = path.resolve(UPLOADS_BASE);
     const resolvedPath = path.resolve(filePath);
     if (!resolvedPath.startsWith(uploadsDir)) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
