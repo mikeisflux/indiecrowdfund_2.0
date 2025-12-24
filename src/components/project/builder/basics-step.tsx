@@ -59,7 +59,6 @@ export function BasicsStep() {
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [slugMessage, setSlugMessage] = useState("");
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
-  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
 
   // Handle video file upload
   const handleVideoUpload = async (file: File) => {
@@ -83,7 +82,6 @@ export function BasicsStep() {
     }
 
     setIsUploadingVideo(true);
-    setVideoUploadProgress(0);
 
     try {
       const formData = new FormData();
