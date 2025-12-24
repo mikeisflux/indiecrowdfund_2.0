@@ -1419,8 +1419,8 @@ export default function PledgePage() {
                   <CardContent className="p-5">
                     <h3 className="font-medium mb-4">Payment</h3>
 
-                    {/* Show error if any */}
-                    {paymentError && (
+                    {/* Show error if any - only for Stripe, not DivinityCoin */}
+                    {paymentError && project?.paymentProcessor !== "DIVINITYCOIN" && (
                       <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                         <p className="text-sm text-red-600 dark:text-red-400 mb-2">{paymentError}</p>
                         <Button
@@ -1881,8 +1881,12 @@ export default function PledgePage() {
                         </Label>
                       </div>
 
-                      {/* Status message */}
-                      {!clientSecret ? (
+                      {/* Status message - different for DivinityCoin vs Stripe */}
+                      {project?.paymentProcessor === "DIVINITYCOIN" ? (
+                        <p className="text-xs text-center text-muted-foreground py-2">
+                          Use DivinityCoin to complete your pledge.
+                        </p>
+                      ) : !clientSecret ? (
                         <div className="flex items-center justify-center gap-2 py-2">
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Setting up payment...</span>
@@ -1898,7 +1902,10 @@ export default function PledgePage() {
                         <Link href="/terms" className="underline">Terms of Use</Link>
                         , and{" "}
                         <Link href="/privacy" className="underline">Privacy Policy</Link>
-                        , and for our payment processor, Stripe, to charge your payment method.
+                        {project?.paymentProcessor === "DIVINITYCOIN"
+                          ? ", and for DivinityCoin to process your payment."
+                          : ", and for our payment processor, Stripe, to charge your payment method."
+                        }
                       </p>
                     </div>
                   </CardContent>
