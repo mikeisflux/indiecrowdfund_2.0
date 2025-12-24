@@ -67,12 +67,21 @@ export async function POST(
     if (data.retailerDiscount !== undefined) updateData.retailerDiscount = data.retailerDiscount;
     if (data.retailerMinQuantity !== undefined) updateData.retailerMinQuantity = data.retailerMinQuantity;
 
+    // Automatically set payment processor based on content flags
+    // Adult or risky content requires DivinityCoin, otherwise use Stripe
+    if (data.hasAdultContent !== undefined || data.hasRiskyContent !== undefined) {
+      const hasAdult = data.hasAdultContent ?? false;
+      const hasRisky = data.hasRiskyContent ?? false;
+      updateData.paymentProcessor = (hasAdult || hasRisky) ? "DIVINITYCOIN" : "STRIPE";
+    }
+
     const updated = await db.project.update({
       where: { id: projectId },
       data: updateData,
       select: {
         id: true,
         projectType: true,
+        paymentProcessor: true,
         hasAdultContent: true,
         hasRiskyContent: true,
         promoContentSfw: true,
@@ -132,6 +141,7 @@ export async function GET(
         id: true,
         contactEmail: true,
         projectType: true,
+        paymentProcessor: true,
         hasAdultContent: true,
         hasRiskyContent: true,
         promoContentSfw: true,
