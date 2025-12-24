@@ -345,7 +345,6 @@ export async function createStripePayment({
   userId,
   sourceCampaignId,
   shippingAmount = 0,
-  shippingCountry,
 }: CreatePaymentParams) {
   const stripeClient = await getStripeInstance();
 
