@@ -293,8 +293,9 @@ export function PromotionStep() {
     setIsDeactivating(true);
 
     try {
-      const response = await fetch(`/api/projects/${projectId}`, {
-        method: "PATCH",
+      // Use dedicated prelaunch endpoint for reliable deactivation
+      const response = await fetch(`/api/projects/${projectId}/prelaunch`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ prelaunchActive: false }),
       });

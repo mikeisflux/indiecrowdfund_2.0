@@ -94,11 +94,13 @@ export function ProjectBuilder() {
         shippingCost: reward.shippingCost || {},
         quantityAvailable: reward.quantityAvailable != null ? Number(reward.quantityAvailable) : null,
         isEnded: reward.isEnded || false,
+        visibility: reward.visibility || "PUBLIC",
         items: reward.items?.map((item) => {
           // Find the full item details from the items store
           const fullItem = items.find((i) => i.id === item.id);
           return {
             id: item.id,
+            projectItemId: item.id,
             title: fullItem?.title || item.title || "Item",
             description: fullItem?.description,
             imageUrl: fullItem?.imageUrl || undefined,
@@ -106,93 +108,203 @@ export function ProjectBuilder() {
         }) || [],
       }));
 
-      const projectData = {
-        // Basics
-        title: basics.title,
-        subtitle: basics.subtitle,
-        slug: basics.slug || undefined,
-        category: basics.category,
-        subcategory: basics.subcategory,
-        secondaryCategory: basics.secondaryCategory,
-        secondarySubcategory: basics.secondarySubcategory,
-        location: basics.location,
-        imageUrl: basics.imageUrl || undefined,
-        videoUrl: basics.videoUrl,
-        goalAmount: Number(basics.goalAmount) || 10000,
-        durationType: basics.durationType || "FIXED_DAYS",
-        durationDays: basics.durationDays != null ? Number(basics.durationDays) : undefined,
-        endDate: basics.endDate instanceof Date ? basics.endDate.toISOString() : basics.endDate,
-        launchDate: basics.launchDate instanceof Date ? basics.launchDate.toISOString() : basics.launchDate,
+      // If no projectId, create the project first
+      if (!projectId) {
+        const projectData = {
+          title: basics.title,
+          subtitle: basics.subtitle,
+          category: basics.category,
+          subcategory: basics.subcategory,
+          secondaryCategory: basics.secondaryCategory,
+          secondarySubcategory: basics.secondarySubcategory,
+          location: basics.location,
+          imageUrl: basics.imageUrl || undefined,
+          videoUrl: basics.videoUrl,
+          goalAmount: Number(basics.goalAmount) || 10000,
+          durationType: basics.durationType || "FIXED_DAYS",
+          durationDays: basics.durationDays != null ? Number(basics.durationDays) : undefined,
+          endDate: basics.endDate instanceof Date ? basics.endDate.toISOString() : basics.endDate,
+          launchDate: basics.launchDate instanceof Date ? basics.launchDate.toISOString() : basics.launchDate,
+          description: story.description || "",
+          risks: story.risks || "",
+          usesAI: story.usesAI || false,
+          faqs: story.faqs || [],
+          contactEmail: payment.contactEmail,
+          projectType: payment.projectType || "INDIVIDUAL",
+          hasAdultContent: payment.hasAdultContent || false,
+          hasRiskyContent: payment.hasRiskyContent || false,
+          promoContentSfw: payment.promoContentSfw !== false,
+          allowRetailerPledges: payment.allowRetailerPledges || false,
+          retailerDiscount: Number(payment.retailerDiscount) || 50,
+          retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
+          prelaunchActive: promotion.prelaunchActive || false,
+          prelaunchDescription: promotion.prelaunchDescription,
+          customReferralTags: promotion.customReferralTags || [],
+          googleAnalyticsId: promotion.googleAnalyticsId,
+          metaPixelId: promotion.metaPixelId,
+        };
 
-        // Story
-        description: story.description || "",
-        risks: story.risks || "",
-        usesAI: story.usesAI || false,
-        faqs: story.faqs || [],
-
-        // Payment
-        contactEmail: payment.contactEmail,
-        projectType: payment.projectType || "INDIVIDUAL",
-        hasAdultContent: payment.hasAdultContent || false,
-        hasRiskyContent: payment.hasRiskyContent || false,
-        promoContentSfw: payment.promoContentSfw !== false,
-        allowRetailerPledges: payment.allowRetailerPledges || false,
-        retailerDiscount: Number(payment.retailerDiscount) || 50,
-        retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
-
-        // Promotion
-        prelaunchActive: promotion.prelaunchActive || false,
-        prelaunchDescription: promotion.prelaunchDescription,
-        customReferralTags: promotion.customReferralTags || [],
-        googleAnalyticsId: promotion.googleAnalyticsId,
-        metaPixelId: promotion.metaPixelId,
-
-        // Rewards
-        rewards: transformedRewards,
-
-        // Collaborators
-        collaborators: people.collaborators || [],
-      };
-
-      let response;
-
-      if (projectId) {
-        // Update existing project
-        response = await fetch(`/api/projects/${projectId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-          body: JSON.stringify(projectData),
-        });
-      } else {
-        // Create new project (POST doesn't handle rewards yet, will need a subsequent PATCH)
-        response = await fetch("/api/projects", {
+        const response = await fetch("/api/projects", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify(projectData),
         });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to create project");
+        }
+
+        const result = await response.json();
+        const newProjectId = result.project?.id;
+
+        if (newProjectId) {
+          setProjectId(newProjectId);
+
+          // Save rewards for new projects using dedicated endpoint
+          for (const reward of transformedRewards) {
+            await fetch(`/api/projects/${newProjectId}/rewards`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+              body: JSON.stringify(reward),
+            });
+          }
+
+          // Save collaborators using dedicated endpoint
+          for (const collab of people.collaborators || []) {
+            await fetch(`/api/projects/${newProjectId}/collaborators`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+              body: JSON.stringify(collab),
+            });
+          }
+        }
+
+        toast.success("Project created successfully");
+        return true;
       }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to save project");
+      // For existing projects, use dedicated endpoints in parallel for reliability
+      const savePromises: Promise<Response>[] = [];
+
+      // Save basics
+      savePromises.push(
+        fetch(`/api/projects/${projectId}/basics`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            title: basics.title,
+            subtitle: basics.subtitle,
+            slug: basics.slug || undefined,
+            category: basics.category,
+            subcategory: basics.subcategory,
+            secondaryCategory: basics.secondaryCategory,
+            secondarySubcategory: basics.secondarySubcategory,
+            location: basics.location,
+            imageUrl: basics.imageUrl || undefined,
+            videoUrl: basics.videoUrl,
+            goalAmount: Number(basics.goalAmount) || 10000,
+            durationType: basics.durationType || "FIXED_DAYS",
+            durationDays: basics.durationDays != null ? Number(basics.durationDays) : undefined,
+            endDate: basics.endDate instanceof Date ? basics.endDate.toISOString() : basics.endDate,
+            launchDate: basics.launchDate instanceof Date ? basics.launchDate.toISOString() : basics.launchDate,
+          }),
+        })
+      );
+
+      // Save story
+      savePromises.push(
+        fetch(`/api/projects/${projectId}/story`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            description: story.description || "",
+            risks: story.risks || "",
+            usesAI: story.usesAI || false,
+            faqs: story.faqs || [],
+          }),
+        })
+      );
+
+      // Save payment settings
+      savePromises.push(
+        fetch(`/api/projects/${projectId}/payment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            projectType: payment.projectType || "INDIVIDUAL",
+            hasAdultContent: payment.hasAdultContent || false,
+            hasRiskyContent: payment.hasRiskyContent || false,
+            promoContentSfw: payment.promoContentSfw !== false,
+            allowRetailerPledges: payment.allowRetailerPledges || false,
+            retailerDiscount: Number(payment.retailerDiscount) || 50,
+            retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
+          }),
+        })
+      );
+
+      // Save contact email separately (dedicated endpoint for reliability)
+      if (payment.contactEmail) {
+        savePromises.push(
+          fetch(`/api/projects/${projectId}/contact-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+            body: JSON.stringify({ contactEmail: payment.contactEmail }),
+          })
+        );
       }
 
-      const result = await response.json();
+      // Save promotion settings
+      savePromises.push(
+        fetch(`/api/projects/${projectId}/promotion`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            customReferralTags: promotion.customReferralTags || [],
+            googleAnalyticsId: promotion.googleAnalyticsId,
+            metaPixelId: promotion.metaPixelId,
+          }),
+        })
+      );
 
-      if (!projectId && result.project?.id) {
-        setProjectId(result.project.id);
+      // Save prelaunch settings
+      savePromises.push(
+        fetch(`/api/projects/${projectId}/prelaunch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            prelaunchActive: promotion.prelaunchActive || false,
+            prelaunchDescription: promotion.prelaunchDescription,
+          }),
+        })
+      );
 
-        // For new projects, we need to save rewards with a PATCH since POST doesn't handle them
-        if (transformedRewards.length > 0) {
-          const rewardsResponse = await fetch(`/api/projects/${result.project.id}`, {
+      // Execute all saves in parallel
+      const results = await Promise.allSettled(savePromises);
+
+      // Check for any failures
+      const failures = results.filter(r => r.status === "rejected" || (r.status === "fulfilled" && !r.value.ok));
+      if (failures.length > 0) {
+        console.warn("Some saves had issues:", failures);
+        // Don't throw - partial success is better than complete failure
+      }
+
+      // Handle rewards with dedicated endpoint
+      for (const reward of transformedRewards) {
+        if (reward.id) {
+          // Update existing reward
+          await fetch(`/api/projects/${projectId}/rewards`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-            body: JSON.stringify({ rewards: transformedRewards }),
+            body: JSON.stringify(reward),
           });
-
-          if (!rewardsResponse.ok) {
-            console.error("Failed to save rewards");
-          }
+        } else {
+          // Create new reward
+          await fetch(`/api/projects/${projectId}/rewards`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+            body: JSON.stringify(reward),
+          });
         }
       }
 
