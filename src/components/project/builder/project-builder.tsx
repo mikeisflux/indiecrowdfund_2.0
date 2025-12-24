@@ -162,23 +162,24 @@ export function ProjectBuilder() {
         if (newProjectId) {
           setProjectId(newProjectId);
 
-          // Save rewards for new projects using dedicated endpoint
-          for (const reward of transformedRewards) {
-            await fetch(`/api/projects/${newProjectId}/rewards`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-              body: JSON.stringify(reward),
-            });
-          }
-
-          // Save collaborators using dedicated endpoint
-          for (const collab of people.collaborators || []) {
-            await fetch(`/api/projects/${newProjectId}/collaborators`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-              body: JSON.stringify(collab),
-            });
-          }
+          // Save rewards and collaborators in parallel for new projects
+          const newProjectPromises = [
+            ...transformedRewards.map((reward) =>
+              fetch(`/api/projects/${newProjectId}/rewards`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                body: JSON.stringify(reward),
+              })
+            ),
+            ...(people.collaborators || []).map((collab) =>
+              fetch(`/api/projects/${newProjectId}/collaborators`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                body: JSON.stringify(collab),
+              })
+            ),
+          ];
+          await Promise.allSettled(newProjectPromises);
         }
 
         toast.success("Project created successfully");
@@ -290,24 +291,15 @@ export function ProjectBuilder() {
         // Don't throw - partial success is better than complete failure
       }
 
-      // Handle rewards with dedicated endpoint
-      for (const reward of transformedRewards) {
-        if (reward.id) {
-          // Update existing reward
-          await fetch(`/api/projects/${projectId}/rewards`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-            body: JSON.stringify(reward),
-          });
-        } else {
-          // Create new reward
-          await fetch(`/api/projects/${projectId}/rewards`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-            body: JSON.stringify(reward),
-          });
-        }
-      }
+      // Handle rewards with dedicated endpoint - save all in parallel
+      const rewardPromises = transformedRewards.map((reward) =>
+        fetch(`/api/projects/${projectId}/rewards`, {
+          method: reward.id ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify(reward),
+        })
+      );
+      await Promise.allSettled(rewardPromises);
 
       toast.success("Project saved successfully");
       return true;
