@@ -16,13 +16,6 @@ export async function GET(req: NextRequest) {
     // Validate days parameter - default 30, min 1, max 365
     const days = Math.min(365, Math.max(1, parseInt(searchParams.get("days") || "30") || 30));
 
-    // Get the creator's vanity URL
-    const creator = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { vanityUrl: true },
-    });
-    const creatorVanityUrl = creator?.vanityUrl || null;
-
     // Get user's own projects
     const ownProjects = await db.project.findMany({
       where: {
@@ -45,6 +38,11 @@ export async function GET(req: NextRequest) {
         launchDate: true,
         launchedAt: true,
         createdAt: true,
+        creator: {
+          select: {
+            vanityUrl: true,
+          },
+        },
       },
     });
 
@@ -72,6 +70,11 @@ export async function GET(req: NextRequest) {
             launchDate: true,
             launchedAt: true,
             createdAt: true,
+            creator: {
+              select: {
+                vanityUrl: true,
+              },
+            },
           },
         },
       },
@@ -407,9 +410,9 @@ export async function GET(req: NextRequest) {
     });
 
     // Helper to build project URL with vanity URL if available
-    const buildProjectUrl = (slug: string) => {
-      return creatorVanityUrl
-        ? `/projects/${creatorVanityUrl}/${slug}`
+    const buildProjectUrl = (slug: string, projectCreatorVanityUrl: string | null) => {
+      return projectCreatorVanityUrl
+        ? `/projects/${projectCreatorVanityUrl}/${slug}`
         : `/projects/${slug}`;
     };
 
@@ -420,7 +423,7 @@ export async function GET(req: NextRequest) {
         slug: p.slug,
         status: p.status,
         imageUrl: p.imageUrl,
-        projectUrl: buildProjectUrl(p.slug),
+        projectUrl: buildProjectUrl(p.slug, p.creator?.vanityUrl || null),
       })),
       selectedProject: {
         id: selectedProject.id,
@@ -434,7 +437,7 @@ export async function GET(req: NextRequest) {
         daysRemaining,
         endDate: selectedProject.endDate,
         launchedAt: selectedProject.launchedAt,
-        projectUrl: buildProjectUrl(selectedProject.slug),
+        projectUrl: buildProjectUrl(selectedProject.slug, selectedProject.creator?.vanityUrl || null),
       },
       stats: {
         todayPledges: Math.round(todayAmount * 100) / 100,
