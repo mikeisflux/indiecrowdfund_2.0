@@ -106,7 +106,6 @@ export function BasicsStep() {
       alert(error instanceof Error ? error.message : "Failed to upload video");
     } finally {
       setIsUploadingVideo(false);
-      setVideoUploadProgress(0);
     }
   };
 
