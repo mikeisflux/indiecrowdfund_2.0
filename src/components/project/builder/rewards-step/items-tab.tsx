@@ -209,8 +209,19 @@ export function ItemsTab({
   // Get which rewards/addons include a specific item
   const getItemIncludedIn = (itemId: string) => {
     const includedIn: { rewards: string[]; addons: string[] } = { rewards: [], addons: [] };
+    // Find the global item to get its title for fallback matching
+    const globalItem = items.find(i => i.id === itemId);
+
     rewards.forEach((r) => {
-      if (r.items.some((i) => i.id === itemId || i.projectItemId === itemId)) {
+      // Check by ID first (projectItemId or id), then fallback to title matching for legacy data
+      const isIncluded = r.items.some((i) =>
+        i.id === itemId ||
+        i.projectItemId === itemId ||
+        // Fallback: match by title when projectItemId is not set (legacy data)
+        (globalItem && !i.projectItemId && i.title === globalItem.title)
+      );
+
+      if (isIncluded) {
         if (r.type === "TIER") {
           includedIn.rewards.push(r.title);
         } else {

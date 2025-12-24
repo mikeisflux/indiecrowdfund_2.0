@@ -82,18 +82,25 @@ export async function GET(
     return NextResponse.json({
       pledge: {
         id: pledge.id,
-        amount: pledge.amount,
+        amount: Number(pledge.amount),
         status: pledge.status,
         createdAt: pledge.createdAt,
         stripePaymentIntentId: pledge.stripePaymentIntentId,
         stripeSetupIntentId: pledge.stripeSetupIntentId,
         user: pledge.user,
-        project: pledge.project,
-        reward: pledge.reward,
+        project: {
+          ...pledge.project,
+          currentAmount: Number(pledge.project.currentAmount),
+          goalAmount: Number(pledge.project.goalAmount),
+        },
+        reward: pledge.reward ? {
+          ...pledge.reward,
+          amount: Number(pledge.reward.amount),
+        } : null,
         addons: pledge.addons.map((a: { addon: { id: string; title: string; amount: number }; quantity: number }) => ({
           id: a.addon.id,
           title: a.addon.title,
-          amount: a.addon.amount,
+          amount: Number(a.addon.amount),
           quantity: a.quantity,
         })),
         canCancel: pledge.status === "PENDING",
