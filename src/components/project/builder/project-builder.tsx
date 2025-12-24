@@ -162,15 +162,17 @@ export function ProjectBuilder() {
         if (newProjectId) {
           setProjectId(newProjectId);
 
-          // Save rewards and collaborators in parallel for new projects
+          // Save rewards (batch) and collaborators in parallel for new projects
           const newProjectPromises = [
-            ...transformedRewards.map((reward) =>
-              fetch(`/api/projects/${newProjectId}/rewards`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-                body: JSON.stringify(reward),
-              })
-            ),
+            // Batch save all rewards in a single request
+            transformedRewards.length > 0
+              ? fetch(`/api/projects/${newProjectId}/rewards`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                  body: JSON.stringify({ rewards: transformedRewards }),
+                })
+              : Promise.resolve(new Response()),
+            // Save collaborators in parallel
             ...(people.collaborators || []).map((collab) =>
               fetch(`/api/projects/${newProjectId}/collaborators`, {
                 method: "POST",
@@ -291,15 +293,14 @@ export function ProjectBuilder() {
         // Don't throw - partial success is better than complete failure
       }
 
-      // Handle rewards with dedicated endpoint - save all in parallel (POST handles both create and update)
-      const rewardPromises = transformedRewards.map((reward) =>
-        fetch(`/api/projects/${projectId}/rewards`, {
+      // Handle rewards with dedicated endpoint - batch save all rewards in a single request
+      if (transformedRewards.length > 0) {
+        await fetch(`/api/projects/${projectId}/rewards`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-          body: JSON.stringify(reward),
-        })
-      );
-      await Promise.allSettled(rewardPromises);
+          body: JSON.stringify({ rewards: transformedRewards }),
+        });
+      }
 
       toast.success("Project saved successfully");
       return true;

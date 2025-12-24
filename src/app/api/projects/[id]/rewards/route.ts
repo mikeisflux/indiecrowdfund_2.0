@@ -66,7 +66,122 @@ const rewardSchema = z.object({
   })).optional().default([]),
 });
 
+// Batch schema - accepts array of rewards
+const batchRewardsSchema = z.object({
+  rewards: z.array(rewardSchema),
+});
+
+// Helper type for reward data
+type RewardData = z.infer<typeof rewardSchema>;
+
+// Helper function to save a single reward (create or update)
+async function saveReward(projectId: string, reward: RewardData) {
+  // Generate secret token for SECRET visibility if not provided
+  let secretToken = reward.secretToken || null;
+  if (reward.visibility === "SECRET" && !secretToken) {
+    secretToken = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+  }
+  // Clear secret token if visibility is not SECRET
+  if (reward.visibility !== "SECRET") {
+    secretToken = null;
+  }
+
+  // If reward has an ID, this is an update
+  if (reward.id) {
+    // Verify reward belongs to this project
+    const existingReward = await db.reward.findFirst({
+      where: { id: reward.id, projectId },
+      include: { items: true },
+    });
+
+    if (!existingReward) {
+      throw new Error("Reward not found");
+    }
+
+    // Update reward and manage items
+    const updated = await db.$transaction(async (tx) => {
+      // Delete existing items
+      await tx.rewardItem.deleteMany({
+        where: { rewardId: reward.id },
+      });
+
+      // Update reward and create new items
+      return tx.reward.update({
+        where: { id: reward.id },
+        data: {
+          type: reward.type,
+          title: reward.title,
+          description: reward.description || "",
+          amount: reward.amount,
+          imageUrl: reward.imageUrl || null,
+          estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
+          shippingType: reward.shippingType,
+          shippingCountries: reward.shippingCountries,
+          shippingCost: reward.shippingCost,
+          quantityAvailable: reward.quantityAvailable,
+          visibility: reward.visibility,
+          secretToken,
+          isEnded: reward.isEnded,
+          items: {
+            create: reward.items.map(item => ({
+              projectItemId: item.projectItemId || null,
+              title: item.title,
+              description: item.description || null,
+              imageUrl: item.imageUrl || null,
+            })),
+          },
+        },
+        include: {
+          items: true,
+        },
+      });
+    });
+
+    return {
+      ...updated,
+      amount: Number(updated.amount),
+    };
+  }
+
+  // Otherwise, create new reward
+  const created = await db.reward.create({
+    data: {
+      projectId,
+      type: reward.type,
+      title: reward.title,
+      description: reward.description || "",
+      amount: reward.amount,
+      imageUrl: reward.imageUrl || null,
+      estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
+      shippingType: reward.shippingType,
+      shippingCountries: reward.shippingCountries,
+      shippingCost: reward.shippingCost,
+      quantityAvailable: reward.quantityAvailable,
+      visibility: reward.visibility,
+      secretToken,
+      isEnded: reward.isEnded,
+      items: {
+        create: reward.items.map(item => ({
+          projectItemId: item.projectItemId || null,
+          title: item.title,
+          description: item.description || null,
+          imageUrl: item.imageUrl || null,
+        })),
+      },
+    },
+    include: {
+      items: true,
+    },
+  });
+
+  return {
+    ...created,
+    amount: Number(created.amount),
+  };
+}
+
 // Create or update a reward (upsert - handles both POST for new and updates for existing)
+// Also supports batch operations when body contains { rewards: [...] }
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -110,117 +225,42 @@ export async function POST(
     }
 
     const body = await req.json();
-    const reward = rewardSchema.parse(body);
 
-    // Generate secret token for SECRET visibility if not provided
-    let secretToken = reward.secretToken || null;
-    if (reward.visibility === "SECRET" && !secretToken) {
-      secretToken = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-    }
-    // Clear secret token if visibility is not SECRET
-    if (reward.visibility !== "SECRET") {
-      secretToken = null;
-    }
+    // Check if this is a batch request
+    if (body.rewards && Array.isArray(body.rewards)) {
+      const batch = batchRewardsSchema.parse(body);
+      const results: Array<{ success: boolean; reward?: unknown; error?: string }> = [];
 
-    // If reward has an ID, this is an update
-    if (reward.id) {
-      // Verify reward belongs to this project
-      const existingReward = await db.reward.findFirst({
-        where: { id: reward.id, projectId },
-        include: { items: true },
-      });
-
-      if (!existingReward) {
-        return NextResponse.json({ error: "Reward not found" }, { status: 404 });
+      // Process each reward in the batch
+      for (const rewardData of batch.rewards) {
+        try {
+          const savedReward = await saveReward(projectId, rewardData);
+          results.push({ success: true, reward: savedReward });
+        } catch (err) {
+          console.error(`Error saving reward:`, err);
+          results.push({
+            success: false,
+            error: err instanceof Error ? err.message : "Unknown error"
+          });
+        }
       }
 
-      // Update reward and manage items
-      const updated = await db.$transaction(async (tx) => {
-        // Delete existing items
-        await tx.rewardItem.deleteMany({
-          where: { rewardId: reward.id },
-        });
-
-        // Update reward and create new items
-        return tx.reward.update({
-          where: { id: reward.id },
-          data: {
-            type: reward.type,
-            title: reward.title,
-            description: reward.description || "",
-            amount: reward.amount,
-            imageUrl: reward.imageUrl || null,
-            estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
-            shippingType: reward.shippingType,
-            shippingCountries: reward.shippingCountries,
-            shippingCost: reward.shippingCost,
-            quantityAvailable: reward.quantityAvailable,
-            visibility: reward.visibility,
-            secretToken,
-            isEnded: reward.isEnded,
-            items: {
-              create: reward.items.map(item => ({
-                projectItemId: item.projectItemId || null,
-                title: item.title,
-                description: item.description || null,
-                imageUrl: item.imageUrl || null,
-              })),
-            },
-          },
-          include: {
-            items: true,
-          },
-        });
-      });
-
-      console.log(`Reward updated: ${reward.id} for project ${projectId}`);
+      console.log(`Batch rewards saved: ${results.filter(r => r.success).length}/${batch.rewards.length} for project ${projectId}`);
       return NextResponse.json({
         success: true,
-        reward: {
-          ...updated,
-          amount: Number(updated.amount),
-        },
+        results,
+        savedCount: results.filter(r => r.success).length,
+        totalCount: batch.rewards.length,
       });
     }
 
-    // Otherwise, create new reward
-    const created = await db.reward.create({
-      data: {
-        projectId,
-        type: reward.type,
-        title: reward.title,
-        description: reward.description || "",
-        amount: reward.amount,
-        imageUrl: reward.imageUrl || null,
-        estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
-        shippingType: reward.shippingType,
-        shippingCountries: reward.shippingCountries,
-        shippingCost: reward.shippingCost,
-        quantityAvailable: reward.quantityAvailable,
-        visibility: reward.visibility,
-        secretToken,
-        isEnded: reward.isEnded,
-        items: {
-          create: reward.items.map(item => ({
-            projectItemId: item.projectItemId || null,
-            title: item.title,
-            description: item.description || null,
-            imageUrl: item.imageUrl || null,
-          })),
-        },
-      },
-      include: {
-        items: true,
-      },
-    });
-
-    console.log(`Reward created: ${created.id} for project ${projectId}`);
+    // Single reward handling - use the shared helper
+    const reward = rewardSchema.parse(body);
+    const savedReward = await saveReward(projectId, reward);
+    console.log(`Reward ${reward.id ? 'updated' : 'created'}: ${savedReward.id} for project ${projectId}`);
     return NextResponse.json({
       success: true,
-      reward: {
-        ...created,
-        amount: Number(created.amount),
-      },
+      reward: savedReward,
     });
   } catch (error) {
     console.error("Create reward error:", error);
