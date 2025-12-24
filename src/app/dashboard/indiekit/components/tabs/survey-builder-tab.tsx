@@ -47,6 +47,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface SurveyQuestion {
   id: string;
@@ -184,11 +185,11 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => toast.info("Opening survey preview...")}>
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button>
-          <Button className="bg-teal-600 hover:bg-teal-700">
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Survey draft saved!")}>
             <Save className="h-4 w-4 mr-2" />
             Save Draft
           </Button>

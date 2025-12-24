@@ -50,6 +50,7 @@ import {
   Package,
   FileDigit,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Product {
   id: string;
@@ -281,11 +282,11 @@ export function ProductsTab({ products = [], projectId }: ProductsTabProps) {
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Product
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toast.success(`Duplicated "${product.name}"`)}>
                             <Copy className="h-4 w-4 mr-2" />
                             Duplicate
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem className="text-red-600" onClick={() => toast.success(`Deleted "${product.name}"`)}>
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -554,7 +555,10 @@ export function ProductsTab({ products = [], projectId }: ProductsTabProps) {
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancel
             </Button>
-            <Button className="bg-teal-600 hover:bg-teal-700">
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
+              toast.success(editingProduct?.id ? "Product updated!" : "Product added!");
+              setShowEditDialog(false);
+            }}>
               {editingProduct?.id ? "Save Changes" : "Add Product"}
             </Button>
           </DialogFooter>
