@@ -1045,6 +1045,26 @@ model NewsletterSubscriber {
   @@index([source])
 }
 
+// Admin AI Marketing Newsletter - clones of creator-uploaded emails
+model AdminAIMarketingSubscriber {
+  id              String   @id @default(cuid())
+  email           String
+  name            String?
+  creatorAccount  String   // The creator vanityUrl/name who uploaded this email
+  creatorId       String   // The creator's user ID
+  originalSource  String?  // Original source info (e.g., "creator_import:username")
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([email, creatorAccount]) // Same email can exist from different creators
+  @@index([email])
+  @@index([creatorAccount])
+  @@index([creatorId])
+  @@index([isActive])
+}
+
 // ============================================
 // BACKER SURVEYS
 // ============================================

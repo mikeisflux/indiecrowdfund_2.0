@@ -108,15 +108,45 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        const sourceTag = `creator_import:${creatorTag}`;
+
         // Create new subscriber with creator tag in source
         await db.newsletterSubscriber.create({
           data: {
             email: row.email,
             name: row.name || null,
-            source: `creator_import:${creatorTag}`,
+            source: sourceTag,
             isActive: true,
           },
         });
+
+        // Also clone to Admin AI Marketing newsletter (tagged by creator account)
+        // This allows admin to have a copy of all creator-uploaded emails
+        try {
+          await db.adminAIMarketingSubscriber.upsert({
+            where: {
+              email_creatorAccount: {
+                email: row.email,
+                creatorAccount: creatorTag,
+              },
+            },
+            create: {
+              email: row.email,
+              name: row.name || null,
+              creatorAccount: creatorTag,
+              creatorId: session.user.id,
+              originalSource: sourceTag,
+              isActive: true,
+            },
+            update: {
+              name: row.name || undefined,
+              isActive: true,
+            },
+          });
+        } catch {
+          // Silently ignore admin clone errors - don't affect creator import
+          console.error(`Failed to clone email to admin marketing: ${row.email}`);
+        }
 
         imported++;
       } catch (err) {
