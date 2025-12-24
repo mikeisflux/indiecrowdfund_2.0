@@ -291,7 +291,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                         <span>Amount Pledged</span>
                         <Check className="h-3 w-3 text-green-500" />
                       </div>
-                      <span>(${backer.balance?.pledgeAmount?.toFixed(2) || "0.00"})</span>
+                      <span>(${Number(backer.balance?.pledgeAmount || 0).toFixed(2)})</span>
                     </div>
                     <div className="text-xs">
                       <span className="text-muted-foreground">Indiecrowdfund</span>
@@ -309,23 +309,23 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                     <div className="border-t pt-2 mt-2">
                       <div className="flex justify-between">
                         <span>Pledge Level</span>
-                        <span>${backer.balance?.pledgeLevelAmount?.toFixed(2) || "0.00"}</span>
+                        <span>${Number(backer.balance?.pledgeLevelAmount || 0).toFixed(2)}</span>
                       </div>
                       <p className="text-xs text-muted-foreground">${backer.rewardAmount} - {backer.reward}</p>
                     </div>
                     <div className="flex justify-between">
                       <span>Add-ons</span>
-                      <span>${backer.balance?.addonsAmount?.toFixed(2) || "0.00"}</span>
+                      <span>${Number(backer.balance?.addonsAmount || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Shipping</span>
-                      <span>${backer.balance?.shippingAmount?.toFixed(2) || "0.00"}</span>
+                      <span>${Number(backer.balance?.shippingAmount || 0).toFixed(2)}</span>
                     </div>
                     <div className="border-t pt-2 mt-2 font-medium">
                       <div className="flex justify-between">
                         <span>Balance</span>
                         <span className={backer.balance?.balanceDue === 0 ? "text-green-600" : "text-red-600"}>
-                          ${backer.balance?.balanceDue?.toFixed(2) || "0.00"}
+                          ${Number(backer.balance?.balanceDue || 0).toFixed(2)}
                         </span>
                       </div>
                     </div>

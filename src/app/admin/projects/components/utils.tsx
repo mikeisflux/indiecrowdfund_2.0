@@ -9,7 +9,7 @@ export const getFlags = (project: Project): string[] => {
   if (!project.creator.emailVerified) {
     flags.push("unverified_creator");
   }
-  if (project.goalAmount > 100000) {
+  if (Number(project.goalAmount) > 100000) {
     flags.push("high_goal");
   }
   if (!project.videoUrl) {

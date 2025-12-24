@@ -618,7 +618,7 @@ function DiscoverContent() {
 }
 
 function ProjectCard({ project }: { project: Project }) {
-  const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
+  const fundingPercent = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
   const isPrelaunch = project.isPrelaunch;
 
   // Format launch date for prelaunch projects
@@ -685,11 +685,11 @@ function ProjectCard({ project }: { project: Project }) {
               <div className="flex w-full items-center justify-between text-sm">
                 <div>
                   <span className="font-semibold text-primary">
-                    ${project.currentAmount.toLocaleString()}
+                    ${Number(project.currentAmount).toLocaleString()}
                   </span>
                   <span className="text-muted-foreground">
                     {" "}
-                    / ${project.goalAmount.toLocaleString()}
+                    / ${Number(project.goalAmount).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex items-center gap-4 text-muted-foreground">
@@ -712,7 +712,7 @@ function ProjectCard({ project }: { project: Project }) {
 }
 
 function ProjectListItem({ project }: { project: Project }) {
-  const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
+  const fundingPercent = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
   const isPrelaunch = project.isPrelaunch;
 
   // Format launch date for prelaunch projects

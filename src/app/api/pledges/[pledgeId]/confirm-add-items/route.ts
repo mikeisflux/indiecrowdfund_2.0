@@ -140,7 +140,7 @@ export async function POST(
               pledgeId: pledge.id,
               addonId: addon.id,
               quantity,
-              amount: addon.amount * quantity,
+              amount: Number(addon.amount) * quantity,
             },
           });
         }

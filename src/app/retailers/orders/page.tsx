@@ -270,14 +270,14 @@ export default function RetailerOrdersPage() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <p className="text-sm text-zinc-500">
-                        Quantity: {order.quantity} units @ ${order.unitPrice.toFixed(2)} each
+                        Quantity: {order.quantity} units @ ${Number(order.unitPrice).toFixed(2)} each
                       </p>
                       <div className="flex items-center gap-2">
                         <p className="text-xl font-bold text-emerald-600">
-                          ${order.totalAmount.toLocaleString()}
+                          ${Number(order.totalAmount).toLocaleString()}
                         </p>
                         <p className="text-sm text-zinc-400 line-through">
-                          ${order.originalAmount.toLocaleString()}
+                          ${Number(order.originalAmount).toLocaleString()}
                         </p>
                         <Badge className="bg-emerald-100 text-emerald-700">
                           {order.discountPercent}% off

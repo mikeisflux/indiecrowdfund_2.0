@@ -265,7 +265,7 @@ export default function RetailerDashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-zinc-500">Total Savings</p>
-                  <p className="text-3xl font-bold">${retailerData?.totalSavings?.toLocaleString()}</p>
+                  <p className="text-3xl font-bold">${Number(retailerData?.totalSavings || 0).toLocaleString()}</p>
                   <p className="text-xs text-emerald-600 mt-1">50% wholesale discount</p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -349,9 +349,9 @@ export default function RetailerDashboardPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-emerald-600">${order.totalAmount.toFixed(2)}</p>
+                        <p className="font-bold text-emerald-600">${Number(order.totalAmount).toFixed(2)}</p>
                         <p className="text-sm text-zinc-400 line-through">
-                          ${order.originalAmount.toFixed(2)}
+                          ${Number(order.originalAmount).toFixed(2)}
                         </p>
                         <p className="text-xs text-emerald-600">50% off</p>
                       </div>

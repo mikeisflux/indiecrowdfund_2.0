@@ -282,7 +282,7 @@ export default function ManagePledgePage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Your Pledge</p>
-                <p className="text-2xl font-bold">${pledge.amount.toFixed(2)}</p>
+                <p className="text-2xl font-bold">${Number(pledge.amount).toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -310,7 +310,7 @@ export default function ManagePledgePage() {
                 {pledge.addons.map((addon) => (
                   <div key={addon.id} className="flex justify-between text-sm">
                     <span>{addon.title} x{addon.quantity}</span>
-                    <span>${(addon.amount * addon.quantity).toFixed(2)}</span>
+                    <span>${(Number(addon.amount) * addon.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -434,7 +434,7 @@ export default function ManagePledgePage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Cancel Your Pledge?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Are you sure you want to cancel your ${pledge.amount.toFixed(2)} pledge to &quot;{pledge.project.title}&quot;?
+                        Are you sure you want to cancel your ${Number(pledge.amount).toFixed(2)} pledge to &quot;{pledge.project.title}&quot;?
                         This action cannot be undone. Your payment authorization will be released and you will not be charged.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -475,7 +475,7 @@ export default function ManagePledgePage() {
               <CheckCircle className="h-4 w-4 text-green-600" />
               <AlertTitle className="text-green-700 dark:text-green-300">Payment Processing</AlertTitle>
               <AlertDescription className="text-green-600 dark:text-green-400">
-                Your pledge of ${pledge.amount.toFixed(2)} is being processed. You&apos;ll receive a confirmation once the payment is complete.
+                Your pledge of ${Number(pledge.amount).toFixed(2)} is being processed. You&apos;ll receive a confirmation once the payment is complete.
               </AlertDescription>
             </Alert>
 

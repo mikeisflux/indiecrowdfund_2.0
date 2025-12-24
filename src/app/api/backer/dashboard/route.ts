@@ -181,7 +181,7 @@ export async function GET() {
     const surveysCompleted = pledges.filter((p) => p.surveyCompleted).length;
     const pendingSurveys = pledges.filter(
       (p) => !p.surveyCompleted &&
-             (p.project.status === "FUNDED" || p.project.currentAmount >= p.project.goalAmount)
+             (p.project.status === "FUNDED" || Number(p.project.currentAmount) >= Number(p.project.goalAmount))
     ).length;
 
     // Count rewards by fulfillment status

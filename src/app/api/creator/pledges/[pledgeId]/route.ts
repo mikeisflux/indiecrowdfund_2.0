@@ -78,7 +78,7 @@ export async function GET(
       user: { id: string; name: string | null; email: string | null };
     };
 
-    const isFunded = typedPledge.project.currentAmount >= typedPledge.project.goalAmount || typedPledge.project.status === "FUNDED";
+    const isFunded = Number(typedPledge.project.currentAmount) >= Number(typedPledge.project.goalAmount) || typedPledge.project.status === "FUNDED";
 
     return NextResponse.json({
       pledge: {

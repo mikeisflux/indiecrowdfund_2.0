@@ -764,7 +764,7 @@ export default function RetailersPage() {
                                 {survey.order.quantity}x {survey.order.reward?.title || "Item"}
                               </p>
                               <p className="text-xs text-zinc-500">
-                                ${survey.order.totalAmount.toFixed(2)}
+                                ${Number(survey.order.totalAmount).toFixed(2)}
                               </p>
                             </div>
                           ) : (
@@ -974,7 +974,7 @@ export default function RetailersPage() {
                               {selectedSurvey.order.quantity}x {selectedSurvey.order.reward?.title || "Item"}
                             </p>
                             <p className="text-sm font-medium mt-1">
-                              ${selectedSurvey.order.totalAmount.toFixed(2)}
+                              ${Number(selectedSurvey.order.totalAmount).toFixed(2)}
                             </p>
                           </div>
                           <Badge variant="outline">{selectedSurvey.order.status}</Badge>

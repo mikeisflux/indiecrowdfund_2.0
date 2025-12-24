@@ -372,7 +372,7 @@ export async function createStripePayment({
   });
 
   // Check if campaign is already funded
-  const isCampaignFunded = project.currentAmount >= project.goalAmount;
+  const isCampaignFunded = Number(project.currentAmount) >= Number(project.goalAmount);
 
   // Get or create Stripe customer
   const customerId = await getOrCreateStripeCustomer(
@@ -1327,7 +1327,7 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
     console.log(`[SetupIntent] Pledge ${pledgeId} already processed, checking if project needs processing...`);
 
     // Still check if project is funded and process pending pledges as failsafe
-    const projectIsFunded = existingPledge.project.currentAmount >= existingPledge.project.goalAmount;
+    const projectIsFunded = Number(existingPledge.project.currentAmount) >= Number(existingPledge.project.goalAmount);
     if (projectIsFunded) {
       console.log(`[SetupIntent] Project ${existingPledge.projectId} is funded, processing pending pledges as failsafe...`);
       const chargeResults = await processPendingPledgesForProject(existingPledge.projectId);

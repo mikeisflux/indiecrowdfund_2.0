@@ -190,7 +190,7 @@ export async function POST(
     // Calculate the expected amount with quantities
     const calculatedAmount = validAddons.reduce((sum: number, addon: { id: string; amount: number }) => {
       const qty = addonQuantityMap.get(addon.id) || 1;
-      return sum + (addon.amount * qty);
+      return sum + (Number(addon.amount) * qty);
     }, 0);
 
     // Allow some tolerance for shipping costs

@@ -154,9 +154,9 @@ export async function POST(
       console.log(`[Confirm] Updated project stats for pledge ${pledgeId}: +$${pledge.amount}`);
 
       // Check if project just reached funding goal
-      const projectIsFunded = updatedProject.currentAmount >= updatedProject.goalAmount;
+      const projectIsFunded = Number(updatedProject.currentAmount) >= Number(updatedProject.goalAmount);
       const justReachedGoal = projectIsFunded &&
-        updatedProject.currentAmount - pledge.amount < updatedProject.goalAmount;
+        Number(updatedProject.currentAmount) - Number(pledge.amount) < Number(updatedProject.goalAmount);
 
       if (justReachedGoal) {
         await notifyProjectFunded(pledge.projectId);

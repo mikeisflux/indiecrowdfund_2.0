@@ -62,7 +62,7 @@ export async function POST(
       validationErrors.push("Risks section must be at least 50 characters");
     }
 
-    if (!project.goalAmount || project.goalAmount < 100) {
+    if (!project.goalAmount || Number(project.goalAmount) < 100) {
       validationErrors.push("Funding goal must be at least $100");
     }
 
@@ -248,11 +248,11 @@ export async function POST(
     }
 
     // Flag: High funding goal
-    if (project.goalAmount > 100000 && !flagsRaised.includes("high_goal")) {
+    if (Number(project.goalAmount) > 100000 && !flagsRaised.includes("high_goal")) {
       flagsRaised.push("high_goal");
       aiConfidenceScore = Math.max(0, aiConfidenceScore - 5);
     }
-    if (project.goalAmount > 500000 && !flagsRaised.includes("unrealistic_goal")) {
+    if (Number(project.goalAmount) > 500000 && !flagsRaised.includes("unrealistic_goal")) {
       flagsRaised.push("unrealistic_goal");
       aiConfidenceScore = Math.max(0, aiConfidenceScore - 15);
     }

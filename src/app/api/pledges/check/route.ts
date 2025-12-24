@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const isFunded = project.currentAmount >= project.goalAmount || project.status === "FUNDED";
+    const isFunded = Number(project.currentAmount) >= Number(project.goalAmount) || project.status === "FUNDED";
 
     // Find any CONFIRMED pledge for this user/project
     // Includes COMPLETED pledges and PENDING pledges with payment method saved

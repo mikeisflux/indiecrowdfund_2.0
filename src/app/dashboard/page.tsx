@@ -307,7 +307,7 @@ export default function CreatorDashboard() {
   const project = data.selectedProject;
   const stats = data.stats;
   const fundingPercent = project
-    ? (project.currentAmount / project.goalAmount) * 100
+    ? (Number(project.currentAmount) / Number(project.goalAmount)) * 100
     : 0;
 
   // Get the last 10 days of funding data for the chart
@@ -405,10 +405,10 @@ export default function CreatorDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    ${project.currentAmount.toLocaleString()}
+                    ${Number(project.currentAmount).toLocaleString()}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {fundingPercent.toFixed(0)}% of ${project.goalAmount.toLocaleString()} goal
+                    {fundingPercent.toFixed(0)}% of ${Number(project.goalAmount).toLocaleString()} goal
                   </p>
                   <Progress value={Math.min(fundingPercent, 100)} className="mt-2 h-1" />
                 </CardContent>
@@ -569,7 +569,7 @@ export default function CreatorDashboard() {
                                   }}
                                 />
                                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-md whitespace-nowrap">
-                                  ${day.amount.toLocaleString()}
+                                  ${Number(day.amount).toLocaleString()}
                                 </div>
                               </div>
                             ))}
@@ -673,7 +673,7 @@ export default function CreatorDashboard() {
                               {referrer.pledges}
                             </div>
                             <div className="w-24 text-right text-sm font-medium text-primary">
-                              ${referrer.amount.toLocaleString()}
+                              ${Number(referrer.amount).toLocaleString()}
                             </div>
                           </div>
                         ))}
@@ -774,7 +774,7 @@ export default function CreatorDashboard() {
                               </div>
                               <div className="text-center">
                                 <p className="text-lg font-bold text-primary">
-                                  ${reward.total.toLocaleString()}
+                                  ${Number(reward.total).toLocaleString()}
                                 </p>
                                 <p className="text-xs text-muted-foreground">Total</p>
                               </div>

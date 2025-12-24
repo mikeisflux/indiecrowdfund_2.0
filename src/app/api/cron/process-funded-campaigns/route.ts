@@ -136,7 +136,7 @@ export async function GET(req: NextRequest) {
     // Filter to only projects that are actually funded and have pending pledges
     const projectsToProcess = fundedProjectsWithPendingPledges.filter(
       (project) =>
-        project.currentAmount >= project.goalAmount &&
+        Number(project.currentAmount) >= Number(project.goalAmount) &&
         project._count.pledges > 0
     );
 
@@ -157,7 +157,7 @@ export async function GET(req: NextRequest) {
 
     // Also find projects that might have pledges needing payment method sync
     const projectsNeedingSync = fundedProjectsWithPendingPledges.filter(
-      (project) => project.currentAmount >= project.goalAmount
+      (project) => Number(project.currentAmount) >= Number(project.goalAmount)
     );
 
     let totalSynced = 0;

@@ -77,7 +77,7 @@ export async function GET(
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    const isFunded = pledge.project.currentAmount >= pledge.project.goalAmount || pledge.project.status === "FUNDED";
+    const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
 
     return NextResponse.json({
       pledge: {

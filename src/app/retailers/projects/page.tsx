@@ -348,10 +348,10 @@ export default function RetailerProjectsPage() {
                       <p className="text-xs text-zinc-500 mb-1">Wholesale pricing from</p>
                       <div className="flex items-baseline gap-2">
                         <span className="text-xl font-bold text-emerald-600">
-                          ${project.rewards[0]?.retailerPrice.toFixed(2)}
+                          ${Number(project.rewards[0]?.retailerPrice).toFixed(2)}
                         </span>
                         <span className="text-sm text-zinc-400 line-through">
-                          ${project.rewards[0]?.amount.toFixed(2)}
+                          ${Number(project.rewards[0]?.amount).toFixed(2)}
                         </span>
                       </div>
                       <p className="text-xs text-zinc-500 mt-1">
@@ -455,10 +455,10 @@ export default function RetailerProjectsPage() {
                             <p className="text-xs text-zinc-500 mb-1">Wholesale price from</p>
                             <div className="flex items-baseline justify-end gap-2">
                               <span className="text-2xl font-bold text-emerald-600">
-                                ${project.rewards[0]?.retailerPrice.toFixed(2)}
+                                ${Number(project.rewards[0]?.retailerPrice).toFixed(2)}
                               </span>
                               <span className="text-sm text-zinc-400 line-through">
-                                ${project.rewards[0]?.amount.toFixed(2)}
+                                ${Number(project.rewards[0]?.amount).toFixed(2)}
                               </span>
                             </div>
                             <p className="text-xs text-zinc-500 mt-1">

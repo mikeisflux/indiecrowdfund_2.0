@@ -340,7 +340,7 @@ export default function FollowingPage() {
               </Card>
             ) : (
               followedProjects.map((project) => {
-                const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
+                const fundingPercent = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
                 const timeRemaining = getTimeRemaining(project.endDate);
 
                 return (
@@ -412,10 +412,10 @@ export default function FollowingPage() {
                             <div className="flex items-center justify-between text-sm mb-2">
                               <span>
                                 <span className="font-semibold text-primary">
-                                  ${project.currentAmount.toLocaleString()}
+                                  ${Number(project.currentAmount).toLocaleString()}
                                 </span>
                                 <span className="text-muted-foreground">
-                                  {" "}of ${project.goalAmount.toLocaleString()}
+                                  {" "}of ${Number(project.goalAmount).toLocaleString()}
                                 </span>
                               </span>
                               <span className="text-muted-foreground">

@@ -448,10 +448,10 @@ export default function AdminDashboard() {
                               {formatCurrency(project.currentAmount)} / {formatCurrency(project.goalAmount)}
                             </span>
                             <span className="font-medium">
-                              {Math.round((project.currentAmount / project.goalAmount) * 100)}%
+                              {Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)}%
                             </span>
                           </div>
-                          <Progress value={(project.currentAmount / project.goalAmount) * 100} className="h-1.5" />
+                          <Progress value={(Number(project.currentAmount) / Number(project.goalAmount)) * 100} className="h-1.5" />
                         </div>
                       )}
                     </div>

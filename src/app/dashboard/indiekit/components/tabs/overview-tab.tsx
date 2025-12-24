@@ -111,9 +111,9 @@ export function OverviewTab({ stats, backers, timeline = [] }: OverviewTabProps)
                     <div
                       key={idx}
                       className={cn(item.color, "flex items-center justify-center text-white text-xs font-medium")}
-                      style={{ width: `${(item.amount / totalRaised) * 100}%` }}
+                      style={{ width: `${(Number(item.amount) / totalRaised) * 100}%` }}
                     >
-                      {(item.amount / totalRaised) * 100 > 15 && `$${(item.amount / 1000).toFixed(1)}k`}
+                      {(Number(item.amount) / totalRaised) * 100 > 15 && `$${(Number(item.amount) / 1000).toFixed(1)}k`}
                     </div>
                   ))}
                 </div>

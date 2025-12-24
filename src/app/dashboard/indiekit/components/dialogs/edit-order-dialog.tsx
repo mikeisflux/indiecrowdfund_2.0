@@ -193,8 +193,8 @@ export function EditOrderDialog({
                         </Button>
                       </div>
                       <div className="text-right w-20">
-                        <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
-                        <p className="text-xs text-muted-foreground">${item.price.toFixed(2)} ea</p>
+                        <p className="font-medium">${(Number(item.price) * item.quantity).toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">${Number(item.price).toFixed(2)} ea</p>
                       </div>
                       <Button
                         variant="ghost"
@@ -221,7 +221,7 @@ export function EditOrderDialog({
                   <SelectContent>
                     {availableProducts.map((product) => (
                       <SelectItem key={product.id} value={product.id}>
-                        {product.name} - ${product.price.toFixed(2)}
+                        {product.name} - ${Number(product.price).toFixed(2)}
                       </SelectItem>
                     ))}
                   </SelectContent>

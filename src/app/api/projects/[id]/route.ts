@@ -27,7 +27,7 @@ async function hasSuccessfulCampaign(userId: string): Promise<boolean> {
 
   // Filter to only projects that actually reached their goal
   const projectsThatReachedGoal = fundedProjects.filter(
-    (p) => p.currentAmount >= p.goalAmount
+    (p) => Number(p.currentAmount) >= Number(p.goalAmount)
   );
 
   if (projectsThatReachedGoal.length === 0) {
@@ -333,7 +333,7 @@ export async function GET(
       ...project,
       goalAmount: Number(project.goalAmount),
       currentAmount: Number(project.currentAmount),
-      rewards: project.rewards.map(reward => ({
+      rewards: project.rewards.map((reward: { amount: unknown; [key: string]: unknown }) => ({
         ...reward,
         amount: Number(reward.amount),
       })),

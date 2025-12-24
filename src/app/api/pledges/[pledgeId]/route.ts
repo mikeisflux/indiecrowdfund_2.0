@@ -64,7 +64,7 @@ export async function GET(
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    const isFunded = pledge.project.currentAmount >= pledge.project.goalAmount || pledge.project.status === "FUNDED";
+    const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
 
     // Build project URL with vanity URL if available
     const projectUrl = pledge.project.creator.vanityUrl
@@ -154,7 +154,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    const isFunded = pledge.project.currentAmount >= pledge.project.goalAmount || pledge.project.status === "FUNDED";
+    const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
 
     if (action === "cancel") {
       // Can only cancel if NOT funded and pledge is pending
@@ -479,7 +479,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    const isFunded = pledge.project.currentAmount >= pledge.project.goalAmount || pledge.project.status === "FUNDED";
+    const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
 
     if (isFunded) {
       return NextResponse.json(

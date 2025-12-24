@@ -219,7 +219,7 @@ export default function RetailerInvoicesPage() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <p className="text-xl font-bold text-emerald-600">
-                        ${invoice.amount.toLocaleString()}
+                        ${Number(invoice.amount).toLocaleString()}
                       </p>
                       <p className="text-sm text-zinc-500">
                         Due: {new Date(invoice.dueDate).toLocaleDateString()}

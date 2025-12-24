@@ -107,7 +107,7 @@ export function ActiveProjectPanel({
       const data = await response.json();
 
       if (response.ok) {
-        setSyncMessage(`Synced: $${data.currentAmount.toLocaleString()} from ${data.backerCount} backers`);
+        setSyncMessage(`Synced: $${Number(data.currentAmount).toLocaleString()} from ${data.backerCount} backers`);
         onStatsUpdated?.({ currentAmount: data.currentAmount, backerCount: data.backerCount });
       } else {
         setSyncMessage(`Error: ${data.error || "Failed to sync"}`);
@@ -222,11 +222,11 @@ export function ActiveProjectPanel({
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-zinc-500">Goal</p>
-                  <p className="font-semibold">${project.goalAmount.toLocaleString()} {project.currency}</p>
+                  <p className="font-semibold">${Number(project.goalAmount).toLocaleString()} {project.currency}</p>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-zinc-500">Raised</p>
-                  <p className="font-semibold text-emerald-600">${project.currentAmount.toLocaleString()}</p>
+                  <p className="font-semibold text-emerald-600">${Number(project.currentAmount).toLocaleString()}</p>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-zinc-500">Backers</p>
@@ -349,7 +349,7 @@ export function ActiveProjectPanel({
           )}
 
           {/* Process Pledges Button - shows for funded projects */}
-          {project.currentAmount >= project.goalAmount && (
+          {Number(project.currentAmount) >= Number(project.goalAmount) && (
             <div className="mb-4">
               <Button
                 variant="default"

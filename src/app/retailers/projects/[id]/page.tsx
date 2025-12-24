@@ -209,7 +209,7 @@ export default function RetailerProjectDetailPage() {
     );
   }
 
-  const fundingPercent = Math.round((project.currentAmount / project.goalAmount) * 100);
+  const fundingPercent = Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100);
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -260,9 +260,9 @@ export default function RetailerProjectDetailPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-emerald-600">
-                    ${project.currentAmount.toLocaleString()}
+                    ${Number(project.currentAmount).toLocaleString()}
                   </p>
-                  <p className="text-sm text-zinc-500">pledged of ${project.goalAmount.toLocaleString()}</p>
+                  <p className="text-sm text-zinc-500">pledged of ${Number(project.goalAmount).toLocaleString()}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold">{fundingPercent}%</p>
@@ -346,10 +346,10 @@ export default function RetailerProjectDetailPage() {
                         <div className="text-right ml-6">
                           <div className="mb-3">
                             <p className="text-sm text-zinc-400 line-through">
-                              Retail: ${reward.amount.toFixed(2)}
+                              Retail: ${Number(reward.amount).toFixed(2)}
                             </p>
                             <p className="text-2xl font-bold text-emerald-600">
-                              ${reward.retailerPrice.toFixed(2)}
+                              ${Number(reward.retailerPrice).toFixed(2)}
                             </p>
                             <p className="text-xs text-emerald-600">per unit</p>
                           </div>
@@ -384,7 +384,7 @@ export default function RetailerProjectDetailPage() {
                           </div>
                           {quantity > 0 && (
                             <p className="text-sm font-medium mt-2">
-                              Subtotal: ${(reward.retailerPrice * quantity).toFixed(2)}
+                              Subtotal: ${(Number(reward.retailerPrice) * quantity).toFixed(2)}
                             </p>
                           )}
                         </div>
@@ -441,7 +441,7 @@ export default function RetailerProjectDetailPage() {
                                 <p className="text-zinc-500">Qty: {item.quantity}</p>
                               </div>
                               <p className="font-medium">
-                                ${(reward.retailerPrice * item.quantity).toFixed(2)}
+                                ${(Number(reward.retailerPrice) * item.quantity).toFixed(2)}
                               </p>
                             </div>
                           );

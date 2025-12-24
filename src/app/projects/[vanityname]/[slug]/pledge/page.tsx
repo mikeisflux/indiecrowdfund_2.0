@@ -1359,7 +1359,7 @@ export default function PledgePage() {
                       Your payment method will be charged immediately for these additional items.
                       You&apos;ll receive a confirmation email when your purchase is successfully processed.
                     </p>
-                  ) : project && project.currentAmount >= project.goalAmount ? (
+                  ) : project && Number(project.currentAmount) >= Number(project.goalAmount) ? (
                     // Campaign already funded - charged immediately
                     <>
                       <p className="text-sm text-muted-foreground leading-relaxed">
@@ -1594,7 +1594,7 @@ export default function PledgePage() {
                           return (
                             <div key={id} className="flex justify-between text-sm py-1">
                               <span>{addon.title} x{qty}</span>
-                              <span>${addon.amount * qty}</span>
+                              <span>${Number(addon.amount) * qty}</span>
                             </div>
                           );
                         })}
@@ -1668,7 +1668,7 @@ export default function PledgePage() {
                           return (
                             <div key={id} className="flex justify-between text-sm">
                               <span>{addon.title} x{qty}</span>
-                              <span>${addon.amount * qty}</span>
+                              <span>${Number(addon.amount) * qty}</span>
                             </div>
                           );
                         })}
@@ -1742,7 +1742,7 @@ export default function PledgePage() {
                         return (
                           <div key={id} className="flex justify-between text-sm py-1">
                             <span>{addon.title} x{qty}</span>
-                            <span>${addon.amount * qty}.00</span>
+                            <span>${Number(addon.amount) * qty}.00</span>
                           </div>
                         );
                       })}
@@ -1831,7 +1831,7 @@ export default function PledgePage() {
                           return (
                             <div key={id} className="flex justify-between text-sm">
                               <span>{addon.title} x{qty}</span>
-                              <span>${addon.amount * qty}.00</span>
+                              <span>${Number(addon.amount) * qty}.00</span>
                             </div>
                           );
                         })}
@@ -1917,7 +1917,7 @@ export default function PledgePage() {
               <div>
                 <h3 className="font-medium mb-3">Frequently Asked Questions</h3>
                 <Accordion type="single" collapsible>
-                  {getFaqItems(Boolean(project && project.currentAmount >= project.goalAmount)).map((item, idx) => (
+                  {getFaqItems(Boolean(project && Number(project.currentAmount) >= Number(project.goalAmount))).map((item, idx) => (
                     <AccordionItem key={idx} value={`faq-${idx}`} className="border-b">
                       <AccordionTrigger className="py-3 text-sm hover:no-underline text-left">
                         {item.question}

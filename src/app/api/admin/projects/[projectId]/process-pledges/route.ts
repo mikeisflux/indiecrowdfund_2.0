@@ -87,7 +87,7 @@ export async function GET(
     });
 
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const projectIsFunded = project.currentAmount >= project.goalAmount;
+    const projectIsFunded = Number(project.currentAmount) >= Number(project.goalAmount);
     const creatorHasStripe = !!project.creator.stripeConfig?.stripeAccountId;
 
     // Analyze each pledge
@@ -238,7 +238,7 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const projectIsFunded = project.currentAmount >= project.goalAmount;
+    const projectIsFunded = Number(project.currentAmount) >= Number(project.goalAmount);
     const creatorHasStripe = !!project.creator.stripeConfig?.stripeAccountId;
 
     if (!creatorHasStripe) {

@@ -74,7 +74,7 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
 
     // Count projects that met their funding goal
     const projectsFundedCount = allActiveProjects.filter(
-      (p) => p.currentAmount >= p.goalAmount
+      (p) => Number(p.currentAmount) >= Number(p.goalAmount)
     ).length;
 
     // Calculate success rate based on ended projects
@@ -85,7 +85,7 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
     );
 
     const successfulEndedProjects = endedProjects.filter(
-      (p) => p.currentAmount >= p.goalAmount
+      (p) => Number(p.currentAmount) >= Number(p.goalAmount)
     ).length;
 
     const totalEndedProjects = endedProjects.length;

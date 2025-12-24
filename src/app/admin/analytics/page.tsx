@@ -504,7 +504,7 @@ export default function AnalyticsPage() {
                               </div>
                               <div className="w-24">
                                 <Progress
-                                  value={Math.min((project.currentAmount / project.goalAmount) * 100, 100)}
+                                  value={Math.min((Number(project.currentAmount) / Number(project.goalAmount)) * 100, 100)}
                                   className="h-2"
                                 />
                               </div>

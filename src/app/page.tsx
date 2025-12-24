@@ -393,17 +393,17 @@ export default async function HomePage() {
                   </CardContent>
                   <CardFooter className="flex-col items-start gap-3 border-t pt-4">
                     <Progress
-                      value={(project.currentAmount / project.goalAmount) * 100}
+                      value={(Number(project.currentAmount) / Number(project.goalAmount)) * 100}
                       className="h-2"
                     />
                     <div className="flex w-full items-center justify-between text-sm">
                       <div>
                         <span className="font-semibold text-primary">
-                          ${project.currentAmount.toLocaleString()}
+                          ${Number(project.currentAmount).toLocaleString()}
                         </span>
                         <span className="text-muted-foreground">
                           {" "}
-                          / ${project.goalAmount.toLocaleString()}
+                          / ${Number(project.goalAmount).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-muted-foreground">

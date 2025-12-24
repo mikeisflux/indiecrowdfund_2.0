@@ -484,7 +484,7 @@ export default function BackerDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">${stats.totalPledged.toLocaleString()}</div>
+              <div className="text-3xl font-bold">${Number(stats.totalPledged).toLocaleString()}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 ~${stats.avgContribution.toFixed(0)} avg per project
               </p>
@@ -556,7 +556,7 @@ export default function BackerDashboard() {
                   </Card>
                 ) : (
                   backedProjects.map((project) => {
-                    const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
+                    const fundingPercent = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
 
                     return (
                       <Card key={project.id} className="overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5 group">
@@ -646,10 +646,10 @@ export default function BackerDashboard() {
                               <div className="mb-2 flex items-center justify-between text-sm">
                                 <span>
                                   <span className="font-semibold text-primary">
-                                    ${project.currentAmount.toLocaleString()}
+                                    ${Number(project.currentAmount).toLocaleString()}
                                   </span>
                                   <span className="text-muted-foreground">
-                                    {" "}of ${project.goalAmount.toLocaleString()}
+                                    {" "}of ${Number(project.goalAmount).toLocaleString()}
                                   </span>
                                 </span>
                                 <span className="text-muted-foreground">
@@ -719,7 +719,7 @@ export default function BackerDashboard() {
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2">
                     {savedProjects.map((project) => {
-                      const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
+                      const fundingPercent = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
 
                       return (
                         <Card key={project.id} className="overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5 group">
@@ -1009,10 +1009,10 @@ export default function BackerDashboard() {
                 </div>
                 <h3 className="text-lg font-semibold mb-1">Credits Added!</h3>
                 <p className="text-3xl font-bold text-[#0066FF] mb-2">
-                  +${redeemSuccess.amount.toFixed(2)}
+                  +${Number(redeemSuccess.amount).toFixed(2)}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Your new balance is ${divinityCoinBalance.toFixed(2)}
+                  Your new balance is ${Number(divinityCoinBalance).toFixed(2)}
                 </p>
               </div>
             ) : (

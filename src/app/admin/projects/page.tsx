@@ -801,7 +801,7 @@ export default function ProjectsPage() {
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-zinc-500">Goal</p>
-                          <p className="font-medium">${selectedProject.goalAmount.toLocaleString()}</p>
+                          <p className="font-medium">${Number(selectedProject.goalAmount).toLocaleString()}</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-zinc-500">Launch Date</p>

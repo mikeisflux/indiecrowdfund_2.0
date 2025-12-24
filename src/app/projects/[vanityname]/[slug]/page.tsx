@@ -90,7 +90,7 @@ export default function ProjectPage() {
   const [statsJustUpdated, setStatsJustUpdated] = useState(false);
 
   const tiers = rewards.filter((r) => r.type === "TIER");
-  const fundingPercentage = (project.currentAmount / project.goalAmount) * 100;
+  const fundingPercentage = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
   const hasEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
 
   // Check if this is a legacy slug-only URL (vanityname = "_" from middleware rewrite)
@@ -597,7 +597,7 @@ export default function ProjectPage() {
                       You&apos;re backing this project!
                     </div>
                     <p className="text-sm text-[#05ce78]/80 mt-1">
-                      Pledged ${existingPledge.amount.toFixed(2)} • {existingPledge.reward?.title || "No reward"}
+                      Pledged ${Number(existingPledge.amount).toFixed(2)} • {existingPledge.reward?.title || "No reward"}
                     </p>
                   </div>
                   <Link href="/dashboard/backer" className="block">
@@ -614,7 +614,7 @@ export default function ProjectPage() {
                       Checkout not completed
                     </div>
                     <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
-                      Your pledge of ${existingPledge.amount.toFixed(2)} is not yet confirmed.
+                      Your pledge of ${Number(existingPledge.amount).toFixed(2)} is not yet confirmed.
                     </p>
                   </div>
                   <Link href={`${projectPath}/pledge`} className="block">
@@ -698,7 +698,7 @@ export default function ProjectPage() {
                 <ShieldCheck className="h-5 w-5 text-black" />
               </div>
               <p className="text-sm">
-                {project.currentAmount >= project.goalAmount ? (
+                {Number(project.currentAmount) >= Number(project.goalAmount) ? (
                   <>
                     <strong>Your card is charged immediately</strong> when you back this funded project.
                   </>

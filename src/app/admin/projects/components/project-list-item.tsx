@@ -70,7 +70,7 @@ export function ProjectListItem({
                 <>
                   <span className="flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
-                    ${project.currentAmount.toLocaleString()} / ${project.goalAmount.toLocaleString()}
+                    ${Number(project.currentAmount).toLocaleString()} / ${Number(project.goalAmount).toLocaleString()}
                   </span>
                   <span className="flex items-center gap-1">
                     <User className="h-3 w-3" />
@@ -81,7 +81,7 @@ export function ProjectListItem({
                 <>
                   <span className="flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
-                    ${project.goalAmount.toLocaleString()}
+                    ${Number(project.goalAmount).toLocaleString()}
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
@@ -96,11 +96,11 @@ export function ProjectListItem({
                 <div className="h-2 bg-zinc-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-600 rounded-full"
-                    style={{ width: `${Math.min(100, (project.currentAmount / project.goalAmount) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (Number(project.currentAmount) / Number(project.goalAmount)) * 100)}%` }}
                   />
                 </div>
                 <p className="text-xs text-zinc-500 mt-1">
-                  {Math.round((project.currentAmount / project.goalAmount) * 100)}% funded
+                  {Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)}% funded
                 </p>
               </div>
             )}

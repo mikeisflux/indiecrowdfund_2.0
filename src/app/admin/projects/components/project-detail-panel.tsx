@@ -84,7 +84,7 @@ export function ProjectDetailPanel({
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-zinc-500">Goal</p>
-                  <p className="font-semibold">${project.goalAmount.toLocaleString()} {project.currency}</p>
+                  <p className="font-semibold">${Number(project.goalAmount).toLocaleString()} {project.currency}</p>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-zinc-500">Duration</p>
