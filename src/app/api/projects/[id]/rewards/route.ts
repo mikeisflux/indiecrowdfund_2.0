@@ -226,6 +226,13 @@ export async function POST(
 
     const body = await req.json();
 
+    // Debug: log shipping data received
+    console.log("[Rewards API] Received shipping data:", {
+      shippingType: body.shippingType,
+      shippingCost: body.shippingCost,
+      shippingCountries: body.shippingCountries,
+    });
+
     // Check if this is a batch request
     if (body.rewards && Array.isArray(body.rewards)) {
       const batch = batchRewardsSchema.parse(body);
@@ -256,6 +263,12 @@ export async function POST(
 
     // Single reward handling - use the shared helper
     const reward = rewardSchema.parse(body);
+    // Debug: log parsed shipping data
+    console.log("[Rewards API] Parsed shipping data:", {
+      shippingType: reward.shippingType,
+      shippingCost: reward.shippingCost,
+      shippingCountries: reward.shippingCountries,
+    });
     const savedReward = await saveReward(projectId, reward);
     console.log(`Reward ${reward.id ? 'updated' : 'created'}: ${savedReward.id} for project ${projectId}`);
     return NextResponse.json({
