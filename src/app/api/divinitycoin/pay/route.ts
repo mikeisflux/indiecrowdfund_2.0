@@ -156,10 +156,18 @@ export async function POST(req: NextRequest) {
         return { alreadyPaid: true, balance: currentBalance };
       }
 
-      // Get project info
+      // Get project info including goal for funded check
       const project = await tx.project.findUnique({
         where: { id: pledgeRow.projectId },
-        select: { id: true, paymentProcessor: true, creatorId: true, title: true },
+        select: {
+          id: true,
+          paymentProcessor: true,
+          creatorId: true,
+          title: true,
+          goalAmount: true,
+          currentAmount: true,
+          fundedAt: true,
+        },
       });
 
       if (!project) {
@@ -170,6 +178,17 @@ export async function POST(req: NextRequest) {
       if (project.paymentProcessor !== "DIVINITYCOIN") {
         throw new Error("INVALID_PAYMENT_PROCESSOR");
       }
+
+      // Get the pledge details including rewardId
+      const pledge = await tx.pledge.findUnique({
+        where: { id: pledgeId },
+        select: { rewardId: true },
+      });
+
+      // Check if campaign is already funded (determines if we charge immediately)
+      const goalAmount = Number(project.goalAmount);
+      const currentAmount = Number(project.currentAmount);
+      const isCampaignFunded = currentAmount >= goalAmount;
 
       // Generate secure payment ID
       const paymentId = `dc_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`;
@@ -193,14 +212,33 @@ export async function POST(req: NextRequest) {
       });
 
       // Update pledge status
+      // chargedImmediately = true if campaign was already funded, false otherwise
+      // If false and campaign fails, user will be refunded
       await tx.pledge.update({
         where: { id: pledgeId },
         data: {
           status: "COMPLETED",
           backerNumber: existingBackerCount + 1,
           divinityCoinPaymentId: paymentId,
+          chargedImmediately: isCampaignFunded,
         },
       });
+
+      // Update reward quantity if pledge has a reward
+      if (pledge?.rewardId) {
+        await tx.reward.update({
+          where: { id: pledge.rewardId },
+          data: {
+            quantityClaimed: { increment: 1 },
+          },
+        });
+      }
+
+      // Calculate new project total and check if just reached goal
+      const newCurrentAmount = currentAmount + amount;
+      const wasAlreadyFunded = isCampaignFunded;
+      const isNowFunded = newCurrentAmount >= goalAmount;
+      const justReachedGoal = isNowFunded && !wasAlreadyFunded && !project.fundedAt;
 
       // Update project funding
       await tx.project.update({
@@ -208,6 +246,8 @@ export async function POST(req: NextRequest) {
         data: {
           currentAmount: { increment: amount },
           backerCount: { increment: 1 },
+          // Set fundedAt timestamp when project first reaches goal
+          ...(justReachedGoal ? { fundedAt: new Date() } : {}),
         },
       });
 
