@@ -36,7 +36,6 @@ import {
   Loader2,
   XCircle,
   RefreshCw,
-  CheckCircle2,
   Box,
   Gift,
 } from "lucide-react";
