@@ -167,11 +167,11 @@ export function UserProfileDropdown() {
 
             {/* Column 2: Backer Dashboard */}
             <div className="p-4 md:p-5 border-b md:border-b-0">
-              <Link href="/dashboard/backer" className="flex items-center justify-between mb-3 group">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">
+              <Link href="/dashboard/backer" className="block mb-3">
+                <Button variant="outline" size="sm" className="w-full justify-between text-xs font-semibold uppercase tracking-wider">
                   Backer Dashboard
-                </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </Link>
 
               {loading ? (
@@ -215,11 +215,11 @@ export function UserProfileDropdown() {
 
             {/* Column 3: Creator Dashboard */}
             <div className="p-4 md:p-5">
-              <Link href="/dashboard" className="flex items-center justify-between mb-3 group">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">
+              <Link href="/dashboard" className="block mb-3">
+                <Button variant="outline" size="sm" className="w-full justify-between text-xs font-semibold uppercase tracking-wider">
                   Creator Dashboard
-                </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </Link>
 
               {loading ? (
