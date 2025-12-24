@@ -33,6 +33,13 @@ export async function GET(
     // Security: Ensure we're only serving from uploads directory
     const uploadsDir = path.resolve(UPLOADS_BASE);
     const resolvedPath = path.resolve(filePath);
+
+    // Debug logging
+    console.log(`[Uploads] Request: ${relativePath}`);
+    console.log(`[Uploads] UPLOADS_BASE: ${UPLOADS_BASE}`);
+    console.log(`[Uploads] Resolved path: ${resolvedPath}`);
+    console.log(`[Uploads] File exists: ${existsSync(resolvedPath)}`);
+
     if (!resolvedPath.startsWith(uploadsDir)) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
