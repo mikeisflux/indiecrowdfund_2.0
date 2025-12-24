@@ -134,6 +134,7 @@ export async function GET(req: NextRequest) {
       rewardStats,
       dailyFunding,
       referrerData,
+      fulfillmentData,
     ] = await Promise.all([
       // Today's pledges amount
       db.pledge.aggregate({
@@ -275,6 +276,41 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { pledgeAmount: "desc" },
       }),
+
+      // Fulfillment data - all pledges with their rewards and addons
+      db.pledge.findMany({
+        where: {
+          projectId: selectedProjectId,
+          status: "COMPLETED",
+        },
+        select: {
+          id: true,
+          fulfillmentStatus: true,
+          reward: {
+            select: {
+              id: true,
+              title: true,
+              items: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          },
+          addons: {
+            select: {
+              quantity: true,
+              addon: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
 
     // Calculate days remaining
@@ -376,6 +412,80 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 10);
 
+    // Process fulfillment data
+    const totalBackers = fulfillmentData.length;
+    const shippedBackers = fulfillmentData.filter(
+      (p) => p.fulfillmentStatus === "SHIPPED" || p.fulfillmentStatus === "DELIVERED"
+    ).length;
+    const fulfillmentPercentage = totalBackers > 0 ? Math.round((shippedBackers / totalBackers) * 100) : 0;
+
+    // Count items needed for fulfillment (from rewards and addons)
+    const itemCounts = new Map<string, { name: string; count: number; type: "reward" | "addon" }>();
+
+    fulfillmentData.forEach((pledge) => {
+      // Count reward tier (1 per pledge)
+      if (pledge.reward) {
+        const rewardKey = `reward_${pledge.reward.id}`;
+        const existing = itemCounts.get(rewardKey);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          itemCounts.set(rewardKey, {
+            name: pledge.reward.title,
+            count: 1,
+            type: "reward",
+          });
+        }
+
+        // Count individual items within the reward
+        pledge.reward.items?.forEach((item) => {
+          const itemKey = `item_${item.id}`;
+          const existingItem = itemCounts.get(itemKey);
+          if (existingItem) {
+            existingItem.count += 1;
+          } else {
+            itemCounts.set(itemKey, {
+              name: item.title,
+              count: 1,
+              type: "reward",
+            });
+          }
+        });
+      }
+
+      // Count addons (with quantity)
+      pledge.addons?.forEach((pledgeAddon) => {
+        const addonKey = `addon_${pledgeAddon.addon.id}`;
+        const existing = itemCounts.get(addonKey);
+        if (existing) {
+          existing.count += pledgeAddon.quantity;
+        } else {
+          itemCounts.set(addonKey, {
+            name: pledgeAddon.addon.title,
+            count: pledgeAddon.quantity,
+            type: "addon",
+          });
+        }
+      });
+    });
+
+    // Convert to array and sort by count descending
+    const fulfillmentItems = Array.from(itemCounts.values())
+      .sort((a, b) => b.count - a.count);
+
+    const fulfillmentStats = {
+      totalBackers,
+      shippedBackers,
+      fulfillmentPercentage,
+      items: fulfillmentItems,
+      statusBreakdown: {
+        notStarted: fulfillmentData.filter((p) => p.fulfillmentStatus === "NOT_STARTED").length,
+        inProgress: fulfillmentData.filter((p) => p.fulfillmentStatus === "IN_PROGRESS").length,
+        shipped: fulfillmentData.filter((p) => p.fulfillmentStatus === "SHIPPED").length,
+        delivered: fulfillmentData.filter((p) => p.fulfillmentStatus === "DELIVERED").length,
+      },
+    };
+
     // Process recent backers
     const processedBackers = recentBackers.map((pledge) => {
       const now = Date.now();
@@ -452,6 +562,7 @@ export async function GET(req: NextRequest) {
       recentBackers: processedBackers,
       rewardStats: processedRewardStats,
       referrers: processedReferrers,
+      fulfillmentStats,
     });
   } catch (error) {
     console.error("Creator dashboard error:", error);

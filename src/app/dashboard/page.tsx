@@ -36,6 +36,9 @@ import {
   Loader2,
   XCircle,
   RefreshCw,
+  CheckCircle2,
+  Box,
+  Gift,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
@@ -111,6 +114,25 @@ interface Referrer {
   percentage: number;
 }
 
+interface FulfillmentItem {
+  name: string;
+  count: number;
+  type: "reward" | "addon";
+}
+
+interface FulfillmentStats {
+  totalBackers: number;
+  shippedBackers: number;
+  fulfillmentPercentage: number;
+  items: FulfillmentItem[];
+  statusBreakdown: {
+    notStarted: number;
+    inProgress: number;
+    shipped: number;
+    delivered: number;
+  };
+}
+
 interface DashboardData {
   projects: Project[];
   selectedProject: SelectedProject | null;
@@ -119,6 +141,7 @@ interface DashboardData {
   recentBackers: Backer[];
   rewardStats: RewardStat[];
   referrers: Referrer[];
+  fulfillmentStats: FulfillmentStats | null;
 }
 
 export default function CreatorDashboard() {
@@ -916,17 +939,209 @@ export default function CreatorDashboard() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="fulfillment">
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <Truck className="mb-4 h-12 w-12 text-muted-foreground" />
-                    <h3 className="mb-2 font-semibold">Fulfillment available after funding</h3>
-                    <p className="mb-4 text-center text-sm text-muted-foreground">
-                      Once your campaign ends successfully, you&apos;ll be able to manage<br />
-                      backer surveys and reward fulfillment here
-                    </p>
-                  </CardContent>
-                </Card>
+              <TabsContent value="fulfillment" className="space-y-6">
+                {data.fulfillmentStats && data.fulfillmentStats.totalBackers > 0 ? (
+                  <>
+                    {/* Fulfillment Progress Overview */}
+                    <div className="grid gap-6 lg:grid-cols-3">
+                      {/* Circular Progress */}
+                      <Card className="lg:col-span-1">
+                        <CardHeader>
+                          <CardTitle className="text-center">Fulfillment Progress</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-col items-center">
+                          {/* Circular Progress Indicator */}
+                          <div className="relative w-48 h-48">
+                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                              {/* Background circle */}
+                              <circle
+                                cx="50"
+                                cy="50"
+                                r="40"
+                                stroke="currentColor"
+                                strokeWidth="8"
+                                fill="none"
+                                className="text-muted/20"
+                              />
+                              {/* Progress circle */}
+                              <circle
+                                cx="50"
+                                cy="50"
+                                r="40"
+                                stroke="currentColor"
+                                strokeWidth="8"
+                                fill="none"
+                                strokeLinecap="round"
+                                className="text-primary"
+                                strokeDasharray={`${(data.fulfillmentStats.fulfillmentPercentage / 100) * 251.2} 251.2`}
+                              />
+                            </svg>
+                            {/* Center text */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="text-4xl font-bold">{data.fulfillmentStats.fulfillmentPercentage}%</span>
+                              <span className="text-sm text-muted-foreground">Fulfilled</span>
+                            </div>
+                          </div>
+                          <div className="mt-4 text-center">
+                            <p className="text-lg font-semibold">
+                              {data.fulfillmentStats.shippedBackers} of {data.fulfillmentStats.totalBackers} backers
+                            </p>
+                            <p className="text-sm text-muted-foreground">marked as shipped or delivered</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Status Breakdown */}
+                      <Card className="lg:col-span-2">
+                        <CardHeader>
+                          <CardTitle>Fulfillment Status Breakdown</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="text-center p-4 rounded-lg bg-muted/30">
+                              <div className="w-3 h-3 rounded-full bg-gray-400 mx-auto mb-2" />
+                              <p className="text-2xl font-bold">{data.fulfillmentStats.statusBreakdown.notStarted}</p>
+                              <p className="text-xs text-muted-foreground">Not Started</p>
+                            </div>
+                            <div className="text-center p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                              <div className="w-3 h-3 rounded-full bg-blue-500 mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-blue-600">{data.fulfillmentStats.statusBreakdown.inProgress}</p>
+                              <p className="text-xs text-muted-foreground">In Progress</p>
+                            </div>
+                            <div className="text-center p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30">
+                              <div className="w-3 h-3 rounded-full bg-amber-500 mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-amber-600">{data.fulfillmentStats.statusBreakdown.shipped}</p>
+                              <p className="text-xs text-muted-foreground">Shipped</p>
+                            </div>
+                            <div className="text-center p-4 rounded-lg bg-green-50 dark:bg-green-950/30">
+                              <div className="w-3 h-3 rounded-full bg-green-500 mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-green-600">{data.fulfillmentStats.statusBreakdown.delivered}</p>
+                              <p className="text-xs text-muted-foreground">Delivered</p>
+                            </div>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="mt-6">
+                            <div className="flex h-4 rounded-full overflow-hidden bg-muted/30">
+                              {data.fulfillmentStats.statusBreakdown.delivered > 0 && (
+                                <div
+                                  className="bg-green-500"
+                                  style={{
+                                    width: `${(data.fulfillmentStats.statusBreakdown.delivered / data.fulfillmentStats.totalBackers) * 100}%`,
+                                  }}
+                                />
+                              )}
+                              {data.fulfillmentStats.statusBreakdown.shipped > 0 && (
+                                <div
+                                  className="bg-amber-500"
+                                  style={{
+                                    width: `${(data.fulfillmentStats.statusBreakdown.shipped / data.fulfillmentStats.totalBackers) * 100}%`,
+                                  }}
+                                />
+                              )}
+                              {data.fulfillmentStats.statusBreakdown.inProgress > 0 && (
+                                <div
+                                  className="bg-blue-500"
+                                  style={{
+                                    width: `${(data.fulfillmentStats.statusBreakdown.inProgress / data.fulfillmentStats.totalBackers) * 100}%`,
+                                  }}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Items to Fulfill */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Package className="h-5 w-5" />
+                          Items to Fulfill
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          Complete breakdown of all items needed to fulfill your campaign
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        {data.fulfillmentStats.items.length > 0 ? (
+                          <div className="rounded-lg border overflow-hidden">
+                            <div className="grid grid-cols-12 gap-4 bg-muted/50 p-3 text-sm font-medium">
+                              <div className="col-span-1">Type</div>
+                              <div className="col-span-8">Item Name</div>
+                              <div className="col-span-3 text-right">Quantity Needed</div>
+                            </div>
+                            {data.fulfillmentStats.items.map((item, index) => (
+                              <div
+                                key={index}
+                                className="grid grid-cols-12 gap-4 p-3 text-sm border-t items-center"
+                              >
+                                <div className="col-span-1">
+                                  {item.type === "reward" ? (
+                                    <Gift className="h-4 w-4 text-primary" />
+                                  ) : (
+                                    <Box className="h-4 w-4 text-amber-500" />
+                                  )}
+                                </div>
+                                <div className="col-span-8 flex items-center gap-2">
+                                  <span className="font-medium">{item.name}</span>
+                                  <Badge variant={item.type === "reward" ? "default" : "secondary"} className="text-xs">
+                                    {item.type === "reward" ? "Reward" : "Add-on"}
+                                  </Badge>
+                                </div>
+                                <div className="col-span-3 text-right">
+                                  <span className="text-lg font-bold">{item.count.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            ))}
+                            <div className="grid grid-cols-12 gap-4 p-3 bg-muted/30 border-t font-medium">
+                              <div className="col-span-9">Total Items</div>
+                              <div className="col-span-3 text-right text-lg">
+                                {data.fulfillmentStats.items.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="py-8 text-center text-muted-foreground">
+                            No items to fulfill yet. Reward items will appear here once backers pledge.
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Link to IndieKit */}
+                    <Card>
+                      <CardContent className="py-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold">Need more fulfillment tools?</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Use IndieKit for advanced fulfillment management, backer surveys, shipping integration, and more.
+                            </p>
+                          </div>
+                          <Link href="/dashboard/indiekit">
+                            <Button>
+                              <Package className="mr-2 h-4 w-4" />
+                              Open IndieKit
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                ) : (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <Truck className="mb-4 h-12 w-12 text-muted-foreground" />
+                      <h3 className="mb-2 font-semibold">Fulfillment available after funding</h3>
+                      <p className="mb-4 text-center text-sm text-muted-foreground">
+                        Once your campaign ends successfully, you&apos;ll be able to manage<br />
+                        backer surveys and reward fulfillment here
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
             </Tabs>
           </>
