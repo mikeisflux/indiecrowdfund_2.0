@@ -11,8 +11,18 @@ import sharp from "sharp";
 const UPLOADS_BASE = process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads");
 
 // Allowed image types
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+// Allowed video types
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+
+// All allowed types
+const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+
+// Size limits
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB for images
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB for videos
+
 const WEBP_QUALITY = 85;
 
 // Types that should be converted to WebP
@@ -96,10 +106,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate file size
-    if (file.size > MAX_SIZE) {
+    // Validate file size based on type
+    const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
+    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    const maxSizeLabel = isVideo ? "100MB" : "10MB";
+
+    if (file.size > maxSize) {
       return NextResponse.json(
-        { error: "File too large. Maximum size is 10MB" },
+        { error: `File too large. Maximum size is ${maxSizeLabel}` },
         { status: 400 }
       );
     }

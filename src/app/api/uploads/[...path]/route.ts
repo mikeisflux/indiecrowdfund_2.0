@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile } from "fs/promises";
-import { existsSync } from "fs";
+import { readFile, stat } from "fs/promises";
+import { existsSync, createReadStream } from "fs";
 import path from "path";
 
 // Base uploads directory - use env var or fallback to project directory
@@ -16,6 +16,7 @@ const MIME_TYPES: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".mp4": "video/mp4",
   ".webm": "video/webm",
+  ".mov": "video/quicktime",
   ".pdf": "application/pdf",
 };
 
@@ -71,12 +72,45 @@ export async function GET(
       return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
     }
 
-    // Read and return the file
+    // Get file stats for size
+    const fileStat = await stat(finalPath);
+    const fileSize = fileStat.size;
+
+    // Check if this is a video and if Range header is present
+    const isVideo = mimeType.startsWith("video/");
+    const rangeHeader = req.headers.get("range");
+
+    if (isVideo && rangeHeader) {
+      // Parse Range header (e.g., "bytes=0-1024")
+      const parts = rangeHeader.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = end - start + 1;
+
+      // Read the specific chunk
+      const fileBuffer = await readFile(finalPath);
+      const chunk = fileBuffer.subarray(start, end + 1);
+
+      return new NextResponse(chunk, {
+        status: 206, // Partial Content
+        headers: {
+          "Content-Type": mimeType,
+          "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+          "Accept-Ranges": "bytes",
+          "Content-Length": String(chunkSize),
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+
+    // Read and return the full file (for images or non-range video requests)
     const fileBuffer = await readFile(finalPath);
 
     return new NextResponse(fileBuffer, {
       headers: {
         "Content-Type": mimeType,
+        "Content-Length": String(fileSize),
+        "Accept-Ranges": isVideo ? "bytes" : "none",
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });
