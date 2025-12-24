@@ -366,6 +366,8 @@ export default function PledgePage() {
     shippingType: string,
     country: string
   ): number => {
+    // Debug logging
+    console.log("[Shipping Debug]", { shippingCost, shippingType, country });
     if (shippingType === "NO_SHIPPING") return 0;
     if (typeof shippingCost === "number") return shippingCost;
     if (!shippingCost) return 0;
