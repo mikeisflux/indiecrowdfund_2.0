@@ -31,6 +31,7 @@ import {
   Zap,
   Sparkles,
   Link2,
+  Archive,
 } from "lucide-react";
 import {
   Project,
@@ -54,6 +55,7 @@ export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState("pending");
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjects, setActiveProjects] = useState<Project[]>([]);
+  const [closedProjects, setClosedProjects] = useState<Project[]>([]);
   const [prelaunchProjects, setPrelaunchProjects] = useState<Project[]>([]);
   const [prelaunchReviewProjects, setPrelaunchReviewProjects] = useState<Project[]>([]);
   const [reviewHistory, setReviewHistory] = useState<ReviewHistory[]>([]);
@@ -124,10 +126,22 @@ export default function ProjectsPage() {
         allProjects.push(...(approvedData.projects || []));
       }
 
-      setActiveProjects(allProjects);
+      // Filter out projects whose endDate has passed (closed campaigns)
+      const now = new Date();
+      const activeOnly = allProjects.filter((project) => {
+        if (!project.endDate) return true; // No end date = still active
+        return new Date(project.endDate) > now;
+      });
+      const closed = allProjects.filter((project) => {
+        if (!project.endDate) return false;
+        return new Date(project.endDate) <= now;
+      });
+
+      setActiveProjects(activeOnly);
+      setClosedProjects(closed);
       setStats((prev) => ({
         ...prev,
-        activeCampaigns: allProjects.length,
+        activeCampaigns: activeOnly.length,
       }));
     } catch (error) {
       console.error("Error fetching active projects:", error);
@@ -198,6 +212,8 @@ export default function ProjectsPage() {
     setSelectedProject(null);
     if (activeTab === "active") {
       fetchActiveProjects();
+    } else if (activeTab === "closed") {
+      fetchActiveProjects(); // This also fetches closed projects
     } else if (activeTab === "pending") {
       fetchProjects();
     } else if (activeTab === "prelaunchReview") {
@@ -383,6 +399,16 @@ export default function ProjectsPage() {
     );
   });
 
+  const filteredClosedProjects = closedProjects.filter((project) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      project.title.toLowerCase().includes(query) ||
+      project.creator.name?.toLowerCase().includes(query) ||
+      project.creator.email.toLowerCase().includes(query)
+    );
+  });
+
   const filteredPrelaunchProjects = prelaunchProjects.filter((project) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -467,6 +493,13 @@ export default function ProjectsPage() {
             Active Prelaunch
             {prelaunchProjects.length > 0 && (
               <Badge variant="default" className="ml-2 bg-amber-500">{prelaunchProjects.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="closed">
+            <Archive className="mr-2 h-4 w-4" />
+            Closed Campaigns
+            {closedProjects.length > 0 && (
+              <Badge variant="secondary" className="ml-2">{closedProjects.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="flagged">
@@ -869,6 +902,72 @@ export default function ProjectsPage() {
                   </CardContent>
                 )}
               </Card>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Closed Campaigns Tab */}
+        <TabsContent value="closed" className="mt-6 space-y-4">
+          {/* Filters */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Input
+                placeholder="Search closed campaigns..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Technology">Technology</SelectItem>
+                <SelectItem value="Film & Video">Film & Video</SelectItem>
+                <SelectItem value="Games">Games</SelectItem>
+                <SelectItem value="Design">Design</SelectItem>
+                <SelectItem value="Food & Drink">Food & Drink</SelectItem>
+                <SelectItem value="Music">Music</SelectItem>
+                <SelectItem value="Art">Art</SelectItem>
+                <SelectItem value="Comics">Comics</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {closedProjects.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Archive className="h-12 w-12 text-zinc-300 mb-4" />
+                <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No closed campaigns</h3>
+                <p className="text-sm text-zinc-500 max-w-sm">
+                  Campaigns that have ended will appear here.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-4">
+                {filteredClosedProjects.map((project) => (
+                  <ProjectListItem
+                    key={project.id}
+                    project={project}
+                    isSelected={selectedProject?.id === project.id}
+                    onClick={() => setSelectedProject(project)}
+                    showStatus
+                    showFunding
+                    badge={<Badge variant="secondary" className="text-xs">Ended</Badge>}
+                  />
+                ))}
+              </div>
+
+              <ActiveProjectPanel
+                project={selectedProject}
+                onMakeLive={handleMakeLive}
+                onDeactivate={handleDeactivate}
+              />
             </div>
           )}
         </TabsContent>

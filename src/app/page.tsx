@@ -23,6 +23,8 @@ import {
   Menu,
   Eye,
   Sparkles,
+  Archive,
+  CheckCircle,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { MobileProfileLinks } from "@/components/mobile-profile-links";
@@ -39,12 +41,18 @@ export const dynamic = "force-dynamic";
  * #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE#
  */
 
-// Fetch featured/live projects from database
+// Fetch featured/live projects from database (excludes closed campaigns)
 async function getFeaturedProjects() {
   try {
+    const now = new Date();
     const projects = await db.project.findMany({
       where: {
         status: "LIVE",
+        // Only include projects that haven't ended yet
+        OR: [
+          { endDate: null },
+          { endDate: { gt: now } },
+        ],
       },
       include: {
         creator: {
@@ -190,12 +198,72 @@ async function getPrelaunchProjects() {
   }
 }
 
+// Fetch past/closed campaigns from database
+async function getPastCampaigns() {
+  try {
+    const now = new Date();
+    const projects = await db.project.findMany({
+      where: {
+        status: "LIVE",
+        // Only include projects that have ended
+        endDate: { lte: now },
+      },
+      include: {
+        creator: {
+          select: {
+            name: true,
+            vanityUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        endDate: "desc",
+      },
+      take: 6,
+    });
+
+    return projects.map((project) => {
+      // Calculate funding percentage
+      const fundingPercentage = Number(project.goalAmount) > 0
+        ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)
+        : 0;
+      const wasSuccessful = fundingPercentage >= 100;
+
+      // Build project URL - use vanity URL if creator has one
+      const projectUrl = project.creator.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+        : `/projects/${project.slug}`;
+
+      return {
+        id: project.id,
+        slug: project.slug,
+        title: project.title,
+        subtitle: project.subtitle || "",
+        category: project.category,
+        imageUrl: project.imageUrl || "",
+        creator: project.creator.name || "Creator",
+        goalAmount: project.goalAmount,
+        currentAmount: project.currentAmount,
+        backerCount: project.backerCount,
+        fundingPercentage,
+        wasSuccessful,
+        endDate: project.endDate?.toISOString() || null,
+        projectUrl,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching past campaigns:", error);
+    return [];
+  }
+}
+
 export default async function HomePage() {
-  const [stats, featuredProjects, categories, prelaunchProjects] = await Promise.all([
+  const [stats, featuredProjects, categories, prelaunchProjects, pastCampaigns] = await Promise.all([
     getPlatformStats(),
     getFeaturedProjects(),
     getCategoryCounts(),
     getPrelaunchProjects(),
+    getPastCampaigns(),
   ]);
 
   return (
@@ -574,6 +642,93 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Past Campaigns */}
+      {pastCampaigns.length > 0 && (
+        <section className="border-t bg-gradient-to-b from-zinc-50/50 to-background dark:from-zinc-900/20 py-16 md:py-24">
+          <div className="container">
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Archive className="h-5 w-5 text-zinc-500" />
+                  <h2 className="text-2xl font-bold md:text-3xl">Past Campaigns</h2>
+                </div>
+                <p className="text-muted-foreground">Recently completed campaigns</p>
+              </div>
+              <Link href="/discover?status=closed">
+                <Button variant="ghost">
+                  View all
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {pastCampaigns.map((project) => (
+                <Link key={project.id} href={project.projectUrl}>
+                  <Card className="overflow-hidden h-full transition-all hover:shadow-lg border-zinc-200/50 dark:border-zinc-700/30">
+                    <div className="aspect-video bg-muted relative">
+                      {project.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={project.imageUrl}
+                          alt={project.title}
+                          className="absolute inset-0 w-full h-full object-cover grayscale-[30%]"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-800/30 dark:to-zinc-700/20">
+                          <Archive className="h-12 w-12 text-zinc-400/50" />
+                        </div>
+                      )}
+                      <Badge className={`absolute left-3 top-3 ${project.wasSuccessful ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-zinc-500 hover:bg-zinc-600'}`}>
+                        {project.wasSuccessful ? (
+                          <><CheckCircle className="h-3 w-3 mr-1" /> Funded</>
+                        ) : (
+                          'Ended'
+                        )}
+                      </Badge>
+                      <Badge className="absolute right-3 top-3" variant="secondary">
+                        {project.category}
+                      </Badge>
+                    </div>
+                    <CardContent className="pt-4">
+                      <h3 className="mb-1 font-semibold line-clamp-1">{project.title}</h3>
+                      <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+                        {project.subtitle}
+                      </p>
+                      <p className="text-xs text-muted-foreground">by {project.creator}</p>
+                    </CardContent>
+                    <CardFooter className="flex-col items-start gap-3 border-t pt-4">
+                      <Progress
+                        value={Math.min(project.fundingPercentage, 100)}
+                        className={`h-2 ${project.wasSuccessful ? '[&>div]:bg-emerald-500' : ''}`}
+                      />
+                      <div className="flex w-full items-center justify-between text-sm">
+                        <div>
+                          <span className={`font-semibold ${project.wasSuccessful ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                            {project.fundingPercentage}% funded
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {project.backerCount}
+                          </span>
+                          {project.endDate && (
+                            <span className="text-xs">
+                              Ended {new Date(project.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="border-t bg-primary py-16 text-primary-foreground md:py-24">
