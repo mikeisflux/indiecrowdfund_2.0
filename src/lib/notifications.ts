@@ -1114,10 +1114,23 @@ export async function processUnsentConfirmationEmails() {
     },
     include: {
       project: {
-        select: { id: true, title: true, slug: true, imageUrl: true, currency: true },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          imageUrl: true,
+          currency: true,
+          creator: { select: { vanityUrl: true } },
+        },
       },
       reward: {
         select: { title: true },
+      },
+      addons: {
+        select: {
+          quantity: true,
+          addon: { select: { title: true, amount: true } },
+        },
       },
       user: {
         select: { id: true, email: true, name: true },
@@ -1136,10 +1149,23 @@ export async function processUnsentConfirmationEmails() {
     },
     include: {
       project: {
-        select: { id: true, title: true, slug: true, imageUrl: true, currency: true },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          imageUrl: true,
+          currency: true,
+          creator: { select: { vanityUrl: true } },
+        },
       },
       reward: {
         select: { title: true },
+      },
+      addons: {
+        select: {
+          quantity: true,
+          addon: { select: { title: true, amount: true } },
+        },
       },
       user: {
         select: { id: true, email: true, name: true },
@@ -1163,6 +1189,28 @@ export async function processUnsentConfirmationEmails() {
     }
 
     try {
+      // Format addons for the email - convert Decimal amounts to numbers
+      const addons = pledge.addons?.map((addonEntry: { quantity: number; addon: { title: string; amount: unknown } }) => ({
+        title: addonEntry.addon.title,
+        quantity: addonEntry.quantity,
+        amount: Number(addonEntry.addon.amount) * addonEntry.quantity,
+      })) || [];
+
+      // Get shipping info from pledge
+      const shippingInfo = {
+        name: pledge.shippingName || null,
+        address: pledge.shippingAddress || null,
+        city: pledge.shippingCity || null,
+        state: pledge.shippingState || null,
+        postalCode: pledge.shippingPostalCode || null,
+        country: pledge.shippingCountry || null,
+      };
+
+      // Build project URL with vanity URL if available
+      const projectUrlPath = pledge.project.creator?.vanityUrl
+        ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
+        : undefined;
+
       const emailResult = await sendPledgeConfirmationEmail(
         pledge.user.email,
         pledge.user.name || "Backer",
@@ -1172,7 +1220,10 @@ export async function processUnsentConfirmationEmails() {
         pledge.reward?.title || null,
         pledge.chargedImmediately,
         pledge.project.imageUrl,
-        pledge.project.currency
+        pledge.project.currency,
+        addons,
+        shippingInfo,
+        projectUrlPath
       );
 
       if (emailResult.success) {

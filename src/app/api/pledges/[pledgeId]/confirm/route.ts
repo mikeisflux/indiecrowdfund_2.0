@@ -31,7 +31,7 @@ export async function POST(
 
     const { pledgeId } = await params;
 
-    // Get the pledge with project and user info
+    // Get the pledge with project, user, addons, and shipping info
     const pledge = await db.pledge.findUnique({
       where: { id: pledgeId },
       include: {
@@ -45,6 +45,7 @@ export async function POST(
             goalAmount: true,
             currentAmount: true,
             creatorId: true,
+            creator: { select: { vanityUrl: true } },
           },
         },
         user: {
@@ -58,6 +59,12 @@ export async function POST(
           select: {
             id: true,
             title: true,
+          },
+        },
+        addons: {
+          select: {
+            quantity: true,
+            addon: { select: { title: true, amount: true } },
           },
         },
       },
@@ -176,6 +183,28 @@ export async function POST(
     const pledgeEmailEnabled = await isEmailTypeEnabled("pledgeConfirmation");
 
     if (pledge.user.email && pledgeEmailEnabled) {
+      // Format addons for the email - convert Decimal amounts to numbers
+      const addons = pledge.addons?.map((addonEntry: { quantity: number; addon: { title: string; amount: unknown } }) => ({
+        title: addonEntry.addon.title,
+        quantity: addonEntry.quantity,
+        amount: Number(addonEntry.addon.amount) * addonEntry.quantity,
+      })) || [];
+
+      // Get shipping info from pledge
+      const shippingInfo = {
+        name: pledge.shippingName || null,
+        address: pledge.shippingAddress || null,
+        city: pledge.shippingCity || null,
+        state: pledge.shippingState || null,
+        postalCode: pledge.shippingPostalCode || null,
+        country: pledge.shippingCountry || null,
+      };
+
+      // Build project URL with vanity URL if available
+      const projectUrlPath = pledge.project.creator?.vanityUrl
+        ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
+        : undefined;
+
       const emailResult = await sendPledgeConfirmationEmail(
         pledge.user.email,
         pledge.user.name || "Backer",
@@ -185,7 +214,10 @@ export async function POST(
         pledge.reward?.title || null,
         pledge.chargedImmediately,
         pledge.project.imageUrl,
-        pledge.project.currency || "USD"
+        pledge.project.currency || "USD",
+        addons,
+        shippingInfo,
+        projectUrlPath
       );
       emailSent = emailResult.success;
 
