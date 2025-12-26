@@ -545,7 +545,7 @@ export default function BackerDashboard() {
                       <Card key={project.id} className="overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5 group">
                         <div className="flex flex-col md:flex-row">
                           {/* Project Image */}
-                          <div className="relative aspect-video w-full bg-gradient-to-br from-muted to-muted/50 md:aspect-auto md:h-auto md:w-52 overflow-hidden">
+                          <div className="relative aspect-video w-full md:w-64 md:shrink-0 bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
                             {project.imageUrl ? (
                               <Image
                                 src={project.imageUrl}

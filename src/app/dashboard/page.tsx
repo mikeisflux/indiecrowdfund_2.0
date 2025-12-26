@@ -39,11 +39,16 @@ import {
   Box,
   Gift,
   Download,
+  Target,
+  TrendingUp,
+  Zap,
+  CheckCircle,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Project {
   id: string;
@@ -158,6 +163,287 @@ interface DashboardData {
   allAddons: RewardAddonItem[];
   referrers: Referrer[];
   fulfillmentStats: FulfillmentStats | null;
+}
+
+// Glowing stat card component for creator dashboard
+function GlowingStatCard({
+  title,
+  value,
+  prefix = "",
+  suffix = "",
+  icon: Icon,
+  color = "primary",
+  trend,
+  subtitle,
+  delay = 0,
+  pulse = false,
+}: {
+  title: string;
+  value: number | string;
+  prefix?: string;
+  suffix?: string;
+  icon: React.ElementType;
+  color?: "primary" | "green" | "blue" | "purple" | "amber" | "rose" | "cyan";
+  trend?: { value: number; isPositive?: boolean; label?: string };
+  subtitle?: string;
+  delay?: number;
+  pulse?: boolean;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  useEffect(() => {
+    if (!isVisible || typeof value !== "number") return;
+    const duration = 1500;
+    const steps = 60;
+    const stepDuration = duration / steps;
+    const increment = value / steps;
+    let current = 0;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= value) {
+        setDisplayValue(value);
+        clearInterval(timer);
+      } else {
+        setDisplayValue(Math.floor(current));
+      }
+    }, stepDuration);
+    return () => clearInterval(timer);
+  }, [isVisible, value]);
+
+  const colorStyles = {
+    primary: {
+      bg: "from-primary/10 to-primary/5",
+      iconBg: "bg-primary/20",
+      iconColor: "text-primary",
+      glow: "group-hover:shadow-primary/20",
+    },
+    green: {
+      bg: "from-emerald-500/10 to-emerald-500/5",
+      iconBg: "bg-emerald-500/20",
+      iconColor: "text-emerald-500",
+      glow: "group-hover:shadow-emerald-500/20",
+    },
+    blue: {
+      bg: "from-blue-500/10 to-blue-500/5",
+      iconBg: "bg-blue-500/20",
+      iconColor: "text-blue-500",
+      glow: "group-hover:shadow-blue-500/20",
+    },
+    purple: {
+      bg: "from-purple-500/10 to-purple-500/5",
+      iconBg: "bg-purple-500/20",
+      iconColor: "text-purple-500",
+      glow: "group-hover:shadow-purple-500/20",
+    },
+    amber: {
+      bg: "from-amber-500/10 to-amber-500/5",
+      iconBg: "bg-amber-500/20",
+      iconColor: "text-amber-500",
+      glow: "group-hover:shadow-amber-500/20",
+    },
+    rose: {
+      bg: "from-rose-500/10 to-rose-500/5",
+      iconBg: "bg-rose-500/20",
+      iconColor: "text-rose-500",
+      glow: "group-hover:shadow-rose-500/20",
+    },
+    cyan: {
+      bg: "from-cyan-500/10 to-cyan-500/5",
+      iconBg: "bg-cyan-500/20",
+      iconColor: "text-cyan-500",
+      glow: "group-hover:shadow-cyan-500/20",
+    },
+  };
+
+  const styles = colorStyles[color];
+
+  return (
+    <Card
+      className={cn(
+        "group relative overflow-hidden bg-card/50 backdrop-blur border-border/50 transition-all duration-500 hover:border-primary/30",
+        styles.glow,
+        "hover:shadow-lg",
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      )}
+    >
+      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50", styles.bg)} />
+      <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+
+      <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
+        <div className={cn(
+          "p-2 rounded-xl transition-transform group-hover:scale-110",
+          styles.iconBg,
+          pulse && "animate-pulse"
+        )}>
+          <Icon className={cn("h-4 w-4", styles.iconColor)} />
+        </div>
+      </CardHeader>
+      <CardContent className="relative">
+        <div className="text-2xl font-bold tabular-nums">
+          {prefix}
+          {typeof value === "number" ? displayValue.toLocaleString() : value}
+          {suffix}
+        </div>
+        {trend && (
+          <p className={cn(
+            "flex items-center text-xs mt-1",
+            trend.isPositive !== false ? "text-emerald-500" : "text-rose-500"
+          )}>
+            {trend.isPositive !== false ? (
+              <ArrowUpRight className="mr-1 h-3 w-3" />
+            ) : (
+              <ArrowDownRight className="mr-1 h-3 w-3" />
+            )}
+            {trend.isPositive !== false ? "+" : ""}{trend.value}% {trend.label || ""}
+          </p>
+        )}
+        {subtitle && (
+          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Animated bar chart component
+function AnimatedBarChart({
+  data,
+  height = 200,
+  color = "primary",
+}: {
+  data: { label: string; value: number }[];
+  height?: number;
+  color?: "primary" | "green" | "blue" | "purple";
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const maxValue = Math.max(...data.map((d) => d.value), 1);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const colorStyles = {
+    primary: "from-primary to-purple-500",
+    green: "from-emerald-500 to-cyan-500",
+    blue: "from-blue-500 to-indigo-500",
+    purple: "from-purple-500 to-pink-500",
+  };
+
+  return (
+    <div style={{ height }} className="flex items-end gap-2">
+      {data.map((item, index) => {
+        const heightPercent = (item.value / maxValue) * 100;
+        return (
+          <div key={index} className="flex-1 flex flex-col items-center gap-2">
+            <div className="relative w-full group">
+              <div
+                className={cn(
+                  "w-full rounded-t-lg bg-gradient-to-t transition-all duration-1000 ease-out",
+                  colorStyles[color],
+                  "group-hover:opacity-80"
+                )}
+                style={{
+                  height: isVisible ? `${Math.max(heightPercent, 2)}%` : "0%",
+                  minHeight: isVisible ? "4px" : "0",
+                  transitionDelay: `${index * 50}ms`,
+                }}
+              />
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+                ${item.value.toLocaleString()}
+              </div>
+            </div>
+            <span className="text-[10px] text-muted-foreground truncate w-full text-center">
+              {item.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Circular progress component
+function CircularProgress({
+  value,
+  size = 120,
+  strokeWidth = 8,
+  color = "primary",
+}: {
+  value: number;
+  size?: number;
+  strokeWidth?: number;
+  color?: "primary" | "green" | "blue" | "purple";
+}) {
+  const [animatedValue, setAnimatedValue] = useState(0);
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (animatedValue / 100) * circumference;
+
+  useEffect(() => {
+    const duration = 1500;
+    const steps = 60;
+    const stepDuration = duration / steps;
+    const increment = value / steps;
+    let current = 0;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= value) {
+        setAnimatedValue(value);
+        clearInterval(timer);
+      } else {
+        setAnimatedValue(current);
+      }
+    }, stepDuration);
+    return () => clearInterval(timer);
+  }, [value]);
+
+  const colorStyles = {
+    primary: "stroke-primary",
+    green: "stroke-emerald-500",
+    blue: "stroke-blue-500",
+    purple: "stroke-purple-500",
+  };
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          className="text-muted/20"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className={cn(colorStyles[color], "transition-all duration-1000 ease-out")}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-3xl font-bold">{Math.round(animatedValue)}%</span>
+        <span className="text-xs text-muted-foreground">Fulfilled</span>
+      </div>
+    </div>
+  );
 }
 
 export default function CreatorDashboard() {
@@ -350,10 +636,19 @@ export default function CreatorDashboard() {
 
   if (loading && !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading dashboard...</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+        </div>
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary relative" />
+            </div>
+            <p className="text-muted-foreground">Loading dashboard...</p>
+          </div>
         </div>
       </div>
     );
@@ -361,14 +656,19 @@ export default function CreatorDashboard() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold text-destructive">Error</h2>
-          <p className="text-muted-foreground">{error}</p>
-          <Button onClick={fetchDashboardData} className="mt-4">
-            Try Again
-          </Button>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
+        <Card className="max-w-md mx-auto bg-card/50 backdrop-blur border-border/50">
+          <CardContent className="pt-6 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+              <XCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <h2 className="text-lg font-semibold mb-2">Error</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={fetchDashboardData} className="bg-gradient-to-r from-primary to-purple-500">
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -376,14 +676,22 @@ export default function CreatorDashboard() {
   // No projects state
   if (!data?.projects.length) {
     return (
-      <div className="min-h-screen bg-muted/30">
-        <header className="sticky top-0 z-50 border-b bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+        </div>
+
+        <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
           <div className="container flex h-16 items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/" className="text-xl font-bold text-primary">
+              <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
                 IndieCrowdfund
               </Link>
-              <Badge variant="secondary">Creator Dashboard</Badge>
+              <Badge variant="outline" className="border-primary/30 text-primary hidden sm:flex">
+                <Sparkles className="w-3 h-3 mr-1" />
+                Creator Dashboard
+              </Badge>
             </div>
             <div className="flex items-center gap-4">
               <NotificationsDropdown />
@@ -397,18 +705,20 @@ export default function CreatorDashboard() {
           </div>
         </header>
 
-        <div className="container py-20">
+        <div className="container relative py-20">
           <div className="mx-auto max-w-md text-center">
-            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-              <Plus className="h-10 w-10 text-primary" />
+            <div className="mx-auto mb-6 w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center animate-pulse">
+              <Plus className="h-12 w-12 text-primary" />
             </div>
-            <h1 className="mb-2 text-2xl font-bold">Create Your First Project</h1>
-            <p className="mb-6 text-muted-foreground">
+            <h1 className="mb-2 text-3xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+              Create Your First Project
+            </h1>
+            <p className="mb-8 text-muted-foreground">
               Start bringing your creative vision to life. Create a crowdfunding campaign
               and connect with backers who believe in your project.
             </p>
             <Link href="/projects/new">
-              <Button size="lg">
+              <Button size="lg" className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 shadow-lg shadow-primary/25">
                 <Plus className="mr-2 h-5 w-5" />
                 Create Project
               </Button>
@@ -426,23 +736,35 @@ export default function CreatorDashboard() {
     : 0;
 
   // Get the last 10 days of funding data for the chart
-  const chartData = data.fundingData.slice(-10);
-  const maxAmount = Math.max(...chartData.map(d => d.amount), 1);
+  const chartData = data.fundingData.slice(-10).map(d => ({
+    label: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    value: d.amount,
+  }));
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      {/* Background effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 right-1/3 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background">
+      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/" className="text-xl font-bold text-primary">
+            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
               IndieCrowdfund
             </Link>
-            <Badge variant="secondary">Creator Dashboard</Badge>
+            <Badge variant="outline" className="border-primary/30 text-primary hidden sm:flex">
+              <Sparkles className="w-3 h-3 mr-1" />
+              Creator Dashboard
+            </Badge>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <NotificationsDropdown />
-            <Link href="/dashboard/settings">
+            <Link href="/dashboard/settings" className="hidden sm:block">
               <Button variant="ghost" size="icon">
                 <Settings className="h-5 w-5" />
               </Button>
@@ -453,10 +775,10 @@ export default function CreatorDashboard() {
       </header>
 
       {/* Sub Navigation */}
-      <div className="border-b bg-background">
-        <div className="container flex flex-wrap items-center gap-2 py-3 md:h-12 md:py-0 md:gap-4">
+      <div className="border-b bg-background/60 backdrop-blur-sm">
+        <div className="container flex flex-wrap items-center gap-2 py-3 md:h-14 md:py-0 md:gap-4">
           <Select value={selectedProjectId} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-full sm:w-[280px]">
+            <SelectTrigger className="w-full sm:w-[280px] bg-card/50 backdrop-blur border-border/50">
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>
@@ -472,8 +794,15 @@ export default function CreatorDashboard() {
             const displayStatus = hasEnded && project.status === "LIVE" ? "ENDED" : project.status;
             return (
               <Badge
-                variant={displayStatus === "LIVE" ? "default" : displayStatus === "ENDED" ? "destructive" : "secondary"}
+                className={cn(
+                  "font-medium",
+                  displayStatus === "LIVE" && "bg-gradient-to-r from-green-500 to-emerald-600 border-0",
+                  displayStatus === "ENDED" && "bg-gradient-to-r from-rose-500 to-red-600 border-0",
+                  displayStatus === "FUNDED" && "bg-gradient-to-r from-blue-500 to-indigo-600 border-0"
+                )}
               >
+                {displayStatus === "LIVE" && <Zap className="w-3 h-3 mr-1" />}
+                {displayStatus === "FUNDED" && <CheckCircle className="w-3 h-3 mr-1" />}
                 {displayStatus}
               </Badge>
             );
@@ -482,20 +811,20 @@ export default function CreatorDashboard() {
             {project && (
               <>
                 <Link href={project.projectUrl} className="flex-1 sm:flex-initial">
-                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto hover:border-primary/50 bg-card/50 backdrop-blur">
                     <Eye className="mr-2 h-4 w-4" />
                     <span className="hidden xs:inline">View</span>
                     <span className="xs:hidden">View</span>
                   </Button>
                 </Link>
                 <Link href={`${project.projectUrl}/edit`} className="flex-1 sm:flex-initial">
-                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto hover:border-primary/50 bg-card/50 backdrop-blur">
                     <Settings className="mr-2 h-4 w-4" />
                     <span className="hidden xs:inline">Edit</span>
                     <span className="xs:hidden">Edit</span>
                   </Button>
                 </Link>
-                <Button size="sm" className="flex-1 sm:flex-initial">
+                <Button size="sm" className="flex-1 sm:flex-initial bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
                   <Share2 className="mr-2 h-4 w-4" />
                   <span className="hidden xs:inline">Share</span>
                   <span className="xs:hidden">Share</span>
@@ -506,114 +835,94 @@ export default function CreatorDashboard() {
         </div>
       </div>
 
-      <div className="container py-6">
+      <div className="container relative py-6">
         {project && stats ? (
           <>
-            {/* Stats Overview */}
+            {/* Stats Overview - Animated */}
             <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total Pledged
-                  </CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    ${Number(project.currentAmount).toLocaleString()}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {fundingPercent.toFixed(0)}% of ${Number(project.goalAmount).toLocaleString()} goal
-                  </p>
-                  <Progress value={Math.min(fundingPercent, 100)} className="mt-2 h-1" />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Backers
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{project.backerCount}</div>
-                  {stats.todayBackers > 0 ? (
-                    <p className="flex items-center text-xs text-green-600">
-                      <ArrowUpRight className="mr-1 h-3 w-3" />
-                      +{stats.todayBackers} today
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">No new backers today</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Page Views
-                  </CardTitle>
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.todayViews.toLocaleString()}</div>
-                  {stats.weeklyGrowth !== 0 ? (
-                    <p className={`flex items-center text-xs ${stats.weeklyGrowth > 0 ? "text-green-600" : "text-red-600"}`}>
-                      {stats.weeklyGrowth > 0 ? (
-                        <ArrowUpRight className="mr-1 h-3 w-3" />
-                      ) : (
-                        <ArrowDownRight className="mr-1 h-3 w-3" />
-                      )}
-                      {stats.weeklyGrowth > 0 ? "+" : ""}{stats.weeklyGrowth}% this week
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">No change this week</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Days Remaining
-                  </CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{project.daysRemaining}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {project.endDate
-                      ? `Campaign ends ${new Date(project.endDate).toLocaleDateString()}`
-                      : "No end date set"}
-                  </p>
-                </CardContent>
-              </Card>
+              <GlowingStatCard
+                title="Total Pledged"
+                value={Number(project.currentAmount)}
+                prefix="$"
+                icon={DollarSign}
+                color="green"
+                subtitle={`${fundingPercent.toFixed(0)}% of $${Number(project.goalAmount).toLocaleString()} goal`}
+                delay={0}
+              />
+              <GlowingStatCard
+                title="Backers"
+                value={project.backerCount}
+                icon={Users}
+                color="blue"
+                trend={stats.todayBackers > 0 ? { value: stats.todayBackers, label: "today" } : undefined}
+                subtitle={stats.todayBackers === 0 ? "No new backers today" : undefined}
+                delay={100}
+              />
+              <GlowingStatCard
+                title="Page Views"
+                value={stats.todayViews}
+                icon={Eye}
+                color="purple"
+                trend={stats.weeklyGrowth !== 0 ? { value: Math.abs(stats.weeklyGrowth), isPositive: stats.weeklyGrowth > 0, label: "this week" } : undefined}
+                subtitle={stats.weeklyGrowth === 0 ? "No change this week" : undefined}
+                delay={200}
+              />
+              <GlowingStatCard
+                title="Days Remaining"
+                value={project.daysRemaining}
+                icon={Clock}
+                color={project.daysRemaining <= 7 ? "amber" : "cyan"}
+                subtitle={project.endDate ? `Ends ${new Date(project.endDate).toLocaleDateString()}` : "No end date set"}
+                delay={300}
+                pulse={project.daysRemaining <= 3}
+              />
             </div>
+
+            {/* Funding Progress Bar */}
+            <Card className="mb-6 bg-card/50 backdrop-blur border-border/50 overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Campaign Progress</span>
+                  <span className="text-sm text-muted-foreground">
+                    <span className="font-bold text-primary">${Number(project.currentAmount).toLocaleString()}</span>
+                    {" "}of ${Number(project.goalAmount).toLocaleString()}
+                  </span>
+                </div>
+                <div className="relative h-3 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-purple-500 rounded-full transition-all duration-1000 ease-out"
+                    style={{ width: `${Math.min(fundingPercent, 100)}%` }}
+                  />
+                  {fundingPercent >= 100 && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent animate-pulse" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Main Content */}
             <Tabs defaultValue="overview" className="space-y-6">
               <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-                <TabsList className="inline-flex w-max md:w-auto">
-                  <TabsTrigger value="overview">
+                <TabsList className="inline-flex w-max md:w-auto bg-card/50 backdrop-blur border border-border/50 p-1">
+                  <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <BarChart3 className="mr-2 h-4 w-4" />
                     Overview
                   </TabsTrigger>
-                  <TabsTrigger value="backers">
+                  <TabsTrigger value="backers" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <Users className="mr-2 h-4 w-4" />
                     Backers
                   </TabsTrigger>
-                  <TabsTrigger value="rewards">
+                  <TabsTrigger value="rewards" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <Package className="mr-2 h-4 w-4" />
                     Rewards
                   </TabsTrigger>
-                  <TabsTrigger value="messages">
+                  <TabsTrigger value="messages" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <MessageSquare className="mr-2 h-4 w-4" />
                     Messages
                   </TabsTrigger>
                   <Link href="/dashboard/email">
                     <TabsTrigger value="email" asChild>
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-foreground">
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
                         <MessageSquare className="mr-2 h-4 w-4" />
                         Email
                       </div>
@@ -621,19 +930,19 @@ export default function CreatorDashboard() {
                   </Link>
                   <Link href="/dashboard/email-marketing">
                     <TabsTrigger value="email-marketing" asChild>
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-foreground">
-                        <DollarSign className="mr-2 h-4 w-4" />
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
+                        <TrendingUp className="mr-2 h-4 w-4" />
                         Marketing
                       </div>
                     </TabsTrigger>
                   </Link>
-                  <TabsTrigger value="fulfillment">
+                  <TabsTrigger value="fulfillment" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <Truck className="mr-2 h-4 w-4" />
                     Fulfillment
                   </TabsTrigger>
                   <Link href="/dashboard/social">
                     <TabsTrigger value="social" asChild>
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-foreground">
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
                         <Sparkles className="mr-2 h-4 w-4" />
                         Social Hub
                       </div>
@@ -641,7 +950,7 @@ export default function CreatorDashboard() {
                   </Link>
                   <Link href="/dashboard/indiekit">
                     <TabsTrigger value="indiekit" asChild>
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-foreground">
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
                         <Package className="mr-2 h-4 w-4" />
                         IndieKit
                       </div>
@@ -653,11 +962,16 @@ export default function CreatorDashboard() {
               <TabsContent value="overview" className="space-y-6">
                 <div className="grid gap-6 lg:grid-cols-3">
                   {/* Funding Chart */}
-                  <Card className="lg:col-span-2">
+                  <Card className="lg:col-span-2 bg-card/50 backdrop-blur border-border/50">
                     <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle>Funding Progress</CardTitle>
+                      <CardTitle className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-primary/20">
+                          <BarChart3 className="h-4 w-4 text-primary" />
+                        </div>
+                        Funding Progress
+                      </CardTitle>
                       <Select value={timeRange} onValueChange={setTimeRange}>
-                        <SelectTrigger className="w-[120px]">
+                        <SelectTrigger className="w-[120px] bg-card/50">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -670,60 +984,41 @@ export default function CreatorDashboard() {
                     </CardHeader>
                     <CardContent>
                       {chartData.length > 0 ? (
-                        <div className="h-[300px]">
-                          <div className="flex h-full items-end gap-2">
-                            {chartData.map((day, i) => (
-                              <div
-                                key={i}
-                                className="group relative flex-1"
-                              >
-                                <div
-                                  className="w-full rounded-t bg-primary transition-all hover:bg-primary/80"
-                                  style={{
-                                    height: `${Math.max((day.amount / maxAmount) * 100, 2)}%`,
-                                  }}
-                                />
-                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-md whitespace-nowrap">
-                                  ${Number(day.amount).toLocaleString()}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-                            {chartData
-                              .filter((_, i) => i % Math.ceil(chartData.length / 5) === 0)
-                              .map((day, i) => (
-                                <span key={i}>
-                                  {new Date(day.date).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                </span>
-                              ))}
-                          </div>
-                        </div>
+                        <AnimatedBarChart data={chartData} height={250} color="primary" />
                       ) : (
-                        <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                          No funding data yet
+                        <div className="flex h-[250px] items-center justify-center text-muted-foreground">
+                          <div className="text-center">
+                            <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                            <p>No funding data yet</p>
+                          </div>
                         </div>
                       )}
                     </CardContent>
                   </Card>
 
                   {/* Recent Backers */}
-                  <Card>
+                  <Card className="bg-card/50 backdrop-blur border-border/50">
                     <CardHeader>
-                      <CardTitle>Recent Backers</CardTitle>
+                      <CardTitle className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-blue-500/20">
+                          <Users className="h-4 w-4 text-blue-500" />
+                        </div>
+                        Recent Backers
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       {data.recentBackers.length > 0 ? (
                         <div className="space-y-4">
-                          {data.recentBackers.slice(0, 5).map((backer) => (
-                            <div key={backer.id} className="flex items-center justify-between">
+                          {data.recentBackers.slice(0, 5).map((backer, index) => (
+                            <div
+                              key={backer.id}
+                              className="flex items-center justify-between p-2 rounded-xl hover:bg-muted/30 transition-all duration-300 animate-in fade-in slide-in-from-right"
+                              style={{ animationDelay: `${index * 100}ms` }}
+                            >
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8">
+                                <Avatar className="h-8 w-8 ring-2 ring-primary/20">
                                   {backer.image && <AvatarImage src={backer.image} />}
-                                  <AvatarFallback className="text-xs">
+                                  <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-purple-500/20">
                                     {backer.name[0]?.toUpperCase() || "?"}
                                   </AvatarFallback>
                                 </Avatar>
@@ -732,7 +1027,10 @@ export default function CreatorDashboard() {
                                     <p className="text-sm font-medium">{backer.name}</p>
                                     <Badge
                                       variant={backer.status === "COMPLETED" ? "default" : "secondary"}
-                                      className="text-[10px] px-1.5 py-0"
+                                      className={cn(
+                                        "text-[10px] px-1.5 py-0",
+                                        backer.status === "COMPLETED" && "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
+                                      )}
                                     >
                                       {backer.status}
                                     </Badge>
@@ -743,7 +1041,7 @@ export default function CreatorDashboard() {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-sm font-medium">${backer.amount}</p>
+                                <p className="text-sm font-bold text-primary">${backer.amount}</p>
                                 <p className="text-xs text-muted-foreground">
                                   {backer.time}
                                 </p>
@@ -752,8 +1050,9 @@ export default function CreatorDashboard() {
                           ))}
                         </div>
                       ) : (
-                        <div className="py-8 text-center text-muted-foreground">
-                          No backers yet
+                        <div className="py-8 text-center">
+                          <Users className="h-12 w-12 mx-auto mb-2 text-muted-foreground/30" />
+                          <p className="text-muted-foreground">No backers yet</p>
                         </div>
                       )}
                     </CardContent>
@@ -761,22 +1060,27 @@ export default function CreatorDashboard() {
                 </div>
 
                 {/* Traffic Sources */}
-                <Card>
+                <Card className="bg-card/50 backdrop-blur border-border/50">
                   <CardHeader>
-                    <CardTitle>Traffic Sources</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-purple-500/20">
+                        <Target className="h-4 w-4 text-purple-500" />
+                      </div>
+                      Traffic Sources
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {data.referrers.length > 0 ? (
                       <div className="space-y-4">
                         {data.referrers.map((referrer, i) => (
-                          <div key={i} className="flex items-center gap-4">
-                            <div className="w-24 text-sm font-medium truncate">
+                          <div key={i} className="flex items-center gap-4 p-2 rounded-xl hover:bg-muted/20 transition-colors">
+                            <div className="w-28 text-sm font-medium truncate">
                               {referrer.source}
                             </div>
                             <div className="flex-1">
-                              <div className="flex h-2 overflow-hidden rounded-full bg-muted">
+                              <div className="flex h-2 overflow-hidden rounded-full bg-muted/30">
                                 <div
-                                  className="bg-primary"
+                                  className="bg-gradient-to-r from-primary to-purple-500 rounded-full transition-all duration-500"
                                   style={{ width: `${referrer.percentage}%` }}
                                 />
                               </div>
@@ -787,13 +1091,13 @@ export default function CreatorDashboard() {
                             <div className="w-16 text-right text-sm font-medium">
                               {referrer.pledges}
                             </div>
-                            <div className="w-24 text-right text-sm font-medium text-primary">
+                            <div className="w-24 text-right text-sm font-bold text-primary">
                               ${Number(referrer.amount).toLocaleString()}
                             </div>
                           </div>
                         ))}
-                        <div className="flex items-center gap-4 border-t pt-4 text-xs text-muted-foreground">
-                          <div className="w-24" />
+                        <div className="flex items-center gap-4 border-t border-border/50 pt-4 text-xs text-muted-foreground">
+                          <div className="w-28" />
                           <div className="flex-1" />
                           <div className="w-16 text-right">Visits</div>
                           <div className="w-16 text-right">Pledges</div>
@@ -801,8 +1105,9 @@ export default function CreatorDashboard() {
                         </div>
                       </div>
                     ) : (
-                      <div className="py-8 text-center text-muted-foreground">
-                        No traffic data yet
+                      <div className="py-8 text-center">
+                        <Target className="h-12 w-12 mx-auto mb-2 text-muted-foreground/30" />
+                        <p className="text-muted-foreground">No traffic data yet</p>
                       </div>
                     )}
                   </CardContent>
@@ -810,71 +1115,55 @@ export default function CreatorDashboard() {
 
                 {/* Quick Stats */}
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Conversion Rate
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stats.conversionRate}%</div>
-                      <p className="text-xs text-muted-foreground">
-                        Visitors who pledge
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Average Pledge
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">${stats.avgPledge}</div>
-                      <p className="text-xs text-muted-foreground">
-                        Per backer
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Today&apos;s Pledges
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">${stats.todayPledges.toLocaleString()}</div>
-                      {stats.dailyChange !== 0 ? (
-                        <p className={`flex items-center text-xs ${stats.dailyChange > 0 ? "text-green-600" : "text-red-600"}`}>
-                          {stats.dailyChange > 0 ? (
-                            <ArrowUpRight className="mr-1 h-3 w-3" />
-                          ) : (
-                            <ArrowDownRight className="mr-1 h-3 w-3" />
-                          )}
-                          {stats.dailyChange > 0 ? "+" : ""}{stats.dailyChange}% vs yesterday
-                        </p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          Same as yesterday
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <GlowingStatCard
+                    title="Conversion Rate"
+                    value={stats.conversionRate}
+                    suffix="%"
+                    icon={Target}
+                    color="purple"
+                    subtitle="Visitors who pledge"
+                    delay={0}
+                  />
+                  <GlowingStatCard
+                    title="Average Pledge"
+                    value={stats.avgPledge}
+                    prefix="$"
+                    icon={DollarSign}
+                    color="green"
+                    subtitle="Per backer"
+                    delay={100}
+                  />
+                  <GlowingStatCard
+                    title="Today's Pledges"
+                    value={stats.todayPledges}
+                    prefix="$"
+                    icon={TrendingUp}
+                    color="blue"
+                    trend={stats.dailyChange !== 0 ? { value: Math.abs(stats.dailyChange), isPositive: stats.dailyChange > 0, label: "vs yesterday" } : undefined}
+                    subtitle={stats.dailyChange === 0 ? "Same as yesterday" : undefined}
+                    delay={200}
+                  />
                 </div>
               </TabsContent>
 
               <TabsContent value="rewards" className="space-y-6">
-                <Card>
+                <Card className="bg-card/50 backdrop-blur border-border/50">
                   <CardHeader>
-                    <CardTitle>Reward Performance</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-purple-500/20">
+                        <Gift className="h-4 w-4 text-purple-500" />
+                      </div>
+                      Reward Performance
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {data.rewardStats.length > 0 ? (
                       <div className="space-y-4">
-                        {data.rewardStats.map((reward) => (
+                        {data.rewardStats.map((reward, index) => (
                           <div
                             key={reward.id}
-                            className="flex items-center justify-between rounded-lg border p-4"
+                            className="flex items-center justify-between rounded-xl border border-border/50 p-4 bg-gradient-to-r from-muted/20 to-transparent hover:border-primary/30 transition-all animate-in fade-in slide-in-from-left"
+                            style={{ animationDelay: `${index * 100}ms` }}
                           >
                             <div>
                               <p className="font-medium">{reward.title}</p>
@@ -901,7 +1190,7 @@ export default function CreatorDashboard() {
                                   </p>
                                 </div>
                               )}
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" className="hover:bg-primary/10">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </div>
@@ -909,8 +1198,9 @@ export default function CreatorDashboard() {
                         ))}
                       </div>
                     ) : (
-                      <div className="py-12 text-center text-muted-foreground">
-                        No rewards created yet
+                      <div className="py-12 text-center">
+                        <Gift className="h-12 w-12 mx-auto mb-2 text-muted-foreground/30" />
+                        <p className="text-muted-foreground">No rewards created yet</p>
                       </div>
                     )}
                   </CardContent>
@@ -918,18 +1208,23 @@ export default function CreatorDashboard() {
               </TabsContent>
 
               <TabsContent value="backers" className="space-y-6">
-                <Card>
+                <Card className="bg-card/50 backdrop-blur border-border/50">
                   <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>All Backers</CardTitle>
-                    <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                    <CardTitle className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-blue-500/20">
+                        <Users className="h-4 w-4 text-blue-500" />
+                      </div>
+                      All Backers
+                    </CardTitle>
+                    <Button variant="outline" size="sm" onClick={handleExportCSV} className="hover:border-primary/50 bg-card/50">
                       <Download className="h-4 w-4 mr-2" />
                       Export CSV
                     </Button>
                   </CardHeader>
                   <CardContent>
                     {data.recentBackers.length > 0 ? (
-                      <div className="rounded-lg border overflow-x-auto">
-                        <div className="grid grid-cols-6 gap-4 border-b bg-muted/50 p-3 text-sm font-medium min-w-[800px]">
+                      <div className="rounded-xl border border-border/50 overflow-x-auto">
+                        <div className="grid grid-cols-6 gap-4 border-b border-border/50 bg-muted/30 p-3 text-sm font-medium min-w-[800px]">
                           <div>Backer</div>
                           <div>Reward</div>
                           <div>Amount</div>
@@ -937,10 +1232,11 @@ export default function CreatorDashboard() {
                           <div>Date</div>
                           <div>Actions</div>
                         </div>
-                        {data.recentBackers.map((backer) => (
+                        {data.recentBackers.map((backer, index) => (
                           <div
                             key={backer.id}
-                            className="grid grid-cols-6 gap-4 border-b p-3 text-sm last:border-0 min-w-[800px] items-center"
+                            className="grid grid-cols-6 gap-4 border-b border-border/50 p-3 text-sm last:border-0 min-w-[800px] items-center hover:bg-muted/20 transition-colors animate-in fade-in"
+                            style={{ animationDelay: `${index * 50}ms` }}
                           >
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6">
@@ -957,15 +1253,15 @@ export default function CreatorDashboard() {
                               </div>
                             </div>
                             <div>{backer.reward}</div>
-                            <div className="font-medium">${backer.amount}</div>
+                            <div className="font-bold text-primary">${backer.amount}</div>
                             <div>
                               <Badge
-                                variant={
-                                  backer.status === "COMPLETED" ? "default" :
-                                  backer.status === "PENDING" ? "secondary" :
-                                  backer.status === "REFUNDED" ? "outline" :
-                                  "destructive"
-                                }
+                                className={cn(
+                                  backer.status === "COMPLETED" && "bg-emerald-500/20 text-emerald-500 border-emerald-500/30",
+                                  backer.status === "PENDING" && "bg-amber-500/20 text-amber-500 border-amber-500/30",
+                                  backer.status === "REFUNDED" && "bg-muted text-muted-foreground",
+                                  backer.status === "CANCELLED" && "bg-rose-500/20 text-rose-500 border-rose-500/30"
+                                )}
                               >
                                 {backer.status}
                               </Badge>
@@ -1004,8 +1300,9 @@ export default function CreatorDashboard() {
                         ))}
                       </div>
                     ) : (
-                      <div className="py-12 text-center text-muted-foreground">
-                        No backers yet
+                      <div className="py-12 text-center">
+                        <Users className="h-12 w-12 mx-auto mb-2 text-muted-foreground/30" />
+                        <p className="text-muted-foreground">No backers yet</p>
                       </div>
                     )}
                   </CardContent>
@@ -1013,9 +1310,9 @@ export default function CreatorDashboard() {
               </TabsContent>
 
               <TabsContent value="messages">
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center mb-6">
+                <Card className="bg-card/50 backdrop-blur border-border/50">
+                  <CardContent className="flex flex-col items-center justify-center py-16">
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-6 animate-pulse">
                       <MessageSquare className="h-10 w-10 text-primary" />
                     </div>
                     <h3 className="mb-2 font-semibold text-lg">Backer Messages</h3>
@@ -1023,7 +1320,7 @@ export default function CreatorDashboard() {
                       Connect with your backers, answer questions, and keep them updated on your project&apos;s progress.
                     </p>
                     <Link href="/dashboard/messages">
-                      <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
+                      <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 shadow-lg shadow-primary/25">
                         <MessageSquare className="mr-2 h-4 w-4" />
                         Open Messages
                       </Button>
@@ -1038,43 +1335,22 @@ export default function CreatorDashboard() {
                     {/* Fulfillment Progress Overview */}
                     <div className="grid gap-6 lg:grid-cols-3">
                       {/* Circular Progress */}
-                      <Card className="lg:col-span-1">
+                      <Card className="lg:col-span-1 bg-card/50 backdrop-blur border-border/50">
                         <CardHeader>
-                          <CardTitle className="text-center">Fulfillment Progress</CardTitle>
+                          <CardTitle className="text-center flex items-center justify-center gap-2">
+                            <div className="p-1.5 rounded-lg bg-emerald-500/20">
+                              <CheckCircle className="h-4 w-4 text-emerald-500" />
+                            </div>
+                            Fulfillment Progress
+                          </CardTitle>
                         </CardHeader>
                         <CardContent className="flex flex-col items-center">
-                          {/* Circular Progress Indicator */}
-                          <div className="relative w-48 h-48">
-                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                              {/* Background circle */}
-                              <circle
-                                cx="50"
-                                cy="50"
-                                r="40"
-                                stroke="currentColor"
-                                strokeWidth="8"
-                                fill="none"
-                                className="text-muted/20"
-                              />
-                              {/* Progress circle */}
-                              <circle
-                                cx="50"
-                                cy="50"
-                                r="40"
-                                stroke="currentColor"
-                                strokeWidth="8"
-                                fill="none"
-                                strokeLinecap="round"
-                                className="text-primary"
-                                strokeDasharray={`${(data.fulfillmentStats.fulfillmentPercentage / 100) * 251.2} 251.2`}
-                              />
-                            </svg>
-                            {/* Center text */}
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                              <span className="text-4xl font-bold">{data.fulfillmentStats.fulfillmentPercentage}%</span>
-                              <span className="text-sm text-muted-foreground">Fulfilled</span>
-                            </div>
-                          </div>
+                          <CircularProgress
+                            value={data.fulfillmentStats.fulfillmentPercentage}
+                            size={180}
+                            strokeWidth={12}
+                            color="green"
+                          />
                           <div className="mt-4 text-center">
                             <p className="text-lg font-semibold">
                               {data.fulfillmentStats.shippedBackers} of {data.fulfillmentStats.totalBackers} backers
@@ -1085,30 +1361,35 @@ export default function CreatorDashboard() {
                       </Card>
 
                       {/* Status Breakdown */}
-                      <Card className="lg:col-span-2">
+                      <Card className="lg:col-span-2 bg-card/50 backdrop-blur border-border/50">
                         <CardHeader>
-                          <CardTitle>Fulfillment Status Breakdown</CardTitle>
+                          <CardTitle className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-lg bg-blue-500/20">
+                              <Truck className="h-4 w-4 text-blue-500" />
+                            </div>
+                            Fulfillment Status Breakdown
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="text-center p-4 rounded-lg bg-muted/30">
-                              <div className="w-3 h-3 rounded-full bg-gray-400 mx-auto mb-2" />
+                            <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/50">
+                              <div className="w-4 h-4 rounded-full bg-gray-400 mx-auto mb-2" />
                               <p className="text-2xl font-bold">{data.fulfillmentStats.statusBreakdown.notStarted}</p>
                               <p className="text-xs text-muted-foreground">Not Started</p>
                             </div>
-                            <div className="text-center p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30">
-                              <div className="w-3 h-3 rounded-full bg-blue-500 mx-auto mb-2" />
-                              <p className="text-2xl font-bold text-blue-600">{data.fulfillmentStats.statusBreakdown.inProgress}</p>
+                            <div className="text-center p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                              <div className="w-4 h-4 rounded-full bg-blue-500 mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-blue-500">{data.fulfillmentStats.statusBreakdown.inProgress}</p>
                               <p className="text-xs text-muted-foreground">In Progress</p>
                             </div>
-                            <div className="text-center p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30">
-                              <div className="w-3 h-3 rounded-full bg-amber-500 mx-auto mb-2" />
-                              <p className="text-2xl font-bold text-amber-600">{data.fulfillmentStats.statusBreakdown.shipped}</p>
+                            <div className="text-center p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                              <div className="w-4 h-4 rounded-full bg-amber-500 mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-amber-500">{data.fulfillmentStats.statusBreakdown.shipped}</p>
                               <p className="text-xs text-muted-foreground">Shipped</p>
                             </div>
-                            <div className="text-center p-4 rounded-lg bg-green-50 dark:bg-green-950/30">
-                              <div className="w-3 h-3 rounded-full bg-green-500 mx-auto mb-2" />
-                              <p className="text-2xl font-bold text-green-600">{data.fulfillmentStats.statusBreakdown.delivered}</p>
+                            <div className="text-center p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                              <div className="w-4 h-4 rounded-full bg-emerald-500 mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-emerald-500">{data.fulfillmentStats.statusBreakdown.delivered}</p>
                               <p className="text-xs text-muted-foreground">Delivered</p>
                             </div>
                           </div>
@@ -1118,7 +1399,7 @@ export default function CreatorDashboard() {
                             <div className="flex h-4 rounded-full overflow-hidden bg-muted/30">
                               {data.fulfillmentStats.statusBreakdown.delivered > 0 && (
                                 <div
-                                  className="bg-green-500"
+                                  className="bg-emerald-500 transition-all duration-500"
                                   style={{
                                     width: `${(data.fulfillmentStats.statusBreakdown.delivered / data.fulfillmentStats.totalBackers) * 100}%`,
                                   }}
@@ -1126,7 +1407,7 @@ export default function CreatorDashboard() {
                               )}
                               {data.fulfillmentStats.statusBreakdown.shipped > 0 && (
                                 <div
-                                  className="bg-amber-500"
+                                  className="bg-amber-500 transition-all duration-500"
                                   style={{
                                     width: `${(data.fulfillmentStats.statusBreakdown.shipped / data.fulfillmentStats.totalBackers) * 100}%`,
                                   }}
@@ -1134,7 +1415,7 @@ export default function CreatorDashboard() {
                               )}
                               {data.fulfillmentStats.statusBreakdown.inProgress > 0 && (
                                 <div
-                                  className="bg-blue-500"
+                                  className="bg-blue-500 transition-all duration-500"
                                   style={{
                                     width: `${(data.fulfillmentStats.statusBreakdown.inProgress / data.fulfillmentStats.totalBackers) * 100}%`,
                                   }}
@@ -1147,10 +1428,12 @@ export default function CreatorDashboard() {
                     </div>
 
                     {/* Items to Fulfill */}
-                    <Card>
+                    <Card className="bg-card/50 backdrop-blur border-border/50">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                          <Package className="h-5 w-5" />
+                          <div className="p-1.5 rounded-lg bg-purple-500/20">
+                            <Package className="h-4 w-4 text-purple-500" />
+                          </div>
                           Items to Fulfill
                         </CardTitle>
                         <p className="text-sm text-muted-foreground">
@@ -1159,8 +1442,8 @@ export default function CreatorDashboard() {
                       </CardHeader>
                       <CardContent>
                         {data.fulfillmentStats.items.length > 0 ? (
-                          <div className="rounded-lg border overflow-hidden">
-                            <div className="grid grid-cols-12 gap-4 bg-muted/50 p-3 text-sm font-medium">
+                          <div className="rounded-xl border border-border/50 overflow-hidden">
+                            <div className="grid grid-cols-12 gap-4 bg-muted/30 p-3 text-sm font-medium">
                               <div className="col-span-1">Type</div>
                               <div className="col-span-8">Item Name</div>
                               <div className="col-span-3 text-right">Quantity Needed</div>
@@ -1168,18 +1451,27 @@ export default function CreatorDashboard() {
                             {data.fulfillmentStats.items.map((item, index) => (
                               <div
                                 key={index}
-                                className="grid grid-cols-12 gap-4 p-3 text-sm border-t items-center"
+                                className="grid grid-cols-12 gap-4 p-3 text-sm border-t border-border/50 items-center hover:bg-muted/20 transition-colors animate-in fade-in"
+                                style={{ animationDelay: `${index * 50}ms` }}
                               >
                                 <div className="col-span-1">
                                   {item.type === "reward" ? (
-                                    <Gift className="h-4 w-4 text-primary" />
+                                    <div className="p-1.5 rounded-lg bg-primary/20 inline-block">
+                                      <Gift className="h-4 w-4 text-primary" />
+                                    </div>
                                   ) : (
-                                    <Box className="h-4 w-4 text-amber-500" />
+                                    <div className="p-1.5 rounded-lg bg-amber-500/20 inline-block">
+                                      <Box className="h-4 w-4 text-amber-500" />
+                                    </div>
                                   )}
                                 </div>
                                 <div className="col-span-8 flex items-center gap-2">
                                   <span className="font-medium">{item.name}</span>
-                                  <Badge variant={item.type === "reward" ? "default" : "secondary"} className="text-xs">
+                                  <Badge
+                                    className={cn(
+                                      item.type === "reward" ? "bg-primary/20 text-primary border-primary/30" : "bg-amber-500/20 text-amber-500 border-amber-500/30"
+                                    )}
+                                  >
                                     {item.type === "reward" ? "Reward" : "Add-on"}
                                   </Badge>
                                 </div>
@@ -1188,23 +1480,26 @@ export default function CreatorDashboard() {
                                 </div>
                               </div>
                             ))}
-                            <div className="grid grid-cols-12 gap-4 p-3 bg-muted/30 border-t font-medium">
+                            <div className="grid grid-cols-12 gap-4 p-3 bg-muted/30 border-t border-border/50 font-medium">
                               <div className="col-span-9">Total Items</div>
-                              <div className="col-span-3 text-right text-lg">
+                              <div className="col-span-3 text-right text-lg text-primary">
                                 {data.fulfillmentStats.items.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
                               </div>
                             </div>
                           </div>
                         ) : (
-                          <div className="py-8 text-center text-muted-foreground">
-                            No items to fulfill yet. Reward items will appear here once backers pledge.
+                          <div className="py-8 text-center">
+                            <Package className="h-12 w-12 mx-auto mb-2 text-muted-foreground/30" />
+                            <p className="text-muted-foreground">
+                              No items to fulfill yet. Reward items will appear here once backers pledge.
+                            </p>
                           </div>
                         )}
                       </CardContent>
                     </Card>
 
                     {/* Link to IndieKit */}
-                    <Card>
+                    <Card className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 border-primary/20">
                       <CardContent className="py-6">
                         <div className="flex items-center justify-between">
                           <div>
@@ -1214,7 +1509,7 @@ export default function CreatorDashboard() {
                             </p>
                           </div>
                           <Link href="/dashboard/indiekit">
-                            <Button>
+                            <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 shadow-lg shadow-primary/25">
                               <Package className="mr-2 h-4 w-4" />
                               Open IndieKit
                             </Button>
@@ -1224,12 +1519,14 @@ export default function CreatorDashboard() {
                     </Card>
                   </>
                 ) : (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                      <Truck className="mb-4 h-12 w-12 text-muted-foreground" />
-                      <h3 className="mb-2 font-semibold">Fulfillment available after funding</h3>
-                      <p className="mb-4 text-center text-sm text-muted-foreground">
-                        Once your campaign ends successfully, you&apos;ll be able to manage<br />
+                  <Card className="bg-card/50 backdrop-blur border-border/50">
+                    <CardContent className="flex flex-col items-center justify-center py-16">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-6">
+                        <Truck className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                      <h3 className="mb-2 font-semibold text-lg">Fulfillment available after funding</h3>
+                      <p className="mb-4 text-center text-sm text-muted-foreground max-w-md">
+                        Once your campaign ends successfully, you&apos;ll be able to manage
                         backer surveys and reward fulfillment here
                       </p>
                     </CardContent>
@@ -1239,8 +1536,11 @@ export default function CreatorDashboard() {
             </Tabs>
           </>
         ) : (
-          <div className="py-12 text-center text-muted-foreground">
-            Select a project to view dashboard
+          <div className="py-12 text-center">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-6 mx-auto">
+              <BarChart3 className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground">Select a project to view dashboard</p>
           </div>
         )}
       </div>
