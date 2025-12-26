@@ -341,12 +341,12 @@ export function ImportEmailDialog({
 
                   <div className="space-y-2">
                     <Label>Name Column (optional)</Label>
-                    <Select value={nameColumn} onValueChange={setNameColumn}>
+                    <Select value={nameColumn || "__none__"} onValueChange={(v) => setNameColumn(v === "__none__" ? "" : v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select column" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {parsedCSV.headers.map((col) => (
                           <SelectItem key={col} value={col}>{col}</SelectItem>
                         ))}
