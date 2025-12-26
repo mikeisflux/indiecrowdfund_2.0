@@ -9,3 +9,4 @@ export { SocialSettingsSection } from "./SocialSettingsSection";
 export { IDVerificationSettingsSection } from "./IDVerificationSettingsSection";
 export { APISettingsSection } from "./APISettingsSection";
 export { DatabaseSettingsSection } from "./DatabaseSettingsSection";
+export { StorageSettingsSection } from "./StorageSettingsSection";

@@ -69,6 +69,10 @@ model User {
   apiKeys           ApiKey[]
   backerNotes       BackerNote[]
   emailCampaignClicks EmailCampaignClick[]
+  uploadedDigitalFiles DigitalFile[]
+  achievements      UserAchievement[]
+  redemptionBonusLedgers RedemptionBonusLedger[]
+  redemptionBonusApplications RedemptionBonusApplication[]
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -226,6 +230,7 @@ model Project {
   followers             ProjectFollower[]
   retailerPledges       RetailerPledge[]
   divinityCoinSettlements DivinityCoinSettlement[]
+  digitalFiles          DigitalFile[]
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
@@ -1674,6 +1679,20 @@ model PlatformSettings {
   fontFamily            String   @default("Inter")
   borderRadius          String   @default("8")
 
+  // Cloudflare R2 Storage Settings
+  r2Enabled             Boolean  @default(false)
+  r2AccountId           String?
+  r2AccessKeyId         String?
+  r2SecretAccessKey     String?
+  r2BucketName          String?
+  r2PublicDomain        String?
+  r2Region              String   @default("auto")
+  maxFileSizeMB         Int      @default(50)
+  maxProjectStorageMB   Int      @default(200)
+  allowedFileTypes      String   @default("pdf,epub,zip,mp3")
+  digitalDownloadsEnabled Boolean @default(false)
+  signedUrlExpirationMinutes Int @default(60)
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
@@ -2440,16 +2459,29 @@ model BackerNote {
 model DigitalFile {
   id                String            @id @default(cuid())
   projectId         String
+  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   name              String
+  description       String?           @db.Text
   fileName          String
-  fileUrl           String
+  fileUrl           String            // Legacy URL or public domain URL
+  r2StorageKey      String?           // Cloudflare R2 storage key
   fileSize          Int               // in bytes
   mimeType          String?
+
+  // Access control - which rewards/addons grant access
+  accessType        DigitalAccessType @default(ALL_BACKERS)
+  rewardIds         String[]          // Reward IDs that grant access
+  addonIds          String[]          // Addon IDs that grant access
 
   // Distribution tracking
   totalEligible     Int               @default(0)
   distributedCount  Int               @default(0)
+  downloadCount     Int               @default(0)
+
+  // Uploaded by
+  uploadedById      String?
+  uploadedBy        User?             @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -2457,6 +2489,14 @@ model DigitalFile {
   distributions     DigitalDistribution[]
 
   @@index([projectId])
+  @@index([uploadedById])
+}
+
+enum DigitalAccessType {
+  ALL_BACKERS       // All backers can access
+  SPECIFIC_REWARDS  // Only specific reward tiers
+  SPECIFIC_ADDONS   // Only specific addons
+  REWARD_AND_ADDON  // Specific rewards or addons
 }
 
 // Distribution rules and tracking
@@ -2477,4 +2517,83 @@ model DigitalDistribution {
   @@unique([digitalFileId, pledgeId])
   @@index([digitalFileId])
   @@index([pledgeId])
+}
+
+// ============================================
+// ACHIEVEMENT BADGES & REDEMPTION BONUSES
+// ============================================
+
+model UserAchievement {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  badgeType   BadgeType
+  earnedAt    DateTime    @default(now())
+
+  // Metadata about how badge was earned
+  metadata    Json?       // { projectId, pledgeId, etc }
+
+  @@unique([userId, badgeType])
+  @@index([userId])
+}
+
+enum BadgeType {
+  FIRST_PLEDGE                // First pledge ever
+  SUPER_BACKER_10            // Backed 10+ projects
+  SUPER_BACKER_25            // Backed 25+ projects
+  SUPER_BACKER_50            // Backed 50+ projects
+  EARLY_BIRD                 // Pledged within first 24 hours
+  STRETCH_GOAL_CONTRIBUTOR   // Contributed to reaching stretch goal
+  PREMIUM_SUPPORTER          // Pledged $500+ total
+  SURVEY_CHAMPION            // Completed 10+ surveys promptly
+  REFERRAL_MASTER            // Referred 5+ successful backers
+  ANNIVERSARY_BACKER         // Active backer for 1+ year
+}
+
+// Monthly redemption bonus tracking with Decimal for precision
+model RedemptionBonusLedger {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Month tracking (first day of month)
+  month           DateTime
+
+  // Bonus calculation (using Decimal for financial precision)
+  totalBadges     Int      @default(0)
+  rawBonusPercent Decimal  @db.Decimal(10, 6)  // Sum of badge bonuses before cap (e.g., 0.000500 for 0.05%)
+  appliedBonusPercent Decimal @db.Decimal(10, 6)  // After 0.03% cap applied
+
+  // Usage tracking
+  redemptionCount Int      @default(0)
+  totalBonusApplied Decimal @default(0) @db.Decimal(10, 2)  // Total $ saved from bonus
+
+  applications    RedemptionBonusApplication[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, month])
+  @@index([userId, month])
+}
+
+// Track individual bonus applications to redemptions
+model RedemptionBonusApplication {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  redemptionId          String   // Link to DivinityCoinRedemption
+  bonusLedgerId         String
+  bonusLedger           RedemptionBonusLedger @relation(fields: [bonusLedgerId], references: [id], onDelete: Cascade)
+
+  bonusPercentApplied   Decimal  @db.Decimal(10, 6)
+  bonusAmountSaved      Decimal  @db.Decimal(10, 2)  // Actual $ saved
+
+  appliedAt             DateTime @default(now())
+
+  @@index([userId])
+  @@index([bonusLedgerId])
+  @@index([redemptionId])
 }

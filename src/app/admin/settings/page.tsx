@@ -17,6 +17,7 @@ import {
   Bot,
   ShieldCheck,
   Share2,
+  Cloud,
 } from "lucide-react";
 import {
   GeneralSettings,
@@ -28,6 +29,7 @@ import {
   IdVerificationSettings,
   ApiSettings,
   DatabaseSettings,
+  StorageSettings,
 } from "@/components/admin/settings";
 
 interface PlatformSettings {
@@ -279,6 +281,21 @@ export default function SettingsPage() {
     mode: "production",
   });
 
+  const [storageSettings, setStorageSettings] = useState({
+    r2Enabled: false,
+    r2AccountId: "",
+    r2AccessKeyId: "",
+    r2SecretAccessKey: "",
+    r2BucketName: "",
+    r2PublicDomain: "",
+    r2Region: "auto",
+    maxFileSizeMB: "50",
+    maxProjectStorageMB: "200",
+    allowedFileTypes: "pdf,epub,zip,mp3",
+    digitalDownloadsEnabled: false,
+    signedUrlExpirationMinutes: "60",
+  });
+
   // Fetch settings from API
   const fetchSettings = useCallback(async () => {
     try {
@@ -499,6 +516,27 @@ export default function SettingsPage() {
     }));
   };
 
+  const [r2TestResult, setR2TestResult] = useState<"idle" | "testing" | "success" | "error">("idle");
+
+  const testR2 = async () => {
+    setR2TestResult("testing");
+    try {
+      const response = await fetch("/api/admin/settings/test-r2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          accountId: storageSettings.r2AccountId,
+          accessKeyId: storageSettings.r2AccessKeyId,
+          secretAccessKey: storageSettings.r2SecretAccessKey,
+          bucketName: storageSettings.r2BucketName,
+        }),
+      });
+      setR2TestResult(response.ok ? "success" : "error");
+    } catch {
+      setR2TestResult("error");
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     setSaveMessage(null);
@@ -634,6 +672,23 @@ export default function SettingsPage() {
             idVerificationMode: idVerificationSettings.mode,
           };
           break;
+        case "storage":
+          section = "storage";
+          data = {
+            r2Enabled: storageSettings.r2Enabled,
+            r2AccountId: storageSettings.r2AccountId,
+            r2AccessKeyId: storageSettings.r2AccessKeyId,
+            r2SecretAccessKey: storageSettings.r2SecretAccessKey,
+            r2BucketName: storageSettings.r2BucketName,
+            r2PublicDomain: storageSettings.r2PublicDomain,
+            r2Region: storageSettings.r2Region,
+            maxFileSizeMB: parseInt(storageSettings.maxFileSizeMB) || 50,
+            maxProjectStorageMB: parseInt(storageSettings.maxProjectStorageMB) || 200,
+            allowedFileTypes: storageSettings.allowedFileTypes,
+            digitalDownloadsEnabled: storageSettings.digitalDownloadsEnabled,
+            signedUrlExpirationMinutes: parseInt(storageSettings.signedUrlExpirationMinutes) || 60,
+          };
+          break;
         default:
           // For tabs without database storage (API, Database)
           setSaveMessage("Settings saved successfully");
@@ -705,7 +760,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10 lg:w-auto lg:inline-grid">
           <TabsTrigger value="general">
             <Settings className="mr-2 h-4 w-4" />
             General
@@ -733,6 +788,10 @@ export default function SettingsPage() {
           <TabsTrigger value="idverify">
             <ShieldCheck className="mr-2 h-4 w-4" />
             ID Verify
+          </TabsTrigger>
+          <TabsTrigger value="storage">
+            <Cloud className="mr-2 h-4 w-4" />
+            Storage
           </TabsTrigger>
           <TabsTrigger value="api">
             <Key className="mr-2 h-4 w-4" />
@@ -791,6 +850,14 @@ export default function SettingsPage() {
           settings={idVerificationSettings}
           onSettingsChange={setIdVerificationSettings}
           onSave={handleSave}
+        />
+
+        <StorageSettings
+          settings={storageSettings}
+          testResult={r2TestResult}
+          onSettingsChange={setStorageSettings}
+          onSave={handleSave}
+          onTestR2={testR2}
         />
 
         <ApiSettings />

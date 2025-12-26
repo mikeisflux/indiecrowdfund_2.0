@@ -7,3 +7,4 @@ export { SecuritySettings } from "./security-settings";
 export { IdVerificationSettings } from "./id-verification-settings";
 export { ApiSettings } from "./api-settings";
 export { DatabaseSettings } from "./database-settings";
+export { StorageSettings } from "./storage-settings";

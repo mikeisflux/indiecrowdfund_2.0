@@ -119,6 +119,24 @@ export interface IDVerificationSettings {
   mode: string;
 }
 
+export interface StorageSettings {
+  // Cloudflare R2 Configuration
+  r2Enabled: boolean;
+  r2AccountId: string;
+  r2AccessKeyId: string;
+  r2SecretAccessKey: string;
+  r2BucketName: string;
+  r2PublicDomain: string;
+  r2Region: string;
+  // Storage limits
+  maxFileSizeMB: string;
+  maxProjectStorageMB: string;
+  allowedFileTypes: string;
+  // Feature flags
+  digitalDownloadsEnabled: boolean;
+  signedUrlExpirationMinutes: string;
+}
+
 // Props types for section components
 export interface SettingsSectionProps<T> {
   settings: T;
