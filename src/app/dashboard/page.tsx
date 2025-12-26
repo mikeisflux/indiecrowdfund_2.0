@@ -38,6 +38,7 @@ import {
   RefreshCw,
   Box,
   Gift,
+  Download,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
@@ -253,6 +254,46 @@ export default function CreatorDashboard() {
     } finally {
       setRefundingPledge(null);
     }
+  };
+
+  // Export backers to CSV
+  const handleExportCSV = () => {
+    if (!data?.recentBackers.length) {
+      toast.error("No backers to export");
+      return;
+    }
+
+    // CSV header
+    const headers = ["Name", "Email", "Reward", "Amount", "Status", "Date"];
+
+    // CSV rows
+    const rows = data.recentBackers.map((backer) => [
+      backer.name,
+      backer.email || "",
+      backer.reward,
+      backer.amount.toString(),
+      backer.status,
+      backer.time,
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
+    ].join("\n");
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `backers-${data.selectedProject?.slug || "export"}-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`Exported ${data.recentBackers.length} backers to CSV`);
   };
 
   if (loading && !data) {
@@ -828,7 +869,8 @@ export default function CreatorDashboard() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>All Backers</CardTitle>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                      <Download className="h-4 w-4 mr-2" />
                       Export CSV
                     </Button>
                   </CardHeader>
