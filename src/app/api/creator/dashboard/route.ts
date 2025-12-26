@@ -229,6 +229,16 @@ export async function GET(req: NextRequest) {
               title: true,
             },
           },
+          addons: {
+            select: {
+              quantity: true,
+              addon: {
+                select: {
+                  title: true,
+                },
+              },
+            },
+          },
         },
       }),
 
@@ -506,6 +516,11 @@ export async function GET(req: NextRequest) {
         timeAgo = `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
       }
 
+      // Format addons as a string list
+      const addonsList = pledge.addons?.map((a: { quantity: number; addon: { title: string } }) =>
+        a.quantity > 1 ? `${a.addon.title} (x${a.quantity})` : a.addon.title
+      ).join(", ") || "";
+
       return {
         id: pledge.id,
         status: pledge.status,
@@ -515,6 +530,7 @@ export async function GET(req: NextRequest) {
         image: pledge.user.image,
         amount: Number(pledge.amount),
         reward: pledge.reward?.title || "No Reward",
+        addons: addonsList,
         time: timeAgo,
       };
     });

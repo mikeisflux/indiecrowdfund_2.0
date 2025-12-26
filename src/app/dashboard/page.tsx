@@ -94,6 +94,7 @@ interface Backer {
   image: string | null;
   amount: number;
   reward: string;
+  addons: string;
   time: string;
 }
 
@@ -264,13 +265,14 @@ export default function CreatorDashboard() {
     }
 
     // CSV header
-    const headers = ["Name", "Email", "Reward", "Amount", "Status", "Date"];
+    const headers = ["Name", "Email", "Reward", "Addons", "Amount", "Status", "Date"];
 
     // CSV rows
     const rows = data.recentBackers.map((backer) => [
       backer.name,
       backer.email || "",
       backer.reward,
+      backer.addons || "",
       backer.amount.toString(),
       backer.status,
       backer.time,
