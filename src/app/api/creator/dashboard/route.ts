@@ -132,6 +132,7 @@ export async function GET(req: NextRequest) {
       lastWeekViews,
       recentBackers,
       rewardStats,
+      addonsList,
       dailyFunding,
       referrerData,
       fulfillmentData,
@@ -214,8 +215,18 @@ export async function GET(req: NextRequest) {
           status: { in: ["PENDING", "COMPLETED"] },
         },
         orderBy: { createdAt: "desc" },
-        take: 50,
-        include: {
+        take: 500, // Increased limit for CSV export
+        select: {
+          id: true,
+          status: true,
+          amount: true,
+          shippingAmount: true,
+          createdAt: true,
+          fulfillmentStatus: true,
+          shippingAddress: true,
+          shippingCity: true,
+          shippingState: true,
+          shippingCountry: true,
           user: {
             select: {
               id: true,
@@ -226,6 +237,7 @@ export async function GET(req: NextRequest) {
           },
           reward: {
             select: {
+              id: true,
               title: true,
             },
           },
@@ -234,6 +246,7 @@ export async function GET(req: NextRequest) {
               quantity: true,
               addon: {
                 select: {
+                  id: true,
                   title: true,
                 },
               },
@@ -260,6 +273,19 @@ export async function GET(req: NextRequest) {
             where: { status: "COMPLETED" },
             select: { amount: true },
           },
+        },
+        orderBy: { amount: "asc" },
+      }),
+
+      // All addons for this project (for CSV export columns)
+      db.reward.findMany({
+        where: {
+          projectId: selectedProjectId,
+          type: "ADDON",
+        },
+        select: {
+          id: true,
+          title: true,
         },
         orderBy: { amount: "asc" },
       }),
@@ -516,21 +542,35 @@ export async function GET(req: NextRequest) {
         timeAgo = `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
       }
 
-      // Format addons as a string list
-      const addonsList = pledge.addons?.map((a: { quantity: number; addon: { title: string } }) =>
+      // Format addons as a string list for display
+      const addonsDisplay = pledge.addons?.map((a: { quantity: number; addon: { id: string; title: string } }) =>
         a.quantity > 1 ? `${a.addon.title} (x${a.quantity})` : a.addon.title
       ).join(", ") || "";
+
+      // Create addon map for CSV export (addonId -> quantity)
+      const addonsMap: Record<string, number> = {};
+      pledge.addons?.forEach((a: { quantity: number; addon: { id: string; title: string } }) => {
+        addonsMap[a.addon.id] = a.quantity;
+      });
 
       return {
         id: pledge.id,
         status: pledge.status,
+        fulfillmentStatus: pledge.fulfillmentStatus || "NOT_STARTED",
         userId: pledge.user.id,
         name: pledge.user.name || "Anonymous",
         email: pledge.user.email,
         image: pledge.user.image,
         amount: Number(pledge.amount),
+        shippingAmount: Number(pledge.shippingAmount || 0),
+        shippingAddress: pledge.shippingAddress || "",
+        shippingCity: pledge.shippingCity || "",
+        shippingState: pledge.shippingState || "",
+        shippingCountry: pledge.shippingCountry || "",
+        rewardId: pledge.reward?.id || null,
         reward: pledge.reward?.title || "No Reward",
-        addons: addonsList,
+        addons: addonsDisplay,
+        addonsMap,
         time: timeAgo,
       };
     });
@@ -577,6 +617,10 @@ export async function GET(req: NextRequest) {
       fundingData,
       recentBackers: processedBackers,
       rewardStats: processedRewardStats,
+      // All rewards for CSV column headers
+      allRewards: rewardStats.map((r) => ({ id: r.id, title: r.title })),
+      // All addons for CSV column headers
+      allAddons: addonsList.map((a) => ({ id: a.id, title: a.title })),
       referrers: processedReferrers,
       fulfillmentStats,
     });

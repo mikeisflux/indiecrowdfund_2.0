@@ -88,14 +88,27 @@ interface FundingDataPoint {
 interface Backer {
   id: string;
   status: string;
+  fulfillmentStatus: string;
   userId: string;
   name: string;
   email: string | null;
   image: string | null;
   amount: number;
+  shippingAmount: number;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingState: string;
+  shippingCountry: string;
+  rewardId: string | null;
   reward: string;
   addons: string;
+  addonsMap: Record<string, number>;
   time: string;
+}
+
+interface RewardAddonItem {
+  id: string;
+  title: string;
 }
 
 interface RewardStat {
@@ -141,6 +154,8 @@ interface DashboardData {
   fundingData: FundingDataPoint[];
   recentBackers: Backer[];
   rewardStats: RewardStat[];
+  allRewards: RewardAddonItem[];
+  allAddons: RewardAddonItem[];
   referrers: Referrer[];
   fulfillmentStats: FulfillmentStats | null;
 }
@@ -264,19 +279,54 @@ export default function CreatorDashboard() {
       return;
     }
 
-    // CSV header
-    const headers = ["Name", "Email", "Reward", "Addons", "Amount", "Status", "Date"];
+    // Build dynamic headers: fixed columns + reward columns + addon columns
+    const fixedHeaders = [
+      "Name",
+      "Email",
+      "Pledge Amount",
+      "Shipping Paid",
+      "Fulfillment Status",
+      "Address",
+      "City",
+      "State",
+      "Country",
+    ];
+
+    // Add reward columns (each reward gets its own column)
+    const rewardHeaders = (data.allRewards || []).map((r) => `Reward: ${r.title}`);
+
+    // Add addon columns (each addon gets its own column)
+    const addonHeaders = (data.allAddons || []).map((a) => `Addon: ${a.title}`);
+
+    const headers = [...fixedHeaders, ...rewardHeaders, ...addonHeaders];
 
     // CSV rows
-    const rows = data.recentBackers.map((backer) => [
-      backer.name,
-      backer.email || "",
-      backer.reward,
-      backer.addons || "",
-      backer.amount.toString(),
-      backer.status,
-      backer.time,
-    ]);
+    const rows = data.recentBackers.map((backer) => {
+      // Fixed columns
+      const fixedCols = [
+        backer.name,
+        backer.email || "",
+        backer.amount.toString(),
+        backer.shippingAmount.toString(),
+        backer.fulfillmentStatus || "",
+        backer.shippingAddress || "",
+        backer.shippingCity || "",
+        backer.shippingState || "",
+        backer.shippingCountry || "",
+      ];
+
+      // Reward columns (1 if backer has this reward, 0 if not)
+      const rewardCols = (data.allRewards || []).map((r) =>
+        backer.rewardId === r.id ? "1" : "0"
+      );
+
+      // Addon columns (quantity if backer has this addon, 0 if not)
+      const addonCols = (data.allAddons || []).map((a) =>
+        (backer.addonsMap?.[a.id] || 0).toString()
+      );
+
+      return [...fixedCols, ...rewardCols, ...addonCols];
+    });
 
     // Combine headers and rows
     const csvContent = [
