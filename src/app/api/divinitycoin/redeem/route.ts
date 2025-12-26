@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import crypto from "crypto";
+import { Prisma } from "@prisma/client";
 import { validateCSRFToken } from "@/lib/csrf";
+import { applyRedemptionBonus, checkAndAwardBadges, getAvailableBonusPercent } from "@/lib/redemption-bonus";
 
 interface RedemptionResult {
   newBalance: number;
+  redemptionId: string;
 }
 
 // Rate limiting for redemption attempts (stricter than payments)
@@ -264,6 +267,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Get available bonus percent before redemption
+    const bonusInfo = await getAvailableBonusPercent(userId);
+
     // Process redemption in atomic transaction
     const result = await db.$transaction(async (tx) => {
       // Double-check the code hasn't been redeemed (race condition protection)
@@ -284,7 +290,7 @@ export async function POST(req: NextRequest) {
       const previousBalance = user ? Number(user.divinityCoinBalance) : 0;
 
       // Create redemption record
-      await tx.divinityCoinRedemption.create({
+      const redemption = await tx.divinityCoinRedemption.create({
         data: {
           code: cleanCode,
           userId: userId,
@@ -325,20 +331,87 @@ export async function POST(req: NextRequest) {
 
       return {
         newBalance: Number(updatedUser.divinityCoinBalance),
+        redemptionId: redemption.id,
       };
     }) as RedemptionResult;
+
+    // Apply achievement badge bonus (outside transaction for non-critical operation)
+    let bonusApplied = {
+      bonusPercentApplied: new Prisma.Decimal(0),
+      bonusAmountSaved: new Prisma.Decimal(0),
+    };
+
+    if (bonusInfo.availablePercent.gt(0)) {
+      try {
+        bonusApplied = await applyRedemptionBonus(
+          userId,
+          result.redemptionId,
+          new Prisma.Decimal(amount)
+        );
+
+        // If bonus was applied, add it to the balance
+        if (Number(bonusApplied.bonusAmountSaved) > 0) {
+          await db.user.update({
+            where: { id: userId },
+            data: {
+              divinityCoinBalance: {
+                increment: bonusApplied.bonusAmountSaved,
+              },
+            },
+          });
+
+          // Create bonus transaction record
+          await db.divinityCoinTransaction.create({
+            data: {
+              userId,
+              amount: Number(bonusApplied.bonusAmountSaved),
+              type: "BONUS",
+              description: `Achievement badge bonus (${Number(bonusApplied.bonusPercentApplied).toFixed(4) * 100}%)`,
+              metadata: JSON.stringify({
+                redemptionId: result.redemptionId,
+                bonusPercent: Number(bonusApplied.bonusPercentApplied),
+                originalAmount: amount,
+              }),
+            },
+          });
+
+          result.newBalance += Number(bonusApplied.bonusAmountSaved);
+        }
+      } catch (bonusError) {
+        console.error(`[DivinityCoin Redeem] [${requestId}] Bonus application error:`, bonusError);
+        // Don't fail the redemption if bonus fails
+      }
+    }
+
+    // Check and award any new badges after redemption
+    try {
+      await checkAndAwardBadges(userId);
+    } catch (badgeError) {
+      console.error(`[DivinityCoin Redeem] [${requestId}] Badge check error:`, badgeError);
+    }
 
     // Clear failed attempts on successful redemption
     clearFailedAttempts(userId);
 
     const duration = Date.now() - startTime;
-    console.log(`[DivinityCoin Redeem] [${requestId}] Redemption successful: amount=${amount} in ${duration}ms`);
+    const bonusAmount = Number(bonusApplied.bonusAmountSaved);
+    console.log(`[DivinityCoin Redeem] [${requestId}] Redemption successful: amount=${amount}, bonus=${bonusAmount.toFixed(2)} in ${duration}ms`);
+
+    // Build response message
+    let message = `Successfully redeemed $${amount.toFixed(2)} in DivinityCoin credits`;
+    if (bonusAmount > 0) {
+      message += ` (+$${bonusAmount.toFixed(2)} badge bonus!)`;
+    }
 
     return NextResponse.json({
       success: true,
       amount,
       newBalance: result.newBalance,
-      message: `Successfully redeemed $${amount.toFixed(2)} in DivinityCoin credits`,
+      message,
+      bonus: bonusAmount > 0 ? {
+        amount: bonusAmount,
+        percent: `${(Number(bonusApplied.bonusPercentApplied) * 100).toFixed(2)}%`,
+      } : null,
     });
   } catch (error) {
     const duration = Date.now() - startTime;

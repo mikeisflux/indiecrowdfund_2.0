@@ -44,9 +44,18 @@ import {
   Ticket,
   Loader2,
   RefreshCw,
+  Download,
+  ClipboardList,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { formatTimeRemaining } from "@/lib/utils";
+import {
+  GlowingStatCard,
+  AnimatedBarChart,
+  FulfillmentPipeline,
+  DigitalDownloadsTab,
+  SurveyHubTab,
+} from "./components";
 
 interface BackedProject {
   id: string;
@@ -452,87 +461,49 @@ export default function BackerDashboard() {
           </div>
         </div>
 
-        {/* Stats Overview */}
+        {/* Stats Overview - Animated */}
         <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="relative overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/30 transition-colors">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/20 to-transparent rounded-bl-full" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Projects Backed
-              </CardTitle>
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Target className="h-4 w-4 text-primary" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.totalBacked}</div>
-              <p className="flex items-center text-xs text-green-500 mt-1">
-                <TrendingUp className="mr-1 h-3 w-3" />
-                {stats.successRate}% success rate
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-green-500/30 transition-colors">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-500/20 to-transparent rounded-bl-full" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Invested
-              </CardTitle>
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <DollarSign className="h-4 w-4 text-green-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">${Number(stats.totalPledged).toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                ~${stats.avgContribution.toFixed(0)} avg per project
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-blue-500/30 transition-colors">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-transparent rounded-bl-full" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Successfully Funded
-              </CardTitle>
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <CheckCircle className="h-4 w-4 text-blue-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.projectsFunded}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {analytics.rewardsDelivered} reward{analytics.rewardsDelivered !== 1 ? "s" : ""} delivered
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-purple-500/30 transition-colors">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-500/20 to-transparent rounded-bl-full" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Rewards Pending
-              </CardTitle>
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <Gift className="h-4 w-4 text-purple-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{analytics.rewardsPending}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Track delivery status below
-              </p>
-            </CardContent>
-          </Card>
+          <GlowingStatCard
+            title="Projects Backed"
+            value={stats.totalBacked}
+            icon={Target}
+            color="primary"
+            trend={{ value: stats.successRate, label: "success rate" }}
+            delay={0}
+          />
+          <GlowingStatCard
+            title="Total Invested"
+            value={Number(stats.totalPledged)}
+            prefix="$"
+            icon={DollarSign}
+            color="green"
+            subtitle={`~$${stats.avgContribution.toFixed(0)} avg per project`}
+            delay={100}
+          />
+          <GlowingStatCard
+            title="Successfully Funded"
+            value={stats.projectsFunded}
+            icon={CheckCircle}
+            color="blue"
+            subtitle={`${analytics.rewardsDelivered} reward${analytics.rewardsDelivered !== 1 ? "s" : ""} delivered`}
+            delay={200}
+          />
+          <GlowingStatCard
+            title="Rewards Pending"
+            value={analytics.rewardsPending}
+            icon={Gift}
+            color="purple"
+            subtitle="Track delivery status below"
+            delay={300}
+            pulse={analytics.rewardsPending > 0}
+          />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="bg-card/50 backdrop-blur border border-border/50 p-1">
+              <TabsList className="bg-card/50 backdrop-blur border border-border/50 p-1 flex-wrap h-auto gap-1">
                 <TabsTrigger value="backed" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                   <Package className="mr-2 h-4 w-4" />
                   Backed ({backedProjects.length})
@@ -540,6 +511,19 @@ export default function BackerDashboard() {
                 <TabsTrigger value="saved" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                   <Heart className="mr-2 h-4 w-4" />
                   Saved ({savedProjects.length})
+                </TabsTrigger>
+                <TabsTrigger value="downloads" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white">
+                  <Download className="mr-2 h-4 w-4" />
+                  Downloads
+                </TabsTrigger>
+                <TabsTrigger value="surveys" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white relative">
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Surveys
+                  {stats.pendingSurveys > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold animate-pulse">
+                      {stats.pendingSurveys}
+                    </span>
+                  )}
                 </TabsTrigger>
               </TabsList>
 
@@ -789,6 +773,16 @@ export default function BackerDashboard() {
                   </div>
                 )}
               </TabsContent>
+
+              {/* Downloads Tab */}
+              <TabsContent value="downloads" className="space-y-4">
+                <DigitalDownloadsTab />
+              </TabsContent>
+
+              {/* Surveys Tab */}
+              <TabsContent value="surveys" className="space-y-4">
+                <SurveyHubTab />
+              </TabsContent>
             </Tabs>
           </div>
 
@@ -881,71 +875,80 @@ export default function BackerDashboard() {
               </CardContent>
             </Card>
 
-            {/* Spending Analytics */}
-            <Card className="bg-card/50 backdrop-blur border-border/50">
+            {/* Spending Analytics - Animated */}
+            <Card className="glass-card glass-card-hover">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <BarChart3 className="h-4 w-4 text-primary" />
+                  <div className="p-1.5 rounded-lg bg-primary/20">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                  </div>
                   Backing Activity
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Mini chart */}
-                <div className="h-32 flex items-end gap-1 mb-4">
-                  {analytics.monthlySpending.map((item, i) => {
-                    const maxAmount = Math.max(...analytics.monthlySpending.map((s) => s.amount), 1);
-                    const heightPercent = item.amount > 0 ? Math.max((item.amount / maxAmount) * 100, 10) : 4;
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                        <div
-                          className="w-full bg-gradient-to-t from-primary to-purple-500 rounded-t transition-all hover:opacity-80"
-                          style={{ height: `${heightPercent}%` }}
-                        />
-                        <span className="text-[10px] text-muted-foreground">{item.month}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="text-sm text-muted-foreground text-center">
+                <AnimatedBarChart
+                  data={analytics.monthlySpending.map((item) => ({
+                    label: item.month,
+                    value: item.amount,
+                  }))}
+                  height={128}
+                  showGlow
+                  color="primary"
+                />
+                <div className="text-sm text-muted-foreground text-center mt-2">
                   Last 6 months spending
                 </div>
               </CardContent>
             </Card>
 
-            {/* Upcoming Deliveries */}
-            <Card className="bg-card/50 backdrop-blur border-border/50">
+            {/* Upcoming Deliveries - Animated */}
+            <Card className="glass-card glass-card-hover">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Calendar className="h-4 w-4 text-purple-500" />
+                  <div className="p-1.5 rounded-lg bg-purple-500/20">
+                    <Calendar className="h-4 w-4 text-purple-500" />
+                  </div>
                   Upcoming Deliveries
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 {backedProjects.filter((p) => p.fulfillmentStatus !== "DELIVERED").length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No pending deliveries
-                  </p>
+                  <div className="text-center py-6">
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <CheckCircle className="h-6 w-6 text-emerald-500" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      All rewards delivered!
+                    </p>
+                  </div>
                 ) : (
                   backedProjects
                     .filter((p) => p.fulfillmentStatus !== "DELIVERED")
                     .slice(0, 5)
-                    .map((project) => (
-                      <div key={project.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
+                    .map((project, index) => (
+                      <div
+                        key={project.id}
+                        className="group flex items-center gap-3 p-2 rounded-xl hover:bg-muted/30 transition-all duration-300 animate-in fade-in slide-in-from-left"
+                        style={{ animationDelay: `${index * 100}ms` }}
+                      >
+                        <div className="relative w-10 h-10 rounded-lg bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
                           {project.imageUrl ? (
                             <Image
                               src={project.imageUrl}
                               alt={project.title}
                               width={40}
                               height={40}
-                              className="object-cover"
+                              className="object-cover group-hover:scale-110 transition-transform"
                             />
                           ) : (
                             <Package className="h-5 w-5 text-muted-foreground" />
                           )}
+                          {project.fulfillmentStatus === "SHIPPED" && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full live-indicator" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{project.title}</p>
+                          <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{project.title}</p>
                           <p className="text-xs text-muted-foreground">
                             {project.estimatedDelivery
                               ? `Est. ${new Date(project.estimatedDelivery).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`
