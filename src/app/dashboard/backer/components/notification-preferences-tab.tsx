@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -24,7 +23,6 @@ import {
   ClipboardList,
   Megaphone,
   AlertCircle,
-  Loader2,
   CheckCircle,
   Settings,
   Clock,
@@ -102,7 +100,7 @@ export function NotificationPreferencesTab() {
         global: { ...data.global, [key]: value },
       });
       toast.success("Preference updated");
-    } catch (err) {
+    } catch {
       toast.error("Failed to update preference");
     } finally {
       setSaving(null);
@@ -133,7 +131,7 @@ export function NotificationPreferencesTab() {
         ),
       });
       toast.success("Preference updated");
-    } catch (err) {
+    } catch {
       toast.error("Failed to update preference");
     } finally {
       setSaving(null);

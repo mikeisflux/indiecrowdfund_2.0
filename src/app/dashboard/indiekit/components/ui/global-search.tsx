@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -90,13 +90,16 @@ export function GlobalSearch({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Filter results based on query
-  const filteredResults = query.length >= 2
-    ? demoResults.filter(
-        (result) =>
-          result.title.toLowerCase().includes(query.toLowerCase()) ||
-          result.subtitle?.toLowerCase().includes(query.toLowerCase())
-      )
-    : [];
+  const filteredResults = useMemo(() =>
+    query.length >= 2
+      ? demoResults.filter(
+          (result) =>
+            result.title.toLowerCase().includes(query.toLowerCase()) ||
+            result.subtitle?.toLowerCase().includes(query.toLowerCase())
+        )
+      : [],
+    [query]
+  );
 
   // Reset selection when results change
   useEffect(() => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -583,9 +584,11 @@ export default function RetailersPage() {
                           {survey.order?.project ? (
                             <div className="flex items-center gap-2">
                               {survey.order.project.imageUrl && (
-                                <img
+                                <Image
                                   src={survey.order.project.imageUrl}
                                   alt=""
+                                  width={32}
+                                  height={32}
                                   className="h-8 w-8 rounded object-cover"
                                 />
                               )}

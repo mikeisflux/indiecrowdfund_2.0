@@ -41,7 +41,6 @@ import {
   Loader2,
   ChevronRight,
   Share2,
-  Heart,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -200,7 +199,7 @@ export function CollectionsTab() {
         setSelectedCollection(null);
       }
       fetchCollections();
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete collection");
     } finally {
       setDeleting(null);
@@ -217,7 +216,7 @@ export function CollectionsTab() {
       if (!response.ok) throw new Error("Failed to remove project");
       toast.success("Project removed from collection");
       fetchCollections();
-    } catch (err) {
+    } catch {
       toast.error("Failed to remove project");
     }
   };

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,7 +16,6 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Coins,
-  ArrowUpRight,
   ArrowDownLeft,
   Gift,
   Ticket,
@@ -151,7 +149,7 @@ export function DivinityCoinWalletTab() {
         toast.success("Balance synced");
         fetchWalletData();
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to sync balance");
     } finally {
       setSyncing(false);

@@ -14,7 +14,6 @@ import {
   Rocket,
   CreditCard,
   Package,
-  Shield,
   ArrowRight,
   ExternalLink,
   ChevronRight,

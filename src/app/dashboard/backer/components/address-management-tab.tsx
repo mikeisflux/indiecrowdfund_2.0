@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -194,7 +194,7 @@ export function AddressManagementTab() {
       if (!response.ok) throw new Error("Failed to delete address");
       toast.success("Address deleted");
       fetchAddresses();
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete address");
     } finally {
       setDeleting(null);
@@ -212,7 +212,7 @@ export function AddressManagementTab() {
       if (!response.ok) throw new Error("Failed to set default");
       toast.success("Default address updated");
       fetchAddresses();
-    } catch (err) {
+    } catch {
       toast.error("Failed to update default address");
     }
   };

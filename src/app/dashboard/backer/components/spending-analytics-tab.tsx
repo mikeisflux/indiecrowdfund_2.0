@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ import {
 import { cn } from "@/lib/utils";
 import {
   DollarSign,
-  TrendingUp,
   TrendingDown,
   Download,
   PieChart,
@@ -66,13 +65,7 @@ export function SpendingAnalyticsTab() {
   const [timeRange, setTimeRange] = useState("all");
   const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    fetchAnalytics();
-    const timer = setTimeout(() => setIsVisible(true), 100);
-    return () => clearTimeout(timer);
-  }, [timeRange]);
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/backer/analytics?range=${timeRange}`, {
@@ -86,7 +79,13 @@ export function SpendingAnalyticsTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    fetchAnalytics();
+    const timer = setTimeout(() => setIsVisible(true), 100);
+    return () => clearTimeout(timer);
+  }, [fetchAnalytics]);
 
   const handleExportCSV = async () => {
     setExporting(true);
@@ -107,7 +106,7 @@ export function SpendingAnalyticsTab() {
       URL.revokeObjectURL(url);
 
       toast.success("Exported successfully! Great for tax records.");
-    } catch (err) {
+    } catch {
       toast.error("Failed to export");
     } finally {
       setExporting(false);

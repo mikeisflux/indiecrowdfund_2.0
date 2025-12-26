@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getCSRFHeaders } from "@/lib/csrf";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,8 +15,6 @@ import {
   Users,
   UserPlus,
   UserMinus,
-  Bell,
-  BellOff,
   ExternalLink,
   Package,
   AlertCircle,
@@ -108,7 +106,7 @@ export function FollowingTab() {
       if (!response.ok) throw new Error("Failed to unfollow");
       toast.success("Unfollowed creator");
       fetchFollowing();
-    } catch (err) {
+    } catch {
       toast.error("Failed to unfollow");
     } finally {
       setUnfollowing(null);
@@ -139,7 +137,7 @@ export function FollowingTab() {
         ),
       });
       toast.success("Preference updated");
-    } catch (err) {
+    } catch {
       toast.error("Failed to update preference");
     } finally {
       setUpdating(null);
