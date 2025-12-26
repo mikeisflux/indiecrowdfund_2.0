@@ -374,7 +374,7 @@ const promotionFields: FieldInfo[] = [
 
 function FieldCard({ field }: { field: FieldInfo }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-5">
+    <div className="rounded-lg border border-border bg-card/80 backdrop-blur-sm p-5 hover:shadow-lg transition-all duration-300">
       <div className="flex items-start justify-between">
         <h4 className="font-semibold text-zinc-900">{field.name}</h4>
         {field.required ? (
@@ -412,9 +412,14 @@ export default function CreatorHandbookPage() {
   const [activeTab, setActiveTab] = useState('basics');
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-purple-500/5 relative overflow-hidden">
+      {/* Floating Orbs */}
+      <div className="floating-orb w-96 h-96 bg-purple-500/10 -top-48 -right-48" style={{ animationDelay: "0s" }} />
+      <div className="floating-orb w-80 h-80 bg-pink-500/10 top-1/3 -left-40" style={{ animationDelay: "2s" }} />
+      <div className="floating-orb w-64 h-64 bg-primary/10 bottom-40 right-1/4" style={{ animationDelay: "4s" }} />
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-500 py-16 text-center text-white">
+      <div className="bg-gradient-to-r from-purple-600 to-pink-500 py-16 text-center text-white relative overflow-hidden">
         <h1 className="text-4xl font-bold">Creator Handbook</h1>
         <p className="mt-2 text-purple-100">
           Everything you need to know about creating a successful project
@@ -424,7 +429,7 @@ export default function CreatorHandbookPage() {
       {/* Content */}
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         {/* Tab Navigation */}
-        <div className="mb-8 flex flex-wrap gap-2 rounded-xl bg-white p-2 shadow-sm">
+        <div className="mb-8 flex flex-wrap gap-2 rounded-xl bg-card/80 backdrop-blur-sm p-2 shadow-sm border border-border">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

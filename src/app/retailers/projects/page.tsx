@@ -140,9 +140,14 @@ export default function RetailerProjectsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-emerald-500/5 relative overflow-hidden">
+      {/* Floating Orbs */}
+      <div className="floating-orb w-96 h-96 bg-emerald-500/10 -top-48 -right-48" style={{ animationDelay: "0s" }} />
+      <div className="floating-orb w-80 h-80 bg-teal-500/10 top-1/2 -left-40" style={{ animationDelay: "2s" }} />
+      <div className="floating-orb w-64 h-64 bg-blue-500/10 bottom-20 right-1/4" style={{ animationDelay: "4s" }} />
+
       {/* Header */}
-      <header className="bg-white border-b border-zinc-200 sticky top-0 z-50">
+      <header className="bg-background/80 backdrop-blur-xl border-b border-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">

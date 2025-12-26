@@ -275,9 +275,14 @@ export default function SocialHubPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 relative overflow-hidden">
+      {/* Floating Orbs */}
+      <div className="floating-orb w-96 h-96 bg-primary/10 -top-48 -right-48" style={{ animationDelay: "0s" }} />
+      <div className="floating-orb w-80 h-80 bg-purple-500/10 top-1/3 -left-40" style={{ animationDelay: "2s" }} />
+      <div className="floating-orb w-64 h-64 bg-blue-500/10 bottom-20 right-1/4" style={{ animationDelay: "4s" }} />
+
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background">
+      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">

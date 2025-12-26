@@ -97,7 +97,12 @@ export default async function SuccessStoriesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950">
+    <div className="min-h-screen bg-background dark:bg-zinc-950 relative overflow-hidden">
+      {/* Floating Orbs */}
+      <div className="floating-orb w-96 h-96 bg-orange-500/10 -top-48 -right-48" style={{ animationDelay: "0s" }} />
+      <div className="floating-orb w-80 h-80 bg-rose-500/10 top-1/3 -left-40" style={{ animationDelay: "2s" }} />
+      <div className="floating-orb w-64 h-64 bg-amber-500/10 bottom-40 right-1/4" style={{ animationDelay: "4s" }} />
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
@@ -260,7 +265,7 @@ export default async function SuccessStoriesPage() {
       </section>
 
       {/* Category Breakdown */}
-      <section className="py-20 bg-zinc-50 dark:bg-zinc-900">
+      <section className="py-20 bg-muted/30 dark:bg-zinc-900 relative">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
