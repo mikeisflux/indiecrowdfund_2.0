@@ -7,7 +7,7 @@
 
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 // File type magic bytes for validation
 const FILE_SIGNATURES: Record<string, Buffer> = {
@@ -43,7 +43,7 @@ interface PresignedUrlOptions {
 export async function getR2Config(): Promise<R2Config | null> {
   try {
     // Try database first
-    const settings = await prisma.platformSettings.findFirst({
+    const settings = await db.platformSettings.findFirst({
       select: {
         r2AccountId: true,
         r2AccessKeyId: true,

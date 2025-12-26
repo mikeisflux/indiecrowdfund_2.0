@@ -55,6 +55,7 @@ import {
   FulfillmentPipeline,
   DigitalDownloadsTab,
   SurveyHubTab,
+  BadgesDisplay,
 } from "./components";
 
 interface BackedProject {
@@ -961,8 +962,11 @@ export default function BackerDashboard() {
               </CardContent>
             </Card>
 
+            {/* Achievement Badges */}
+            <BadgesDisplay />
+
             {/* Recommendations */}
-            <Card className="bg-gradient-to-br from-primary/10 to-purple-500/10 border-primary/20">
+            <Card className="glass-card bg-gradient-to-br from-primary/10 to-purple-500/10 border-primary/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Sparkles className="h-4 w-4 text-yellow-500" />

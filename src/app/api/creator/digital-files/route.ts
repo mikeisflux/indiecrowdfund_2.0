@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { getR2Storage, generateFileKey, validateFileType } from "@/lib/r2";
 
 // CORS headers for API responses
@@ -19,7 +18,7 @@ export async function OPTIONS() {
 // GET: List digital files for a project
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
     }
@@ -32,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user owns or collaborates on this project
-    const project = await prisma.project.findFirst({
+    const project = await db.project.findFirst({
       where: {
         id: projectId,
         OR: [
@@ -47,7 +46,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404, headers: corsHeaders });
     }
 
-    const files = await prisma.digitalFile.findMany({
+    const files = await db.digitalFile.findMany({
       where: { projectId },
       orderBy: { createdAt: "desc" },
       include: {
@@ -73,7 +72,7 @@ export async function GET(request: NextRequest) {
 // POST: Create a new digital file (get presigned upload URL)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
     }
@@ -89,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user owns or collaborates on this project
-    const project = await prisma.project.findFirst({
+    const project = await db.project.findFirst({
       where: {
         id: projectId,
         OR: [
@@ -104,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get storage settings
-    const settings = await prisma.platformSettings.findFirst({
+    const settings = await db.platformSettings.findFirst({
       select: {
         r2Enabled: true,
         digitalDownloadsEnabled: true,
@@ -160,7 +159,7 @@ export async function POST(request: NextRequest) {
     const storageKey = generateFileKey(projectId, fileName, fileId);
 
     // Create file record in database
-    const digitalFile = await prisma.digitalFile.create({
+    const digitalFile = await db.digitalFile.create({
       data: {
         id: fileId,
         projectId,
@@ -204,7 +203,7 @@ export async function POST(request: NextRequest) {
 // DELETE: Remove a digital file
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
     }
@@ -217,7 +216,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get file and verify ownership
-    const file = await prisma.digitalFile.findUnique({
+    const file = await db.digitalFile.findUnique({
       where: { id: fileId },
       include: {
         project: {
@@ -249,7 +248,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete from database (cascades to distributions)
-    await prisma.digitalFile.delete({
+    await db.digitalFile.delete({
       where: { id: fileId },
     });
 

@@ -33,7 +33,7 @@ interface DigitalFile {
     id: string;
     title: string;
     slug: string;
-    mainImage?: string;
+    imageUrl?: string;
   };
 }
 
@@ -41,7 +41,7 @@ interface ProjectWithFiles {
   id: string;
   title: string;
   slug: string;
-  mainImage?: string;
+  imageUrl?: string;
   files: DigitalFile[];
   fileCount: number;
   newFileCount: number;

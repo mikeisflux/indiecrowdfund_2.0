@@ -6,3 +6,4 @@ export { FulfillmentPipeline } from "./fulfillment-pipeline";
 export { DownloadCard } from "./download-card";
 export { DigitalDownloadsTab } from "./digital-downloads-tab";
 export { SurveyHubTab } from "./survey-hub-tab";
+export { BadgesDisplay } from "./badges-display";

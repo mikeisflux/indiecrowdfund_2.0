@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { getR2Storage } from "@/lib/r2";
 
 // CORS headers for API responses
@@ -19,7 +18,7 @@ export async function OPTIONS() {
 // GET: List all digital files accessible to the backer
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
     }
@@ -28,7 +27,7 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get("projectId");
 
     // Get all valid pledges for the user
-    const pledges = await prisma.pledge.findMany({
+    const pledges = await db.pledge.findMany({
       where: {
         userId: session.user.id,
         status: "COMPLETED",
@@ -40,7 +39,7 @@ export async function GET(request: NextRequest) {
             id: true,
             title: true,
             slug: true,
-            mainImage: true,
+            imageUrl: true,
             status: true,
           },
         },
@@ -67,7 +66,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all digital files for these projects
-    const allFiles = await prisma.digitalFile.findMany({
+    const allFiles = await db.digitalFile.findMany({
       where: {
         projectId: { in: projectIds },
       },
@@ -77,7 +76,7 @@ export async function GET(request: NextRequest) {
             id: true,
             title: true,
             slug: true,
-            mainImage: true,
+            imageUrl: true,
           },
         },
         _count: {
@@ -116,7 +115,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get download status for these files
-    const distributions = await prisma.digitalDistribution.findMany({
+    const distributions = await db.digitalDistribution.findMany({
       where: {
         digitalFileId: { in: accessibleFiles.map((f) => f.id) },
         pledgeId: { in: pledges.map((p) => p.id) },
@@ -184,7 +183,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the file
-    const file = await prisma.digitalFile.findUnique({
+    const file = await db.digitalFile.findUnique({
       where: { id: fileId },
       include: {
         project: {
@@ -198,7 +197,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's pledge for this project
-    const pledge = await prisma.pledge.findFirst({
+    const pledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
         projectId: file.projectId,
@@ -271,7 +270,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get signed URL expiration from settings
-    const settings = await prisma.platformSettings.findFirst({
+    const settings = await db.platformSettings.findFirst({
       select: { signedUrlExpirationMinutes: true },
     });
     const expiresIn = (settings?.signedUrlExpirationMinutes || 60) * 60;
@@ -279,7 +278,7 @@ export async function POST(request: NextRequest) {
     const downloadUrl = await r2.getDownloadUrl(file.r2StorageKey, { expiresIn });
 
     // Update or create distribution record
-    await prisma.digitalDistribution.upsert({
+    await db.digitalDistribution.upsert({
       where: {
         digitalFileId_pledgeId: {
           digitalFileId: file.id,
@@ -300,7 +299,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Update file download count
-    await prisma.digitalFile.update({
+    await db.digitalFile.update({
       where: { id: file.id },
       data: { downloadCount: { increment: 1 } },
     });
