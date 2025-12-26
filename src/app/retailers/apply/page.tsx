@@ -151,25 +151,32 @@ export default function RetailerApplyPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-4">
-        <Card className="max-w-lg w-full">
+      <div className="relative min-h-screen bg-background overflow-hidden flex items-center justify-center p-4">
+        {/* Floating orbs background */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-emerald-500/15" />
+          <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-teal-500/10" style={{ animationDelay: '-6s' }} />
+          <div className="floating-orb absolute -bottom-40 right-1/4 w-[350px] h-[350px] bg-cyan-500/10" style={{ animationDelay: '-12s' }} />
+        </div>
+
+        <Card className="glass-card max-w-lg w-full border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-                <CheckCircle className="h-8 w-8 text-emerald-600" />
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg">
+                <CheckCircle className="h-8 w-8 text-white" />
               </div>
-              <h2 className="mt-6 text-2xl font-bold text-zinc-900 dark:text-white">
+              <h2 className="mt-6 text-2xl font-bold">
                 Application Submitted!
               </h2>
-              <p className="mt-4 text-zinc-600 dark:text-zinc-400">
+              <p className="mt-4 text-muted-foreground">
                 Thank you for applying to our retailer program. Our team will review your
                 application and contact you within 2-3 business days.
               </p>
-              <p className="mt-4 text-sm text-zinc-500">
-                A confirmation email has been sent to <strong>{formData.email}</strong>
+              <p className="mt-4 text-sm text-muted-foreground">
+                A confirmation email has been sent to <strong className="text-foreground">{formData.email}</strong>
               </p>
               <div className="mt-8 flex flex-col gap-3">
-                <Button asChild className="w-full">
+                <Button asChild className="w-full btn-glow bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
                   <Link href="/retailers">Return to Retailer Info</Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
@@ -184,37 +191,44 @@ export default function RetailerApplyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+    <div className="relative min-h-screen bg-background overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-emerald-500/10" />
+        <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-teal-500/8" style={{ animationDelay: '-5s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/4 w-[350px] h-[350px] bg-cyan-500/8" style={{ animationDelay: '-10s' }} />
+      </div>
+
       {/* Header */}
-      <div className="border-b bg-white dark:bg-zinc-900">
+      <div className="relative border-b bg-gradient-to-b from-emerald-500/5 to-background/80 backdrop-blur-sm">
         <div className="mx-auto max-w-4xl px-4 py-6">
           <Link
             href="/retailers"
-            className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-700"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Retailer Info
           </Link>
-          <h1 className="mt-4 text-2xl font-bold text-zinc-900 dark:text-white">
+          <h1 className="mt-4 text-2xl font-bold">
             Retailer Application
           </h1>
-          <p className="mt-1 text-zinc-500">
+          <p className="mt-1 text-muted-foreground">
             Complete the form below to apply for retailer access
           </p>
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="relative mx-auto max-w-4xl px-4 py-8">
         {/* Progress Steps */}
-        <div className="mb-8">
+        <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                     currentStep >= step.id
-                      ? "border-emerald-500 bg-emerald-500 text-white"
-                      : "border-zinc-300 text-zinc-400"
+                      ? "border-emerald-500 bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg"
+                      : "border-muted-foreground/30 text-muted-foreground"
                   }`}
                 >
                   {currentStep > step.id ? (
@@ -225,8 +239,8 @@ export default function RetailerApplyPage() {
                 </div>
                 {index < steps.length - 1 && (
                   <div
-                    className={`hidden h-1 w-16 md:block lg:w-24 ${
-                      currentStep > step.id ? "bg-emerald-500" : "bg-zinc-200"
+                    className={`hidden h-1 w-16 md:block lg:w-24 transition-colors duration-300 ${
+                      currentStep > step.id ? "bg-gradient-to-r from-emerald-500 to-teal-500" : "bg-muted"
                     }`}
                   />
                 )}
@@ -248,7 +262,7 @@ export default function RetailerApplyPage() {
         </div>
 
         {/* Form Content */}
-        <Card>
+        <Card className="glass-card border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
           <CardHeader>
             <CardTitle>{steps[currentStep - 1].title}</CardTitle>
             <CardDescription>
@@ -665,7 +679,7 @@ export default function RetailerApplyPage() {
                 <Button
                   onClick={handleSubmit}
                   disabled={!canProceed() || isSubmitting}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="btn-glow bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
                 >
                   {isSubmitting ? (
                     <>

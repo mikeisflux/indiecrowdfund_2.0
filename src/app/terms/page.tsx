@@ -31,31 +31,38 @@ export default function TermsPage() {
   const [activeTab, setActiveTab] = useState("terms");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
+    <div className="relative min-h-screen bg-background overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+        <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-purple-500/8" style={{ animationDelay: '-7s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/3 w-[350px] h-[350px] bg-blue-500/8" style={{ animationDelay: '-14s' }} />
+      </div>
+
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-sm dark:bg-zinc-950/80">
+      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">
-            <Link href="/" className="text-xl font-bold text-zinc-900 dark:text-white">
+            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
               IndieCrowdfund
             </Link>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link href="/discover" className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">
+            <Link href="/discover" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Discover
             </Link>
-            <Link href="/projects/new" className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">
+            <Link href="/projects/new" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Start a Project
             </Link>
-            <Link href="/retailers" className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">
+            <Link href="/retailers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Retailers
             </Link>
-            <Link href="/about-us" className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">
+            <Link href="/about-us" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               About Us
             </Link>
-            <Link href="/faq" className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">
+            <Link href="/faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               FAQ
             </Link>
           </nav>
@@ -80,21 +87,21 @@ export default function TermsPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 relative">
         {/* Back Link */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white mb-6"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Home
         </Link>
 
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-2">
+        <div className="max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">
             Legal & Policies
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-8">
+          <p className="text-muted-foreground mb-8">
             Important information about using IndieCrowdfund
           </p>
 
@@ -104,68 +111,68 @@ export default function TermsPage() {
               {/* Left Sidebar Navigation */}
               <div className="w-64 flex-shrink-0">
                 <div className="sticky top-24">
-                  <TabsList className="flex flex-col h-auto w-full bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 space-y-1">
-                    <TabsTrigger value="terms" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                  <TabsList className="flex flex-col h-auto w-full glass-card rounded-lg p-2 space-y-1">
+                    <TabsTrigger value="terms" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <ScrollText className="h-4 w-4" />
                       <span>Terms of Service</span>
                     </TabsTrigger>
-                    <TabsTrigger value="privacy" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="privacy" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <Shield className="h-4 w-4" />
                       <span>Privacy Policy</span>
                     </TabsTrigger>
-                    <TabsTrigger value="refunds" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="refunds" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <RotateCcw className="h-4 w-4" />
                       <span>Refund Policy</span>
                     </TabsTrigger>
-                    <TabsTrigger value="creator" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="creator" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <UserCheck className="h-4 w-4" />
                       <span>Creator Agreement</span>
                     </TabsTrigger>
-                    <TabsTrigger value="backer" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="backer" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <AlertTriangle className="h-4 w-4" />
                       <span>Backer Risks</span>
                     </TabsTrigger>
-                    <TabsTrigger value="shipping" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="shipping" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <Package className="h-4 w-4" />
                       <span>Shipping & Rewards</span>
                     </TabsTrigger>
-                    <TabsTrigger value="chargebacks" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="chargebacks" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <CreditCard className="h-4 w-4" />
                       <span>Chargebacks</span>
                     </TabsTrigger>
-                    <TabsTrigger value="fraud" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="fraud" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <ShieldAlert className="h-4 w-4" />
                       <span>Fraud Policy</span>
                     </TabsTrigger>
-                    <TabsTrigger value="cookies" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="cookies" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <Cookie className="h-4 w-4" />
                       <span>Cookie Policy</span>
                     </TabsTrigger>
-                    <TabsTrigger value="guidelines" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="guidelines" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <FileText className="h-4 w-4" />
                       <span>Community Guidelines</span>
                     </TabsTrigger>
-                    <TabsTrigger value="dmca" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="dmca" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <Copyright className="h-4 w-4" />
                       <span>DMCA Policy</span>
                     </TabsTrigger>
-                    <TabsTrigger value="ai-policy" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="ai-policy" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <Brain className="h-4 w-4" />
                       <span>AI Policy</span>
                     </TabsTrigger>
-                    <TabsTrigger value="gdpr-ccpa" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="gdpr-ccpa" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <Globe className="h-4 w-4" />
                       <span>GDPR + CCPA</span>
                     </TabsTrigger>
-                    <TabsTrigger value="data-deletion" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="data-deletion" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <Trash2 className="h-4 w-4" />
                       <span>Data Deletion</span>
                     </TabsTrigger>
-                    <TabsTrigger value="nsfw" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="nsfw" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <EyeOff className="h-4 w-4" />
                       <span>NSFW Policy</span>
                     </TabsTrigger>
-                    <TabsTrigger value="pci-compliance" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="pci-compliance" className="flex items-center gap-3 w-full justify-start px-4 py-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
                       <Lock className="h-4 w-4" />
                       <span>PCI Compliance Certification</span>
                     </TabsTrigger>

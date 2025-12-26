@@ -106,8 +106,12 @@ export default function RetailerLoginPage() {
   // Show loading spinner while checking session
   if (isCheckingSession) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 flex items-center justify-center p-4">
-        <div className="text-center">
+      <div className="relative min-h-screen bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 flex items-center justify-center p-4 overflow-hidden">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-white/10" />
+          <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-emerald-400/20" style={{ animationDelay: '-5s' }} />
+        </div>
+        <div className="text-center relative">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p className="text-white">
             {sessionMessage || "Checking your session..."}
@@ -118,22 +122,29 @@ export default function RetailerLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+    <div className="relative min-h-screen bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 flex items-center justify-center p-4 overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-white/10" />
+        <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-emerald-400/20" style={{ animationDelay: '-5s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/4 w-[350px] h-[350px] bg-cyan-400/15" style={{ animationDelay: '-10s' }} />
+      </div>
+
+      <div className="w-full max-w-md relative">
+        <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Link
             href="/retailers"
-            className="inline-flex items-center text-sm text-white/80 hover:text-white"
+            className="inline-flex items-center text-sm text-white/80 hover:text-white transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Retailer Info
           </Link>
         </div>
 
-        <Card className="shadow-xl">
+        <Card className="glass-card shadow-2xl border-white/20 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
           <CardHeader className="text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-              <Store className="h-7 w-7 text-emerald-600" />
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg">
+              <Store className="h-7 w-7 text-white" />
             </div>
             <CardTitle className="mt-4 text-2xl">Retailer Portal</CardTitle>
             <CardDescription>
@@ -247,7 +258,7 @@ export default function RetailerLoginPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                className="w-full btn-glow bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
                 disabled={isLoading}
               >
                 {isLoading ? (

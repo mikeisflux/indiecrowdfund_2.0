@@ -315,8 +315,9 @@ export default function SettingsPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+          <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
+          <div className="floating-orb absolute -bottom-40 right-1/4 w-[350px] h-[350px] bg-cyan-500/8" style={{ animationDelay: '-10s' }} />
         </div>
 
         <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
@@ -373,8 +374,9 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+        <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/4 w-[350px] h-[350px] bg-cyan-500/8" style={{ animationDelay: '-10s' }} />
       </div>
 
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
@@ -399,7 +401,7 @@ export default function SettingsPage() {
               onClick={handleSave}
               disabled={saving}
               size="sm"
-              className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
+              className="btn-glow bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
@@ -424,7 +426,7 @@ export default function SettingsPage() {
 
         <div className="space-y-6">
           {/* Profile Section */}
-          <Card className="bg-card/50 backdrop-blur border-border/50">
+          <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5 text-primary" />
@@ -580,7 +582,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* Account Section */}
-          <Card className="bg-card/50 backdrop-blur border-border/50">
+          <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-blue-500" />
@@ -657,7 +659,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* Email Preferences */}
-          <Card className="bg-card/50 backdrop-blur border-border/50">
+          <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '200ms' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5 text-amber-500" />
@@ -723,7 +725,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* Privacy & Security */}
-          <Card className="bg-card/50 backdrop-blur border-border/50">
+          <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '300ms' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-green-500" />
@@ -781,7 +783,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* Connected Services */}
-          <Card className="bg-card/50 backdrop-blur border-border/50">
+          <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '400ms' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Globe className="h-5 w-5 text-purple-500" />

@@ -91,15 +91,22 @@ export default function BugReportPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-12">
-        <div className="container max-w-2xl mx-auto px-4">
-          <Card className="border-green-200 bg-green-50/50">
+      <div className="relative min-h-screen bg-background overflow-hidden py-12">
+        {/* Floating orbs background */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-emerald-500/15" />
+          <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-green-500/10" style={{ animationDelay: '-6s' }} />
+        </div>
+        <div className="container max-w-2xl mx-auto px-4 relative">
+          <Card className="glass-card border-green-200/50 bg-green-50/30 dark:bg-green-950/20 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
             <CardContent className="pt-8 pb-8 text-center">
-              <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-green-800 mb-2">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <CheckCircle2 className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-green-800 dark:text-green-400 mb-2">
                 Thank You!
               </h2>
-              <p className="text-green-700 mb-6">
+              <p className="text-green-700 dark:text-green-500 mb-6">
                 Your bug report has been submitted successfully. Our team will
                 review it and work on a fix.
               </p>
@@ -133,15 +140,22 @@ export default function BugReportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-12">
-      <div className="container max-w-2xl mx-auto px-4">
+    <div className="relative min-h-screen bg-background overflow-hidden py-12">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+        <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-amber-500/8" style={{ animationDelay: '-5s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/4 w-[350px] h-[350px] bg-orange-500/8" style={{ animationDelay: '-10s' }} />
+      </div>
+
+      <div className="container max-w-2xl mx-auto px-4 relative">
         {/* Header Section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Bug className="w-8 h-8 text-primary" />
+        <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-purple-500 shadow-lg mb-4">
+            <Bug className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold mb-3">Bug Report</h1>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <div className="glass-card bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-500/20 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-center gap-2 text-amber-700 mb-2">
               <Heart className="w-5 h-5 text-amber-600" />
               <span className="font-semibold">Beta Release</span>
@@ -157,7 +171,7 @@ export default function BugReportPage() {
         </div>
 
         {/* Bug Report Form */}
-        <Card>
+        <Card className="glass-card border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Send className="w-5 h-5" />
@@ -336,7 +350,7 @@ export default function BugReportPage() {
 
               {/* Submit Button */}
               <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={isSubmitting} size="lg">
+                <Button type="submit" disabled={isSubmitting} size="lg" className="btn-glow">
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

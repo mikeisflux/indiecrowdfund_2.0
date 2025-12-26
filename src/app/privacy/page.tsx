@@ -241,12 +241,19 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen bg-background overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-blue-500/10" />
+        <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-primary/8" style={{ animationDelay: '-7s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/3 w-[350px] h-[350px] bg-purple-500/8" style={{ animationDelay: '-14s' }} />
+      </div>
+
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-20 relative overflow-hidden">
+      <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-20 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 mb-6">
               Privacy Policy
             </Badge>
@@ -264,7 +271,7 @@ export default function PrivacyPage() {
       </section>
 
       {/* Quick Links */}
-      <section className="py-8 bg-slate-50 border-b">
+      <section className="relative py-8 bg-muted/50 border-b backdrop-blur-sm">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-sm font-semibold text-muted-foreground mb-4">
@@ -286,10 +293,10 @@ export default function PrivacyPage() {
       </section>
 
       {/* Summary Card */}
-      <section className="py-12 bg-white">
+      <section className="relative py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <Card className="border-blue-200 bg-blue-50">
+            <Card className="glass-card border-blue-200/50 bg-blue-50/50 dark:bg-blue-950/20 shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-blue-900">
                   <Shield className="h-5 w-5" />
@@ -322,19 +329,19 @@ export default function PrivacyPage() {
       </section>
 
       {/* Main Content */}
-      <section className="py-12 bg-slate-50">
+      <section className="relative py-12 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto space-y-12">
-            {sections.map((section) => (
-              <div key={section.id} id={section.id} className="scroll-mt-8">
+            {sections.map((section, idx) => (
+              <div key={section.id} id={section.id} className="scroll-mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${idx * 50}ms` }}>
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <section.icon className="h-5 w-5 text-primary" />
+                  <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+                    <section.icon className="h-5 w-5 text-primary-foreground" />
                   </div>
                   <h2 className="text-2xl font-bold">{section.title}</h2>
                 </div>
 
-                <Card>
+                <Card className="glass-card border shadow-lg">
                   <CardContent className="p-6 space-y-6">
                     {section.content.map((subsection, idx) => (
                       <div key={idx}>
@@ -363,7 +370,7 @@ export default function PrivacyPage() {
       </section>
 
       {/* Contact Section */}
-      <section className="py-16 bg-white">
+      <section className="relative py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <Mail className="h-12 w-12 text-primary mx-auto mb-4" />
@@ -383,7 +390,7 @@ export default function PrivacyPage() {
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <Link href="/contact">
-                  <Button size="lg" className="gap-2">
+                  <Button size="lg" className="gap-2 btn-glow">
                     Contact Support
                     <ArrowRight className="h-5 w-5" />
                   </Button>
@@ -401,12 +408,12 @@ export default function PrivacyPage() {
       </section>
 
       {/* Related Links */}
-      <section className="py-12 bg-slate-100">
+      <section className="relative py-12 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="grid sm:grid-cols-3 gap-4">
               <Link href="/terms" className="group">
-                <Card className="h-full transition-shadow group-hover:shadow-md">
+                <Card className="glass-card h-full transition-all group-hover:shadow-lg group-hover:-translate-y-1">
                   <CardContent className="p-6 text-center">
                     <FileText className="h-8 w-8 mx-auto mb-3 text-primary" />
                     <h3 className="font-semibold mb-1">Terms of Service</h3>
@@ -417,7 +424,7 @@ export default function PrivacyPage() {
                 </Card>
               </Link>
               <Link href="/trust-safety" className="group">
-                <Card className="h-full transition-shadow group-hover:shadow-md">
+                <Card className="glass-card h-full transition-all group-hover:shadow-lg group-hover:-translate-y-1">
                   <CardContent className="p-6 text-center">
                     <Shield className="h-8 w-8 mx-auto mb-3 text-primary" />
                     <h3 className="font-semibold mb-1">Trust & Safety</h3>
@@ -428,7 +435,7 @@ export default function PrivacyPage() {
                 </Card>
               </Link>
               <Link href="/faq" className="group">
-                <Card className="h-full transition-shadow group-hover:shadow-md">
+                <Card className="glass-card h-full transition-all group-hover:shadow-lg group-hover:-translate-y-1">
                   <CardContent className="p-6 text-center">
                     <AlertCircle className="h-8 w-8 mx-auto mb-3 text-primary" />
                     <h3 className="font-semibold mb-1">FAQ</h3>

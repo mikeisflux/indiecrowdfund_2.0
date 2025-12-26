@@ -231,7 +231,11 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="container py-8 max-w-4xl">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+          <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
+        </div>
+        <div className="container py-8 max-w-4xl relative">
           <Skeleton className="h-48 md:h-64 w-full rounded-xl" />
           <div className="px-6 md:px-8 pb-6">
             <Skeleton className="h-32 w-32 rounded-full -mt-16 mb-4 ring-4 ring-background" />
@@ -273,7 +277,14 @@ export default function ProfilePage() {
     : `/u/${profile.id}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+        <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/4 w-[350px] h-[350px] bg-cyan-500/8" style={{ animationDelay: '-10s' }} />
+      </div>
+
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
@@ -299,7 +310,7 @@ export default function ProfilePage() {
               onClick={handleSave}
               disabled={saving}
               size="sm"
-              className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
+              className="btn-glow bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -314,7 +325,7 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <div className="container py-8 max-w-4xl">
+      <div className="container py-8 max-w-4xl relative">
         {/* Hero Image Section */}
         <div className="relative rounded-xl overflow-hidden group">
           <div
@@ -407,7 +418,7 @@ export default function ProfilePage() {
 
           {/* Basic Info Tab */}
           <TabsContent value="basic" className="space-y-6">
-            <Card>
+            <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5 text-primary" />
@@ -477,7 +488,7 @@ export default function ProfilePage() {
 
           {/* Links & Social Tab */}
           <TabsContent value="links" className="space-y-6">
-            <Card>
+            <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Globe className="h-5 w-5 text-primary" />
@@ -510,7 +521,7 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Link2 className="h-5 w-5 text-primary" />
@@ -560,7 +571,7 @@ export default function ProfilePage() {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
-            <Card>
+            <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500">
               <CardHeader>
                 <CardTitle>Profile Visibility</CardTitle>
                 <CardDescription>
@@ -603,7 +614,7 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
               <CardHeader>
                 <CardTitle>Account Settings</CardTitle>
                 <CardDescription>

@@ -153,7 +153,7 @@ export default function NotificationsPage() {
   const totalPages = Math.ceil(pagination.total / pagination.limit);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -201,7 +201,7 @@ export default function NotificationsPage() {
       </Tabs>
 
       {/* Notifications List */}
-      <Card>
+      <Card className="glass-card border shadow-lg">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Bell className="h-5 w-5" />
