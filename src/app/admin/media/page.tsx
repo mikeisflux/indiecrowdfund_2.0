@@ -7,7 +7,6 @@ import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -17,17 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Image as ImageIcon,
   Upload,
@@ -49,69 +39,28 @@ import {
   FolderPlus,
   Edit3,
   Move,
-  X,
   Download,
-  AlertCircle,
-  CheckCircle2,
 } from "lucide-react";
 
-interface MediaFile {
-  id: string;
-  filename: string;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  url: string;
-  thumbnailUrl: string | null;
-  width: number | null;
-  height: number | null;
-  duration: number | null;
-  folder: string;
-  tags: string[];
-  altText: string | null;
-  createdAt: string;
-  uploader: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  } | null;
-}
+// Types
+import type {
+  MediaFile,
+  MediaStats,
+  FolderInfo,
+  Pagination,
+  ScanResult,
+  ImportResult,
+  EditFormState,
+} from "./types";
 
-interface MediaStats {
-  totalFiles: number;
-  totalSize: number;
-  images: number;
-  videos: number;
-  documents: number;
-}
-
-interface FolderInfo {
-  name: string;
-  count: number;
-}
-
-interface Pagination {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
-interface ScanResult {
-  scanned: {
-    filesystemTotal: number;
-    databaseTotal: number;
-    alreadyTracked: {
-      filesystem: number;
-      database: number;
-    };
-    untracked: {
-      filesystem: number;
-      database: number;
-    };
-  };
-}
+// Components
+import {
+  UploadDialog,
+  ScanImportDialog,
+  EditFileDialog,
+  MoveFilesDialog,
+  NewFolderDialog,
+} from "./components";
 
 // Default folder structure
 const DEFAULT_FOLDERS = [
@@ -138,7 +87,7 @@ export default function MediaPage() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [scanning, setScanning] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: boolean; imported: number; errors?: string[] } | null>(null);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [stats, setStats] = useState<MediaStats | null>(null);
@@ -152,7 +101,7 @@ export default function MediaPage() {
   const [newFolderName, setNewFolderName] = useState("");
 
   // Edit form state
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<EditFormState>({
     originalName: "",
     altText: "",
     folder: "",
@@ -1042,508 +991,72 @@ export default function MediaPage() {
       </div>
 
       {/* Edit File Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit File</DialogTitle>
-            <DialogDescription>Update file details and metadata</DialogDescription>
-          </DialogHeader>
-          {editingFile && (
-            <div className="grid gap-6 py-4 md:grid-cols-2">
-              {/* Preview */}
-              <div>
-                <div className="aspect-square rounded-lg bg-zinc-100 dark:bg-zinc-800 overflow-hidden relative mb-4">
-                  {editingFile.thumbnailUrl || (editingFile.mimeType.startsWith("image") && editingFile.url) ? (
-                    <Image
-                      src={editingFile.thumbnailUrl || editingFile.url}
-                      alt={editingFile.altText || editingFile.originalName}
-                      fill
-                      className="object-contain"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      {getFileIcon(editingFile.mimeType)}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Size:</span>
-                    <span>{formatFileSize(editingFile.size)}</span>
-                  </div>
-                  {editingFile.width && editingFile.height && (
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Dimensions:</span>
-                      <span>{editingFile.width} x {editingFile.height}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Type:</span>
-                    <span>{editingFile.mimeType}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Uploaded:</span>
-                    <span>{new Date(editingFile.createdAt).toLocaleString()}</span>
-                  </div>
-                  {editingFile.uploader && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-500">By:</span>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={editingFile.uploader.image || undefined} />
-                          <AvatarFallback className="text-[10px]">
-                            {editingFile.uploader.name?.[0] || editingFile.uploader.email[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{editingFile.uploader.name || editingFile.uploader.email}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => window.open(editingFile.url, "_blank")}
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Open
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => copyUrl(editingFile.url)}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy URL
-                  </Button>
-                </div>
-              </div>
-
-              {/* Form */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>File Name</Label>
-                  <Input
-                    value={editForm.originalName}
-                    onChange={(e) => setEditForm({ ...editForm, originalName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Folder</Label>
-                  <Select
-                    value={editForm.folder}
-                    onValueChange={(v) => setEditForm({ ...editForm, folder: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allFolders.map((folder) => (
-                        <SelectItem key={folder} value={folder}>
-                          <span className="capitalize">{folder}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Alt Text</Label>
-                  <Textarea
-                    placeholder="Describe this image for accessibility..."
-                    value={editForm.altText}
-                    onChange={(e) => setEditForm({ ...editForm, altText: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tags (comma separated)</Label>
-                  <Input
-                    placeholder="tag1, tag2, tag3"
-                    value={editForm.tags}
-                    onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={saveFileEdits} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditFileDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        file={editingFile}
+        editForm={editForm}
+        onEditFormChange={setEditForm}
+        allFolders={allFolders}
+        saving={saving}
+        onSave={saveFileEdits}
+        onCopyUrl={copyUrl}
+        formatFileSize={formatFileSize}
+      />
 
       {/* Move Files Dialog */}
-      <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Move Files</DialogTitle>
-            <DialogDescription>
-              Select a folder to move {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} to
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-2">
-            {allFolders.map((folder) => (
-              <button
-                key={folder}
-                onClick={() => moveFilesToFolder(folder)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-              >
-                <Folder className="h-5 w-5 text-zinc-400" />
-                <span className="capitalize">{folder}</span>
-              </button>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMoveDialog(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MoveFilesDialog
+        open={showMoveDialog}
+        onOpenChange={setShowMoveDialog}
+        selectedCount={selectedFiles.length}
+        allFolders={allFolders}
+        onMove={moveFilesToFolder}
+      />
 
       {/* New Folder Dialog */}
-      <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Folder</DialogTitle>
-            <DialogDescription>
-              Enter a name for the new folder
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="space-y-2">
-              <Label>Folder Name</Label>
-              <Input
-                placeholder="my-folder"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-              />
-              <p className="text-xs text-zinc-500">
-                Folder will be created when you upload files to it
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={createNewFolder} disabled={!newFolderName.trim()}>
-              <FolderPlus className="mr-2 h-4 w-4" />
-              Create & Upload
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NewFolderDialog
+        open={showNewFolderDialog}
+        onOpenChange={setShowNewFolderDialog}
+        folderName={newFolderName}
+        onFolderNameChange={setNewFolderName}
+        onCreate={createNewFolder}
+      />
 
       {/* Scan & Import Dialog */}
-      <Dialog open={showScanDialog} onOpenChange={setShowScanDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Import Existing Media</DialogTitle>
-            <DialogDescription>
-              Scan for files on disk and image URLs from projects that aren&apos;t tracked in the media library
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            {scanning && (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
-                <span className="ml-3 text-zinc-500">Scanning for files...</span>
-              </div>
-            )}
-
-            {!scanning && scanResult && (
-              <>
-                {/* Scan Results */}
-                <div className="space-y-3">
-                  {/* Filesystem files */}
-                  <div className="rounded-lg border p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <HardDrive className="h-5 w-5 text-blue-500" />
-                        <span className="font-medium">Filesystem Files</span>
-                      </div>
-                      <Badge variant="outline">
-                        {scanResult.scanned.filesystemTotal} total
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-zinc-500 space-y-1">
-                      <div className="flex justify-between">
-                        <span>Already tracked:</span>
-                        <span className="text-emerald-600">{scanResult.scanned.alreadyTracked.filesystem}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Untracked (can import):</span>
-                        <span className={scanResult.scanned.untracked.filesystem > 0 ? "text-amber-600 font-medium" : ""}>
-                          {scanResult.scanned.untracked.filesystem}
-                        </span>
-                      </div>
-                    </div>
-                    {scanResult.scanned.untracked.filesystem > 0 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3 w-full"
-                        onClick={() => importFiles("filesystem")}
-                        disabled={importing}
-                      >
-                        {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                        Import {scanResult.scanned.untracked.filesystem} files
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Database image references */}
-                  <div className="rounded-lg border p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <FileImage className="h-5 w-5 text-emerald-500" />
-                        <span className="font-medium">Project Images</span>
-                      </div>
-                      <Badge variant="outline">
-                        {scanResult.scanned.databaseTotal} total
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-zinc-500 space-y-1">
-                      <div className="flex justify-between">
-                        <span>Already tracked:</span>
-                        <span className="text-emerald-600">{scanResult.scanned.alreadyTracked.database}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Untracked (can import):</span>
-                        <span className={scanResult.scanned.untracked.database > 0 ? "text-amber-600 font-medium" : ""}>
-                          {scanResult.scanned.untracked.database}
-                        </span>
-                      </div>
-                    </div>
-                    {scanResult.scanned.untracked.database > 0 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3 w-full"
-                        onClick={() => importFiles("database")}
-                        disabled={importing}
-                      >
-                        {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                        Import {scanResult.scanned.untracked.database} images
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Import all button */}
-                {(scanResult.scanned.untracked.filesystem > 0 || scanResult.scanned.untracked.database > 0) && (
-                  <Button
-                    className="w-full"
-                    onClick={() => importFiles("all")}
-                    disabled={importing}
-                  >
-                    {importing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Importing...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4 mr-2" />
-                        Import All ({scanResult.scanned.untracked.filesystem + scanResult.scanned.untracked.database} files)
-                      </>
-                    )}
-                  </Button>
-                )}
-
-                {/* No files to import */}
-                {scanResult.scanned.untracked.filesystem === 0 && scanResult.scanned.untracked.database === 0 && (
-                  <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-4 flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-emerald-800 dark:text-emerald-400">All files tracked</p>
-                      <p className="text-sm text-emerald-700 dark:text-emerald-500">
-                        All existing files are already in the media library.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Import result */}
-                {importResult && (
-                  <div className={`rounded-lg p-4 flex items-start gap-3 ${
-                    importResult.success
-                      ? "bg-emerald-50 dark:bg-emerald-950/30"
-                      : "bg-red-50 dark:bg-red-950/30"
-                  }`}>
-                    {importResult.success ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5" />
-                    ) : (
-                      <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                    )}
-                    <div>
-                      <p className={`font-medium ${importResult.success ? "text-emerald-800 dark:text-emerald-400" : "text-red-800 dark:text-red-400"}`}>
-                        {importResult.success ? `Imported ${importResult.imported} files` : "Import failed"}
-                      </p>
-                      {importResult.errors && importResult.errors.length > 0 && (
-                        <ul className="text-sm text-red-700 dark:text-red-500 mt-1 list-disc list-inside">
-                          {importResult.errors.slice(0, 3).map((err, i) => (
-                            <li key={i}>{err}</li>
-                          ))}
-                          {importResult.errors.length > 3 && (
-                            <li>...and {importResult.errors.length - 3} more errors</li>
-                          )}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowScanDialog(false)}>
-              Close
-            </Button>
-            <Button variant="outline" onClick={scanForFiles} disabled={scanning}>
-              {scanning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-              Rescan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ScanImportDialog
+        open={showScanDialog}
+        onOpenChange={setShowScanDialog}
+        scanning={scanning}
+        scanResult={scanResult}
+        importing={importing}
+        importResult={importResult}
+        onScan={scanForFiles}
+        onImport={importFiles}
+      />
 
       {/* Upload Dialog */}
-      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Upload Media</DialogTitle>
-            <DialogDescription>Upload images, videos, or documents (max 50MB each)</DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            {/* Folder selection */}
-            <div className="space-y-2">
-              <Label>Upload to folder</Label>
-              <Select value={uploadFolder} onValueChange={setUploadFolder}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {allFolders.map((folder) => (
-                    <SelectItem key={folder} value={folder}>
-                      <span className="capitalize">{folder}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Drop zone */}
-            <div
-              className={`rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
-                isDragging
-                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
-                  : "border-zinc-300 dark:border-zinc-700"
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <Upload className={`h-10 w-10 mx-auto mb-3 ${isDragging ? "text-emerald-500" : "text-zinc-400"}`} />
-              <p className="text-sm font-medium mb-1">Drop files here</p>
-              <p className="text-xs text-zinc-500 mb-3">or click to browse</p>
-              <label>
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileSelect}
-                  accept="image/*,video/*,.pdf,.doc,.docx"
-                />
-                <Button variant="outline" size="sm" asChild>
-                  <span className="cursor-pointer">Browse Files</span>
-                </Button>
-              </label>
-            </div>
-
-            {/* Selected files */}
-            {uploadingFiles.length > 0 && (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                <Label>Selected files ({uploadingFiles.length})</Label>
-                {uploadingFiles.map((file, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 rounded bg-zinc-50 dark:bg-zinc-800"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {getFileIcon(file.type)}
-                      <span className="text-sm truncate">{file.name}</span>
-                      <span className="text-xs text-zinc-500">({formatFileSize(file.size)})</span>
-                    </div>
-                    {uploadProgress[file.name] !== undefined ? (
-                      uploadProgress[file.name] === 100 ? (
-                        <Badge variant="default" className="bg-emerald-500">Done</Badge>
-                      ) : uploadProgress[file.name] === -1 ? (
-                        <Badge variant="destructive">Failed</Badge>
-                      ) : (
-                        <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
-                      )
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeUploadFile(index)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowUploadDialog(false);
-                setUploadingFiles([]);
-                setUploadProgress({});
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={uploadFiles}
-              disabled={uploadingFiles.length === 0 || Object.keys(uploadProgress).length > 0}
-            >
-              {Object.keys(uploadProgress).length > 0 ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload {uploadingFiles.length > 0 ? `(${uploadingFiles.length})` : ""}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UploadDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        uploadFolder={uploadFolder}
+        onUploadFolderChange={setUploadFolder}
+        allFolders={allFolders}
+        uploadingFiles={uploadingFiles}
+        uploadProgress={uploadProgress}
+        isDragging={isDragging}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onFileSelect={handleFileSelect}
+        onRemoveFile={removeUploadFile}
+        onUpload={uploadFiles}
+        onCancel={() => {
+          setShowUploadDialog(false);
+          setUploadingFiles([]);
+          setUploadProgress({});
+        }}
+        formatFileSize={formatFileSize}
+      />
     </div>
   );
 }
