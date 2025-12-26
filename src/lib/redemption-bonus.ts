@@ -291,7 +291,7 @@ export async function checkAndAwardBadges(userId: string): Promise<string[]> {
       status: "COMPLETED",
       surveyCompleted: false,
       project: {
-        status: { in: ["FUNDED", "DELIVERED"] },
+        status: "FUNDED",
       },
     },
   });
