@@ -77,7 +77,7 @@ export async function GET() {
       badgeCount: summary.badgeCount,
       bonus: {
         rawPercent: summary.rawBonusPercent,
-        availablePercent: `${Number(bonusInfo.availablePercent).toFixed(4) * 100}%`,
+        availablePercent: `${(Number(bonusInfo.availablePercent) * 100).toFixed(2)}%`,
         perBadge: "0.05%",
         monthlyCap: "0.03%",
       },

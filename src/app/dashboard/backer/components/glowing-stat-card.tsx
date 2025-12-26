@@ -11,14 +11,16 @@ interface GlowingStatCardProps {
   prefix?: string;
   suffix?: string;
   icon: LucideIcon;
-  color?: "green" | "cyan" | "purple" | "amber" | "rose";
+  color?: "green" | "cyan" | "purple" | "amber" | "rose" | "primary" | "blue";
   trend?: {
     value: number;
-    isPositive: boolean;
+    isPositive?: boolean;
+    label?: string;
   };
   subtitle?: string;
   animate?: boolean;
   delay?: number;
+  pulse?: boolean;
 }
 
 const colorClasses = {
@@ -60,6 +62,22 @@ const colorClasses = {
     border: "border-rose-500/20",
     icon: "text-rose-500",
     gradient: "from-rose-500 to-rose-600",
+    neon: "",
+  },
+  primary: {
+    glow: "glow-pulse",
+    bg: "bg-primary/10",
+    border: "border-primary/20",
+    icon: "text-primary",
+    gradient: "from-primary to-primary/80",
+    neon: "",
+  },
+  blue: {
+    glow: "glow-pulse",
+    bg: "bg-blue-500/10",
+    border: "border-blue-500/20",
+    icon: "text-blue-500",
+    gradient: "from-blue-500 to-blue-600",
     neon: "",
   },
 };
@@ -120,6 +138,7 @@ export function GlowingStatCard({
   subtitle,
   animate = true,
   delay = 0,
+  pulse = false,
 }: GlowingStatCardProps) {
   const colors = colorClasses[color];
   const [isVisible, setIsVisible] = useState(!animate);
@@ -156,10 +175,10 @@ export function GlowingStatCard({
             {trend && (
               <div className={cn(
                 "flex items-center gap-1 text-sm",
-                trend.isPositive ? "text-emerald-500" : "text-rose-500"
+                trend.isPositive !== false ? "text-emerald-500" : "text-rose-500"
               )}>
                 <span>{trend.isPositive ? "+" : ""}{trend.value}%</span>
-                <span className="text-muted-foreground">vs last month</span>
+                <span className="text-muted-foreground">{trend.label || "vs last month"}</span>
               </div>
             )}
           </div>
@@ -168,7 +187,8 @@ export function GlowingStatCard({
           <div className={cn(
             "relative p-3 rounded-xl",
             colors.bg,
-            colors.glow
+            colors.glow,
+            pulse && "animate-pulse"
           )}>
             <Icon className={cn("h-6 w-6", colors.icon)} />
             {/* Icon glow backdrop */}

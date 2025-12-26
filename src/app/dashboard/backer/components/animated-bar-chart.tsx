@@ -7,15 +7,17 @@ import { cn } from "@/lib/utils";
 interface BarData {
   label: string;
   value: number;
-  color?: "green" | "cyan" | "purple" | "amber";
+  color?: "green" | "cyan" | "purple" | "amber" | "primary";
 }
 
 interface AnimatedBarChartProps {
-  title: string;
+  title?: string;
   data: BarData[];
   height?: number;
   showValues?: boolean;
   showLabels?: boolean;
+  showGlow?: boolean;
+  color?: "green" | "cyan" | "purple" | "amber" | "primary";
   className?: string;
 }
 
@@ -40,6 +42,11 @@ const barColors = {
     glow: "shadow-[0_0_20px_rgba(245,158,11,0.5)]",
     hover: "hover:shadow-[0_0_30px_rgba(245,158,11,0.7)]",
   },
+  primary: {
+    bg: "bg-gradient-to-t from-primary to-primary/70",
+    glow: "shadow-[0_0_20px_hsl(var(--primary)/0.5)]",
+    hover: "hover:shadow-[0_0_30px_hsl(var(--primary)/0.7)]",
+  },
 };
 
 export function AnimatedBarChart({
@@ -48,6 +55,8 @@ export function AnimatedBarChart({
   height = 200,
   showValues = true,
   showLabels = true,
+  showGlow = false,
+  color,
   className,
 }: AnimatedBarChartProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -75,7 +84,7 @@ export function AnimatedBarChart({
         >
           {data.map((item, index) => {
             const heightPercent = (item.value / maxValue) * 100;
-            const colors = barColors[item.color || "green"];
+            const colors = barColors[item.color || color || "green"];
             const delayClass = `animate-bar-delay-${Math.min(index + 1, 6)}`;
 
             return (
@@ -105,7 +114,7 @@ export function AnimatedBarChart({
                     className={cn(
                       "w-full max-w-[40px] rounded-t-lg transition-all duration-300 cursor-pointer",
                       colors.bg,
-                      colors.glow,
+                      showGlow && colors.glow,
                       colors.hover,
                       isVisible ? "animate-bar" : "opacity-0",
                       delayClass

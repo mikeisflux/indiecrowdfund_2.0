@@ -8,12 +8,13 @@ interface CircularProgressProps {
   max?: number;
   size?: number;
   strokeWidth?: number;
-  color?: "green" | "cyan" | "purple" | "amber";
+  color?: "green" | "cyan" | "purple" | "amber" | "emerald";
   showValue?: boolean;
   label?: string;
   sublabel?: string;
   animate?: boolean;
   glowing?: boolean;
+  showGlow?: boolean;
   className?: string;
 }
 
@@ -42,6 +43,12 @@ const colorStyles = {
     glow: "drop-shadow(0 0 10px rgba(245, 158, 11, 0.6))",
     text: "text-amber-500",
   },
+  emerald: {
+    stroke: "stroke-emerald-500",
+    fill: "fill-emerald-500",
+    glow: "drop-shadow(0 0 10px rgba(16, 185, 129, 0.6))",
+    text: "text-emerald-500",
+  },
 };
 
 export function CircularProgress({
@@ -55,8 +62,11 @@ export function CircularProgress({
   sublabel,
   animate = true,
   glowing = true,
+  showGlow,
   className,
 }: CircularProgressProps) {
+  // showGlow is an alias for glowing for compatibility
+  const shouldGlow = showGlow ?? glowing;
   const [animatedValue, setAnimatedValue] = useState(animate ? 0 : value);
   const colors = colorStyles[color];
 
@@ -96,7 +106,7 @@ export function CircularProgress({
         width={size}
         height={size}
         className="transform -rotate-90"
-        style={{ filter: glowing ? colors.glow : undefined }}
+        style={{ filter: shouldGlow ? colors.glow : undefined }}
       >
         {/* Background track */}
         <circle
@@ -135,7 +145,7 @@ export function CircularProgress({
         />
 
         {/* Animated glow dot at the end of progress */}
-        {glowing && percentage > 0 && (
+        {shouldGlow && percentage > 0 && (
           <circle
             cx={size / 2 + radius * Math.cos(((percentage / 100) * 360 - 90) * (Math.PI / 180))}
             cy={size / 2 + radius * Math.sin(((percentage / 100) * 360 - 90) * (Math.PI / 180))}

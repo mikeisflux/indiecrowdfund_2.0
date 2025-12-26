@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import crypto from "crypto";
-import { Prisma } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import { validateCSRFToken } from "@/lib/csrf";
 import { applyRedemptionBonus, checkAndAwardBadges, getAvailableBonusPercent } from "@/lib/redemption-bonus";
 
@@ -337,8 +337,8 @@ export async function POST(req: NextRequest) {
 
     // Apply achievement badge bonus (outside transaction for non-critical operation)
     let bonusApplied = {
-      bonusPercentApplied: new Prisma.Decimal(0),
-      bonusAmountSaved: new Prisma.Decimal(0),
+      bonusPercentApplied: new Decimal(0),
+      bonusAmountSaved: new Decimal(0),
     };
 
     if (bonusInfo.availablePercent.gt(0)) {
@@ -346,7 +346,7 @@ export async function POST(req: NextRequest) {
         bonusApplied = await applyRedemptionBonus(
           userId,
           result.redemptionId,
-          new Prisma.Decimal(amount)
+          new Decimal(amount)
         );
 
         // If bonus was applied, add it to the balance
@@ -366,7 +366,7 @@ export async function POST(req: NextRequest) {
               userId,
               amount: Number(bonusApplied.bonusAmountSaved),
               type: "BONUS",
-              description: `Achievement badge bonus (${Number(bonusApplied.bonusPercentApplied).toFixed(4) * 100}%)`,
+              description: `Achievement badge bonus (${(Number(bonusApplied.bonusPercentApplied) * 100).toFixed(2)}%)`,
               metadata: JSON.stringify({
                 redemptionId: result.redemptionId,
                 bonusPercent: Number(bonusApplied.bonusPercentApplied),

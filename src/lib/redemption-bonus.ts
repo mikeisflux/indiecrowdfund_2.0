@@ -8,12 +8,12 @@
  * Uses Decimal for financial precision.
  */
 
-import { Prisma } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import { db } from "@/lib/db";
 
 // Constants for bonus calculation
-const BONUS_PER_BADGE = new Prisma.Decimal("0.0005"); // 0.05%
-const MONTHLY_CAP = new Prisma.Decimal("0.0003"); // 0.03%
+const BONUS_PER_BADGE = new Decimal("0.0005"); // 0.05%
+const MONTHLY_CAP = new Decimal("0.0003"); // 0.03%
 
 /**
  * Get the start of the current month for ledger tracking
@@ -26,7 +26,7 @@ function getMonthStart(): Date {
 /**
  * Calculate the raw bonus percentage based on user's badges
  */
-export async function calculateRawBonusPercent(userId: string): Promise<Prisma.Decimal> {
+export async function calculateRawBonusPercent(userId: string): Promise<Decimal> {
   const badgeCount = await db.userAchievement.count({
     where: { userId },
   });
@@ -60,8 +60,8 @@ export async function getOrCreateMonthlyLedger(userId: string) {
         userId,
         month,
         rawBonusPercent,
-        appliedBonusPercent: new Prisma.Decimal(0),
-        totalBonusApplied: new Prisma.Decimal(0),
+        appliedBonusPercent: new Decimal(0),
+        totalBonusApplied: new Decimal(0),
       },
     });
   }
@@ -74,15 +74,15 @@ export async function getOrCreateMonthlyLedger(userId: string) {
  * Takes into account the monthly cap
  */
 export async function getAvailableBonusPercent(userId: string): Promise<{
-  rawPercent: Prisma.Decimal;
-  availablePercent: Prisma.Decimal;
-  appliedThisMonth: Prisma.Decimal;
-  remainingCap: Prisma.Decimal;
+  rawPercent: Decimal;
+  availablePercent: Decimal;
+  appliedThisMonth: Decimal;
+  remainingCap: Decimal;
 }> {
   const ledger = await getOrCreateMonthlyLedger(userId);
 
-  const rawPercent = new Prisma.Decimal(ledger.rawBonusPercent);
-  const appliedThisMonth = new Prisma.Decimal(ledger.appliedBonusPercent);
+  const rawPercent = new Decimal(ledger.rawBonusPercent.toString());
+  const appliedThisMonth = new Decimal(ledger.appliedBonusPercent.toString());
 
   // Calculate remaining cap
   const remainingCap = MONTHLY_CAP.minus(appliedThisMonth);
@@ -92,9 +92,9 @@ export async function getAvailableBonusPercent(userId: string): Promise<{
 
   return {
     rawPercent,
-    availablePercent: availablePercent.gt(0) ? availablePercent : new Prisma.Decimal(0),
+    availablePercent: availablePercent.gt(0) ? availablePercent : new Decimal(0),
     appliedThisMonth,
-    remainingCap: remainingCap.gt(0) ? remainingCap : new Prisma.Decimal(0),
+    remainingCap: remainingCap.gt(0) ? remainingCap : new Decimal(0),
   };
 }
 
@@ -105,25 +105,25 @@ export async function getAvailableBonusPercent(userId: string): Promise<{
 export async function applyRedemptionBonus(
   userId: string,
   redemptionId: string,
-  redemptionAmount: Prisma.Decimal
+  redemptionAmount: Decimal
 ): Promise<{
-  bonusPercentApplied: Prisma.Decimal;
-  bonusAmountSaved: Prisma.Decimal;
-  newMonthlyTotal: Prisma.Decimal;
+  bonusPercentApplied: Decimal;
+  bonusAmountSaved: Decimal;
+  newMonthlyTotal: Decimal;
 }> {
   const { availablePercent } = await getAvailableBonusPercent(userId);
 
   if (availablePercent.lte(0)) {
     return {
-      bonusPercentApplied: new Prisma.Decimal(0),
-      bonusAmountSaved: new Prisma.Decimal(0),
-      newMonthlyTotal: new Prisma.Decimal(0),
+      bonusPercentApplied: new Decimal(0),
+      bonusAmountSaved: new Decimal(0),
+      newMonthlyTotal: new Decimal(0),
     };
   }
 
   // Calculate bonus amount
   const bonusAmount = redemptionAmount.mul(availablePercent);
-  const roundedBonus = new Prisma.Decimal(bonusAmount.toFixed(2));
+  const roundedBonus = new Decimal(bonusAmount.toFixed(2));
 
   // Get ledger to update
   const ledger = await getOrCreateMonthlyLedger(userId);
@@ -155,7 +155,7 @@ export async function applyRedemptionBonus(
   return {
     bonusPercentApplied: availablePercent,
     bonusAmountSaved: roundedBonus,
-    newMonthlyTotal: new Prisma.Decimal(updatedLedger.appliedBonusPercent),
+    newMonthlyTotal: new Decimal(updatedLedger.appliedBonusPercent.toString()),
   };
 }
 
@@ -235,8 +235,8 @@ export async function awardBadge(
         userId,
         month,
         rawBonusPercent,
-        appliedBonusPercent: new Prisma.Decimal(0),
-        totalBonusApplied: new Prisma.Decimal(0),
+        appliedBonusPercent: new Decimal(0),
+        totalBonusApplied: new Decimal(0),
       },
     });
 
