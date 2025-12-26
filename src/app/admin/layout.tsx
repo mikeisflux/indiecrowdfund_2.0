@@ -174,10 +174,12 @@ export default function AdminLayout({
   // Show loading state while checking auth
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <div className="text-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-emerald-500/5 relative overflow-hidden">
+        <div className="floating-orb w-96 h-96 bg-emerald-500/10 -top-48 -right-48 pointer-events-none" style={{ animationDelay: "0s" }} />
+        <div className="floating-orb w-80 h-80 bg-teal-500/10 top-1/2 -left-40 pointer-events-none" style={{ animationDelay: "2s" }} />
+        <div className="text-center relative z-10">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-4" />
-          <p className="text-zinc-500">Loading admin panel...</p>
+          <p className="text-muted-foreground">Loading admin panel...</p>
         </div>
       </div>
     );
@@ -197,7 +199,12 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa] dark:bg-zinc-950">
+    <div className="flex min-h-screen bg-gradient-to-br from-background via-background to-emerald-500/5 dark:bg-zinc-950 relative overflow-hidden">
+      {/* Floating Orbs */}
+      <div className="floating-orb w-96 h-96 bg-emerald-500/10 -top-48 -right-48 pointer-events-none" style={{ animationDelay: "0s" }} />
+      <div className="floating-orb w-80 h-80 bg-teal-500/10 top-1/2 -left-40 pointer-events-none" style={{ animationDelay: "2s" }} />
+      <div className="floating-orb w-64 h-64 bg-primary/10 bottom-20 right-1/4 pointer-events-none" style={{ animationDelay: "4s" }} />
+
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -209,18 +216,18 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 transform bg-white border-r border-zinc-200 transition-transform duration-200 lg:translate-x-0 lg:static dark:bg-zinc-900 dark:border-zinc-800",
+          "fixed inset-y-0 left-0 z-50 w-64 transform bg-background/95 backdrop-blur-xl border-r border-border transition-transform duration-200 lg:translate-x-0 lg:static",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center justify-between border-b border-zinc-200 px-4 dark:border-zinc-800">
+        <div className="flex h-16 items-center justify-between border-b border-border px-4">
           <Link href="/admin" prefetch={false} className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
               <Zap className="h-5 w-5 text-white" />
             </div>
             <div>
-              <span className="font-semibold text-zinc-900 dark:text-white">IndieCrowdfund</span>
+              <span className="font-semibold text-foreground">IndieCrowdfund</span>
               <Badge variant="secondary" className="ml-2 text-[10px]">Admin</Badge>
             </div>
           </Link>
@@ -239,7 +246,7 @@ export default function AdminLayout({
           <div className="space-y-6 px-3">
             {navigation.map((section) => (
               <div key={section.title}>
-                <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {section.title}
                 </h3>
                 <div className="space-y-1">
@@ -259,8 +266,8 @@ export default function AdminLayout({
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                           isActive
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         )}
                       >
                         <item.icon className={cn("h-5 w-5", isActive && "text-emerald-600")} />
@@ -300,7 +307,7 @@ export default function AdminLayout({
       {/* Main content */}
       <div className="flex flex-1 flex-col">
         {/* Top header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-zinc-200 bg-white px-4 lg:px-6 dark:bg-zinc-900 dark:border-zinc-800">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -317,9 +324,9 @@ export default function AdminLayout({
               <input
                 type="text"
                 placeholder="Search anything..."
-                className="h-10 w-80 rounded-lg border border-zinc-200 bg-zinc-50 pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                className="h-10 w-80 rounded-lg border border-border bg-muted/50 pl-10 pr-4 text-sm text-foreground outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
               />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-700">
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                 ⌘K
               </kbd>
             </div>
