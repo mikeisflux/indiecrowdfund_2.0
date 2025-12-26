@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -21,7 +20,6 @@ import {
   Crown,
   Zap,
   ClipboardCheck,
-  ChevronRight,
   Sparkles,
   TrendingUp,
   Info,
@@ -93,7 +91,9 @@ export function BadgesDisplay() {
     }
   };
 
-  const checkForNewBadges = async () => {
+  const hasCheckedBadges = useRef(false);
+
+  const checkForNewBadges = useCallback(async () => {
     try {
       const response = await fetch("/api/backer/badges", {
         method: "POST",
@@ -109,14 +109,15 @@ export function BadgesDisplay() {
     } catch (err) {
       console.error("Error checking for new badges:", err);
     }
-  };
+  }, []);
 
-  // Check for new badges on mount
+  // Check for new badges on mount (once data is loaded)
   useEffect(() => {
-    if (!loading && data) {
+    if (!loading && data && !hasCheckedBadges.current) {
+      hasCheckedBadges.current = true;
       checkForNewBadges();
     }
-  }, [loading]);
+  }, [loading, data, checkForNewBadges]);
 
   if (loading) {
     return (

@@ -11,7 +11,6 @@ import {
   Download,
   FileText,
   Sparkles,
-  Loader2,
   AlertCircle,
   FolderOpen,
   ChevronDown,

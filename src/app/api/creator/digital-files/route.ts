@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getR2Storage, generateFileKey, validateFileType } from "@/lib/r2";
+import { getR2Storage, generateFileKey } from "@/lib/r2";
 
 // CORS headers for API responses
 const corsHeaders = {

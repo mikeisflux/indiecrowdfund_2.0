@@ -29,7 +29,6 @@ import {
   Bell,
   CheckCircle,
   Truck,
-  TrendingUp,
   Sparkles,
   Search,
   MessageSquare,
@@ -52,7 +51,6 @@ import { formatTimeRemaining } from "@/lib/utils";
 import {
   GlowingStatCard,
   AnimatedBarChart,
-  FulfillmentPipeline,
   DigitalDownloadsTab,
   SurveyHubTab,
   BadgesDisplay,

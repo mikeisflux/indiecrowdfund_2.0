@@ -319,7 +319,6 @@ export function generateFileKey(
   fileId?: string
 ): string {
   const id = fileId || crypto.randomUUID();
-  const ext = originalFilename.split(".").pop()?.toLowerCase() || "bin";
   const sanitizedName = originalFilename
     .replace(/[^a-zA-Z0-9.-]/g, "_")
     .substring(0, 50);
