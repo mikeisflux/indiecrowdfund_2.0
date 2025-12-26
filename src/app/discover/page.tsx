@@ -95,17 +95,24 @@ export default function DiscoverPage() {
 function DiscoverPageSkeleton() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+      {/* Background Effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+        <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
+        <div className="floating-orb absolute bottom-20 right-1/4 w-[300px] h-[300px] bg-cyan-500/10" style={{ animationDelay: '-10s' }} />
+      </div>
+
+      <header className="sticky top-0 z-50 border-b border-border/50 glass-card">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">IndieCrowdfund</Link>
+            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">IndieCrowdfund</Link>
           </div>
         </div>
       </header>
-      <section className="border-b bg-muted/30 py-12">
+      <section className="relative border-b border-border/50 py-16 hero-gradient">
         <div className="container">
-          <h1 className="mb-2 text-3xl font-bold">Discover Projects</h1>
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="h-8 w-48 bg-muted/50 rounded-lg animate-pulse mb-4" />
+          <div className="h-4 w-72 bg-muted/30 rounded animate-pulse" />
         </div>
       </section>
     </div>
@@ -226,44 +233,61 @@ function DiscoverContent() {
     (!showFunded ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      {/* Background Effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+        <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
+        <div className="floating-orb absolute bottom-20 right-1/4 w-[300px] h-[300px] bg-cyan-500/10" style={{ animationDelay: '-10s' }} />
+      </div>
+
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-border/50 glass-card">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href="/" className="text-xl font-bold text-primary">
-              IndieCrowdfund
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-shadow">
+                <Sparkles className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
+                IndieCrowdfund
+              </span>
             </Link>
             <nav className="hidden items-center gap-6 md:flex">
               <Link
                 href="/discover"
-                className="text-sm font-medium text-primary"
+                className="relative text-sm font-medium text-primary group"
               >
                 Discover
+                <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full" />
               </Link>
               <Link
                 href="/projects/new"
-                className="text-sm font-medium hover:text-primary"
+                className="relative text-sm font-medium text-muted-foreground hover:text-primary transition-colors group"
               >
                 Start a Project
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full group-hover:w-full transition-all" />
               </Link>
               <Link
                 href="/retailers"
-                className="text-sm font-medium hover:text-primary"
+                className="relative text-sm font-medium text-muted-foreground hover:text-primary transition-colors group"
               >
                 Retailers
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full group-hover:w-full transition-all" />
               </Link>
               <Link
                 href="/about-us"
-                className="text-sm font-medium hover:text-primary"
+                className="relative text-sm font-medium text-muted-foreground hover:text-primary transition-colors group"
               >
                 About Us
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full group-hover:w-full transition-all" />
               </Link>
               <Link
                 href="/faq"
-                className="text-sm font-medium hover:text-primary"
+                className="relative text-sm font-medium text-muted-foreground hover:text-primary transition-colors group"
               >
                 FAQ
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full group-hover:w-full transition-all" />
               </Link>
             </nav>
           </div>
@@ -274,32 +298,32 @@ function DiscoverContent() {
             {/* Mobile Menu */}
             <Sheet>
               <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="hover:bg-primary/10">
                   <Menu className="h-5 w-5" />
                   <span className="sr-only">Toggle menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px]">
+              <SheetContent side="right" className="w-[300px] glass-card border-l border-border/50">
                 <SheetHeader>
-                  <SheetTitle>Menu</SheetTitle>
+                  <SheetTitle className="text-left">Menu</SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col gap-4 mt-6">
-                  <Link href="/discover" className="text-sm font-medium hover:text-primary py-2">
+                  <Link href="/discover" className="text-sm font-medium text-primary py-2 px-3 rounded-lg bg-primary/10">
                     Discover
                   </Link>
-                  <Link href="/projects/new" className="text-sm font-medium hover:text-primary py-2">
+                  <Link href="/projects/new" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
                     Start a Project
                   </Link>
-                  <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2">
+                  <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
                     Retailers
                   </Link>
-                  <Link href="/about-us" className="text-sm font-medium hover:text-primary py-2">
+                  <Link href="/about-us" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
                     About Us
                   </Link>
-                  <Link href="/faq" className="text-sm font-medium hover:text-primary py-2">
+                  <Link href="/faq" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
                     FAQ
                   </Link>
-                  <div className="border-t pt-4 mt-2">
+                  <div className="border-t border-border/50 pt-4 mt-2">
                     <UserProfileDropdown />
                   </div>
                 </nav>
@@ -310,25 +334,41 @@ function DiscoverContent() {
       </header>
 
       {/* Hero */}
-      <section className="border-b bg-muted/30 py-12">
-        <div className="container">
-          <h1 className="mb-2 text-3xl font-bold">Discover Projects</h1>
-          <p className="text-muted-foreground">
-            Find and support creative projects from around the world
+      <section className="relative border-b border-border/50 py-16 hero-gradient overflow-hidden">
+        {/* Decorative grid */}
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.02]" style={{
+          backgroundImage: `linear-gradient(to right, currentColor 1px, transparent 1px),
+            linear-gradient(to bottom, currentColor 1px, transparent 1px)`,
+          backgroundSize: '40px 40px'
+        }} />
+
+        <div className="container relative">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-card border border-primary/20 mb-4">
+            <Search className="h-3.5 w-3.5 text-primary" />
+            <span className="text-sm font-medium text-primary">Explore & Discover</span>
+          </div>
+          <h1 className="mb-3 text-4xl md:text-5xl font-bold">
+            Discover{" "}
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-emerald-500 to-cyan-500">
+              Amazing Projects
+            </span>
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl">
+            Find and support creative projects from innovators around the world. Every contribution helps bring ideas to life.
           </p>
         </div>
       </section>
 
       {/* Filters Bar */}
-      <section className="sticky top-16 z-40 border-b bg-background">
+      <section className="sticky top-16 z-40 border-b border-border/50 glass-card">
         <div className="container py-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* Search */}
-            <div className="relative flex-1 md:max-w-xs">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative flex-1 md:max-w-xs group">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
                 placeholder="Search projects..."
-                className="pl-10"
+                className="pl-10 glass-card border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -553,46 +593,67 @@ function DiscoverContent() {
       </section>
 
       {/* Results */}
-      <section className="container py-8">
+      <section className="container py-8 relative">
         <div className="mb-6 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             {isLoading && filteredProjects.length === 0 ? (
               <span className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 Loading projects...
               </span>
             ) : (
-              `${totalProjects} projects found`
+              <span className="flex items-center gap-2">
+                <span className="font-semibold text-foreground">{totalProjects}</span>
+                projects found
+              </span>
             )}
           </p>
         </div>
 
         {filteredProjects.length === 0 && !isLoading ? (
-          <div className="py-12 text-center">
-            <Sparkles className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <h3 className="mb-2 font-semibold">No projects found</h3>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Try adjusting your filters or search terms
+          <div className="py-16 text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-card mb-6">
+              <Sparkles className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h3 className="mb-2 text-xl font-semibold">No projects found</h3>
+            <p className="mb-6 text-muted-foreground max-w-md mx-auto">
+              Try adjusting your filters or search terms to discover more amazing projects
             </p>
-            <Button variant="outline" onClick={clearFilters}>
-              Clear filters
+            <Button onClick={clearFilters} className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/20">
+              Clear all filters
             </Button>
           </div>
         ) : filteredProjects.length === 0 && isLoading ? (
-          <div className="py-12 text-center">
-            <Loader2 className="mx-auto mb-4 h-12 w-12 text-muted-foreground animate-spin" />
-            <h3 className="mb-2 font-semibold">Loading projects...</h3>
+          <div className="py-16 text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-card mb-6 relative">
+              <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-ping" />
+              <Loader2 className="h-10 w-10 text-primary animate-spin" />
+            </div>
+            <h3 className="mb-2 text-xl font-semibold">Loading projects...</h3>
+            <p className="text-muted-foreground">Discovering amazing projects for you</p>
           </div>
         ) : view === "grid" ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+            {filteredProjects.map((project, index) => (
+              <div
+                key={project.id}
+                className="animate-in fade-in slide-in-from-bottom-4"
+                style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
+              >
+                <ProjectCard project={project} />
+              </div>
             ))}
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredProjects.map((project) => (
-              <ProjectListItem key={project.id} project={project} />
+            {filteredProjects.map((project, index) => (
+              <div
+                key={project.id}
+                className="animate-in fade-in slide-in-from-left-4"
+                style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
+              >
+                <ProjectListItem project={project} />
+              </div>
             ))}
           </div>
         )}
@@ -600,14 +661,22 @@ function DiscoverContent() {
         {/* Load More */}
         {filteredProjects.length > 0 && hasMore && (
           <div className="mt-12 text-center">
-            <Button variant="outline" disabled={isLoading} onClick={loadMore}>
+            <Button
+              variant="outline"
+              disabled={isLoading}
+              onClick={loadMore}
+              className="glass-card border-border/50 hover:border-primary/50 hover:bg-primary/5 px-8"
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Loading...
                 </>
               ) : (
-                "Load more projects"
+                <>
+                  Load more projects
+                  <TrendingUp className="ml-2 h-4 w-4" />
+                </>
               )}
             </Button>
           </div>
@@ -630,74 +699,95 @@ function ProjectCard({ project }: { project: Project }) {
 
   return (
     <Link href={project.projectUrl}>
-      <Card className={`h-full overflow-hidden transition-all hover:shadow-lg ${isPrelaunch ? "border-amber-200/50 dark:border-amber-800/30" : ""}`}>
-        <div className="aspect-video bg-muted relative">
+      <Card className={`project-card h-full overflow-hidden glass-card glass-card-hover rounded-2xl border-border/50 ${isPrelaunch ? "border-amber-300/50 dark:border-amber-700/50" : ""}`}>
+        <div className="aspect-video bg-muted relative overflow-hidden group">
           {project.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={project.imageUrl}
               alt={project.title}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
               <Play className="h-12 w-12 text-muted-foreground/50" />
             </div>
           )}
-          <Badge className={`absolute left-3 top-3 ${isPrelaunch ? "bg-amber-500" : ""}`}>
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+          <Badge className={`absolute left-3 top-3 shadow-lg ${isPrelaunch ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0" : "bg-gradient-to-r from-primary to-emerald-600 text-white border-0"}`}>
             {isPrelaunch ? "Coming Soon" : (PROJECT_CATEGORIES.find((c) => c.value === project.category)?.label || project.category)}
           </Badge>
           {project.isStaffPick && (
-            <Badge className="absolute right-3 top-3" variant="secondary">
-              <Sparkles className="mr-1 h-3 w-3" />
+            <Badge className="absolute right-3 top-3 bg-white/90 dark:bg-black/70 backdrop-blur-sm text-foreground shadow-lg" variant="secondary">
+              <Sparkles className="mr-1 h-3 w-3 text-amber-500" />
               Staff Pick
             </Badge>
           )}
+
+          {/* Funding percentage badge for live projects */}
+          {!isPrelaunch && fundingPercent >= 100 && (
+            <div className="absolute bottom-3 right-3 px-2 py-1 rounded-full bg-primary/90 backdrop-blur-sm text-white text-xs font-bold shadow-lg">
+              Funded!
+            </div>
+          )}
         </div>
         <CardContent className="pt-4">
-          <h3 className="mb-1 font-semibold line-clamp-1">{project.title}</h3>
+          <h3 className="mb-1 font-semibold line-clamp-1 group-hover:text-primary transition-colors">{project.title}</h3>
           <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
             {project.subtitle}
           </p>
-          <p className="text-xs text-muted-foreground">
-            by {project.creator.name}
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-muted">
+              {project.creator.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={project.creator.image} alt="" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <span className="text-[10px] font-medium">{project.creator.name?.charAt(0)}</span>
+              )}
+            </span>
+            by <span className="font-medium text-foreground/80">{project.creator.name}</span>
           </p>
         </CardContent>
-        <CardFooter className="flex-col items-start gap-3 border-t pt-4">
+        <CardFooter className="flex-col items-start gap-3 border-t border-border/50 pt-4">
           {isPrelaunch ? (
             <>
               {/* Prelaunch - show follower count and launch date */}
               <div className="flex w-full items-center justify-between text-sm">
-                <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                  <Bell className="h-4 w-4" />
-                  <span className="font-medium">{project.followerCount || 0} followers</span>
+                <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                  <div className="p-1 rounded-full bg-amber-100 dark:bg-amber-900/30">
+                    <Bell className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="font-semibold">{project.followerCount || 0} followers</span>
                 </div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <CalendarClock className="h-4 w-4" />
-                  <span>Launches {formatLaunchDate(project.launchDate)}</span>
+                <div className="flex items-center gap-1 text-muted-foreground text-xs">
+                  <CalendarClock className="h-3.5 w-3.5" />
+                  <span>{formatLaunchDate(project.launchDate)}</span>
                 </div>
               </div>
             </>
           ) : (
             <>
               {/* Live project - show funding progress */}
-              <Progress value={Math.min(fundingPercent, 100)} className="h-2" />
+              <div className="w-full progress-glow-bar">
+                <Progress value={Math.min(fundingPercent, 100)} className="h-2" />
+              </div>
               <div className="flex w-full items-center justify-between text-sm">
                 <div>
-                  <span className="font-semibold text-primary">
+                  <span className="font-bold text-primary">
                     ${Number(project.currentAmount).toLocaleString()}
                   </span>
-                  <span className="text-muted-foreground">
-                    {" "}
-                    / ${Number(project.goalAmount).toLocaleString()}
+                  <span className="text-muted-foreground text-xs">
+                    {" "}/ ${Number(project.goalAmount).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-muted-foreground">
-                  <span className="flex items-center gap-1">
+                <div className="flex items-center gap-3 text-muted-foreground text-xs">
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/50">
                     <Users className="h-3 w-3" />
                     {project.backerCount}
                   </span>
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/50">
                     <Clock className="h-3 w-3" />
                     {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining}d`}
                   </span>
@@ -724,58 +814,66 @@ function ProjectListItem({ project }: { project: Project }) {
 
   return (
     <Link href={project.projectUrl}>
-      <Card className={`overflow-hidden transition-all hover:shadow-lg ${isPrelaunch ? "border-amber-200/50 dark:border-amber-800/30" : ""}`}>
-        <div className="flex flex-col sm:flex-row">
-          <div className="aspect-video w-full sm:w-48 flex-shrink-0 bg-muted relative">
+      <Card className={`overflow-hidden glass-card glass-card-hover rounded-2xl border-border/50 transition-all ${isPrelaunch ? "border-amber-300/50 dark:border-amber-700/50" : ""}`}>
+        <div className="flex flex-col sm:flex-row group">
+          <div className="aspect-video w-full sm:w-56 flex-shrink-0 bg-muted relative overflow-hidden">
             {project.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={project.imageUrl}
                 alt={project.title}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
                 <Play className="h-8 w-8 text-muted-foreground/50" />
               </div>
             )}
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity sm:block hidden" />
+
+            {fundingPercent >= 100 && !isPrelaunch && (
+              <div className="absolute top-3 left-3 px-2 py-1 rounded-full bg-primary/90 backdrop-blur-sm text-white text-xs font-bold shadow-lg">
+                Funded!
+              </div>
+            )}
           </div>
-          <div className="flex flex-1 flex-col p-4">
-            <div className="mb-2 flex items-start justify-between gap-4">
-              <div>
-                <div className="mb-1 flex items-center gap-2">
+          <div className="flex flex-1 flex-col p-5">
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
                   {isPrelaunch ? (
-                    <Badge className="text-xs bg-amber-500">Coming Soon</Badge>
+                    <Badge className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-sm">Coming Soon</Badge>
                   ) : (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge className="text-xs bg-gradient-to-r from-primary to-emerald-600 text-white border-0 shadow-sm">
                       {PROJECT_CATEGORIES.find((c) => c.value === project.category)
                         ?.label || project.category}
                     </Badge>
                   )}
                   {project.isStaffPick && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Sparkles className="mr-1 h-3 w-3" />
+                    <Badge variant="secondary" className="text-xs bg-muted/80 backdrop-blur-sm">
+                      <Sparkles className="mr-1 h-3 w-3 text-amber-500" />
                       Staff Pick
                     </Badge>
                   )}
                 </div>
-                <h3 className="font-semibold">{project.title}</h3>
-                <p className="text-sm text-muted-foreground">{project.subtitle}</p>
+                <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{project.title}</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">{project.subtitle}</p>
               </div>
               {isPrelaunch ? (
-                <div className="text-right">
-                  <p className="font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <div className="text-right flex-shrink-0">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
                     <Bell className="h-4 w-4" />
-                    {project.followerCount || 0} followers
-                  </p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                    <span className="font-semibold">{project.followerCount || 0}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1 justify-end">
                     <CalendarClock className="h-3 w-3" />
                     Launches {formatLaunchDate(project.launchDate)}
                   </p>
                 </div>
               ) : (
-                <div className="text-right">
-                  <p className="font-semibold text-primary">
+                <div className="text-right flex-shrink-0">
+                  <p className="font-bold text-lg text-primary">
                     ${project.currentAmount.toLocaleString()}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -784,29 +882,36 @@ function ProjectListItem({ project }: { project: Project }) {
                 </div>
               )}
             </div>
-            <div className="mt-auto flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                by {project.creator.name}
+            <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/50">
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-muted">
+                  {project.creator.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={project.creator.image} alt="" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] font-medium">{project.creator.name?.charAt(0)}</span>
+                  )}
+                </span>
+                by <span className="font-medium text-foreground/80">{project.creator.name}</span>
               </p>
               {isPrelaunch ? (
-                <div className="text-sm text-muted-foreground">
-                  <span className="text-amber-600 dark:text-amber-400 font-medium">
-                    Follow to get notified
-                  </span>
-                </div>
+                <Button variant="ghost" size="sm" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                  <Bell className="mr-1.5 h-3.5 w-3.5" />
+                  Follow to get notified
+                </Button>
               ) : (
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <TrendingUp className="h-4 w-4" />
-                    {Math.round(fundingPercent)}% funded
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    {Math.round(fundingPercent)}%
                   </span>
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
                     {project.backerCount}
                   </span>
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining} days left`}
+                    {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining}d`}
                   </span>
                 </div>
               )}

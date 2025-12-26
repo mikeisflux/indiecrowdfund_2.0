@@ -815,9 +815,17 @@ export default function PledgePage() {
   // Auth loading state - wait for auth check before showing content
   if (authStatus === "loading" || authStatus === "unauthenticated") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+      <div className="min-h-screen bg-background flex items-center justify-center relative">
+        {/* Background Effects */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+          <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
+        </div>
+        <div className="text-center relative">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-card mb-6 relative">
+            <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-ping" />
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
           <p className="text-muted-foreground">
             {authStatus === "unauthenticated" ? "Redirecting to login..." : "Checking authentication..."}
           </p>
@@ -829,9 +837,17 @@ export default function PledgePage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+      <div className="min-h-screen bg-background flex items-center justify-center relative">
+        {/* Background Effects */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+          <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-cyan-500/10" style={{ animationDelay: '-5s' }} />
+        </div>
+        <div className="text-center relative">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-card mb-6 relative">
+            <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-ping" />
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
           <p className="text-muted-foreground">Loading pledge details...</p>
         </div>
       </div>
@@ -841,23 +857,32 @@ export default function PledgePage() {
   // Error state
   if (error || !project) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+      <div className="min-h-screen bg-background relative">
+        {/* Background Effects */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-red-500/10" />
+          <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-orange-500/10" style={{ animationDelay: '-5s' }} />
+        </div>
+        <header className="sticky top-0 z-50 border-b border-border/50 glass-card">
           <div className="container flex h-14 items-center">
-            <Link href="/" className="text-xl font-bold text-primary">
+            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
               IndieCrowdfund
             </Link>
           </div>
         </header>
-        <div className="container py-16">
-          <div className="mx-auto max-w-lg text-center">
-            <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+        <div className="container py-16 relative">
+          <div className="mx-auto max-w-lg text-center glass-card rounded-2xl p-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/30 mb-4">
+              <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+            </div>
             <h2 className="mb-2 text-2xl font-bold">Unable to load project</h2>
             <p className="mb-8 text-muted-foreground">
               {error || "The project you're looking for could not be found."}
             </p>
             <Link href="/discover">
-              <Button>Discover Projects</Button>
+              <Button className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/20">
+                Discover Projects
+              </Button>
             </Link>
           </div>
         </div>
@@ -1000,24 +1025,35 @@ export default function PledgePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 dark:from-background dark:to-background relative">
+      {/* Background Effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/5" />
+        <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-cyan-500/5" style={{ animationDelay: '-5s' }} />
+        <div className="floating-orb absolute bottom-20 right-1/4 w-[300px] h-[300px] bg-purple-500/5" style={{ animationDelay: '-10s' }} />
+      </div>
+
       {/* Header */}
-      <header className="border-b bg-white dark:bg-background">
+      <header className="border-b border-border/50 glass-card relative z-10">
         <div className="container py-6">
           {/* Project title and creator - centered */}
           <div className="text-center mb-4">
-            <h1 className="text-2xl font-bold mb-2">{project.title}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80">{project.title}</h1>
             <div className="flex items-center justify-center gap-2">
-              {project.creator.image && (
+              {project.creator.image ? (
                 <Image
                   src={project.creator.image}
                   alt={project.creator.name}
-                  width={24}
-                  height={24}
-                  className="rounded-full"
+                  width={28}
+                  height={28}
+                  className="rounded-full ring-2 ring-border/50"
                 />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center text-white text-xs font-medium">
+                  {project.creator.name.charAt(0)}
+                </div>
               )}
-              <span className="text-sm text-muted-foreground">{project.creator.name}</span>
+              <span className="text-sm text-muted-foreground">by <span className="font-medium text-foreground/80">{project.creator.name}</span></span>
             </div>
           </div>
           {/* Breadcrumb - centered */}
@@ -1042,8 +1078,8 @@ export default function PledgePage() {
                 </div>
 
                 {/* Pledge without reward */}
-                <Card className="border-zinc-200">
-                  <CardContent className="p-5">
+                <Card className="glass-card glass-card-hover rounded-2xl border-border/50">
+                  <CardContent className="p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
                         <h3 className="font-semibold mb-1">Pledge without a reward</h3>
@@ -1051,20 +1087,20 @@ export default function PledgePage() {
                           Support the project for no reward, just because it speaks to you.
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center border rounded-md">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center border border-border/50 rounded-lg glass-card">
                           <span className="px-3 text-muted-foreground">$</span>
                           <Input
                             type="number"
                             min={1}
                             value={customPledgeAmount}
                             onChange={(e) => setCustomPledgeAmount(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-20 border-0 focus-visible:ring-0"
+                            className="w-20 border-0 focus-visible:ring-0 bg-transparent"
                           />
                         </div>
                         <Button
                           onClick={handlePledgeWithoutReward}
-                          className="bg-[#028858] hover:bg-[#026d47] text-white whitespace-nowrap"
+                          className="bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white whitespace-nowrap shadow-lg shadow-[#028858]/20"
                         >
                           Pledge ${customPledgeAmount}
                         </Button>
@@ -1098,15 +1134,19 @@ export default function PledgePage() {
                 {/* Reward cards */}
                 {allRewards.length > 0 ? (
                   <div className="space-y-4">
-                    {allRewards.map((reward) => {
+                    {allRewards.map((reward, index) => {
                       const shipping = getShippingCost(reward.shippingCost, reward.shippingType, shippingCountry);
 
                       return (
-                        <Card key={reward.id} className="border-zinc-200 overflow-hidden">
+                        <Card
+                          key={reward.id}
+                          className="glass-card glass-card-hover rounded-2xl border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4"
+                          style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
+                        >
                           <CardContent className="p-0">
                             <div className="flex flex-col md:flex-row">
                               {/* Left side - Content */}
-                              <div className="flex-1 p-5 order-2 md:order-1">
+                              <div className="flex-1 p-6 order-2 md:order-1">
                                 {/* Title */}
                                 <h4 className="font-semibold text-lg uppercase tracking-wide mb-1">
                                   {reward.title}
@@ -1193,7 +1233,7 @@ export default function PledgePage() {
                                 {/* Pledge button */}
                                 <Button
                                   onClick={() => handleSelectReward(reward)}
-                                  className="rounded-none h-12 bg-[#028858] hover:bg-[#026d47] text-white font-medium"
+                                  className="rounded-b-xl md:rounded-none h-12 bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white font-medium shadow-lg shadow-[#028858]/20"
                                 >
                                   Pledge ${reward.amount}
                                 </Button>
@@ -1205,7 +1245,7 @@ export default function PledgePage() {
                     })}
                   </div>
                 ) : (
-                  <Card className="border-dashed">
+                  <Card className="glass-card rounded-2xl border-dashed border-border/50">
                     <CardContent className="p-6 text-center">
                       <p className="text-muted-foreground">No reward tiers available for this project.</p>
                       <p className="text-sm text-muted-foreground mt-2">
@@ -1240,9 +1280,10 @@ export default function PledgePage() {
                       return (
                         <Card
                           key={addon.id}
-                          className={`overflow-hidden transition-all ${
-                            isSelected ? "ring-2 ring-[#028858] border-[#028858]" : "border-zinc-200"
+                          className={`overflow-hidden transition-all glass-card rounded-2xl animate-in fade-in slide-in-from-bottom-4 ${
+                            isSelected ? "ring-2 ring-[#028858] border-[#028858]" : "border-border/50"
                           }`}
+                          style={{ animationDelay: `${addons.indexOf(addon) * 100}ms`, animationFillMode: 'backwards' }}
                         >
                           <CardContent className="p-0">
                             <div className="flex flex-col md:flex-row">
@@ -1596,8 +1637,8 @@ export default function PledgePage() {
             <div className="sticky top-6 space-y-6">
               {/* Order Summary for Add-ons step - Add Items Mode */}
               {step === "addons" && isAddItemsMode && (
-                <Card>
-                  <CardContent className="p-5">
+                <Card className="glass-card rounded-2xl border-border/50">
+                  <CardContent className="p-6">
                     <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Additional Items</p>
 
                     {/* Selected Add-ons */}
@@ -1641,7 +1682,7 @@ export default function PledgePage() {
                     {/* Continue button */}
                     <div className="mt-4">
                       <Button
-                        className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
+                        className="w-full bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white font-medium shadow-lg shadow-[#028858]/20"
                         size="lg"
                         onClick={() => setStep("payment")}
                         disabled={Object.keys(selectedAddons).length === 0}
@@ -1655,7 +1696,7 @@ export default function PledgePage() {
 
               {/* Order Summary for Add-ons step - Normal Mode */}
               {step === "addons" && !isAddItemsMode && (selectedReward || pledgeWithoutReward) && (
-                <Card>
+                <Card className="glass-card rounded-2xl border-border/50">
                   <CardContent className="p-5">
                     {/* Selected reward */}
                     <div className="pb-4 border-b">
@@ -1732,7 +1773,7 @@ export default function PledgePage() {
                     {/* Continue button */}
                     <div className="mt-4">
                       <Button
-                        className="w-full bg-[#028858] hover:bg-[#026d47] text-white font-medium"
+                        className="w-full bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white font-medium shadow-lg shadow-[#028858]/20"
                         size="lg"
                         onClick={() => setStep("payment")}
                       >
@@ -1745,7 +1786,7 @@ export default function PledgePage() {
 
               {/* Payment step sidebar - Add Items Mode */}
               {step === "payment" && isAddItemsMode && Object.keys(selectedAddons).length > 0 && (
-                <Card>
+                <Card className="glass-card rounded-2xl border-border/50">
                   <CardContent className="p-5">
                     <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Additional Items</p>
 
@@ -1824,7 +1865,7 @@ export default function PledgePage() {
 
               {/* Payment step sidebar - Normal Mode */}
               {step === "payment" && !isAddItemsMode && (selectedReward || pledgeWithoutReward) && (
-                <Card>
+                <Card className="glass-card rounded-2xl border-border/50">
                   <CardContent className="p-5">
                     {/* Reward */}
                     <div className="pb-4 border-b">

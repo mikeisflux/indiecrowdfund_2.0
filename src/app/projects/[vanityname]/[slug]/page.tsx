@@ -333,9 +333,17 @@ export default function ProjectPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+      <div className="min-h-screen bg-background flex items-center justify-center relative">
+        {/* Background Effects */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+          <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
+        </div>
+        <div className="text-center space-y-6 relative">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-card relative">
+            <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-ping" />
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
           <p className="text-muted-foreground">Loading project...</p>
         </div>
       </div>
@@ -345,13 +353,22 @@ export default function ProjectPage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+      <div className="min-h-screen bg-background flex items-center justify-center relative">
+        {/* Background Effects */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-red-500/10" />
+          <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-orange-500/10" style={{ animationDelay: '-5s' }} />
+        </div>
+        <div className="text-center space-y-6 relative glass-card rounded-2xl p-8 max-w-md mx-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/30">
+            <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+          </div>
           <h1 className="text-2xl font-bold">{error}</h1>
           <p className="text-muted-foreground">The project you&apos;re looking for could not be found.</p>
           <Link href="/discover">
-            <Button>Browse Projects</Button>
+            <Button className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/20">
+              Browse Projects
+            </Button>
           </Link>
         </div>
       </div>
@@ -359,24 +376,39 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden relative">
+      {/* Background Effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
+        <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
+        <div className="floating-orb absolute bottom-20 right-1/4 w-[300px] h-[300px] bg-cyan-500/10" style={{ animationDelay: '-10s' }} />
+      </div>
+
       {/* Main Navigation */}
-      <header className="border-b bg-background">
+      <header className="border-b border-border/50 glass-card relative z-10">
         <div className="container flex h-14 items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-primary">
-            IndieCrowdfund
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-shadow">
+              <Heart className="h-3.5 w-3.5 text-white" />
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
+              IndieCrowdfund
+            </span>
           </Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm">
-            <Link href="/discover?category=art" className="hover:text-primary">Art</Link>
-            <Link href="/discover?category=comics" className="hover:text-primary">Comics</Link>
-            <Link href="/discover?category=crafts" className="hover:text-primary">Crafts</Link>
-            <Link href="/discover?category=design" className="hover:text-primary">Design</Link>
-            <Link href="/discover?category=film" className="hover:text-primary">Film</Link>
-            <Link href="/discover?category=games" className="hover:text-primary">Games</Link>
-            <Link href="/discover?category=music" className="hover:text-primary">Music</Link>
-            <Link href="/discover?category=publishing" className="hover:text-primary">Publishing</Link>
-            <Link href="/discover?category=technology" className="hover:text-primary">Technology</Link>
-            <Link href="/discover" className="text-primary font-medium">Discover</Link>
+          <nav className="hidden md:flex items-center gap-4 text-sm">
+            {['Art', 'Comics', 'Crafts', 'Design', 'Film', 'Games', 'Music', 'Publishing', 'Technology'].map((cat) => (
+              <Link
+                key={cat}
+                href={`/discover?category=${cat.toLowerCase()}`}
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                {cat}
+              </Link>
+            ))}
+            <Link href="/discover" className="text-primary font-medium relative">
+              Discover
+              <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full" />
+            </Link>
           </nav>
           <div className="flex items-center gap-4">
             <div className="hidden sm:block">
@@ -385,32 +417,32 @@ export default function ProjectPage() {
             {/* Mobile Menu */}
             <Sheet>
               <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="hover:bg-primary/10">
                   <Menu className="h-5 w-5" />
                   <span className="sr-only">Toggle menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px]">
+              <SheetContent side="right" className="w-[300px] glass-card border-l border-border/50">
                 <SheetHeader>
-                  <SheetTitle>Menu</SheetTitle>
+                  <SheetTitle className="text-left">Menu</SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col gap-4 mt-6">
-                  <Link href="/discover" className="text-sm font-medium hover:text-primary py-2">
+                  <Link href="/discover" className="text-sm font-medium text-primary py-2 px-3 rounded-lg bg-primary/10">
                     Discover
                   </Link>
-                  <Link href="/projects/new" className="text-sm font-medium hover:text-primary py-2">
+                  <Link href="/projects/new" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
                     Start a Project
                   </Link>
-                  <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2">
+                  <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
                     Retailers
                   </Link>
-                  <Link href="/about-us" className="text-sm font-medium hover:text-primary py-2">
+                  <Link href="/about-us" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
                     About Us
                   </Link>
-                  <Link href="/faq" className="text-sm font-medium hover:text-primary py-2">
+                  <Link href="/faq" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
                     FAQ
                   </Link>
-                  <div className="border-t pt-4 mt-2">
+                  <div className="border-t border-border/50 pt-4 mt-2">
                     <UserProfileDropdown />
                   </div>
                 </nav>
@@ -422,26 +454,29 @@ export default function ProjectPage() {
 
       {/* Sticky Header (appears on scroll) */}
       {showStickyHeader && (
-        <div className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur shadow-sm">
+        <div className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 glass-card shadow-lg animate-in slide-in-from-top-2 duration-300">
           <div className="container flex h-14 items-center justify-between">
             <div className="flex items-center gap-4">
               <span className="font-medium truncate max-w-md">{project.title}</span>
+              <span className="hidden sm:inline-flex text-xs text-muted-foreground px-2 py-0.5 rounded-full bg-muted/50">
+                {Math.round(fundingPercentage)}% funded
+              </span>
             </div>
             <div className="flex items-center gap-3">
               {hasEnded ? (
-                <Button className="bg-[#05ce78]/50 text-white cursor-not-allowed" disabled>
+                <Button className="bg-muted text-muted-foreground cursor-not-allowed" disabled>
                   No longer available
                 </Button>
               ) : existingPledge ? (
                 <Link href="/dashboard/backer">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg shadow-blue-500/20">
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Manage Pledge (${existingPledge.amount})
                   </Button>
                 </Link>
               ) : (
                 <Link href={`${projectPath}/pledge`}>
-                  <Button className="bg-[#05ce78] hover:bg-[#05ce78]/90 text-white">
+                  <Button className="bg-gradient-to-r from-[#05ce78] to-emerald-500 hover:from-[#04b86a] hover:to-emerald-600 text-white shadow-lg shadow-[#05ce78]/20">
                     Back this project
                   </Button>
                 </Link>
@@ -449,7 +484,7 @@ export default function ProjectPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsReminded(!isReminded)}
-                className={isReminded ? "border-primary text-primary" : ""}
+                className={`hidden sm:flex glass-card border-border/50 ${isReminded ? "border-primary text-primary bg-primary/5" : ""}`}
               >
                 <Bookmark className={`mr-2 h-4 w-4 ${isReminded ? "fill-current" : ""}`} />
                 Remind me
@@ -460,18 +495,18 @@ export default function ProjectPage() {
       )}
 
       {/* Hero Section */}
-      <section className="border-b">
-        <div className="container py-8">
+      <section className="border-b border-border/50 relative hero-gradient">
+        <div className="container py-10 relative">
           {/* Title */}
-          <div className="text-center mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">{project.title}</h1>
-            <p className="text-muted-foreground max-w-2xl mx-auto">{project.subtitle}</p>
+          <div className="text-center mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3 animate-in fade-in slide-in-from-bottom-4 duration-500">{project.title}</h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>{project.subtitle}</p>
           </div>
 
           <div className="grid gap-8 lg:grid-cols-5">
             {/* Media - Takes 3 columns */}
-            <div className="lg:col-span-3">
-              <div className="aspect-video overflow-hidden rounded-lg bg-muted relative">
+            <div className="lg:col-span-3 animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '200ms' }}>
+              <div className="aspect-video overflow-hidden rounded-2xl bg-muted relative shadow-2xl shadow-black/20 ring-1 ring-border/50">
                 {project.videoUrl ? (
                   (() => {
                     // Extract embed URL for YouTube or Vimeo
@@ -545,33 +580,37 @@ export default function ProjectPage() {
             </div>
 
             {/* Stats - Takes 2 columns */}
-            <div className="lg:col-span-2 space-y-4">
-              {/* Progress bar */}
-              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={`h-full bg-[#05ce78] rounded-full transition-all duration-700 ease-out ${statsJustUpdated ? "bg-[#04b56a]" : ""}`}
-                  style={{ width: `${Math.min(fundingPercentage, 100)}%` }}
-                />
-              </div>
-
-              {/* Funding amount */}
-              <div>
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-3xl font-bold text-[#05ce78] transition-all duration-500 ${statsJustUpdated ? "scale-110 text-[#04b56a]" : ""}`}>
-                    {formatMoney(project.currentAmount)}
-                  </span>
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+            <div className="lg:col-span-2 space-y-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '300ms' }}>
+              {/* Stats card */}
+              <div className="glass-card rounded-2xl p-6 space-y-5">
+                {/* Progress bar */}
+                <div className="progress-glow-bar">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full bg-gradient-to-r from-[#05ce78] to-emerald-400 rounded-full transition-all duration-700 ease-out ${statsJustUpdated ? "from-[#04b56a] to-emerald-500" : ""}`}
+                      style={{ width: `${Math.min(fundingPercentage, 100)}%` }}
+                    />
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  pledged of {formatMoney(project.goalAmount)} goal
-                </p>
-              </div>
 
-              {/* Backers */}
-              <div>
-                <p className={`text-2xl font-bold transition-all duration-500 ${statsJustUpdated ? "scale-110 text-[#05ce78]" : ""}`}>{project.backerCount.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">backers</p>
-              </div>
+                {/* Funding amount */}
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-3xl font-bold bg-gradient-to-r from-[#05ce78] to-emerald-500 bg-clip-text text-transparent transition-all duration-500 ${statsJustUpdated ? "scale-105" : ""}`}>
+                      {formatMoney(project.currentAmount)}
+                    </span>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    pledged of {formatMoney(project.goalAmount)} goal
+                  </p>
+                </div>
+
+                {/* Backers */}
+                <div>
+                  <p className={`text-2xl font-bold transition-all duration-500 ${statsJustUpdated ? "scale-105 text-[#05ce78]" : ""}`}>{project.backerCount.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">backers</p>
+                </div>
 
               {/* Time remaining with live countdown */}
               {project.endDate ? (
@@ -590,8 +629,8 @@ export default function ProjectPage() {
 
               {/* Back button */}
               {existingPledge && existingPledge.status !== "CHECKOUT_IN_PROGRESS" ? (
-                <div className="space-y-2">
-                  <div className="p-3 bg-[#05ce78]/10 rounded-lg border border-[#05ce78]/20">
+                <div className="space-y-3">
+                  <div className="p-4 bg-gradient-to-r from-[#05ce78]/10 to-emerald-500/10 rounded-xl border border-[#05ce78]/20">
                     <div className="flex items-center gap-2 text-[#05ce78] font-medium">
                       <CheckCircle className="h-5 w-5" />
                       You&apos;re backing this project!
@@ -601,14 +640,14 @@ export default function ProjectPage() {
                     </p>
                   </div>
                   <Link href="/dashboard/backer" className="block">
-                    <Button className="w-full bg-[#05ce78] hover:bg-[#04b86a] text-white font-medium" size="lg">
+                    <Button className="w-full bg-gradient-to-r from-[#05ce78] to-emerald-500 hover:from-[#04b86a] hover:to-emerald-600 text-white font-medium shadow-lg shadow-[#05ce78]/20" size="lg">
                       Manage Your Pledge
                     </Button>
                   </Link>
                 </div>
               ) : existingPledge && existingPledge.status === "CHECKOUT_IN_PROGRESS" ? (
-                <div className="space-y-2">
-                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <div className="space-y-3">
+                  <div className="p-4 bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-950/50 dark:to-amber-950/50 rounded-xl border border-yellow-200 dark:border-yellow-800">
                     <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300 font-medium">
                       <AlertTriangle className="h-5 w-5" />
                       Checkout not completed
@@ -618,19 +657,20 @@ export default function ProjectPage() {
                     </p>
                   </div>
                   <Link href={`${projectPath}/pledge`} className="block">
-                    <Button className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium" size="lg">
+                    <Button className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white font-medium shadow-lg shadow-yellow-500/20" size="lg">
                       Complete Your Pledge
                     </Button>
                   </Link>
                 </div>
               ) : hasEnded ? (
-                <Button className="w-full bg-[#05ce78]/50 text-white font-medium cursor-not-allowed" size="lg" disabled>
+                <Button className="w-full bg-muted text-muted-foreground font-medium cursor-not-allowed" size="lg" disabled>
                   No longer available
                 </Button>
               ) : (
                 <Link href={`${projectPath}/pledge`} className="block">
-                  <Button className="w-full bg-[#05ce78] hover:bg-[#05ce78]/90 text-white font-medium" size="lg">
+                  <Button className="w-full bg-gradient-to-r from-[#05ce78] to-emerald-500 hover:from-[#04b86a] hover:to-emerald-600 text-white font-medium shadow-lg shadow-[#05ce78]/20 group" size="lg">
                     Back this project
+                    <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                   </Button>
                 </Link>
               )}
@@ -639,26 +679,26 @@ export default function ProjectPage() {
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  className={`flex-1 ${isReminded ? "border-primary text-primary" : ""}`}
+                  className={`flex-1 glass-card border-border/50 hover:border-primary/50 ${isReminded ? "border-primary text-primary bg-primary/5" : ""}`}
                   onClick={() => setIsReminded(!isReminded)}
                 >
                   <Bookmark className={`mr-2 h-4 w-4 ${isReminded ? "fill-current" : ""}`} />
                   Remind me
                 </Button>
-                <div className="flex items-center">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1877f2]" onClick={() => handleShare("facebook")}>
+                <div className="flex items-center glass-card rounded-lg border border-border/50">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1877f2] hover:bg-[#1877f2]/10 rounded-lg" onClick={() => handleShare("facebook")}>
                     <FacebookIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1da1f2]" onClick={() => handleShare("twitter")}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1da1f2] hover:bg-[#1da1f2]/10 rounded-lg" onClick={() => handleShare("twitter")}>
                     <TwitterIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#0085ff]" onClick={() => handleShare("bluesky")}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#0085ff] hover:bg-[#0085ff]/10 rounded-lg" onClick={() => handleShare("bluesky")}>
                     <BlueskyIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleShare("email")}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg" onClick={() => handleShare("email")}>
                     <EmailIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleShare("copy")}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg" onClick={() => handleShare("copy")}>
                     <LinkIcon />
                   </Button>
                 </div>
@@ -668,33 +708,34 @@ export default function ProjectPage() {
               <p className="text-xs text-muted-foreground">
                 <Link href="#" className="underline hover:text-foreground">All or nothing.</Link> This project will only be funded if it reaches its goal by {formatDate(project.endDate)}.
               </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Info Bar */}
-      <section className="border-b bg-muted/30 py-6">
+      <section className="border-b border-border/50 py-6 relative">
         <div className="container">
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#ffc439] flex items-center justify-center flex-shrink-0">
+            <div className="flex items-start gap-3 glass-card rounded-xl p-4">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20">
                 <Handshake className="h-5 w-5 text-black" />
               </div>
               <p className="text-sm">
                 <strong>IndieCrowdfund connects creators with backers</strong> to fund projects.
               </p>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#ffc439] flex items-center justify-center flex-shrink-0">
+            <div className="flex items-start gap-3 glass-card rounded-xl p-4">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20">
                 <AlertTriangle className="h-5 w-5 text-black" />
               </div>
               <p className="text-sm">
                 <strong>Rewards aren&apos;t guaranteed,</strong> but creators must regularly update backers.
               </p>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#ffc439] flex items-center justify-center flex-shrink-0">
+            <div className="flex items-start gap-3 glass-card rounded-xl p-4">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20">
                 <ShieldCheck className="h-5 w-5 text-black" />
               </div>
               <p className="text-sm">
@@ -714,7 +755,7 @@ export default function ProjectPage() {
       </section>
 
       {/* Tabs Navigation */}
-      <section ref={tabsSectionRef} className="border-b sticky top-0 z-40 bg-background overflow-hidden">
+      <section ref={tabsSectionRef} className="border-b border-border/50 sticky top-0 z-40 glass-card overflow-hidden">
         <div className="container">
           <div className="flex h-14 items-center gap-0 overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
             {[
@@ -729,14 +770,21 @@ export default function ProjectPage() {
               <button
                 key={tab.value}
                 onClick={() => handleTabClick(tab.value)}
-                className={`h-14 px-4 text-sm font-medium border-b-2 transition-colors ${
+                className={`relative h-14 px-4 text-sm font-medium transition-all ${
                   activeTab === tab.value
-                    ? "border-foreground text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {tab.label}
-                {tab.count !== undefined && <sup className="ml-1">{tab.count}</sup>}
+                {tab.count !== undefined && (
+                  <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.value ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    {tab.count}
+                  </span>
+                )}
+                {activeTab === tab.value && (
+                  <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full" />
+                )}
               </button>
             ))}
           </div>
@@ -744,7 +792,7 @@ export default function ProjectPage() {
       </section>
 
       {/* Main Content */}
-      <section ref={contentSectionRef} className="container py-8">
+      <section ref={contentSectionRef} className="container py-8 relative">
         {activeTab === "campaign" && (
           <CampaignTab project={project} tiers={tiers} projectPath={projectPath} />
         )}
