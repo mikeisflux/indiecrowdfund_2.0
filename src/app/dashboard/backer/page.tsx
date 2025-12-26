@@ -45,6 +45,12 @@ import {
   RefreshCw,
   Download,
   ClipboardList,
+  MapPin,
+  PieChart,
+  Wallet,
+  FolderHeart,
+  BellRing,
+  Users,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { formatTimeRemaining } from "@/lib/utils";
@@ -54,6 +60,12 @@ import {
   DigitalDownloadsTab,
   SurveyHubTab,
   BadgesDisplay,
+  AddressManagementTab,
+  SpendingAnalyticsTab,
+  DivinityCoinWalletTab,
+  CollectionsTab,
+  NotificationPreferencesTab,
+  FollowingTab,
 } from "./components";
 
 interface BackedProject {
@@ -524,6 +536,30 @@ export default function BackerDashboard() {
                     </span>
                   )}
                 </TabsTrigger>
+                <TabsTrigger value="addresses" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white">
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Addresses
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white">
+                  <PieChart className="mr-2 h-4 w-4" />
+                  Analytics
+                </TabsTrigger>
+                <TabsTrigger value="wallet" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#0066FF] data-[state=active]:to-blue-600 data-[state=active]:text-white">
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Wallet
+                </TabsTrigger>
+                <TabsTrigger value="collections" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-500 data-[state=active]:text-white">
+                  <FolderHeart className="mr-2 h-4 w-4" />
+                  Collections
+                </TabsTrigger>
+                <TabsTrigger value="notifications" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                  <BellRing className="mr-2 h-4 w-4" />
+                  Notifications
+                </TabsTrigger>
+                <TabsTrigger value="following" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
+                  <Users className="mr-2 h-4 w-4" />
+                  Following
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="backed" className="space-y-4">
@@ -781,6 +817,36 @@ export default function BackerDashboard() {
               {/* Surveys Tab */}
               <TabsContent value="surveys" className="space-y-4">
                 <SurveyHubTab />
+              </TabsContent>
+
+              {/* Address Management Tab */}
+              <TabsContent value="addresses" className="space-y-4">
+                <AddressManagementTab />
+              </TabsContent>
+
+              {/* Spending Analytics Tab */}
+              <TabsContent value="analytics" className="space-y-4">
+                <SpendingAnalyticsTab />
+              </TabsContent>
+
+              {/* DivinityCoin Wallet Tab */}
+              <TabsContent value="wallet" className="space-y-4">
+                <DivinityCoinWalletTab />
+              </TabsContent>
+
+              {/* Collections Tab */}
+              <TabsContent value="collections" className="space-y-4">
+                <CollectionsTab />
+              </TabsContent>
+
+              {/* Notification Preferences Tab */}
+              <TabsContent value="notifications" className="space-y-4">
+                <NotificationPreferencesTab />
+              </TabsContent>
+
+              {/* Following Tab */}
+              <TabsContent value="following" className="space-y-4">
+                <FollowingTab />
               </TabsContent>
             </Tabs>
           </div>

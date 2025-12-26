@@ -74,6 +74,13 @@ model User {
   redemptionBonusLedgers RedemptionBonusLedger[]
   redemptionBonusApplications RedemptionBonusApplication[]
 
+  // Backer dashboard enhancements
+  savedAddresses    UserAddress[]
+  projectCollections ProjectCollection[]
+  projectNotificationPrefs ProjectNotificationPreference[]
+  following         CreatorFollow[] @relation("Followers")
+  followers         CreatorFollow[] @relation("Following")
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?  // Soft delete timestamp
@@ -231,6 +238,8 @@ model Project {
   retailerPledges       RetailerPledge[]
   divinityCoinSettlements DivinityCoinSettlement[]
   digitalFiles          DigitalFile[]
+  collectionItems       ProjectCollectionItem[]
+  notificationPrefs     ProjectNotificationPreference[]
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
@@ -2596,4 +2605,118 @@ model RedemptionBonusApplication {
   @@index([userId])
   @@index([bonusLedgerId])
   @@index([redemptionId])
+}
+
+// ============================================
+// BACKER DASHBOARD ENHANCEMENTS
+// ============================================
+
+// User saved addresses for shipping
+model UserAddress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label       String   // "Home", "Work", "Office", etc.
+  isDefault   Boolean  @default(false)
+
+  // Address fields
+  fullName    String
+  line1       String
+  line2       String?
+  city        String
+  state       String
+  postalCode  String
+  country     String
+  phone       String?
+
+  // Validation
+  isValidated Boolean  @default(false)
+  validatedAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+// Project collections/wishlists
+model ProjectCollection {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  color       String?  // For UI theming
+
+  projects    ProjectCollectionItem[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isPublic])
+}
+
+model ProjectCollectionItem {
+  id           String   @id @default(cuid())
+  collectionId String
+  collection   ProjectCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  notes        String?  // Personal notes about the project
+  addedAt      DateTime @default(now())
+
+  @@unique([collectionId, projectId])
+  @@index([collectionId])
+  @@index([projectId])
+}
+
+// Notification preferences per project
+model ProjectNotificationPreference {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Notification types
+  updates     Boolean  @default(true)
+  comments    Boolean  @default(true)
+  surveys     Boolean  @default(true)
+  shipping    Boolean  @default(true)
+  messages    Boolean  @default(true)
+
+  // Email digest frequency
+  digestFrequency String @default("instant") // instant, daily, weekly, none
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// Creator follow relationship
+model CreatorFollow {
+  id          String   @id @default(cuid())
+  followerId  String   // The user doing the following
+  follower    User     @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  creatorId   String   // The creator being followed
+  creator     User     @relation("Following", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Notification preferences for this follow
+  notifyNewProjects Boolean @default(true)
+  notifyUpdates     Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, creatorId])
+  @@index([followerId])
+  @@index([creatorId])
 }
