@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = (settings.allowedFileTypes || "pdf,epub,zip,mp3").split(",").map((t) => t.trim());
+    const allowedTypes = (settings.allowedFileTypes || "pdf,epub,zip,mp3").split(",").map((t: string) => t.trim());
     const fileExt = fileName.split(".").pop()?.toLowerCase();
     if (!fileExt || !allowedTypes.includes(fileExt)) {
       return NextResponse.json(
@@ -233,7 +233,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const isOwner = file.project.creatorId === session.user.id;
-    const isCollaborator = file.project.collaborators.some((c) => c.userId === session.user.id);
+    const isCollaborator = file.project.collaborators.some((c: { userId: string }) => c.userId === session.user.id);
 
     if (!isOwner && !isCollaborator) {
       return NextResponse.json({ error: "Access denied" }, { status: 403, headers: corsHeaders });

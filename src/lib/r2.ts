@@ -238,7 +238,7 @@ export class R2Storage {
     });
 
     const response = await this.client.send(command);
-    return (response.Contents || []).map((obj) => ({
+    return (response.Contents || []).map((obj: { Key?: string; Size?: number; LastModified?: Date }) => ({
       key: obj.Key || "",
       size: obj.Size || 0,
       lastModified: obj.LastModified,

@@ -190,7 +190,7 @@ export async function getUserBadgeSummary(userId: string): Promise<{
 
   return {
     badgeCount: badges.length,
-    badges: badges.map((b) => ({
+    badges: badges.map((b: typeof badges[number]) => ({
       type: b.badgeType,
       earnedAt: b.earnedAt,
     })),

@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get project IDs from pledges
-    const projectIds = [...new Set(pledges.map((p) => p.projectId))];
+    const projectIds = Array.from(new Set(pledges.map((p) => p.projectId)));
 
     if (projectIds.length === 0) {
       return NextResponse.json({ files: [], projects: [] }, { headers: corsHeaders });
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Filter files based on access control
-    const accessibleFiles = allFiles.filter((file) => {
+    const accessibleFiles = allFiles.filter((file: typeof allFiles[number]) => {
       // Find the pledge for this project
       const pledge = pledges.find((p) => p.projectId === file.projectId);
       if (!pledge) return false;
@@ -100,13 +100,13 @@ export async function GET(request: NextRequest) {
           return pledge.rewardId && file.rewardIds.includes(pledge.rewardId);
 
         case "SPECIFIC_ADDONS":
-          const pledgeAddonIds = pledge.addons.map((a) => a.addonId);
-          return file.addonIds.some((addonId) => pledgeAddonIds.includes(addonId));
+          const pledgeAddonIds = pledge.addons.map((a: { id: string; addonId: string }) => a.addonId);
+          return file.addonIds.some((addonId: string) => pledgeAddonIds.includes(addonId));
 
         case "REWARD_AND_ADDON":
           const hasReward = pledge.rewardId && file.rewardIds.includes(pledge.rewardId);
-          const pledgeAddons = pledge.addons.map((a) => a.addonId);
-          const hasAddon = file.addonIds.some((addonId) => pledgeAddons.includes(addonId));
+          const pledgeAddons = pledge.addons.map((a: { id: string; addonId: string }) => a.addonId);
+          const hasAddon = file.addonIds.some((addonId: string) => pledgeAddons.includes(addonId));
           return hasReward || hasAddon;
 
         default:
@@ -117,16 +117,16 @@ export async function GET(request: NextRequest) {
     // Get download status for these files
     const distributions = await db.digitalDistribution.findMany({
       where: {
-        digitalFileId: { in: accessibleFiles.map((f) => f.id) },
+        digitalFileId: { in: accessibleFiles.map((f: typeof accessibleFiles[number]) => f.id) },
         pledgeId: { in: pledges.map((p) => p.id) },
       },
     });
 
     // Enrich files with download status
-    const filesWithStatus = accessibleFiles.map((file) => {
+    const filesWithStatus = accessibleFiles.map((file: typeof accessibleFiles[number]) => {
       const pledge = pledges.find((p) => p.projectId === file.projectId);
       const distribution = distributions.find(
-        (d) => d.digitalFileId === file.id && pledge && d.pledgeId === pledge.id
+        (d: typeof distributions[number]) => d.digitalFileId === file.id && pledge && d.pledgeId === pledge.id
       );
 
       return {
@@ -140,12 +140,12 @@ export async function GET(request: NextRequest) {
     // Group by project for UI
     const projectsWithFiles = projectIds.map((pid) => {
       const project = pledges.find((p) => p.projectId === pid)?.project;
-      const files = filesWithStatus.filter((f) => f.projectId === pid);
+      const files = filesWithStatus.filter((f: typeof filesWithStatus[number]) => f.projectId === pid);
       return {
         ...project,
         files,
         fileCount: files.length,
-        newFileCount: files.filter((f) => f.isNew).length,
+        newFileCount: files.filter((f: typeof filesWithStatus[number]) => f.isNew).length,
       };
     }).filter((p) => p.fileCount > 0);
 
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
         files: filesWithStatus,
         projects: projectsWithFiles,
         totalFiles: filesWithStatus.length,
-        newFiles: filesWithStatus.filter((f) => f.isNew).length,
+        newFiles: filesWithStatus.filter((f: typeof filesWithStatus[number]) => f.isNew).length,
       },
       { headers: corsHeaders }
     );
@@ -229,14 +229,14 @@ export async function POST(request: NextRequest) {
         break;
 
       case "SPECIFIC_ADDONS":
-        const pledgeAddonIds = pledge.addons.map((a) => a.addonId);
-        hasAccess = file.addonIds.some((addonId) => pledgeAddonIds.includes(addonId));
+        const pledgeAddonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
+        hasAccess = file.addonIds.some((addonId: string) => pledgeAddonIds.includes(addonId));
         break;
 
       case "REWARD_AND_ADDON":
         const hasReward = pledge.rewardId !== null && file.rewardIds.includes(pledge.rewardId);
-        const pledgeAddons = pledge.addons.map((a) => a.addonId);
-        const hasAddon = file.addonIds.some((addonId) => pledgeAddons.includes(addonId));
+        const pledgeAddons = pledge.addons.map((a: { addonId: string }) => a.addonId);
+        const hasAddon = file.addonIds.some((addonId: string) => pledgeAddons.includes(addonId));
         hasAccess = hasReward || hasAddon;
         break;
 

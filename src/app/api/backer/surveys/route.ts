@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get project IDs
-    const projectIds = [...new Set(pledges.map((p) => p.projectId))];
+    const projectIds = Array.from(new Set(pledges.map((p) => p.projectId)));
 
     if (projectIds.length === 0) {
       return NextResponse.json({
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 
       // Count questions (backer questions + item questions)
       const questionCount = survey.backerQuestions.length +
-        survey.itemQuestions.reduce((acc, item) =>
+        survey.itemQuestions.reduce((acc: number, item: typeof survey.itemQuestions[number]) =>
           acc + item.variants.length + item.customQuestions.length + 1, 0);
 
       return {
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
     const questions: QuestionFormat[] = [];
 
     // Add backer questions
-    survey.backerQuestions.forEach((q) => {
+    survey.backerQuestions.forEach((q: typeof survey.backerQuestions[number]) => {
       questions.push({
         id: q.id,
         type: mapQuestionType(q.questionType),
@@ -275,7 +275,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Add item questions (for selected rewards/addons)
-    survey.itemQuestions.forEach((item) => {
+    survey.itemQuestions.forEach((item: typeof survey.itemQuestions[number]) => {
       // Add section break for item
       questions.push({
         id: `section_${item.id}`,
@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Add variant questions
-      item.variants.forEach((variant) => {
+      item.variants.forEach((variant: typeof item.variants[number]) => {
         questions.push({
           id: variant.id,
           type: "dropdown",
@@ -301,7 +301,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Add custom questions
-      item.customQuestions.forEach((custom) => {
+      item.customQuestions.forEach((custom: typeof item.customQuestions[number]) => {
         questions.push({
           id: custom.id,
           type: mapQuestionType(custom.questionType),
@@ -330,7 +330,7 @@ export async function POST(request: NextRequest) {
         surveyResponses: pledge.surveyResponses,
         shippingAddress: pledge.shippingAddress,
         reward: pledge.reward,
-        addons: pledge.addons.map((a) => a.addon),
+        addons: pledge.addons.map((a: typeof pledge.addons[number]) => a.addon),
       },
       questions: questions.sort((a, b) => a.sortOrder - b.sortOrder),
     }, { headers: corsHeaders });
