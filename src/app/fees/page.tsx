@@ -133,15 +133,22 @@ export default function FeesPage() {
   const fees = paymentMethod === "stripe" ? stripeFees : divinityFees;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950">
+    <div className="relative min-h-screen bg-background overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[600px] h-[600px] bg-emerald-500/15" />
+        <div className="floating-orb absolute top-1/3 -left-40 w-[500px] h-[500px] bg-teal-500/10" style={{ animationDelay: '-8s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/4 w-[400px] h-[400px] bg-cyan-500/10" style={{ animationDelay: '-15s' }} />
+      </div>
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/90 via-teal-600/90 to-cyan-700/90" />
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <Badge className="mb-4 bg-white/20 text-white hover:bg-white/30">
+          <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <Badge className="mb-4 bg-white/20 text-white hover:bg-white/30 border-0">
               <DollarSign className="mr-1 h-3 w-3" />
               Transparent Pricing
             </Badge>
@@ -157,19 +164,19 @@ export default function FeesPage() {
         {/* Wave decoration */}
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="white" className="dark:fill-zinc-950"/>
+            <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" className="fill-background"/>
           </svg>
         </div>
       </section>
 
       {/* Payment Method Selection */}
-      <section className="py-20">
+      <section className="relative py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
+          <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               Payment Options
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               We offer two payment solutions to best fit your needs
             </p>
           </div>
@@ -188,18 +195,22 @@ export default function FeesPage() {
 
             <TabsContent value="stripe">
               <div className="grid gap-8 md:grid-cols-2 lg:max-w-4xl lg:mx-auto">
-                {stripeFeeBreakdown.map((fee) => (
-                  <Card key={fee.title} className="border-2 hover:border-emerald-200 transition-colors">
+                {stripeFeeBreakdown.map((fee, index) => (
+                  <Card
+                    key={fee.title}
+                    className="glass-card border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                    style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
+                  >
                     <CardHeader className="text-center pb-2">
-                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 mb-4">
-                        <Percent className="h-8 w-8 text-emerald-600" />
+                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg mb-4">
+                        <Percent className="h-8 w-8 text-white" />
                       </div>
                       <CardTitle className="text-2xl">{fee.title}</CardTitle>
-                      <div className="text-4xl font-bold text-emerald-600 mt-2">{fee.rate}</div>
+                      <div className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mt-2">{fee.rate}</div>
                       <CardDescription className="text-base mt-2">{fee.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center">
+                      <p className="text-sm text-muted-foreground text-center">
                         {fee.details}
                       </p>
                     </CardContent>
@@ -218,18 +229,22 @@ export default function FeesPage() {
 
             <TabsContent value="divinitycoin">
               <div className="grid gap-8 md:grid-cols-2 lg:max-w-4xl lg:mx-auto">
-                {divinityCoinFeeBreakdown.map((fee) => (
-                  <Card key={fee.title} className="border-2 hover:border-purple-200 transition-colors">
+                {divinityCoinFeeBreakdown.map((fee, index) => (
+                  <Card
+                    key={fee.title}
+                    className="glass-card border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                    style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
+                  >
                     <CardHeader className="text-center pb-2">
-                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30 mb-4">
-                        <Coins className="h-8 w-8 text-purple-600" />
+                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg mb-4">
+                        <Coins className="h-8 w-8 text-white" />
                       </div>
                       <CardTitle className="text-2xl">{fee.title}</CardTitle>
-                      <div className="text-4xl font-bold text-purple-600 mt-2">{fee.rate}</div>
+                      <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mt-2">{fee.rate}</div>
                       <CardDescription className="text-base mt-2">{fee.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center">
+                      <p className="text-sm text-muted-foreground text-center">
                         {fee.details}
                       </p>
                     </CardContent>
@@ -286,18 +301,19 @@ export default function FeesPage() {
       </section>
 
       {/* Interactive Calculator Section */}
-      <section className="py-20 bg-zinc-50 dark:bg-zinc-900">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
+      <section className="relative py-20">
+        <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               Estimate Your Earnings
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               Use the slider to see how much you&apos;ll take home at different funding levels
             </p>
           </div>
 
-          <Card className="mt-12">
+          <Card className="mt-12 glass-card border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
             <CardContent className="p-8">
               {/* Payment Method Toggle */}
               <div className="flex justify-center mb-6">
@@ -459,25 +475,29 @@ export default function FeesPage() {
       </section>
 
       {/* Features */}
-      <section className="py-20">
+      <section className="relative py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
+          <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               What&apos;s Included
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               Your platform fee covers everything you need to run a successful campaign
             </p>
           </div>
 
           <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature) => (
-              <div key={feature.title} className="text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
-                  <feature.icon className="h-6 w-6 text-emerald-600" />
+            {features.map((feature, index) => (
+              <div
+                key={feature.title}
+                className="text-center glass-card rounded-2xl p-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
+              >
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg">
+                  <feature.icon className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="mt-4 font-semibold text-zinc-900 dark:text-white">{feature.title}</h3>
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{feature.description}</p>
+                <h3 className="mt-4 font-semibold">{feature.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -485,18 +505,19 @@ export default function FeesPage() {
       </section>
 
       {/* Comparison Table */}
-      <section className="py-20 bg-zinc-50 dark:bg-zinc-900">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
+      <section className="relative py-20">
+        <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
+        <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               How We Compare
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               Our fees are competitive with other major crowdfunding platforms
             </p>
           </div>
 
-          <div className="mt-12 overflow-hidden rounded-xl border bg-white dark:bg-zinc-800">
+          <div className="mt-12 overflow-hidden rounded-2xl border glass-card shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
             <table className="w-full">
               <thead className="bg-zinc-50 dark:bg-zinc-900">
                 <tr>
@@ -570,18 +591,23 @@ export default function FeesPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-emerald-600 to-teal-600">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <Gift className="mx-auto h-12 w-12 text-white/80 mb-6" />
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+      <section className="relative py-20 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600" />
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-6 animate-in fade-in zoom-in duration-500">
+            <Gift className="h-7 w-7 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold text-white sm:text-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">
             Ready to Launch Your Campaign?
           </h2>
-          <p className="mt-4 text-xl text-emerald-100">
+          <p className="mt-4 text-xl text-emerald-100 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
             Join thousands of creators bringing their ideas to life.
           </p>
-          <div className="mt-10">
+          <div className="mt-10 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '200ms' }}>
             <Link href="/projects/new">
-              <Button size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50">
+              <Button size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50 shadow-xl">
                 Start Your Campaign
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>

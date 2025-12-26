@@ -26,6 +26,7 @@ import {
   Send,
   Clock,
   CheckCircle,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Footer } from "@/components/footer";
@@ -83,14 +84,23 @@ export default function ContactPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
-        <div className="container py-16">
-          <div className="mx-auto max-w-lg text-center">
-            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-              <CheckCircle className="h-10 w-10 text-emerald-600" />
+      <div className="relative min-h-screen bg-background overflow-hidden">
+        {/* Floating orbs background */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-emerald-500/15" />
+          <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-primary/10" style={{ animationDelay: '-6s' }} />
+          <div className="floating-orb absolute -bottom-40 right-1/4 w-[350px] h-[350px] bg-cyan-500/10" style={{ animationDelay: '-12s' }} />
+        </div>
+
+        <div className="container relative py-16">
+          <div
+            className="mx-auto max-w-lg text-center animate-in fade-in slide-in-from-bottom-4 duration-500"
+          >
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-xl">
+              <CheckCircle className="h-10 w-10 text-white" />
             </div>
             <h1 className="mb-4 text-3xl font-bold">Message Sent!</h1>
-            <p className="mb-8 text-zinc-600 dark:text-zinc-400">
+            <p className="mb-8 text-muted-foreground">
               Thank you for reaching out. Our support team will get back to you within 24-48 hours.
             </p>
             <div className="flex justify-center gap-4">
@@ -98,7 +108,7 @@ export default function ContactPage() {
                 Send Another Message
               </Button>
               <Link href="/">
-                <Button>Back to Home</Button>
+                <Button className="btn-glow">Back to Home</Button>
               </Link>
             </div>
           </div>
@@ -108,13 +118,23 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
+    <div className="relative min-h-screen bg-background overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/15" />
+        <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-7s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/3 w-[350px] h-[350px] bg-cyan-500/10" style={{ animationDelay: '-14s' }} />
+      </div>
+
       {/* Header */}
-      <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-zinc-900/80">
+      <div className="relative border-b bg-gradient-to-b from-primary/5 to-background/80 backdrop-blur-sm">
         <div className="container py-12">
-          <div className="mx-auto max-w-2xl text-center">
+          <div className="mx-auto max-w-2xl text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg mb-4">
+              <Sparkles className="h-7 w-7 text-primary-foreground" />
+            </div>
             <h1 className="mb-4 text-4xl font-bold tracking-tight">Contact Support</h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400">
+            <p className="text-lg text-muted-foreground">
               Have a question or need help? We&apos;re here for you. Fill out the form below
               and our team will get back to you as soon as possible.
             </p>
@@ -122,59 +142,73 @@ export default function ContactPage() {
         </div>
       </div>
 
-      <div className="container py-12">
+      <div className="container relative py-12">
         <div className="mx-auto max-w-4xl">
           <div className="grid gap-8 lg:grid-cols-3">
             {/* Contact Info */}
             <div className="space-y-6">
-              <Card>
+              <Card
+                className="glass-card border shadow-lg animate-in fade-in slide-in-from-left-4 duration-500"
+              >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Mail className="h-5 w-5" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80">
+                      <Mail className="h-4 w-4 text-primary-foreground" />
+                    </div>
                     Email Us
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <a
                     href="mailto:support@indiecrowdfund.com"
-                    className="text-emerald-600 hover:underline"
+                    className="text-primary hover:underline font-medium"
                   >
                     support@indiecrowdfund.com
                   </a>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card
+                className="glass-card border shadow-lg animate-in fade-in slide-in-from-left-4 duration-500"
+                style={{ animationDelay: '100ms' }}
+              >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80">
+                      <Clock className="h-4 w-4 text-primary-foreground" />
+                    </div>
                     Response Time
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <p className="text-sm text-muted-foreground">
                     We typically respond within 24-48 hours during business days.
                   </p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card
+                className="glass-card border shadow-lg animate-in fade-in slide-in-from-left-4 duration-500"
+                style={{ animationDelay: '200ms' }}
+              >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <HelpCircle className="h-5 w-5" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80">
+                      <HelpCircle className="h-4 w-4 text-primary-foreground" />
+                    </div>
                     Quick Help
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <Link
                     href="/faq"
-                    className="block text-sm text-emerald-600 hover:underline"
+                    className="block text-sm text-primary hover:underline font-medium"
                   >
                     Browse FAQ
                   </Link>
                   <Link
                     href="/terms"
-                    className="block text-sm text-emerald-600 hover:underline"
+                    className="block text-sm text-primary hover:underline font-medium"
                   >
                     Terms & Policies
                   </Link>
@@ -184,7 +218,10 @@ export default function ContactPage() {
 
             {/* Contact Form */}
             <div className="lg:col-span-2">
-              <Card>
+              <Card
+                className="glass-card border shadow-xl animate-in fade-in slide-in-from-right-4 duration-500"
+                style={{ animationDelay: '100ms' }}
+              >
                 <CardHeader>
                   <CardTitle>Send us a message</CardTitle>
                   <CardDescription>
@@ -203,6 +240,7 @@ export default function ContactPage() {
                           onChange={(e) =>
                             setFormData({ ...formData, name: e.target.value })
                           }
+                          className="bg-background/50"
                         />
                       </div>
                       <div className="space-y-2">
@@ -215,6 +253,7 @@ export default function ContactPage() {
                           onChange={(e) =>
                             setFormData({ ...formData, email: e.target.value })
                           }
+                          className="bg-background/50"
                         />
                       </div>
                     </div>
@@ -227,7 +266,7 @@ export default function ContactPage() {
                           setFormData({ ...formData, category: value })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-background/50">
                           <SelectValue placeholder="Select a category" />
                         </SelectTrigger>
                         <SelectContent>
@@ -252,6 +291,7 @@ export default function ContactPage() {
                         onChange={(e) =>
                           setFormData({ ...formData, subject: e.target.value })
                         }
+                        className="bg-background/50"
                       />
                     </div>
 
@@ -265,10 +305,11 @@ export default function ContactPage() {
                         onChange={(e) =>
                           setFormData({ ...formData, message: e.target.value })
                         }
+                        className="bg-background/50"
                       />
                     </div>
 
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    <Button type="submit" className="w-full btn-glow" disabled={isSubmitting}>
                       {isSubmitting ? (
                         "Sending..."
                       ) : (

@@ -19,6 +19,7 @@ import {
   Settings,
   HelpCircle,
   ArrowLeft,
+  Sparkles,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
 
@@ -91,20 +92,32 @@ export default function FAQPage() {
   const ActiveIcon = activeCategoryInfo?.icon || HelpCircle;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 right-1/4 w-[500px] h-[500px] bg-primary/15" />
+        <div className="floating-orb absolute top-1/2 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-7s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/3 w-[350px] h-[350px] bg-cyan-500/10" style={{ animationDelay: '-14s' }} />
+      </div>
+
       {/* Header */}
-      <div className="border-b bg-gradient-to-b from-primary/5 to-background">
+      <div className="relative border-b bg-gradient-to-b from-primary/5 to-background/80 backdrop-blur-sm">
         <div className="container py-8">
-          <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+          <Link
+            href="/"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 animate-in fade-in slide-in-from-left-4 duration-300"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Home
           </Link>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <HelpCircle className="h-6 w-6 text-primary" />
+          <div className="flex items-center gap-3 mb-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25">
+              <HelpCircle className="h-7 w-7 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold">Frequently Asked Questions</h1>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                Frequently Asked Questions
+              </h1>
               <p className="text-muted-foreground">Find answers to common questions about IndieCrowdfund</p>
             </div>
           </div>
@@ -112,28 +125,35 @@ export default function FAQPage() {
       </div>
 
       {/* Content */}
-      <div className="container py-8">
+      <div className="container relative py-8">
         <div className="flex flex-col gap-8 lg:flex-row">
           {/* Vertical Tab Sidebar */}
-          <div className="w-full lg:w-72 flex-shrink-0">
-            <Card>
+          <div
+            className="w-full lg:w-72 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500"
+            style={{ animationDelay: '100ms' }}
+          >
+            <Card className="glass-card border shadow-xl">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Categories</CardTitle>
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Categories
+                </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <nav className="space-y-1">
-                  {categories.map((category) => {
+                  {categories.map((category, index) => {
                     const Icon = category.icon;
                     const isActive = activeCategory === category.id;
                     return (
                       <button
                         key={category.id}
                         onClick={() => setActiveCategory(category.id)}
-                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200 ${
                           isActive
-                            ? "bg-primary text-primary-foreground"
+                            ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/25"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
+                        style={{ animationDelay: `${index * 50}ms` }}
                       >
                         <Icon className="h-4 w-4 flex-shrink-0" />
                         <span className="truncate">{category.label}</span>
@@ -146,15 +166,18 @@ export default function FAQPage() {
           </div>
 
           {/* FAQ Content */}
-          <div className="flex-1">
-            <Card>
+          <div
+            className="flex-1 animate-in fade-in slide-in-from-right-4 duration-500"
+            style={{ animationDelay: '200ms' }}
+          >
+            <Card className="glass-card border shadow-xl">
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <ActiveIcon className="h-5 w-5 text-primary" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 shadow-inner">
+                    <ActiveIcon className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <CardTitle>{activeCategoryInfo?.label}</CardTitle>
+                    <CardTitle className="text-xl">{activeCategoryInfo?.label}</CardTitle>
                     <CardDescription>{activeCategoryInfo?.description}</CardDescription>
                   </div>
                 </div>
@@ -162,11 +185,15 @@ export default function FAQPage() {
               <CardContent>
                 <Accordion type="single" collapsible className="w-full">
                   {activeData.map((faq, index) => (
-                    <AccordionItem key={index} value={`item-${index}`}>
-                      <AccordionTrigger className="text-left">
+                    <AccordionItem
+                      key={index}
+                      value={`item-${index}`}
+                      className="border-b border-border/50 last:border-0"
+                    >
+                      <AccordionTrigger className="text-left hover:text-primary transition-colors py-4">
                         {faq.question}
                       </AccordionTrigger>
-                      <AccordionContent className="text-muted-foreground">
+                      <AccordionContent className="text-muted-foreground pb-4">
                         {faq.answer}
                       </AccordionContent>
                     </AccordionItem>

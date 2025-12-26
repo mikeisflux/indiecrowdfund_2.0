@@ -56,7 +56,7 @@ const platformFeatures = [
   {
     category: "Project Creation",
     icon: Rocket,
-    color: "bg-indigo-100 text-indigo-600",
+    color: "from-indigo-500 to-purple-500",
     features: [
       {
         title: "6-Step Project Builder",
@@ -99,7 +99,7 @@ const platformFeatures = [
   {
     category: "Payment Processing",
     icon: CreditCard,
-    color: "bg-green-100 text-green-600",
+    color: "from-emerald-500 to-teal-500",
     features: [
       {
         title: "Secure Payment Processing",
@@ -148,7 +148,7 @@ const platformFeatures = [
   {
     category: "Creator Tools",
     icon: Sparkles,
-    color: "bg-purple-100 text-purple-600",
+    color: "from-purple-500 to-pink-500",
     features: [
       {
         title: "Creator Dashboard",
@@ -191,7 +191,7 @@ const platformFeatures = [
   {
     category: "IndieKit",
     icon: Box,
-    color: "bg-teal-100 text-teal-600",
+    color: "from-teal-500 to-cyan-500",
     features: [
       {
         title: "Backer Management",
@@ -270,7 +270,7 @@ const platformFeatures = [
   {
     category: "Analytics & Insights",
     icon: BarChart3,
-    color: "bg-blue-100 text-blue-600",
+    color: "from-blue-500 to-indigo-500",
     features: [
       {
         title: "Real-Time Analytics",
@@ -313,7 +313,7 @@ const platformFeatures = [
   {
     category: "AI Marketing Suite",
     icon: Bot,
-    color: "bg-pink-100 text-pink-600",
+    color: "from-pink-500 to-rose-500",
     features: [
       {
         title: "AI Content Generator",
@@ -356,7 +356,7 @@ const platformFeatures = [
   {
     category: "Backer Experience",
     icon: Users,
-    color: "bg-amber-100 text-amber-600",
+    color: "from-amber-500 to-orange-500",
     features: [
       {
         title: "Personalized Dashboard",
@@ -399,7 +399,7 @@ const platformFeatures = [
   {
     category: "Retailer Program (LCS)",
     icon: Store,
-    color: "bg-emerald-100 text-emerald-600",
+    color: "from-emerald-500 to-green-500",
     features: [
       {
         title: "Wholesale Portal",
@@ -442,7 +442,7 @@ const platformFeatures = [
   {
     category: "Trust & Safety",
     icon: Shield,
-    color: "bg-red-100 text-red-600",
+    color: "from-red-500 to-rose-500",
     features: [
       {
         title: "Project Review Process",
@@ -485,7 +485,7 @@ const platformFeatures = [
   {
     category: "Admin Tools",
     icon: Settings,
-    color: "bg-gray-100 text-gray-600",
+    color: "from-gray-500 to-slate-500",
     features: [
       {
         title: "Project Review Center",
@@ -543,24 +543,28 @@ const values = [
     description:
       "We build every feature with creators in mind. Your success is our success.",
     icon: Heart,
+    color: "from-pink-500 to-rose-500",
   },
   {
     title: "Transparency",
     description:
       "Clear fees, honest policies, and open communication. No hidden surprises.",
     icon: Eye,
+    color: "from-blue-500 to-cyan-500",
   },
   {
     title: "Innovation",
     description:
       "Constantly improving with AI, analytics, and cutting-edge technology.",
     icon: Lightbulb,
+    color: "from-amber-500 to-orange-500",
   },
   {
     title: "Community",
     description:
       "Connecting creators with passionate audiences who believe in their vision.",
     icon: Users,
+    color: "from-purple-500 to-indigo-500",
   },
 ];
 
@@ -626,24 +630,40 @@ export default function AboutUsPage() {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-orb absolute -top-40 -right-40 w-[600px] h-[600px] bg-indigo-500/15" />
+        <div className="floating-orb absolute top-1/3 -left-40 w-[500px] h-[500px] bg-purple-500/10" style={{ animationDelay: '-7s' }} />
+        <div className="floating-orb absolute -bottom-40 right-1/4 w-[400px] h-[400px] bg-pink-500/10" style={{ animationDelay: '-14s' }} />
+      </div>
+
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20"></div>
-        <div className="container mx-auto px-4 relative z-10">
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/90 via-purple-600/90 to-pink-600/90" />
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+
+        <div className="relative container mx-auto px-4 py-24 z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge className="bg-white/20 text-white border-0 mb-6">
+            <Badge className="bg-white/20 text-white border-0 mb-6 animate-in fade-in zoom-in duration-500">
               About IndieCrowdfund
             </Badge>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white animate-in fade-in slide-in-from-bottom-4 duration-700">
               Empowering Independent Creators Since 2024
             </h1>
-            <p className="text-xl md:text-2xl text-white/80 mb-10">
+            <p
+              className="text-xl md:text-2xl text-white/80 mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700"
+              style={{ animationDelay: '100ms' }}
+            >
               We&apos;re building the most powerful and creator-friendly crowdfunding platform for comics, games, art, and creative projects.
             </p>
-            <div className="flex flex-wrap justify-center gap-4">
+            <div
+              className="flex flex-wrap justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700"
+              style={{ animationDelay: '200ms' }}
+            >
               <Link href="/projects/new">
-                <Button size="lg" className="bg-white text-indigo-600 hover:bg-white/90">
+                <Button size="lg" className="bg-white text-indigo-600 hover:bg-white/90 shadow-xl">
                   Start Your Project
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -660,19 +680,30 @@ export default function AboutUsPage() {
             </div>
           </div>
         </div>
+
+        {/* Wave decoration */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" className="fill-background"/>
+          </svg>
+        </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-12 bg-white border-b">
+      <section className="relative py-12 border-b">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {displayStats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 mb-3">
-                  <stat.icon className="h-6 w-6 text-indigo-600" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {displayStats.map((stat, index) => (
+              <div
+                key={stat.label}
+                className="glass-card rounded-2xl p-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg mb-3">
+                  <stat.icon className="h-6 w-6 text-primary-foreground" />
                 </div>
-                <p className="text-3xl font-bold text-zinc-900">{stat.value}</p>
-                <p className="text-zinc-500">{stat.label}</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">{stat.value}</p>
+                <p className="text-muted-foreground">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -680,22 +711,29 @@ export default function AboutUsPage() {
       </section>
 
       {/* Our Mission */}
-      <section className="py-16 bg-zinc-50">
+      <section className="relative py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6">Our Mission</h2>
-            <p className="text-xl text-zinc-600 mb-8">
+            <h2 className="text-3xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">Our Mission</h2>
+            <p
+              className="text-xl text-muted-foreground mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+              style={{ animationDelay: '100ms' }}
+            >
               We believe every creative idea deserves a chance to exist. Our mission is to provide creators with the tools, community, and support they need to bring their visions to life—while giving fans a direct way to support the projects they love.
             </p>
             <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6">
-              {values.map((value) => (
-                <Card key={value.title} className="text-center">
+              {values.map((value, index) => (
+                <Card
+                  key={value.title}
+                  className="glass-card border shadow-lg text-center hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-4"
+                  style={{ animationDelay: `${index * 50 + 200}ms`, animationFillMode: 'backwards' }}
+                >
                   <CardContent className="pt-6">
-                    <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 mb-4">
-                      <value.icon className="h-6 w-6 text-indigo-600" />
+                    <div className={`inline-flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-br ${value.color} shadow-lg mb-4`}>
+                      <value.icon className="h-6 w-6 text-white" />
                     </div>
                     <h3 className="font-semibold mb-2">{value.title}</h3>
-                    <p className="text-sm text-zinc-500">{value.description}</p>
+                    <p className="text-sm text-muted-foreground">{value.description}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -705,39 +743,51 @@ export default function AboutUsPage() {
       </section>
 
       {/* Platform Features */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <Badge className="mb-4">Platform Features</Badge>
+      <section className="relative py-16">
+        <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
+        <div className="relative container mx-auto px-4">
+          <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Badge className="mb-4 bg-primary/10 text-primary border-0">
+              <Sparkles className="mr-1 h-3 w-3" />
+              Platform Features
+            </Badge>
             <h2 className="text-3xl font-bold mb-4">
               Everything You Need to Succeed
             </h2>
-            <p className="text-xl text-zinc-600 max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Discover the comprehensive suite of tools and features that make IndieCrowdfund the most powerful platform for independent creators.
             </p>
           </div>
 
           <div className="space-y-16">
-            {platformFeatures.map((category) => (
-              <div key={category.category}>
+            {platformFeatures.map((category, categoryIndex) => (
+              <div
+                key={category.category}
+                className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                style={{ animationDelay: `${categoryIndex * 100}ms`, animationFillMode: 'backwards' }}
+              >
                 <div className="flex items-center gap-3 mb-6">
-                  <div className={`h-12 w-12 rounded-xl ${category.color} flex items-center justify-center`}>
-                    <category.icon className="h-6 w-6" />
+                  <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center shadow-lg`}>
+                    <category.icon className="h-7 w-7 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold">{category.category}</h3>
                 </div>
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {category.features.map((feature) => (
-                    <Card key={feature.title} className="hover:shadow-md transition-shadow">
+                  {category.features.map((feature, featureIndex) => (
+                    <Card
+                      key={feature.title}
+                      className="glass-card border shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+                      style={{ animationDelay: `${featureIndex * 25}ms` }}
+                    >
                       <CardContent className="p-5">
                         <div className="flex items-start gap-4">
-                          <div className={`h-10 w-10 rounded-lg ${category.color} flex items-center justify-center flex-shrink-0`}>
-                            <feature.icon className="h-5 w-5" />
+                          <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center flex-shrink-0 shadow-md`}>
+                            <feature.icon className="h-5 w-5 text-white" />
                           </div>
                           <div>
                             <h4 className="font-semibold mb-1">{feature.title}</h4>
-                            <p className="text-sm text-zinc-500">{feature.description}</p>
+                            <p className="text-sm text-muted-foreground">{feature.description}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -751,84 +801,84 @@ export default function AboutUsPage() {
       </section>
 
       {/* Why Choose Us */}
-      <section className="py-16 bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
-        <div className="container mx-auto px-4">
+      <section className="relative py-16 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600" />
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+
+        <div className="relative container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">Why Choose IndieCrowdfund?</h2>
+            <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-3xl font-bold mb-4 text-white">Why Choose IndieCrowdfund?</h2>
               <p className="text-xl text-white/80">
                 We&apos;re not just another crowdfunding platform. Here&apos;s what sets us apart.
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className="bg-white/10 border-white/20 text-white">
-                <CardContent className="p-6">
-                  <Award className="h-10 w-10 mb-4 text-yellow-300" />
-                  <h3 className="text-xl font-semibold mb-2">Built for Creators</h3>
-                  <p className="text-white/80">
-                    Every feature is designed with creator success in mind. From AI-assisted content creation to detailed analytics, we give you the tools to run professional campaigns.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/10 border-white/20 text-white">
-                <CardContent className="p-6">
-                  <Zap className="h-10 w-10 mb-4 text-yellow-300" />
-                  <h3 className="text-xl font-semibold mb-2">Cutting-Edge Technology</h3>
-                  <p className="text-white/80">
-                    AI-powered recommendations, smart analytics, and automated marketing tools help you reach more backers and convert more pledges.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/10 border-white/20 text-white">
-                <CardContent className="p-6">
-                  <Store className="h-10 w-10 mb-4 text-yellow-300" />
-                  <h3 className="text-xl font-semibold mb-2">Retailer Network</h3>
-                  <p className="text-white/80">
-                    Our unique LCS program connects your project with certified retailers, helping you get your product into physical stores at wholesale pricing.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/10 border-white/20 text-white">
-                <CardContent className="p-6">
-                  <Shield className="h-10 w-10 mb-4 text-yellow-300" />
-                  <h3 className="text-xl font-semibold mb-2">Trust & Safety</h3>
-                  <p className="text-white/80">
-                    Every project is reviewed by our team. AI fraud detection and identity verification protect both creators and backers.
-                  </p>
-                </CardContent>
-              </Card>
+              {[
+                {
+                  icon: Award,
+                  title: "Built for Creators",
+                  description: "Every feature is designed with creator success in mind. From AI-assisted content creation to detailed analytics, we give you the tools to run professional campaigns."
+                },
+                {
+                  icon: Zap,
+                  title: "Cutting-Edge Technology",
+                  description: "AI-powered recommendations, smart analytics, and automated marketing tools help you reach more backers and convert more pledges."
+                },
+                {
+                  icon: Store,
+                  title: "Retailer Network",
+                  description: "Our unique LCS program connects your project with certified retailers, helping you get your product into physical stores at wholesale pricing."
+                },
+                {
+                  icon: Shield,
+                  title: "Trust & Safety",
+                  description: "Every project is reviewed by our team. AI fraud detection and identity verification protect both creators and backers."
+                },
+              ].map((item, index) => (
+                <Card
+                  key={item.title}
+                  className="bg-white/10 border-white/20 backdrop-blur-sm text-white shadow-xl animate-in fade-in slide-in-from-bottom-4"
+                  style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
+                >
+                  <CardContent className="p-6">
+                    <item.icon className="h-10 w-10 mb-4 text-yellow-300" />
+                    <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
+                    <p className="text-white/80">
+                      {item.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-white">
+      <section className="relative py-16">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
+          <div className="max-w-3xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
-            <p className="text-xl text-zinc-600 mb-8">
+            <p className="text-xl text-muted-foreground mb-8">
               Join thousands of creators who have successfully funded their projects on IndieCrowdfund.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link href="/projects/new">
-                <Button size="lg" className="gap-2">
+                <Button size="lg" className="gap-2 btn-glow shadow-lg">
                   <Rocket className="h-5 w-5" />
                   Start a Project
                 </Button>
               </Link>
               <Link href="/discover">
-                <Button size="lg" variant="outline" className="gap-2">
+                <Button size="lg" variant="outline" className="gap-2 group">
                   <Search className="h-5 w-5" />
                   Discover Projects
                 </Button>
               </Link>
               <Link href="/retailers">
-                <Button size="lg" variant="outline" className="gap-2">
+                <Button size="lg" variant="outline" className="gap-2 group">
                   <Store className="h-5 w-5" />
                   Retailer Program
                 </Button>
@@ -839,37 +889,32 @@ export default function AboutUsPage() {
       </section>
 
       {/* Contact Section */}
-      <section className="py-12 bg-zinc-100">
-        <div className="container mx-auto px-4">
+      <section className="relative py-12">
+        <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
+        <div className="relative container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="grid md:grid-cols-3 gap-6">
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <Mail className="h-8 w-8 mx-auto mb-3 text-indigo-600" />
-                  <h3 className="font-semibold mb-1">General Inquiries</h3>
-                  <a href="mailto:hello@indiecrowdfund.com" className="text-indigo-600 hover:underline">
-                    hello@indiecrowdfund.com
-                  </a>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <MessageSquare className="h-8 w-8 mx-auto mb-3 text-indigo-600" />
-                  <h3 className="font-semibold mb-1">Creator Support</h3>
-                  <a href="mailto:creators@indiecrowdfund.com" className="text-indigo-600 hover:underline">
-                    creators@indiecrowdfund.com
-                  </a>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <Megaphone className="h-8 w-8 mx-auto mb-3 text-indigo-600" />
-                  <h3 className="font-semibold mb-1">Press & Media</h3>
-                  <a href="mailto:press@indiecrowdfund.com" className="text-indigo-600 hover:underline">
-                    press@indiecrowdfund.com
-                  </a>
-                </CardContent>
-              </Card>
+              {[
+                { icon: Mail, title: "General Inquiries", email: "hello@indiecrowdfund.com" },
+                { icon: MessageSquare, title: "Creator Support", email: "creators@indiecrowdfund.com" },
+                { icon: Megaphone, title: "Press & Media", email: "press@indiecrowdfund.com" },
+              ].map((contact, index) => (
+                <Card
+                  key={contact.title}
+                  className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4"
+                  style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
+                >
+                  <CardContent className="p-6 text-center">
+                    <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg mb-3">
+                      <contact.icon className="h-6 w-6 text-primary-foreground" />
+                    </div>
+                    <h3 className="font-semibold mb-1">{contact.title}</h3>
+                    <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
+                      {contact.email}
+                    </a>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </div>
