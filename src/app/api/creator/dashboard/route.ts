@@ -223,10 +223,7 @@ export async function GET(req: NextRequest) {
           shippingAmount: true,
           createdAt: true,
           fulfillmentStatus: true,
-          shippingAddress: true,
-          shippingCity: true,
-          shippingState: true,
-          shippingCountry: true,
+          shippingAddress: true, // JSON field containing { name, line1, city, state, postalCode, country }
           user: {
             select: {
               id: true,
@@ -553,6 +550,9 @@ export async function GET(req: NextRequest) {
         addonsMap[a.addon.id] = a.quantity;
       });
 
+      // Parse shipping address from JSON field
+      const shippingData = pledge.shippingAddress as { line1?: string; city?: string; state?: string; country?: string } | null;
+
       return {
         id: pledge.id,
         status: pledge.status,
@@ -563,10 +563,10 @@ export async function GET(req: NextRequest) {
         image: pledge.user.image,
         amount: Number(pledge.amount),
         shippingAmount: Number(pledge.shippingAmount || 0),
-        shippingAddress: pledge.shippingAddress || "",
-        shippingCity: pledge.shippingCity || "",
-        shippingState: pledge.shippingState || "",
-        shippingCountry: pledge.shippingCountry || "",
+        shippingAddress: shippingData?.line1 || "",
+        shippingCity: shippingData?.city || "",
+        shippingState: shippingData?.state || "",
+        shippingCountry: shippingData?.country || "",
         rewardId: pledge.reward?.id || null,
         reward: pledge.reward?.title || "No Reward",
         addons: addonsDisplay,
