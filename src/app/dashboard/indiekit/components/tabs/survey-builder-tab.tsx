@@ -797,6 +797,7 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
                   onChange={(e) =>
                     setEditingQuestion({ ...editingQuestion, label: e.target.value })
                   }
+                  onKeyDown={(e) => e.stopPropagation()}
                 />
               </div>
 
@@ -807,6 +808,7 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
                   onChange={(e) =>
                     setEditingQuestion({ ...editingQuestion, helpText: e.target.value })
                   }
+                  onKeyDown={(e) => e.stopPropagation()}
                   placeholder="Additional instructions for this question"
                 />
               </div>
@@ -964,6 +966,7 @@ function RewardQuestionCard({
                       onChange={(e) => onUpdateVariant(index, {
                         options: e.target.value.split(",").map(o => o.trim()),
                       })}
+                      onKeyDown={(e) => e.stopPropagation()}
                       placeholder="S, M, L, XL"
                     />
                   </div>
@@ -991,6 +994,7 @@ function RewardQuestionCard({
                       <Input
                         value={question.question}
                         onChange={(e) => onUpdateQuestion(index, { question: e.target.value })}
+                        onKeyDown={(e) => e.stopPropagation()}
                         placeholder="Enter your question..."
                       />
                       <div className="flex items-center gap-2">
@@ -1023,6 +1027,7 @@ function RewardQuestionCard({
                           onChange={(e) => onUpdateQuestion(index, {
                             options: e.target.value.split(",").map(o => o.trim()),
                           })}
+                          onKeyDown={(e) => e.stopPropagation()}
                           placeholder="Options (comma-separated)"
                         />
                       )}
