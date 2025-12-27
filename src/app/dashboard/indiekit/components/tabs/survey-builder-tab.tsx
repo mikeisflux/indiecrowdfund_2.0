@@ -173,7 +173,9 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
         }
         setItemQuestions(questionsMap);
       }
+      // 404 is expected if no survey exists yet - silently ignore
     } catch (error) {
+      // Network errors - log but don't crash
       console.error("Error fetching item questions:", error);
     }
   }, [projectId]);
