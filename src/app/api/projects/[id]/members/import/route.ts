@@ -4,14 +4,73 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-function parseCSV(content: string): { email: string; name?: string }[] {
+interface ColumnMapping {
+  emailColumn?: string;
+  nameColumn?: string;
+  firstNameColumn?: string;
+  lastNameColumn?: string;
+}
+
+function parseCSVLine(line: string): string[] {
+  const values: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (const char of line) {
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      values.push(current.trim().replace(/^"|"$/g, ""));
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  values.push(current.trim().replace(/^"|"$/g, ""));
+
+  return values;
+}
+
+function parseCSV(content: string, columnMapping: ColumnMapping): { email: string; name?: string }[] {
   const lines = content.trim().split("\n");
   if (lines.length < 2) return [];
 
   // Parse header
-  const header = lines[0].toLowerCase().split(",").map((h) => h.trim().replace(/"/g, ""));
-  const emailIndex = header.findIndex((h) => h === "email" || h === "e-mail" || h === "email address");
-  const nameIndex = header.findIndex((h) => h === "name" || h === "full name" || h === "first name");
+  const headers = parseCSVLine(lines[0]);
+  const headerLower = headers.map(h => h.toLowerCase());
+
+  // Find column indices using provided mapping or auto-detect
+  let emailIndex = -1;
+  let nameIndex = -1;
+  let firstNameIndex = -1;
+  let lastNameIndex = -1;
+
+  if (columnMapping.emailColumn) {
+    emailIndex = headers.findIndex(h => h === columnMapping.emailColumn);
+  }
+  if (emailIndex === -1) {
+    // Auto-detect email column
+    emailIndex = headerLower.findIndex(h => h.includes("email") || h === "e-mail");
+  }
+
+  if (columnMapping.nameColumn) {
+    nameIndex = headers.findIndex(h => h === columnMapping.nameColumn);
+  }
+  if (columnMapping.firstNameColumn) {
+    firstNameIndex = headers.findIndex(h => h === columnMapping.firstNameColumn);
+  }
+  if (columnMapping.lastNameColumn) {
+    lastNameIndex = headers.findIndex(h => h === columnMapping.lastNameColumn);
+  }
+
+  // Auto-detect name columns if not provided
+  if (nameIndex === -1 && firstNameIndex === -1 && lastNameIndex === -1) {
+    nameIndex = headerLower.findIndex(h => h === "name" || h.includes("full name") || h === "fullname");
+    if (nameIndex === -1) {
+      firstNameIndex = headerLower.findIndex(h => h === "first name" || h === "firstname" || h === "first");
+      lastNameIndex = headerLower.findIndex(h => h === "last name" || h === "lastname" || h === "last" || h === "surname");
+    }
+  }
 
   if (emailIndex === -1) return [];
 
@@ -21,25 +80,18 @@ function parseCSV(content: string): { email: string; name?: string }[] {
     const line = lines[i].trim();
     if (!line) continue;
 
-    // Simple CSV parsing (handles basic quoted fields)
-    const values: string[] = [];
-    let current = "";
-    let inQuotes = false;
+    const values = parseCSVLine(line);
+    const email = values[emailIndex]?.trim().toLowerCase();
 
-    for (const char of line) {
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === "," && !inQuotes) {
-        values.push(current.trim());
-        current = "";
-      } else {
-        current += char;
-      }
+    // Determine name from full name column or combine first/last
+    let name: string | undefined;
+    if (nameIndex >= 0 && values[nameIndex]) {
+      name = values[nameIndex]?.trim();
+    } else if (firstNameIndex >= 0 || lastNameIndex >= 0) {
+      const firstName = firstNameIndex >= 0 ? values[firstNameIndex]?.trim() : "";
+      const lastName = lastNameIndex >= 0 ? values[lastNameIndex]?.trim() : "";
+      name = [firstName, lastName].filter(Boolean).join(" ") || undefined;
     }
-    values.push(current.trim());
-
-    const email = values[emailIndex]?.replace(/"/g, "").trim().toLowerCase();
-    const name = nameIndex >= 0 ? values[nameIndex]?.replace(/"/g, "").trim() : undefined;
 
     if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       rows.push({ email, name });
@@ -78,6 +130,14 @@ export async function POST(
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const sourceProjectId = formData.get("sourceProjectId") as string | null;
+
+    // Get column mapping from form data
+    const columnMapping: ColumnMapping = {
+      emailColumn: formData.get("emailColumn") as string | undefined,
+      nameColumn: formData.get("nameColumn") as string | undefined,
+      firstNameColumn: formData.get("firstNameColumn") as string | undefined,
+      lastNameColumn: formData.get("lastNameColumn") as string | undefined,
+    };
 
     // If importing from another project
     if (sourceProjectId) {
@@ -147,7 +207,7 @@ export async function POST(
     }
 
     const content = await file.text();
-    const rows = parseCSV(content);
+    const rows = parseCSV(content, columnMapping);
 
     if (rows.length === 0) {
       return NextResponse.json(

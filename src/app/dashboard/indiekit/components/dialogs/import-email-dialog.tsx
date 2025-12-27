@@ -97,6 +97,8 @@ export function ImportEmailDialog({
   const [parsedCSV, setParsedCSV] = useState<ParsedCSV | null>(null);
   const [emailColumn, setEmailColumn] = useState("");
   const [nameColumn, setNameColumn] = useState("");
+  const [firstNameColumn, setFirstNameColumn] = useState("");
+  const [lastNameColumn, setLastNameColumn] = useState("");
   const [importProgress, setImportProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [result, setResult] = useState<{ imported: number; failed: number; total: number } | null>(null);
@@ -142,14 +144,35 @@ export function ImportEmailDialog({
         setEmailColumn(parsed.headers[emailIdx]);
       }
 
-      // Auto-detect name column
-      const nameIdx = parsed.headers.findIndex(h =>
+      // Auto-detect full name column
+      const fullNameIdx = parsed.headers.findIndex(h =>
         h.toLowerCase() === "name" ||
         h.toLowerCase().includes("full name") ||
-        h.toLowerCase() === "first name"
+        h.toLowerCase() === "fullname"
       );
-      if (nameIdx >= 0) {
-        setNameColumn(parsed.headers[nameIdx]);
+      if (fullNameIdx >= 0) {
+        setNameColumn(parsed.headers[fullNameIdx]);
+      }
+
+      // Auto-detect first name column
+      const firstNameIdx = parsed.headers.findIndex(h =>
+        h.toLowerCase() === "first name" ||
+        h.toLowerCase() === "firstname" ||
+        h.toLowerCase() === "first"
+      );
+      if (firstNameIdx >= 0) {
+        setFirstNameColumn(parsed.headers[firstNameIdx]);
+      }
+
+      // Auto-detect last name column
+      const lastNameIdx = parsed.headers.findIndex(h =>
+        h.toLowerCase() === "last name" ||
+        h.toLowerCase() === "lastname" ||
+        h.toLowerCase() === "last" ||
+        h.toLowerCase() === "surname"
+      );
+      if (lastNameIdx >= 0) {
+        setLastNameColumn(parsed.headers[lastNameIdx]);
       }
 
       setStep("mapping");
@@ -170,11 +193,28 @@ export function ImportEmailDialog({
 
     const emailIdx = parsedCSV.headers.indexOf(emailColumn);
     const nameIdx = nameColumn ? parsedCSV.headers.indexOf(nameColumn) : -1;
+    const firstNameIdx = firstNameColumn ? parsedCSV.headers.indexOf(firstNameColumn) : -1;
+    const lastNameIdx = lastNameColumn ? parsedCSV.headers.indexOf(lastNameColumn) : -1;
 
-    return parsedCSV.rows.slice(0, 5).map(row => ({
-      email: row[emailIdx] || "",
-      name: nameIdx >= 0 ? row[nameIdx] : undefined,
-    })).filter(r => r.email && r.email.includes("@"));
+    return parsedCSV.rows.slice(0, 5).map(row => {
+      let name: string | undefined;
+
+      // Prefer full name column if set
+      if (nameIdx >= 0 && row[nameIdx]) {
+        name = row[nameIdx];
+      }
+      // Otherwise combine first and last name
+      else if (firstNameIdx >= 0 || lastNameIdx >= 0) {
+        const firstName = firstNameIdx >= 0 ? row[firstNameIdx]?.trim() : "";
+        const lastName = lastNameIdx >= 0 ? row[lastNameIdx]?.trim() : "";
+        name = [firstName, lastName].filter(Boolean).join(" ") || undefined;
+      }
+
+      return {
+        email: row[emailIdx] || "",
+        name,
+      };
+    }).filter(r => r.email && r.email.includes("@"));
   };
 
   const getTotalValidEmails = (): number => {
@@ -197,6 +237,12 @@ export function ImportEmailDialog({
     try {
       const formData = new FormData();
       formData.append("file", file);
+
+      // Send column mapping so server knows how to parse names
+      if (emailColumn) formData.append("emailColumn", emailColumn);
+      if (nameColumn) formData.append("nameColumn", nameColumn);
+      if (firstNameColumn) formData.append("firstNameColumn", firstNameColumn);
+      if (lastNameColumn) formData.append("lastNameColumn", lastNameColumn);
 
       // Show initial progress
       setImportProgress(10);
@@ -247,6 +293,8 @@ export function ImportEmailDialog({
     setParsedCSV(null);
     setEmailColumn("");
     setNameColumn("");
+    setFirstNameColumn("");
+    setLastNameColumn("");
     setResult(null);
     setError(null);
     setImportProgress(0);
@@ -347,7 +395,7 @@ export function ImportEmailDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Name Column (optional)</Label>
+                    <Label>Full Name Column</Label>
                     <Select value={nameColumn || "__none__"} onValueChange={(v) => setNameColumn(v === "__none__" ? "" : v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select column" />
@@ -360,7 +408,41 @@ export function ImportEmailDialog({
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label>First Name Column</Label>
+                    <Select value={firstNameColumn || "__none__"} onValueChange={(v) => setFirstNameColumn(v === "__none__" ? "" : v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select column" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {parsedCSV.headers.map((col) => (
+                          <SelectItem key={col} value={col}>{col}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Last Name Column</Label>
+                    <Select value={lastNameColumn || "__none__"} onValueChange={(v) => setLastNameColumn(v === "__none__" ? "" : v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select column" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {parsedCSV.headers.map((col) => (
+                          <SelectItem key={col} value={col}>{col}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Use Full Name if names are in one column, or First/Last Name if they&apos;re separate.
+                </p>
               </div>
 
               {/* Preview */}
