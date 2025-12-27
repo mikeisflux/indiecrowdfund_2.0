@@ -66,7 +66,7 @@ export async function GET(
     ]);
 
     // Transform to member format
-    const formattedMembers = members.map((m) => ({
+    const formattedMembers = members.map((m: { id: string; email: string | null; isPrelaunch: boolean; createdAt: Date }) => ({
       id: m.id,
       email: m.email || "",
       name: "", // ProjectFollower doesn't store name currently
