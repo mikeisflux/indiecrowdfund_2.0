@@ -7,7 +7,7 @@ export { DigitalTab } from "./digital-tab";
 export { PreOrdersTab } from "./preorders-tab";
 export { EmailsTab } from "./emails-tab";
 export { TeaserPagesTab } from "./teaser-pages-tab";
-export { MembersTab } from "./members-tab";
+export { EmailListTab } from "./email-list-tab";
 export { ProjectsTab } from "./projects-tab";
 export { SegmentsTab } from "./segments-tab";
 export { ExportTab } from "./export-tab";

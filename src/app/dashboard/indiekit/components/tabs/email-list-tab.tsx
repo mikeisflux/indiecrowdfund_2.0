@@ -57,7 +57,7 @@ interface Member {
   status: "subscribed" | "unsubscribed" | "bounced";
 }
 
-interface MembersTabProps {
+interface EmailListTabProps {
   projectId?: string;
   hasActiveCampaign?: boolean;
 }
@@ -69,7 +69,7 @@ const sourceLabels: Record<Member["source"], string> = {
   preorder: "Pre-order",
 };
 
-export function MembersTab({ projectId, hasActiveCampaign = false }: MembersTabProps) {
+export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailListTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
@@ -455,6 +455,3 @@ export function MembersTab({ projectId, hasActiveCampaign = false }: MembersTabP
     </div>
   );
 }
-
-// Export as both names for compatibility
-export { MembersTab as EmailListTab };

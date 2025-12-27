@@ -82,7 +82,7 @@ import {
   PreOrdersTab,
   EmailsTab,
   TeaserPagesTab,
-  MembersTab,
+  EmailListTab,
   ProjectsTab,
   SegmentsTab,
   ExportTab,
@@ -508,7 +508,7 @@ export default function IndieKitPage() {
                   <FileText className="h-4 w-4 mr-2" />
                   Teaser Pages
                 </TabsTrigger>
-                <TabsTrigger value="members">
+                <TabsTrigger value="email-list">
                   <UsersRound className="h-4 w-4 mr-2" />
                   Email List
                 </TabsTrigger>
@@ -628,8 +628,8 @@ export default function IndieKitPage() {
                 <TeaserPagesTab hasActiveCampaign={hasActiveCampaign} />
               </TabsContent>
 
-              <TabsContent value="members">
-                <MembersTab projectId={selectedProjectId} hasActiveCampaign={hasActiveCampaign} />
+              <TabsContent value="email-list">
+                <EmailListTab projectId={selectedProjectId} hasActiveCampaign={hasActiveCampaign} />
               </TabsContent>
 
               <TabsContent value="projects">
