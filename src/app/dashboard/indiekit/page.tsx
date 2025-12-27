@@ -510,7 +510,7 @@ export default function IndieKitPage() {
                 </TabsTrigger>
                 <TabsTrigger value="members">
                   <UsersRound className="h-4 w-4 mr-2" />
-                  Members
+                  Email List
                 </TabsTrigger>
                 <TabsTrigger value="projects">
                   <FolderKanban className="h-4 w-4 mr-2" />
@@ -629,7 +629,7 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="members">
-                <MembersTab hasActiveCampaign={hasActiveCampaign} />
+                <MembersTab projectId={selectedProjectId} hasActiveCampaign={hasActiveCampaign} />
               </TabsContent>
 
               <TabsContent value="projects">

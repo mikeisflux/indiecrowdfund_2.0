@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,11 +40,13 @@ import {
   XCircle,
   AlertCircle,
   MoreHorizontal,
-  Users,
+  Mail,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { ImportEmailDialog, ExportDialog } from "../dialogs";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface Member {
   id: string;
@@ -56,8 +58,7 @@ interface Member {
 }
 
 interface MembersTabProps {
-  members?: Member[];
-  totalMembers?: number;
+  projectId?: string;
   hasActiveCampaign?: boolean;
 }
 
@@ -68,7 +69,7 @@ const sourceLabels: Record<Member["source"], string> = {
   preorder: "Pre-order",
 };
 
-export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign = false }: MembersTabProps) {
+export function MembersTab({ projectId, hasActiveCampaign = false }: MembersTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
@@ -77,17 +78,70 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
   const [newMemberName, setNewMemberName] = useState("");
   const [isAddingMember, setIsAddingMember] = useState(false);
 
+  // Data state
+  const [members, setMembers] = useState<Member[]>([]);
+  const [totalMembers, setTotalMembers] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch members from API
+  const fetchMembers = useCallback(async () => {
+    if (!projectId) return;
+
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: "50",
+      });
+      if (searchQuery) {
+        params.set("search", searchQuery);
+      }
+
+      const response = await fetch(`/api/projects/${projectId}/members?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMembers(data.members || []);
+        setTotalMembers(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+      }
+    } catch (error) {
+      console.error("Error fetching members:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectId, currentPage, searchQuery]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+      fetchMembers();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const handleAddMember = async () => {
     if (!newMemberEmail || !newMemberEmail.includes("@")) {
       toast.error("Please enter a valid email address");
       return;
     }
 
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
     setIsAddingMember(true);
     try {
-      const response = await fetch("/api/creator/email-marketing/subscribers", {
+      const response = await fetch(`/api/projects/${projectId}/members`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ email: newMemberEmail, name: newMemberName }),
       });
 
@@ -96,29 +150,49 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
         throw new Error(data.error || "Failed to add member");
       }
 
-      toast.success("Member added successfully!");
+      toast.success("Email added successfully!");
       setIsAddMemberDialogOpen(false);
       setNewMemberEmail("");
       setNewMemberName("");
+      fetchMembers(); // Refresh the list
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add member");
+      toast.error(error instanceof Error ? error.message : "Failed to add email");
     } finally {
       setIsAddingMember(false);
     }
   };
 
-  const filteredMembers = members.filter(
-    (m) =>
-      m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleDeleteMember = async (memberId: string) => {
+    if (!projectId) return;
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/members?memberId=${memberId}`, {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+
+      if (response.ok) {
+        toast.success("Email removed");
+        fetchMembers();
+      } else {
+        toast.error("Failed to remove email");
+      }
+    } catch {
+      toast.error("Failed to remove email");
+    }
+  };
+
+  const handleImportComplete = () => {
+    fetchMembers();
+    toast.success("Import complete!");
+  };
 
   if (!hasActiveCampaign) {
     return (
       <Card>
         <CardContent className="pt-6">
           <div className="text-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Active Campaign</h3>
             <p className="text-muted-foreground">
               You must have an active campaign to see data here.
@@ -134,12 +208,15 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold">Members</h3>
+          <h3 className="text-lg font-semibold">Email List</h3>
           <p className="text-sm text-muted-foreground">
-            Total Members: {totalMembers.toLocaleString()}
+            Total Emails: {totalMembers.toLocaleString()}
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={fetchMembers} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+          </Button>
           <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Import
@@ -175,88 +252,108 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
       {/* Members Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMembers.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.email}</TableCell>
-                  <TableCell>{member.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{sourceLabels[member.source]}</Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{member.joinedAt}</TableCell>
-                  <TableCell>
-                    {member.status === "subscribed" && (
-                      <span className="flex items-center gap-1 text-green-600">
-                        <CheckCircle2 className="h-4 w-4" />
-                      </span>
-                    )}
-                    {member.status === "unsubscribed" && (
-                      <span className="flex items-center gap-1 text-red-600">
-                        <XCircle className="h-4 w-4" />
-                      </span>
-                    )}
-                    {member.status === "bounced" && (
-                      <span className="flex items-center gap-1 text-yellow-600">
-                        <AlertCircle className="h-4 w-4" />
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Send Email</DropdownMenuItem>
-                        {member.status === "subscribed" ? (
-                          <DropdownMenuItem className="text-red-600">Unsubscribe</DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem>Resubscribe</DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredMembers.length === 0 && (
+          {isLoading && members.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No members found matching your search.
-                  </TableCell>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {members.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell className="font-medium">{member.email}</TableCell>
+                    <TableCell>{member.name || "-"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{sourceLabels[member.source] || member.source}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(member.joinedAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {member.status === "subscribed" && (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </span>
+                      )}
+                      {member.status === "unsubscribed" && (
+                        <span className="flex items-center gap-1 text-red-600">
+                          <XCircle className="h-4 w-4" />
+                        </span>
+                      )}
+                      {member.status === "bounced" && (
+                        <span className="flex items-center gap-1 text-yellow-600">
+                          <AlertCircle className="h-4 w-4" />
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>View Details</DropdownMenuItem>
+                          <DropdownMenuItem>Send Email</DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteMember(member.id)}
+                          >
+                            Remove
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {members.length === 0 && !isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      No emails found. Import a CSV or add emails manually.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredMembers.length} of {totalMembers.toLocaleString()} members
+          Showing {members.length} of {totalMembers.toLocaleString()} emails
         </p>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Previous
           </Button>
-          <span className="text-sm text-muted-foreground">Page 1 of 92</span>
-          <Button variant="outline" size="sm">
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+          >
             Next
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
@@ -283,9 +380,8 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
       <ImportEmailDialog
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
-        onImport={(count) => {
-          toast.success(`Imported ${count} members`);
-        }}
+        projectId={projectId}
+        onImport={handleImportComplete}
       />
 
       {/* Export Dialog */}
@@ -295,7 +391,7 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
         exportType="backers"
         totalRecords={totalMembers}
         onExport={(options) => {
-          toast.success(`Exporting ${totalMembers} members as ${options.format.toUpperCase()}...`);
+          toast.success(`Exporting ${totalMembers} emails as ${options.format.toUpperCase()}...`);
         }}
       />
 
@@ -305,10 +401,10 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5 text-teal-600" />
-              Add Member
+              Add Email
             </DialogTitle>
             <DialogDescription>
-              Add a new member to your email list manually.
+              Add a new email to this project&apos;s list.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -349,7 +445,7 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
               ) : (
                 <>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Member
+                  Add Email
                 </>
               )}
             </Button>
@@ -359,3 +455,6 @@ export function MembersTab({ members = [], totalMembers = 0, hasActiveCampaign =
     </div>
   );
 }
+
+// Export as both names for compatibility
+export { MembersTab as EmailListTab };

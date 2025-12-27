@@ -34,6 +34,7 @@ import { toast } from "sonner";
 interface ImportEmailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  projectId?: string;
   onImport?: (count: number) => void;
 }
 
@@ -88,6 +89,7 @@ function parseCSVLine(line: string): string[] {
 export function ImportEmailDialog({
   open,
   onOpenChange,
+  projectId,
   onImport,
 }: ImportEmailDialogProps) {
   const [step, setStep] = useState<"upload" | "mapping" | "importing" | "complete">("upload");
@@ -199,7 +201,12 @@ export function ImportEmailDialog({
       // Show initial progress
       setImportProgress(10);
 
-      const response = await fetch("/api/creator/email-marketing/subscribers/import", {
+      // Use project-specific API if projectId provided, otherwise use global creator API
+      const apiUrl = projectId
+        ? `/api/projects/${projectId}/members/import`
+        : "/api/creator/email-marketing/subscribers/import";
+
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: { ...getCSRFHeaders() },
         body: formData,
@@ -258,7 +265,7 @@ export function ImportEmailDialog({
             Import Email List
           </DialogTitle>
           <DialogDescription>
-            Upload a CSV file to import emails. They will be added to the platform newsletter with your creator tag.
+            Upload a CSV file to import emails. They will be added to this project&apos;s email list.
           </DialogDescription>
         </DialogHeader>
 
