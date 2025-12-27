@@ -358,51 +358,24 @@ export default function BackerDashboard() {
     );
   }
 
-  // Empty state
-  if (!data || (data.backedProjects.length === 0 && data.savedProjects.length === 0)) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
-        </div>
-
-        <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
-          <div className="container flex h-16 items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-                IndieCrowdfund
-              </Link>
-              <Badge variant="outline" className="border-primary/30 text-primary">
-                <Sparkles className="w-3 h-3 mr-1" />
-                Backer Dashboard
-              </Badge>
-            </div>
-          </div>
-        </header>
-
-        <div className="container relative py-16">
-          <div className="max-w-md mx-auto text-center">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
-              <Heart className="h-10 w-10 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold mb-4">No backed projects yet</h1>
-            <p className="text-muted-foreground mb-8">
-              Discover amazing projects and support creators bringing their ideas to life.
-            </p>
-            <Link href="/discover">
-              <Button size="lg" className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
-                <Search className="mr-2 h-5 w-5" />
-                Explore Projects
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const { backedProjects, savedProjects, stats, analytics } = data;
+  // Initialize empty data if not available
+  const backedProjects = data?.backedProjects || [];
+  const savedProjects = data?.savedProjects || [];
+  const stats = data?.stats || {
+    totalBacked: 0,
+    totalPledged: 0,
+    projectsCompleted: 0,
+    pendingSurveys: 0,
+    totalSaved: 0,
+    activeProjects: 0,
+    projectsShipped: 0,
+    divinityCoinBalance: 0,
+  };
+  const analytics = data?.analytics || {
+    monthlyPledges: [],
+    categoryBreakdown: [],
+    fulfillmentTimeline: [],
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
