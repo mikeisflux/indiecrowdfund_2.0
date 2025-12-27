@@ -84,6 +84,16 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Fetch members from API
   const fetchMembers = useCallback(async () => {
@@ -95,8 +105,8 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
         page: currentPage.toString(),
         limit: "50",
       });
-      if (searchQuery) {
-        params.set("search", searchQuery);
+      if (debouncedSearch) {
+        params.set("search", debouncedSearch);
       }
 
       const response = await fetch(`/api/projects/${projectId}/members?${params}`);
@@ -111,20 +121,11 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, currentPage, searchQuery]);
+  }, [projectId, currentPage, debouncedSearch]);
 
   useEffect(() => {
     fetchMembers();
   }, [fetchMembers]);
-
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setCurrentPage(1);
-      fetchMembers();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   const handleAddMember = async () => {
     if (!newMemberEmail || !newMemberEmail.includes("@")) {

@@ -34,7 +34,8 @@ export async function GET(
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "50");
     const search = searchParams.get("search") || "";
-    const status = searchParams.get("status") || "";
+    // status filter can be added later if needed
+    // const status = searchParams.get("status") || "";
 
     const skip = (page - 1) * limit;
 
