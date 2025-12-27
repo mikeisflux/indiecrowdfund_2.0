@@ -918,7 +918,11 @@ function RewardQuestionCard({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <CardContent className="pt-0 pb-4 px-4 space-y-6 border-t">
+          <CardContent
+            className="pt-0 pb-4 px-4 space-y-6 border-t"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             {/* Variants Section */}
             <div className="space-y-3 pt-4">
               <div className="flex items-center justify-between">
