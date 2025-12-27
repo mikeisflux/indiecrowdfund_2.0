@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface SurveyQuestion {
   id: string;
@@ -368,6 +369,7 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
         try {
           await fetch(`/api/projects/${projectId}/survey/item-questions?questionId=${itemQuestion.id}`, {
             method: "DELETE",
+            headers: getCSRFHeaders(),
           });
           const newMap = new Map(itemQuestions);
           newMap.delete(rewardId);
@@ -403,7 +405,7 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
       const method = itemQuestion.id ? "PUT" : "POST";
       const response = await fetch(`/api/projects/${projectId}/survey/item-questions`, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify(payload),
       });
 
