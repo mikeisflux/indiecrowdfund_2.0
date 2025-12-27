@@ -370,11 +370,17 @@ export default function BackerDashboard() {
     activeProjects: 0,
     projectsShipped: 0,
     divinityCoinBalance: 0,
+    successRate: 0,
+    avgContribution: 0,
+    projectsFunded: 0,
   };
   const analytics = data?.analytics || {
     monthlyPledges: [],
     categoryBreakdown: [],
     fulfillmentTimeline: [],
+    rewardsDelivered: 0,
+    rewardsPending: 0,
+    monthlySpending: [],
   };
 
   return (
@@ -553,29 +559,31 @@ export default function BackerDashboard() {
                     return (
                       <Card key={project.id} className="overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5 group">
                         <div className="flex flex-col md:flex-row">
-                          {/* Project Image */}
-                          <div className="relative aspect-video w-full md:w-64 md:shrink-0 bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
-                            {project.imageUrl ? (
-                              <Image
-                                src={project.imageUrl}
-                                alt={project.title}
-                                fill
-                                className="object-cover"
-                              />
-                            ) : (
-                              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                                <Package className="h-12 w-12 opacity-50" />
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="flex gap-1">
-                                <Badge variant="secondary" className="text-[10px] bg-black/50 backdrop-blur">
-                                  {project.updates} updates
-                                </Badge>
-                                <Badge variant="secondary" className="text-[10px] bg-black/50 backdrop-blur">
-                                  {project.backerCount} backers
-                                </Badge>
+                          {/* Project Image - 16:9 aspect ratio */}
+                          <div className="relative w-full md:w-64 md:shrink-0 bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
+                            <div className="aspect-video relative">
+                              {project.imageUrl ? (
+                                <Image
+                                  src={project.imageUrl}
+                                  alt={project.title}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                                  <Package className="h-12 w-12 opacity-50" />
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-1">
+                                  <Badge variant="secondary" className="text-[10px] bg-black/50 backdrop-blur">
+                                    {project.updates} updates
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-[10px] bg-black/50 backdrop-blur">
+                                    {project.backerCount} backers
+                                  </Badge>
+                                </div>
                               </div>
                             </div>
                           </div>
