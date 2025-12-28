@@ -126,6 +126,13 @@ const COMMON_VARIANT_TYPES = ["Size", "Color", "Style", "Material", "Edition", "
 // Default template questions for General Questions
 const DEFAULT_SURVEY_QUESTIONS: SurveyQuestion[] = [
   {
+    id: "default_section_header",
+    type: "info_text",
+    label: "Backer Information",
+    required: false,
+    helpText: "Please provide your contact and shipping details below",
+  },
+  {
     id: "default_name",
     type: "short_text",
     label: "Full Name",
