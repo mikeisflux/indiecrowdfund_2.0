@@ -43,14 +43,6 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
     }
 
-    // Get user's global notification settings from UserPreference
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-      },
-    });
-
     // Get per-project notification preferences
     const projectPrefs = await db.projectNotificationPreference.findMany({
       where: { userId: session.user.id },
