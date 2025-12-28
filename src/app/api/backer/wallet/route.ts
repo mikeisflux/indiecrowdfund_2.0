@@ -103,7 +103,7 @@ export async function GET() {
     });
 
     // Get user's badge count for bonus calculation
-    const badgeCount = await db.badge.count({
+    const badgeCount = await db.userAchievement.count({
       where: { userId: session.user.id },
     });
 
