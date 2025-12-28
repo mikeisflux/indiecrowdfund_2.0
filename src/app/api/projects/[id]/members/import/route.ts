@@ -4,6 +4,41 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// Helper function to verify user has access to project (creator or collaborator)
+async function verifyProjectAccess(projectId: string, userId: string) {
+  // Check if user is the creator
+  let project = await db.project.findFirst({
+    where: {
+      id: projectId,
+      creatorId: userId,
+    },
+    select: { id: true, title: true },
+  });
+
+  // If not creator, check if user is a collaborator with permission
+  if (!project) {
+    const collaborator = await db.projectCollaborator.findFirst({
+      where: {
+        projectId,
+        userId,
+        status: "ACCEPTED",
+        canManageCommunity: true,
+      },
+      include: {
+        project: {
+          select: { id: true, title: true },
+        },
+      },
+    });
+
+    if (collaborator) {
+      project = collaborator.project;
+    }
+  }
+
+  return project;
+}
+
 interface ColumnMapping {
   emailColumn?: string;
   nameColumn?: string;
@@ -114,17 +149,11 @@ export async function POST(
 
     const { id: projectId } = await params;
 
-    // Verify user owns this project
-    const project = await db.project.findFirst({
-      where: {
-        id: projectId,
-        creatorId: session.user.id,
-      },
-      select: { id: true, title: true },
-    });
+    // Verify user has access to this project (creator or collaborator)
+    const project = await verifyProjectAccess(projectId, session.user.id);
 
     if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      return NextResponse.json({ error: "Project not found or you don't have access" }, { status: 404 });
     }
 
     const formData = await request.formData();
@@ -141,17 +170,11 @@ export async function POST(
 
     // If importing from another project
     if (sourceProjectId) {
-      // Verify user owns the source project
-      const sourceProject = await db.project.findFirst({
-        where: {
-          id: sourceProjectId,
-          creatorId: session.user.id,
-        },
-        select: { id: true },
-      });
+      // Verify user has access to the source project
+      const sourceProject = await verifyProjectAccess(sourceProjectId, session.user.id);
 
       if (!sourceProject) {
-        return NextResponse.json({ error: "Source project not found" }, { status: 404 });
+        return NextResponse.json({ error: "Source project not found or you don't have access" }, { status: 404 });
       }
 
       // Get members from source project

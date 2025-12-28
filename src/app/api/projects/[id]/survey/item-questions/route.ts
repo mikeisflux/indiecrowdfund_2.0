@@ -112,12 +112,20 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const survey = await db.survey.findUnique({
+    // Auto-create survey if it doesn't exist
+    let survey = await db.survey.findUnique({
       where: { projectId: params.id },
     });
 
     if (!survey) {
-      return NextResponse.json({ error: "Survey not found" }, { status: 404 });
+      survey = await db.survey.create({
+        data: {
+          projectId: params.id,
+          introTitle: "Backer Survey",
+          introMessage: "Please complete this survey to help us fulfill your order.",
+          collectAddresses: true,
+        },
+      });
     }
 
     if (survey.status === "LOCKED") {

@@ -445,6 +445,8 @@ function CircularProgress({
   );
 }
 
+const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
+
 export default function CreatorDashboard() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [timeRange, setTimeRange] = useState("30");
@@ -486,6 +488,7 @@ export default function CreatorDashboard() {
       // Set selected project if not already set
       if (!selectedProjectId && dashboardData.selectedProject) {
         setSelectedProjectId(dashboardData.selectedProject.id);
+        localStorage.setItem(SELECTED_PROJECT_KEY, dashboardData.selectedProject.id);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -494,6 +497,14 @@ export default function CreatorDashboard() {
     }
   }, [selectedProjectId, timeRange]);
 
+  // Load selected project from localStorage on mount
+  useEffect(() => {
+    const savedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
+    if (savedProjectId) {
+      setSelectedProjectId(savedProjectId);
+    }
+  }, []);
+
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
@@ -501,6 +512,7 @@ export default function CreatorDashboard() {
   // Handle project selection change
   const handleProjectChange = (projectId: string) => {
     setSelectedProjectId(projectId);
+    localStorage.setItem(SELECTED_PROJECT_KEY, projectId);
   };
 
   // Cancel a pending pledge (creator)

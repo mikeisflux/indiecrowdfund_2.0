@@ -53,8 +53,8 @@ export async function POST(
     const creatorEmail = `${creator.creatorEmailHandle}@indiecrowdfund.com`;
     const creatorName = creator.name || creator.email || "Creator";
 
-    // Verify the project exists and the user is the creator
-    const project = await db.project.findFirst({
+    // Verify the project exists and user has access (creator or collaborator)
+    let project = await db.project.findFirst({
       where: {
         id: projectId,
         creatorId: session.user.id,
@@ -62,9 +62,30 @@ export async function POST(
       select: { id: true, title: true },
     });
 
+    // If not creator, check if user is a collaborator with permission
+    if (!project) {
+      const collaborator = await db.projectCollaborator.findFirst({
+        where: {
+          projectId,
+          userId: session.user.id,
+          status: "ACCEPTED",
+          canManageCommunity: true,
+        },
+        include: {
+          project: {
+            select: { id: true, title: true },
+          },
+        },
+      });
+
+      if (collaborator) {
+        project = collaborator.project;
+      }
+    }
+
     if (!project) {
       return NextResponse.json(
-        { error: "Project not found or you're not the creator" },
+        { error: "Project not found or you don't have permission to send emails for this project" },
         { status: 404 }
       );
     }

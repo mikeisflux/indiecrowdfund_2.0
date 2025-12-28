@@ -96,6 +96,8 @@ import {
 } from "./components/tabs";
 import { WhatsNextBanner } from "./components/whats-next-banner";
 
+const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
+
 export default function IndieKitPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
@@ -160,8 +162,15 @@ export default function IndieKitPage() {
       setProducts(data.products || []);
       setTimeline(data.timeline || []);
 
+      // Only set default project if none selected and no saved preference
       if (!selectedProjectId && data.projects?.length > 0) {
-        setSelectedProjectId(data.projects[0].id);
+        const savedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
+        if (savedProjectId && data.projects.some((p: Project) => p.id === savedProjectId)) {
+          setSelectedProjectId(savedProjectId);
+        } else {
+          setSelectedProjectId(data.projects[0].id);
+          localStorage.setItem(SELECTED_PROJECT_KEY, data.projects[0].id);
+        }
       }
 
       if (data.workflowState) {
@@ -174,6 +183,14 @@ export default function IndieKitPage() {
       setLoading(false);
     }
   }, [selectedProjectId]);
+
+  // Load selected project from localStorage on mount
+  useEffect(() => {
+    const savedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
+    if (savedProjectId) {
+      setSelectedProjectId(savedProjectId);
+    }
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -261,7 +278,10 @@ export default function IndieKitPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+            <Select value={selectedProjectId} onValueChange={(value) => {
+              setSelectedProjectId(value);
+              localStorage.setItem(SELECTED_PROJECT_KEY, value);
+            }}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select project" />
               </SelectTrigger>

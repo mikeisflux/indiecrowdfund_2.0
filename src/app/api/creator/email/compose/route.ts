@@ -61,9 +61,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If projectId provided, verify creator owns it
+    // If projectId provided, verify user has access (creator or collaborator)
     let project = null;
     if (projectId) {
+      // First check if user is the creator
       project = await db.project.findFirst({
         where: {
           id: projectId,
@@ -72,9 +73,30 @@ export async function POST(request: NextRequest) {
         select: { id: true, title: true },
       });
 
+      // If not creator, check if user is a collaborator with permission
+      if (!project) {
+        const collaborator = await db.projectCollaborator.findFirst({
+          where: {
+            projectId,
+            userId: session.user.id,
+            status: "ACCEPTED",
+            canManageCommunity: true,
+          },
+          include: {
+            project: {
+              select: { id: true, title: true },
+            },
+          },
+        });
+
+        if (collaborator) {
+          project = collaborator.project;
+        }
+      }
+
       if (!project) {
         return NextResponse.json(
-          { error: "Project not found or you're not the creator" },
+          { error: "Project not found or you don't have permission to send emails for this project" },
           { status: 404 }
         );
       }

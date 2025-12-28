@@ -4,6 +4,41 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// Helper function to verify user has access to project (creator or collaborator)
+async function verifyProjectAccess(projectId: string, userId: string) {
+  // Check if user is the creator
+  let project = await db.project.findFirst({
+    where: {
+      id: projectId,
+      creatorId: userId,
+    },
+    select: { id: true },
+  });
+
+  // If not creator, check if user is a collaborator with permission
+  if (!project) {
+    const collaborator = await db.projectCollaborator.findFirst({
+      where: {
+        projectId,
+        userId,
+        status: "ACCEPTED",
+        canManageCommunity: true,
+      },
+      include: {
+        project: {
+          select: { id: true },
+        },
+      },
+    });
+
+    if (collaborator) {
+      project = collaborator.project;
+    }
+  }
+
+  return project;
+}
+
 // GET - Fetch project members (followers/subscribers)
 export async function GET(
   request: NextRequest,
@@ -17,25 +52,17 @@ export async function GET(
 
     const { id: projectId } = await params;
 
-    // Verify user owns this project
-    const project = await db.project.findFirst({
-      where: {
-        id: projectId,
-        creatorId: session.user.id,
-      },
-      select: { id: true },
-    });
+    // Verify user has access to this project
+    const project = await verifyProjectAccess(projectId, session.user.id);
 
     if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      return NextResponse.json({ error: "Project not found or you don't have access" }, { status: 404 });
     }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "50");
     const search = searchParams.get("search") || "";
-    // status filter can be added later if needed
-    // const status = searchParams.get("status") || "";
 
     const skip = (page - 1) * limit;
 
@@ -105,17 +132,11 @@ export async function POST(
 
     const { id: projectId } = await params;
 
-    // Verify user owns this project
-    const project = await db.project.findFirst({
-      where: {
-        id: projectId,
-        creatorId: session.user.id,
-      },
-      select: { id: true },
-    });
+    // Verify user has access to this project
+    const project = await verifyProjectAccess(projectId, session.user.id);
 
     if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      return NextResponse.json({ error: "Project not found or you don't have access" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -188,17 +209,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Member ID is required" }, { status: 400 });
     }
 
-    // Verify user owns this project
-    const project = await db.project.findFirst({
-      where: {
-        id: projectId,
-        creatorId: session.user.id,
-      },
-      select: { id: true },
-    });
+    // Verify user has access to this project
+    const project = await verifyProjectAccess(projectId, session.user.id);
 
     if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      return NextResponse.json({ error: "Project not found or you don't have access" }, { status: 404 });
     }
 
     // Delete the member
