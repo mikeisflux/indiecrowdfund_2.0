@@ -54,7 +54,9 @@ export async function GET() {
     let lifetimeEarned = 0;
     let lifetimeSpent = 0;
 
-    transactions.forEach((tx) => {
+    type TransactionType = typeof transactions[number];
+
+    transactions.forEach((tx: TransactionType) => {
       const amount = Number(tx.amount);
       if (amount > 0) {
         lifetimeEarned += amount;
@@ -64,7 +66,7 @@ export async function GET() {
     });
 
     // Format transactions for frontend
-    const formattedTransactions = transactions.map((tx) => {
+    const formattedTransactions = transactions.map((tx: TransactionType) => {
       const amount = Number(tx.amount);
       let type: "EARNED" | "SPENT" | "REDEEMED" | "BONUS" | "REFERRAL" | "REFUND" = "EARNED";
 
