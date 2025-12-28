@@ -584,7 +584,7 @@ export default function UpdatesPage() {
               <Label>Content</Label>
               <div className="min-h-[300px] border rounded-md">
                 <RichTextEditor
-                  content={content}
+                  value={content}
                   onChange={setContent}
                   placeholder="Write your update..."
                 />
@@ -659,7 +659,7 @@ export default function UpdatesPage() {
               <Label>Content</Label>
               <div className="min-h-[300px] border rounded-md">
                 <RichTextEditor
-                  content={content}
+                  value={content}
                   onChange={setContent}
                   placeholder="Write your update..."
                 />
