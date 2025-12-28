@@ -136,6 +136,52 @@ function parseCSV(content: string, columnMapping: ColumnMapping): { email: strin
   return rows;
 }
 
+// Helper function to sync imported email to admin newsletter
+async function syncToAdminNewsletter(
+  email: string,
+  name: string | undefined,
+  uploaderTag: string,
+  projectTitle: string
+) {
+  try {
+    // Check if already exists in newsletter
+    const existing = await db.newsletterSubscriber.findUnique({
+      where: { email },
+    });
+
+    const newTags = [`creator:${uploaderTag}`, `project:${projectTitle}`];
+
+    if (existing) {
+      // Add new tags without duplicating
+      const existingTags = existing.tags || [];
+      const combinedTags = Array.from(new Set([...existingTags, ...newTags]));
+
+      await db.newsletterSubscriber.update({
+        where: { email },
+        data: {
+          tags: combinedTags,
+          // Reactivate if previously unsubscribed
+          isActive: existing.isActive || true,
+        },
+      });
+    } else {
+      // Create new subscriber
+      await db.newsletterSubscriber.create({
+        data: {
+          email,
+          name,
+          source: "creator_import",
+          tags: newTags,
+          isActive: true,
+        },
+      });
+    }
+  } catch (error) {
+    // Log but don't fail the import if newsletter sync fails
+    console.error("Failed to sync to admin newsletter:", error);
+  }
+}
+
 // POST - Import members from CSV for a specific project
 export async function POST(
   request: NextRequest,
@@ -155,6 +201,13 @@ export async function POST(
     if (!project) {
       return NextResponse.json({ error: "Project not found or you don't have access" }, { status: 404 });
     }
+
+    // Get user info for tagging in admin newsletter
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { name: true, email: true },
+    });
+    const uploaderTag = user?.name || user?.email || session.user.id;
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -212,6 +265,9 @@ export async function POST(
             isPrelaunch: false,
           },
         });
+
+        // Also sync to admin newsletter with uploader tag
+        await syncToAdminNewsletter(member.email, undefined, uploaderTag, project.title);
 
         imported++;
       }
@@ -273,6 +329,9 @@ export async function POST(
             isPrelaunch: false,
           },
         });
+
+        // Also sync to admin newsletter with uploader tag
+        await syncToAdminNewsletter(row.email, row.name, uploaderTag, project.title);
 
         imported++;
       } catch {

@@ -32,8 +32,11 @@ import {
   Calendar,
   Filter,
   Upload,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { ImportEmailDialog } from "./import-email-dialog";
 
 interface Project {
   id: string;
@@ -48,11 +51,23 @@ interface EmailDialogProps {
   projects: Project[];
   selectedProjectId: string;
   onProjectChange?: (projectId: string) => void;
+  memberCount?: number;
+  userEmail?: string;
+  onImportComplete?: () => void;
 }
 
 type EditorStep = "campaign" | "customize" | "send" | "results";
 
-export function EmailDialog({ open, onOpenChange, projects, selectedProjectId, onProjectChange }: EmailDialogProps) {
+export function EmailDialog({
+  open,
+  onOpenChange,
+  projects,
+  selectedProjectId,
+  onProjectChange,
+  memberCount = 0,
+  userEmail = "",
+  onImportComplete,
+}: EmailDialogProps) {
   const [activeStep, setActiveStep] = useState<EditorStep>("campaign");
   const [currentProjectId, setCurrentProjectId] = useState(selectedProjectId);
   const currentProject = projects.find(p => p.id === currentProjectId) || projects[0];
@@ -61,6 +76,14 @@ export function EmailDialog({ open, onOpenChange, projects, selectedProjectId, o
   const [emailTitle, setEmailTitle] = useState(`Special Early Access: ${projectTitle}`);
   const [senderName, setSenderName] = useState("");
   const [emailBody, setEmailBody] = useState("");
+
+  // Send step state
+  const [testEmail, setTestEmail] = useState(userEmail);
+  const [replyToEmail, setReplyToEmail] = useState(userEmail);
+  const [isEditingReplyTo, setIsEditingReplyTo] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState("");
 
   // Initialize/update form when project changes
   useEffect(() => {
@@ -83,9 +106,40 @@ Click here to see the project and back us today!`);
     }
   }, [open, selectedProjectId]);
 
+  // Sync user email when prop changes
+  useEffect(() => {
+    if (userEmail) {
+      setTestEmail(userEmail);
+      setReplyToEmail(userEmail);
+    }
+  }, [userEmail]);
+
   const handleProjectChange = (projectId: string) => {
     setCurrentProjectId(projectId);
     onProjectChange?.(projectId);
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail || !testEmail.includes("@")) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setIsSendingTest(true);
+    try {
+      // TODO: Implement actual send test email API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success(`Test email sent to ${testEmail}`);
+    } catch {
+      toast.error("Failed to send test email");
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
+
+  const handleImportComplete = () => {
+    onImportComplete?.();
+    toast.success("Emails imported to your list");
   };
 
   const steps: { id: EditorStep; label: string }[] = [
@@ -320,10 +374,33 @@ Click here to see the project and back us today!`);
                     Review the email and the page that the email links to for any errors before sending it out.
                   </p>
                   <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-                    <span className="text-sm">Send to user@example.com</span>
-                    <Button variant="outline">
-                      <Mail className="h-4 w-4 mr-2" />
-                      Send Test Email
+                    <div className="flex-1">
+                      <Label htmlFor="test-email" className="sr-only">Test email address</Label>
+                      <Input
+                        id="test-email"
+                        type="email"
+                        placeholder="Enter email address"
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                        className="max-w-xs"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={handleSendTestEmail}
+                      disabled={isSendingTest || !testEmail}
+                    >
+                      {isSendingTest ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Send Test Email
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -343,9 +420,9 @@ Click here to see the project and back us today!`);
                     <Label>Send To</Label>
                     <div className="flex items-end gap-4">
                       <div>
-                        <p className="text-4xl font-bold">1,829</p>
+                        <p className="text-4xl font-bold">{memberCount.toLocaleString()}</p>
                         <p className="text-sm text-muted-foreground">
-                          members who have not pledged to this project
+                          {memberCount === 0 ? "No members in your email list yet" : "members in your email list"}
                         </p>
                       </div>
                       <Button variant="outline" size="sm">
@@ -356,7 +433,10 @@ Click here to see the project and back us today!`);
                   </div>
 
                   {/* Send Button */}
-                  <Button className="bg-teal-600 hover:bg-teal-700">
+                  <Button
+                    className="bg-teal-600 hover:bg-teal-700"
+                    disabled={memberCount === 0}
+                  >
                     <Send className="h-4 w-4 mr-2" />
                     Send Email Campaign
                   </Button>
@@ -366,7 +446,12 @@ Click here to see the project and back us today!`);
                     <Label>Scheduled Send Date - Pacific Time</Label>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <Input type="datetime-local" className="w-auto" />
+                      <Input
+                        type="datetime-local"
+                        className="w-auto"
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                      />
                     </div>
                   </div>
 
@@ -376,10 +461,37 @@ Click here to see the project and back us today!`);
                       Replies by members to this campaign will be sent to your support email:
                     </p>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium font-mono">user@example.com</span>
-                      <Button variant="link" className="text-teal-600 p-0 h-auto text-sm">
-                        Edit »
-                      </Button>
+                      {isEditingReplyTo ? (
+                        <>
+                          <Input
+                            type="email"
+                            value={replyToEmail}
+                            onChange={(e) => setReplyToEmail(e.target.value)}
+                            className="max-w-xs"
+                            autoFocus
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsEditingReplyTo(false)}
+                          >
+                            Save
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-sm font-medium font-mono">
+                            {replyToEmail || "Not set"}
+                          </span>
+                          <Button
+                            variant="link"
+                            className="text-teal-600 p-0 h-auto text-sm"
+                            onClick={() => setIsEditingReplyTo(true)}
+                          >
+                            Edit »
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -388,7 +500,7 @@ Click here to see the project and back us today!`);
                     <p className="text-sm text-muted-foreground">
                       Do you have an email list that you would like to add to this campaign?
                     </p>
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
                       <Upload className="h-4 w-4 mr-2" />
                       Import Email List
                     </Button>
@@ -409,6 +521,14 @@ Click here to see the project and back us today!`);
           </div>
         </div>
       </DialogContent>
+
+      {/* Import Email Dialog */}
+      <ImportEmailDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        projectId={currentProjectId}
+        onImport={handleImportComplete}
+      />
     </Dialog>
   );
 }

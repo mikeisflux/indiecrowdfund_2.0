@@ -93,6 +93,7 @@ export async function GET(req: NextRequest) {
       recentActivity,
       digitalFilesData,
       emailCampaignsData,
+      emailMemberCount,
     ] = await Promise.all([
       // Get all pledges for the project with user info
       db.pledge.findMany({
@@ -207,6 +208,14 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: "desc" },
         take: 20,
+      }),
+
+      // Get email list member count for this project
+      db.projectMember.count({
+        where: {
+          projectId: selectedProjectId,
+          status: "subscribed",
+        },
       }),
     ]);
 
@@ -620,6 +629,8 @@ export async function GET(req: NextRequest) {
       digitalFiles: formattedDigitalFiles,
       emailCampaigns: formattedEmailCampaigns,
       workflowState,
+      emailMemberCount,
+      userEmail: session.user.email || "",
     });
   } catch (error) {
     console.error("IndieKit API error:", error);
