@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Pencil, X, Check } from "lucide-react";
@@ -40,12 +41,19 @@ export function EditableInput({
   };
 
   const handleSave = () => {
-    onChange(localValue);
+    // Use flushSync to force the state update to complete synchronously
+    // This ensures the parent state is updated before we trigger save
+    flushSync(() => {
+      onChange(localValue);
+    });
     setIsEditing(false);
-    // Trigger parent save to persist to database
+
+    // Now trigger parent save - state is guaranteed to be updated
     if (onSave) {
-      // Small delay to ensure state is updated
-      setTimeout(() => onSave(), 50);
+      // Small delay to allow any render effects to complete
+      setTimeout(() => {
+        onSave();
+      }, 50);
     }
   };
 
