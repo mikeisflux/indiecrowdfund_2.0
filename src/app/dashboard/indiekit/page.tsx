@@ -210,9 +210,10 @@ export default function IndieKitPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Check if user has an active campaign (not just prelaunch pages)
+  // Check if user has an active campaign (including prelaunch pages)
   const hasActiveCampaign = projects.some(p =>
-    ["ACTIVE", "FUNDED", "COMPLETED", "FULFILLING"].includes(p.status)
+    ["ACTIVE", "FUNDED", "COMPLETED", "FULFILLING", "LIVE"].includes(p.status) ||
+    (p as { prelaunchActive?: boolean }).prelaunchActive === true
   ) || backers.length > 0;
 
   // Toggle backer selection

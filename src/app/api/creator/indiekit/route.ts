@@ -15,10 +15,14 @@ export async function GET(req: NextRequest) {
     const projectId = searchParams.get("projectId");
 
     // Get user's own projects that are funded/completed (eligible for fulfillment)
+    // Also include DRAFT projects with prelaunchActive=true
     const ownProjects = await db.project.findMany({
       where: {
         creatorId: session.user.id,
-        status: { in: ["FUNDED", "LIVE", "DRAFT"] }, // Include all for now, filter later
+        OR: [
+          { status: { in: ["FUNDED", "LIVE"] } },
+          { status: "DRAFT", prelaunchActive: true },
+        ],
       },
       orderBy: [
         { status: "asc" },
@@ -31,6 +35,7 @@ export async function GET(req: NextRequest) {
         status: true,
         currentAmount: true,
         backerCount: true,
+        prelaunchActive: true,
       },
     });
 
@@ -619,7 +624,7 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({
-      projects: projects.map(p => ({ id: p.id, title: p.title, slug: p.slug, status: p.status })),
+      projects: projects.map(p => ({ id: p.id, title: p.title, slug: p.slug, status: p.status, prelaunchActive: (p as { prelaunchActive?: boolean }).prelaunchActive || false })),
       stats,
       backers: processedBackers,
       packageGroups,
