@@ -32,7 +32,7 @@ export async function GET() {
     // Also get backers from creator's projects (paying customers)
     const creatorProjects = await db.project.findMany({
       where: { creatorId: session.user.id },
-      select: { id: true },
+      select: { id: true, title: true },
     });
 
     const projectIds = creatorProjects.map((p) => p.id);
@@ -55,6 +55,19 @@ export async function GET() {
       distinct: ["userId"],
     });
 
+    // Get prelaunch followers (people who signed up to be notified)
+    const prelaunchFollowers = await db.projectFollower.findMany({
+      where: {
+        projectId: { in: projectIds },
+        isPrelaunch: true,
+      },
+      include: {
+        project: {
+          select: { title: true },
+        },
+      },
+    });
+
     // Combine and deduplicate
     const subscriberMap = new Map<string, {
       id: string;
@@ -62,7 +75,7 @@ export async function GET() {
       name: string;
       status: "active" | "unsubscribed" | "bounced";
       source: string;
-      sourceType: "backer" | "import" | "manual" | "teaser";
+      sourceType: "backer" | "import" | "manual" | "teaser" | "prelaunch";
       createdAt: string;
     }>();
 
@@ -96,6 +109,22 @@ export async function GET() {
           source: "Backer",
           sourceType: "backer",
           createdAt: backer.user.createdAt.toISOString(),
+        });
+      }
+    }
+
+    // Add prelaunch followers (if not already in the list)
+    for (const follower of prelaunchFollowers) {
+      const email = follower.email?.toLowerCase();
+      if (email && !subscriberMap.has(email)) {
+        subscriberMap.set(email, {
+          id: follower.id,
+          email: email,
+          name: "Prelaunch Signup",
+          status: "active",
+          source: `Prelaunch: ${follower.project.title}`,
+          sourceType: "prelaunch",
+          createdAt: follower.createdAt.toISOString(),
         });
       }
     }
