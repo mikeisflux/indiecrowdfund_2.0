@@ -146,7 +146,7 @@ export async function GET(
         id: pledge.id,
         projectTitle: pledge.project.title,
         projectImage: pledge.project.imageUrl,
-        rewardTitle: pledge.reward.title,
+        rewardTitle: pledge.reward?.title || "No Reward",
         addons: pledge.addons.map((a: { addon: { id: string; title: string } }) => ({
           id: a.addon.id,
           title: a.addon.title,
