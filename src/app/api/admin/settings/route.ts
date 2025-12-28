@@ -100,6 +100,8 @@ export async function GET() {
       dalleApiKey: settings.dalleApiKey ? "••••••••" : null,
       stabilityApiKey: settings.stabilityApiKey ? "••••••••" : null,
       shuftiSecretKey: settings.shuftiSecretKey ? "••••••••" : null,
+      r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
+      r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
     };
 
     return NextResponse.json({ settings: maskedSettings });
@@ -161,7 +163,8 @@ export async function PATCH(req: NextRequest) {
       'youtubeClientSecret', 'youtubeApiKey',
       'twitterApiKey', 'twitterApiSecret', 'twitterBearerToken',
       'twitterAccessToken', 'twitterAccessSecret',
-      'dalleApiKey', 'stabilityApiKey', 'shuftiSecretKey'
+      'dalleApiKey', 'stabilityApiKey', 'shuftiSecretKey',
+      'r2AccessKeyId', 'r2SecretAccessKey'
     ];
 
     const filteredData = Object.fromEntries(
@@ -230,6 +233,11 @@ export async function PATCH(req: NextRequest) {
       theme: [
         "primaryColor", "secondaryColor", "accentColor",
         "backgroundColor", "textColor", "fontFamily", "borderRadius"
+      ],
+      storage: [
+        "r2Enabled", "r2AccountId", "r2AccessKeyId", "r2SecretAccessKey",
+        "r2BucketName", "r2PublicDomain", "r2Region",
+        "maxProjectStorageMB", "signedUrlExpirationMinutes"
       ]
     };
 
@@ -297,6 +305,8 @@ export async function PATCH(req: NextRequest) {
       dalleApiKey: settings.dalleApiKey ? "••••••••" : null,
       stabilityApiKey: settings.stabilityApiKey ? "••••••••" : null,
       shuftiSecretKey: settings.shuftiSecretKey ? "••••••••" : null,
+      r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
+      r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
     };
 
     return NextResponse.json({
