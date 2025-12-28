@@ -15,3 +15,4 @@ export { DivinityCoinWalletTab } from "./divinitycoin-wallet-tab";
 export { CollectionsTab } from "./collections-tab";
 export { NotificationPreferencesTab } from "./notification-preferences-tab";
 export { FollowingTab } from "./following-tab";
+export { BookReaderTab } from "./book-reader-tab";
