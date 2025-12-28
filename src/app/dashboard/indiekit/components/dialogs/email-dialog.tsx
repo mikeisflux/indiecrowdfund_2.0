@@ -82,6 +82,7 @@ export function EmailDialog({
   const [replyToEmail, setReplyToEmail] = useState(userEmail);
   const [isEditingReplyTo, setIsEditingReplyTo] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
 
@@ -151,6 +152,47 @@ Click here to see the project and back us today!`);
       toast.error(error instanceof Error ? error.message : "Failed to send test email");
     } finally {
       setIsSendingTest(false);
+    }
+  };
+
+  const handleSendCampaign = async () => {
+    if (memberCount === 0) {
+      toast.error("No members in your email list. Import members first.");
+      return;
+    }
+
+    if (!emailTitle.trim() || !emailBody.trim()) {
+      toast.error("Please add a subject and email body");
+      return;
+    }
+
+    setIsSendingCampaign(true);
+    try {
+      const response = await fetch("/api/creator/email/campaign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: emailTitle,
+          content: emailBody,
+          projectId: currentProjectId,
+          senderName: senderName || undefined,
+          replyTo: replyToEmail || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send campaign");
+      }
+
+      toast.success(data.message || `Campaign sent to ${data.campaign?.recipientCount || memberCount} members`);
+      setActiveStep("results");
+    } catch (error) {
+      console.error("Send campaign error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to send campaign");
+    } finally {
+      setIsSendingCampaign(false);
     }
   };
 
@@ -437,10 +479,20 @@ Click here to see the project and back us today!`);
                   {/* Send Button */}
                   <Button
                     className="bg-teal-600 hover:bg-teal-700"
-                    disabled={memberCount === 0}
+                    disabled={memberCount === 0 || isSendingCampaign}
+                    onClick={handleSendCampaign}
                   >
-                    <Send className="h-4 w-4 mr-2" />
-                    Send Email Campaign
+                    {isSendingCampaign ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Sending Campaign...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send Email Campaign
+                      </>
+                    )}
                   </Button>
 
                   {/* Schedule */}

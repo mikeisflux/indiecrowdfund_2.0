@@ -152,10 +152,14 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
       }
 
       toast.success("Email added successfully!");
-      setIsAddMemberDialogOpen(false);
+      // Clear form values first, then close dialog to prevent search box pollution
       setNewMemberEmail("");
       setNewMemberName("");
-      fetchMembers(); // Refresh the list
+      // Use setTimeout to ensure state is cleared before dialog closes
+      setTimeout(() => {
+        setIsAddMemberDialogOpen(false);
+        fetchMembers(); // Refresh the list
+      }, 0);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add email");
     } finally {
