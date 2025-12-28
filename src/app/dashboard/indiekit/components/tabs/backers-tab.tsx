@@ -86,6 +86,7 @@ export function BackersTab({
   onToggleBackerSelection,
   onSelectAllBackers,
   onOpenBackerDetail,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onPushSelectedOrders,
   hasActiveCampaign = true,
   projectId,
@@ -261,7 +262,7 @@ export function BackersTab({
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       toast.success("Export downloaded");
-    } catch (error) {
+    } catch {
       toast.error("Failed to export data");
     }
   };

@@ -583,7 +583,7 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
       <Dialog open={!!viewingSegment} onOpenChange={(open) => !open && setViewingSegment(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Backers in "{viewingSegment?.name}"</DialogTitle>
+            <DialogTitle>Backers in &ldquo;{viewingSegment?.name}&rdquo;</DialogTitle>
             <DialogDescription>
               {viewingSegment?.backerCount} backers in this segment
             </DialogDescription>
@@ -734,7 +734,7 @@ function EmailComposerDialog({
         <DialogHeader>
           <DialogTitle>Send Email to Segment</DialogTitle>
           <DialogDescription>
-            Send an email to {segment?.backerCount} backers in "{segment?.name}"
+            Send an email to {segment?.backerCount} backers in &ldquo;{segment?.name}&rdquo;
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">

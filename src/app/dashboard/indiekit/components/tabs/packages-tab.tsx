@@ -178,6 +178,7 @@ export function PackagesTab({
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleRefreshStatus = async () => {
     if (!projectId) return;
 
