@@ -968,9 +968,12 @@ function RewardQuestionCard({
                   <div className="space-y-2">
                     <Label className="text-xs">Options (comma-separated)</Label>
                     <Input
-                      value={variant.options.join(", ")}
+                      value={variant.options.join(",")}
                       onChange={(e) => onUpdateVariant(index, {
-                        options: e.target.value.split(",").map(o => o.trim()),
+                        options: e.target.value.split(","),
+                      })}
+                      onBlur={(e) => onUpdateVariant(index, {
+                        options: e.target.value.split(",").map(o => o.trim()).filter(o => o),
                       })}
                       onKeyDown={(e) => e.stopPropagation()}
                       placeholder="S, M, L, XL"
@@ -1029,9 +1032,12 @@ function RewardQuestionCard({
                       </div>
                       {(question.questionType === "SINGLE_SELECT" || question.questionType === "MULTIPLE_SELECT") && (
                         <Input
-                          value={question.options.join(", ")}
+                          value={question.options.join(",")}
                           onChange={(e) => onUpdateQuestion(index, {
-                            options: e.target.value.split(",").map(o => o.trim()),
+                            options: e.target.value.split(","),
+                          })}
+                          onBlur={(e) => onUpdateQuestion(index, {
+                            options: e.target.value.split(",").map(o => o.trim()).filter(o => o),
                           })}
                           onKeyDown={(e) => e.stopPropagation()}
                           placeholder="Options (comma-separated)"
