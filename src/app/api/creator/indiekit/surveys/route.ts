@@ -42,18 +42,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
     }
 
-    // Get survey with questions
+    // Get survey with backer questions only (General Questions)
+    // Item questions are fetched separately via /api/projects/:id/survey/item-questions
     const survey = await db.survey.findUnique({
       where: { projectId },
       include: {
         backerQuestions: {
-          orderBy: { sortOrder: "asc" },
-        },
-        itemQuestions: {
-          include: {
-            variants: true,
-            customQuestions: true,
-          },
           orderBy: { sortOrder: "asc" },
         },
       },
@@ -66,11 +60,9 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Map backer questions to frontend format
+    // Map backer questions to frontend format (General Questions only)
+    // Item questions (per-reward) are fetched separately via /api/projects/:id/survey/item-questions
     type BackerQuestionType = { id: string; questionType: string; question: string; isRequired: boolean; description: string | null; options: string[]; sortOrder: number };
-    type VariantType = { id: string; variantType: string; options: string[]; sortOrder: number };
-    type CustomQuestionType = { id: string; questionType: string; question: string; isRequired: boolean; description: string | null; options: string[]; sortOrder: number };
-    type ItemQuestionType = { id: string; itemName: string; itemDescription: string | null; sortOrder: number; variants: VariantType[]; customQuestions: CustomQuestionType[] };
     type QuestionFormat = { id: string; type: string; label: string; required: boolean; helpText: string | undefined; options: string[] | undefined; sortOrder: number };
 
     const questions: QuestionFormat[] = survey.backerQuestions.map((q: BackerQuestionType) => ({
@@ -82,45 +74,6 @@ export async function GET(req: NextRequest) {
       options: q.options.length > 0 ? q.options : undefined,
       sortOrder: q.sortOrder,
     }));
-
-    // Add item questions if they exist (mapped as section with variants)
-    survey.itemQuestions.forEach((item: ItemQuestionType) => {
-      questions.push({
-        id: item.id,
-        type: "section_break",
-        label: item.itemName,
-        required: false,
-        helpText: item.itemDescription || undefined,
-        options: undefined,
-        sortOrder: item.sortOrder,
-      });
-
-      // Add variant questions
-      item.variants.forEach((variant: VariantType) => {
-        questions.push({
-          id: variant.id,
-          type: "dropdown",
-          label: variant.variantType,
-          required: true,
-          helpText: undefined,
-          options: variant.options,
-          sortOrder: variant.sortOrder,
-        });
-      });
-
-      // Add custom questions
-      item.customQuestions.forEach((custom: CustomQuestionType) => {
-        questions.push({
-          id: custom.id,
-          type: mapQuestionType(custom.questionType),
-          label: custom.question,
-          required: custom.isRequired,
-          helpText: custom.description || undefined,
-          options: custom.options.length > 0 ? custom.options : undefined,
-          sortOrder: custom.sortOrder,
-        });
-      });
-    });
 
     return NextResponse.json({
       survey: {
