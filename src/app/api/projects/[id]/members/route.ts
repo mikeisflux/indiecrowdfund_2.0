@@ -66,41 +66,44 @@ export async function GET(
 
     const skip = (page - 1) * limit;
 
-    // Build where clause
+    // Build where clause for creator's email list (optionally filtered by sourceProjectId)
     const whereClause: Record<string, unknown> = {
-      projectId,
+      creatorId: session.user.id,
+      status: "subscribed",
     };
+
+    // Optionally filter by source project
+    const filterByProject = searchParams.get("filterByProject");
+    if (filterByProject === "true") {
+      whereClause.sourceProjectId = projectId;
+    }
 
     if (search) {
       whereClause.OR = [
         { email: { contains: search, mode: "insensitive" } },
+        { name: { contains: search, mode: "insensitive" } },
       ];
     }
 
-    // Get members from ProjectFollower
+    // Get members from EmailListSubscriber (per-creator list)
     const [members, total] = await Promise.all([
-      db.projectFollower.findMany({
+      db.emailListSubscriber.findMany({
         where: whereClause,
-        include: {
-          project: {
-            select: { title: true },
-          },
-        },
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
-      db.projectFollower.count({ where: whereClause }),
+      db.emailListSubscriber.count({ where: whereClause }),
     ]);
 
     // Transform to member format
-    const formattedMembers = members.map((m: { id: string; email: string | null; isPrelaunch: boolean; createdAt: Date }) => ({
+    const formattedMembers = members.map((m: { id: string; email: string; name: string | null; source: string | null; createdAt: Date; status: string }) => ({
       id: m.id,
-      email: m.email || "",
-      name: "", // ProjectFollower doesn't store name currently
-      source: m.isPrelaunch ? "teaser" : "import",
+      email: m.email,
+      name: m.name || "",
+      source: m.source || "import",
       joinedAt: m.createdAt.toISOString(),
-      status: "subscribed" as const,
+      status: m.status as "subscribed" | "unsubscribed" | "bounced",
     }));
 
     return NextResponse.json({
@@ -148,26 +151,29 @@ export async function POST(
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if already exists
-    const existing = await db.projectFollower.findUnique({
+    // Check if already exists in creator's email list
+    const existing = await db.emailListSubscriber.findUnique({
       where: {
-        projectId_email: {
-          projectId,
+        creatorId_email: {
+          creatorId: session.user.id,
           email: normalizedEmail,
         },
       },
     });
 
     if (existing) {
-      return NextResponse.json({ error: "Email already exists for this project" }, { status: 409 });
+      return NextResponse.json({ error: "Email already exists in your email list" }, { status: 409 });
     }
 
-    // Create new member
-    const member = await db.projectFollower.create({
+    // Add to creator's email list
+    const member = await db.emailListSubscriber.create({
       data: {
-        projectId,
+        creatorId: session.user.id,
         email: normalizedEmail,
-        isPrelaunch: false,
+        name: name || null,
+        source: "manual",
+        sourceProjectId: projectId,
+        status: "subscribed",
       },
     });
 
@@ -175,10 +181,10 @@ export async function POST(
       member: {
         id: member.id,
         email: member.email,
-        name: name || "",
-        source: "import",
+        name: member.name || "",
+        source: member.source || "manual",
         joinedAt: member.createdAt.toISOString(),
-        status: "subscribed",
+        status: member.status,
       },
     });
   } catch (error) {
@@ -216,8 +222,20 @@ export async function DELETE(
       return NextResponse.json({ error: "Project not found or you don't have access" }, { status: 404 });
     }
 
-    // Delete the member
-    await db.projectFollower.delete({
+    // Verify the member belongs to this creator before deleting
+    const member = await db.emailListSubscriber.findFirst({
+      where: {
+        id: memberId,
+        creatorId: session.user.id,
+      },
+    });
+
+    if (!member) {
+      return NextResponse.json({ error: "Member not found" }, { status: 404 });
+    }
+
+    // Delete the member from creator's email list
+    await db.emailListSubscriber.delete({
       where: { id: memberId },
     });
 

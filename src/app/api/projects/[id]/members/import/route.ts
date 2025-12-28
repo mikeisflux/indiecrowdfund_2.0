@@ -230,10 +230,14 @@ export async function POST(
         return NextResponse.json({ error: "Source project not found or you don't have access" }, { status: 404 });
       }
 
-      // Get members from source project
-      const sourceMembers = await db.projectFollower.findMany({
-        where: { projectId: sourceProjectId },
-        select: { email: true },
+      // Get members from source project's creator email list
+      const sourceMembers = await db.emailListSubscriber.findMany({
+        where: {
+          creatorId: session.user.id,
+          sourceProjectId: sourceProjectId,
+          status: "subscribed",
+        },
+        select: { email: true, name: true },
       });
 
       let imported = 0;
@@ -242,11 +246,11 @@ export async function POST(
       for (const member of sourceMembers) {
         if (!member.email) continue;
 
-        // Check if already exists in target project
-        const existing = await db.projectFollower.findUnique({
+        // Check if already exists in creator's email list
+        const existing = await db.emailListSubscriber.findUnique({
           where: {
-            projectId_email: {
-              projectId,
+            creatorId_email: {
+              creatorId: session.user.id,
               email: member.email,
             },
           },
@@ -257,17 +261,20 @@ export async function POST(
           continue;
         }
 
-        // Create in target project
-        await db.projectFollower.create({
+        // Add to creator's email list
+        await db.emailListSubscriber.create({
           data: {
-            projectId,
+            creatorId: session.user.id,
             email: member.email,
-            isPrelaunch: false,
+            name: member.name,
+            source: "project_import",
+            sourceProjectId: projectId,
+            status: "subscribed",
           },
         });
 
         // Also sync to admin newsletter with uploader tag
-        await syncToAdminNewsletter(member.email, undefined, uploaderTag, project.title);
+        await syncToAdminNewsletter(member.email, member.name || undefined, uploaderTag, project.title);
 
         imported++;
       }
@@ -306,11 +313,11 @@ export async function POST(
           continue;
         }
 
-        // Check if already exists
-        const existing = await db.projectFollower.findUnique({
+        // Check if already exists in creator's email list
+        const existing = await db.emailListSubscriber.findUnique({
           where: {
-            projectId_email: {
-              projectId,
+            creatorId_email: {
+              creatorId: session.user.id,
               email: row.email,
             },
           },
@@ -321,12 +328,15 @@ export async function POST(
           continue;
         }
 
-        // Create new member
-        await db.projectFollower.create({
+        // Add to creator's email list
+        await db.emailListSubscriber.create({
           data: {
-            projectId,
+            creatorId: session.user.id,
             email: row.email,
-            isPrelaunch: false,
+            name: row.name,
+            source: "csv_import",
+            sourceProjectId: projectId,
+            status: "subscribed",
           },
         });
 

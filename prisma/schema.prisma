@@ -81,6 +81,9 @@ model User {
   following         CreatorFollow[] @relation("Followers")
   followers         CreatorFollow[] @relation("Following")
 
+  // Creator email list (per-user subscriber list)
+  emailListSubscribers EmailListSubscriber[] @relation("CreatorEmailList")
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?  // Soft delete timestamp
@@ -1945,6 +1948,36 @@ enum CampaignStatus {
   SENDING
   SENT
   CANCELLED
+}
+
+// ============================================
+// CREATOR EMAIL LIST (Per-user subscriber list)
+// ============================================
+
+model EmailListSubscriber {
+  id              String    @id @default(cuid())
+  creatorId       String    // The creator who owns this subscriber
+  email           String
+  name            String?
+  status          String    @default("subscribed") // subscribed, unsubscribed, bounced
+  source          String?   // Where they signed up: import, teaser, project, manual
+  sourceProjectId String?   // If signed up from a specific project
+  tags            String[]  // For segmentation
+
+  // Engagement tracking
+  lastEmailSentAt DateTime?
+  lastOpenedAt    DateTime?
+  lastClickedAt   DateTime?
+
+  creator         User      @relation("CreatorEmailList", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([creatorId, email])
+  @@index([creatorId])
+  @@index([email])
+  @@index([status])
 }
 
 // ============================================

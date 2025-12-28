@@ -210,10 +210,11 @@ export async function GET(req: NextRequest) {
         take: 20,
       }),
 
-      // Get email list member count for this project (using ProjectFollower table)
-      db.projectFollower.count({
+      // Get email list member count for this creator (using EmailListSubscriber table)
+      db.emailListSubscriber.count({
         where: {
-          projectId: selectedProjectId,
+          creatorId: session.user.id,
+          status: "subscribed",
         },
       }),
     ]);

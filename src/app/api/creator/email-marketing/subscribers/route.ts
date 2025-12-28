@@ -13,7 +13,7 @@ async function getCreatorTag(userId: string) {
   return creator?.vanityUrl || creator?.name || userId;
 }
 
-// GET - Fetch creator's subscribers (from project followers + manual imports)
+// GET - Fetch creator's subscribers (from EmailListSubscriber + backers)
 export async function GET() {
   try {
     const session = await auth();
@@ -21,9 +21,15 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const creatorTag = await getCreatorTag(session.user.id);
+    // Get creator's email list subscribers
+    const emailListSubscribers = await db.emailListSubscriber.findMany({
+      where: {
+        creatorId: session.user.id,
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-    // Get all users who follow any of the creator's projects
+    // Also get backers from creator's projects (paying customers)
     const creatorProjects = await db.project.findMany({
       where: { creatorId: session.user.id },
       select: { id: true },
@@ -31,37 +37,6 @@ export async function GET() {
 
     const projectIds = creatorProjects.map((p) => p.id);
 
-    // Get followers from ProjectFollower table (note: user relation not defined in schema)
-    const followers = await db.projectFollower.findMany({
-      where: {
-        projectId: { in: projectIds },
-        userId: { not: null }, // Only get followers with user accounts
-      },
-      include: {
-        project: {
-          select: {
-            title: true,
-          },
-        },
-      },
-    });
-
-    // Get user details for followers
-    const followerUserIds = followers
-      .map((f: { userId: string | null }) => f.userId)
-      .filter((id: string | null): id is string => id !== null);
-    const followerUsers = await db.user.findMany({
-      where: { id: { in: followerUserIds } },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-      },
-    });
-    const followerUserMap = new Map(followerUsers.map((u) => [u.id, u]));
-
-    // Also get backers
     const backers = await db.pledge.findMany({
       where: {
         projectId: { in: projectIds },
@@ -80,16 +55,6 @@ export async function GET() {
       distinct: ["userId"],
     });
 
-    // Get manually added/imported subscribers for this creator
-    const manualSubscribers = await db.newsletterSubscriber.findMany({
-      where: {
-        OR: [
-          { source: { startsWith: `creator_import:${creatorTag}` } },
-          { source: { startsWith: `creator_manual:${creatorTag}` } },
-        ],
-      },
-    });
-
     // Combine and deduplicate
     const subscriberMap = new Map<string, {
       id: string;
@@ -97,27 +62,30 @@ export async function GET() {
       name: string;
       status: "active" | "unsubscribed" | "bounced";
       source: string;
-      sourceType: "follower" | "backer" | "import" | "manual";
+      sourceType: "backer" | "import" | "manual" | "teaser";
       createdAt: string;
     }>();
 
-    // Add followers
-    for (const follower of followers) {
-      const user = follower.userId ? followerUserMap.get(follower.userId) : null;
-      if (user?.email && !subscriberMap.has(user.email)) {
-        subscriberMap.set(user.email, {
-          id: `follower_${user.id}`,
-          email: user.email,
-          name: user.name || "Unknown",
-          status: "active",
-          source: `Follower: ${follower.project.title}`,
-          sourceType: "follower",
-          createdAt: follower.createdAt.toISOString(),
-        });
-      }
+    // Add email list subscribers first (they're the primary source now)
+    for (const sub of emailListSubscribers) {
+      const sourceType = sub.source === "csv_import" || sub.source === "project_import"
+        ? "import"
+        : sub.source === "teaser"
+        ? "teaser"
+        : "manual";
+
+      subscriberMap.set(sub.email, {
+        id: sub.id,
+        email: sub.email,
+        name: sub.name || "Unknown",
+        status: sub.status === "subscribed" ? "active" : sub.status === "bounced" ? "bounced" : "unsubscribed",
+        source: sub.source || "Manual",
+        sourceType,
+        createdAt: sub.createdAt.toISOString(),
+      });
     }
 
-    // Add backers
+    // Add backers (if not already in the list)
     for (const backer of backers) {
       if (backer.user.email && !subscriberMap.has(backer.user.email)) {
         subscriberMap.set(backer.user.email, {
@@ -132,29 +100,13 @@ export async function GET() {
       }
     }
 
-    // Add manual/imported subscribers
-    for (const sub of manualSubscribers) {
-      if (!subscriberMap.has(sub.email)) {
-        const isImport = sub.source?.includes("creator_import:");
-        subscriberMap.set(sub.email, {
-          id: sub.id,
-          email: sub.email,
-          name: sub.name || "Unknown",
-          status: sub.isActive ? "active" : "unsubscribed",
-          source: isImport ? "CSV Import" : "Manual",
-          sourceType: isImport ? "import" : "manual",
-          createdAt: sub.createdAt.toISOString(),
-        });
-      }
-    }
-
     const subscribers = Array.from(subscriberMap.values());
 
     const stats = {
       total: subscribers.length,
       active: subscribers.filter((s) => s.status === "active").length,
       unsubscribed: subscribers.filter((s) => s.status === "unsubscribed").length,
-      bounced: 0,
+      bounced: subscribers.filter((s) => s.status === "bounced").length,
     };
 
     return NextResponse.json({ subscribers, stats });
@@ -167,7 +119,7 @@ export async function GET() {
   }
 }
 
-// POST - Manually add a subscriber
+// POST - Manually add a subscriber to creator's email list
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -190,25 +142,52 @@ export async function POST(request: NextRequest) {
 
     const emailLower = email.toLowerCase().trim();
 
-    // Check if already exists
-    const existing = await db.newsletterSubscriber.findUnique({
-      where: { email: emailLower },
+    // Check if already exists in creator's email list
+    const existing = await db.emailListSubscriber.findUnique({
+      where: {
+        creatorId_email: {
+          creatorId: session.user.id,
+          email: emailLower,
+        },
+      },
     });
 
     if (existing) {
-      return NextResponse.json({ error: "Subscriber already exists" }, { status: 400 });
+      return NextResponse.json({ error: "Subscriber already exists in your email list" }, { status: 400 });
     }
 
-    const creatorTag = await getCreatorTag(session.user.id);
-
-    const subscriber = await db.newsletterSubscriber.create({
+    // Add to creator's email list
+    const subscriber = await db.emailListSubscriber.create({
       data: {
+        creatorId: session.user.id,
         email: emailLower,
         name: name?.trim() || null,
-        source: `creator_manual:${creatorTag}`,
-        isActive: true,
+        source: "manual",
+        status: "subscribed",
       },
     });
+
+    // Also sync to admin newsletter
+    const creatorTag = await getCreatorTag(session.user.id);
+    try {
+      const existingNewsletter = await db.newsletterSubscriber.findUnique({
+        where: { email: emailLower },
+      });
+
+      if (!existingNewsletter) {
+        await db.newsletterSubscriber.create({
+          data: {
+            email: emailLower,
+            name: name?.trim() || null,
+            source: "creator_import",
+            tags: [`creator:${creatorTag}`],
+            isActive: true,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Failed to sync to admin newsletter:", err);
+    }
 
     return NextResponse.json({
       subscriber: {
