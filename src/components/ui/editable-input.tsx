@@ -10,7 +10,6 @@ interface EditableInputProps {
   onChange: (value: string) => void;
   onSave?: () => void;
   placeholder?: string;
-  label?: string;
 }
 
 /**
@@ -24,7 +23,6 @@ export function EditableInput({
   onChange,
   onSave,
   placeholder = "Enter value...",
-  label,
 }: EditableInputProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
