@@ -439,6 +439,22 @@ export default function SettingsPage() {
         minAge: String(settings.idVerificationMinAge || 18),
         mode: settings.idVerificationMode || "production",
       });
+
+      // Load storage settings
+      setStorageSettings({
+        r2Enabled: settings.r2Enabled || false,
+        r2AccountId: settings.r2AccountId || "",
+        r2AccessKeyId: settings.r2AccessKeyId || "",
+        r2SecretAccessKey: settings.r2SecretAccessKey || "",
+        r2BucketName: settings.r2BucketName || "",
+        r2PublicDomain: settings.r2PublicDomain || "",
+        r2Region: settings.r2Region || "auto",
+        maxFileSizeMB: String(settings.maxFileSizeMB || 50),
+        maxProjectStorageMB: String(settings.maxProjectStorageMB || 200),
+        allowedFileTypes: settings.allowedFileTypes || "pdf,epub,zip,mp3",
+        digitalDownloadsEnabled: settings.digitalDownloadsEnabled || false,
+        signedUrlExpirationMinutes: String(settings.signedUrlExpirationMinutes || 60),
+      });
     } catch (err) {
       console.error("Error fetching settings:", err);
       setError("Failed to load settings. Using default values.");
