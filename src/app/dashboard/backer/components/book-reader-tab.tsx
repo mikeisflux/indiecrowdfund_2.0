@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import dynamic from "next/dynamic";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +25,15 @@ import {
   Library,
 } from "lucide-react";
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Dynamically import react-pdf components with SSR disabled
+const Document = dynamic(
+  () => import("react-pdf").then((mod) => mod.Document),
+  { ssr: false }
+);
+const Page = dynamic(
+  () => import("react-pdf").then((mod) => mod.Page),
+  { ssr: false }
+);
 
 interface DigitalFile {
   id: string;
@@ -89,6 +96,15 @@ export function BookReaderTab() {
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [progressMap, setProgressMap] = useState<Record<string, ReadingProgress>>({});
+  const [pdfReady, setPdfReady] = useState(false);
+
+  // Configure PDF.js worker on client side only
+  useEffect(() => {
+    import("react-pdf").then((pdfModule) => {
+      pdfModule.pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfModule.pdfjs.version}/build/pdf.worker.min.mjs`;
+      setPdfReady(true);
+    });
+  }, []);
 
   useEffect(() => {
     fetchPdfFiles();
@@ -337,7 +353,7 @@ export function BookReaderTab() {
             isFullscreen ? "h-[calc(100vh-140px)]" : "h-[600px]"
           )}
         >
-          {loadingPdf ? (
+          {loadingPdf || !pdfReady ? (
             <div className="flex flex-col items-center justify-center h-full">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4" />
               <p className="text-muted-foreground">Loading PDF...</p>
@@ -349,7 +365,7 @@ export function BookReaderTab() {
               <p className="text-muted-foreground mb-4">{pdfError}</p>
               <Button onClick={() => openBook(selectedFile)}>Try Again</Button>
             </div>
-          ) : (
+          ) : pdfReady ? (
             <Document
               file={pdfUrl}
               onLoadSuccess={onDocumentLoadSuccess}
@@ -373,7 +389,7 @@ export function BookReaderTab() {
                 }
               />
             </Document>
-          )}
+          ) : null}
         </div>
 
         {/* Reader Footer - Navigation */}
