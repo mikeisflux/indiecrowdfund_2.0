@@ -37,6 +37,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ImportEmailDialog } from "./import-email-dialog";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface Project {
   id: string;
@@ -130,7 +131,7 @@ Click here to see the project and back us today!`);
     try {
       const response = await fetch("/api/creator/email/send-test", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           to: testEmail,
           subject: emailTitle,
@@ -170,7 +171,7 @@ Click here to see the project and back us today!`);
     try {
       const response = await fetch("/api/creator/email/campaign", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           subject: emailTitle,
           content: emailBody,

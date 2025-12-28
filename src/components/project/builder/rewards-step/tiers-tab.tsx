@@ -179,8 +179,22 @@ function SortableTierRow({
             <>
               <Button variant="ghost" size="sm">Feature</Button>
               {isLive ? (
-                // Live project: show End Reward for tiers with backers, Edit/Duplicate only for tiers without
-                tier.backerCount && tier.backerCount > 0 ? (
+                // Live project: show Edit/Duplicate and End Reward for all tiers
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEditReward(rewardIndex)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDuplicateReward(rewardIndex)}
+                  >
+                    Duplicate
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="sm" className="text-orange-600">
@@ -192,12 +206,24 @@ function SortableTierRow({
                       <AlertDialogHeader>
                         <AlertDialogTitle>End this reward?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This reward has {tier.backerCount} backer(s). Ending it will:
-                          <ul className="list-disc list-inside mt-2 space-y-1">
-                            <li>Keep the reward for existing backers</li>
-                            <li>Prevent new backers from selecting it</li>
-                            <li>This action cannot be undone</li>
-                          </ul>
+                          {tier.backerCount && tier.backerCount > 0 ? (
+                            <>
+                              This reward has {tier.backerCount} backer(s). Ending it will:
+                              <ul className="list-disc list-inside mt-2 space-y-1">
+                                <li>Keep the reward for existing backers</li>
+                                <li>Prevent new backers from selecting it</li>
+                                <li>This action cannot be undone</li>
+                              </ul>
+                            </>
+                          ) : (
+                            <>
+                              Ending this reward will:
+                              <ul className="list-disc list-inside mt-2 space-y-1">
+                                <li>Prevent backers from selecting it</li>
+                                <li>This action cannot be undone</li>
+                              </ul>
+                            </>
+                          )}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -211,25 +237,7 @@ function SortableTierRow({
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                ) : (
-                  // Live project with 0 backers: allow Edit/Duplicate but NOT Delete
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEditReward(rewardIndex)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDuplicateReward(rewardIndex)}
-                    >
-                      Duplicate
-                    </Button>
-                  </>
-                )
+                </>
               ) : (
                 // Not live: allow Edit, Duplicate, and Delete
                 <>

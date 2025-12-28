@@ -175,8 +175,22 @@ function SortableAddonRow({
           {!addon.isEnded && (
             <>
               {isLive ? (
-                // Live project: show End Add-on for addons with backers, Edit/Duplicate only for addons without
-                addon.backerCount && addon.backerCount > 0 ? (
+                // Live project: show Edit/Duplicate and End Add-on for all addons
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEditReward(rewardIndex)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDuplicateReward(rewardIndex)}
+                  >
+                    Duplicate
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="sm" className="text-orange-600">
@@ -188,12 +202,24 @@ function SortableAddonRow({
                       <AlertDialogHeader>
                         <AlertDialogTitle>End this add-on?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This add-on has {addon.backerCount} backer(s). Ending it will:
-                          <ul className="list-disc list-inside mt-2 space-y-1">
-                            <li>Keep the add-on for existing backers</li>
-                            <li>Prevent new backers from selecting it</li>
-                            <li>This action cannot be undone</li>
-                          </ul>
+                          {addon.backerCount && addon.backerCount > 0 ? (
+                            <>
+                              This add-on has {addon.backerCount} backer(s). Ending it will:
+                              <ul className="list-disc list-inside mt-2 space-y-1">
+                                <li>Keep the add-on for existing backers</li>
+                                <li>Prevent new backers from selecting it</li>
+                                <li>This action cannot be undone</li>
+                              </ul>
+                            </>
+                          ) : (
+                            <>
+                              Ending this add-on will:
+                              <ul className="list-disc list-inside mt-2 space-y-1">
+                                <li>Prevent backers from selecting it</li>
+                                <li>This action cannot be undone</li>
+                              </ul>
+                            </>
+                          )}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -207,25 +233,7 @@ function SortableAddonRow({
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                ) : (
-                  // Live project with 0 backers: allow Edit/Duplicate but NOT Delete
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEditReward(rewardIndex)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDuplicateReward(rewardIndex)}
-                    >
-                      Duplicate
-                    </Button>
-                  </>
-                )
+                </>
               ) : (
                 // Not live: allow Edit, Duplicate, and Delete
                 <>
