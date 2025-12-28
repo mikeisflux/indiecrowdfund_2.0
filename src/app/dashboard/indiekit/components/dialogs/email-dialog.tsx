@@ -127,11 +127,28 @@ Click here to see the project and back us today!`);
 
     setIsSendingTest(true);
     try {
-      // TODO: Implement actual send test email API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch("/api/creator/email/send-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: testEmail,
+          subject: emailTitle,
+          htmlContent: emailBody,
+          senderName: senderName || undefined,
+          replyTo: replyToEmail || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send test email");
+      }
+
       toast.success(`Test email sent to ${testEmail}`);
-    } catch {
-      toast.error("Failed to send test email");
+    } catch (error) {
+      console.error("Send test email error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to send test email");
     } finally {
       setIsSendingTest(false);
     }
