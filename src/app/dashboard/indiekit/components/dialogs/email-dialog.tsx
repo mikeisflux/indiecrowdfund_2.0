@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Mail,
   Send,
   ChevronLeft,
@@ -28,24 +35,58 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface Project {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+}
+
 interface EmailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  projects: Project[];
+  selectedProjectId: string;
+  onProjectChange?: (projectId: string) => void;
 }
 
 type EditorStep = "campaign" | "customize" | "send" | "results";
 
-export function EmailDialog({ open, onOpenChange }: EmailDialogProps) {
+export function EmailDialog({ open, onOpenChange, projects, selectedProjectId, onProjectChange }: EmailDialogProps) {
   const [activeStep, setActiveStep] = useState<EditorStep>("campaign");
-  const [emailTitle, setEmailTitle] = useState("Special Early Access: Add Project Title");
-  const [senderName, setSenderName] = useState("");
-  const [emailBody, setEmailBody] = useState(`Hi!
+  const [currentProjectId, setCurrentProjectId] = useState(selectedProjectId);
+  const currentProject = projects.find(p => p.id === currentProjectId) || projects[0];
+  const projectTitle = currentProject?.title || "Select a project";
 
-We're excited to launch our next project: Add Project Title.
+  const [emailTitle, setEmailTitle] = useState(`Special Early Access: ${projectTitle}`);
+  const [senderName, setSenderName] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+
+  // Initialize/update form when project changes
+  useEffect(() => {
+    if (currentProject) {
+      setEmailTitle(`Special Early Access: ${currentProject.title}`);
+      setEmailBody(`Hi!
+
+We're excited to launch our next project: ${currentProject.title}.
 
 As a fan of ours, we want to ask for your commitment to pledge on day ONE so that we can have the strongest launch possible.
 
 Click here to see the project and back us today!`);
+    }
+  }, [currentProject]);
+
+  // Sync with parent's selected project when dialog opens
+  useEffect(() => {
+    if (open && selectedProjectId) {
+      setCurrentProjectId(selectedProjectId);
+    }
+  }, [open, selectedProjectId]);
+
+  const handleProjectChange = (projectId: string) => {
+    setCurrentProjectId(projectId);
+    onProjectChange?.(projectId);
+  };
 
   const steps: { id: EditorStep; label: string }[] = [
     { id: "campaign", label: "Your Email Campaign" },
@@ -85,10 +126,12 @@ Click here to see the project and back us today!`);
           </div>
           <div className="mt-2">
             <h2 className="text-lg font-semibold">{emailTitle}</h2>
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <Badge variant="outline" className="text-teal-600">IC</Badge>
-              Flying Sparks Volumes 1-3
-            </p>
+            {currentProject && (
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <Badge variant="outline" className="text-teal-600">IC</Badge>
+                {currentProject.title}
+              </p>
+            )}
           </div>
         </div>
 
@@ -121,15 +164,37 @@ Click here to see the project and back us today!`);
                 {/* Connect with Project */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Connect with a Project</h3>
-                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <span>Connected to</span>
-                    <Badge variant="outline" className="text-teal-600">IC</Badge>
-                    <span className="font-medium">Flying Sparks Volumes 1-3</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Not this project? <button className="text-teal-600 hover:underline">Select a different project.</button>
-                  </p>
+                  {currentProject ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <span>Connected to</span>
+                      <Badge variant="outline" className="text-teal-600">IC</Badge>
+                      <span className="font-medium">{currentProject.title}</span>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <span className="text-yellow-700">No project selected</span>
+                    </div>
+                  )}
+                  {projects.length > 1 && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Not this project? Select a different one:
+                      </p>
+                      <Select value={currentProjectId} onValueChange={handleProjectChange}>
+                        <SelectTrigger className="w-full max-w-xs">
+                          <SelectValue placeholder="Select a project" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
 
                 <hr />

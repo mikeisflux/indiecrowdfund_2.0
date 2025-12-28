@@ -721,6 +721,8 @@ export default function IndieKitPage() {
       <EmailDialog
         open={isEmailDialogOpen}
         onOpenChange={setIsEmailDialogOpen}
+        projects={projects}
+        selectedProjectId={selectedProjectId}
       />
 
       <AddonDialog
