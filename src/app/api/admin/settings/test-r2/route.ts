@@ -26,8 +26,10 @@ export async function POST(request: NextRequest) {
 
     // If masked values are passed, fetch actual values from database
     const isMasked = (val: string) => val === "••••••••";
+    const isEmpty = (val: string | null | undefined) => !val || val === "";
 
-    if (isMasked(accessKeyId) || isMasked(secretAccessKey) || !accessKeyId || !secretAccessKey) {
+    // Always fetch stored settings if any credential is masked or missing
+    if (isMasked(accessKeyId) || isMasked(secretAccessKey) || isEmpty(accessKeyId) || isEmpty(secretAccessKey)) {
       const settings = await db.platformSettings.findUnique({
         where: { id: "default" },
         select: {
@@ -45,16 +47,25 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Use stored values for masked/missing fields
-      accountId = accountId && !isMasked(accountId) ? accountId : settings.r2AccountId;
+      // Use stored values for masked/missing fields, but prefer frontend values if provided
+      if (isEmpty(accountId) || isMasked(accountId)) {
+        accountId = settings.r2AccountId;
+      }
       accessKeyId = settings.r2AccessKeyId;
       secretAccessKey = settings.r2SecretAccessKey;
-      bucketName = bucketName || settings.r2BucketName;
+      if (isEmpty(bucketName)) {
+        bucketName = settings.r2BucketName;
+      }
     }
 
     if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
+      const missing = [];
+      if (!accountId) missing.push("Account ID");
+      if (!accessKeyId) missing.push("Access Key ID");
+      if (!secretAccessKey) missing.push("Secret Access Key");
+      if (!bucketName) missing.push("Bucket Name");
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: `Missing required fields: ${missing.join(", ")}. Please save your settings first.` },
         { status: 400 }
       );
     }
