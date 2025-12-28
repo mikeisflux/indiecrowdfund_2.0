@@ -32,7 +32,6 @@ import {
 import {
   FileText,
   Plus,
-  Eye,
   EyeOff,
   Edit,
   Trash2,
