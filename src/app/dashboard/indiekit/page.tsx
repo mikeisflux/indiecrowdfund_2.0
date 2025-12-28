@@ -598,6 +598,8 @@ export default function IndieKitPage() {
                   onOpenBackerDetail={openBackerDetail}
                   onPushSelectedOrders={pushSelectedOrders}
                   hasActiveCampaign={hasActiveCampaign}
+                  projectId={selectedProjectId}
+                  onRefresh={fetchData}
                 />
               </TabsContent>
 

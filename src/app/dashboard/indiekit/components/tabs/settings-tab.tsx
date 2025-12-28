@@ -32,15 +32,11 @@ import {
   Bell,
   Plug,
   Users,
-  AlertTriangle,
   Image as ImageIcon,
-  Globe,
-  Archive,
-  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type SettingsSection = "general" | "survey" | "shipping" | "payments" | "notifications" | "integrations" | "team" | "danger";
+type SettingsSection = "general" | "survey" | "shipping" | "payments" | "notifications" | "integrations" | "team";
 
 interface SettingsTabProps {
   projectName?: string;
@@ -56,7 +52,6 @@ const settingsNav = [
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "integrations", label: "Integrations", icon: Plug },
   { id: "team", label: "Team", icon: Users },
-  { id: "danger", label: "Danger Zone", icon: AlertTriangle },
 ] as const;
 
 export function SettingsTab({
@@ -92,15 +87,14 @@ export function SettingsTab({
               {settingsNav.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeSection === item.id;
-                const isDanger = item.id === "danger";
                 return (
                   <Button
                     key={item.id}
                     variant={isActive ? "secondary" : "ghost"}
-                    className={`w-full justify-start ${isDanger ? "text-red-600 hover:text-red-600 hover:bg-red-50" : ""}`}
+                    className="w-full justify-start"
                     onClick={() => setActiveSection(item.id as SettingsSection)}
                   >
-                    <Icon className={`h-4 w-4 mr-2 ${isActive && !isDanger ? "text-teal-600" : ""}`} />
+                    <Icon className={`h-4 w-4 mr-2 ${isActive ? "text-teal-600" : ""}`} />
                     {item.label}
                   </Button>
                 );
@@ -329,18 +323,6 @@ export function SettingsTab({
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded bg-blue-100 flex items-center justify-center">
-                      <Truck className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">ShipStation</p>
-                      <p className="text-sm text-muted-foreground">Shipping label generation</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" onClick={() => toast.info("Connecting to ShipStation...")}>Connect</Button>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded bg-green-100 flex items-center justify-center">
                       <CreditCard className="h-5 w-5 text-green-600" />
                     </div>
@@ -351,17 +333,9 @@ export function SettingsTab({
                   </div>
                   <Button variant="outline" className="text-green-600 border-green-600">Connected</Button>
                 </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded bg-purple-100 flex items-center justify-center">
-                      <Globe className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Zapier</p>
-                      <p className="text-sm text-muted-foreground">Workflow automation</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" onClick={() => toast.info("Connecting to Zapier...")}>Connect</Button>
+                <div className="p-6 text-center text-muted-foreground border rounded-lg bg-muted/30">
+                  <Plug className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>More integrations coming soon</p>
                 </div>
               </CardContent>
             </Card>
@@ -371,154 +345,22 @@ export function SettingsTab({
             <Card>
               <CardHeader>
                 <CardTitle>Team Members</CardTitle>
-                <CardDescription>Manage who has access to this project</CardDescription>
+                <CardDescription>Manage who has access to IndieKit for this project</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-teal-100 flex items-center justify-center">
-                      <span className="text-teal-600 font-medium">JD</span>
-                    </div>
-                    <div>
-                      <p className="font-medium">John Doe</p>
-                      <p className="text-sm text-muted-foreground">john@example.com</p>
-                    </div>
-                  </div>
-                  <span className="text-sm text-muted-foreground">Owner</span>
+                <div className="p-6 text-center text-muted-foreground border rounded-lg bg-muted/30">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="mb-4">No team members added yet</p>
+                  <p className="text-sm mb-4">Team members added here get access to IndieKit for this project only. This is separate from project collaborators.</p>
+                  <Button variant="outline">
+                    <Users className="h-4 w-4 mr-2" />
+                    Invite Team Member
+                  </Button>
                 </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-blue-600 font-medium">JS</span>
-                    </div>
-                    <div>
-                      <p className="font-medium">Jane Smith</p>
-                      <p className="text-sm text-muted-foreground">jane@example.com</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => toast.info("Opening role editor...")}>Admin</Button>
-                </div>
-                <Button variant="outline" className="w-full" onClick={() => toast.info("Opening invite dialog...")}>
-                  <Users className="h-4 w-4 mr-2" />
-                  Invite Team Member
-                </Button>
               </CardContent>
             </Card>
           )}
 
-          {activeSection === "danger" && (
-            <Card className="border-red-200 bg-red-50/50">
-              <CardHeader>
-                <CardTitle className="text-red-600 flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
-                  Danger Zone
-                </CardTitle>
-                <CardDescription>
-                  These actions are destructive and cannot be undone
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 border border-red-200 rounded-lg bg-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Archive Project</p>
-                      <p className="text-sm text-muted-foreground">
-                        Hide this project from your dashboard. Data will be preserved.
-                      </p>
-                    </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50">
-                          <Archive className="h-4 w-4 mr-2" />
-                          Archive Project
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Archive Project?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will hide the project from your dashboard. You can restore it later from your archived projects.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction className="bg-red-600 hover:bg-red-700">
-                            Archive
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-
-                <div className="p-4 border border-red-200 rounded-lg bg-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Delete All Backers</p>
-                      <p className="text-sm text-muted-foreground">
-                        Permanently remove all backer data from this project.
-                      </p>
-                    </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Backers
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete All Backers?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete all backer data. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction className="bg-red-600 hover:bg-red-700">
-                            Delete All Backers
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-
-                <div className="p-4 border border-red-200 rounded-lg bg-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Delete Project</p>
-                      <p className="text-sm text-muted-foreground">
-                        Permanently delete this project and all associated data.
-                      </p>
-                    </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Project
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Project?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete the project and all associated data including backers, orders, and settings. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction className="bg-red-600 hover:bg-red-700">
-                            Delete Project
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>

@@ -56,6 +56,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 import type { Backer } from "../../types";
 import { STATUS_COLORS, STATUS_LABELS } from "../../types";
 
@@ -71,6 +72,8 @@ interface BackersTabProps {
   onOpenBackerDetail: (backer: Backer) => void;
   onPushSelectedOrders: () => void;
   hasActiveCampaign?: boolean;
+  projectId?: string;
+  onRefresh?: () => void;
 }
 
 export function BackersTab({
@@ -85,10 +88,47 @@ export function BackersTab({
   onOpenBackerDetail,
   onPushSelectedOrders,
   hasActiveCampaign = true,
+  projectId,
+  onRefresh,
 }: BackersTabProps) {
   const [showChargeDialog, setShowChargeDialog] = useState(false);
   const [isCharging, setIsCharging] = useState(false);
   const [chargeProgress, setChargeProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Helper function for bulk actions
+  const performBulkAction = async (action: string, successMessage: string) => {
+    if (!projectId || selectedBackers.length === 0) {
+      toast.error("No backers selected or no project");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/backers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          action,
+          pledgeIds: selectedBackers,
+          projectId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Action failed");
+      }
+
+      toast.success(successMessage.replace("{count}", String(data.results?.success || selectedBackers.length)));
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Action failed");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // Show message if no active campaign
   if (!hasActiveCampaign) {
@@ -128,43 +168,102 @@ export function BackersTab({
 
   // Handle bulk charge cards
   const handleChargeCards = async () => {
-    setIsCharging(true);
-    setChargeProgress(0);
-
-    // Simulate charging process
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(r => setTimeout(r, 200));
-      setChargeProgress(i);
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
     }
 
-    setIsCharging(false);
-    setShowChargeDialog(false);
-    toast.success(`Successfully charged ${backersNeedingCharge} backers`);
+    setIsCharging(true);
+    setChargeProgress(10);
+
+    try {
+      const res = await fetch("/api/creator/indiekit/backers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          action: "charge_cards",
+          pledgeIds: selectedBackers,
+          projectId,
+        }),
+      });
+
+      setChargeProgress(50);
+      const data = await res.json();
+      setChargeProgress(100);
+
+      if (!res.ok) {
+        throw new Error(data.error || "Charge failed");
+      }
+
+      toast.success(`Successfully charged ${data.results?.success || backersNeedingCharge} backers`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to charge cards");
+    } finally {
+      setIsCharging(false);
+      setShowChargeDialog(false);
+    }
   };
 
   // Handle bulk send survey reminder
-  const handleSendSurveyReminder = () => {
+  const handleSendSurveyReminder = async () => {
     const pendingSurveys = selectedBackerData.filter(b => !b.surveyCompleted).length;
     if (pendingSurveys === 0) {
       toast.info("All selected backers have completed their surveys");
       return;
     }
-    toast.success(`Sending survey reminders to ${pendingSurveys} backers...`);
+    await performBulkAction("send_survey_reminder", "Sent survey reminders to {count} backers");
   };
 
   // Handle bulk lock orders
-  const handleLockOrders = () => {
-    toast.success(`Locking orders for ${selectedBackers.length} backers...`);
+  const handleLockOrders = async () => {
+    await performBulkAction("lock_orders", "Locked orders for {count} backers");
   };
 
   // Handle bulk lock addresses
-  const handleLockAddresses = () => {
+  const handleLockAddresses = async () => {
     const withAddresses = selectedBackerData.filter(b => b.addressComplete).length;
     if (withAddresses === 0) {
       toast.error("No selected backers have complete addresses");
       return;
     }
-    toast.success(`Locking addresses for ${withAddresses} backers...`);
+    await performBulkAction("lock_addresses", "Locked addresses for {count} backers");
+  };
+
+  // Handle push to fulfillment
+  const handlePushToFulfillment = async () => {
+    await performBulkAction("push_to_fulfillment", "Pushed {count} orders to fulfillment");
+  };
+
+  // Handle export
+  const handleExport = async () => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/creator/indiekit/export?projectId=${projectId}&type=backers`, {
+        headers: getCSRFHeaders(),
+      });
+
+      if (!res.ok) {
+        throw new Error("Export failed");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `backers-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Export downloaded");
+    } catch (error) {
+      toast.error("Failed to export data");
+    }
   };
 
   return (
@@ -225,20 +324,28 @@ export function BackersTab({
                     Lock Addresses
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onPushSelectedOrders}>
+                  <DropdownMenuItem onClick={handlePushToFulfillment} disabled={isProcessing}>
                     <Send className="h-4 w-4 mr-2" />
                     Push to Fulfillment
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button onClick={onPushSelectedOrders} className="bg-teal-600 hover:bg-teal-700">
-                <Send className="h-4 w-4 mr-2" />
+              <Button
+                onClick={handlePushToFulfillment}
+                className="bg-teal-600 hover:bg-teal-700"
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
                 Push {selectedBackers.length} Orders
               </Button>
             </>
           )}
-          <Button variant="outline" onClick={() => toast.success("Exporting backers data...")}>
+          <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
