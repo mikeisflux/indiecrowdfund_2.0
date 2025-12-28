@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import { SecureKeyInput } from "@/components/ui/secure-key-input";
+import { EditableInput } from "@/components/ui/editable-input";
 import {
   Select,
   SelectContent,
@@ -154,9 +155,10 @@ export function StorageSettings({
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Account ID</Label>
-              <Input
+              <EditableInput
                 value={settings.r2AccountId}
-                onChange={(e) => onSettingsChange({ ...settings, r2AccountId: e.target.value })}
+                onChange={(value) => onSettingsChange({ ...settings, r2AccountId: value })}
+                onSave={onSave}
                 placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
               />
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -165,9 +167,10 @@ export function StorageSettings({
             </div>
             <div className="space-y-2">
               <Label>Bucket Name</Label>
-              <Input
+              <EditableInput
                 value={settings.r2BucketName}
-                onChange={(e) => onSettingsChange({ ...settings, r2BucketName: e.target.value })}
+                onChange={(value) => onSettingsChange({ ...settings, r2BucketName: value })}
+                onSave={onSave}
                 placeholder="my-crowdfund-files"
               />
             </div>
