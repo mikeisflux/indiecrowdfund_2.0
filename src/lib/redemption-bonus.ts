@@ -212,6 +212,21 @@ export async function awardBadge(
   metadata?: Record<string, unknown>
 ): Promise<boolean> {
   try {
+    // Check if badge already exists
+    const existing = await db.userAchievement.findUnique({
+      where: {
+        userId_badgeType: {
+          userId,
+          badgeType: badgeType as never,
+        },
+      },
+    });
+
+    if (existing) {
+      // Badge already awarded
+      return false;
+    }
+
     await db.userAchievement.create({
       data: {
         userId,
@@ -242,7 +257,7 @@ export async function awardBadge(
 
     return true;
   } catch (error) {
-    // Duplicate badge or other error
+    // Unexpected error
     console.error("Error awarding badge:", error);
     return false;
   }

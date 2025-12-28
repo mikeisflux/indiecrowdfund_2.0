@@ -2556,6 +2556,7 @@ enum BadgeType {
   STRETCH_GOAL_CONTRIBUTOR   // Contributed to reaching stretch goal
   PREMIUM_SUPPORTER          // Pledged $500+ total
   SURVEY_CHAMPION            // Completed 10+ surveys promptly
+  SURVEY_COMPLETIONIST       // Completed all pending surveys
   REFERRAL_MASTER            // Referred 5+ successful backers
   ANNIVERSARY_BACKER         // Active backer for 1+ year
 }
