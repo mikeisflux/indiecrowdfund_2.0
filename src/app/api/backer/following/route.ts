@@ -33,7 +33,7 @@ export async function GET() {
             createdAt: true,
             projects: {
               where: {
-                status: { in: ["ACTIVE", "FUNDED", "COMPLETED"] },
+                status: { in: ["LIVE", "FUNDED"] },
               },
               select: {
                 id: true,
@@ -54,7 +54,7 @@ export async function GET() {
             _count: {
               select: {
                 projects: {
-                  where: { status: { in: ["ACTIVE", "FUNDED", "COMPLETED"] } },
+                  where: { status: { in: ["LIVE", "FUNDED"] } },
                 },
               },
             },
