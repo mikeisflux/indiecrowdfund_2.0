@@ -164,8 +164,9 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching survey:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch survey" },
+      { error: `Failed to fetch survey: ${errorMessage}` },
       { status: 500 }
     );
   }
