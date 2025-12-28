@@ -24,6 +24,7 @@ import {
   Info,
   Loader2,
   Menu,
+  Coins,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import {
@@ -88,6 +89,9 @@ export default function ProjectPage() {
 
   // Track when stats were last updated for animation
   const [statsJustUpdated, setStatsJustUpdated] = useState(false);
+
+  // DivinityCoin balance for redirect logic
+  const [divinityCoinBalance, setDivinityCoinBalance] = useState<number | null>(null);
 
   const tiers = rewards.filter((r) => r.type === "TIER");
   const fundingPercentage = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
@@ -197,6 +201,26 @@ export default function ProjectPage() {
 
     fetchCurrentUser();
   }, []);
+
+  // Fetch DivinityCoin balance if project uses DivinityCoin
+  useEffect(() => {
+    async function fetchDivinityCoinBalance() {
+      if (project.paymentProcessor !== "DIVINITYCOIN") return;
+
+      try {
+        const response = await fetch("/api/backer/wallet");
+        if (response.ok) {
+          const data = await response.json();
+          setDivinityCoinBalance(data.balance || 0);
+        }
+      } catch (err) {
+        console.debug("Error fetching DivinityCoin balance:", err);
+        setDivinityCoinBalance(0);
+      }
+    }
+
+    fetchDivinityCoinBalance();
+  }, [project.paymentProcessor]);
 
   // Poll for real-time funding stats updates every 10 seconds
   useEffect(() => {
@@ -474,6 +498,13 @@ export default function ProjectPage() {
                     Manage Pledge (${existingPledge.amount})
                   </Button>
                 </Link>
+              ) : project.paymentProcessor === "DIVINITYCOIN" && divinityCoinBalance === 0 ? (
+                <Link href="/dashboard/backer">
+                  <Button className="bg-gradient-to-r from-[#0066FF] to-blue-500 hover:from-[#0052CC] hover:to-blue-600 text-white shadow-lg shadow-[#0066FF]/20">
+                    <Coins className="mr-2 h-4 w-4" />
+                    Add Credits to Back
+                  </Button>
+                </Link>
               ) : (
                 <Link href={`${projectPath}/pledge`}>
                   <Button className="bg-gradient-to-r from-[#05ce78] to-emerald-500 hover:from-[#04b86a] hover:to-emerald-600 text-white shadow-lg shadow-[#05ce78]/20">
@@ -666,6 +697,14 @@ export default function ProjectPage() {
                 <Button className="w-full bg-muted text-muted-foreground font-medium cursor-not-allowed" size="lg" disabled>
                   No longer available
                 </Button>
+              ) : project.paymentProcessor === "DIVINITYCOIN" && divinityCoinBalance === 0 ? (
+                <Link href="/dashboard/backer" className="block">
+                  <Button className="w-full bg-gradient-to-r from-[#0066FF] to-blue-500 hover:from-[#0052CC] hover:to-blue-600 text-white font-medium shadow-lg shadow-[#0066FF]/20 group" size="lg">
+                    <Coins className="mr-2 h-4 w-4" />
+                    Add Credits to Back
+                    <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
+                  </Button>
+                </Link>
               ) : (
                 <Link href={`${projectPath}/pledge`} className="block">
                   <Button className="w-full bg-gradient-to-r from-[#05ce78] to-emerald-500 hover:from-[#04b86a] hover:to-emerald-600 text-white font-medium shadow-lg shadow-[#05ce78]/20 group" size="lg">
