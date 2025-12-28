@@ -172,6 +172,31 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
   const [expandedRewards, setExpandedRewards] = useState<Set<string>>(new Set());
   const [loadingRewards, setLoadingRewards] = useState(false);
   const [savingReward, setSavingReward] = useState<string | null>(null);
+  const [loadingSurvey, setLoadingSurvey] = useState(false);
+
+  // Fetch existing survey questions
+  const fetchSurveyQuestions = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingSurvey(true);
+    try {
+      const response = await fetch(`/api/creator/indiekit/surveys?projectId=${projectId}`, {
+        headers: getCSRFHeaders(),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.questions && data.questions.length > 0) {
+          // Use saved questions if they exist
+          setSurveyQuestions(data.questions);
+        }
+        // If no saved questions, keep the default template
+      }
+    } catch (error) {
+      console.error("Error fetching survey:", error);
+      // Keep default questions on error
+    } finally {
+      setLoadingSurvey(false);
+    }
+  }, [projectId]);
 
   // Fetch rewards for the project
   const fetchRewards = useCallback(async () => {
@@ -217,9 +242,10 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
   }, [projectId]);
 
   useEffect(() => {
+    fetchSurveyQuestions();
     fetchRewards();
     fetchItemQuestions();
-  }, [fetchRewards, fetchItemQuestions]);
+  }, [fetchSurveyQuestions, fetchRewards, fetchItemQuestions]);
 
   const getQuestionIcon = (type: string) => {
     const questionType = questionTypes.find((q) => q.id === type);
@@ -500,12 +526,11 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
               return;
             }
             try {
-              const res = await fetch("/api/creator/indiekit/survey", {
+              const res = await fetch("/api/creator/indiekit/surveys", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
                 body: JSON.stringify({
                   projectId,
-                  action: "save_draft",
                   questions: surveyQuestions,
                 }),
               });
@@ -576,7 +601,11 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {surveyQuestions.length === 0 ? (
+                {loadingSurvey ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : surveyQuestions.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="mb-4">No questions yet. Click a question type to add it.</p>
