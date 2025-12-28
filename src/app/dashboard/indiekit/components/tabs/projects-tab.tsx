@@ -75,16 +75,14 @@ export function ProjectsTab({
     }
   };
 
-  const handleViewAnalytics = (projectId: string, title: string) => {
+  const handleViewAnalytics = (projectId: string) => {
     // Navigate to the project's analytics page
     window.location.href = `/dashboard/project/${projectId}?tab=analytics`;
-    toast.info(`Opening analytics for "${title}"...`);
   };
 
-  const handleOpenSettings = (projectId: string, title: string) => {
+  const handleOpenSettings = (projectId: string) => {
     // Navigate to the project's settings page
     window.location.href = `/dashboard/project/${projectId}?tab=settings`;
-    toast.info(`Opening settings for "${title}"...`);
   };
 
   if (!hasActiveCampaign) {
@@ -209,14 +207,14 @@ export function ProjectsTab({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleViewAnalytics(project.id, project.title)}
+                    onClick={() => handleViewAnalytics(project.id)}
                   >
                     <BarChart3 className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleOpenSettings(project.id, project.title)}
+                    onClick={() => handleOpenSettings(project.id)}
                   >
                     <Settings className="h-4 w-4" />
                   </Button>

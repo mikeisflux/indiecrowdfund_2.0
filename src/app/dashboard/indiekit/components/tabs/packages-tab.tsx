@@ -94,6 +94,20 @@ export function PackagesTab({
   const [isConnecting, setIsConnecting] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
   const [fulfillmentMethod, setFulfillmentMethod] = useState("shipstation");
+  const [isSyncingStatus, setIsSyncingStatus] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupType, setNewGroupType] = useState<string>("domestic");
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [viewingGroup, setViewingGroup] = useState<PackageGroup | null>(null);
+  const [editingCustomsItem, setEditingCustomsItem] = useState<{ groupId: string; itemName: string } | null>(null);
+  const [customsDescription, setCustomsDescription] = useState("");
+  const [customsValue, setCustomsValue] = useState("");
+  const [customsCountry, setCustomsCountry] = useState("US");
+  const [isSavingCustoms, setIsSavingCustoms] = useState(false);
 
   const handleConnect = async () => {
     if (!apiKey.trim() || !apiSecret.trim()) {
@@ -182,6 +196,279 @@ export function PackagesTab({
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Refresh failed");
+    }
+  };
+
+  const handleUpdateConnection = async (service: ConnectedService) => {
+    if (!projectId) return;
+
+    try {
+      const res = await fetch(`/api/creator/indiekit/integrations?projectId=${projectId}&serviceId=${service.id}`, {
+        headers: getCSRFHeaders(),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to get connection details");
+      }
+
+      const data = await res.json();
+      setSelectedService(service.name.toLowerCase());
+      setApiKey(data.apiKey || "");
+      setApiSecret("");
+      setIsConnectDialogOpen(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update connection");
+    }
+  };
+
+  const handleSyncOrderStatus = async () => {
+    if (!projectId) return;
+
+    setIsSyncingStatus(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/fulfillment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "sync_status",
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Sync failed");
+      }
+
+      const data = await res.json();
+      toast.success(`Synced ${data.updated || 0} orders from ${fulfillmentMethod}`);
+      setLastRefreshed(new Date().toLocaleString());
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Sync failed");
+    } finally {
+      setIsSyncingStatus(false);
+    }
+  };
+
+  const handleRefreshPackageGroups = async () => {
+    if (!projectId) return;
+
+    setIsRefreshing(true);
+    try {
+      const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=refresh_groups`, {
+        headers: getCSRFHeaders(),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Refresh failed");
+      }
+
+      setLastRefreshed(new Date().toLocaleString());
+      toast.success("Package groups refreshed");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Refresh failed");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleSearchPackageGroup = async () => {
+    if (!projectId || !searchGroupId.trim()) {
+      toast.error("Please enter a group ID to search");
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=get_group&groupId=${searchGroupId}`, {
+        headers: getCSRFHeaders(),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Group not found");
+      }
+
+      const data = await res.json();
+      if (data.group) {
+        setViewingGroup(data.group);
+      } else {
+        toast.error(`Package group #${searchGroupId} not found`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Search failed");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handlePushAllOrders = async () => {
+    if (!projectId) return;
+
+    setIsPushing(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/fulfillment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "push_all",
+          segment: segmentFilter,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Push failed");
+      }
+
+      const data = await res.json();
+      toast.success(`Pushed ${data.count || 0} orders to ${fulfillmentMethod}`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Push failed");
+    } finally {
+      setIsPushing(false);
+    }
+  };
+
+  const handleRetryErrored = async () => {
+    if (!projectId) return;
+
+    setIsRetrying(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/fulfillment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "retry_errored",
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Retry failed");
+      }
+
+      const data = await res.json();
+      toast.success(`Re-pushed ${data.count || 0} errored orders`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Retry failed");
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  const handleCreateGroup = async () => {
+    if (!projectId || !newGroupName.trim()) {
+      toast.error("Please enter a group name");
+      return;
+    }
+
+    setIsCreatingGroup(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/fulfillment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "create_group",
+          name: newGroupName,
+          type: newGroupType,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create group");
+      }
+
+      toast.success(`Created package group "${newGroupName}"`);
+      setShowCreateGroupDialog(false);
+      setNewGroupName("");
+      setNewGroupType("domestic");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create group");
+    } finally {
+      setIsCreatingGroup(false);
+    }
+  };
+
+  const handleExport = async (groupId: string, format: "csv" | "excel" | "packing_slips" | "shipping_labels") => {
+    if (!projectId) return;
+
+    try {
+      const res = await fetch("/api/creator/indiekit/fulfillment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "export",
+          groupId,
+          format,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Export failed");
+      }
+
+      const data = await res.json();
+      if (data.downloadUrl) {
+        window.open(data.downloadUrl, "_blank");
+        toast.success(`Export ready for download`);
+      } else {
+        toast.success(`Export is being prepared. You'll receive an email when it's ready.`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Export failed");
+    }
+  };
+
+  const handleSaveCustoms = async () => {
+    if (!projectId || !editingCustomsItem) return;
+
+    setIsSavingCustoms(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/fulfillment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "update_customs",
+          groupId: editingCustomsItem.groupId,
+          itemName: editingCustomsItem.itemName,
+          customs: {
+            description: customsDescription,
+            value: parseFloat(customsValue) || 0,
+            countryOfOrigin: customsCountry,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update customs info");
+      }
+
+      toast.success("Customs information updated");
+      setEditingCustomsItem(null);
+      setCustomsDescription("");
+      setCustomsValue("");
+      setCustomsCountry("US");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update customs");
+    } finally {
+      setIsSavingCustoms(false);
     }
   };
 
@@ -373,7 +660,7 @@ export function PackagesTab({
                           {service.connectedAt}
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm" className="text-teal-600" onClick={() => toast.info(`Updating ${service.name} connection...`)}>
+                          <Button variant="ghost" size="sm" className="text-teal-600" onClick={() => handleUpdateConnection(service)}>
                             Update
                             <ExternalLink className="h-3 w-3 ml-1" />
                           </Button>
@@ -424,9 +711,9 @@ export function PackagesTab({
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
                 <p className="font-semibold">ShipStation</p>
                 <p className="text-sm text-muted-foreground">(NDM Express)</p>
-                <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={() => toast.info("Updating order status from ShipStation...")}>
-                  Update Order Status
-                  <ArrowRight className="h-3 w-3 ml-1" />
+                <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={handleSyncOrderStatus} disabled={isSyncingStatus}>
+                  {isSyncingStatus ? "Syncing..." : "Update Order Status"}
+                  {!isSyncingStatus && <ArrowRight className="h-3 w-3 ml-1" />}
                 </Button>
               </CardContent>
             </Card>
@@ -434,9 +721,13 @@ export function PackagesTab({
             {/* Add New Orders Box */}
             <Card>
               <CardContent className="pt-6">
-                <Button className="bg-teal-600 hover:bg-teal-700 w-full mb-2" onClick={() => toast.success("Package groups refreshed!")}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh Package Groups
+                <Button className="bg-teal-600 hover:bg-teal-700 w-full mb-2" onClick={handleRefreshPackageGroups} disabled={isRefreshing}>
+                  {isRefreshing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  {isRefreshing ? "Refreshing..." : "Refresh Package Groups"}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   Last Refreshed: {lastRefreshed}
@@ -454,8 +745,8 @@ export function PackagesTab({
                     value={searchGroupId}
                     onChange={(e) => setSearchGroupId(e.target.value)}
                   />
-                  <Button size="icon" className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info(`Searching for package group #${searchGroupId}...`)}>
-                    <Search className="h-4 w-4" />
+                  <Button size="icon" className="bg-teal-600 hover:bg-teal-700" onClick={handleSearchPackageGroup} disabled={isSearching}>
+                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   </Button>
                 </div>
               </CardContent>
@@ -472,23 +763,23 @@ export function PackagesTab({
               <div className="flex flex-wrap gap-4">
                 <Button
                   className="bg-teal-600 hover:bg-teal-700"
-                  disabled={totalNotPushed === 0}
-                  onClick={() => toast.success(`Pushing ${totalNotPushed} orders to ShipStation...`)}
+                  disabled={totalNotPushed === 0 || isPushing}
+                  onClick={handlePushAllOrders}
                 >
-                  <Send className="h-4 w-4 mr-2" />
-                  Push all {totalNotPushed} orders
+                  {isPushing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                  {isPushing ? "Pushing..." : `Push all ${totalNotPushed} orders`}
                 </Button>
                 <Button
                   className="bg-amber-600 hover:bg-amber-700"
-                  disabled={totalErrored === 0}
-                  onClick={() => toast.success(`Re-pushing ${totalErrored} errored orders...`)}
+                  disabled={totalErrored === 0 || isRetrying}
+                  onClick={handleRetryErrored}
                 >
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Re-push all {totalErrored} errored orders
+                  {isRetrying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+                  {isRetrying ? "Retrying..." : `Re-push all ${totalErrored} errored orders`}
                 </Button>
-                <Button variant="outline" onClick={() => toast.info("Updating order status...")}>
-                  <RefreshCcw className="h-4 w-4 mr-2" />
-                  Update Order Status
+                <Button variant="outline" onClick={handleSyncOrderStatus} disabled={isSyncingStatus}>
+                  {isSyncingStatus ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCcw className="h-4 w-4 mr-2" />}
+                  {isSyncingStatus ? "Syncing..." : "Update Order Status"}
                 </Button>
               </div>
             </CardContent>
@@ -565,9 +856,9 @@ export function PackagesTab({
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
                 <p className="font-semibold">ShipStation</p>
                 <p className="text-sm text-muted-foreground">(NDM Express)</p>
-                <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={() => toast.info("Updating order status from ShipStation...")}>
-                  Update Order Status
-                  <ArrowRight className="h-3 w-3 ml-1" />
+                <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={handleSyncOrderStatus} disabled={isSyncingStatus}>
+                  {isSyncingStatus ? "Syncing..." : "Update Order Status"}
+                  {!isSyncingStatus && <ArrowRight className="h-3 w-3 ml-1" />}
                 </Button>
               </CardContent>
             </Card>
@@ -575,9 +866,13 @@ export function PackagesTab({
             {/* Add New Orders Box */}
             <Card>
               <CardContent className="pt-6">
-                <Button className="bg-teal-600 hover:bg-teal-700 w-full mb-2" onClick={() => toast.success("Package groups refreshed!")}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh Package Groups
+                <Button className="bg-teal-600 hover:bg-teal-700 w-full mb-2" onClick={handleRefreshPackageGroups} disabled={isRefreshing}>
+                  {isRefreshing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  {isRefreshing ? "Refreshing..." : "Refresh Package Groups"}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   Last Refreshed: {lastRefreshed}
@@ -595,8 +890,8 @@ export function PackagesTab({
                     value={searchGroupId}
                     onChange={(e) => setSearchGroupId(e.target.value)}
                   />
-                  <Button size="icon" className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info(`Searching for package group #${searchGroupId}...`)}>
-                    <Search className="h-4 w-4" />
+                  <Button size="icon" className="bg-teal-600 hover:bg-teal-700" onClick={handleSearchPackageGroup} disabled={isSearching}>
+                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   </Button>
                 </div>
               </CardContent>
@@ -643,11 +938,11 @@ export function PackagesTab({
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => toast.success("Groups refreshed!")}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Groups
+              <Button variant="outline" onClick={handleRefreshPackageGroups} disabled={isRefreshing}>
+                {isRefreshing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                {isRefreshing ? "Refreshing..." : "Refresh Groups"}
               </Button>
-              <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening create group dialog...")}>
+              <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setShowCreateGroupDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Group
               </Button>
@@ -679,9 +974,9 @@ export function PackagesTab({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => toast.info(`Viewing group #${group.id}...`)}>View This Group</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.success(`Exporting orders for group #${group.id}...`)}>Export Orders</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.success(`Exporting reports for group #${group.id}...`)}>Export Reports</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setViewingGroup(group)}>View This Group</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExport(group.id, "csv")}>Export Orders</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExport(group.id, "excel")}>Export Reports</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -717,11 +1012,11 @@ export function PackagesTab({
                     <Button
                       size="sm"
                       className="bg-teal-600 hover:bg-teal-700 w-full"
-                      disabled={group.statusCounts.notPushed === 0}
-                      onClick={() => toast.success(`Sending ${group.statusCounts.notPushed} orders from group #${group.id} to ShipStation...`)}
+                      disabled={group.statusCounts.notPushed === 0 || isPushing}
+                      onClick={() => handlePushOrders(group.id)}
                     >
-                      <Send className="h-4 w-4 mr-2" />
-                      Send {group.statusCounts.notPushed} to ShipStation
+                      {isPushing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                      {isPushing ? "Sending..." : `Send ${group.statusCounts.notPushed} to ShipStation`}
                     </Button>
                   </div>
 
@@ -746,7 +1041,7 @@ export function PackagesTab({
                                   <p className="text-xs text-red-600 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
                                     Not Valid for Customs
-                                    <button className="text-teal-600 underline ml-1" onClick={() => toast.info(`Editing customs info for ${item.name}...`)}>edit</button>
+                                    <button className="text-teal-600 underline ml-1" onClick={() => setEditingCustomsItem({ groupId: group.id, itemName: item.name })}>edit</button>
                                   </p>
                                 )}
                               </div>
@@ -770,7 +1065,7 @@ export function PackagesTab({
 
                   {/* View Group Link */}
                   <div className="mt-4 text-center">
-                    <Button variant="link" className="text-teal-600" onClick={() => toast.info(`Viewing group #${group.id}...`)}>
+                    <Button variant="link" className="text-teal-600" onClick={() => setViewingGroup(group)}>
                       View This Group
                       <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
@@ -787,10 +1082,10 @@ export function PackagesTab({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-48">
-                        <DropdownMenuItem onClick={() => toast.success(`Exporting group #${group.id} as CSV...`)}>Export as CSV</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.success(`Exporting group #${group.id} as Excel...`)}>Export as Excel</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.success(`Exporting packing slips for group #${group.id}...`)}>Export Packing Slips</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.success(`Exporting shipping labels for group #${group.id}...`)}>Export Shipping Labels</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExport(group.id, "csv")}>Export as CSV</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExport(group.id, "excel")}>Export as Excel</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExport(group.id, "packing_slips")}>Export Packing Slips</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExport(group.id, "shipping_labels")}>Export Shipping Labels</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -864,6 +1159,211 @@ export function PackagesTab({
                 </>
               ) : (
                 "Connect Service"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Group Dialog */}
+      <Dialog open={showCreateGroupDialog} onOpenChange={setShowCreateGroupDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Package Group</DialogTitle>
+            <DialogDescription>
+              Create a new package group to organize orders for fulfillment
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="groupName">Group Name</Label>
+              <Input
+                id="groupName"
+                placeholder="e.g., US Domestic Orders"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="groupType">Group Type</Label>
+              <Select value={newGroupType} onValueChange={setNewGroupType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="domestic">Domestic</SelectItem>
+                  <SelectItem value="international">International</SelectItem>
+                  <SelectItem value="incomplete">Incomplete</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateGroupDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={handleCreateGroup}
+              disabled={isCreatingGroup}
+            >
+              {isCreatingGroup ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Group"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Group Dialog */}
+      <Dialog open={!!viewingGroup} onOpenChange={(open) => !open && setViewingGroup(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Package Group #{viewingGroup?.id}</DialogTitle>
+            <DialogDescription>
+              {viewingGroup?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {viewingGroup && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center justify-between py-3 px-4 bg-muted/30 rounded-lg">
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Not Pushed</p>
+                  <p className="text-xl font-bold">{viewingGroup.statusCounts.notPushed}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-300" />
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Errored</p>
+                  <p className="text-xl font-bold">{viewingGroup.statusCounts.pushErrored}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-300" />
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Pushed</p>
+                  <p className="text-xl font-bold">{viewingGroup.statusCounts.pushed}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-300" />
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Shipped</p>
+                  <p className="text-xl font-bold">{viewingGroup.statusCounts.shipped}</p>
+                </div>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">Qty.</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="text-right w-24">Weight</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {viewingGroup.items.map((item, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{item.quantity}</TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">
+                        {item.weight.lbs} lb {item.weight.oz.toFixed(1)} oz
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingGroup(null)}>
+              Close
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={() => {
+                if (viewingGroup) handlePushOrders(viewingGroup.id);
+              }}
+              disabled={!viewingGroup || viewingGroup.statusCounts.notPushed === 0 || isPushing}
+            >
+              {isPushing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send to ShipStation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Customs Dialog */}
+      <Dialog open={!!editingCustomsItem} onOpenChange={(open) => !open && setEditingCustomsItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Customs Information</DialogTitle>
+            <DialogDescription>
+              Update customs details for {editingCustomsItem?.itemName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="customsDescription">Description</Label>
+              <Input
+                id="customsDescription"
+                placeholder="Brief description of the item"
+                value={customsDescription}
+                onChange={(e) => setCustomsDescription(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customsValue">Declared Value (USD)</Label>
+              <Input
+                id="customsValue"
+                type="number"
+                placeholder="0.00"
+                value={customsValue}
+                onChange={(e) => setCustomsValue(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customsCountry">Country of Origin</Label>
+              <Select value={customsCountry} onValueChange={setCustomsCountry}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="US">United States</SelectItem>
+                  <SelectItem value="CN">China</SelectItem>
+                  <SelectItem value="UK">United Kingdom</SelectItem>
+                  <SelectItem value="DE">Germany</SelectItem>
+                  <SelectItem value="JP">Japan</SelectItem>
+                  <SelectItem value="KR">South Korea</SelectItem>
+                  <SelectItem value="TW">Taiwan</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingCustomsItem(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={handleSaveCustoms}
+              disabled={isSavingCustoms}
+            >
+              {isSavingCustoms ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Customs Info"
               )}
             </Button>
           </DialogFooter>

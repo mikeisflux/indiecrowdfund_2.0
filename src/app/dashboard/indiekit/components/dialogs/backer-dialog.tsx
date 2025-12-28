@@ -77,8 +77,28 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
   if (!backer) return null;
 
   const handleViewAsBacker = () => {
-    toast.info("Opening backer survey view...");
+    // Open backer survey view in new tab
     window.open(`/survey/${backer.id}`, '_blank');
+  };
+
+  const handleCancelOrder = async () => {
+    try {
+      const res = await fetch("/api/creator/indiekit/backers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          action: "cancel_order",
+          pledgeIds: [backer.id],
+          projectId: backer.projectId,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to cancel order");
+      toast.success("Order cancelled");
+      onOpenChange(false);
+    } catch (error) {
+      toast.error("Failed to cancel order");
+      console.error("Cancel order error:", error);
+    }
   };
 
   const handleResendSurvey = async () => {
@@ -615,9 +635,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
         onOpenChange={setShowCancelOrder}
         orderId={backer.id}
         backerName={backer.name}
-        onConfirm={() => {
-          toast.success("Order cancelled");
-        }}
+        onConfirm={handleCancelOrder}
       />
 
       <PackingSlipDialog

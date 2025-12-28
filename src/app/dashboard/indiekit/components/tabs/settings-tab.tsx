@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,8 @@ interface SettingsTabProps {
   projectName?: string;
   currency?: string;
   timezone?: string;
+  projectId?: string;
+  onRefresh?: () => void;
 }
 
 const settingsNav = [
@@ -62,11 +64,296 @@ export function SettingsTab({
   projectName = "Flying Sparks Volumes 1-3",
   currency = "USD",
   timezone = "America/Los_Angeles",
+  projectId,
+  onRefresh,
 }: SettingsTabProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("general");
   const [name, setName] = useState(projectName);
   const [selectedCurrency, setSelectedCurrency] = useState(currency);
   const [selectedTimezone, setSelectedTimezone] = useState(timezone);
+
+  // Loading states
+  const [isSavingGeneral, setIsSavingGeneral] = useState(false);
+  const [isSavingSurvey, setIsSavingSurvey] = useState(false);
+  const [isSavingShipping, setIsSavingShipping] = useState(false);
+  const [isSavingPayments, setIsSavingPayments] = useState(false);
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isConnectingShipStation, setIsConnectingShipStation] = useState(false);
+  const [isConnectingEasyship, setIsConnectingEasyship] = useState(false);
+
+  // File input ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Integration credentials
+  const [shipStationKey, setShipStationKey] = useState("");
+  const [shipStationSecret, setShipStationSecret] = useState("");
+  const [easyshipToken, setEasyshipToken] = useState("");
+
+  // Switch states
+  const [surveySettings, setSurveySettings] = useState({
+    allowAddressChanges: true,
+    sendConfirmationEmail: true,
+    lockAfterFulfillment: true,
+    sendReminders: true,
+  });
+
+  const [shippingSettings, setShippingSettings] = useState({
+    domesticShipping: true,
+    internationalShipping: true,
+    addressValidation: true,
+  });
+
+  const [paymentSettings, setPaymentSettings] = useState({
+    autoRetry: true,
+    sendReceipts: true,
+    failedNotifications: true,
+  });
+
+  const [notificationSettings, setNotificationSettings] = useState({
+    surveyCompletions: false,
+    failedPayments: true,
+    newPreorders: true,
+    dailySummary: true,
+  });
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !projectId) return;
+
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("projectId", projectId);
+
+      const res = await fetch("/api/creator/indiekit/settings/image", {
+        method: "POST",
+        headers: getCSRFHeaders(),
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to upload image");
+      }
+
+      toast.success("Project image updated");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleSaveGeneral = async () => {
+    if (!projectId) return;
+
+    setIsSavingGeneral(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          section: "general",
+          settings: { name, currency: selectedCurrency, timezone: selectedTimezone },
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save settings");
+      }
+
+      toast.success("General settings saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+    } finally {
+      setIsSavingGeneral(false);
+    }
+  };
+
+  const handleSaveSurvey = async () => {
+    if (!projectId) return;
+
+    setIsSavingSurvey(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          section: "survey",
+          settings: surveySettings,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save settings");
+      }
+
+      toast.success("Survey settings saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+    } finally {
+      setIsSavingSurvey(false);
+    }
+  };
+
+  const handleSaveShipping = async () => {
+    if (!projectId) return;
+
+    setIsSavingShipping(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          section: "shipping",
+          settings: shippingSettings,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save settings");
+      }
+
+      toast.success("Shipping settings saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+    } finally {
+      setIsSavingShipping(false);
+    }
+  };
+
+  const handleSavePayments = async () => {
+    if (!projectId) return;
+
+    setIsSavingPayments(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          section: "payments",
+          settings: paymentSettings,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save settings");
+      }
+
+      toast.success("Payment settings saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+    } finally {
+      setIsSavingPayments(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    if (!projectId) return;
+
+    setIsSavingNotifications(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          section: "notifications",
+          settings: notificationSettings,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save settings");
+      }
+
+      toast.success("Notification settings saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  };
+
+  const handleConnectShipStation = async () => {
+    if (!projectId || !shipStationKey.trim() || !shipStationSecret.trim()) {
+      toast.error("Please enter both API key and secret");
+      return;
+    }
+
+    setIsConnectingShipStation(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          service: "shipstation",
+          apiKey: shipStationKey,
+          apiSecret: shipStationSecret,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to connect ShipStation");
+      }
+
+      toast.success("Connected to ShipStation");
+      setShipStationKey("");
+      setShipStationSecret("");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to connect ShipStation");
+    } finally {
+      setIsConnectingShipStation(false);
+    }
+  };
+
+  const handleConnectEasyship = async () => {
+    if (!projectId || !easyshipToken.trim()) {
+      toast.error("Please enter your API token");
+      return;
+    }
+
+    setIsConnectingEasyship(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          service: "easyship",
+          apiKey: easyshipToken,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to connect Easyship");
+      }
+
+      toast.success("Connected to Easyship");
+      setEasyshipToken("");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to connect Easyship");
+    } finally {
+      setIsConnectingEasyship(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -130,7 +417,23 @@ export function SettingsTab({
                     <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center">
                       <ImageIcon className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <Button variant="outline" onClick={() => toast.info("Opening image selector...")}>Change Image</Button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploadingImage}>
+                      {isUploadingImage ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        "Change Image"
+                      )}
+                    </Button>
                   </div>
                 </div>
 
@@ -167,7 +470,16 @@ export function SettingsTab({
                   </Select>
                 </div>
 
-                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("General settings saved!")}>Save Changes</Button>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSaveGeneral} disabled={isSavingGeneral}>
+                  {isSavingGeneral ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -184,30 +496,51 @@ export function SettingsTab({
                     <p className="font-medium">Allow Address Changes</p>
                     <p className="text-sm text-muted-foreground">Backers can update shipping address after submitting</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={surveySettings.allowAddressChanges}
+                    onCheckedChange={(checked) => setSurveySettings({ ...surveySettings, allowAddressChanges: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Send Confirmation Email</p>
                     <p className="text-sm text-muted-foreground">Email backers when their survey is completed</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={surveySettings.sendConfirmationEmail}
+                    onCheckedChange={(checked) => setSurveySettings({ ...surveySettings, sendConfirmationEmail: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Lock After Fulfillment</p>
                     <p className="text-sm text-muted-foreground">Prevent survey changes once order ships</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={surveySettings.lockAfterFulfillment}
+                    onCheckedChange={(checked) => setSurveySettings({ ...surveySettings, lockAfterFulfillment: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Send Reminder Emails</p>
                     <p className="text-sm text-muted-foreground">Automatically remind backers to complete survey</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={surveySettings.sendReminders}
+                    onCheckedChange={(checked) => setSurveySettings({ ...surveySettings, sendReminders: checked })}
+                  />
                 </div>
-                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Survey settings saved!")}>Save Changes</Button>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSaveSurvey} disabled={isSavingSurvey}>
+                  {isSavingSurvey ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -224,23 +557,41 @@ export function SettingsTab({
                     <p className="font-medium">Domestic Shipping</p>
                     <p className="text-sm text-muted-foreground">Enable shipping within your country</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={shippingSettings.domesticShipping}
+                    onCheckedChange={(checked) => setShippingSettings({ ...shippingSettings, domesticShipping: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">International Shipping</p>
                     <p className="text-sm text-muted-foreground">Enable shipping to other countries</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={shippingSettings.internationalShipping}
+                    onCheckedChange={(checked) => setShippingSettings({ ...shippingSettings, internationalShipping: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Address Validation</p>
                     <p className="text-sm text-muted-foreground">Validate addresses using USPS/postal services</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={shippingSettings.addressValidation}
+                    onCheckedChange={(checked) => setShippingSettings({ ...shippingSettings, addressValidation: checked })}
+                  />
                 </div>
-                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Shipping settings saved!")}>Save Changes</Button>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSaveShipping} disabled={isSavingShipping}>
+                  {isSavingShipping ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -257,23 +608,41 @@ export function SettingsTab({
                     <p className="font-medium">Auto-Retry Failed Payments</p>
                     <p className="text-sm text-muted-foreground">Automatically retry failed charges after 3 days</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={paymentSettings.autoRetry}
+                    onCheckedChange={(checked) => setPaymentSettings({ ...paymentSettings, autoRetry: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Send Payment Receipts</p>
                     <p className="text-sm text-muted-foreground">Email receipts for successful charges</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={paymentSettings.sendReceipts}
+                    onCheckedChange={(checked) => setPaymentSettings({ ...paymentSettings, sendReceipts: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Failed Payment Notifications</p>
                     <p className="text-sm text-muted-foreground">Notify backers when their payment fails</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={paymentSettings.failedNotifications}
+                    onCheckedChange={(checked) => setPaymentSettings({ ...paymentSettings, failedNotifications: checked })}
+                  />
                 </div>
-                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Payment settings saved!")}>Save Changes</Button>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSavePayments} disabled={isSavingPayments}>
+                  {isSavingPayments ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -290,30 +659,51 @@ export function SettingsTab({
                     <p className="font-medium">Survey Completions</p>
                     <p className="text-sm text-muted-foreground">Get notified when backers complete surveys</p>
                   </div>
-                  <Switch />
+                  <Switch
+                    checked={notificationSettings.surveyCompletions}
+                    onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, surveyCompletions: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Failed Payments</p>
                     <p className="text-sm text-muted-foreground">Get notified about failed payment attempts</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={notificationSettings.failedPayments}
+                    onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, failedPayments: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">New Pre-orders</p>
                     <p className="text-sm text-muted-foreground">Get notified when new pre-orders are placed</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={notificationSettings.newPreorders}
+                    onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, newPreorders: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Daily Summary</p>
                     <p className="text-sm text-muted-foreground">Receive a daily activity summary email</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={notificationSettings.dailySummary}
+                    onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, dailySummary: checked })}
+                  />
                 </div>
-                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Notification settings saved!")}>Save Changes</Button>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSaveNotifications} disabled={isSavingNotifications}>
+                  {isSavingNotifications ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -364,11 +754,22 @@ export function SettingsTab({
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
                           <Label htmlFor="shipstation-key">API Key</Label>
-                          <Input id="shipstation-key" placeholder="Enter your ShipStation API key" />
+                          <Input
+                            id="shipstation-key"
+                            placeholder="Enter your ShipStation API key"
+                            value={shipStationKey}
+                            onChange={(e) => setShipStationKey(e.target.value)}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="shipstation-secret">API Secret</Label>
-                          <Input id="shipstation-secret" type="password" placeholder="Enter your API secret" />
+                          <Input
+                            id="shipstation-secret"
+                            type="password"
+                            placeholder="Enter your API secret"
+                            value={shipStationSecret}
+                            onChange={(e) => setShipStationSecret(e.target.value)}
+                          />
                         </div>
                         <p className="text-sm text-muted-foreground">
                           Find your API credentials in ShipStation under Settings → API Settings
@@ -376,8 +777,15 @@ export function SettingsTab({
                       </div>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => toast.info("ShipStation integration coming soon!")}>
-                          Connect
+                        <AlertDialogAction onClick={handleConnectShipStation} disabled={isConnectingShipStation}>
+                          {isConnectingShipStation ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Connecting...
+                            </>
+                          ) : (
+                            "Connect"
+                          )}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -427,7 +835,12 @@ export function SettingsTab({
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
                           <Label htmlFor="easyship-token">API Token</Label>
-                          <Input id="easyship-token" placeholder="Enter your Easyship API token" />
+                          <Input
+                            id="easyship-token"
+                            placeholder="Enter your Easyship API token"
+                            value={easyshipToken}
+                            onChange={(e) => setEasyshipToken(e.target.value)}
+                          />
                         </div>
                         <p className="text-sm text-muted-foreground">
                           Find your API token in Easyship under Settings → API
@@ -435,8 +848,15 @@ export function SettingsTab({
                       </div>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => toast.info("Easyship integration coming soon!")}>
-                          Connect
+                        <AlertDialogAction onClick={handleConnectEasyship} disabled={isConnectingEasyship}>
+                          {isConnectingEasyship ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Connecting...
+                            </>
+                          ) : (
+                            "Connect"
+                          )}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

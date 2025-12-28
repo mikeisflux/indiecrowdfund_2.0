@@ -90,6 +90,13 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
   const [segmentName, setSegmentName] = useState("");
   const [segmentType, setSegmentType] = useState<string>("CUSTOM");
   const [segmentDescription, setSegmentDescription] = useState("");
+  const [editingSegment, setEditingSegment] = useState<Segment | null>(null);
+  const [viewingSegment, setViewingSegment] = useState<Segment | null>(null);
+  const [viewingBackers, setViewingBackers] = useState<Array<{ id: string; name: string; email: string; pledgeAmount: number }>>([]);
+  const [isLoadingBackers, setIsLoadingBackers] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [emailSegment, setEmailSegment] = useState<Segment | null>(null);
 
   const handleCreateSegment = async (quickCreate?: { name: string; type: string; criteria?: Record<string, unknown> }) => {
     if (!projectId) {
@@ -157,6 +164,131 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete segment");
+    }
+  };
+
+  const handleViewBackers = async (segment: Segment) => {
+    if (!projectId) return;
+
+    setViewingSegment(segment);
+    setIsLoadingBackers(true);
+    try {
+      const res = await fetch(`/api/creator/indiekit/segments/backers?segmentId=${segment.id}&projectId=${projectId}`, {
+        headers: getCSRFHeaders(),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to load backers");
+      }
+
+      const data = await res.json();
+      setViewingBackers(data.backers || []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load backers");
+      setViewingSegment(null);
+    } finally {
+      setIsLoadingBackers(false);
+    }
+  };
+
+  const handleSendEmail = (segment: Segment) => {
+    setEmailSegment(segment);
+  };
+
+  const handleEditSegment = (segment: Segment) => {
+    setEditingSegment(segment);
+    setSegmentName(segment.name);
+    setSegmentDescription("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!projectId || !editingSegment) return;
+
+    setIsSavingEdit(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/segments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          segmentId: editingSegment.id,
+          name: segmentName,
+          description: segmentDescription,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update segment");
+      }
+
+      toast.success(`Updated segment "${segmentName}"`);
+      setEditingSegment(null);
+      setSegmentName("");
+      setSegmentDescription("");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update segment");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const handleDuplicateSegment = async (segment: Segment) => {
+    if (!projectId) return;
+
+    setIsDuplicating(segment.id);
+    try {
+      const res = await fetch("/api/creator/indiekit/segments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "duplicate",
+          segmentId: segment.id,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to duplicate segment");
+      }
+
+      toast.success(`Duplicated segment "${segment.name}"`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate segment");
+    } finally {
+      setIsDuplicating(null);
+    }
+  };
+
+  const handleSendEmailToSegment = async (subject: string, body: string) => {
+    if (!projectId || !emailSegment) return;
+
+    try {
+      const res = await fetch("/api/creator/indiekit/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "send_to_segment",
+          segmentId: emailSegment.id,
+          subject,
+          body,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to send email");
+      }
+
+      toast.success(`Email sent to ${emailSegment.backerCount} backers`);
+      setEmailSegment(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send email");
     }
   };
 
@@ -328,21 +460,25 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => toast.info(`Viewing ${segment.backerCount} backers in "${segment.name}"...`)}>
+                        <DropdownMenuItem onClick={() => handleViewBackers(segment)}>
                           <Users className="h-4 w-4 mr-2" />
                           View Backers
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info(`Opening email composer for "${segment.name}"...`)}>
+                        <DropdownMenuItem onClick={() => handleSendEmail(segment)}>
                           <Mail className="h-4 w-4 mr-2" />
                           Send Email
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info(`Editing segment "${segment.name}"...`)}>
+                        <DropdownMenuItem onClick={() => handleEditSegment(segment)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Segment
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.success(`Duplicated segment "${segment.name}"`)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Duplicate
+                        <DropdownMenuItem onClick={() => handleDuplicateSegment(segment)} disabled={isDuplicating === segment.id}>
+                          {isDuplicating === segment.id ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Copy className="h-4 w-4 mr-2" />
+                          )}
+                          {isDuplicating === segment.id ? "Duplicating..." : "Duplicate"}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteSegment(segment.id, segment.name)}>
                           <Trash2 className="h-4 w-4 mr-2" />
@@ -442,6 +578,209 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
           </div>
         </CardContent>
       </Card>
+
+      {/* View Backers Dialog */}
+      <Dialog open={!!viewingSegment} onOpenChange={(open) => !open && setViewingSegment(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Backers in "{viewingSegment?.name}"</DialogTitle>
+            <DialogDescription>
+              {viewingSegment?.backerCount} backers in this segment
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {isLoadingBackers ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead className="text-right">Pledge</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {viewingBackers.map((backer) => (
+                    <TableRow key={backer.id}>
+                      <TableCell className="font-medium">{backer.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{backer.email}</TableCell>
+                      <TableCell className="text-right">${backer.pledgeAmount}</TableCell>
+                    </TableRow>
+                  ))}
+                  {viewingBackers.length === 0 && !isLoadingBackers && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                        No backers in this segment
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingSegment(null)}>
+              Close
+            </Button>
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
+              if (viewingSegment) {
+                handleSendEmail(viewingSegment);
+                setViewingSegment(null);
+              }
+            }}>
+              <Mail className="h-4 w-4 mr-2" />
+              Email This Segment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Segment Dialog */}
+      <Dialog open={!!editingSegment} onOpenChange={(open) => !open && setEditingSegment(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Segment</DialogTitle>
+            <DialogDescription>
+              Update segment details
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-segment-name">Segment Name</Label>
+              <Input
+                id="edit-segment-name"
+                value={segmentName}
+                onChange={(e) => setSegmentName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-segment-description">Description (Optional)</Label>
+              <Textarea
+                id="edit-segment-description"
+                placeholder="Describe this segment..."
+                value={segmentDescription}
+                onChange={(e) => setSegmentDescription(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingSegment(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={handleSaveEdit}
+              disabled={isSavingEdit}
+            >
+              {isSavingEdit ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Email Dialog */}
+      <EmailComposerDialog
+        segment={emailSegment}
+        onClose={() => setEmailSegment(null)}
+        onSend={handleSendEmailToSegment}
+      />
     </div>
+  );
+}
+
+// Email Composer Dialog component
+function EmailComposerDialog({
+  segment,
+  onClose,
+  onSend,
+}: {
+  segment: Segment | null;
+  onClose: () => void;
+  onSend: (subject: string, body: string) => Promise<void>;
+}) {
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!subject.trim() || !body.trim()) {
+      toast.error("Please enter both subject and message");
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      await onSend(subject, body);
+      setSubject("");
+      setBody("");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!segment} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Send Email to Segment</DialogTitle>
+          <DialogDescription>
+            Send an email to {segment?.backerCount} backers in "{segment?.name}"
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="email-subject">Subject</Label>
+            <Input
+              id="email-subject"
+              placeholder="Email subject..."
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email-body">Message</Label>
+            <Textarea
+              id="email-body"
+              placeholder="Write your message..."
+              rows={6}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            className="bg-teal-600 hover:bg-teal-700"
+            onClick={handleSend}
+            disabled={isSending}
+          >
+            {isSending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Mail className="h-4 w-4 mr-2" />
+                Send Email
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
