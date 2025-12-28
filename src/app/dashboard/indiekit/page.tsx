@@ -93,6 +93,7 @@ import {
   SettingsTab,
   ProductsTab,
   AccountSettingsTab,
+  UpdatesTab,
 } from "./components/tabs";
 import { WhatsNextBanner } from "./components/whats-next-banner";
 
@@ -553,6 +554,10 @@ export default function IndieKitPage() {
                   <Clock className="h-4 w-4 mr-2" />
                   Timeline
                 </TabsTrigger>
+                <TabsTrigger value="updates">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Updates
+                </TabsTrigger>
               </TabsList>
               {/* Row 3 */}
               <TabsList className="mb-6 h-auto gap-1 p-2 bg-muted/50 justify-center">
@@ -690,6 +695,14 @@ export default function IndieKitPage() {
 
               <TabsContent value="timeline">
                 <TimelineTab entries={timeline} projectId={selectedProjectId} />
+              </TabsContent>
+
+              <TabsContent value="updates">
+                <UpdatesTab
+                  projectId={selectedProjectId}
+                  projectName={projects.find(p => p.id === selectedProjectId)?.title}
+                  hasActiveCampaign={hasActiveCampaign}
+                />
               </TabsContent>
 
               <TabsContent value="counts">

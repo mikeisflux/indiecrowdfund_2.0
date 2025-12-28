@@ -18,3 +18,4 @@ export { SurveyBuilderTab } from "./survey-builder-tab";
 export { SettingsTab } from "./settings-tab";
 export { ProductsTab } from "./products-tab";
 export { AccountSettingsTab } from "./account-settings-tab";
+export { UpdatesTab } from "./updates-tab";
