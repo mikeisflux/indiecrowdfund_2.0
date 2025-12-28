@@ -96,7 +96,9 @@ export default function UpdatesPage() {
   // Fetch projects
   const fetchProjects = useCallback(async () => {
     try {
-      const res = await fetch("/api/creator/dashboard?days=30");
+      const res = await fetch("/api/creator/dashboard?days=30", {
+        headers: getCSRFHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setProjects(data.projects || []);
