@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -84,7 +85,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
     try {
       const res = await fetch("/api/creator/indiekit/backers", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           action: "send_survey_reminder",
           pledgeIds: [backer.id],
@@ -103,7 +104,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
     try {
       const res = await fetch("/api/creator/indiekit/backers", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           action: "push_to_fulfillment",
           pledgeIds: [backer.id],

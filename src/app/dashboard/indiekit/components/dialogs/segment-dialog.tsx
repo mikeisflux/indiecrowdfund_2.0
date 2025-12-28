@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,7 +130,7 @@ export function SegmentDialog({
     try {
       const res = await fetch("/api/creator/indiekit/segments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           projectId,
           name: name.trim(),

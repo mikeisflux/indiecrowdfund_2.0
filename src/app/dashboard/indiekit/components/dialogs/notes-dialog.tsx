@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -104,7 +105,7 @@ export function NotesDialog({
     try {
       const res = await fetch("/api/creator/indiekit/notes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           pledgeId: backerId,
           projectId,
@@ -148,6 +149,7 @@ export function NotesDialog({
     try {
       const res = await fetch(`/api/creator/indiekit/notes?noteId=${noteId}`, {
         method: "DELETE",
+        headers: getCSRFHeaders(),
       });
 
       if (!res.ok) throw new Error("Failed to delete note");
