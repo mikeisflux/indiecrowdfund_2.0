@@ -210,6 +210,36 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     toast.success("Item deleted");
   };
 
+  const handleEndItem = async (id: string) => {
+    if (!projectId) {
+      toast.error("Project must be saved before ending items");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/items/${id}/end`,
+        { method: "POST", headers: getCSRFHeaders() }
+      );
+
+      if (!response.ok) {
+        const result = await response.json();
+        toast.error(result.error || "Failed to end item");
+        return;
+      }
+
+      // Update the item's isEnded status in local state
+      const item = items.find(i => i.id === id);
+      if (item) {
+        updateItem(id, { ...item, isEnded: true });
+      }
+      toast.success("Item ended - no longer available for new pledges");
+    } catch (error) {
+      console.error("End item error:", error);
+      toast.error("Failed to end item");
+    }
+  };
+
   // Auto-save image handlers for drag-drop in list view
   const handleItemImageChange = async (itemId: string, imageUrl: string) => {
     const item = items.find(i => i.id === itemId);
@@ -779,9 +809,11 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             items={items}
             rewards={rewards}
             projectId={projectId}
+            isLive={isLive}
             onCreateItem={openCreateItemDialog}
             onEditItem={openEditItemDialog}
             onDeleteItem={handleDeleteItem}
+            onEndItem={handleEndItem}
             onItemImageChange={handleItemImageChange}
             onReorderItems={reorderItems}
           />

@@ -151,7 +151,7 @@ export async function DELETE(
     // Verify project ownership or collaborator with edit permission
     const project = await db.project.findUnique({
       where: { id: projectId },
-      select: { creatorId: true },
+      select: { creatorId: true, status: true },
     });
 
     if (!project) {
@@ -161,6 +161,14 @@ export async function DELETE(
     const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
     if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Block deletion if project is live - use End Item instead
+    if (project.status === "LIVE" || project.status === "FUNDED") {
+      return NextResponse.json(
+        { error: "Cannot delete items from a live campaign. Use 'End Item' instead." },
+        { status: 400 }
+      );
     }
 
     // Delete the item (this will also remove from rewards via projectItemId)
@@ -212,7 +220,13 @@ export async function GET(
       orderBy: { createdAt: "asc" },
     });
 
-    return NextResponse.json({ items });
+    // Map items to include isEnded boolean for frontend
+    const mappedItems = items.map((item: typeof items[number]) => ({
+      ...item,
+      isEnded: !!item.endedAt,
+    }));
+
+    return NextResponse.json({ items: mappedItems });
   } catch (error) {
     console.error("Get items error:", error);
     return NextResponse.json(

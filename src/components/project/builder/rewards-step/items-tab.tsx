@@ -9,7 +9,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Box, GripVertical, ArrowUpDown } from "lucide-react";
+import { Plus, Box, GripVertical, ArrowUpDown, Ban } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { DragDropImageCell } from "@/components/ui/drag-drop-image-cell";
 import { RewardItemData, RewardData } from "@/types";
 import {
@@ -37,9 +49,11 @@ interface ItemsTabProps {
   items: RewardItemData[];
   rewards: RewardData[];
   projectId: string | null;
+  isLive: boolean;
   onCreateItem: () => void;
   onEditItem: (item: RewardItemData) => void;
   onDeleteItem: (id: string) => void;
+  onEndItem: (id: string) => void;
   onItemImageChange: (itemId: string, imageUrl: string) => Promise<void>;
   onReorderItems: (items: RewardItemData[]) => void;
 }
@@ -48,15 +62,19 @@ function SortableItemRow({
   item,
   includedIn,
   projectId,
+  isLive,
   onEditItem,
   onDeleteItem,
+  onEndItem,
   onItemImageChange,
 }: {
   item: RewardItemData;
   includedIn: { rewards: string[]; addons: string[] };
   projectId: string | null;
+  isLive: boolean;
   onEditItem: (item: RewardItemData) => void;
   onDeleteItem: (id: string) => void;
+  onEndItem: (id: string) => void;
   onItemImageChange: (itemId: string, imageUrl: string) => Promise<void>;
 }) {
   const {
@@ -142,7 +160,12 @@ function SortableItemRow({
       </div>
 
       {/* Actions */}
-      <div className="px-4 pb-4 flex justify-end gap-4">
+      <div className="px-4 pb-4 flex justify-end items-center gap-4">
+        {item.isEnded && (
+          <Badge variant="secondary" className="text-muted-foreground">
+            Ended
+          </Badge>
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -150,14 +173,51 @@ function SortableItemRow({
         >
           Edit
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:text-destructive"
-          onClick={() => onDeleteItem(item.id || "")}
-        >
-          Delete
-        </Button>
+        {isLive ? (
+          // Show End Item button for live projects
+          !item.isEnded && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-orange-600 hover:text-orange-700"
+                >
+                  <Ban className="h-4 w-4 mr-1" />
+                  End Item
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>End this item?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This item will no longer be available for new pledges. Existing backers
+                    who selected this item will still receive it. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-orange-600 hover:bg-orange-700"
+                    onClick={() => onEndItem(item.id || "")}
+                  >
+                    End Item
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )
+        ) : (
+          // Show Delete button for draft projects
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => onDeleteItem(item.id || "")}
+          >
+            Delete
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -167,9 +227,11 @@ export function ItemsTab({
   items,
   rewards,
   projectId,
+  isLive,
   onCreateItem,
   onEditItem,
   onDeleteItem,
+  onEndItem,
   onItemImageChange,
   onReorderItems,
 }: ItemsTabProps) {
@@ -323,8 +385,10 @@ export function ItemsTab({
                     item={item}
                     includedIn={includedIn}
                     projectId={projectId}
+                    isLive={isLive}
                     onEditItem={onEditItem}
                     onDeleteItem={onDeleteItem}
+                    onEndItem={onEndItem}
                     onItemImageChange={onItemImageChange}
                   />
                 );

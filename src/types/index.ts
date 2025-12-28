@@ -392,6 +392,7 @@ export interface RewardItemData {
   title: string;
   description?: string;
   imageUrl?: string;
+  isEnded?: boolean; // True if item has been ended (no longer available for new pledges)
 }
 
 export interface ProjectStoryData {
