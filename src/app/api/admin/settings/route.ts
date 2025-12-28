@@ -237,7 +237,8 @@ export async function PATCH(req: NextRequest) {
       storage: [
         "r2Enabled", "r2AccountId", "r2AccessKeyId", "r2SecretAccessKey",
         "r2BucketName", "r2PublicDomain", "r2Region",
-        "maxProjectStorageMB", "signedUrlExpirationMinutes"
+        "maxProjectStorageMB", "signedUrlExpirationMinutes",
+        "maxFileSizeMB", "allowedFileTypes", "digitalDownloadsEnabled"
       ]
     };
 

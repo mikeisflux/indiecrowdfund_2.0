@@ -22,7 +22,35 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { accountId, accessKeyId, secretAccessKey, bucketName } = body;
+    let { accountId, accessKeyId, secretAccessKey, bucketName } = body;
+
+    // If masked values are passed, fetch actual values from database
+    const isMasked = (val: string) => val === "••••••••";
+
+    if (isMasked(accessKeyId) || isMasked(secretAccessKey) || !accessKeyId || !secretAccessKey) {
+      const settings = await db.platformSettings.findUnique({
+        where: { id: "default" },
+        select: {
+          r2AccountId: true,
+          r2AccessKeyId: true,
+          r2SecretAccessKey: true,
+          r2BucketName: true,
+        },
+      });
+
+      if (!settings?.r2AccessKeyId || !settings?.r2SecretAccessKey) {
+        return NextResponse.json(
+          { error: "No R2 credentials configured. Please save credentials first." },
+          { status: 400 }
+        );
+      }
+
+      // Use stored values for masked/missing fields
+      accountId = accountId && !isMasked(accountId) ? accountId : settings.r2AccountId;
+      accessKeyId = settings.r2AccessKeyId;
+      secretAccessKey = settings.r2SecretAccessKey;
+      bucketName = bucketName || settings.r2BucketName;
+    }
 
     if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
       return NextResponse.json(
