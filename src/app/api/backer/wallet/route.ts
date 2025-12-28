@@ -20,12 +20,12 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
     }
 
-    // Get user with wallet data
+    // Get user with wallet balance
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: {
         id: true,
-        divinityCoins: true,
+        divinityCoinBalance: true,
         createdAt: true,
       },
     });
@@ -34,126 +34,112 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404, headers: corsHeaders });
     }
 
-    // Get all pledges to calculate bonuses earned
-    const pledges = await db.pledge.findMany({
-      where: {
-        userId: session.user.id,
-        status: "COMPLETED",
-      },
+    // Get transaction history from DivinityCoinTransaction model
+    const transactions = await db.divinityCoinTransaction.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      take: 50, // Limit to last 50 transactions
       include: {
-        project: {
-          select: {
-            title: true,
-            slug: true,
-            imageUrl: true,
+        pledge: {
+          include: {
+            project: {
+              select: { title: true },
+            },
           },
         },
       },
-      orderBy: { createdAt: "desc" },
     });
 
-    // Calculate wallet statistics
-    const totalEarned = pledges.reduce((sum, p) => sum + Number(p.bonusAmount || 0), 0);
-    const totalSpent = pledges.reduce((sum, p) => sum + Number(p.coinsUsed || 0), 0);
+    // Calculate lifetime stats from transactions
+    let lifetimeEarned = 0;
+    let lifetimeSpent = 0;
 
-    // Build transaction history from pledges
-    const transactions = pledges.flatMap((pledge) => {
-      const txns = [];
-
-      // Bonus earned transaction
-      if (Number(pledge.bonusAmount || 0) > 0) {
-        txns.push({
-          id: `${pledge.id}-bonus`,
-          type: "earned",
-          amount: Number(pledge.bonusAmount),
-          description: `Bonus from backing ${pledge.project.title}`,
-          projectTitle: pledge.project.title,
-          projectSlug: pledge.project.slug,
-          projectImage: pledge.project.imageUrl,
-          createdAt: pledge.createdAt,
-        });
+    transactions.forEach((tx) => {
+      const amount = Number(tx.amount);
+      if (amount > 0) {
+        lifetimeEarned += amount;
+      } else {
+        lifetimeSpent += Math.abs(amount);
       }
-
-      // Coins spent transaction
-      if (Number(pledge.coinsUsed || 0) > 0) {
-        txns.push({
-          id: `${pledge.id}-spent`,
-          type: "spent",
-          amount: Number(pledge.coinsUsed),
-          description: `Applied to ${pledge.project.title}`,
-          projectTitle: pledge.project.title,
-          projectSlug: pledge.project.slug,
-          projectImage: pledge.project.imageUrl,
-          createdAt: pledge.createdAt,
-        });
-      }
-
-      return txns;
     });
 
-    // Sort transactions by date
-    transactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Format transactions for frontend
+    const formattedTransactions = transactions.map((tx) => {
+      const amount = Number(tx.amount);
+      let type: "EARNED" | "SPENT" | "REDEEMED" | "BONUS" | "REFERRAL" | "REFUND" = "EARNED";
 
-    // Calculate monthly earning trends (last 6 months)
-    const now = new Date();
-    const monthlyData = [];
-    for (let i = 5; i >= 0; i--) {
-      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      // Map transaction type
+      switch (tx.type) {
+        case "PAYMENT":
+          type = "SPENT";
+          break;
+        case "REDEMPTION":
+          type = "REDEEMED";
+          break;
+        case "BONUS":
+          type = "BONUS";
+          break;
+        case "REFERRAL":
+          type = "REFERRAL";
+          break;
+        case "REFUND":
+          type = "REFUND";
+          break;
+        default:
+          type = amount >= 0 ? "EARNED" : "SPENT";
+      }
 
-      const monthPledges = pledges.filter((p) => {
-        const date = new Date(p.createdAt);
-        return date >= monthStart && date <= monthEnd;
-      });
+      return {
+        id: tx.id,
+        type,
+        amount: Math.abs(amount),
+        description: tx.description || `${type} transaction`,
+        projectTitle: tx.pledge?.project?.title || undefined,
+        createdAt: tx.createdAt.toISOString(),
+        metadata: tx.metadata ? JSON.parse(tx.metadata as string) : undefined,
+      };
+    });
 
-      const earned = monthPledges.reduce((sum, p) => sum + Number(p.bonusAmount || 0), 0);
-      const spent = monthPledges.reduce((sum, p) => sum + Number(p.coinsUsed || 0), 0);
+    // Get user's badge count for bonus calculation
+    const badgeCount = await db.badge.count({
+      where: { userId: session.user.id },
+    });
 
-      monthlyData.push({
-        month: monthStart.toLocaleDateString("en-US", { month: "short" }),
-        earned,
-        spent,
-      });
-    }
+    // Calculate bonus rate (0.05% per badge, capped at reasonable amount)
+    const rawBonusPercent = Math.min(badgeCount * 0.05, 5); // Cap at 5%
+    const monthlyCap = 0.03; // 0.03% monthly cap per badge
+    const appliedThisMonth = Math.min(rawBonusPercent, monthlyCap * badgeCount);
 
-    // Calculate bonus rate tiers based on total pledges
-    const pledgeCount = pledges.length;
-    let currentTier = "Bronze";
-    let bonusRate = 1;
-    let nextTier = "Silver";
-    let pledgesToNextTier = 5 - pledgeCount;
+    // Calculate this month's redemptions to get remaining cap
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
 
-    if (pledgeCount >= 25) {
-      currentTier = "Diamond";
-      bonusRate = 5;
-      nextTier = "";
-      pledgesToNextTier = 0;
-    } else if (pledgeCount >= 15) {
-      currentTier = "Gold";
-      bonusRate = 3;
-      nextTier = "Diamond";
-      pledgesToNextTier = 25 - pledgeCount;
-    } else if (pledgeCount >= 5) {
-      currentTier = "Silver";
-      bonusRate = 2;
-      nextTier = "Gold";
-      pledgesToNextTier = 15 - pledgeCount;
-    }
+    const thisMonthRedemptions = await db.divinityCoinTransaction.aggregate({
+      where: {
+        userId: session.user.id,
+        type: "REDEMPTION",
+        createdAt: { gte: startOfMonth },
+      },
+      _sum: { amount: true },
+    });
+
+    const totalRedeemedThisMonth = Number(thisMonthRedemptions._sum.amount || 0);
+    const bonusSavedThisMonth = totalRedeemedThisMonth * (appliedThisMonth / 100);
 
     return NextResponse.json({
-      balance: Number(user.divinityCoins || 0),
-      totalEarned,
-      totalSpent,
-      transactions,
-      monthlyData,
-      tier: {
-        current: currentTier,
-        bonusRate,
-        next: nextTier,
-        pledgesToNext: Math.max(0, pledgesToNextTier),
-        totalPledges: pledgeCount,
+      balance: Number(user.divinityCoinBalance || 0),
+      lifetimeEarned,
+      lifetimeSpent,
+      pendingBonuses: 0, // Could calculate from pending stretch goals
+      transactions: formattedTransactions,
+      bonusSummary: {
+        badgeCount,
+        rawBonusPercent: `${rawBonusPercent.toFixed(2)}%`,
+        appliedThisMonth: `${appliedThisMonth.toFixed(2)}%`,
+        remainingCap: `$${(1000 - bonusSavedThisMonth).toFixed(2)}`, // Example monthly cap
+        totalSavedThisMonth: `$${bonusSavedThisMonth.toFixed(2)}`,
       },
-      memberSince: user.createdAt,
     }, { headers: corsHeaders });
   } catch (error) {
     console.error("Error fetching wallet data:", error);
