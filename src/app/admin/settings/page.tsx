@@ -138,6 +138,19 @@ interface PlatformSettings {
   textColor: string;
   fontFamily: string;
   borderRadius: string;
+  // R2 Storage settings
+  r2Enabled: boolean;
+  r2AccountId: string | null;
+  r2AccessKeyId: string | null;
+  r2SecretAccessKey: string | null;
+  r2BucketName: string | null;
+  r2PublicDomain: string | null;
+  r2Region: string;
+  maxFileSizeMB: number;
+  maxProjectStorageMB: number;
+  allowedFileTypes: string;
+  digitalDownloadsEnabled: boolean;
+  signedUrlExpirationMinutes: number;
 }
 
 export default function SettingsPage() {
