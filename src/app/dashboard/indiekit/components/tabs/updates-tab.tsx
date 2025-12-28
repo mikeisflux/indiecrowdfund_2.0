@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,6 @@ import {
   MoreHorizontal,
   MessageSquare,
   Calendar,
-  Users,
   Globe,
   Lock,
   Loader2,
@@ -73,20 +72,12 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
   // Form state
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [visibility, setVisibility] = useState<"public" | "backers_only">("public");
   const [isBackersOnly, setIsBackersOnly] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPublishing, setIsPublishing] = useState<string | null>(null);
 
-  // Fetch updates
-  useEffect(() => {
-    if (projectId) {
-      fetchUpdates();
-    }
-  }, [projectId]);
-
-  const fetchUpdates = async () => {
+  const fetchUpdates = useCallback(async () => {
     if (!projectId) return;
 
     setIsLoading(true);
@@ -107,12 +98,18 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [projectId]);
+
+  // Fetch updates
+  useEffect(() => {
+    if (projectId) {
+      fetchUpdates();
+    }
+  }, [projectId, fetchUpdates]);
 
   const resetForm = () => {
     setTitle("");
     setContent("");
-    setVisibility("public");
     setIsBackersOnly(false);
   };
 
@@ -125,7 +122,6 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
     setEditingUpdate(update);
     setTitle(update.title);
     setContent(update.content);
-    setVisibility(update.visibility);
     setIsBackersOnly(update.visibility === "backers_only");
     setIsEditDialogOpen(true);
   };

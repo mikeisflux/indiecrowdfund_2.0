@@ -135,7 +135,6 @@ export default function IndieKitPage() {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isAddonDialogOpen, setIsAddonDialogOpen] = useState(false);
   const [editingAddon, setEditingAddon] = useState<SurveyAddon | null>(null);
-  const [isImportAddonDialogOpen, setIsImportAddonDialogOpen] = useState(false);
   const [isDistributionDialogOpen, setIsDistributionDialogOpen] = useState(false);
   const [isNPSDialogOpen, setIsNPSDialogOpen] = useState(false);
   const [packageGroupFilter, setPackageGroupFilter] = useState<string>("all");
@@ -615,7 +614,7 @@ export default function IndieKitPage() {
                   backers={backers}
                   surveyAddons={surveyAddons}
                   onOpenAddonDialog={() => setIsAddonDialogOpen(true)}
-                  onOpenImportDialog={() => setIsImportAddonDialogOpen(true)}
+                  onOpenImportDialog={() => toast.info("Import from Kickstarter/Gamefound coming soon")}
                   projectId={selectedProjectId}
                   onRefresh={fetchData}
                   onEditAddon={(addon) => {
