@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
     // Get unique emails
     const uniqueEmails = Array.from(
-      new Set(subscribers.map((s) => s.email).filter(Boolean))
+      new Set(subscribers.map((s: { email: string; name: string | null }) => s.email).filter(Boolean))
     ) as string[];
 
     for (const recipientEmail of uniqueEmails) {
