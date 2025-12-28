@@ -468,7 +468,7 @@ export async function DELETE(
     // Verify project ownership or collaborator with edit permission
     const project = await db.project.findUnique({
       where: { id: projectId },
-      select: { creatorId: true },
+      select: { creatorId: true, status: true },
     });
 
     if (!project) {
@@ -493,6 +493,14 @@ export async function DELETE(
 
     if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Check if project is live - cannot delete rewards from live projects
+    if (project.status === "LIVE") {
+      return NextResponse.json(
+        { error: "Cannot delete rewards from a live project. You can only end rewards to prevent new backers." },
+        { status: 400 }
+      );
     }
 
     // Check if reward has backers

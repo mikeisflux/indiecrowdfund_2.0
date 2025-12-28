@@ -174,38 +174,60 @@ function SortableAddonRow({
         <div className="flex items-center gap-4">
           {!addon.isEnded && (
             <>
-              {isLive && addon.backerCount && addon.backerCount > 0 ? (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-orange-600">
-                      <Ban className="h-4 w-4 mr-1" />
-                      End Add-on
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>End this add-on?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This add-on has {addon.backerCount} backer(s). Ending it will:
-                        <ul className="list-disc list-inside mt-2 space-y-1">
-                          <li>Keep the add-on for existing backers</li>
-                          <li>Prevent new backers from selecting it</li>
-                          <li>This action cannot be undone</li>
-                        </ul>
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => onEndReward(rewardIndex)}
-                        className="bg-orange-600 hover:bg-orange-700"
-                      >
+              {isLive ? (
+                // Live project: show End Add-on for addons with backers, Edit/Duplicate only for addons without
+                addon.backerCount && addon.backerCount > 0 ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="text-orange-600">
+                        <Ban className="h-4 w-4 mr-1" />
                         End Add-on
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>End this add-on?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This add-on has {addon.backerCount} backer(s). Ending it will:
+                          <ul className="list-disc list-inside mt-2 space-y-1">
+                            <li>Keep the add-on for existing backers</li>
+                            <li>Prevent new backers from selecting it</li>
+                            <li>This action cannot be undone</li>
+                          </ul>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onEndReward(rewardIndex)}
+                          className="bg-orange-600 hover:bg-orange-700"
+                        >
+                          End Add-on
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : (
+                  // Live project with 0 backers: allow Edit/Duplicate but NOT Delete
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditReward(rewardIndex)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDuplicateReward(rewardIndex)}
+                    >
+                      Duplicate
+                    </Button>
+                  </>
+                )
               ) : (
+                // Not live: allow Edit, Duplicate, and Delete
                 <>
                   <Button
                     variant="ghost"

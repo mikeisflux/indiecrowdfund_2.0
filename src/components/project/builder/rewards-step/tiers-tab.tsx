@@ -178,38 +178,60 @@ function SortableTierRow({
           {!tier.isEnded && (
             <>
               <Button variant="ghost" size="sm">Feature</Button>
-              {isLive && tier.backerCount && tier.backerCount > 0 ? (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-orange-600">
-                      <Ban className="h-4 w-4 mr-1" />
-                      End Reward
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>End this reward?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This reward has {tier.backerCount} backer(s). Ending it will:
-                        <ul className="list-disc list-inside mt-2 space-y-1">
-                          <li>Keep the reward for existing backers</li>
-                          <li>Prevent new backers from selecting it</li>
-                          <li>This action cannot be undone</li>
-                        </ul>
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => onEndReward(rewardIndex)}
-                        className="bg-orange-600 hover:bg-orange-700"
-                      >
+              {isLive ? (
+                // Live project: show End Reward for tiers with backers, Edit/Duplicate only for tiers without
+                tier.backerCount && tier.backerCount > 0 ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="text-orange-600">
+                        <Ban className="h-4 w-4 mr-1" />
                         End Reward
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>End this reward?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This reward has {tier.backerCount} backer(s). Ending it will:
+                          <ul className="list-disc list-inside mt-2 space-y-1">
+                            <li>Keep the reward for existing backers</li>
+                            <li>Prevent new backers from selecting it</li>
+                            <li>This action cannot be undone</li>
+                          </ul>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onEndReward(rewardIndex)}
+                          className="bg-orange-600 hover:bg-orange-700"
+                        >
+                          End Reward
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : (
+                  // Live project with 0 backers: allow Edit/Duplicate but NOT Delete
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditReward(rewardIndex)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDuplicateReward(rewardIndex)}
+                    >
+                      Duplicate
+                    </Button>
+                  </>
+                )
               ) : (
+                // Not live: allow Edit, Duplicate, and Delete
                 <>
                   <Button
                     variant="ghost"
