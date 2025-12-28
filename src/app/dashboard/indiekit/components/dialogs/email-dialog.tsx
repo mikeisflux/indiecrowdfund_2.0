@@ -289,21 +289,6 @@ Click here to see the project and back us today!`);
 
                 <hr />
 
-                {/* Send Test Email */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Button variant="outline">
-                      <Mail className="h-4 w-4 mr-2" />
-                      Send Test Email
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      Send to: user@example.com
-                    </span>
-                  </div>
-                </div>
-
-                <hr />
-
                 {/* Unsubscribe Info Link */}
                 <div>
                   <Button variant="link" className="text-teal-600 p-0 h-auto text-sm">
