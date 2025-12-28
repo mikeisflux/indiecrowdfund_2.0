@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +17,11 @@ import {
   Users,
   ShoppingCart,
   Inbox,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 import type { Backer, FulfillmentStats } from "../../types";
 import { STATUS_LABELS } from "../../types";
 
@@ -35,9 +38,64 @@ interface OverviewTabProps {
   stats: FulfillmentStats | null;
   backers: Backer[];
   timeline?: TimelineEntry[];
+  projectId?: string;
+  onSwitchTab?: (tab: string) => void;
 }
 
-export function OverviewTab({ stats, backers, timeline = [] }: OverviewTabProps) {
+export function OverviewTab({ stats, backers, timeline = [], projectId, onSwitchTab }: OverviewTabProps) {
+  const [isSendingReminders, setIsSendingReminders] = useState(false);
+
+  const handleWhatsNextAction = async () => {
+    const surveysPendingCount = stats?.surveysPending || 0;
+    const notShippedCount = backers.filter(b => b.status !== "shipped").length;
+
+    if (surveysPendingCount > 0) {
+      // Send survey reminders
+      if (!projectId) {
+        toast.error("No project selected");
+        return;
+      }
+
+      setIsSendingReminders(true);
+      try {
+        const res = await fetch("/api/creator/indiekit/backers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            action: "send_survey_reminder",
+            projectId,
+            sendToAll: true,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to send reminders");
+        }
+
+        toast.success(`Sent reminders to ${surveysPendingCount} backers`);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to send reminders");
+      } finally {
+        setIsSendingReminders(false);
+      }
+    } else if (notShippedCount > 0) {
+      // Switch to packages tab for shipping workflow
+      if (onSwitchTab) {
+        onSwitchTab("packages");
+      } else {
+        window.location.href = "/dashboard/indiekit?tab=packages";
+      }
+    } else {
+      // View fulfillment report - switch to timeline tab
+      if (onSwitchTab) {
+        onSwitchTab("timeline");
+      } else {
+        window.location.href = "/dashboard/indiekit?tab=timeline";
+      }
+    }
+  };
+
   // Determine next action based on current state
   const surveysPending = stats?.surveysPending || 0;
   const notShipped = backers.filter(b => b.status !== "shipped").length;
@@ -81,13 +139,23 @@ export function OverviewTab({ stats, backers, timeline = [] }: OverviewTabProps)
               )}
             </div>
           </div>
-          <Button variant="secondary" className="bg-white text-teal-600 hover:bg-teal-50" onClick={() => {
-            if (surveysPending > 0) toast.success("Sending survey reminders...");
-            else if (notShipped > 0) toast.info("Opening shipping workflow...");
-            else toast.info("Opening fulfillment report...");
-          }}>
-            {surveysPending > 0 ? "Send Reminders" : notShipped > 0 ? "Start Shipping" : "View Report"}
-            <ChevronRight className="h-4 w-4 ml-2" />
+          <Button
+            variant="secondary"
+            className="bg-white text-teal-600 hover:bg-teal-50"
+            onClick={handleWhatsNextAction}
+            disabled={isSendingReminders}
+          >
+            {isSendingReminders ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                {surveysPending > 0 ? "Send Reminders" : notShipped > 0 ? "Start Shipping" : "View Report"}
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -291,7 +359,13 @@ export function OverviewTab({ stats, backers, timeline = [] }: OverviewTabProps)
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Recent Activity</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => toast.info("Viewing all activity...")}>View All</Button>
+          <Button variant="outline" size="sm" onClick={() => {
+            if (onSwitchTab) {
+              onSwitchTab("timeline");
+            } else {
+              window.location.href = "/dashboard/indiekit?tab=timeline";
+            }
+          }}>View All</Button>
         </CardHeader>
         <CardContent>
           {recentActivity.length > 0 ? (

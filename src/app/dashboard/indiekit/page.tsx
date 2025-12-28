@@ -582,7 +582,7 @@ export default function IndieKitPage() {
               </TabsList>
 
               <TabsContent value="overview">
-                <OverviewTab stats={stats} backers={backers} timeline={timeline} />
+                <OverviewTab stats={stats} backers={backers} timeline={timeline} projectId={selectedProjectId} onSwitchTab={setActiveTab} />
               </TabsContent>
 
               <TabsContent value="backers">
@@ -613,6 +613,12 @@ export default function IndieKitPage() {
                     toast.info("Opening add-on import...");
                     // TODO: Open import dialog to select add-ons from other projects
                   }}
+                  projectId={selectedProjectId}
+                  onRefresh={fetchData}
+                  onEditAddon={(addon) => {
+                    // TODO: Open edit dialog for the addon
+                    toast.info(`Opening editor for "${addon.name}"...`);
+                  }}
                 />
               </TabsContent>
 
@@ -628,7 +634,7 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="shipping">
-                <ShippingTab shippingServices={shippingServices} />
+                <ShippingTab shippingServices={shippingServices} projectId={selectedProjectId} onRefresh={fetchData} />
               </TabsContent>
 
               <TabsContent value="digital">
@@ -638,6 +644,8 @@ export default function IndieKitPage() {
                   distributionRules={distributionRules}
                   onOpenUploadDialog={() => setIsUploadDialogOpen(true)}
                   onOpenDistributionDialog={() => setIsDistributionDialogOpen(true)}
+                  projectId={selectedProjectId}
+                  onRefresh={fetchData}
                 />
               </TabsContent>
 
@@ -649,11 +657,13 @@ export default function IndieKitPage() {
                 <EmailsTab
                   emailCampaigns={emailCampaigns}
                   onOpenEmailDialog={() => setIsEmailDialogOpen(true)}
+                  projectId={selectedProjectId}
+                  onRefresh={fetchData}
                 />
               </TabsContent>
 
               <TabsContent value="teaser">
-                <TeaserPagesTab hasActiveCampaign={hasActiveCampaign} />
+                <TeaserPagesTab hasActiveCampaign={hasActiveCampaign} projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="email-list">
@@ -681,7 +691,7 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="timeline">
-                <TimelineTab entries={timeline} />
+                <TimelineTab entries={timeline} projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="counts">

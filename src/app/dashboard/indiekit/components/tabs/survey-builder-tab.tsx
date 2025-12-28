@@ -449,11 +449,38 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => toast.info("Opening survey preview...")}>
+          <Button variant="outline" onClick={() => {
+            if (projectId) {
+              window.open(`/survey/preview?projectId=${projectId}`, "_blank");
+            } else {
+              toast.error("No project selected");
+            }
+          }}>
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button>
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Survey draft saved!")}>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={async () => {
+            if (!projectId) {
+              toast.error("No project selected");
+              return;
+            }
+            try {
+              const res = await fetch("/api/creator/indiekit/survey", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                body: JSON.stringify({
+                  projectId,
+                  action: "save_draft",
+                  questions: surveyQuestions,
+                }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "Failed to save");
+              toast.success("Survey draft saved!");
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Failed to save");
+            }
+          }}>
             <Save className="h-4 w-4 mr-2" />
             Save Draft
           </Button>

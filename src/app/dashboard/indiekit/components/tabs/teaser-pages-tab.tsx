@@ -12,7 +12,6 @@ import {
   Users,
   AlertCircle,
 } from "lucide-react";
-import { toast } from "sonner";
 
 interface TeaserPage {
   id: string;
@@ -27,9 +26,20 @@ interface TeaserPage {
 interface TeaserPagesTabProps {
   teaserPages?: TeaserPage[];
   hasActiveCampaign?: boolean;
+  projectId?: string;
 }
 
-export function TeaserPagesTab({ teaserPages = [], hasActiveCampaign = false }: TeaserPagesTabProps) {
+export function TeaserPagesTab({ teaserPages = [], hasActiveCampaign = false, projectId }: TeaserPagesTabProps) {
+  const handleCreatePage = () => {
+    window.location.href = projectId
+      ? `/dashboard/indiekit/teaser/new?projectId=${projectId}`
+      : "/dashboard/indiekit/teaser/new";
+  };
+
+  const handleEditPage = (pageId: string) => {
+    window.location.href = `/dashboard/indiekit/teaser/${pageId}/edit`;
+  };
+
   if (!hasActiveCampaign) {
     return (
       <Card>
@@ -56,7 +66,7 @@ export function TeaserPagesTab({ teaserPages = [], hasActiveCampaign = false }: 
             Collect email signups before your campaign launches
           </p>
         </div>
-        <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening page creator...")}>
+        <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleCreatePage}>
           <Plus className="h-4 w-4 mr-2" />
           Create New Page
         </Button>
@@ -95,7 +105,7 @@ export function TeaserPagesTab({ teaserPages = [], hasActiveCampaign = false }: 
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => toast.info(`Editing "${page.title}"...`)}>
+                      <Button variant="outline" size="sm" onClick={() => handleEditPage(page.id)}>
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
@@ -149,7 +159,7 @@ export function TeaserPagesTab({ teaserPages = [], hasActiveCampaign = false }: 
               <p className="text-sm text-muted-foreground mb-4">
                 Create a teaser page to collect email signups before your campaign launches
               </p>
-              <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening page creator...")}>
+              <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleCreatePage}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Your First Page
               </Button>

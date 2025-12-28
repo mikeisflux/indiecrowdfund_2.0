@@ -24,8 +24,10 @@ import {
   MessageSquare,
   ChevronRight,
   CalendarDays,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface TimelineEntry {
   id: string;
@@ -66,16 +68,43 @@ const typeFilterMap: Record<string, string[]> = {
   support: ["comment"],
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function TimelineTab({ entries = [], projectId }: TimelineTabProps) {
   const [activityFilter, setActivityFilter] = useState("all");
   const [dateRange, setDateRange] = useState("all");
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [allEntries, setAllEntries] = useState(entries);
+
+  const handleLoadMore = async () => {
+    if (!projectId) return;
+
+    setIsLoadingMore(true);
+    try {
+      const res = await fetch(`/api/creator/indiekit/timeline?projectId=${projectId}&offset=${allEntries.length}`, {
+        headers: getCSRFHeaders(),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load more activity");
+      }
+
+      if (data.entries && data.entries.length > 0) {
+        setAllEntries([...allEntries, ...data.entries]);
+      } else {
+        toast.info("No more activity to load");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load more activity");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Filter entries based on selected filters
   const filteredEntries = useMemo(() => {
     const allowedTypes = typeFilterMap[activityFilter] || typeFilterMap.all;
-    return entries.filter(entry => allowedTypes.includes(entry.type));
-  }, [entries, activityFilter]);
+    return allEntries.filter(entry => allowedTypes.includes(entry.type));
+  }, [allEntries, activityFilter]);
 
   // Group filtered entries by date
   const groupedEntries = useMemo(() => {
@@ -200,7 +229,16 @@ export function TimelineTab({ entries = [], projectId }: TimelineTabProps) {
       {/* Load More - only show if we have entries */}
       {hasEntries && filteredEntries.length >= 50 && (
         <div className="text-center">
-          <Button variant="outline" onClick={() => toast.info("Loading more activity...")}>Load More Activity</Button>
+          <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              "Load More Activity"
+            )}
+          </Button>
         </div>
       )}
     </div>

@@ -1,8 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +30,11 @@ import {
   X,
   Trash2,
   Download,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 import type { SurveyAddon, Backer, FulfillmentStats } from "../../types";
 
 interface AddonsTabProps {
@@ -31,9 +43,103 @@ interface AddonsTabProps {
   surveyAddons: SurveyAddon[];
   onOpenAddonDialog: () => void;
   onOpenImportDialog?: () => void;
+  projectId?: string;
+  onRefresh?: () => void;
+  onEditAddon?: (addon: SurveyAddon) => void;
 }
 
-export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onOpenImportDialog }: AddonsTabProps) {
+export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onOpenImportDialog, projectId, onRefresh, onEditAddon }: AddonsTabProps) {
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [confirmDeleteAddon, setConfirmDeleteAddon] = useState<SurveyAddon | null>(null);
+  const [isDeletingAddon, setIsDeletingAddon] = useState(false);
+
+  const handleDuplicateAddon = async (addon: SurveyAddon) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    setDuplicatingId(addon.id);
+    try {
+      const res = await fetch("/api/creator/indiekit/addons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "duplicate",
+          addonId: addon.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to duplicate addon");
+      }
+
+      toast.success(`Duplicated "${addon.name}"`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate addon");
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
+
+  const handleToggleAddon = async (addon: SurveyAddon) => {
+    if (!projectId) return;
+
+    setTogglingId(addon.id);
+    try {
+      const res = await fetch("/api/creator/indiekit/addons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: addon.available ? "deactivate" : "activate",
+          addonId: addon.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update addon");
+      }
+
+      toast.success(`${addon.available ? "Deactivated" : "Activated"} "${addon.name}"`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update addon");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleDeleteAddon = async (addon: SurveyAddon) => {
+    if (!projectId) return;
+
+    setIsDeletingAddon(true);
+    try {
+      const res = await fetch(`/api/creator/indiekit/addons?projectId=${projectId}&addonId=${addon.id}`, {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete addon");
+      }
+
+      toast.success(`Deleted "${addon.name}"`);
+      setConfirmDeleteAddon(null);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete addon");
+    } finally {
+      setIsDeletingAddon(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Add-ons Header */}
@@ -126,7 +232,7 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => toast.info(`Editing "${addon.name}"...`)}>
+                  <Button size="sm" variant="outline" onClick={() => onEditAddon?.(addon)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit
                   </Button>
@@ -137,24 +243,31 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.success(`Duplicated "${addon.name}"`)}>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Duplicate
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toast.success(`${addon.available ? "Deactivated" : "Activated"} "${addon.name}"`)}>
-                        {addon.available ? (
-                          <>
-                            <X className="h-4 w-4 mr-2" />
-                            Deactivate
-                          </>
+                      <DropdownMenuItem
+                        onClick={() => handleDuplicateAddon(addon)}
+                        disabled={duplicatingId === addon.id}
+                      >
+                        {duplicatingId === addon.id ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
-                          <>
-                            <Check className="h-4 w-4 mr-2" />
-                            Activate
-                          </>
+                          <Copy className="h-4 w-4 mr-2" />
                         )}
+                        {duplicatingId === addon.id ? "Duplicating..." : "Duplicate"}
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600" onClick={() => toast.success(`Deleted "${addon.name}"`)}>
+                      <DropdownMenuItem
+                        onClick={() => handleToggleAddon(addon)}
+                        disabled={togglingId === addon.id}
+                      >
+                        {togglingId === addon.id ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : addon.available ? (
+                          <X className="h-4 w-4 mr-2" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-2" />
+                        )}
+                        {togglingId === addon.id ? "Updating..." : addon.available ? "Deactivate" : "Activate"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-red-600" onClick={() => setConfirmDeleteAddon(addon)}>
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
@@ -235,6 +348,45 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirm Delete Dialog */}
+      <Dialog open={!!confirmDeleteAddon} onOpenChange={(open) => !open && setConfirmDeleteAddon(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Delete Add-on?
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{confirmDeleteAddon?.name}&quot;?
+              {confirmDeleteAddon && confirmDeleteAddon.purchasedCount > 0 && (
+                <span className="block mt-2 text-amber-600">
+                  Warning: This add-on has been purchased {confirmDeleteAddon.purchasedCount} time{confirmDeleteAddon.purchasedCount !== 1 ? 's' : ''}.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteAddon(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmDeleteAddon && handleDeleteAddon(confirmDeleteAddon)}
+              disabled={isDeletingAddon}
+            >
+              {isDeletingAddon ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

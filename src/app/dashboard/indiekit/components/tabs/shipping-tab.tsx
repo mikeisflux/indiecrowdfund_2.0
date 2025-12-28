@@ -23,8 +23,10 @@ import {
   Trash2,
   Globe,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 import type { ShippingService } from "../../types";
 
 interface ShippingZone {
@@ -41,6 +43,8 @@ interface ShippingZone {
 
 interface ShippingTabProps {
   shippingServices: ShippingService[];
+  projectId?: string;
+  onRefresh?: () => void;
 }
 
 // Demo shipping zones
@@ -102,10 +106,124 @@ const demoShippingZones: ShippingZone[] = [
   },
 ];
 
-export function ShippingTab({ shippingServices }: ShippingTabProps) {
+export function ShippingTab({ shippingServices, projectId, onRefresh }: ShippingTabProps) {
   const [shippingZones, setShippingZones] = useState<ShippingZone[]>(demoShippingZones);
   const [showZoneDialog, setShowZoneDialog] = useState(false);
   const [editingZone, setEditingZone] = useState<ShippingZone | null>(null);
+  const [connectingService, setConnectingService] = useState<string | null>(null);
+  const [disconnectingService, setDisconnectingService] = useState<string | null>(null);
+  const [savingZone, setSavingZone] = useState(false);
+  const [showConnectDialog, setShowConnectDialog] = useState<ShippingService | null>(null);
+  const [connectCredentials, setConnectCredentials] = useState({ apiKey: "", apiSecret: "" });
+
+  const handleConnectService = async (service: ShippingService) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    if (!connectCredentials.apiKey.trim()) {
+      toast.error("Please enter API credentials");
+      return;
+    }
+
+    setConnectingService(service.id);
+    try {
+      const res = await fetch("/api/creator/indiekit/shipping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "connect",
+          serviceId: service.id,
+          serviceName: service.name,
+          credentials: connectCredentials,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to connect service");
+      }
+
+      toast.success(`Connected to ${service.name}`);
+      setShowConnectDialog(null);
+      setConnectCredentials({ apiKey: "", apiSecret: "" });
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to connect service");
+    } finally {
+      setConnectingService(null);
+    }
+  };
+
+  const handleDisconnectService = async (service: ShippingService) => {
+    if (!projectId) return;
+
+    setDisconnectingService(service.id);
+    try {
+      const res = await fetch(`/api/creator/indiekit/shipping?projectId=${projectId}&serviceId=${service.id}`, {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to disconnect service");
+      }
+
+      toast.success(`Disconnected from ${service.name}`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to disconnect service");
+    } finally {
+      setDisconnectingService(null);
+    }
+  };
+
+  const handleSaveZone = async () => {
+    if (!projectId || !editingZone) return;
+
+    if (!editingZone.name.trim()) {
+      toast.error("Please enter a zone name");
+      return;
+    }
+
+    setSavingZone(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/shipping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: editingZone.id ? "update_zone" : "create_zone",
+          zone: editingZone,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to save zone");
+      }
+
+      if (editingZone.id) {
+        // Update existing zone
+        setShippingZones(shippingZones.map(z => z.id === editingZone.id ? { ...editingZone, id: data.zoneId || editingZone.id } : z));
+        toast.success(`Updated "${editingZone.name}" zone`);
+      } else {
+        // Add new zone
+        setShippingZones([...shippingZones, { ...editingZone, id: data.zoneId || String(Date.now()) }]);
+        toast.success(`Added "${editingZone.name}" zone`);
+      }
+      setShowZoneDialog(false);
+      setEditingZone(null);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save zone");
+    } finally {
+      setSavingZone(false);
+    }
+  };
 
   const handleAddZone = () => {
     setEditingZone({
@@ -161,10 +279,27 @@ export function ShippingTab({ shippingServices }: ShippingTabProps) {
                     <Check className="h-3 w-3 mr-1" />
                     Connected
                   </Badge>
-                  <Button variant="ghost" size="sm" onClick={() => toast.success(`Disconnected from ${service.name}`)}>Disconnect</Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDisconnectService(service)}
+                    disabled={disconnectingService === service.id}
+                  >
+                    {disconnectingService === service.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Disconnecting...
+                      </>
+                    ) : (
+                      "Disconnect"
+                    )}
+                  </Button>
                 </div>
               ) : (
-                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info(`Connecting to ${service.name}...`)}>
+                <Button
+                  className="bg-teal-600 hover:bg-teal-700"
+                  onClick={() => setShowConnectDialog(service)}
+                >
                   <Link2 className="h-4 w-4 mr-2" />
                   Connect
                 </Button>
@@ -394,11 +529,76 @@ export function ShippingTab({ shippingServices }: ShippingTabProps) {
             <Button variant="outline" onClick={() => setShowZoneDialog(false)}>
               Cancel
             </Button>
-            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
-              toast.success(editingZone?.id ? `Updated "${editingZone.name}" zone` : `Added "${editingZone?.name}" zone`);
-              setShowZoneDialog(false);
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={handleSaveZone}
+              disabled={savingZone}
+            >
+              {savingZone ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                editingZone?.id ? "Save Changes" : "Add Zone"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Connect Service Dialog */}
+      <Dialog open={!!showConnectDialog} onOpenChange={(open) => !open && setShowConnectDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Connect to {showConnectDialog?.name}</DialogTitle>
+            <DialogDescription>
+              Enter your API credentials to connect to {showConnectDialog?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>API Key</Label>
+              <Input
+                type="password"
+                value={connectCredentials.apiKey}
+                onChange={(e) => setConnectCredentials({ ...connectCredentials, apiKey: e.target.value })}
+                placeholder="Enter API key"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>API Secret (optional)</Label>
+              <Input
+                type="password"
+                value={connectCredentials.apiSecret}
+                onChange={(e) => setConnectCredentials({ ...connectCredentials, apiSecret: e.target.value })}
+                placeholder="Enter API secret"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowConnectDialog(null);
+              setConnectCredentials({ apiKey: "", apiSecret: "" });
             }}>
-              {editingZone?.id ? "Save Changes" : "Add Zone"}
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={() => showConnectDialog && handleConnectService(showConnectDialog)}
+              disabled={connectingService === showConnectDialog?.id}
+            >
+              {connectingService === showConnectDialog?.id ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Link2 className="h-4 w-4 mr-2" />
+                  Connect
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

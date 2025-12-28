@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   UserCircle,
   Camera,
@@ -16,8 +24,10 @@ import {
   Shield,
   ExternalLink,
   Plus,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface AccountSettingsTabProps {
   userName?: string;
@@ -42,6 +52,135 @@ export function AccountSettingsTab({
     paymentFailed: true,
     productUpdates: true,
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Loading states
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
+  const [showEditCardDialog, setShowEditCardDialog] = useState(false);
+
+  const handleChangePhoto = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const res = await fetch("/api/creator/account/avatar", {
+        method: "POST",
+        headers: getCSRFHeaders(),
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to upload photo");
+      }
+
+      toast.success("Profile photo updated!");
+      window.location.reload();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload photo");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!name.trim()) {
+      toast.error("Please enter your name");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const res = await fetch("/api/creator/account/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ name, email }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update profile");
+      }
+
+      toast.success("Profile saved!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update profile");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!currentPassword) {
+      toast.error("Please enter your current password");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords don't match");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const res = await fetch("/api/creator/account/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update password");
+      }
+
+      toast.success("Password updated!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update password");
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    setIsSavingPreferences(true);
+    try {
+      const res = await fetch("/api/creator/account/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ notifications }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to save preferences");
+      }
+
+      toast.success("Preferences saved!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save preferences");
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -77,9 +216,25 @@ export function AccountSettingsTab({
                   .toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <Button variant="outline" onClick={() => toast.info("Opening photo selector...")}>
-              <Camera className="h-4 w-4 mr-2" />
-              Change Photo
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handlePhotoSelected}
+            />
+            <Button variant="outline" onClick={handleChangePhoto} disabled={isUploadingPhoto}>
+              {isUploadingPhoto ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Camera className="h-4 w-4 mr-2" />
+                  Change Photo
+                </>
+              )}
             </Button>
           </div>
 
@@ -104,7 +259,16 @@ export function AccountSettingsTab({
             />
           </div>
 
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Profile saved!")}>Save Profile</Button>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSaveProfile} disabled={isSavingProfile}>
+            {isSavingProfile ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Profile"
+            )}
+          </Button>
         </CardContent>
       </Card>
 
@@ -148,15 +312,16 @@ export function AccountSettingsTab({
             />
           </div>
 
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
-            if (newPassword !== confirmPassword) {
-              toast.error("Passwords don't match");
-            } else if (!currentPassword || !newPassword) {
-              toast.error("Please fill in all password fields");
-            } else {
-              toast.success("Password updated!");
-            }
-          }}>Update Password</Button>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleUpdatePassword} disabled={isUpdatingPassword}>
+            {isUpdatingPassword ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              "Update Password"
+            )}
+          </Button>
         </CardContent>
       </Card>
 
@@ -235,7 +400,16 @@ export function AccountSettingsTab({
             </Label>
           </div>
 
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.success("Preferences saved!")}>Save Preferences</Button>
+          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSavePreferences} disabled={isSavingPreferences}>
+            {isSavingPreferences ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Preferences"
+            )}
+          </Button>
         </CardContent>
       </Card>
 
@@ -261,9 +435,9 @@ export function AccountSettingsTab({
                     <p className="text-xs text-muted-foreground">Expires 12/25</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => toast.info("Opening card editor...")}>Edit</Button>
+                <Button variant="outline" size="sm" onClick={() => setShowEditCardDialog(true)}>Edit</Button>
               </div>
-              <Button variant="outline" className="w-full" onClick={() => toast.info("Opening payment method dialog...")}>
+              <Button variant="outline" className="w-full" onClick={() => setShowAddPaymentDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Payment Method
               </Button>
@@ -286,14 +460,14 @@ export function AccountSettingsTab({
                   <p className="font-medium">Two-Factor Authentication</p>
                   <p className="text-xs text-muted-foreground">Not enabled</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => toast.info("Setting up two-factor authentication...")}>Enable</Button>
+                <Button variant="outline" size="sm" onClick={() => window.location.href = "/dashboard/settings/security/2fa"}>Enable</Button>
               </div>
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">Active Sessions</p>
                   <p className="text-xs text-muted-foreground">2 devices</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => toast.info("Opening session manager...")}>
+                <Button variant="outline" size="sm" onClick={() => window.location.href = "/dashboard/settings/security/sessions"}>
                   Manage
                   <ExternalLink className="h-3 w-3 ml-1" />
                 </Button>
@@ -302,6 +476,61 @@ export function AccountSettingsTab({
           </CardContent>
         </Card>
       </div>
+
+      {/* Add Payment Method Dialog */}
+      <Dialog open={showAddPaymentDialog} onOpenChange={setShowAddPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Payment Method</DialogTitle>
+            <DialogDescription>
+              Add a new payment method for receiving payouts
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 text-center text-muted-foreground">
+            <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Payment method management is handled through Stripe.</p>
+            <p className="text-sm mt-2">You will be redirected to Stripe&apos;s secure portal.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddPaymentDialog(false)}>
+              Cancel
+            </Button>
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
+              window.open("/api/creator/stripe/portal", "_blank");
+              setShowAddPaymentDialog(false);
+            }}>
+              Open Stripe Portal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Card Dialog */}
+      <Dialog open={showEditCardDialog} onOpenChange={setShowEditCardDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Payment Method</DialogTitle>
+            <DialogDescription>
+              Manage your existing payment method through Stripe
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 text-center text-muted-foreground">
+            <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Card editing is handled through Stripe&apos;s secure portal.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditCardDialog(false)}>
+              Cancel
+            </Button>
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
+              window.open("/api/creator/stripe/portal", "_blank");
+              setShowEditCardDialog(false);
+            }}>
+              Open Stripe Portal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -17,14 +26,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MoreHorizontal, Mail, PenLine } from "lucide-react";
+import { MoreHorizontal, Mail, PenLine, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 import type { EmailCampaign } from "../../types";
 
 interface EmailsTabProps {
   emailCampaigns: EmailCampaign[];
   onOpenEmailDialog: () => void;
+  projectId?: string;
+  onRefresh?: () => void;
 }
 
 // Launch Timeline stages from design document
@@ -56,7 +68,150 @@ const launchTimelineStages = [
   },
 ];
 
-export function EmailsTab({ emailCampaigns, onOpenEmailDialog }: EmailsTabProps) {
+export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefresh }: EmailsTabProps) {
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState<string | null>(null);
+  const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
+  const [confirmSendDialog, setConfirmSendDialog] = useState<EmailCampaign | null>(null);
+  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState<EmailCampaign | null>(null);
+  const [isStartingDraft, setIsStartingDraft] = useState<string | null>(null);
+
+  const handleEditCampaign = (campaign: EmailCampaign) => {
+    // Navigate to campaign editor
+    window.location.href = `/dashboard/indiekit/emails/${campaign.id}/edit`;
+  };
+
+  const handleDuplicateCampaign = async (campaign: EmailCampaign) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    setIsDuplicating(campaign.id);
+    try {
+      const res = await fetch("/api/creator/indiekit/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "duplicate",
+          campaignId: campaign.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to duplicate campaign");
+      }
+
+      toast.success(`Duplicated "${campaign.title}"`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate campaign");
+    } finally {
+      setIsDuplicating(null);
+    }
+  };
+
+  const handleSendCampaign = async (campaign: EmailCampaign) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    setIsSending(campaign.id);
+    try {
+      const res = await fetch("/api/creator/indiekit/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "send",
+          campaignId: campaign.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send campaign");
+      }
+
+      toast.success(`Campaign "${campaign.title}" is being sent!`);
+      setConfirmSendDialog(null);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send campaign");
+    } finally {
+      setIsSending(null);
+    }
+  };
+
+  const handleDeleteCampaign = async (campaign: EmailCampaign) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    setIsDeleting(campaign.id);
+    try {
+      const res = await fetch(`/api/creator/indiekit/campaigns?campaignId=${campaign.id}&projectId=${projectId}`, {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete campaign");
+      }
+
+      toast.success(`Deleted "${campaign.title}"`);
+      setConfirmDeleteDialog(null);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete campaign");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  const handleStartDraft = async (stageId: string, stageTitle: string) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    setIsStartingDraft(stageId);
+    try {
+      const res = await fetch("/api/creator/indiekit/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "create_draft",
+          stageId,
+          title: stageTitle,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create draft");
+      }
+
+      toast.success(`Created draft for "${stageTitle}"`);
+      // Navigate to the new campaign editor
+      if (data.campaignId) {
+        window.location.href = `/dashboard/indiekit/emails/${data.campaignId}/edit`;
+      } else {
+        onRefresh?.();
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create draft");
+    } finally {
+      setIsStartingDraft(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -122,12 +277,29 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog }: EmailsTabProps)
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => toast.info(`Editing "${campaign.title}"...`)}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.success(`Duplicated "${campaign.title}"`)}>Duplicate</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditCampaign(campaign)}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDuplicateCampaign(campaign)}
+                          disabled={isDuplicating === campaign.id}
+                        >
+                          {isDuplicating === campaign.id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Duplicating...
+                            </>
+                          ) : (
+                            "Duplicate"
+                          )}
+                        </DropdownMenuItem>
                         {campaign.status === "draft" && (
-                          <DropdownMenuItem onClick={() => toast.success(`Sending "${campaign.title}" now...`)}>Send Now</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setConfirmSendDialog(campaign)}>Send Now</DropdownMenuItem>
                         )}
-                        <DropdownMenuItem className="text-red-600" onClick={() => toast.success(`Deleted "${campaign.title}"`)}>Delete</DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => setConfirmDeleteDialog(campaign)}
+                        >
+                          Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -176,8 +348,21 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog }: EmailsTabProps)
                           {stage.description}
                         </p>
                       </div>
-                      <Button variant="outline" size="sm" className="shrink-0" onClick={() => toast.info(`Starting draft for "${stage.title}"...`)}>
-                        Start draft
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => handleStartDraft(stage.id, stage.title)}
+                        disabled={isStartingDraft === stage.id}
+                      >
+                        {isStartingDraft === stage.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          "Start draft"
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -235,6 +420,76 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog }: EmailsTabProps)
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirm Send Dialog */}
+      <Dialog open={!!confirmSendDialog} onOpenChange={(open) => !open && setConfirmSendDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Campaign Now?</DialogTitle>
+            <DialogDescription>
+              This will immediately send &quot;{confirmSendDialog?.title}&quot; to {confirmSendDialog?.recipients || 0} recipient{(confirmSendDialog?.recipients || 0) !== 1 ? 's' : ''}.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmSendDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={() => confirmSendDialog && handleSendCampaign(confirmSendDialog)}
+              disabled={isSending === confirmSendDialog?.id}
+            >
+              {isSending === confirmSendDialog?.id ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Now
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Delete Dialog */}
+      <Dialog open={!!confirmDeleteDialog} onOpenChange={(open) => !open && setConfirmDeleteDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Delete Campaign?
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{confirmDeleteDialog?.title}&quot;?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmDeleteDialog && handleDeleteCampaign(confirmDeleteDialog)}
+              disabled={isDeleting === confirmDeleteDialog?.id}
+            >
+              {isDeleting === confirmDeleteDialog?.id ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
