@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -11,6 +15,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,8 +46,10 @@ import {
   Edit,
   Copy,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface Segment {
   id: string;
@@ -42,6 +63,7 @@ interface Segment {
 interface SegmentsTabProps {
   segments?: Segment[];
   projectId?: string;
+  onRefresh?: () => void;
 }
 
 const typeLabels: Record<Segment["type"], string> = {
@@ -62,8 +84,82 @@ const typeColors: Record<Segment["type"], string> = {
   custom: "bg-gray-100 text-gray-700",
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function SegmentsTab({ segments = [], projectId }: SegmentsTabProps) {
+export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTabProps) {
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [segmentName, setSegmentName] = useState("");
+  const [segmentType, setSegmentType] = useState<string>("CUSTOM");
+  const [segmentDescription, setSegmentDescription] = useState("");
+
+  const handleCreateSegment = async (quickCreate?: { name: string; type: string; criteria?: Record<string, unknown> }) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    const name = quickCreate?.name || segmentName;
+    const type = quickCreate?.type || segmentType;
+
+    if (!name.trim()) {
+      toast.error("Please enter a segment name");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/segments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          name,
+          type,
+          description: segmentDescription,
+          criteria: quickCreate?.criteria,
+          isDynamic: true,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create segment");
+      }
+
+      toast.success(`Created segment "${name}"`);
+      setIsCreateDialogOpen(false);
+      setSegmentName("");
+      setSegmentType("CUSTOM");
+      setSegmentDescription("");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create segment");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDeleteSegment = async (segmentId: string, segmentName: string) => {
+    if (!projectId) return;
+
+    try {
+      const res = await fetch(`/api/creator/indiekit/segments?segmentId=${segmentId}&projectId=${projectId}`, {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete segment");
+      }
+
+      toast.success(`Deleted segment "${segmentName}"`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete segment");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -77,10 +173,77 @@ export function SegmentsTab({ segments = [], projectId }: SegmentsTabProps) {
             </p>
           </div>
         </div>
-        <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening segment creator...")}>
+        <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Create Segment
         </Button>
+
+        {/* Create Segment Dialog */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Segment</DialogTitle>
+              <DialogDescription>
+                Create a new backer segment for targeted communications
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="segment-name">Segment Name</Label>
+                <Input
+                  id="segment-name"
+                  placeholder="e.g., Premium Backers"
+                  value={segmentName}
+                  onChange={(e) => setSegmentName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="segment-type">Segment Type</Label>
+                <Select value={segmentType} onValueChange={setSegmentType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PLEDGE_LEVEL">Pledge Level</SelectItem>
+                    <SelectItem value="ADDON">Add-on Based</SelectItem>
+                    <SelectItem value="SURVEY_STATUS">Survey Status</SelectItem>
+                    <SelectItem value="SHIPPING_REGION">Shipping Region</SelectItem>
+                    <SelectItem value="PAYMENT_STATUS">Payment Status</SelectItem>
+                    <SelectItem value="CUSTOM">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="segment-description">Description (Optional)</Label>
+                <Textarea
+                  id="segment-description"
+                  placeholder="Describe this segment..."
+                  value={segmentDescription}
+                  onChange={(e) => setSegmentDescription(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-teal-600 hover:bg-teal-700"
+                onClick={() => handleCreateSegment()}
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Segment"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Segment Types Info */}
@@ -181,7 +344,7 @@ export function SegmentsTab({ segments = [], projectId }: SegmentsTabProps) {
                           <Copy className="h-4 w-4 mr-2" />
                           Duplicate
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600" onClick={() => toast.success(`Deleted segment "${segment.name}"`)}>
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteSegment(segment.id, segment.name)}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
@@ -210,37 +373,67 @@ export function SegmentsTab({ segments = [], projectId }: SegmentsTabProps) {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'Survey Incomplete' segment")}>
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-3"
+              disabled={isCreating}
+              onClick={() => handleCreateSegment({ name: "Survey Incomplete", type: "SURVEY_STATUS", criteria: { surveyComplete: false } })}
+            >
               <div className="text-left">
                 <p className="font-medium">Survey Incomplete</p>
                 <p className="text-xs text-muted-foreground">Backers who haven&apos;t completed their survey</p>
               </div>
             </Button>
-            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'Payment Failed' segment")}>
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-3"
+              disabled={isCreating}
+              onClick={() => handleCreateSegment({ name: "Payment Failed", type: "PAYMENT_STATUS", criteria: { paymentStatus: "FAILED" } })}
+            >
               <div className="text-left">
                 <p className="font-medium">Payment Failed</p>
                 <p className="text-xs text-muted-foreground">Backers with failed payment attempts</p>
               </div>
             </Button>
-            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'International Shipping' segment")}>
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-3"
+              disabled={isCreating}
+              onClick={() => handleCreateSegment({ name: "International Shipping", type: "SHIPPING_REGION", criteria: { excludeCountry: "US" } })}
+            >
               <div className="text-left">
                 <p className="font-medium">International Shipping</p>
                 <p className="text-xs text-muted-foreground">Backers outside the US</p>
               </div>
             </Button>
-            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'High Value Backers' segment")}>
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-3"
+              disabled={isCreating}
+              onClick={() => handleCreateSegment({ name: "High Value Backers", type: "CUSTOM", criteria: { minPledge: 100 } })}
+            >
               <div className="text-left">
                 <p className="font-medium">High Value Backers</p>
                 <p className="text-xs text-muted-foreground">Backers with pledges over $100</p>
               </div>
             </Button>
-            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'With Add-ons' segment")}>
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-3"
+              disabled={isCreating}
+              onClick={() => handleCreateSegment({ name: "With Add-ons", type: "ADDON", criteria: { hasAddons: true } })}
+            >
               <div className="text-left">
                 <p className="font-medium">With Add-ons</p>
                 <p className="text-xs text-muted-foreground">Backers who purchased add-ons</p>
               </div>
             </Button>
-            <Button variant="outline" className="justify-start h-auto py-3" onClick={() => toast.success("Created 'Ready to Ship' segment")}>
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-3"
+              disabled={isCreating}
+              onClick={() => handleCreateSegment({ name: "Ready to Ship", type: "CUSTOM", criteria: { surveyComplete: true, paymentStatus: "COMPLETED", addressComplete: true } })}
+            >
               <div className="text-left">
                 <p className="font-medium">Ready to Ship</p>
                 <p className="text-xs text-muted-foreground">Backers ready for fulfillment</p>

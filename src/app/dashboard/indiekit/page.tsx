@@ -622,6 +622,8 @@ export default function IndieKitPage() {
                   packageGroupFilter={packageGroupFilter}
                   onPackageGroupFilterChange={setPackageGroupFilter}
                   hasActiveCampaign={hasActiveCampaign}
+                  projectId={selectedProjectId}
+                  onRefresh={fetchData}
                 />
               </TabsContent>
 
@@ -659,15 +661,23 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="projects">
-                <ProjectsTab hasActiveCampaign={hasActiveCampaign} />
+                <ProjectsTab
+                  projects={projects}
+                  hasActiveCampaign={hasActiveCampaign}
+                  selectedProjectId={selectedProjectId}
+                  onSelectProject={(projectId) => {
+                    setSelectedProjectId(projectId);
+                    localStorage.setItem(SELECTED_PROJECT_KEY, projectId);
+                  }}
+                />
               </TabsContent>
 
               <TabsContent value="segments">
-                <SegmentsTab segments={segments} />
+                <SegmentsTab segments={segments} projectId={selectedProjectId} onRefresh={fetchData} />
               </TabsContent>
 
               <TabsContent value="export">
-                <ExportTab />
+                <ExportTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="timeline">
@@ -687,7 +697,7 @@ export default function IndieKitPage() {
               </TabsContent>
 
               <TabsContent value="support">
-                <SupportTab backers={backers} projectId={selectedProjectId} />
+                <SupportTab backers={backers} projectId={selectedProjectId} onRefresh={fetchData} />
               </TabsContent>
 
               <TabsContent value="survey-builder">

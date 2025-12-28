@@ -33,7 +33,11 @@ import {
   Plug,
   Users,
   Image as ImageIcon,
+  Globe,
+  ExternalLink,
+  Loader2,
 } from "lucide-react";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
 type SettingsSection = "general" | "survey" | "shipping" | "payments" | "notifications" | "integrations" | "team";
@@ -318,9 +322,10 @@ export function SettingsTab({
             <Card>
               <CardHeader>
                 <CardTitle>Integrations</CardTitle>
-                <CardDescription>Connect third-party services</CardDescription>
+                <CardDescription>Connect third-party services for fulfillment</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Stripe - Already connected through platform */}
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded bg-green-100 flex items-center justify-center">
@@ -333,9 +338,109 @@ export function SettingsTab({
                   </div>
                   <Button variant="outline" className="text-green-600 border-green-600">Connected</Button>
                 </div>
-                <div className="p-6 text-center text-muted-foreground border rounded-lg bg-muted/30">
-                  <Plug className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>More integrations coming soon</p>
+
+                {/* ShipStation */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded bg-blue-100 flex items-center justify-center">
+                      <Truck className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">ShipStation</p>
+                      <p className="text-sm text-muted-foreground">Shipping label generation & tracking</p>
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline">Connect</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Connect ShipStation</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Connect your ShipStation account to automatically sync orders and generate shipping labels.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="shipstation-key">API Key</Label>
+                          <Input id="shipstation-key" placeholder="Enter your ShipStation API key" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="shipstation-secret">API Secret</Label>
+                          <Input id="shipstation-secret" type="password" placeholder="Enter your API secret" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Find your API credentials in ShipStation under Settings → API Settings
+                        </p>
+                      </div>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => toast.info("ShipStation integration coming soon!")}>
+                          Connect
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+
+                {/* Zapier */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded bg-orange-100 flex items-center justify-center">
+                      <Globe className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Zapier</p>
+                      <p className="text-sm text-muted-foreground">Workflow automation</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" asChild>
+                    <a href="https://zapier.com" target="_blank" rel="noopener noreferrer">
+                      Connect <ExternalLink className="h-4 w-4 ml-2" />
+                    </a>
+                  </Button>
+                </div>
+
+                {/* Easyship */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded bg-purple-100 flex items-center justify-center">
+                      <Truck className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Easyship</p>
+                      <p className="text-sm text-muted-foreground">Global shipping rates & labels</p>
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline">Connect</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Connect Easyship</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Connect your Easyship account for international shipping rates and labels.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="easyship-token">API Token</Label>
+                          <Input id="easyship-token" placeholder="Enter your Easyship API token" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Find your API token in Easyship under Settings → API
+                        </p>
+                      </div>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => toast.info("Easyship integration coming soon!")}>
+                          Connect
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>

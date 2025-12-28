@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -43,8 +44,10 @@ import {
   ExternalLink,
   CheckCircle2,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface Backer {
   id: string;
@@ -70,6 +73,7 @@ interface Backer {
 interface SupportTabProps {
   backers?: Backer[];
   projectId?: string;
+  onRefresh?: () => void;
 }
 
 const surveyStatusColors = {
@@ -82,13 +86,22 @@ const surveyStatusIcons = {
   pending: <Clock className="h-3 w-3" />,
 };
 
-export function SupportTab({ backers = [], projectId: _projectId }: SupportTabProps) {
-  // projectId available for future API calls
-  void _projectId;
+export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBacker, setSelectedBacker] = useState<Backer | null>(null);
   const [showBackerDialog, setShowBackerDialog] = useState(false);
   const [noteText, setNoteText] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [showEditOrderDialog, setShowEditOrderDialog] = useState(false);
+  const [showAddressDialog, setShowAddressDialog] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    line1: "",
+    line2: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "",
+  });
 
   const filteredBackers = backers.filter(
     (backer) =>
@@ -97,6 +110,126 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
       backer.id.includes(searchQuery) ||
       (backer.backerNumber && backer.backerNumber.toString().includes(searchQuery))
   );
+
+  const handleResendSurvey = async (backer: Backer) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/creator/indiekit/backers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          action: "send_survey_reminder",
+          pledgeIds: [backer.id],
+          projectId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to resend survey");
+      }
+
+      toast.success(`Survey resent to ${backer.email}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to resend survey");
+    }
+  };
+
+  const handleSaveNote = async () => {
+    if (!selectedBacker || !projectId) return;
+    if (!noteText.trim()) {
+      toast.error("Please enter a note");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          pledgeId: selectedBacker.id,
+          projectId,
+          content: noteText,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save note");
+      }
+
+      toast.success(`Note saved for ${selectedBacker.name}`);
+      setNoteText("");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save note");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdateAddress = async () => {
+    if (!selectedBacker || !projectId) return;
+
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/address", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          pledgeId: selectedBacker.id,
+          projectId,
+          address: addressForm,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update address");
+      }
+
+      toast.success("Shipping address updated");
+      setShowAddressDialog(false);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update address");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleViewAsBacker = (backer: Backer) => {
+    // Open survey page for this backer in a new tab
+    if (projectId) {
+      window.open(`/survey/${projectId}/${backer.id}`, "_blank");
+    }
+  };
+
+  const handleCopySurveyLink = (backer: Backer) => {
+    if (projectId) {
+      const surveyLink = `${window.location.origin}/survey/${projectId}/${backer.id}`;
+      navigator.clipboard.writeText(surveyLink);
+      toast.success("Survey link copied to clipboard!");
+    }
+  };
+
+  const openEditAddress = (backer: Backer) => {
+    setSelectedBacker(backer);
+    setAddressForm({
+      line1: backer.shippingAddress?.line1 || "",
+      line2: backer.shippingAddress?.line2 || "",
+      city: backer.shippingAddress?.city || "",
+      state: backer.shippingAddress?.state || "",
+      postalCode: backer.shippingAddress?.postalCode || "",
+      country: backer.shippingAddress?.country || "",
+    });
+    setShowAddressDialog(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -115,28 +248,58 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="cursor-pointer hover:border-teal-500 transition-colors">
+        <Card
+          className="cursor-pointer hover:border-teal-500 transition-colors"
+          onClick={() => document.getElementById("backer-search")?.focus()}
+        >
           <CardContent className="pt-6 text-center">
             <Search className="h-6 w-6 text-teal-600 mx-auto mb-2" />
             <p className="font-medium text-sm">Search Backers</p>
             <p className="text-xs text-muted-foreground">Find by name, email, or ID</p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-teal-500 transition-colors">
+        <Card
+          className="cursor-pointer hover:border-teal-500 transition-colors"
+          onClick={() => {
+            if (backers.length > 0) {
+              handleViewAsBacker(backers[0]);
+            } else {
+              toast.info("No backers available to view");
+            }
+          }}
+        >
           <CardContent className="pt-6 text-center">
             <Eye className="h-6 w-6 text-blue-600 mx-auto mb-2" />
             <p className="font-medium text-sm">View as Backer</p>
             <p className="text-xs text-muted-foreground">See what backers see</p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-teal-500 transition-colors">
+        <Card
+          className="cursor-pointer hover:border-teal-500 transition-colors"
+          onClick={() => {
+            if (selectedBacker) {
+              handleResendSurvey(selectedBacker);
+            } else {
+              toast.info("Select a backer first to resend survey");
+            }
+          }}
+        >
           <CardContent className="pt-6 text-center">
             <Send className="h-6 w-6 text-green-600 mx-auto mb-2" />
             <p className="font-medium text-sm">Resend Survey</p>
             <p className="text-xs text-muted-foreground">Re-send survey link</p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-teal-500 transition-colors">
+        <Card
+          className="cursor-pointer hover:border-teal-500 transition-colors"
+          onClick={() => {
+            if (selectedBacker) {
+              setShowEditOrderDialog(true);
+            } else {
+              toast.info("Select a backer first to edit order");
+            }
+          }}
+        >
           <CardContent className="pt-6 text-center">
             <Edit className="h-6 w-6 text-purple-600 mx-auto mb-2" />
             <p className="font-medium text-sm">Edit Order</p>
@@ -156,13 +319,23 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                id="backer-search"
                 placeholder="Enter name, email, or pledge ID..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Searching backers...")}>Search</Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={() => {
+                if (!searchQuery.trim()) {
+                  toast.info("Enter a search term");
+                }
+              }}
+            >
+              Search
+            </Button>
           </div>
 
           {/* Search Results */}
@@ -203,7 +376,14 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewAsBacker(backer);
+                            }}
+                          >
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -281,24 +461,33 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info(`Viewing survey as ${backer.name}...`)}>
+                        <DropdownMenuItem onClick={() => handleViewAsBacker(backer)}>
                           <Eye className="h-4 w-4 mr-2" />
                           View as Backer
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.success(`Survey resent to ${backer.email}`)}>
+                        <DropdownMenuItem onClick={() => handleResendSurvey(backer)}>
                           <Send className="h-4 w-4 mr-2" />
                           Resend Survey
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => toast.info(`Editing order for ${backer.name}...`)}>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedBacker(backer);
+                          setShowEditOrderDialog(true);
+                        }}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Order
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info(`Adding note for ${backer.name}...`)}>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedBacker(backer);
+                          setShowBackerDialog(true);
+                        }}>
                           <StickyNote className="h-4 w-4 mr-2" />
                           Add Note
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info(`Viewing changelog for ${backer.name}...`)}>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedBacker(backer);
+                          window.open(`/dashboard/project/${projectId}/backer/${backer.id}/changelog`, "_blank");
+                        }}>
                           <History className="h-4 w-4 mr-2" />
                           View Changelog
                         </DropdownMenuItem>
@@ -333,18 +522,15 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
 
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2 py-2 border-y">
-            <Button variant="outline" size="sm" onClick={() => toast.info(`Viewing survey as ${selectedBacker?.name}...`)}>
+            <Button variant="outline" size="sm" onClick={() => selectedBacker && handleViewAsBacker(selectedBacker)}>
               <Eye className="h-4 w-4 mr-2" />
               View/Edit as Backer
             </Button>
-            <Button variant="outline" size="sm" onClick={() => toast.success(`Survey resent to ${selectedBacker?.email}`)}>
+            <Button variant="outline" size="sm" onClick={() => selectedBacker && handleResendSurvey(selectedBacker)}>
               <Send className="h-4 w-4 mr-2" />
               Resend Survey
             </Button>
-            <Button variant="outline" size="sm" onClick={() => {
-              navigator.clipboard.writeText(`https://example.com/survey/${selectedBacker?.id}`);
-              toast.success("Survey link copied to clipboard!");
-            }}>
+            <Button variant="outline" size="sm" onClick={() => selectedBacker && handleCopySurveyLink(selectedBacker)}>
               <Link className="h-4 w-4 mr-2" />
               Copy Survey Link
             </Button>
@@ -356,15 +542,23 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => toast.info(`Processing refund for ${selectedBacker?.name}...`)}>
+                <DropdownMenuItem onClick={() => {
+                  if (selectedBacker && projectId) {
+                    window.open(`/dashboard/project/${projectId}/backer/${selectedBacker.id}/refund`, "_blank");
+                  }
+                }}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refund Order
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info(`Editing shipping address for ${selectedBacker?.name}...`)}>
+                <DropdownMenuItem onClick={() => selectedBacker && openEditAddress(selectedBacker)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Shipping Address
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info(`Viewing full changelog for ${selectedBacker?.name}...`)}>
+                <DropdownMenuItem onClick={() => {
+                  if (selectedBacker && projectId) {
+                    window.open(`/dashboard/project/${projectId}/backer/${selectedBacker.id}/changelog`, "_blank");
+                  }
+                }}>
                   <History className="h-4 w-4 mr-2" />
                   View Full Changelog
                 </DropdownMenuItem>
@@ -458,14 +652,140 @@ export function SupportTab({ backers = [], projectId: _projectId }: SupportTabPr
             <Button variant="outline" onClick={() => setShowBackerDialog(false)}>
               Close
             </Button>
-            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
-              if (noteText.trim()) {
-                toast.success(`Note saved for ${selectedBacker?.name}`);
-                setNoteText("");
-              } else {
-                toast.error("Please enter a note");
-              }
-            }}>Save Note</Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={handleSaveNote}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Note"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Address Dialog */}
+      <Dialog open={showAddressDialog} onOpenChange={setShowAddressDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Shipping Address</DialogTitle>
+            <DialogDescription>
+              Update shipping address for {selectedBacker?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="line1">Address Line 1</Label>
+              <Input
+                id="line1"
+                value={addressForm.line1}
+                onChange={(e) => setAddressForm({ ...addressForm, line1: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="line2">Address Line 2</Label>
+              <Input
+                id="line2"
+                value={addressForm.line2}
+                onChange={(e) => setAddressForm({ ...addressForm, line2: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={addressForm.city}
+                  onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">State/Province</Label>
+                <Input
+                  id="state"
+                  value={addressForm.state}
+                  onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="postalCode">Postal Code</Label>
+                <Input
+                  id="postalCode"
+                  value={addressForm.postalCode}
+                  onChange={(e) => setAddressForm({ ...addressForm, postalCode: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <Input
+                  id="country"
+                  value={addressForm.country}
+                  onChange={(e) => setAddressForm({ ...addressForm, country: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddressDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={handleUpdateAddress}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Address"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Order Dialog */}
+      <Dialog open={showEditOrderDialog} onOpenChange={setShowEditOrderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Order</DialogTitle>
+            <DialogDescription>
+              Manage order for {selectedBacker?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              To edit this order, please use the backer survey view where you can modify
+              reward selections, add-ons, and other order details.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditOrderDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={() => {
+                if (selectedBacker) {
+                  handleViewAsBacker(selectedBacker);
+                  setShowEditOrderDialog(false);
+                }
+              }}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open Backer View
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

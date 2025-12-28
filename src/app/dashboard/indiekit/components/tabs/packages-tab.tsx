@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Plus,
   RefreshCw,
   MoreHorizontal,
@@ -42,9 +51,11 @@ import {
   ExternalLink,
   CheckCircle2,
   Info,
+  Loader2,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 import type { PackageGroup } from "../../types";
 
 interface ConnectedService {
@@ -60,6 +71,8 @@ interface PackagesTabProps {
   onPackageGroupFilterChange: (filter: string) => void;
   hasActiveCampaign?: boolean;
   connectedServices?: ConnectedService[];
+  projectId?: string;
+  onRefresh?: () => void;
 }
 
 export function PackagesTab({
@@ -68,10 +81,109 @@ export function PackagesTab({
   onPackageGroupFilterChange,
   hasActiveCampaign = true,
   connectedServices = [],
+  projectId,
+  onRefresh,
 }: PackagesTabProps) {
   const [segmentFilter, setSegmentFilter] = useState("ready_to_ship");
   const [searchGroupId, setSearchGroupId] = useState("");
-  const [lastRefreshed] = useState(new Date().toLocaleString());
+  const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleString());
+  const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<string>("shipstation");
+  const [apiKey, setApiKey] = useState("");
+  const [apiSecret, setApiSecret] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isPushing, setIsPushing] = useState(false);
+  const [fulfillmentMethod, setFulfillmentMethod] = useState("shipstation");
+
+  const handleConnect = async () => {
+    if (!apiKey.trim() || !apiSecret.trim()) {
+      toast.error("Please enter both API key and secret");
+      return;
+    }
+
+    setIsConnecting(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          service: selectedService,
+          apiKey,
+          apiSecret,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to connect");
+      }
+
+      toast.success(`Connected to ${selectedService.charAt(0).toUpperCase() + selectedService.slice(1)}`);
+      setIsConnectDialogOpen(false);
+      setApiKey("");
+      setApiSecret("");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Connection failed");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handlePushOrders = async (groupId?: string) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    setIsPushing(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/fulfillment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "push_orders",
+          groupId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Push failed");
+      }
+
+      const data = await res.json();
+      toast.success(`Pushed ${data.count || 0} orders to fulfillment`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Push failed");
+    } finally {
+      setIsPushing(false);
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    if (!projectId) return;
+
+    try {
+      const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=refresh`, {
+        headers: getCSRFHeaders(),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Refresh failed");
+      }
+
+      setLastRefreshed(new Date().toLocaleString());
+      toast.success("Order status updated");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Refresh failed");
+    }
+  };
 
   // Show message if no active campaign
   if (!hasActiveCampaign) {
@@ -97,7 +209,7 @@ export function PackagesTab({
   return (
     <div className="space-y-6">
       {/* Back Button */}
-      <Button variant="ghost" size="sm" className="-mb-4" onClick={() => toast.info("Navigating back...")}>
+      <Button variant="ghost" size="sm" className="-mb-4" onClick={() => window.history.back()}>
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back
       </Button>
@@ -117,9 +229,9 @@ export function PackagesTab({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => toast.success("Switched to ShipStation")}>ShipStation</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast.success("Switched to CSV Export")}>CSV Export</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast.success("Switched to Manual Fulfillment")}>Manual Fulfillment</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setFulfillmentMethod("shipstation"); toast.success("Switched to ShipStation"); }}>ShipStation</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setFulfillmentMethod("csv"); toast.success("Switched to CSV Export"); }}>CSV Export</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setFulfillmentMethod("manual"); toast.success("Switched to Manual Fulfillment"); }}>Manual Fulfillment</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -219,7 +331,7 @@ export function PackagesTab({
               </div>
 
               <div className="flex justify-center">
-                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening connection wizard...")}>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setIsConnectDialogOpen(true)}>
                   Get Started - Connect Service
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -277,7 +389,7 @@ export function PackagesTab({
               )}
 
               <div className="flex justify-center mt-6">
-                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => toast.info("Opening connection dialog...")}>
+                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setIsConnectDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add New Connection
                 </Button>
@@ -688,6 +800,75 @@ export function PackagesTab({
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Connect Service Dialog */}
+      <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Connect Fulfillment Service</DialogTitle>
+            <DialogDescription>
+              Connect to a shipping service to push orders directly for fulfillment
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="service">Select Service</Label>
+              <Select value={selectedService} onValueChange={setSelectedService}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a service" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="shipstation">ShipStation</SelectItem>
+                  <SelectItem value="easyship">Easyship</SelectItem>
+                  <SelectItem value="shippo">Shippo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">API Key</Label>
+              <Input
+                id="apiKey"
+                type="password"
+                placeholder="Enter your API key"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="apiSecret">API Secret</Label>
+              <Input
+                id="apiSecret"
+                type="password"
+                placeholder="Enter your API secret"
+                value={apiSecret}
+                onChange={(e) => setApiSecret(e.target.value)}
+              />
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+              <p>You can find your API credentials in your {selectedService.charAt(0).toUpperCase() + selectedService.slice(1)} account settings.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsConnectDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={handleConnect}
+              disabled={isConnecting}
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                "Connect Service"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -20,8 +20,10 @@ import {
   Package,
   Clock,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface ExportHistory {
   id: string;
@@ -35,11 +37,57 @@ interface ExportHistory {
 
 interface ExportTabProps {
   exportHistory?: ExportHistory[];
+  projectId?: string;
 }
 
-export function ExportTab({ exportHistory = [] }: ExportTabProps) {
-  const [exportOption, setExportOption] = useState("all");
+export function ExportTab({ exportHistory = [], projectId }: ExportTabProps) {
+  const [exportOption, setExportOption] = useState("backers");
   const [exportFormat, setExportFormat] = useState("csv");
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Handle export
+  const handleExport = async (type?: string) => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    const exportType = type || exportOption;
+    setIsExporting(true);
+
+    try {
+      const res = await fetch(
+        `/api/creator/indiekit/export?projectId=${projectId}&type=${exportType}`,
+        { headers: getCSRFHeaders() }
+      );
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Export failed");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+
+      // Get filename from content-disposition header or generate one
+      const contentDisposition = res.headers.get("content-disposition");
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      a.download = filenameMatch?.[1] || `${exportType}-${new Date().toISOString().split("T")[0]}.csv`;
+
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success(`${exportType.charAt(0).toUpperCase() + exportType.slice(1)} export downloaded`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Export failed");
+    } finally {
+      setIsExporting(false);
+    }
+  };
   const [selectedFields, setSelectedFields] = useState({
     name: true,
     email: true,
@@ -81,47 +129,19 @@ export function ExportTab({ exportHistory = [] }: ExportTabProps) {
           <CardContent className="space-y-6">
             {/* Export Options */}
             <div className="space-y-4">
-              <Label className="text-base font-medium">Export Options</Label>
+              <Label className="text-base font-medium">Export Type</Label>
               <RadioGroup value={exportOption} onValueChange={setExportOption}>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="all" />
-                  <Label htmlFor="all">All Backers</Label>
+                  <RadioGroupItem value="backers" id="backers" />
+                  <Label htmlFor="backers">All Backers</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="segment" id="segment" />
-                  <Label htmlFor="segment" className="flex items-center gap-2">
-                    By Segment:
-                    <Select disabled={exportOption !== "segment"}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select segment" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="premium">Premium Backers</SelectItem>
-                        <SelectItem value="international">International</SelectItem>
-                        <SelectItem value="incomplete">Survey Incomplete</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Label>
+                  <RadioGroupItem value="addresses" id="addresses" />
+                  <Label htmlFor="addresses">Shipping Addresses Only</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="package" id="package" />
-                  <Label htmlFor="package" className="flex items-center gap-2">
-                    By Package Group:
-                    <Select disabled={exportOption !== "package"}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select group" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="us-standard">US Standard</SelectItem>
-                        <SelectItem value="us-premium">US Premium</SelectItem>
-                        <SelectItem value="intl">International</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="ready" id="ready" />
-                  <Label htmlFor="ready">Ready to Ship Only</Label>
+                  <RadioGroupItem value="surveys" id="surveys" />
+                  <Label htmlFor="surveys">Survey Responses</Label>
                 </div>
               </RadioGroup>
             </div>
@@ -177,9 +197,22 @@ export function ExportTab({ exportHistory = [] }: ExportTabProps) {
             </div>
 
             {/* Export Button */}
-            <Button className="w-full bg-teal-600 hover:bg-teal-700" onClick={() => toast.success(`Exporting ${exportOption} data as ${exportFormat.toUpperCase()}...`)}>
-              <Download className="h-4 w-4 mr-2" />
-              Export Data
+            <Button
+              className="w-full bg-teal-600 hover:bg-teal-700"
+              onClick={() => handleExport()}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Data
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -242,16 +275,22 @@ export function ExportTab({ exportHistory = [] }: ExportTabProps) {
 
       {/* Quick Export Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="cursor-pointer hover:border-teal-500 transition-colors" onClick={() => toast.success("Generating PDF pack lists...")}>
+        <Card
+          className="cursor-pointer hover:border-teal-500 transition-colors"
+          onClick={() => handleExport("backers")}
+        >
           <CardContent className="pt-6 text-center">
             <Package className="h-8 w-8 text-teal-600 mx-auto mb-2" />
-            <h4 className="font-medium">Pack Lists</h4>
+            <h4 className="font-medium">All Backers</h4>
             <p className="text-sm text-muted-foreground">
-              Generate PDF pack lists for fulfillment
+              Export all backer data with orders
             </p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-teal-500 transition-colors" onClick={() => toast.success("Exporting address labels...")}>
+        <Card
+          className="cursor-pointer hover:border-teal-500 transition-colors"
+          onClick={() => handleExport("addresses")}
+        >
           <CardContent className="pt-6 text-center">
             <FileSpreadsheet className="h-8 w-8 text-green-600 mx-auto mb-2" />
             <h4 className="font-medium">Address Labels</h4>
@@ -260,12 +299,15 @@ export function ExportTab({ exportHistory = [] }: ExportTabProps) {
             </p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-teal-500 transition-colors" onClick={() => toast.success("Creating full backup...")}>
+        <Card
+          className="cursor-pointer hover:border-teal-500 transition-colors"
+          onClick={() => handleExport("surveys")}
+        >
           <CardContent className="pt-6 text-center">
             <Download className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-            <h4 className="font-medium">Full Backup</h4>
+            <h4 className="font-medium">Survey Data</h4>
             <p className="text-sm text-muted-foreground">
-              Download complete backer data
+              Download survey responses
             </p>
           </CardContent>
         </Card>

@@ -512,11 +512,38 @@ export function BackersTab({
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.success(`Opening email composer for ${backer.name}...`)}>
+                        <DropdownMenuItem onClick={() => {
+                          // Open email composer with this backer's email pre-filled
+                          window.location.href = `mailto:${backer.email}?subject=Regarding%20Your%20Pledge`;
+                        }}>
                           <Mail className="h-4 w-4 mr-2" />
                           Send Email
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.success(`Pushing order for ${backer.name} to fulfillment...`)}>
+                        <DropdownMenuItem onClick={async () => {
+                          if (!projectId) {
+                            toast.error("No project selected");
+                            return;
+                          }
+                          try {
+                            const res = await fetch("/api/creator/indiekit/backers", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                              body: JSON.stringify({
+                                action: "push_to_fulfillment",
+                                pledgeIds: [backer.id],
+                                projectId,
+                              }),
+                            });
+                            if (!res.ok) {
+                              const data = await res.json();
+                              throw new Error(data.error || "Push failed");
+                            }
+                            toast.success(`Pushed order for ${backer.name} to fulfillment`);
+                            onRefresh?.();
+                          } catch (error) {
+                            toast.error(error instanceof Error ? error.message : "Push failed");
+                          }
+                        }}>
                           <Send className="h-4 w-4 mr-2" />
                           Push to Fulfillment
                         </DropdownMenuItem>
