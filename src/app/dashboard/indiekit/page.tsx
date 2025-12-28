@@ -133,6 +133,8 @@ export default function IndieKitPage() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isAddonDialogOpen, setIsAddonDialogOpen] = useState(false);
+  const [editingAddon, setEditingAddon] = useState<SurveyAddon | null>(null);
+  const [isImportAddonDialogOpen, setIsImportAddonDialogOpen] = useState(false);
   const [isDistributionDialogOpen, setIsDistributionDialogOpen] = useState(false);
   const [isNPSDialogOpen, setIsNPSDialogOpen] = useState(false);
   const [packageGroupFilter, setPackageGroupFilter] = useState<string>("all");
@@ -347,7 +349,6 @@ export default function IndieKitPage() {
                       onClick={() => {
                         if (isClickable && step.targetTab) {
                           setActiveTab(step.targetTab);
-                          toast.info(`Navigating to ${step.label}...`);
                         }
                       }}
                       disabled={step.status === "locked"}
@@ -483,7 +484,7 @@ export default function IndieKitPage() {
               <div className="mb-6">
                 <WhatsNextBanner
                   upcomingProjectsCount={3}
-                  onTellUsClick={() => toast.info("Opening project submission form...")}
+                  onTellUsClick={() => window.location.href = "/dashboard/create"}
                   onViewProjects={() => setActiveTab("projects")}
                 />
               </div>
@@ -609,15 +610,12 @@ export default function IndieKitPage() {
                   backers={backers}
                   surveyAddons={surveyAddons}
                   onOpenAddonDialog={() => setIsAddonDialogOpen(true)}
-                  onOpenImportDialog={() => {
-                    toast.info("Opening add-on import...");
-                    // TODO: Open import dialog to select add-ons from other projects
-                  }}
+                  onOpenImportDialog={() => setIsImportAddonDialogOpen(true)}
                   projectId={selectedProjectId}
                   onRefresh={fetchData}
                   onEditAddon={(addon) => {
-                    // TODO: Open edit dialog for the addon
-                    toast.info(`Opening editor for "${addon.name}"...`);
+                    setEditingAddon(addon);
+                    setIsAddonDialogOpen(true);
                   }}
                 />
               </TabsContent>
@@ -756,7 +754,17 @@ export default function IndieKitPage() {
 
       <AddonDialog
         open={isAddonDialogOpen}
-        onOpenChange={setIsAddonDialogOpen}
+        onOpenChange={(open) => {
+          setIsAddonDialogOpen(open);
+          if (!open) setEditingAddon(null);
+        }}
+        editingAddon={editingAddon}
+        projectId={selectedProjectId}
+        onSave={() => {
+          fetchData();
+          setIsAddonDialogOpen(false);
+          setEditingAddon(null);
+        }}
       />
 
       <DistributionDialog
