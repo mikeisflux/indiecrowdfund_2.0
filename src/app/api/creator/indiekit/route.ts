@@ -196,9 +196,10 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
       }),
 
-      // Get email campaigns (if project-specific campaigns exist)
+      // Get email campaigns created by this user for this project only
       db.emailCampaign.findMany({
         where: {
+          createdBy: session.user.id,
           filters: {
             path: ["projectId"],
             equals: selectedProjectId,
