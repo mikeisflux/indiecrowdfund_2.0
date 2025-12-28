@@ -63,12 +63,13 @@ fi
 # Step 4: Run type check
 echo ""
 echo "🔍 Step 4: Running type check..."
-if npx tsc --noEmit 2>&1; then
+# Use tsconfig.build.json which excludes .next to avoid stale type references
+if npx tsc --noEmit --project tsconfig.build.json 2>&1; then
     echo -e "${GREEN}   Type check passed${NC}"
 else
     echo -e "${RED}❌ ERROR: TypeScript errors found!${NC}"
     echo ""
-    echo "Run 'npx tsc --noEmit' to see details"
+    echo "Run 'npx tsc --noEmit --project tsconfig.build.json' to see details"
     exit 1
 fi
 
@@ -80,6 +81,12 @@ if [ -d ".next-new" ]; then
     echo -e "${GREEN}   Cleaned up .next-new${NC}"
 else
     echo -e "${GREEN}   No cleanup needed${NC}"
+fi
+
+# Also clean stale .next/types (only used for TS checking, not runtime)
+if [ -d ".next/types" ]; then
+    rm -rf .next/types
+    echo -e "${GREEN}   Cleaned stale .next/types${NC}"
 fi
 
 # Step 6: Build new version to separate directory (zero-downtime)

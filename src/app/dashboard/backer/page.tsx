@@ -152,6 +152,7 @@ export default function BackerDashboard() {
   const [redeemSuccess, setRedeemSuccess] = useState<{ amount: number } | null>(null);
   const [divinityCoinBalance, setDivinityCoinBalance] = useState(0);
   const [isSyncingBalance, setIsSyncingBalance] = useState(false);
+  const [unsavingProjectId, setUnsavingProjectId] = useState<string | null>(null);
 
   const handleSyncBalance = async () => {
     setIsSyncingBalance(true);
@@ -209,6 +210,30 @@ export default function BackerDashboard() {
     setRedeemCode("");
     setRedeemError(null);
     setRedeemSuccess(null);
+  };
+
+  const handleUnsaveProject = async (projectId: string) => {
+    setUnsavingProjectId(projectId);
+    try {
+      const response = await fetch(`/api/user/following?projectId=${projectId}`, {
+        method: "DELETE",
+        headers: { ...getCSRFHeaders() },
+      });
+      if (response.ok) {
+        // Remove from local state
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            savedProjects: prev.savedProjects.filter((p) => p.id !== projectId),
+          };
+        });
+      }
+    } catch (err) {
+      console.error("Failed to unsave project:", err);
+    } finally {
+      setUnsavingProjectId(null);
+    }
   };
 
   useEffect(() => {
@@ -405,14 +430,16 @@ export default function BackerDashboard() {
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative hidden sm:flex">
-              <Bell className="h-5 w-5" />
-              {stats.pendingSurveys > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full text-[10px] flex items-center justify-center text-primary-foreground font-bold">
-                  {stats.pendingSurveys}
-                </span>
-              )}
-            </Button>
+            <Link href="/dashboard/notifications" className="hidden sm:block">
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {stats.pendingSurveys > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full text-[10px] flex items-center justify-center text-primary-foreground font-bold">
+                    {stats.pendingSurveys}
+                  </span>
+                )}
+              </Button>
+            </Link>
             <Link href="/dashboard/messages" className="hidden sm:block">
               <Button variant="ghost" size="icon">
                 <MessageSquare className="h-5 w-5" />
@@ -688,10 +715,12 @@ export default function BackerDashboard() {
                                   Message Creator
                                 </Button>
                               </Link>
-                              {project.fulfillmentStatus === "IN_PROGRESS" && !project.surveyCompleted && (
-                                <Button size="sm" className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
-                                  Complete Survey
-                                </Button>
+                              {!project.surveyCompleted && (project.status === "FUNDED" || project.currentAmount >= project.goalAmount) && (
+                                <Link href={`/dashboard/pledges/${project.pledge.id}/survey`}>
+                                  <Button size="sm" className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
+                                    Complete Survey
+                                  </Button>
+                                </Link>
                               )}
                             </div>
                           </div>
@@ -740,8 +769,14 @@ export default function BackerDashboard() {
                               variant="ghost"
                               size="icon"
                               className="absolute right-2 top-2 bg-background/80 hover:bg-background backdrop-blur"
+                              onClick={() => handleUnsaveProject(project.id)}
+                              disabled={unsavingProjectId === project.id}
                             >
-                              <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                              {unsavingProjectId === project.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                              )}
                             </Button>
                             <Badge className="absolute left-2 top-2 bg-gradient-to-r from-primary/80 to-purple-500/80 backdrop-blur">
                               {project.category}

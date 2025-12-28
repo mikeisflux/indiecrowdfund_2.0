@@ -27,7 +27,7 @@ const responseSchema = z.object({
 // GET - Get survey for a pledge (backer view)
 export async function GET(
   req: NextRequest,
-  { params }: { params: { pledgeId: string } }
+  { params }: { params: Promise<{ pledgeId: string }> }
 ) {
   try {
     const session = await auth();
@@ -35,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const pledgeId = params.pledgeId;
+    const { pledgeId } = await params;
 
     // Get pledge and verify ownership
     const pledge = await db.pledge.findUnique({
@@ -174,7 +174,7 @@ export async function GET(
 // POST - Submit/update survey response
 export async function POST(
   req: NextRequest,
-  { params }: { params: { pledgeId: string } }
+  { params }: { params: Promise<{ pledgeId: string }> }
 ) {
   try {
     const session = await auth();
@@ -182,7 +182,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const pledgeId = params.pledgeId;
+    const { pledgeId } = await params;
 
     // Get pledge and verify ownership
     const pledge = await db.pledge.findUnique({
