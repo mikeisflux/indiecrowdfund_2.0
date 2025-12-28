@@ -123,9 +123,44 @@ const questionTypes = [
 
 const COMMON_VARIANT_TYPES = ["Size", "Color", "Style", "Material", "Edition", "Language"];
 
+// Default template questions for General Questions
+const DEFAULT_SURVEY_QUESTIONS: SurveyQuestion[] = [
+  {
+    id: "default_name",
+    type: "short_text",
+    label: "Full Name",
+    required: true,
+    helpText: "Enter your full name as it appears on your ID",
+  },
+  {
+    id: "default_email",
+    type: "email",
+    label: "Email Address",
+    required: true,
+    helpText: "We'll use this email for order updates and shipping notifications",
+  },
+  {
+    id: "default_address",
+    type: "address",
+    label: "Shipping Address",
+    required: true,
+    helpText: "Enter your complete shipping address",
+  },
+  {
+    id: "default_phone",
+    type: "phone",
+    label: "Phone Number",
+    required: false,
+    helpText: "Optional - may be needed for delivery coordination",
+  },
+];
+
 export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTabProps) {
   const [activeTab, setActiveTab] = useState("general");
-  const [surveyQuestions, setSurveyQuestions] = useState(questions);
+  // Initialize with default questions if no questions provided
+  const [surveyQuestions, setSurveyQuestions] = useState<SurveyQuestion[]>(
+    questions.length > 0 ? questions : DEFAULT_SURVEY_QUESTIONS
+  );
   const [editingQuestion, setEditingQuestion] = useState<SurveyQuestion | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -544,7 +579,13 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
                 {surveyQuestions.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No questions yet. Click a question type to add it.</p>
+                    <p className="mb-4">No questions yet. Click a question type to add it.</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setSurveyQuestions(DEFAULT_SURVEY_QUESTIONS)}
+                    >
+                      Restore Default Template
+                    </Button>
                   </div>
                 ) : (
                   surveyQuestions.map((question, index) => (
