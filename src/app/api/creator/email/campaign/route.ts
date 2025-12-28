@@ -42,21 +42,6 @@ export async function POST(request: NextRequest) {
     const fromName = senderName || creator.name || creator.email || APP_NAME;
     const replyToEmail = replyTo || creator.email || fromEmail;
 
-    // Get project info if provided (for tracking/logging)
-    let projectTitle = "Email Campaign";
-    if (projectId) {
-      const project = await db.project.findFirst({
-        where: {
-          id: projectId,
-          creatorId: session.user.id,
-        },
-        select: { title: true },
-      });
-      if (project) {
-        projectTitle = project.title;
-      }
-    }
-
     // Get all subscribed members from creator's email list
     const subscribers = await db.emailListSubscriber.findMany({
       where: {
