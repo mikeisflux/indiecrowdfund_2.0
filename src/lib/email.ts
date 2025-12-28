@@ -1152,3 +1152,82 @@ export async function sendProjectChangesRequestedEmail(
     html,
   });
 }
+
+/**
+ * Send survey available notification email to backer
+ */
+export async function sendSurveyAvailableEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  creatorName: string,
+  pledgeId: string
+) {
+  const surveyUrl = `${APP_URL}/dashboard/pledges/${pledgeId}/survey`;
+  const dashboardUrl = `${APP_URL}/dashboard/backer`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Survey Available - Action Required</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; font-size: 14px; font-weight: 600;">
+              📋 SURVEY AVAILABLE
+            </div>
+          </div>
+
+          <h2 style="margin-top: 0; color: white; text-align: center;">Action Required</h2>
+          <p style="text-align: center;">Hi ${backerName || "there"},</p>
+          <p style="text-align: center;"><strong>${creatorName}</strong> has sent you a survey for your pledge to <strong>"${projectTitle}"</strong>.</p>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin-top: 0;">Why do I need to fill this out?</h3>
+          <p style="color: #666; margin: 0;">The creator needs additional information from you to fulfill your reward. This may include:</p>
+          <ul style="color: #666; margin: 10px 0 0 0; padding-left: 20px;">
+            <li>Shipping address confirmation</li>
+            <li>Size or color preferences</li>
+            <li>Custom reward options</li>
+            <li>Other fulfillment details</li>
+          </ul>
+        </div>
+
+        <div style="background: #fffbeb; border-radius: 8px; padding: 15px; margin-bottom: 20px; border: 1px solid #fef3c7;">
+          <p style="margin: 0; font-size: 14px; color: #92400e;"><strong>⏰ Please complete this survey soon!</strong> The creator may need this information to begin fulfillment.</p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${surveyUrl}" style="display: inline-block; background: #0ea5e9; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+            Complete Survey Now
+          </a>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+          <a href="${dashboardUrl}" style="color: #666; font-size: 14px; text-decoration: underline;">View all your pledges</a>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because you backed "${projectTitle}" on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return queueEmail({
+    to: email,
+    subject: `📋 Survey available for "${projectTitle}" - Action Required`,
+    html,
+    priority: EMAIL_PRIORITY.CREATOR,
+  });
+}

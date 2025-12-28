@@ -48,6 +48,7 @@ import {
   GripVertical,
   Eye,
   Save,
+  Send,
   Trash2,
   Edit,
   Settings,
@@ -550,6 +551,52 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
           }}>
             <Save className="h-4 w-4 mr-2" />
             Save Draft
+          </Button>
+          <Button
+            className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white"
+            onClick={async () => {
+              if (!projectId) {
+                toast.error("No project selected");
+                return;
+              }
+              if (surveyQuestions.length === 0) {
+                toast.error("Please add at least one question before sending");
+                return;
+              }
+              // First save the survey
+              try {
+                const saveRes = await fetch("/api/creator/indiekit/surveys", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                  body: JSON.stringify({
+                    projectId,
+                    questions: surveyQuestions,
+                  }),
+                });
+                if (!saveRes.ok) {
+                  const data = await saveRes.json();
+                  throw new Error(data.error || "Failed to save survey");
+                }
+
+                // Then send the survey
+                const sendRes = await fetch("/api/creator/indiekit/surveys", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                  body: JSON.stringify({
+                    projectId,
+                    action: "send",
+                  }),
+                });
+                const sendData = await sendRes.json();
+                if (!sendRes.ok) throw new Error(sendData.error || "Failed to send survey");
+                toast.success(`Survey sent to ${sendData.emailsSent || 0} backers!`);
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : "Failed to send survey");
+              }
+            }}
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Send Survey
           </Button>
         </div>
       </div>

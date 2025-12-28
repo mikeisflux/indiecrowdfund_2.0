@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { sendSurveyAvailableEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -235,6 +236,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Survey not found" }, { status: 404 });
     }
 
+    let emailsSent = 0;
+
     switch (action) {
       case "send":
         await db.survey.update({
@@ -242,12 +245,56 @@ export async function PATCH(req: NextRequest) {
           data: { status: "SENT", sentAt: new Date() },
         });
 
+        // Get all valid backers for this project to send email notifications
+        const backers = await db.pledge.findMany({
+          where: {
+            projectId,
+            OR: [
+              { status: "COMPLETED" },
+              {
+                status: "PENDING",
+                confirmationEmailSent: true,
+              },
+              {
+                status: "PENDING",
+                stripePaymentMethodId: { not: null },
+              },
+            ],
+          },
+          include: {
+            user: {
+              select: {
+                email: true,
+                name: true,
+              },
+            },
+          },
+        });
+
+        // Send email to each backer
+        for (const pledge of backers) {
+          if (pledge.user?.email) {
+            try {
+              await sendSurveyAvailableEmail(
+                pledge.user.email,
+                pledge.user.name || "Backer",
+                project.title,
+                session.user.name || "The Creator",
+                pledge.id
+              );
+              emailsSent++;
+            } catch (emailError) {
+              console.error(`Failed to send survey email to ${pledge.user.email}:`, emailError);
+            }
+          }
+        }
+
         // Log activity
         await db.fulfillmentActivity.create({
           data: {
             projectId,
             type: "SURVEY_SENT",
-            title: "Survey sent to all backers",
+            title: `Survey sent to ${emailsSent} backers`,
           },
         });
         break;
@@ -283,7 +330,7 @@ export async function PATCH(req: NextRequest) {
         break;
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, emailsSent });
   } catch (error) {
     console.error("IndieKit survey status update error:", error);
     return NextResponse.json(
