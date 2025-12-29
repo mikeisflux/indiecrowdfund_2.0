@@ -2,8 +2,6 @@
 
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -25,35 +23,15 @@ interface UploadDialogProps {
 }
 
 export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: UploadDialogProps) {
-  const [distributionRules, setDistributionRules] = useState<string[]>(["all"]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCheckboxChange = (value: string, checked: boolean) => {
-    if (value === "all") {
-      // If "All backers" is checked, uncheck the others
-      if (checked) {
-        setDistributionRules(["all"]);
-      } else {
-        setDistributionRules([]);
-      }
-    } else {
-      // If a specific option is checked, uncheck "All backers"
-      if (checked) {
-        setDistributionRules((prev) => [...prev.filter((r) => r !== "all"), value]);
-      } else {
-        setDistributionRules((prev) => prev.filter((r) => r !== value));
-      }
-    }
-  };
-
   const handleClose = (isOpen: boolean) => {
     if (!isOpen && !isUploading) {
       // Reset to default when closing
-      setDistributionRules(["all"]);
       setSelectedFile(null);
       setUploadProgress(0);
     }
@@ -98,24 +76,9 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Convert distribution rules to accessType
-  const getAccessType = () => {
-    if (distributionRules.includes("all")) return "ALL_BACKERS";
-    if (distributionRules.includes("tier") && distributionRules.includes("addon")) {
-      return "SPECIFIC_REWARDS";
-    }
-    if (distributionRules.includes("tier")) return "SPECIFIC_REWARDS";
-    if (distributionRules.includes("addon")) return "ADDON_PURCHASERS";
-    return "ALL_BACKERS";
-  };
-
   const handleUpload = async () => {
     if (!selectedFile) {
       toast.error("Please select a file");
-      return;
-    }
-    if (distributionRules.length === 0) {
-      toast.error("Please select at least one distribution rule");
       return;
     }
     if (!projectId) {
@@ -137,7 +100,6 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
           fileSize: selectedFile.size,
           mimeType: selectedFile.type || "application/octet-stream",
           name: selectedFile.name,
-          accessType: getAccessType(),
         }),
       });
 
@@ -167,7 +129,6 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
       onUploaded?.();
 
       // Reset and close
-      setDistributionRules(["all"]);
       setSelectedFile(null);
       setUploadProgress(0);
       onOpenChange(false);
@@ -268,63 +229,6 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
               </Button>
             </div>
           )}
-
-          <div className="space-y-3">
-            <Label>Intended Recipients</Label>
-            <p className="text-xs text-muted-foreground">
-              Select who this file is intended for. You&apos;ll configure specific distribution rules after uploading.
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="dist-all"
-                  checked={distributionRules.includes("all")}
-                  onCheckedChange={(checked) =>
-                    handleCheckboxChange("all", checked as boolean)
-                  }
-                  disabled={isUploading}
-                />
-                <label
-                  htmlFor="dist-all"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  All backers
-                </label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="dist-tier"
-                  checked={distributionRules.includes("tier")}
-                  onCheckedChange={(checked) =>
-                    handleCheckboxChange("tier", checked as boolean)
-                  }
-                  disabled={isUploading}
-                />
-                <label
-                  htmlFor="dist-tier"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Specific reward tiers
-                </label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="dist-addon"
-                  checked={distributionRules.includes("addon")}
-                  onCheckedChange={(checked) =>
-                    handleCheckboxChange("addon", checked as boolean)
-                  }
-                  disabled={isUploading}
-                />
-                <label
-                  htmlFor="dist-addon"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Add-on purchasers
-                </label>
-              </div>
-            </div>
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleClose(false)} disabled={isUploading}>
@@ -332,7 +236,7 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
           </Button>
           <Button
             className="bg-teal-600 hover:bg-teal-700"
-            disabled={distributionRules.length === 0 || !selectedFile || isUploading}
+            disabled={!selectedFile || isUploading}
             onClick={handleUpload}
           >
             {isUploading ? (
