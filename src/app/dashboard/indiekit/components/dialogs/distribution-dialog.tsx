@@ -69,7 +69,7 @@ export function DistributionDialog({
       toast.error("Please enter a rule name");
       return;
     }
-    if (!triggerProduct) {
+    if (triggerType !== "all" && !triggerProduct) {
       toast.error("Please select a trigger product");
       return;
     }
@@ -185,41 +185,41 @@ export function DistributionDialog({
             </RadioGroup>
           </div>
 
-          <div className="space-y-2">
-            <Label>Trigger Product</Label>
-            <Select value={triggerProduct} onValueChange={setTriggerProduct}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a product..." />
-              </SelectTrigger>
-              <SelectContent className="max-h-[200px]">
-                {availableProducts.length > 0 ? (
-                  availableProducts.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      <span className="flex items-center gap-2">
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${
-                          product.type === "reward"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-purple-100 text-purple-700"
-                        }`}>
-                          {product.type === "reward" ? "Reward" : "Add-on"}
+          {triggerType !== "all" && (
+            <div className="space-y-2">
+              <Label>Trigger Product</Label>
+              <Select value={triggerProduct} onValueChange={setTriggerProduct}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a product..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  {availableProducts.length > 0 ? (
+                    availableProducts.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        <span className="flex items-center gap-2">
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${
+                            product.type === "reward"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-purple-100 text-purple-700"
+                          }`}>
+                            {product.type === "reward" ? "Reward" : "Add-on"}
+                          </span>
+                          {product.name}
                         </span>
-                        {product.name}
-                      </span>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="none" disabled>
+                      {triggerType === "rewards" ? "No rewards found" : "No add-ons found"}
                     </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="none" disabled>
-                    {triggerType === "rewards" ? "No rewards found" :
-                     triggerType === "addons" ? "No add-ons found" :
-                     "No rewards or add-ons found"}
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              When this product is in the order, the file will be distributed
-            </p>
-          </div>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                When this product is in the order, the file will be distributed
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>File to Distribute</Label>
@@ -257,7 +257,7 @@ export function DistributionDialog({
           <Button
             className="bg-teal-600 hover:bg-teal-700"
             onClick={handleCreate}
-            disabled={isCreating || !ruleName.trim() || !triggerProduct || !fileToDistribute}
+            disabled={isCreating || !ruleName.trim() || (triggerType !== "all" && !triggerProduct) || !fileToDistribute}
           >
             {isCreating ? (
               <>
