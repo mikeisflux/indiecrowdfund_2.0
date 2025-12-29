@@ -16,10 +16,11 @@ export async function GET() {
         id: true,
         name: true,
         image: true,
+        vanityUrl: true,
       },
     });
 
-    return NextResponse.json({ user });
+    return NextResponse.json({ user, vanityUrl: user?.vanityUrl || null });
   } catch (error) {
     console.error("Error fetching current user:", error);
     return NextResponse.json({ user: null });
