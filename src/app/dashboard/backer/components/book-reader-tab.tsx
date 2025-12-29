@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent } from "@/components/ui/card";
@@ -582,35 +582,36 @@ export function BookReaderTab() {
                     className="relative w-full h-full flex items-center justify-center"
                     style={{ perspective: "1500px" }}
                   >
-                    {/* Preload adjacent pages (always rendered but hidden for caching) */}
+                    {/* Preload 6+ pages for smooth transitions (always rendered but hidden for caching) */}
                     <div className="absolute opacity-0 pointer-events-none" style={{ zIndex: -10 }}>
-                      {currentPage > 1 && (
-                        <Page
-                          pageNumber={currentPage - 1}
-                          width={Math.min(window.innerWidth * 0.85, 360)}
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                          loading={null}
-                        />
-                      )}
-                      {currentPage < numPages && (
-                        <Page
-                          pageNumber={currentPage + 1}
-                          width={Math.min(window.innerWidth * 0.85, 360)}
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                          loading={null}
-                        />
-                      )}
-                      {currentPage + 2 <= numPages && (
-                        <Page
-                          pageNumber={currentPage + 2}
-                          width={Math.min(window.innerWidth * 0.85, 360)}
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                          loading={null}
-                        />
-                      )}
+                      {/* Preload 3 pages ahead */}
+                      {[1, 2, 3].map((offset) => {
+                        const pageNum = currentPage + offset;
+                        return pageNum <= numPages ? (
+                          <Page
+                            key={`next-${offset}`}
+                            pageNumber={pageNum}
+                            width={Math.min(window.innerWidth * 0.85, 360)}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            loading={null}
+                          />
+                        ) : null;
+                      })}
+                      {/* Preload 3 pages behind */}
+                      {[1, 2, 3].map((offset) => {
+                        const pageNum = currentPage - offset;
+                        return pageNum >= 1 ? (
+                          <Page
+                            key={`prev-${offset}`}
+                            pageNumber={pageNum}
+                            width={Math.min(window.innerWidth * 0.85, 360)}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            loading={null}
+                          />
+                        ) : null;
+                      })}
                     </div>
 
                     {/* Previous Page (behind current, shown when dragging backward) */}
@@ -749,37 +750,40 @@ export function BookReaderTab() {
                       transition: "transform 0.3s ease",
                     }}
                   >
-                    {/* Preload adjacent spreads (always rendered but hidden for caching) */}
+                    {/* Preload 6+ pages for smooth transitions (always rendered but hidden for caching) */}
                     <div className="absolute opacity-0 pointer-events-none" style={{ zIndex: -10 }}>
-                      {/* Cover page */}
+                      {/* Always preload cover, pages 2-3 */}
                       <Page pageNumber={1} width={Math.min(window.innerWidth * 0.45, 430)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                      {numPages >= 2 && <Page pageNumber={2} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                      {numPages >= 3 && <Page pageNumber={3} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                       {/* Current spread pages */}
-                      {spreadPages.left && spreadPages.left > 1 && <Page pageNumber={spreadPages.left} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
-                      {spreadPages.right && spreadPages.right > 1 && <Page pageNumber={spreadPages.right} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
-                      {/* Next spread pages */}
-                      {(() => {
-                        const nextSpread = currentSpread + 1;
-                        const nextLeftPage = isCoverPage ? 2 : nextSpread * 2;
-                        const nextRightPage = isCoverPage ? 3 : nextSpread * 2 + 1;
+                      {spreadPages.left && spreadPages.left > 3 && <Page pageNumber={spreadPages.left} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                      {spreadPages.right && spreadPages.right > 3 && <Page pageNumber={spreadPages.right} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                      {/* Preload 3 spreads ahead */}
+                      {[1, 2, 3].map((offset) => {
+                        const nextSpread = currentSpread + offset;
+                        const nextLeftPage = isCoverPage && offset === 1 ? 2 : nextSpread * 2;
+                        const nextRightPage = isCoverPage && offset === 1 ? 3 : nextSpread * 2 + 1;
                         return (
-                          <>
-                            {nextLeftPage <= numPages && <Page pageNumber={nextLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
-                            {nextRightPage <= numPages && <Page pageNumber={nextRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
-                          </>
+                          <React.Fragment key={`next-${offset}`}>
+                            {nextLeftPage <= numPages && nextLeftPage > 3 && <Page pageNumber={nextLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                            {nextRightPage <= numPages && nextRightPage > 3 && <Page pageNumber={nextRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                          </React.Fragment>
                         );
-                      })()}
-                      {/* Previous spread pages */}
-                      {currentSpread > 1 && (() => {
-                        const prevSpread = currentSpread - 1;
+                      })}
+                      {/* Preload 3 spreads back */}
+                      {[1, 2, 3].map((offset) => {
+                        const prevSpread = currentSpread - offset;
+                        if (prevSpread < 1) return null;
                         const prevLeftPage = prevSpread * 2;
                         const prevRightPage = prevSpread * 2 + 1;
                         return (
-                          <>
-                            {prevLeftPage >= 2 && <Page pageNumber={prevLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
-                            {prevRightPage <= numPages && <Page pageNumber={prevRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
-                          </>
+                          <React.Fragment key={`prev-${offset}`}>
+                            {prevLeftPage > 3 && prevLeftPage <= numPages && <Page pageNumber={prevLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                            {prevRightPage > 3 && prevRightPage <= numPages && <Page pageNumber={prevRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                          </React.Fragment>
                         );
-                      })()}
+                      })}
                     </div>
 
                     {/* Book Container */}
@@ -799,13 +803,12 @@ export function BookReaderTab() {
                         </div>
                       )}
 
-                      {/* Next Spread Preview - Visible when dragging forward */}
-                      {isDragging && dragDirection === "forward" && dragProgress > 0.1 && (
+                      {/* Next Spread - Always positioned underneath for smooth transitions */}
+                      {!isCoverPage && (
                         <div
                           className="absolute flex"
                           style={{
-                            opacity: Math.min(1, dragProgress * 2),
-                            zIndex: 0,
+                            zIndex: 5,
                           }}
                         >
                           {(() => {
@@ -833,13 +836,12 @@ export function BookReaderTab() {
                         </div>
                       )}
 
-                      {/* Previous Spread Preview - Visible when dragging backward */}
-                      {isDragging && dragDirection === "backward" && dragProgress > 0.1 && currentSpread > 0 && (
+                      {/* Previous Spread - Visible during backward drag */}
+                      {currentSpread > 0 && isDragging && dragDirection === "backward" && (
                         <div
                           className="absolute flex"
                           style={{
-                            opacity: Math.min(1, dragProgress * 2),
-                            zIndex: 0,
+                            zIndex: 5,
                           }}
                         >
                           {(() => {
@@ -881,16 +883,27 @@ export function BookReaderTab() {
                       {!isCoverPage && (
                         <div
                           className={cn(
-                            "relative bg-[#f5f0e6] shadow-2xl overflow-hidden",
-                            "transition-transform duration-500 ease-in-out origin-right",
-                            isFlipping && flipDirection === "prev" && "animate-page-flip-reverse"
+                            "relative bg-[#f5f0e6] shadow-2xl overflow-hidden select-none",
+                            isFlipping && flipDirection === "prev" && "animate-page-flip-reverse",
+                            !isDragging && !isFlipping && "transition-transform duration-300 ease-out"
                           )}
                           style={{
                             width: "min(45vw, 400px)",
                             height: "min(60vw, 550px)",
-                            boxShadow: "-4px 0 20px rgba(0,0,0,0.4), inset 2px 0 8px rgba(0,0,0,0.1)",
+                            boxShadow: isDragging && dragDirection === "backward"
+                              ? `4px 0 30px rgba(0,0,0,${0.4 + dragProgress * 0.2})`
+                              : "-4px 0 20px rgba(0,0,0,0.4), inset 2px 0 8px rgba(0,0,0,0.1)",
                             backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)",
+                            transformOrigin: "right center",
+                            transform: isDragging && dragDirection === "backward"
+                              ? `rotateY(${dragProgress * 180}deg)`
+                              : "rotateY(0deg)",
+                            transformStyle: "preserve-3d",
+                            backfaceVisibility: "hidden",
+                            zIndex: isDragging && dragDirection === "backward" ? 20 : 10,
                           }}
+                          onMouseDown={currentSpread > 0 ? handleDragStart : undefined}
+                          onTouchStart={currentSpread > 0 ? handleDragStart : undefined}
                         >
                           <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")` }} />
                           <div className="relative z-10 flex items-center justify-center h-full">
@@ -906,7 +919,7 @@ export function BookReaderTab() {
                         ref={pageRef}
                         className={cn(
                           "relative overflow-hidden select-none",
-                          isCoverPage ? "cursor-grab active:cursor-grabbing" : "origin-left",
+                          isCoverPage ? "cursor-grab active:cursor-grabbing" : "",
                           isFlipping && flipDirection === "next" && "animate-page-flip",
                           !isDragging && !isFlipping && "transition-transform duration-300 ease-out"
                         )}
@@ -914,21 +927,22 @@ export function BookReaderTab() {
                           width: isCoverPage ? "min(50vw, 450px)" : "min(45vw, 400px)",
                           height: isCoverPage ? "min(65vw, 600px)" : "min(60vw, 550px)",
                           backgroundColor: isCoverPage ? "#1a1510" : "#f5f0e6",
-                          boxShadow: isCoverPage
-                            ? `0 25px 50px -12px rgba(0, 0, 0, ${0.6 + dragProgress * 0.2}), ${8 - dragProgress * 8}px 0 30px rgba(0,0,0,0.4)`
-                            : "4px 0 20px rgba(0,0,0,0.4), inset -2px 0 8px rgba(0,0,0,0.1)",
+                          boxShadow: isDragging && dragDirection === "forward"
+                            ? `0 25px 50px -12px rgba(0, 0, 0, ${0.6 + dragProgress * 0.2}), -${dragProgress * 8}px 0 30px rgba(0,0,0,0.4)`
+                            : isCoverPage
+                              ? "0 25px 50px -12px rgba(0, 0, 0, 0.6), 8px 0 30px rgba(0,0,0,0.4)"
+                              : "4px 0 20px rgba(0,0,0,0.4), inset -2px 0 8px rgba(0,0,0,0.1)",
                           backgroundImage: isCoverPage
                             ? "linear-gradient(135deg, #2a2015 0%, #1a1510 50%, #0f0a05 100%)"
                             : "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)",
                           borderRadius: isCoverPage ? "0 8px 8px 0" : "0",
-                          transformOrigin: dragDirection === "backward" ? "right center" : "left center",
-                          transform: isDragging
-                            ? dragDirection === "backward"
-                              ? `rotateY(${dragProgress * 180}deg)`
-                              : `rotateY(${-dragProgress * 180}deg)`
+                          transformOrigin: "left center",
+                          transform: isDragging && dragDirection === "forward"
+                            ? `rotateY(${-dragProgress * 180}deg)`
                             : "rotateY(0deg)",
                           transformStyle: "preserve-3d",
                           backfaceVisibility: "hidden",
+                          zIndex: isDragging && dragDirection === "forward" ? 20 : 10,
                         }}
                         onMouseDown={handleDragStart}
                         onTouchStart={handleDragStart}
