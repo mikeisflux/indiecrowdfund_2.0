@@ -221,7 +221,7 @@ export function DigitalTab({
 
     setDeletingFileId(file.id);
     try {
-      const res = await fetch(`/api/creator/indiekit/digital?projectId=${projectId}&fileId=${file.id}`, {
+      const res = await fetch(`/api/creator/digital-files?fileId=${file.id}`, {
         method: "DELETE",
         headers: getCSRFHeaders(),
       });
