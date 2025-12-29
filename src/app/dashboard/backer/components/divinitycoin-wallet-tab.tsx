@@ -40,6 +40,7 @@ interface Transaction {
   description: string;
   projectTitle?: string;
   createdAt: string;
+  balanceAfter?: number;
   metadata?: Record<string, unknown>;
 }
 
@@ -378,11 +379,18 @@ export function DivinityCoinWalletTab() {
                         })}
                       </p>
                     </div>
-                    <div className={cn(
-                      "text-lg font-bold tabular-nums",
-                      isPositive ? "text-emerald-500" : "text-rose-500"
-                    )}>
-                      {isPositive ? "+" : "-"}◆ {Math.abs(tx.amount).toLocaleString()}
+                    <div className="text-right">
+                      <div className={cn(
+                        "text-lg font-bold tabular-nums",
+                        isPositive ? "text-emerald-500" : "text-rose-500"
+                      )}>
+                        {isPositive ? "+" : "-"}◆ {Math.abs(tx.amount).toLocaleString()}
+                      </div>
+                      {tx.balanceAfter !== undefined && (
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          Balance: ◆ {tx.balanceAfter.toLocaleString()}
+                        </p>
+                      )}
                     </div>
                   </div>
                 );

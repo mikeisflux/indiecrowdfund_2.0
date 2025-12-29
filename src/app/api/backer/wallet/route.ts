@@ -65,8 +65,26 @@ export async function GET() {
       }
     });
 
-    // Format transactions for frontend
-    const formattedTransactions = transactions.map((tx: TransactionType) => {
+    // Format transactions for frontend with running balance
+    // Sort oldest first to calculate running balance, then reverse
+    const sortedForBalance = [...transactions].reverse();
+    let runningBalance = Number(user.divinityCoinBalance || 0);
+
+    // Calculate what the balance was before all these transactions
+    sortedForBalance.forEach((tx) => {
+      runningBalance -= Number(tx.amount);
+    });
+
+    // Now process in chronological order to build running balances
+    const transactionsWithBalance = sortedForBalance.map((tx) => {
+      runningBalance += Number(tx.amount);
+      return { ...tx, balanceAfter: runningBalance };
+    });
+
+    // Reverse back to newest first
+    transactionsWithBalance.reverse();
+
+    const formattedTransactions = transactionsWithBalance.map((tx) => {
       const amount = Number(tx.amount);
       let type: "EARNED" | "SPENT" | "REDEEMED" | "BONUS" | "REFERRAL" | "REFUND" = "EARNED";
 
@@ -91,14 +109,32 @@ export async function GET() {
           type = amount >= 0 ? "EARNED" : "SPENT";
       }
 
+      // Parse metadata to extract code suffix for redemptions
+      let parsedMetadata;
+      try {
+        parsedMetadata = tx.metadata ? JSON.parse(tx.metadata as string) : undefined;
+      } catch {
+        parsedMetadata = undefined;
+      }
+
+      // Build description with code suffix for redemptions
+      let description = tx.description || `${type} transaction`;
+      if (type === "REDEEMED" && parsedMetadata?.codeSuffix) {
+        description = `Gift card redeemed ****${parsedMetadata.codeSuffix}`;
+      } else if (type === "REDEEMED" && parsedMetadata?.codePrefix) {
+        // Fallback for older redemptions that only have prefix
+        description = `Gift card redeemed ${parsedMetadata.codePrefix}****`;
+      }
+
       return {
         id: tx.id,
         type,
         amount: Math.abs(amount),
-        description: tx.description || `${type} transaction`,
+        description,
         projectTitle: tx.pledge?.project?.title || undefined,
         createdAt: tx.createdAt.toISOString(),
-        metadata: tx.metadata ? JSON.parse(tx.metadata as string) : undefined,
+        balanceAfter: tx.balanceAfter,
+        metadata: parsedMetadata,
       };
     });
 

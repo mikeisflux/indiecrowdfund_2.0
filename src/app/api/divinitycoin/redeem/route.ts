@@ -311,15 +311,17 @@ export async function POST(req: NextRequest) {
       });
 
       // Create audit transaction record
+      const codeSuffix = cleanCode.slice(-4);
       await tx.divinityCoinTransaction.create({
         data: {
           userId: userId,
           amount: amount, // Positive for credit
           type: "REDEMPTION",
-          description: `Redeemed code ${cleanCode.substring(0, 4)}****`,
+          description: `Gift card redeemed ****${codeSuffix}`,
           metadata: JSON.stringify({
             requestId,
             codePrefix: cleanCode.substring(0, 4),
+            codeSuffix: codeSuffix,
             previousBalance,
             newBalance: Number(updatedUser.divinityCoinBalance),
             timestamp: new Date().toISOString(),
