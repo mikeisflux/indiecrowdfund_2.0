@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -41,9 +41,7 @@ import {
   Download,
   AlertCircle,
   Loader2,
-  Banknote,
   User,
-  Calendar,
   DollarSign,
   ChevronRight,
   ArrowLeft,
@@ -51,8 +49,6 @@ import {
   Building,
   Eye,
   Coins,
-  ExternalLink,
-  CreditCard,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -284,8 +280,8 @@ export default function DivinityCoinPayoutsPage() {
     }
   };
 
-  // Update settlement status
-  const updateSettlementStatus = async (settlementId: string, action: string) => {
+  // Update settlement status (TODO: Add UI buttons to use this)
+  const _updateSettlementStatus = async (settlementId: string, action: string) => {
     setProcessing(true);
     try {
       const response = await fetch("/api/admin/payouts/divinitycoin", {
