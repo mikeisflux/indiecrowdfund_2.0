@@ -79,3 +79,4 @@
 3. Using `<Image />` from next/image, not `<img>`
 4. All useEffect/useCallback/useMemo dependencies are included
 5. Run lint check mentally before committing
+6. **VERIFY API ENDPOINTS EXIST** - Before adding frontend code that calls an API endpoint, verify the endpoint exists at `src/app/api/...`. Never create fetch calls to non-existent endpoints.
