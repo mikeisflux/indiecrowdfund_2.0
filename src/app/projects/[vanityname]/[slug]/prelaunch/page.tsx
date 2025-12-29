@@ -90,6 +90,7 @@ export default function PrelaunchPage() {
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [followerCount, setFollowerCount] = useState<number | null>(null);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // Check if this is a legacy slug-only URL (vanityname = "_" from middleware rewrite)
   const isLegacyUrl = vanityname === "_";
@@ -116,8 +117,13 @@ export default function PrelaunchPage() {
 
         const data = await response.json();
 
-        // Check if pre-launch is active
-        if (!data.project.prelaunchActive) {
+        // Check if user is admin or project owner
+        const isAdmin = session?.user?.role === "SUPER_ADMIN" || session?.user?.role === "ADMIN";
+        const isOwner = session?.user?.id === data.project.creator?.id;
+        const canViewUnpublished = isAdmin || isOwner;
+
+        // Check if pre-launch is active (or user has permission to view)
+        if (!data.project.prelaunchActive && !canViewUnpublished) {
           // If project is live, redirect to main page
           if (data.project.status === "LIVE") {
             window.location.href = projectPath;
@@ -125,6 +131,11 @@ export default function PrelaunchPage() {
           }
           setError("Pre-launch page is not available");
           return;
+        }
+
+        // Set preview mode if viewing unpublished page as admin/owner
+        if (!data.project.prelaunchActive && canViewUnpublished) {
+          setIsPreviewMode(true);
         }
 
         setProject(data.project);
@@ -259,6 +270,13 @@ export default function PrelaunchPage() {
           </div>
         </div>
       </header>
+
+      {/* Admin/Owner Preview Banner */}
+      {isPreviewMode && (
+        <div className="bg-amber-500 text-amber-950 text-center py-2 px-4 text-sm font-medium">
+          Preview Mode - This pre-launch page is not yet published. Only you can see this page.
+        </div>
+      )}
 
       {/* Hero Section */}
       <div className="relative">
