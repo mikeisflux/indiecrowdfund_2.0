@@ -105,6 +105,7 @@ export function BookReaderTab() {
   const [currentPage, setCurrentPage] = useState(1); // For mobile single-page view
   const bookRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+  const flipToNextRef = useRef<() => void>(() => {});
 
   // Detect mobile screen size
   useEffect(() => {
@@ -243,14 +244,14 @@ export function BookReaderTab() {
     setPdfError(null);
   }, [selectedFile, numPages, getCurrentPage, isMobile, currentPage]);
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-  };
+  const handleDocumentLoadSuccess = useCallback(({ numPages: pages }: { numPages: number }) => {
+    setNumPages(pages);
+  }, []);
 
-  const onDocumentLoadError = (error: Error) => {
+  const handleDocumentLoadError = useCallback((error: Error) => {
     console.error("PDF load error:", error);
     setPdfError("Failed to load PDF document");
-  };
+  }, []);
 
   // Calculate max spreads (cover + page pairs)
   const maxSpreads = Math.ceil((numPages + 1) / 2);
@@ -309,6 +310,9 @@ export function BookReaderTab() {
       }, 500);
     }
   };
+
+  // Keep ref updated for use in handleDragEnd
+  flipToNextRef.current = flipToNext;
 
   const flipToPrev = () => {
     if (isFlipping) return;
@@ -372,8 +376,8 @@ export function BookReaderTab() {
     setIsDragging(false);
 
     if (dragProgress > 0.3) {
-      // Complete the flip
-      flipToNext();
+      // Complete the flip using ref to avoid dependency cycle
+      flipToNextRef.current();
     }
     setDragProgress(0);
   }, [isDragging, dragProgress]);
@@ -588,7 +592,12 @@ export function BookReaderTab() {
                     />
                     {/* Page Content */}
                     <div className="relative z-10 flex items-center justify-center h-full">
-                      <Document file={pdfUrl} loading={null}>
+                      <Document
+                        file={pdfUrl}
+                        onLoadSuccess={handleDocumentLoadSuccess}
+                        onLoadError={handleDocumentLoadError}
+                        loading={null}
+                      >
                         <Page
                           pageNumber={currentPage}
                           width={Math.min(window.innerWidth * 0.85, 360)}
@@ -835,7 +844,12 @@ export function BookReaderTab() {
                       {/* Book Cover Frame */}
                       <div className="absolute inset-0 rounded-r-lg overflow-hidden">
                         {/* Render PDF Page 1 as the cover */}
-                        <Document file={pdfUrl} loading={null}>
+                        <Document
+                          file={pdfUrl}
+                          onLoadSuccess={handleDocumentLoadSuccess}
+                          onLoadError={handleDocumentLoadError}
+                          loading={null}
+                        >
                           <Page
                             pageNumber={1}
                             width={Math.min(window.innerWidth * 0.45, 430)}
