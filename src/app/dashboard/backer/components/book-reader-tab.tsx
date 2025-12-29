@@ -103,9 +103,14 @@ export function BookReaderTab() {
   const [dragStartX, setDragStartX] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [currentPage, setCurrentPage] = useState(1); // For mobile single-page view
+  const [preloadedPages, setPreloadedPages] = useState<Set<number>>(new Set());
   const bookRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const flipToNextRef = useRef<() => void>(() => {});
+
+  // PDF render scale for crisp text - uses device pixel ratio for retina displays
+  // This offloads high-res rendering to the user's GPU
+  const PDF_RENDER_SCALE = typeof window !== "undefined" ? Math.min(window.devicePixelRatio || 2, 3) : 2;
 
   // Detect mobile screen size
   useEffect(() => {
@@ -253,6 +258,28 @@ export function BookReaderTab() {
     setPdfError("Failed to load PDF document");
   }, []);
 
+  // Preload nearby pages for smooth transitions (6 pages buffer)
+  useEffect(() => {
+    if (!pdfUrl || numPages === 0) return;
+
+    const pagesToPreload = new Set<number>();
+
+    if (isMobile) {
+      // Mobile: preload 3 pages before and after current
+      for (let i = Math.max(1, currentPage - 3); i <= Math.min(numPages, currentPage + 3); i++) {
+        pagesToPreload.add(i);
+      }
+    } else {
+      // Desktop: preload current spread + 2 spreads before/after (6+ pages)
+      const spreadStart = currentSpread === 0 ? 1 : currentSpread * 2;
+      for (let i = Math.max(1, spreadStart - 4); i <= Math.min(numPages, spreadStart + 6); i++) {
+        pagesToPreload.add(i);
+      }
+    }
+
+    setPreloadedPages(pagesToPreload);
+  }, [pdfUrl, numPages, currentPage, currentSpread, isMobile]);
+
   // Calculate max spreads (cover + page pairs)
   const maxSpreads = Math.ceil((numPages + 1) / 2);
 
@@ -399,7 +426,7 @@ export function BookReaderTab() {
   }, [isDragging, handleDragMove, handleDragEnd]);
 
   const adjustScale = (delta: number) => {
-    setScale((prev) => Math.max(0.5, Math.min(2.0, prev + delta)));
+    setScale((prev) => Math.max(0.5, Math.min(4.0, prev + delta)));
   };
 
   const resetScale = () => setScale(1.0);
@@ -509,7 +536,7 @@ export function BookReaderTab() {
                 variant="ghost"
                 size="icon"
                 onClick={() => adjustScale(0.1)}
-                disabled={scale >= 2.0}
+                disabled={scale >= 4.0}
                 className="text-white/70 hover:text-white hover:bg-white/10"
               >
                 <ZoomIn className="h-4 w-4" />
@@ -601,6 +628,7 @@ export function BookReaderTab() {
                         <Page
                           pageNumber={currentPage}
                           width={Math.min(window.innerWidth * 0.85, 360)}
+                          scale={PDF_RENDER_SCALE}
                           renderTextLayer={false}
                           renderAnnotationLayer={false}
                           loading={
@@ -638,6 +666,7 @@ export function BookReaderTab() {
                           <Page
                             pageNumber={currentPage + 1}
                             width={Math.min(window.innerWidth * 0.85, 360)}
+                            scale={PDF_RENDER_SCALE}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             loading={<div className="animate-pulse text-stone-400">Loading...</div>}
@@ -718,6 +747,7 @@ export function BookReaderTab() {
                                   <Page
                                     pageNumber={nextLeftPage}
                                     width={Math.min(window.innerWidth * 0.4, 380)}
+                                    scale={PDF_RENDER_SCALE}
                                     renderTextLayer={false}
                                     renderAnnotationLayer={false}
                                     loading={<div className="animate-pulse text-stone-400">Loading...</div>}
@@ -745,6 +775,7 @@ export function BookReaderTab() {
                                   <Page
                                     pageNumber={nextRightPage}
                                     width={Math.min(window.innerWidth * 0.4, 380)}
+                                    scale={PDF_RENDER_SCALE}
                                     renderTextLayer={false}
                                     renderAnnotationLayer={false}
                                     loading={<div className="animate-pulse text-stone-400">Loading...</div>}
@@ -788,6 +819,7 @@ export function BookReaderTab() {
                           <Page
                             pageNumber={spreadPages.left}
                             width={Math.min(window.innerWidth * 0.4, 380)}
+                            scale={PDF_RENDER_SCALE}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             loading={
@@ -853,6 +885,7 @@ export function BookReaderTab() {
                           <Page
                             pageNumber={1}
                             width={Math.min(window.innerWidth * 0.45, 430)}
+                            scale={PDF_RENDER_SCALE}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             className="[&>canvas]:rounded-r-lg"
@@ -898,6 +931,7 @@ export function BookReaderTab() {
                             <Page
                               pageNumber={spreadPages.right}
                               width={Math.min(window.innerWidth * 0.4, 380)}
+                              scale={PDF_RENDER_SCALE}
                               renderTextLayer={false}
                               renderAnnotationLayer={false}
                               loading={
@@ -1032,57 +1066,92 @@ export function BookReaderTab() {
           </Button>
         </div>
 
-        {/* CSS Animations */}
+        {/* Hidden preloader for smooth page transitions - preloads 6 pages */}
+        <div className="sr-only" aria-hidden="true">
+          <Document file={pdfUrl} loading={null}>
+            {Array.from(preloadedPages).map((pageNum) => (
+              <Page
+                key={`preload-${pageNum}`}
+                pageNumber={pageNum}
+                width={100}
+                scale={0.5}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+                loading={null}
+              />
+            ))}
+          </Document>
+        </div>
+
+        {/* CSS Animations with GPU acceleration */}
         <style jsx global>{`
+          /* GPU-accelerated page rendering */
+          .react-pdf__Page {
+            will-change: transform;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+          }
+          .react-pdf__Page canvas {
+            /* Force hardware acceleration for canvas */
+            transform: translateZ(0);
+            will-change: transform;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+          }
           @keyframes pageFlip {
             0% {
-              transform: rotateY(0deg);
+              transform: rotateY(0deg) translateZ(0);
             }
             100% {
-              transform: rotateY(-180deg);
+              transform: rotateY(-180deg) translateZ(0);
             }
           }
           @keyframes pageFlipReverse {
             0% {
-              transform: rotateY(-180deg);
+              transform: rotateY(-180deg) translateZ(0);
             }
             100% {
-              transform: rotateY(0deg);
+              transform: rotateY(0deg) translateZ(0);
             }
           }
           @keyframes mobilePageFlipNext {
             0% {
-              transform: rotateY(0deg) scale(1);
+              transform: rotateY(0deg) scale(1) translateZ(0);
               opacity: 1;
             }
             50% {
-              transform: rotateY(-45deg) scale(0.95);
+              transform: rotateY(-45deg) scale(0.95) translateZ(0);
               opacity: 0.8;
             }
             100% {
-              transform: rotateY(-90deg) scale(0.9);
+              transform: rotateY(-90deg) scale(0.9) translateZ(0);
               opacity: 0;
             }
           }
           @keyframes mobilePageFlipPrev {
             0% {
-              transform: rotateY(0deg) scale(1);
+              transform: rotateY(0deg) scale(1) translateZ(0);
               opacity: 1;
             }
             50% {
-              transform: rotateY(45deg) scale(0.95);
+              transform: rotateY(45deg) scale(0.95) translateZ(0);
               opacity: 0.8;
             }
             100% {
-              transform: rotateY(90deg) scale(0.9);
+              transform: rotateY(90deg) scale(0.9) translateZ(0);
               opacity: 0;
             }
           }
           .animate-page-flip {
             animation: pageFlip 0.6s ease-in-out forwards;
+            will-change: transform;
+            transform-style: preserve-3d;
           }
           .animate-page-flip-reverse {
             animation: pageFlipReverse 0.6s ease-in-out forwards;
+            will-change: transform;
+            transform-style: preserve-3d;
           }
           @media (max-width: 767px) {
             .animate-page-flip {
