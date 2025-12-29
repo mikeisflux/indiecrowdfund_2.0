@@ -225,18 +225,18 @@ export async function GET(req: NextRequest) {
         },
       }),
 
-      // Get rewards for this project
+      // Get rewards for this project (type: TIER)
       db.reward.findMany({
-        where: { projectId: selectedProjectId },
+        where: { projectId: selectedProjectId, type: "TIER" },
         select: { id: true, title: true, amount: true },
         orderBy: { amount: "asc" },
       }),
 
-      // Get addons for this project
-      db.surveyAddon.findMany({
-        where: { projectId: selectedProjectId },
-        select: { id: true, title: true, price: true },
-        orderBy: { price: "asc" },
+      // Get addons for this project (type: ADDON)
+      db.reward.findMany({
+        where: { projectId: selectedProjectId, type: "ADDON" },
+        select: { id: true, title: true, amount: true },
+        orderBy: { amount: "asc" },
       }),
     ]);
 
@@ -652,8 +652,8 @@ export async function GET(req: NextRequest) {
       workflowState,
       emailMemberCount,
       userEmail: session.user.email || "",
-      rewards: projectRewards.map((r: { id: string; title: string; amount: number }) => ({ id: r.id, name: r.title, amount: r.amount })),
-      addons: projectAddons.map((a: { id: string; title: string; price: number }) => ({ id: a.id, name: a.title, price: a.price })),
+      rewards: projectRewards.map((r: { id: string; title: string; amount: unknown }) => ({ id: r.id, name: r.title, amount: Number(r.amount) })),
+      addons: projectAddons.map((a: { id: string; title: string; amount: unknown }) => ({ id: a.id, name: a.title, price: Number(a.amount) })),
     });
   } catch (error) {
     console.error("IndieKit API error:", error);

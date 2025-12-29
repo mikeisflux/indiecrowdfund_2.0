@@ -67,6 +67,11 @@
 - Soft deletes use `deletedAt` field
 - Always filter with `deletedAt: null` for active records
 - Projects: status enum includes DRAFT, SUBMITTED, APPROVED, LIVE, FUNDED, FAILED, CANCELLED
+- **ALWAYS** check `prisma/schema.prisma` for correct model and field names before writing database queries
+- Common models:
+  - `Reward` - both rewards (type: TIER) and add-ons (type: ADDON) are in this model
+  - `PledgeAddon` - join table between pledges and addon rewards
+  - `DigitalFile` - digital download files
 
 ## Pre-Commit Checklist
 1. All imports are used
