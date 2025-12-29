@@ -34,11 +34,11 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404, headers: corsHeaders });
     }
 
-    // Get transaction history from DivinityCoinTransaction model
+    // Get ALL transaction history from DivinityCoinTransaction model
+    // No limit - show complete accounting history
     const transactions = await db.divinityCoinTransaction.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
-      take: 50, // Limit to last 50 transactions
       include: {
         pledge: {
           include: {
@@ -117,13 +117,18 @@ export async function GET() {
         parsedMetadata = undefined;
       }
 
-      // Build description with code suffix for redemptions
+      // Build description - preserve original for historical transactions
       let description = tx.description || `${type} transaction`;
-      if (type === "REDEEMED" && parsedMetadata?.codeSuffix) {
-        description = `Gift card redeemed ****${parsedMetadata.codeSuffix}`;
-      } else if (type === "REDEEMED" && parsedMetadata?.codePrefix) {
-        // Fallback for older redemptions that only have prefix
-        description = `Gift card redeemed ${parsedMetadata.codePrefix}****`;
+
+      // For redemptions, try to extract code info from metadata if available
+      if (type === "REDEEMED") {
+        if (parsedMetadata?.codeSuffix) {
+          description = `Gift card redeemed ****${parsedMetadata.codeSuffix}`;
+        } else if (parsedMetadata?.codePrefix) {
+          // Fallback for older redemptions that only have prefix
+          description = `Gift card redeemed ${parsedMetadata.codePrefix}****`;
+        }
+        // Otherwise keep original description from database
       }
 
       return {
