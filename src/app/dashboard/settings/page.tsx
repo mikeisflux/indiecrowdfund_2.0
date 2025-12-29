@@ -474,7 +474,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="vanityUrl">Custom URL</Label>
                   <div className="flex items-center">
-                    <span className="text-sm text-muted-foreground mr-2">indiecrowdfund.com/u/</span>
+                    <span className="text-sm text-muted-foreground mr-2">indiecrowdfund.com/projects/</span>
                     <Input
                       id="vanityUrl"
                       value={settings.vanityUrl || ""}
@@ -482,6 +482,7 @@ export default function SettingsPage() {
                       placeholder="username"
                       className="flex-1"
                     />
+                    <span className="text-sm text-muted-foreground ml-2">/</span>
                   </div>
                 </div>
               </div>
