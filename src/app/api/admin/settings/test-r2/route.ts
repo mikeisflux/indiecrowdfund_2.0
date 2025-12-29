@@ -5,6 +5,12 @@ import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 // POST: Test R2 connection with provided credentials
 export async function POST(request: NextRequest) {
+  // Declare outside try block so they're accessible in catch for debugging
+  let accountId: string | undefined;
+  let accessKeyId: string | undefined;
+  let secretAccessKey: string | undefined;
+  let bucketName: string | undefined;
+
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -22,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    let { accountId, accessKeyId, secretAccessKey, bucketName } = body;
+    ({ accountId, accessKeyId, secretAccessKey, bucketName } = body);
 
     // If masked values are passed, fetch actual values from database
     const isMasked = (val: string) => val === "••••••••";
@@ -69,6 +75,15 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Log what we're using (mask sensitive data)
+    console.log("[R2 Test] Using credentials:", {
+      accountId: accountId,
+      accessKeyIdPrefix: accessKeyId.substring(0, 8) + "...",
+      secretKeyLength: secretAccessKey.length,
+      bucketName: bucketName,
+      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    });
 
     // Create S3 client for R2
     const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
@@ -117,7 +132,16 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: errorMessage, details: errorDetails, success: false },
+      {
+        error: errorMessage,
+        details: errorDetails,
+        success: false,
+        debug: {
+          accountIdUsed: accountId ? `${accountId.substring(0, 8)}...` : "missing",
+          bucketNameUsed: bucketName || "missing",
+          endpoint: accountId ? `https://${accountId}.r2.cloudflarestorage.com` : "unknown",
+        }
+      },
       { status: 400 }
     );
   }
