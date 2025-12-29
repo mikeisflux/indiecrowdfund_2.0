@@ -118,6 +118,7 @@ export default function SettingsPage() {
   });
   const [sendingVerification, setSendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [vanityUrlLocked, setVanityUrlLocked] = useState(false);
 
   useEffect(() => {
     async function fetchSettings() {
@@ -126,6 +127,10 @@ export default function SettingsPage() {
         if (!res.ok) throw new Error("Failed to fetch settings");
         const data = await res.json();
         setSettings(data);
+        // Lock the vanity URL field if it was already set
+        if (data.vanityUrl) {
+          setVanityUrlLocked(true);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load settings");
       } finally {
@@ -480,10 +485,22 @@ export default function SettingsPage() {
                       value={settings.vanityUrl || ""}
                       onChange={(e) => setSettings({ ...settings, vanityUrl: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })}
                       placeholder="username"
-                      className="flex-1"
+                      className={`flex-1 ${vanityUrlLocked ? "bg-muted cursor-not-allowed" : ""}`}
+                      disabled={vanityUrlLocked}
                     />
                     <span className="text-sm text-muted-foreground ml-2">/</span>
                   </div>
+                  {vanityUrlLocked ? (
+                    <p className="text-xs text-muted-foreground">
+                      Your username has been set and cannot be changed.
+                    </p>
+                  ) : (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+                      <p className="text-xs text-amber-800 dark:text-amber-200">
+                        <strong>Warning:</strong> Your username can only be set once and cannot be changed after saving. Choose carefully!
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

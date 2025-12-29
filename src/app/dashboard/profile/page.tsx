@@ -85,6 +85,7 @@ export default function ProfilePage() {
   const [newWebsite, setNewWebsite] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingHero, setUploadingHero] = useState(false);
+  const [vanityUrlLocked, setVanityUrlLocked] = useState(false);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const heroInputRef = useRef<HTMLInputElement>(null);
@@ -96,6 +97,10 @@ export default function ProfilePage() {
         if (!res.ok) throw new Error("Failed to fetch profile");
         const data = await res.json();
         setProfile(data);
+        // Lock the vanity URL field if it was already set
+        if (data.vanityUrl) {
+          setVanityUrlLocked(true);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile");
       } finally {
@@ -449,10 +454,22 @@ export default function ProfilePage() {
                         value={profile.vanityUrl || ""}
                         onChange={(e) => setProfile({ ...profile, vanityUrl: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, "") })}
                         placeholder="username"
-                        className="flex-1"
+                        className={`flex-1 ${vanityUrlLocked ? "bg-muted cursor-not-allowed" : ""}`}
+                        disabled={vanityUrlLocked}
                       />
                       <span className="text-sm text-muted-foreground ml-2">/</span>
                     </div>
+                    {vanityUrlLocked ? (
+                      <p className="text-xs text-muted-foreground">
+                        Your username has been set and cannot be changed.
+                      </p>
+                    ) : (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+                        <p className="text-xs text-amber-800 dark:text-amber-200">
+                          <strong>Warning:</strong> Your username can only be set once and cannot be changed after saving. Choose carefully!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

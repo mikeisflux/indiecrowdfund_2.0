@@ -62,7 +62,7 @@ export function BasicsStep() {
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [userVanityUrl, setUserVanityUrl] = useState<string | null>(null);
 
-  // Fetch user's vanity URL on mount
+  // Fetch user's vanity URL on mount and when page becomes visible (e.g., after navigating back)
   useEffect(() => {
     const fetchUserVanityUrl = async () => {
       try {
@@ -75,7 +75,29 @@ export function BasicsStep() {
         // Ignore errors - vanity URL is optional
       }
     };
+
+    // Fetch on mount
     fetchUserVanityUrl();
+
+    // Re-fetch when page becomes visible (handles browser back button)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchUserVanityUrl();
+      }
+    };
+
+    // Re-fetch when window gains focus
+    const handleFocus = () => {
+      fetchUserVanityUrl();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, []);
 
   // Handle video file upload
