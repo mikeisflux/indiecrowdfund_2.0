@@ -50,9 +50,10 @@ function getCSPHeader(): string {
 
   // Script sources - only allow unsafe-eval in development (needed for hot reload)
   // In production, we rely on Next.js bundled scripts being from 'self'
+  // Note: https://unpkg.com is needed for pdf.js worker
   const scriptSrc = isDev
-    ? "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com"
-    : "'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com";
+    ? "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com"
+    : "'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com";
 
   const directives = [
     "default-src 'self'",
@@ -61,8 +62,10 @@ function getCSPHeader(): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https: http:",
-    "connect-src 'self' https://api.stripe.com https://www.google-analytics.com https://vitals.vercel-analytics.com https://*.r2.cloudflarestorage.com wss:",
+    "connect-src 'self' https://api.stripe.com https://www.google-analytics.com https://vitals.vercel-analytics.com https://*.r2.cloudflarestorage.com https://unpkg.com wss:",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.youtube.com https://youtube.com https://player.vimeo.com",
+    // Worker sources - allow blob URLs for pdf.js web worker
+    "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
