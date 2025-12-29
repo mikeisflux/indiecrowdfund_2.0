@@ -304,23 +304,6 @@ export function DigitalTab({
             <Button variant="ghost" size="icon" title="Distribution rules help you automatically send files to backers based on their order contents.">
               <HelpCircle className="h-4 w-4" />
             </Button>
-            <Button
-              className="bg-teal-600 hover:bg-teal-700"
-              disabled={distributionRules.filter(r => r.status === "not_started").length === 0 || isStartingDistributions}
-              onClick={handleStartAllDistributions}
-            >
-              {isStartingDistributions ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Starting...
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  Start all distributions ({distributionRules.filter(r => r.status === "not_started").length})
-                </>
-              )}
-            </Button>
             <Button onClick={onOpenDistributionDialog} variant="outline">
               <Plus className="h-4 w-4 mr-2" />
               Create Rule
@@ -328,6 +311,36 @@ export function DigitalTab({
           </div>
         </CardHeader>
         <CardContent>
+          {/* Process Distribution Button - only show when there are pending rules */}
+          {distributionRules.filter(r => r.status === "not_started").length > 0 && (
+            <div className="mb-6 p-4 bg-teal-50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-800 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-teal-900 dark:text-teal-100">Ready to distribute</h4>
+                  <p className="text-sm text-teal-700 dark:text-teal-300">
+                    {distributionRules.filter(r => r.status === "not_started").length} distribution rule{distributionRules.filter(r => r.status === "not_started").length !== 1 ? 's' : ''} ready to process
+                  </p>
+                </div>
+                <Button
+                  className="bg-teal-600 hover:bg-teal-700"
+                  disabled={isStartingDistributions}
+                  onClick={handleStartAllDistributions}
+                >
+                  {isStartingDistributions ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Process Distribution
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>

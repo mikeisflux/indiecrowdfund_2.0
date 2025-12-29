@@ -12,18 +12,24 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Upload, FileText, X } from "lucide-react";
+import { Upload, FileText, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  projectId?: string;
+  onUploaded?: () => void;
 }
 
-export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
+export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: UploadDialogProps) {
   const [distributionRules, setDistributionRules] = useState<string[]>(["all"]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCheckboxChange = (value: string, checked: boolean) => {
@@ -45,12 +51,15 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
   };
 
   const handleClose = (isOpen: boolean) => {
-    if (!isOpen) {
+    if (!isOpen && !isUploading) {
       // Reset to default when closing
       setDistributionRules(["all"]);
       setSelectedFile(null);
+      setUploadProgress(0);
     }
-    onOpenChange(isOpen);
+    if (!isUploading) {
+      onOpenChange(isOpen);
+    }
   };
 
   const handleFileSelect = (file: File) => {
@@ -89,13 +98,93 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  // Convert distribution rules to accessType
+  const getAccessType = () => {
+    if (distributionRules.includes("all")) return "ALL_BACKERS";
+    if (distributionRules.includes("tier") && distributionRules.includes("addon")) {
+      return "SPECIFIC_REWARDS";
+    }
+    if (distributionRules.includes("tier")) return "SPECIFIC_REWARDS";
+    if (distributionRules.includes("addon")) return "ADDON_PURCHASERS";
+    return "ALL_BACKERS";
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      toast.error("Please select a file");
+      return;
+    }
+    if (distributionRules.length === 0) {
+      toast.error("Please select at least one distribution rule");
+      return;
+    }
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(10);
+
+    try {
+      // Step 1: Get presigned upload URL from API
+      const res = await fetch("/api/creator/digital-files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          fileName: selectedFile.name,
+          fileSize: selectedFile.size,
+          mimeType: selectedFile.type || "application/octet-stream",
+          name: selectedFile.name,
+          accessType: getAccessType(),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to initiate upload");
+      }
+
+      const { uploadUrl } = await res.json();
+      setUploadProgress(30);
+
+      // Step 2: Upload file directly to R2 using presigned URL
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: selectedFile,
+        headers: {
+          "Content-Type": selectedFile.type || "application/octet-stream",
+        },
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Failed to upload file to storage");
+      }
+
+      setUploadProgress(100);
+      toast.success("File uploaded successfully. Create distribution rules to send it to backers.");
+      onUploaded?.();
+
+      // Reset and close
+      setDistributionRules(["all"]);
+      setSelectedFile(null);
+      setUploadProgress(0);
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload file");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Upload Digital File</DialogTitle>
           <DialogDescription>
-            Upload a file to distribute to your backers
+            Upload a file for your backers. After uploading, create distribution rules to send it out.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -127,10 +216,24 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
                   size="icon"
                   onClick={() => setSelectedFile(null)}
                   className="h-8 w-8"
+                  disabled={isUploading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
+              {isUploading && uploadProgress > 0 && (
+                <div className="mt-3">
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-teal-500 transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 text-center">
+                    {uploadProgress < 100 ? "Uploading..." : "Complete!"}
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             // Show drop zone
@@ -167,9 +270,9 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
           )}
 
           <div className="space-y-3">
-            <Label>Distribution Rules</Label>
+            <Label>Intended Recipients</Label>
             <p className="text-xs text-muted-foreground">
-              Select who should receive this file. You can select multiple options.
+              Select who this file is intended for. You&apos;ll configure specific distribution rules after uploading.
             </p>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
@@ -179,6 +282,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
                   onCheckedChange={(checked) =>
                     handleCheckboxChange("all", checked as boolean)
                   }
+                  disabled={isUploading}
                 />
                 <label
                   htmlFor="dist-all"
@@ -194,6 +298,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
                   onCheckedChange={(checked) =>
                     handleCheckboxChange("tier", checked as boolean)
                   }
+                  disabled={isUploading}
                 />
                 <label
                   htmlFor="dist-tier"
@@ -209,6 +314,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
                   onCheckedChange={(checked) =>
                     handleCheckboxChange("addon", checked as boolean)
                   }
+                  disabled={isUploading}
                 />
                 <label
                   htmlFor="dist-addon"
@@ -221,14 +327,25 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleClose(false)}>
+          <Button variant="outline" onClick={() => handleClose(false)} disabled={isUploading}>
             Cancel
           </Button>
           <Button
             className="bg-teal-600 hover:bg-teal-700"
-            disabled={distributionRules.length === 0 || !selectedFile}
+            disabled={distributionRules.length === 0 || !selectedFile || isUploading}
+            onClick={handleUpload}
           >
-            Upload & Distribute
+            {isUploading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

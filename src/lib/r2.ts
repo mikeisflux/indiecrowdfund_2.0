@@ -311,7 +311,54 @@ export function validateFileType(
 }
 
 /**
+ * Get file type category from extension
+ */
+function getFileTypeCategory(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  const categories: Record<string, string> = {
+    // Documents
+    pdf: "documents",
+    doc: "documents",
+    docx: "documents",
+    txt: "documents",
+    // eBooks
+    epub: "ebooks",
+    mobi: "ebooks",
+    azw: "ebooks",
+    azw3: "ebooks",
+    // Audio
+    mp3: "audio",
+    wav: "audio",
+    flac: "audio",
+    m4a: "audio",
+    ogg: "audio",
+    aac: "audio",
+    // Video
+    mp4: "video",
+    mkv: "video",
+    mov: "video",
+    avi: "video",
+    webm: "video",
+    // Images
+    jpg: "images",
+    jpeg: "images",
+    png: "images",
+    gif: "images",
+    webp: "images",
+    svg: "images",
+    // Archives
+    zip: "archives",
+    rar: "archives",
+    "7z": "archives",
+    tar: "archives",
+    gz: "archives",
+  };
+  return categories[ext] || "other";
+}
+
+/**
  * Generate a unique file key for storage
+ * Organized by: digital-rewards/{projectId}/{fileType}/{fileId}_{sanitizedName}
  */
 export function generateFileKey(
   projectId: string,
@@ -322,7 +369,8 @@ export function generateFileKey(
   const sanitizedName = originalFilename
     .replace(/[^a-zA-Z0-9.-]/g, "_")
     .substring(0, 50);
-  return `digital-rewards/${projectId}/${id}_${sanitizedName}`;
+  const fileType = getFileTypeCategory(originalFilename);
+  return `digital-rewards/${projectId}/${fileType}/${id}_${sanitizedName}`;
 }
 
 /**
@@ -330,15 +378,31 @@ export function generateFileKey(
  */
 export function parseFileKey(key: string): {
   projectId: string;
+  fileType: string;
   fileId: string;
   filename: string;
 } | null {
-  const match = key.match(/^digital-rewards\/([^/]+)\/([^_]+)_(.+)$/);
-  if (!match) return null;
+  // New format: digital-rewards/{projectId}/{fileType}/{fileId}_{filename}
+  const newMatch = key.match(/^digital-rewards\/([^/]+)\/([^/]+)\/([^_]+)_(.+)$/);
+  if (newMatch) {
+    return {
+      projectId: newMatch[1],
+      fileType: newMatch[2],
+      fileId: newMatch[3],
+      filename: newMatch[4],
+    };
+  }
 
-  return {
-    projectId: match[1],
-    fileId: match[2],
-    filename: match[3],
-  };
+  // Legacy format: digital-rewards/{projectId}/{fileId}_{filename}
+  const legacyMatch = key.match(/^digital-rewards\/([^/]+)\/([^_]+)_(.+)$/);
+  if (legacyMatch) {
+    return {
+      projectId: legacyMatch[1],
+      fileType: "other",
+      fileId: legacyMatch[2],
+      filename: legacyMatch[3],
+    };
+  }
+
+  return null;
 }
