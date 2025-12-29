@@ -113,23 +113,54 @@ export async function POST(request: NextRequest) {
 
     let errorMessage = "Connection failed";
     let errorDetails = "";
+    let awsErrorCode = "";
+    let httpStatusCode: number | undefined;
+    let requestId = "";
+
+    // Extract AWS SDK specific error details
+    const awsError = error as {
+      name?: string;
+      Code?: string;
+      $metadata?: { httpStatusCode?: number; requestId?: string };
+      message?: string;
+    };
+
+    if (awsError.$metadata) {
+      httpStatusCode = awsError.$metadata.httpStatusCode;
+      requestId = awsError.$metadata.requestId || "";
+    }
+
+    if (awsError.Code) {
+      awsErrorCode = awsError.Code;
+    } else if (awsError.name) {
+      awsErrorCode = awsError.name;
+    }
 
     if (error instanceof Error) {
       errorDetails = error.message;
-      if (error.message.includes("NoSuchBucket")) {
-        errorMessage = "Bucket not found - check the bucket name";
-      } else if (error.message.includes("AccessDenied")) {
-        errorMessage = "Access denied - check bucket permissions";
-      } else if (error.message.includes("InvalidAccessKeyId")) {
-        errorMessage = "Invalid Access Key ID";
-      } else if (error.message.includes("SignatureDoesNotMatch")) {
-        errorMessage = "Invalid Secret Access Key";
+      if (error.message.includes("NoSuchBucket") || awsErrorCode === "NoSuchBucket") {
+        errorMessage = "Bucket not found - check the bucket name matches exactly (case-sensitive)";
+      } else if (error.message.includes("AccessDenied") || awsErrorCode === "AccessDenied") {
+        errorMessage = "Access denied - possible causes: (1) API token permissions, (2) IP address not allowed, (3) bucket not in token scope, (4) token recently created (wait 1-2 min)";
+      } else if (error.message.includes("InvalidAccessKeyId") || awsErrorCode === "InvalidAccessKeyId") {
+        errorMessage = "Invalid Access Key ID - the access key does not exist";
+      } else if (error.message.includes("SignatureDoesNotMatch") || awsErrorCode === "SignatureDoesNotMatch") {
+        errorMessage = "Invalid Secret Access Key - the secret key is incorrect";
       } else if (error.message.includes("getaddrinfo") || error.message.includes("ENOTFOUND")) {
         errorMessage = "Invalid Account ID - could not connect to R2 endpoint";
       } else if (error.message.includes("fetch failed") || error.message.includes("ECONNREFUSED")) {
         errorMessage = "Network error - could not reach R2";
       }
     }
+
+    console.error("[R2 Test] Full error details:", {
+      awsErrorCode,
+      httpStatusCode,
+      requestId,
+      message: errorDetails,
+      accountId: accountId?.substring(0, 8) + "...",
+      bucketName,
+    });
 
     return NextResponse.json(
       {
@@ -140,6 +171,9 @@ export async function POST(request: NextRequest) {
           accountIdUsed: accountId ? `${accountId.substring(0, 8)}...` : "missing",
           bucketNameUsed: bucketName || "missing",
           endpoint: accountId ? `https://${accountId}.r2.cloudflarestorage.com` : "unknown",
+          awsErrorCode: awsErrorCode || "unknown",
+          httpStatus: httpStatusCode || "unknown",
+          r2RequestId: requestId || "unknown",
         }
       },
       { status: 400 }
