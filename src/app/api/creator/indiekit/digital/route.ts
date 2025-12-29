@@ -92,8 +92,9 @@ export async function GET(req: NextRequest) {
     });
 
     // Transform rules to expected format
+    type RuleWithFile = typeof rules[number];
     const formattedRules = await Promise.all(
-      rules.map(async (rule) => {
+      rules.map(async (rule: RuleWithFile) => {
         let triggerProductName = "All Backers";
         if (rule.triggerType === "SPECIFIC_REWARD" && rule.triggerRewardId) {
           const reward = await db.reward.findUnique({

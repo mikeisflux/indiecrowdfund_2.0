@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
     const formattedProjects = projects.map((project) => {
       // Calculate total raised from DivinityCoin pledges
       const totalRaised = project.pledges.reduce(
-        (sum, pledge) => sum + Number(pledge.amount),
+        (sum: number, pledge: { id: string; amount: unknown }) => sum + Number(pledge.amount),
         0
       );
 
@@ -112,16 +112,16 @@ export async function GET(request: NextRequest) {
 
       // Calculate amount already settled
       const completedSettlements = project.divinityCoinSettlements.filter(
-        (s) => s.status === "COMPLETED"
+        (s: { status: string }) => s.status === "COMPLETED"
       );
       const amountSettled = completedSettlements.reduce(
-        (sum, s) => sum + Number(s.amount),
+        (sum: number, s: { amount: unknown }) => sum + Number(s.amount),
         0
       );
 
       // Check for pending/processing settlements
       const pendingSettlements = project.divinityCoinSettlements.filter(
-        (s) => s.status === "PENDING" || s.status === "PROCESSING" || s.status === "INITIATED"
+        (s: { status: string }) => s.status === "PENDING" || s.status === "PROCESSING" || s.status === "INITIATED"
       );
 
       const remainingAmount = amountOwed - amountSettled;
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
               }
             : null,
         },
-        settlements: project.divinityCoinSettlements.map((s) => ({
+        settlements: project.divinityCoinSettlements.map((s: { id: string; amount: unknown; status: string; processedAt: Date | null; completedAt: Date | null }) => ({
           id: s.id,
           amount: Number(s.amount),
           status: s.status,
