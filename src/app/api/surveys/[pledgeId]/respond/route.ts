@@ -3,14 +3,27 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
-const addressSchema = z.object({
-  name: z.string().min(1),
-  line1: z.string().min(1),
+// Lenient address schema for progress saves (allows empty strings)
+const addressSchemaPartial = z.object({
+  name: z.string(),
+  line1: z.string(),
   line2: z.string().optional().nullable(),
-  city: z.string().min(1),
-  state: z.string().min(1),
-  postalCode: z.string().min(1),
-  country: z.string().min(1),
+  city: z.string(),
+  state: z.string(),
+  postalCode: z.string(),
+  country: z.string(),
+  phone: z.string().optional().nullable(),
+});
+
+// Strict address schema for final submission
+const addressSchemaStrict = z.object({
+  name: z.string().min(1, "Name is required"),
+  line1: z.string().min(1, "Address is required"),
+  line2: z.string().optional().nullable(),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
+  postalCode: z.string().min(1, "Postal code is required"),
+  country: z.string().min(1, "Country is required"),
   phone: z.string().optional().nullable(),
 });
 
@@ -20,7 +33,7 @@ const responseSchema = z.object({
     customAnswers: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(),
   })).optional(),
   backerResponses: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(),
-  shippingAddress: addressSchema.optional().nullable(),
+  shippingAddress: addressSchemaPartial.optional().nullable(),
   submit: z.boolean().default(false), // If true, mark as complete
 });
 
@@ -312,11 +325,23 @@ export async function POST(
       }
 
       // Check address if required
-      if (survey.collectAddresses && !data.shippingAddress && !existingResponse.shippingAddress) {
-        return NextResponse.json(
-          { error: "Shipping address is required" },
-          { status: 400 }
-        );
+      if (survey.collectAddresses) {
+        const addressToValidate = data.shippingAddress || existingResponse.shippingAddress;
+        if (!addressToValidate) {
+          return NextResponse.json(
+            { error: "Shipping address is required" },
+            { status: 400 }
+          );
+        }
+        // Validate address with strict schema on submit
+        const addressResult = addressSchemaStrict.safeParse(addressToValidate);
+        if (!addressResult.success) {
+          const errorMessage = addressResult.error.issues.map(i => i.message).join(', ');
+          return NextResponse.json(
+            { error: `Shipping address incomplete: ${errorMessage}` },
+            { status: 400 }
+          );
+        }
       }
     }
 

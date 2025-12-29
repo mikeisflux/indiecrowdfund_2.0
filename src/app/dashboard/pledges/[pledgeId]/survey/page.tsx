@@ -172,7 +172,10 @@ export default function BackerSurveyPage() {
         body: JSON.stringify({
           itemResponses,
           backerResponses,
-          shippingAddress: data?.survey.collectAddresses ? shippingAddress : null,
+          // Only send address if it has content (at least name filled in)
+          shippingAddress: data?.survey.collectAddresses && shippingAddress.name.trim()
+            ? shippingAddress
+            : null,
           submit,
         }),
       });
