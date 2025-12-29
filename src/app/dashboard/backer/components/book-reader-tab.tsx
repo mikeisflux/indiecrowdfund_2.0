@@ -591,7 +591,7 @@ export function BookReaderTab() {
                           <Page
                             key={`next-${offset}`}
                             pageNumber={pageNum}
-                            width={Math.min(window.innerWidth * 0.85, 360)}
+                            height={Math.min(window.innerHeight * 0.7, 560)}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             loading={null}
@@ -605,7 +605,7 @@ export function BookReaderTab() {
                           <Page
                             key={`prev-${offset}`}
                             pageNumber={pageNum}
-                            width={Math.min(window.innerWidth * 0.85, 360)}
+                            height={Math.min(window.innerHeight * 0.7, 560)}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             loading={null}
@@ -619,18 +619,18 @@ export function BookReaderTab() {
                       <div
                         className="absolute bg-[#f5f0e6] shadow-xl overflow-hidden"
                         style={{
-                          width: "min(90vw, 380px)",
-                          height: "min(130vw, 550px)",
+                          height: "min(75vh, 580px)",
+                          aspectRatio: "6.88 / 10.5",
                           opacity: Math.min(1, dragProgress * 2),
                           zIndex: -1,
                           borderRadius: "4px",
                           backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 5%, #f8f5ef 95%, #e8e0d0 100%)",
                         }}
                       >
-                        <div className="relative z-10 flex items-center justify-center h-full">
+                        <div className="relative z-10 flex items-center justify-center h-full w-full">
                           <Page
                             pageNumber={currentPage - 1}
-                            width={Math.min(window.innerWidth * 0.85, 360)}
+                            height={Math.min(window.innerHeight * 0.7, 560)}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             loading={null}
@@ -647,18 +647,18 @@ export function BookReaderTab() {
                       <div
                         className="absolute bg-[#f5f0e6] shadow-xl overflow-hidden"
                         style={{
-                          width: "min(90vw, 380px)",
-                          height: "min(130vw, 550px)",
+                          height: "min(75vh, 580px)",
+                          aspectRatio: "6.88 / 10.5",
                           opacity: Math.min(1, dragProgress * 2),
                           zIndex: -1,
                           borderRadius: "4px",
                           backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 5%, #f8f5ef 95%, #e8e0d0 100%)",
                         }}
                       >
-                        <div className="relative z-10 flex items-center justify-center h-full">
+                        <div className="relative z-10 flex items-center justify-center h-full w-full">
                           <Page
                             pageNumber={currentPage + 1}
-                            width={Math.min(window.innerWidth * 0.85, 360)}
+                            height={Math.min(window.innerHeight * 0.7, 560)}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             loading={null}
@@ -678,8 +678,8 @@ export function BookReaderTab() {
                         !isDragging && !isFlipping && "transition-transform duration-300 ease-out"
                       )}
                       style={{
-                        width: "min(90vw, 380px)",
-                        height: "min(130vw, 550px)",
+                        height: "min(75vh, 580px)",
+                        aspectRatio: "6.88 / 10.5",
                         boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
                         backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 5%, #f8f5ef 95%, #e8e0d0 100%)",
                         borderRadius: "4px",
@@ -706,10 +706,10 @@ export function BookReaderTab() {
                         }}
                       />
                       {/* Page Content */}
-                      <div className="relative z-10 flex items-center justify-center h-full">
+                      <div className="relative z-10 flex items-center justify-center h-full w-full">
                         <Page
                           pageNumber={currentPage}
-                          width={Math.min(window.innerWidth * 0.85, 360)}
+                          height={Math.min(window.innerHeight * 0.7, 560)}
                           renderTextLayer={false}
                           renderAnnotationLayer={false}
                           loading={null}
@@ -753,12 +753,12 @@ export function BookReaderTab() {
                     {/* Preload 6+ pages for smooth transitions (always rendered but hidden for caching) */}
                     <div className="absolute opacity-0 pointer-events-none" style={{ zIndex: -10 }}>
                       {/* Always preload cover, pages 2-3 */}
-                      <Page pageNumber={1} width={Math.min(window.innerWidth * 0.45, 430)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
-                      {numPages >= 2 && <Page pageNumber={2} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
-                      {numPages >= 3 && <Page pageNumber={3} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                      <Page pageNumber={1} height={Math.min(window.innerHeight * 0.72, 600)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                      {numPages >= 2 && <Page pageNumber={2} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                      {numPages >= 3 && <Page pageNumber={3} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                       {/* Current spread pages */}
-                      {spreadPages.left && spreadPages.left > 3 && <Page pageNumber={spreadPages.left} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
-                      {spreadPages.right && spreadPages.right > 3 && <Page pageNumber={spreadPages.right} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                      {spreadPages.left && spreadPages.left > 3 && <Page pageNumber={spreadPages.left} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                      {spreadPages.right && spreadPages.right > 3 && <Page pageNumber={spreadPages.right} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                       {/* Preload 3 spreads ahead */}
                       {[1, 2, 3].map((offset) => {
                         const nextSpread = currentSpread + offset;
@@ -766,8 +766,8 @@ export function BookReaderTab() {
                         const nextRightPage = isCoverPage && offset === 1 ? 3 : nextSpread * 2 + 1;
                         return (
                           <React.Fragment key={`next-${offset}`}>
-                            {nextLeftPage <= numPages && nextLeftPage > 3 && <Page pageNumber={nextLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
-                            {nextRightPage <= numPages && nextRightPage > 3 && <Page pageNumber={nextRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                            {nextLeftPage <= numPages && nextLeftPage > 3 && <Page pageNumber={nextLeftPage} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                            {nextRightPage <= numPages && nextRightPage > 3 && <Page pageNumber={nextRightPage} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                           </React.Fragment>
                         );
                       })}
@@ -779,8 +779,8 @@ export function BookReaderTab() {
                         const prevRightPage = prevSpread * 2 + 1;
                         return (
                           <React.Fragment key={`prev-${offset}`}>
-                            {prevLeftPage > 3 && prevLeftPage <= numPages && <Page pageNumber={prevLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
-                            {prevRightPage > 3 && prevRightPage <= numPages && <Page pageNumber={prevRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                            {prevLeftPage > 3 && prevLeftPage <= numPages && <Page pageNumber={prevLeftPage} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                            {prevRightPage > 3 && prevRightPage <= numPages && <Page pageNumber={prevRightPage} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                           </React.Fragment>
                         );
                       })}
@@ -817,16 +817,16 @@ export function BookReaderTab() {
                             const nextRightPage = isCoverPage ? 3 : nextSpread * 2 + 1;
                             return (
                               <>
-                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ width: "min(45vw, 400px)", height: "min(60vw, 550px)", boxShadow: "-4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
+                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ height: "min(70vh, 580px)", aspectRatio: "6.88 / 10.5", boxShadow: "-4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
                                   <div className="relative z-10 flex items-center justify-center h-full">
-                                    {nextLeftPage <= numPages && <Page pageNumber={nextLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                                    {nextLeftPage <= numPages && <Page pageNumber={nextLeftPage} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                                   </div>
                                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{nextLeftPage}</div>
                                 </div>
-                                <div className="w-8 bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
-                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ width: "min(45vw, 400px)", height: "min(60vw, 550px)", boxShadow: "4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
+                                <div className="w-4 bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
+                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ height: "min(70vh, 580px)", aspectRatio: "6.88 / 10.5", boxShadow: "4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
                                   <div className="relative z-10 flex items-center justify-center h-full">
-                                    {nextRightPage <= numPages && <Page pageNumber={nextRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                                    {nextRightPage <= numPages && <Page pageNumber={nextRightPage} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                                   </div>
                                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{nextRightPage}</div>
                                 </div>
@@ -848,9 +848,9 @@ export function BookReaderTab() {
                             if (currentSpread === 1) {
                               // Going back to cover
                               return (
-                                <div className="relative overflow-hidden" style={{ width: "min(50vw, 450px)", height: "min(65vw, 600px)", backgroundColor: "#1a1510", borderRadius: "0 8px 8px 0", backgroundImage: "linear-gradient(135deg, #2a2015 0%, #1a1510 50%, #0f0a05 100%)" }}>
+                                <div className="relative overflow-hidden" style={{ height: "min(75vh, 620px)", aspectRatio: "6.88 / 10.5", backgroundColor: "#1a1510", borderRadius: "0 8px 8px 0", backgroundImage: "linear-gradient(135deg, #2a2015 0%, #1a1510 50%, #0f0a05 100%)" }}>
                                   <div className="absolute inset-0 rounded-r-lg overflow-hidden">
-                                    <Page pageNumber={1} width={Math.min(window.innerWidth * 0.45, 430)} renderTextLayer={false} renderAnnotationLayer={false} className="[&>canvas]:rounded-r-lg" loading={null} />
+                                    <Page pageNumber={1} height={Math.min(window.innerHeight * 0.72, 600)} renderTextLayer={false} renderAnnotationLayer={false} className="[&>canvas]:rounded-r-lg" loading={null} />
                                   </div>
                                 </div>
                               );
@@ -860,16 +860,16 @@ export function BookReaderTab() {
                             const prevRightPage = prevSpread * 2 + 1;
                             return (
                               <>
-                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ width: "min(45vw, 400px)", height: "min(60vw, 550px)", boxShadow: "-4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
+                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ height: "min(70vh, 580px)", aspectRatio: "6.88 / 10.5", boxShadow: "-4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
                                   <div className="relative z-10 flex items-center justify-center h-full">
-                                    {prevLeftPage <= numPages && <Page pageNumber={prevLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                                    {prevLeftPage <= numPages && <Page pageNumber={prevLeftPage} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                                   </div>
                                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{prevLeftPage}</div>
                                 </div>
-                                <div className="w-8 bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
-                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ width: "min(45vw, 400px)", height: "min(60vw, 550px)", boxShadow: "4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
+                                <div className="w-4 bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
+                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ height: "min(70vh, 580px)", aspectRatio: "6.88 / 10.5", boxShadow: "4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
                                   <div className="relative z-10 flex items-center justify-center h-full">
-                                    {prevRightPage <= numPages && <Page pageNumber={prevRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                                    {prevRightPage <= numPages && <Page pageNumber={prevRightPage} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                                   </div>
                                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{prevRightPage}</div>
                                 </div>
@@ -888,8 +888,8 @@ export function BookReaderTab() {
                             !isDragging && !isFlipping && "transition-transform duration-300 ease-out"
                           )}
                           style={{
-                            width: "min(45vw, 400px)",
-                            height: "min(60vw, 550px)",
+                            height: "min(70vh, 580px)",
+                            aspectRatio: "6.88 / 10.5",
                             boxShadow: isDragging && dragDirection === "backward"
                               ? `4px 0 30px rgba(0,0,0,${0.4 + dragProgress * 0.2})`
                               : "-4px 0 20px rgba(0,0,0,0.4), inset 2px 0 8px rgba(0,0,0,0.1)",
@@ -907,7 +907,7 @@ export function BookReaderTab() {
                         >
                           <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")` }} />
                           <div className="relative z-10 flex items-center justify-center h-full">
-                            {spreadPages.left && <Page pageNumber={spreadPages.left} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                            {spreadPages.left && <Page pageNumber={spreadPages.left} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                           </div>
                           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{spreadPages.left}</div>
                           <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-black/10 to-transparent pointer-events-none" />
@@ -924,8 +924,8 @@ export function BookReaderTab() {
                           !isDragging && !isFlipping && "transition-transform duration-300 ease-out"
                         )}
                         style={{
-                          width: isCoverPage ? "min(50vw, 450px)" : "min(45vw, 400px)",
-                          height: isCoverPage ? "min(65vw, 600px)" : "min(60vw, 550px)",
+                          height: isCoverPage ? "min(75vh, 620px)" : "min(70vh, 580px)",
+                          aspectRatio: "6.88 / 10.5",
                           backgroundColor: isCoverPage ? "#1a1510" : "#f5f0e6",
                           boxShadow: isDragging && dragDirection === "forward"
                             ? `0 25px 50px -12px rgba(0, 0, 0, ${0.6 + dragProgress * 0.2}), -${dragProgress * 8}px 0 30px rgba(0,0,0,0.4)`
@@ -951,7 +951,7 @@ export function BookReaderTab() {
                         {isCoverPage && (
                           <>
                             <div className="absolute inset-0 rounded-r-lg overflow-hidden">
-                              <Page pageNumber={1} width={Math.min(window.innerWidth * 0.45, 430)} renderTextLayer={false} renderAnnotationLayer={false} className="[&>canvas]:rounded-r-lg" loading={null} />
+                              <Page pageNumber={1} height={Math.min(window.innerHeight * 0.72, 600)} renderTextLayer={false} renderAnnotationLayer={false} className="[&>canvas]:rounded-r-lg" loading={null} />
                             </div>
                             <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-black/20 pointer-events-none" />
                             <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-amber-500/30 rounded-tr" />
@@ -970,7 +970,7 @@ export function BookReaderTab() {
                           <>
                             <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")` }} />
                             <div className="relative z-10 flex items-center justify-center h-full">
-                              {spreadPages.right && <Page pageNumber={spreadPages.right} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                              {spreadPages.right && <Page pageNumber={spreadPages.right} height={Math.min(window.innerHeight * 0.68, 560)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
                             </div>
                             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{spreadPages.right}</div>
                             <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
@@ -980,12 +980,12 @@ export function BookReaderTab() {
 
                       {/* Page Turn Overlay - Next */}
                       {isFlipping && flipDirection === "next" && (
-                        <div className="absolute top-0 right-0 bg-[#f5f0e6] origin-left z-30" style={{ width: isCoverPage ? "min(50vw, 450px)" : "min(45vw, 400px)", height: isCoverPage ? "min(65vw, 600px)" : "min(60vw, 550px)", animation: "pageFlip 0.6s ease-in-out forwards", boxShadow: "-5px 0 30px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 100%)" }} />
+                        <div className="absolute top-0 right-0 bg-[#f5f0e6] origin-left z-30" style={{ height: isCoverPage ? "min(75vh, 620px)" : "min(70vh, 580px)", aspectRatio: "6.88 / 10.5", animation: "pageFlip 0.6s ease-in-out forwards", boxShadow: "-5px 0 30px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 100%)" }} />
                       )}
 
                       {/* Page Turn Overlay - Prev */}
                       {isFlipping && flipDirection === "prev" && (
-                        <div className="absolute top-0 left-0 bg-[#f5f0e6] origin-right z-30" style={{ width: "min(45vw, 400px)", height: "min(60vw, 550px)", animation: "pageFlipReverse 0.6s ease-in-out forwards", boxShadow: "5px 0 30px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 100%)" }} />
+                        <div className="absolute top-0 left-0 bg-[#f5f0e6] origin-right z-30" style={{ height: "min(70vh, 580px)", aspectRatio: "6.88 / 10.5", animation: "pageFlipReverse 0.6s ease-in-out forwards", boxShadow: "5px 0 30px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 100%)" }} />
                       )}
                     </div>
 
@@ -1003,10 +1003,10 @@ export function BookReaderTab() {
                       </div>
                     </div>
                     <div
-                      className={cn("absolute top-0 right-0 w-1/3 h-full z-40 group select-none", !isCoverPage && "cursor-grab active:cursor-grabbing")}
+                      className={cn("absolute top-0 right-0 w-1/3 h-full z-40 group select-none cursor-grab active:cursor-grabbing")}
                       onClick={!isDragging ? flipToNext : undefined}
-                      onMouseDown={!isCoverPage ? handleDragStart : undefined}
-                      onTouchStart={!isCoverPage ? handleDragStart : undefined}
+                      onMouseDown={handleDragStart}
+                      onTouchStart={handleDragStart}
                       style={{ display: currentSpread >= maxSpreads - 1 ? "none" : "block" }}
                     >
                       <div className="absolute inset-0 bg-gradient-to-l from-black/0 to-transparent opacity-0 group-hover:opacity-20 transition-opacity" />
