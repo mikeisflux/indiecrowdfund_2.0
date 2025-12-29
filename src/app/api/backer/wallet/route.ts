@@ -50,13 +50,60 @@ export async function GET() {
       },
     });
 
-    // Calculate lifetime stats from transactions
+    // Also get redemptions from the DivinityCoinRedemption table
+    // These might exist without corresponding transaction records (historical data)
+    const redemptions = await db.divinityCoinRedemption.findMany({
+      where: { userId: session.user.id },
+      orderBy: { redeemedAt: "desc" },
+    });
+
+    // Find redemptions that don't have a corresponding transaction record
+    // (check by matching amount and approximate time)
+    const existingRedemptionTimes = new Set(
+      transactions
+        .filter(tx => tx.type === "REDEMPTION")
+        .map(tx => tx.createdAt.getTime())
+    );
+
+    const orphanedRedemptions = redemptions.filter(r => {
+      // Check if there's a transaction within 60 seconds of this redemption
+      const redemptionTime = r.redeemedAt.getTime();
+      for (const txTime of existingRedemptionTimes) {
+        if (Math.abs(txTime - redemptionTime) < 60000) {
+          return false; // Has matching transaction
+        }
+      }
+      return true; // No matching transaction found
+    });
+
+    // Convert orphaned redemptions to transaction format
+    const redemptionTransactions = orphanedRedemptions.map(r => ({
+      id: `redemption-${r.id}`,
+      userId: r.userId,
+      pledgeId: null,
+      amount: r.amount,
+      type: "REDEMPTION" as const,
+      description: `Gift card redeemed (${r.code.substring(0, 4)}****)`,
+      metadata: JSON.stringify({
+        codePrefix: r.code.substring(0, 4),
+        source: "DivinityCoinRedemption"
+      }),
+      createdAt: r.redeemedAt,
+      pledge: null,
+    }));
+
+    // Merge and sort all transactions by date (newest first)
+    const allTransactions = [...transactions, ...redemptionTransactions].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+    );
+
+    // Calculate lifetime stats from all transactions
     let lifetimeEarned = 0;
     let lifetimeSpent = 0;
 
-    type TransactionType = typeof transactions[number];
+    type TransactionType = typeof allTransactions[number];
 
-    transactions.forEach((tx: TransactionType) => {
+    allTransactions.forEach((tx: TransactionType) => {
       const amount = Number(tx.amount);
       if (amount > 0) {
         lifetimeEarned += amount;
@@ -67,13 +114,37 @@ export async function GET() {
 
     // Format transactions for frontend with running balance
     // Sort oldest first to calculate running balance, then reverse
-    const sortedForBalance = [...transactions].reverse();
+    const sortedForBalance = [...allTransactions].reverse();
     let runningBalance = Number(user.divinityCoinBalance || 0);
 
     // Calculate what the balance was before all these transactions
     sortedForBalance.forEach((tx) => {
       runningBalance -= Number(tx.amount);
     });
+
+    // If there's an unaccounted starting balance, add an "Opening Balance" transaction
+    const openingBalance = runningBalance;
+    if (openingBalance !== 0) {
+      // Add opening balance as the first (oldest) transaction
+      const oldestDate = sortedForBalance.length > 0
+        ? new Date(sortedForBalance[0].createdAt.getTime() - 1000) // 1 second before oldest
+        : new Date(user.createdAt);
+
+      sortedForBalance.unshift({
+        id: "opening-balance",
+        userId: session.user.id,
+        pledgeId: null,
+        amount: { toNumber: () => openingBalance } as unknown as typeof sortedForBalance[0]["amount"],
+        type: "INITIAL" as unknown as typeof sortedForBalance[0]["type"],
+        description: "Opening balance",
+        metadata: null,
+        createdAt: oldestDate,
+        pledge: null,
+      } as typeof sortedForBalance[0]);
+    }
+
+    // Reset and recalculate running balance
+    runningBalance = 0;
 
     // Now process in chronological order to build running balances
     const transactionsWithBalance = sortedForBalance.map((tx) => {
@@ -86,7 +157,7 @@ export async function GET() {
 
     const formattedTransactions = transactionsWithBalance.map((tx) => {
       const amount = Number(tx.amount);
-      let type: "EARNED" | "SPENT" | "REDEEMED" | "BONUS" | "REFERRAL" | "REFUND" = "EARNED";
+      let type: "EARNED" | "SPENT" | "REDEEMED" | "BONUS" | "REFERRAL" | "REFUND" | "INITIAL" = "EARNED";
 
       // Map transaction type
       switch (tx.type) {
@@ -104,6 +175,9 @@ export async function GET() {
           break;
         case "REFUND":
           type = "REFUND";
+          break;
+        case "INITIAL":
+          type = "INITIAL";
           break;
         default:
           type = amount >= 0 ? "EARNED" : "SPENT";

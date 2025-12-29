@@ -35,7 +35,7 @@ import { toast } from "sonner";
 
 interface Transaction {
   id: string;
-  type: "EARNED" | "SPENT" | "REDEEMED" | "BONUS" | "REFERRAL" | "REFUND";
+  type: "EARNED" | "SPENT" | "REDEEMED" | "BONUS" | "REFERRAL" | "REFUND" | "INITIAL";
   amount: number;
   description: string;
   projectTitle?: string;
@@ -66,6 +66,7 @@ const TRANSACTION_ICONS: Record<string, React.ElementType> = {
   BONUS: Star,
   REFERRAL: Users,
   REFUND: RefreshCw,
+  INITIAL: Coins,
 };
 
 const TRANSACTION_COLORS: Record<string, string> = {
@@ -75,6 +76,7 @@ const TRANSACTION_COLORS: Record<string, string> = {
   BONUS: "text-amber-500 bg-amber-500/20",
   REFERRAL: "text-blue-500 bg-blue-500/20",
   REFUND: "text-cyan-500 bg-cyan-500/20",
+  INITIAL: "text-[#0066FF] bg-[#0066FF]/20",
 };
 
 export function DivinityCoinWalletTab() {
@@ -346,7 +348,7 @@ export function DivinityCoinWalletTab() {
               {data.transactions.map((tx, index) => {
                 const Icon = TRANSACTION_ICONS[tx.type] || Gift;
                 const colorClass = TRANSACTION_COLORS[tx.type] || TRANSACTION_COLORS.EARNED;
-                const isPositive = ["EARNED", "REDEEMED", "BONUS", "REFERRAL", "REFUND"].includes(tx.type);
+                const isPositive = ["EARNED", "REDEEMED", "BONUS", "REFERRAL", "REFUND", "INITIAL"].includes(tx.type);
 
                 return (
                   <div
