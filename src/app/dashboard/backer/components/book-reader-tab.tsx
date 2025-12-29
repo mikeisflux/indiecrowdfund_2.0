@@ -33,7 +33,6 @@ const Page = dynamic(
   () => import("react-pdf").then((mod) => mod.Page),
   { ssr: false }
 );
-const NextImage = dynamic(() => import("next/image"), { ssr: false });
 
 interface DigitalFile {
   id: string;
@@ -105,13 +104,10 @@ export function BookReaderTab() {
   const [dragDirection, setDragDirection] = useState<"forward" | "backward" | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [currentPage, setCurrentPage] = useState(1); // For mobile single-page view
-  const [preloadedPages, setPreloadedPages] = useState<Set<number>>(new Set());
-  const [pageCache, setPageCache] = useState<Map<number, string>>(new Map()); // Stores base64 images
   const bookRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const flipToNextRef = useRef<() => void>(() => {});
   const flipToPrevRef = useRef<() => void>(() => {});
-  const preloadContainerRef = useRef<HTMLDivElement>(null);
 
 
   // Detect mobile screen size
@@ -259,50 +255,6 @@ export function BookReaderTab() {
     console.error("PDF load error:", error);
     setPdfError("Failed to load PDF document");
   }, []);
-
-  // Callback to cache rendered page as data URL
-  const handlePageRenderSuccess = useCallback((pageNum: number) => {
-    // Find the canvas for this page and cache it
-    setTimeout(() => {
-      const canvases = document.querySelectorAll(`[data-page-number="${pageNum}"] canvas`);
-      canvases.forEach((canvas) => {
-        if (canvas instanceof HTMLCanvasElement) {
-          try {
-            const dataUrl = canvas.toDataURL("image/png");
-            setPageCache((prev) => {
-              const newCache = new Map(prev);
-              newCache.set(pageNum, dataUrl);
-              return newCache;
-            });
-          } catch {
-            // Canvas might be tainted, ignore
-          }
-        }
-      });
-    }, 100);
-  }, []);
-
-  // Preload nearby pages for smooth transitions (6 pages buffer)
-  useEffect(() => {
-    if (!pdfUrl || numPages === 0) return;
-
-    const pagesToPreload = new Set<number>();
-
-    if (isMobile) {
-      // Mobile: preload 3 pages before and after current
-      for (let i = Math.max(1, currentPage - 3); i <= Math.min(numPages, currentPage + 3); i++) {
-        pagesToPreload.add(i);
-      }
-    } else {
-      // Desktop: preload current spread + 2 spreads before/after (6+ pages)
-      const spreadStart = currentSpread === 0 ? 1 : currentSpread * 2;
-      for (let i = Math.max(1, spreadStart - 4); i <= Math.min(numPages, spreadStart + 6); i++) {
-        pagesToPreload.add(i);
-      }
-    }
-
-    setPreloadedPages(pagesToPreload);
-  }, [pdfUrl, numPages, currentPage, currentSpread, isMobile]);
 
   // Calculate max spreads (cover + page pairs)
   const maxSpreads = Math.ceil((numPages + 1) / 2);
@@ -781,326 +733,277 @@ export function BookReaderTab() {
                   </div>
                 </Document>
               ) : (
-                /* Desktop Two-Page Spread View */
-                <div
-                  ref={bookRef}
-                  className="relative"
-                  style={{
-                    transform: `scale(${scale})`,
-                    transformOrigin: "center center",
-                    transition: "transform 0.3s ease",
-                  }}
+                /* Desktop Two-Page Spread View - Single Document for caching */
+                <Document
+                  file={pdfUrl}
+                  onLoadSuccess={handleDocumentLoadSuccess}
+                  onLoadError={handleDocumentLoadError}
+                  loading={null}
                 >
-                  {/* Book Container */}
                   <div
-                    className={cn(
-                      "relative flex",
-                      isCoverPage ? "justify-center" : "justify-center"
-                    )}
+                    ref={bookRef}
+                    className="relative"
                     style={{
-                      transformStyle: "preserve-3d",
+                      transform: `scale(${scale})`,
+                      transformOrigin: "center center",
+                      transition: "transform 0.3s ease",
                     }}
                   >
-                    {/* Book Spine Shadow */}
-                    {!isCoverPage && (
-                      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-8 z-20 pointer-events-none">
-                        <div className="h-full bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
-                      </div>
-                    )}
+                    {/* Preload adjacent spreads (always rendered but hidden for caching) */}
+                    <div className="absolute opacity-0 pointer-events-none" style={{ zIndex: -10 }}>
+                      {/* Cover page */}
+                      <Page pageNumber={1} width={Math.min(window.innerWidth * 0.45, 430)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                      {/* Current spread pages */}
+                      {spreadPages.left && spreadPages.left > 1 && <Page pageNumber={spreadPages.left} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                      {spreadPages.right && spreadPages.right > 1 && <Page pageNumber={spreadPages.right} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                      {/* Next spread pages */}
+                      {(() => {
+                        const nextSpread = currentSpread + 1;
+                        const nextLeftPage = isCoverPage ? 2 : nextSpread * 2;
+                        const nextRightPage = isCoverPage ? 3 : nextSpread * 2 + 1;
+                        return (
+                          <>
+                            {nextLeftPage <= numPages && <Page pageNumber={nextLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                            {nextRightPage <= numPages && <Page pageNumber={nextRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                          </>
+                        );
+                      })()}
+                      {/* Previous spread pages */}
+                      {currentSpread > 1 && (() => {
+                        const prevSpread = currentSpread - 1;
+                        const prevLeftPage = prevSpread * 2;
+                        const prevRightPage = prevSpread * 2 + 1;
+                        return (
+                          <>
+                            {prevLeftPage >= 2 && <Page pageNumber={prevLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                            {prevRightPage <= numPages && <Page pageNumber={prevRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                          </>
+                        );
+                      })()}
+                    </div>
 
-                {/* Next Spread Preview - Visible when dragging any page */}
-                {isDragging && dragProgress > 0.1 && (
-                  <div
-                    className="absolute flex"
-                    style={{
-                      opacity: Math.min(1, dragProgress * 2),
-                      zIndex: 0,
-                    }}
-                  >
-                    {/* Calculate next spread pages */}
-                    {(() => {
-                      const nextSpread = currentSpread + 1;
-                      const nextLeftPage = isCoverPage ? 2 : nextSpread * 2;
-                      const nextRightPage = isCoverPage ? 3 : nextSpread * 2 + 1;
-                      return (
-                        <>
-                          {/* Left Page of Next Spread */}
-                          <div
-                            className="relative bg-[#f5f0e6] overflow-hidden"
-                            style={{
-                              width: "min(45vw, 400px)",
-                              height: "min(60vw, 550px)",
-                              boxShadow: "-4px 0 20px rgba(0,0,0,0.3)",
-                              backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)",
-                            }}
-                          >
-                            <div className="relative z-10 flex items-center justify-center h-full">
-                              {nextLeftPage <= numPages && (
-                                <Document file={pdfUrl} loading={null}>
-                                  <Page
-                                    pageNumber={nextLeftPage}
-                                    width={Math.min(window.innerWidth * 0.4, 380)}
-                                    renderTextLayer={false}
-                                    renderAnnotationLayer={false}
-                                    loading={<div className="animate-pulse text-stone-400">Loading...</div>}
-                                  />
-                                </Document>
-                              )}
-                            </div>
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{nextLeftPage}</div>
-                          </div>
-                          {/* Spine */}
-                          <div className="w-8 bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
-                          {/* Right Page of Next Spread */}
-                          <div
-                            className="relative bg-[#f5f0e6] overflow-hidden"
-                            style={{
-                              width: "min(45vw, 400px)",
-                              height: "min(60vw, 550px)",
-                              boxShadow: "4px 0 20px rgba(0,0,0,0.3)",
-                              backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)",
-                            }}
-                          >
-                            <div className="relative z-10 flex items-center justify-center h-full">
-                              {nextRightPage <= numPages && (
-                                <Document file={pdfUrl} loading={null}>
-                                  <Page
-                                    pageNumber={nextRightPage}
-                                    width={Math.min(window.innerWidth * 0.4, 380)}
-                                    renderTextLayer={false}
-                                    renderAnnotationLayer={false}
-                                    loading={<div className="animate-pulse text-stone-400">Loading...</div>}
-                                  />
-                                </Document>
-                              )}
-                            </div>
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{nextRightPage}</div>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {/* Left Page */}
-                {!isCoverPage && (
-                  <div
-                    className={cn(
-                      "relative bg-[#f5f0e6] shadow-2xl overflow-hidden",
-                      "transition-transform duration-500 ease-in-out origin-right",
-                      isFlipping && flipDirection === "prev" && "animate-page-flip-reverse"
-                    )}
-                    style={{
-                      width: "min(45vw, 400px)",
-                      height: "min(60vw, 550px)",
-                      boxShadow: "-4px 0 20px rgba(0,0,0,0.4), inset 2px 0 8px rgba(0,0,0,0.1)",
-                      backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)",
-                    }}
-                  >
-                    {/* Paper Texture Overlay */}
-                    <div className="absolute inset-0 opacity-30 pointer-events-none"
-                      style={{
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")`,
-                      }}
-                    />
-                    {/* Page Content */}
-                    <div className="relative z-10 flex items-center justify-center h-full">
-                      {spreadPages.left && (
-                        <Document file={pdfUrl} loading={null}>
-                          <Page
-                            pageNumber={spreadPages.left}
-                            width={Math.min(window.innerWidth * 0.4, 380)}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                            loading={
-                              <div className="flex items-center justify-center h-full">
-                                <div className="animate-pulse text-stone-400">Loading...</div>
-                              </div>
-                            }
-                          />
-                        </Document>
+                    {/* Book Container */}
+                    <div
+                      className={cn(
+                        "relative flex",
+                        isCoverPage ? "justify-center" : "justify-center"
                       )}
-                    </div>
-                    {/* Page Number */}
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">
-                      {spreadPages.left}
-                    </div>
-                    {/* Inner Shadow */}
-                    <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-black/10 to-transparent pointer-events-none" />
-                  </div>
-                )}
+                      style={{
+                        transformStyle: "preserve-3d",
+                      }}
+                    >
+                      {/* Book Spine Shadow */}
+                      {!isCoverPage && (
+                        <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-8 z-20 pointer-events-none">
+                          <div className="h-full bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
+                        </div>
+                      )}
 
-                {/* Right Page / Cover */}
-                <div
-                  ref={pageRef}
-                  className={cn(
-                    "relative overflow-hidden select-none",
-                    isCoverPage ? "cursor-grab active:cursor-grabbing" : "origin-left",
-                    isFlipping && flipDirection === "next" && "animate-page-flip",
-                    !isDragging && !isFlipping && "transition-transform duration-300 ease-out"
-                  )}
-                  style={{
-                    width: isCoverPage ? "min(50vw, 450px)" : "min(45vw, 400px)",
-                    height: isCoverPage ? "min(65vw, 600px)" : "min(60vw, 550px)",
-                    backgroundColor: isCoverPage ? "#1a1510" : "#f5f0e6",
-                    boxShadow: isCoverPage
-                      ? `0 25px 50px -12px rgba(0, 0, 0, ${0.6 + dragProgress * 0.2}), ${8 - dragProgress * 8}px 0 30px rgba(0,0,0,0.4)`
-                      : "4px 0 20px rgba(0,0,0,0.4), inset -2px 0 8px rgba(0,0,0,0.1)",
-                    backgroundImage: isCoverPage
-                      ? "linear-gradient(135deg, #2a2015 0%, #1a1510 50%, #0f0a05 100%)"
-                      : "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)",
-                    borderRadius: isCoverPage ? "0 8px 8px 0" : "0",
-                    transformOrigin: "left center",
-                    transform: isDragging
-                      ? `rotateY(${-dragProgress * 180}deg)`
-                      : "rotateY(0deg)",
-                    transformStyle: "preserve-3d",
-                    backfaceVisibility: "hidden",
-                  }}
-                  onMouseDown={isCoverPage ? handleDragStart : undefined}
-                  onTouchStart={isCoverPage ? handleDragStart : undefined}
-                >
-                  {/* Cover Design - Render PDF Page 1 */}
-                  {isCoverPage && (
-                    <>
-                      {/* Book Cover Frame */}
-                      <div className="absolute inset-0 rounded-r-lg overflow-hidden">
-                        {/* Render PDF Page 1 as the cover */}
-                        <Document
-                          file={pdfUrl}
-                          onLoadSuccess={handleDocumentLoadSuccess}
-                          onLoadError={handleDocumentLoadError}
-                          loading={null}
+                      {/* Next Spread Preview - Visible when dragging forward */}
+                      {isDragging && dragDirection === "forward" && dragProgress > 0.1 && (
+                        <div
+                          className="absolute flex"
+                          style={{
+                            opacity: Math.min(1, dragProgress * 2),
+                            zIndex: 0,
+                          }}
                         >
-                          <Page
-                            pageNumber={1}
-                            width={Math.min(window.innerWidth * 0.45, 430)}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                            className="[&>canvas]:rounded-r-lg"
-                            loading={
-                              <div className="flex items-center justify-center h-full bg-stone-800">
-                                <div className="animate-pulse text-stone-400">Loading cover...</div>
-                              </div>
-                            }
-                          />
-                        </Document>
-                      </div>
-                      {/* Subtle overlay for depth */}
-                      <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-black/20 pointer-events-none" />
-                      {/* Gold corner accents */}
-                      <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-amber-500/30 rounded-tr" />
-                      <div className="absolute bottom-3 right-3 w-8 h-8 border-b-2 border-r-2 border-amber-500/30 rounded-br" />
-                      {/* Spine Effect */}
-                      <div className="absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
-                      {/* Page count badge */}
-                      <div className="absolute bottom-4 right-4 px-2 py-1 bg-black/60 rounded text-xs text-amber-200/80 backdrop-blur-sm">
-                        {numPages} pages
-                      </div>
-                      {/* Drag hint */}
-                      <div className="absolute top-1/2 right-2 -translate-y-1/2 flex items-center gap-1 text-white/40 text-xs animate-pulse">
-                        <ChevronLeft className="h-4 w-4" />
-                        <span className="hidden sm:inline">Drag to open</span>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Regular Page Content */}
-                  {!isCoverPage && (
-                    <>
-                      {/* Paper Texture */}
-                      <div className="absolute inset-0 opacity-30 pointer-events-none"
-                        style={{
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")`,
-                        }}
-                      />
-                      <div className="relative z-10 flex items-center justify-center h-full">
-                        {spreadPages.right && (
-                          <Document file={pdfUrl} loading={null}>
-                            <Page
-                              pageNumber={spreadPages.right}
-                              width={Math.min(window.innerWidth * 0.4, 380)}
-                              renderTextLayer={false}
-                              renderAnnotationLayer={false}
-                              loading={
-                                <div className="flex items-center justify-center h-full">
-                                  <div className="animate-pulse text-stone-400">Loading...</div>
+                          {(() => {
+                            const nextSpread = currentSpread + 1;
+                            const nextLeftPage = isCoverPage ? 2 : nextSpread * 2;
+                            const nextRightPage = isCoverPage ? 3 : nextSpread * 2 + 1;
+                            return (
+                              <>
+                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ width: "min(45vw, 400px)", height: "min(60vw, 550px)", boxShadow: "-4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
+                                  <div className="relative z-10 flex items-center justify-center h-full">
+                                    {nextLeftPage <= numPages && <Page pageNumber={nextLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                                  </div>
+                                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{nextLeftPage}</div>
                                 </div>
-                              }
-                            />
-                          </Document>
+                                <div className="w-8 bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
+                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ width: "min(45vw, 400px)", height: "min(60vw, 550px)", boxShadow: "4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
+                                  <div className="relative z-10 flex items-center justify-center h-full">
+                                    {nextRightPage <= numPages && <Page pageNumber={nextRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                                  </div>
+                                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{nextRightPage}</div>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Previous Spread Preview - Visible when dragging backward */}
+                      {isDragging && dragDirection === "backward" && dragProgress > 0.1 && currentSpread > 0 && (
+                        <div
+                          className="absolute flex"
+                          style={{
+                            opacity: Math.min(1, dragProgress * 2),
+                            zIndex: 0,
+                          }}
+                        >
+                          {(() => {
+                            if (currentSpread === 1) {
+                              // Going back to cover
+                              return (
+                                <div className="relative overflow-hidden" style={{ width: "min(50vw, 450px)", height: "min(65vw, 600px)", backgroundColor: "#1a1510", borderRadius: "0 8px 8px 0", backgroundImage: "linear-gradient(135deg, #2a2015 0%, #1a1510 50%, #0f0a05 100%)" }}>
+                                  <div className="absolute inset-0 rounded-r-lg overflow-hidden">
+                                    <Page pageNumber={1} width={Math.min(window.innerWidth * 0.45, 430)} renderTextLayer={false} renderAnnotationLayer={false} className="[&>canvas]:rounded-r-lg" loading={null} />
+                                  </div>
+                                </div>
+                              );
+                            }
+                            const prevSpread = currentSpread - 1;
+                            const prevLeftPage = prevSpread * 2;
+                            const prevRightPage = prevSpread * 2 + 1;
+                            return (
+                              <>
+                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ width: "min(45vw, 400px)", height: "min(60vw, 550px)", boxShadow: "-4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
+                                  <div className="relative z-10 flex items-center justify-center h-full">
+                                    {prevLeftPage <= numPages && <Page pageNumber={prevLeftPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                                  </div>
+                                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{prevLeftPage}</div>
+                                </div>
+                                <div className="w-8 bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
+                                <div className="relative bg-[#f5f0e6] overflow-hidden" style={{ width: "min(45vw, 400px)", height: "min(60vw, 550px)", boxShadow: "4px 0 20px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)" }}>
+                                  <div className="relative z-10 flex items-center justify-center h-full">
+                                    {prevRightPage <= numPages && <Page pageNumber={prevRightPage} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                                  </div>
+                                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{prevRightPage}</div>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Left Page */}
+                      {!isCoverPage && (
+                        <div
+                          className={cn(
+                            "relative bg-[#f5f0e6] shadow-2xl overflow-hidden",
+                            "transition-transform duration-500 ease-in-out origin-right",
+                            isFlipping && flipDirection === "prev" && "animate-page-flip-reverse"
+                          )}
+                          style={{
+                            width: "min(45vw, 400px)",
+                            height: "min(60vw, 550px)",
+                            boxShadow: "-4px 0 20px rgba(0,0,0,0.4), inset 2px 0 8px rgba(0,0,0,0.1)",
+                            backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)",
+                          }}
+                        >
+                          <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")` }} />
+                          <div className="relative z-10 flex items-center justify-center h-full">
+                            {spreadPages.left && <Page pageNumber={spreadPages.left} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                          </div>
+                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{spreadPages.left}</div>
+                          <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-black/10 to-transparent pointer-events-none" />
+                        </div>
+                      )}
+
+                      {/* Right Page / Cover */}
+                      <div
+                        ref={pageRef}
+                        className={cn(
+                          "relative overflow-hidden select-none",
+                          isCoverPage ? "cursor-grab active:cursor-grabbing" : "origin-left",
+                          isFlipping && flipDirection === "next" && "animate-page-flip",
+                          !isDragging && !isFlipping && "transition-transform duration-300 ease-out"
+                        )}
+                        style={{
+                          width: isCoverPage ? "min(50vw, 450px)" : "min(45vw, 400px)",
+                          height: isCoverPage ? "min(65vw, 600px)" : "min(60vw, 550px)",
+                          backgroundColor: isCoverPage ? "#1a1510" : "#f5f0e6",
+                          boxShadow: isCoverPage
+                            ? `0 25px 50px -12px rgba(0, 0, 0, ${0.6 + dragProgress * 0.2}), ${8 - dragProgress * 8}px 0 30px rgba(0,0,0,0.4)`
+                            : "4px 0 20px rgba(0,0,0,0.4), inset -2px 0 8px rgba(0,0,0,0.1)",
+                          backgroundImage: isCoverPage
+                            ? "linear-gradient(135deg, #2a2015 0%, #1a1510 50%, #0f0a05 100%)"
+                            : "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 3%, #f8f5ef 100%)",
+                          borderRadius: isCoverPage ? "0 8px 8px 0" : "0",
+                          transformOrigin: dragDirection === "backward" ? "right center" : "left center",
+                          transform: isDragging
+                            ? dragDirection === "backward"
+                              ? `rotateY(${dragProgress * 180}deg)`
+                              : `rotateY(${-dragProgress * 180}deg)`
+                            : "rotateY(0deg)",
+                          transformStyle: "preserve-3d",
+                          backfaceVisibility: "hidden",
+                        }}
+                        onMouseDown={handleDragStart}
+                        onTouchStart={handleDragStart}
+                      >
+                        {/* Cover Design */}
+                        {isCoverPage && (
+                          <>
+                            <div className="absolute inset-0 rounded-r-lg overflow-hidden">
+                              <Page pageNumber={1} width={Math.min(window.innerWidth * 0.45, 430)} renderTextLayer={false} renderAnnotationLayer={false} className="[&>canvas]:rounded-r-lg" loading={null} />
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-black/20 pointer-events-none" />
+                            <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-amber-500/30 rounded-tr" />
+                            <div className="absolute bottom-3 right-3 w-8 h-8 border-b-2 border-r-2 border-amber-500/30 rounded-br" />
+                            <div className="absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+                            <div className="absolute bottom-4 right-4 px-2 py-1 bg-black/60 rounded text-xs text-amber-200/80 backdrop-blur-sm">{numPages} pages</div>
+                            <div className="absolute top-1/2 right-2 -translate-y-1/2 flex items-center gap-1 text-white/40 text-xs animate-pulse">
+                              <ChevronLeft className="h-4 w-4" />
+                              <span className="hidden sm:inline">Drag to open</span>
+                            </div>
+                          </>
+                        )}
+
+                        {/* Regular Page Content */}
+                        {!isCoverPage && (
+                          <>
+                            <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")` }} />
+                            <div className="relative z-10 flex items-center justify-center h-full">
+                              {spreadPages.right && <Page pageNumber={spreadPages.right} width={Math.min(window.innerWidth * 0.4, 380)} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />}
+                            </div>
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">{spreadPages.right}</div>
+                            <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
+                          </>
                         )}
                       </div>
-                      {/* Page Number */}
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400">
-                        {spreadPages.right}
+
+                      {/* Page Turn Overlay - Next */}
+                      {isFlipping && flipDirection === "next" && (
+                        <div className="absolute top-0 right-0 bg-[#f5f0e6] origin-left z-30" style={{ width: isCoverPage ? "min(50vw, 450px)" : "min(45vw, 400px)", height: isCoverPage ? "min(65vw, 600px)" : "min(60vw, 550px)", animation: "pageFlip 0.6s ease-in-out forwards", boxShadow: "-5px 0 30px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 100%)" }} />
+                      )}
+
+                      {/* Page Turn Overlay - Prev */}
+                      {isFlipping && flipDirection === "prev" && (
+                        <div className="absolute top-0 left-0 bg-[#f5f0e6] origin-right z-30" style={{ width: "min(45vw, 400px)", height: "min(60vw, 550px)", animation: "pageFlipReverse 0.6s ease-in-out forwards", boxShadow: "5px 0 30px rgba(0,0,0,0.3)", backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 100%)" }} />
+                      )}
+                    </div>
+
+                    {/* Click/Drag Areas for Page Turn */}
+                    <div
+                      className="absolute top-0 left-0 w-1/3 h-full cursor-pointer z-40 group"
+                      onClick={flipToPrev}
+                      onMouseDown={currentSpread > 0 ? handleDragStart : undefined}
+                      onTouchStart={currentSpread > 0 ? handleDragStart : undefined}
+                      style={{ display: currentSpread === 0 ? "none" : "block" }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/0 to-transparent opacity-0 group-hover:opacity-20 transition-opacity" />
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ChevronLeft className="h-12 w-12 text-white/60" />
                       </div>
-                      {/* Inner Shadow */}
-                      <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
-                    </>
-                  )}
-                </div>
-
-                {/* Page Turn Overlay - Next */}
-                {isFlipping && flipDirection === "next" && (
-                  <div
-                    className="absolute top-0 right-0 bg-[#f5f0e6] origin-left z-30"
-                    style={{
-                      width: isCoverPage ? "min(50vw, 450px)" : "min(45vw, 400px)",
-                      height: isCoverPage ? "min(65vw, 600px)" : "min(60vw, 550px)",
-                      animation: "pageFlip 0.6s ease-in-out forwards",
-                      boxShadow: "-5px 0 30px rgba(0,0,0,0.3)",
-                      backgroundImage: "linear-gradient(to left, #e8e0d0 0%, #f5f0e6 100%)",
-                    }}
-                  />
-                )}
-
-                {/* Page Turn Overlay - Prev */}
-                {isFlipping && flipDirection === "prev" && (
-                  <div
-                    className="absolute top-0 left-0 bg-[#f5f0e6] origin-right z-30"
-                    style={{
-                      width: "min(45vw, 400px)",
-                      height: "min(60vw, 550px)",
-                      animation: "pageFlipReverse 0.6s ease-in-out forwards",
-                      boxShadow: "5px 0 30px rgba(0,0,0,0.3)",
-                      backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 100%)",
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* Click/Drag Areas for Page Turn */}
-              {/* Left side - click to go back */}
-              <div
-                className="absolute top-0 left-0 w-1/3 h-full cursor-pointer z-40 group"
-                onClick={flipToPrev}
-                style={{ display: currentSpread === 0 ? "none" : "block" }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-black/0 to-transparent opacity-0 group-hover:opacity-20 transition-opacity" />
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ChevronLeft className="h-12 w-12 text-white/60" />
-                </div>
-              </div>
-              {/* Right side - click or drag to go forward */}
-              <div
-                className={cn(
-                  "absolute top-0 right-0 w-1/3 h-full z-40 group select-none",
-                  !isCoverPage && "cursor-grab active:cursor-grabbing"
-                )}
-                onClick={!isDragging ? flipToNext : undefined}
-                onMouseDown={!isCoverPage ? handleDragStart : undefined}
-                onTouchStart={!isCoverPage ? handleDragStart : undefined}
-                style={{ display: currentSpread >= maxSpreads - 1 ? "none" : "block" }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-l from-black/0 to-transparent opacity-0 group-hover:opacity-20 transition-opacity" />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                  <span className="text-white/40 text-xs hidden sm:inline">Drag or click</span>
-                  <ChevronRight className="h-12 w-12 text-white/60" />
-                </div>
-              </div>
-            </div>
-          )}
+                    </div>
+                    <div
+                      className={cn("absolute top-0 right-0 w-1/3 h-full z-40 group select-none", !isCoverPage && "cursor-grab active:cursor-grabbing")}
+                      onClick={!isDragging ? flipToNext : undefined}
+                      onMouseDown={!isCoverPage ? handleDragStart : undefined}
+                      onTouchStart={!isCoverPage ? handleDragStart : undefined}
+                      style={{ display: currentSpread >= maxSpreads - 1 ? "none" : "block" }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-l from-black/0 to-transparent opacity-0 group-hover:opacity-20 transition-opacity" />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                        <span className="text-white/40 text-xs hidden sm:inline">Drag or click</span>
+                        <ChevronRight className="h-12 w-12 text-white/60" />
+                      </div>
+                    </div>
+                  </div>
+                </Document>
+              )}
           </>
           ) : null}
         </div>
@@ -1152,28 +1055,6 @@ export function BookReaderTab() {
             <span className="hidden sm:inline">Next</span>
             <ChevronRight className="h-5 w-5" />
           </Button>
-        </div>
-
-        {/* Hidden preloader for smooth page transitions - preloads pages at full size */}
-        <div
-          ref={preloadContainerRef}
-          className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none"
-          aria-hidden="true"
-        >
-          <Document file={pdfUrl} loading={null}>
-            {Array.from(preloadedPages).map((pageNum) => (
-              <Page
-                key={`preload-${pageNum}`}
-                pageNumber={pageNum}
-                width={isMobile ? Math.min(window.innerWidth * 0.85, 360) : Math.min(window.innerWidth * 0.4, 380)}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-                loading={null}
-                onRenderSuccess={() => handlePageRenderSuccess(pageNum)}
-                data-page-number={pageNum}
-              />
-            ))}
-          </Document>
         </div>
 
         {/* CSS Animations with GPU acceleration */}
