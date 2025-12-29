@@ -97,18 +97,27 @@ export async function POST(request: NextRequest) {
     console.error("R2 connection test error:", error);
 
     let errorMessage = "Connection failed";
+    let errorDetails = "";
+
     if (error instanceof Error) {
+      errorDetails = error.message;
       if (error.message.includes("NoSuchBucket")) {
-        errorMessage = "Bucket not found";
-      } else if (error.message.includes("AccessDenied") || error.message.includes("InvalidAccessKeyId")) {
-        errorMessage = "Invalid credentials";
+        errorMessage = "Bucket not found - check the bucket name";
+      } else if (error.message.includes("AccessDenied")) {
+        errorMessage = "Access denied - check bucket permissions";
+      } else if (error.message.includes("InvalidAccessKeyId")) {
+        errorMessage = "Invalid Access Key ID";
       } else if (error.message.includes("SignatureDoesNotMatch")) {
-        errorMessage = "Invalid secret access key";
+        errorMessage = "Invalid Secret Access Key";
+      } else if (error.message.includes("getaddrinfo") || error.message.includes("ENOTFOUND")) {
+        errorMessage = "Invalid Account ID - could not connect to R2 endpoint";
+      } else if (error.message.includes("fetch failed") || error.message.includes("ECONNREFUSED")) {
+        errorMessage = "Network error - could not reach R2";
       }
     }
 
     return NextResponse.json(
-      { error: errorMessage, success: false },
+      { error: errorMessage, details: errorDetails, success: false },
       { status: 400 }
     );
   }

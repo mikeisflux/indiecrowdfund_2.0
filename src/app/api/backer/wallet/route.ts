@@ -59,13 +59,14 @@ export async function GET() {
 
     // Find redemptions that don't have a corresponding transaction record
     // (check by matching amount and approximate time)
-    const existingRedemptionTimes = new Set(
-      transactions
-        .filter(tx => tx.type === "REDEMPTION")
-        .map(tx => tx.createdAt.getTime())
-    );
+    type TransactionRecord = typeof transactions[number];
+    type RedemptionRecord = typeof redemptions[number];
 
-    const orphanedRedemptions = redemptions.filter(r => {
+    const existingRedemptionTimes: number[] = transactions
+      .filter((tx: TransactionRecord) => tx.type === "REDEMPTION")
+      .map((tx: TransactionRecord) => tx.createdAt.getTime());
+
+    const orphanedRedemptions = redemptions.filter((r: RedemptionRecord) => {
       // Check if there's a transaction within 60 seconds of this redemption
       const redemptionTime = r.redeemedAt.getTime();
       for (const txTime of existingRedemptionTimes) {
@@ -77,7 +78,7 @@ export async function GET() {
     });
 
     // Convert orphaned redemptions to transaction format
-    const redemptionTransactions = orphanedRedemptions.map(r => ({
+    const redemptionTransactions = orphanedRedemptions.map((r: RedemptionRecord) => ({
       id: `redemption-${r.id}`,
       userId: r.userId,
       pledgeId: null,
