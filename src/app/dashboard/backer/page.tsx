@@ -1,7 +1,8 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -141,10 +142,29 @@ interface DashboardData {
 }
 
 export default function BackerDashboard() {
-  const [activeTab, setActiveTab] = useState("backed");
+  const searchParams = useSearchParams();
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const initialTab = searchParams.get("tab") || "backed";
+
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-scroll to tabs section on mobile when tab param is present
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam && tabsRef.current) {
+      // Check if mobile (screen width < 1024px which is lg breakpoint)
+      const isMobile = window.innerWidth < 1024;
+      if (isMobile) {
+        // Small delay to ensure content is rendered
+        setTimeout(() => {
+          tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
+    }
+  }, [searchParams]);
 
   // DivinityCoin redemption state
   const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
@@ -528,7 +548,7 @@ export default function BackerDashboard() {
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2" ref={tabsRef}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <TabsList className="bg-card/50 backdrop-blur border border-border/50 p-1 flex-wrap h-auto gap-1">
                 <TabsTrigger value="backed" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">

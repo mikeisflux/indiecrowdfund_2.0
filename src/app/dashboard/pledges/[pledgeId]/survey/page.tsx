@@ -182,7 +182,7 @@ export default function BackerSurveyPage() {
 
       if (response.ok) {
         if (submit) {
-          router.push("/dashboard/backer");
+          router.push("/dashboard/backer?tab=wallet");
         }
       } else {
         const err = await response.json();
