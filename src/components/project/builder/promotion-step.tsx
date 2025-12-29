@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Trash2, Copy, Link2, BarChart3, Share2, Rocket, Loader2, CheckCircle, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Copy, Link2, BarChart3, Share2, Rocket, Loader2, CheckCircle, ExternalLink, Send, Clock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export function PromotionStep() {
@@ -22,6 +22,8 @@ export function PromotionStep() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [justPublished, setJustPublished] = useState(false);
+  const [isSubmittingForReview, setIsSubmittingForReview] = useState(false);
+  const [prelaunchStatus, setPrelaunchStatus] = useState<string>("DRAFT");
 
   // Vanity URL state (fetched from profile)
   const [vanityUrl, setVanityUrl] = useState("");
@@ -43,6 +45,28 @@ export function PromotionStep() {
     };
     fetchVanityUrl();
   }, []);
+
+  // Fetch prelaunch status when projectId changes
+  useEffect(() => {
+    const fetchPrelaunchStatus = async () => {
+      if (!projectId) return;
+      try {
+        const response = await fetch(`/api/projects/${projectId}/prelaunch`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.prelaunchStatus) {
+            setPrelaunchStatus(data.prelaunchStatus);
+          }
+          if (data.prelaunchActive) {
+            setJustPublished(true);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch prelaunch status:", error);
+      }
+    };
+    fetchPrelaunchStatus();
+  }, [projectId]);
 
   const customTags = promotion.customReferralTags || [];
 
@@ -184,6 +208,7 @@ export function PromotionStep() {
         toast.info(result.message || "Your pre-launch page has been submitted for review.");
         // Don't set prelaunchActive - it's pending approval
         updatePromotion({ prelaunchActive: false });
+        setPrelaunchStatus("SUBMITTED");
         setJustPublished(false);
       } else {
         updatePromotion({ prelaunchActive: true });
@@ -195,6 +220,91 @@ export function PromotionStep() {
       toast.error(error instanceof Error ? error.message : "Failed to publish");
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  const submitPrelaunchForReview = async () => {
+    // Require vanity URL to be set first
+    if (!vanityUrl) {
+      toast.error("Please set your creator URL in your profile settings first");
+      return;
+    }
+
+    if (!basics.title || basics.title.trim().length < 3) {
+      toast.error("Please enter a project title first (in the Basics step)");
+      return;
+    }
+
+    if (!basics.category) {
+      toast.error("Please select a project category first (in the Basics step)");
+      return;
+    }
+
+    setIsSubmittingForReview(true);
+
+    try {
+      // First save the project if needed
+      let currentProjectId = projectId;
+
+      if (!currentProjectId) {
+        // Create the project first
+        const projectData = {
+          title: basics.title,
+          subtitle: basics.subtitle,
+          category: basics.category,
+          subcategory: basics.subcategory,
+          location: basics.location,
+          imageUrl: basics.imageUrl || undefined,
+          goalAmount: basics.goalAmount || 10000,
+          prelaunchDescription: promotion.prelaunchDescription,
+        };
+
+        const createResponse = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify(projectData),
+        });
+
+        if (!createResponse.ok) {
+          const error = await createResponse.json();
+          throw new Error(error.error || "Failed to save project");
+        }
+
+        const createResult = await createResponse.json();
+        currentProjectId = createResult.project.id;
+        setProjectId(currentProjectId);
+        if (createResult.project.slug) {
+          setProjectSlug(createResult.project.slug);
+        }
+      }
+
+      // Submit the prelaunch for review
+      const response = await fetch(`/api/projects/${currentProjectId}/prelaunch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ prelaunchActive: true }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to submit for review");
+      }
+
+      if (result.requiresApproval) {
+        setPrelaunchStatus("SUBMITTED");
+        toast.success("Pre-launch page submitted for review! You'll be notified once it's approved.");
+      } else {
+        // User can publish directly (trusted user)
+        updatePromotion({ prelaunchActive: true });
+        setJustPublished(true);
+        toast.success("Pre-launch page published!");
+      }
+    } catch (error) {
+      console.error("Submit for review error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to submit for review");
+    } finally {
+      setIsSubmittingForReview(false);
     }
   };
 
@@ -362,18 +472,107 @@ export function PromotionStep() {
               </p>
             )}
 
-            {/* Publish Button and Success State */}
+            {/* Status-based buttons */}
             {justPublished ? (
-              <Alert className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20">
-                <CheckCircle className="h-4 w-4 text-emerald-600" />
+              /* Pre-launch is live */
+              <>
+                <Alert className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20">
+                  <CheckCircle className="h-4 w-4 text-emerald-600" />
+                  <AlertDescription className="ml-2">
+                    <p className="font-medium text-emerald-800 dark:text-emerald-200">
+                      Your pre-launch page is live! Share the URL above to start building your audience.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+                <Button
+                  onClick={publishPrelaunchPage}
+                  disabled={isPublishing}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {isPublishing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Rocket className="mr-2 h-4 w-4" />
+                      Update Pre-launch Page
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={deactivatePrelaunchPage}
+                  disabled={isDeactivating}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  {isDeactivating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deactivating...
+                    </>
+                  ) : (
+                    "Deactivate Pre-launch Page"
+                  )}
+                </Button>
+              </>
+            ) : prelaunchStatus === "SUBMITTED" ? (
+              /* Pending review */
+              <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                <Clock className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="ml-2">
-                  <p className="font-medium text-emerald-800 dark:text-emerald-200">
-                    Your pre-launch page is live! Share the URL above to start building your audience.
+                  <p className="font-medium text-amber-800 dark:text-amber-200">
+                    Your pre-launch page is pending review.
+                  </p>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                    You&apos;ll be notified once it&apos;s approved and you can publish it.
                   </p>
                 </AlertDescription>
               </Alert>
-            ) : (
+            ) : prelaunchStatus === "REJECTED" ? (
+              /* Rejected - can resubmit */
+              <>
+                <Alert className="border-red-200 bg-red-50 dark:bg-red-950/20">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="ml-2">
+                    <p className="font-medium text-red-800 dark:text-red-200">
+                      Your pre-launch page was not approved.
+                    </p>
+                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                      Please make the requested changes and submit again for review.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+                <Button
+                  onClick={submitPrelaunchForReview}
+                  disabled={isSubmittingForReview}
+                  className="w-full"
+                >
+                  {isSubmittingForReview ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Resubmit for Review
+                    </>
+                  )}
+                </Button>
+              </>
+            ) : prelaunchStatus === "APPROVED" ? (
+              /* Approved - can publish */
               <div className="space-y-3">
+                <Alert className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20">
+                  <CheckCircle className="h-4 w-4 text-emerald-600" />
+                  <AlertDescription className="ml-2">
+                    <p className="font-medium text-emerald-800 dark:text-emerald-200">
+                      Your pre-launch page has been approved!
+                    </p>
+                  </AlertDescription>
+                </Alert>
                 <Button
                   onClick={publishPrelaunchPage}
                   disabled={isPublishing}
@@ -387,35 +586,38 @@ export function PromotionStep() {
                   ) : (
                     <>
                       <Rocket className="mr-2 h-4 w-4" />
-                      {hasActualSlug ? "Update Pre-launch Page" : "Publish Pre-launch Page"}
+                      Publish Pre-launch Page
                     </>
                   )}
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
-                  {hasActualSlug
-                    ? "Update the pre-launch page with your latest changes."
-                    : "Publishing will save your project and make the pre-launch page visible to the public."}
+                  Publishing will make the pre-launch page visible to the public.
                 </p>
               </div>
-            )}
-
-            {/* Deactivate Button */}
-            {projectId && (
-              <Button
-                onClick={deactivatePrelaunchPage}
-                disabled={isDeactivating}
-                variant="destructive"
-                className="w-full"
-              >
-                {isDeactivating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deactivating...
-                  </>
-                ) : (
-                  "Deactivate Pre-launch Page"
-                )}
-              </Button>
+            ) : (
+              /* Draft - submit for review */
+              <div className="space-y-3">
+                <Button
+                  onClick={submitPrelaunchForReview}
+                  disabled={isSubmittingForReview}
+                  className="w-full"
+                >
+                  {isSubmittingForReview ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Submit Pre-launch for Review
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Your pre-launch page will be reviewed before it can go live.
+                </p>
+              </div>
             )}
           </CardContent>
         )}
