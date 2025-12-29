@@ -24,7 +24,6 @@ import {
 import {
   Plus,
   Eye,
-  Upload,
   Mail,
   FileText,
   Download,
@@ -485,13 +484,9 @@ export function DigitalTab({
               <div className="text-center py-12">
                 <Download className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="font-semibold mb-2">No digital files yet</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Upload files to distribute to your backers
+                <p className="text-sm text-muted-foreground">
+                  Use the <span className="font-medium">Create</span> button above to upload files for distribution.
                 </p>
-                <Button onClick={onOpenUploadDialog}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload File
-                </Button>
               </div>
             )}
           </div>
