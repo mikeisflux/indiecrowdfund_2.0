@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST endpoint for manual triggering from admin panel
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   try {
     // For POST requests, verify admin authentication
     const { auth } = await import("@/lib/auth");
