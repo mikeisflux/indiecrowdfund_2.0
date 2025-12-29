@@ -160,7 +160,12 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
               }}>
                 <Link2 className="h-3 w-3" />
               </Button>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open('/docs/backer-management', '_blank')}
+                title="Open backer management help"
+              >
                 <HelpCircle className="h-3 w-3" />
               </Button>
               <DropdownMenu>
@@ -357,7 +362,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                 <div className="rounded-lg border p-4">
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="font-medium">Items ({backer.items?.length || 0})</h4>
-                    <Button variant="ghost" size="sm">Pack List</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setShowPackingSlip(true)}>Pack List</Button>
                   </div>
                   <div className="space-y-3">
                     <div>
@@ -397,7 +402,12 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                         <span>QTY</span>
                       </p>
                       <p className="text-sm text-muted-foreground italic">nothing added</p>
-                      <Button variant="outline" size="sm" className="mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => toast.info("SKU management coming soon")}
+                      >
                         <Plus className="h-3 w-3 mr-1" />
                         Add SKUs
                       </Button>
@@ -467,7 +477,12 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
               <div className="rounded-lg border p-4 text-center">
                 <Mail className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">Email history for this backer will appear here</p>
-                <Button variant="outline" size="sm" className="mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => setShowEmailComposer(true)}
+                >
                   <Mail className="h-3 w-3 mr-1" />
                   Send Email
                 </Button>
@@ -479,7 +494,11 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
               <div className="rounded-lg border p-4">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-medium">Backer Segments</h4>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toast.info("Segment management coming soon")}
+                  >
                     <Plus className="h-3 w-3 mr-1" />
                     Add to Segment
                   </Button>
