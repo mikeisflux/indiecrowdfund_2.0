@@ -99,6 +99,8 @@ export async function GET(req: NextRequest) {
       digitalFilesData,
       emailCampaignsData,
       emailMemberCount,
+      projectRewards,
+      projectAddons,
     ] = await Promise.all([
       // Get all pledges for the project with user info
       db.pledge.findMany({
@@ -221,6 +223,20 @@ export async function GET(req: NextRequest) {
           creatorId: session.user.id,
           status: "subscribed",
         },
+      }),
+
+      // Get rewards for this project
+      db.reward.findMany({
+        where: { projectId: selectedProjectId },
+        select: { id: true, title: true, amount: true },
+        orderBy: { amount: "asc" },
+      }),
+
+      // Get addons for this project
+      db.surveyAddon.findMany({
+        where: { projectId: selectedProjectId },
+        select: { id: true, title: true, price: true },
+        orderBy: { price: "asc" },
       }),
     ]);
 
@@ -636,6 +652,8 @@ export async function GET(req: NextRequest) {
       workflowState,
       emailMemberCount,
       userEmail: session.user.email || "",
+      rewards: projectRewards.map((r: { id: string; title: string; amount: number }) => ({ id: r.id, name: r.title, amount: r.amount })),
+      addons: projectAddons.map((a: { id: string; title: string; price: number }) => ({ id: a.id, name: a.title, price: a.price })),
     });
   } catch (error) {
     console.error("IndieKit API error:", error);

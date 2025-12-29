@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,8 @@ interface DistributionDialogProps {
   onOpenChange: (open: boolean) => void;
   digitalFiles: DigitalFile[];
   projectId?: string;
-  products?: { id: string; name: string }[];
+  rewards?: { id: string; name: string; amount: number }[];
+  addons?: { id: string; name: string; price: number }[];
   onCreated?: () => void;
 }
 
@@ -39,10 +41,12 @@ export function DistributionDialog({
   onOpenChange,
   digitalFiles,
   projectId,
-  products = [],
+  rewards = [],
+  addons = [],
   onCreated,
 }: DistributionDialogProps) {
   const [ruleName, setRuleName] = useState("");
+  const [triggerType, setTriggerType] = useState<"all" | "rewards" | "addons">("all");
   const [triggerProduct, setTriggerProduct] = useState("");
   const [fileToDistribute, setFileToDistribute] = useState("");
   const [requirePayment, setRequirePayment] = useState(true);
@@ -52,6 +56,7 @@ export function DistributionDialog({
     if (!isOpen) {
       // Reset form
       setRuleName("");
+      setTriggerType("all");
       setTriggerProduct("");
       setFileToDistribute("");
       setRequirePayment(true);
@@ -83,6 +88,7 @@ export function DistributionDialog({
           action: "create_distribution_rule",
           ruleName,
           triggerProduct,
+          triggerType,
           fileId: fileToDistribute,
           requirePayment,
         }),
@@ -103,12 +109,43 @@ export function DistributionDialog({
     }
   };
 
-  // Use provided products or default to sample data
-  const availableProducts = products.length > 0 ? products : [
-    { id: "product1", name: "Digital Art Book" },
-    { id: "product2", name: "Soundtrack Album" },
-    { id: "product3", name: "E-Book Bundle" },
-  ];
+  // Get available products based on trigger type selection
+  const availableProducts = useMemo(() => {
+    switch (triggerType) {
+      case "rewards":
+        return rewards.map(r => ({
+          id: `reward:${r.id}`,
+          name: `${r.name} ($${r.amount})`,
+          type: "reward" as const
+        }));
+      case "addons":
+        return addons.map(a => ({
+          id: `addon:${a.id}`,
+          name: `${a.name} ($${a.price})`,
+          type: "addon" as const
+        }));
+      case "all":
+      default:
+        return [
+          ...rewards.map(r => ({
+            id: `reward:${r.id}`,
+            name: `${r.name} ($${r.amount})`,
+            type: "reward" as const
+          })),
+          ...addons.map(a => ({
+            id: `addon:${a.id}`,
+            name: `${a.name} ($${a.price})`,
+            type: "addon" as const
+          })),
+        ];
+    }
+  }, [triggerType, rewards, addons]);
+
+  // Reset product selection when trigger type changes
+  const handleTriggerTypeChange = (value: string) => {
+    setTriggerType(value as "all" | "rewards" | "addons");
+    setTriggerProduct(""); // Reset selection
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -129,31 +166,68 @@ export function DistributionDialog({
               onChange={(e) => setRuleName(e.target.value)}
             />
           </div>
+
+          <div className="space-y-3">
+            <Label>Distribution Target</Label>
+            <RadioGroup value={triggerType} onValueChange={handleTriggerTypeChange} className="flex gap-4">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="trigger-all" />
+                <Label htmlFor="trigger-all" className="cursor-pointer font-normal">All</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="rewards" id="trigger-rewards" />
+                <Label htmlFor="trigger-rewards" className="cursor-pointer font-normal">Rewards Only</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="addons" id="trigger-addons" />
+                <Label htmlFor="trigger-addons" className="cursor-pointer font-normal">Add-ons Only</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
           <div className="space-y-2">
             <Label>Trigger Product</Label>
             <Select value={triggerProduct} onValueChange={setTriggerProduct}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a product..." />
               </SelectTrigger>
-              <SelectContent>
-                {availableProducts.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name}
+              <SelectContent className="max-h-[200px]">
+                {availableProducts.length > 0 ? (
+                  availableProducts.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      <span className="flex items-center gap-2">
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          product.type === "reward"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-purple-100 text-purple-700"
+                        }`}>
+                          {product.type === "reward" ? "Reward" : "Add-on"}
+                        </span>
+                        {product.name}
+                      </span>
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="none" disabled>
+                    {triggerType === "rewards" ? "No rewards found" :
+                     triggerType === "addons" ? "No add-ons found" :
+                     "No rewards or add-ons found"}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
               When this product is in the order, the file will be distributed
             </p>
           </div>
+
           <div className="space-y-2">
             <Label>File to Distribute</Label>
             <Select value={fileToDistribute} onValueChange={setFileToDistribute}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a file..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[200px]">
                 {digitalFiles.length > 0 ? (
                   digitalFiles.map((file) => (
                     <SelectItem key={file.id} value={file.id}>{file.name}</SelectItem>
@@ -164,6 +238,7 @@ export function DistributionDialog({
               </SelectContent>
             </Select>
           </div>
+
           <div className="flex items-center gap-2">
             <Checkbox
               id="require-payment"

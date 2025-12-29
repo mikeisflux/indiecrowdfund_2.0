@@ -123,6 +123,8 @@ export default function IndieKitPage() {
   const [segments, setSegments] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [products, setProducts] = useState<any[]>([]);
+  const [rewards, setRewards] = useState<{ id: string; name: string; amount: number }[]>([]);
+  const [addons, setAddons] = useState<{ id: string; name: string; price: number }[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [timeline, setTimeline] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
@@ -167,6 +169,8 @@ export default function IndieKitPage() {
       setUserEmail(data.userEmail || "");
       setSegments(data.segments || []);
       setProducts(data.products || []);
+      setRewards(data.rewards || []);
+      setAddons(data.addons || []);
       setTimeline(data.timeline || []);
 
       // Only set default project if none selected and no saved preference
@@ -796,7 +800,8 @@ export default function IndieKitPage() {
         onOpenChange={setIsDistributionDialogOpen}
         digitalFiles={digitalFiles}
         projectId={selectedProjectId}
-        products={products.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))}
+        rewards={rewards}
+        addons={addons}
         onCreated={() => fetchData()}
       />
 
