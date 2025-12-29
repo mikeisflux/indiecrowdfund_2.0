@@ -14,10 +14,7 @@ import {
   Lock,
   Eye,
   RefreshCw,
-  AlertCircle,
-  CheckCircle,
   Package,
-  ExternalLink,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
