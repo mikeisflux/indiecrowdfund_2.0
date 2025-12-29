@@ -194,12 +194,6 @@ export default function SettingsPage() {
     paymentSettingsRef.current = paymentSettings;
   }, [paymentSettings]);
 
-  // Ref to track latest storage settings for save handler (avoids stale closure)
-  const storageSettingsRef = useRef(storageSettings);
-  useEffect(() => {
-    storageSettingsRef.current = storageSettings;
-  }, [storageSettings]);
-
   const [emailSettings, setEmailSettings] = useState({
     provider: "sendgrid",
     // SMTP settings
@@ -314,6 +308,12 @@ export default function SettingsPage() {
     digitalDownloadsEnabled: false,
     signedUrlExpirationMinutes: "60",
   });
+
+  // Ref to track latest storage settings for save handler (avoids stale closure)
+  const storageSettingsRef = useRef(storageSettings);
+  useEffect(() => {
+    storageSettingsRef.current = storageSettings;
+  }, [storageSettings]);
 
   // Fetch settings from API
   const fetchSettings = useCallback(async () => {
