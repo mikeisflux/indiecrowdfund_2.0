@@ -281,7 +281,8 @@ export default function DivinityCoinPayoutsPage() {
   };
 
   // Update settlement status (TODO: Add UI buttons to use this)
-  const _updateSettlementStatus = async (settlementId: string, action: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const updateSettlementStatus = async (settlementId: string, action: string) => {
     setProcessing(true);
     try {
       const response = await fetch("/api/admin/payouts/divinitycoin", {
