@@ -206,7 +206,7 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
       }),
 
-      // Get distribution rules
+      // Get distribution rules (wrapped in catch to handle missing table before migration)
       db.distributionRule.findMany({
         where: { projectId: selectedProjectId },
         include: {
@@ -215,7 +215,7 @@ export async function GET(req: NextRequest) {
           },
         },
         orderBy: { createdAt: "desc" },
-      }),
+      }).catch(() => []),
 
       // Get email campaigns created by this user for this project only
       db.emailCampaign.findMany({
