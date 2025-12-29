@@ -112,7 +112,6 @@ export default function IndieKitPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [shippingServices, setShippingServices] = useState<ShippingService[]>(SHIPPING_SERVICES);
   const [digitalFiles, setDigitalFiles] = useState<DigitalFile[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [distributionRules, setDistributionRules] = useState<DistributionRule[]>([]);
   const [emailCampaigns, setEmailCampaigns] = useState<EmailCampaign[]>([]);
   const [emailMemberCount, setEmailMemberCount] = useState<number>(0);
@@ -164,6 +163,7 @@ export default function IndieKitPage() {
       setBackers(data.backers || []);
       setPackageGroups(data.packageGroups || []);
       setDigitalFiles(data.digitalFiles || []);
+      setDistributionRules(data.distributionRules || []);
       setEmailCampaigns(data.emailCampaigns || []);
       setEmailMemberCount(data.emailMemberCount || 0);
       setUserEmail(data.userEmail || "");

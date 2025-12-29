@@ -78,6 +78,7 @@ export async function GET(req: NextRequest) {
         backers: [],
         packageGroups: [],
         digitalFiles: [],
+        distributionRules: [],
         emailCampaigns: [],
         workflowState: null,
       });
@@ -97,6 +98,7 @@ export async function GET(req: NextRequest) {
       products,
       recentActivity,
       digitalFilesData,
+      distributionRulesData,
       emailCampaignsData,
       emailMemberCount,
       projectRewards,
@@ -200,6 +202,17 @@ export async function GET(req: NextRequest) {
         where: { projectId: selectedProjectId },
         include: {
           distributions: true,
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+
+      // Get distribution rules
+      db.distributionRule.findMany({
+        where: { projectId: selectedProjectId },
+        include: {
+          digitalFile: {
+            select: { name: true },
+          },
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -631,6 +644,59 @@ export async function GET(req: NextRequest) {
       uploadedAt: file.createdAt.toLocaleDateString(), distributedTo: file.distributedCount, totalEligible: file.totalEligible,
     }));
 
+    // Format distribution rules
+    type DistributionRuleType = {
+      id: string;
+      name: string;
+      triggerType: string;
+      triggerRewardId: string | null;
+      triggerAddonId: string | null;
+      requiresPayment: boolean;
+      status: string;
+      distributedCount: number;
+      totalEligible: number;
+      startedAt: Date | null;
+      digitalFile: { name: string } | null;
+    };
+    const formattedDistributionRules = await Promise.all(
+      distributionRulesData.map(async (rule: DistributionRuleType) => {
+        let triggerProductName = "All Backers";
+        if (rule.triggerType === "SPECIFIC_REWARD" && rule.triggerRewardId) {
+          const reward = await db.reward.findUnique({
+            where: { id: rule.triggerRewardId },
+            select: { title: true },
+          });
+          triggerProductName = reward?.title || "Unknown Reward";
+        } else if (rule.triggerType === "SPECIFIC_ADDON" && rule.triggerAddonId) {
+          const addon = await db.reward.findUnique({
+            where: { id: rule.triggerAddonId },
+            select: { title: true },
+          });
+          triggerProductName = addon?.title || "Unknown Add-on";
+        }
+
+        // Convert status to lowercase with underscores for frontend
+        const statusMap: Record<string, "not_started" | "started" | "completed"> = {
+          NOT_STARTED: "not_started",
+          STARTED: "started",
+          COMPLETED: "completed",
+        };
+
+        return {
+          id: rule.id,
+          name: rule.name,
+          condition: rule.triggerType,
+          triggerProduct: triggerProductName,
+          distributeFile: rule.digitalFile?.name || "Unknown File",
+          requiresPayment: rule.requiresPayment,
+          status: statusMap[rule.status] || "not_started",
+          distributedCount: rule.distributedCount,
+          totalEligible: rule.totalEligible,
+          startedAt: rule.startedAt?.toISOString(),
+        };
+      })
+    );
+
     // Format email campaigns
     type CampaignType = { id: string; name: string; status: string; sentAt: Date | null; scheduledFor: Date | null; recipientCount: number; sentCount: number; openCount: number };
     const formattedEmailCampaigns = emailCampaignsData.map((campaign: CampaignType) => ({
@@ -648,6 +714,7 @@ export async function GET(req: NextRequest) {
       products: formattedProducts,
       timeline: formattedTimeline,
       digitalFiles: formattedDigitalFiles,
+      distributionRules: formattedDistributionRules,
       emailCampaigns: formattedEmailCampaigns,
       workflowState,
       emailMemberCount,

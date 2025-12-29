@@ -2564,6 +2564,51 @@ model DigitalDistribution {
   @@index([pledgeId])
 }
 
+// Distribution rules - defines which file gets distributed when conditions are met
+model DistributionRule {
+  id                String                      @id @default(cuid())
+  projectId         String
+  digitalFileId     String
+
+  name              String
+  description       String?
+
+  // Trigger conditions
+  triggerType       DistributionTriggerType     @default(ALL_BACKERS)
+  triggerRewardId   String?                     // If triggering on a specific reward
+  triggerAddonId    String?                     // If triggering on a specific addon
+
+  // Requirements
+  requiresPayment   Boolean                     @default(false)  // Must payment be completed?
+
+  // Status tracking
+  status            DistributionRuleStatus      @default(NOT_STARTED)
+  distributedCount  Int                         @default(0)
+  totalEligible     Int                         @default(0)
+
+  // Timestamps
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  @@index([projectId])
+  @@index([digitalFileId])
+  @@index([status])
+}
+
+enum DistributionTriggerType {
+  ALL_BACKERS       // All backers get the file
+  SPECIFIC_REWARD   // Only backers of a specific reward tier
+  SPECIFIC_ADDON    // Only backers who purchased a specific addon
+}
+
+enum DistributionRuleStatus {
+  NOT_STARTED
+  STARTED
+  COMPLETED
+}
+
 // ============================================
 // ACHIEVEMENT BADGES & REDEMPTION BONUSES
 // ============================================

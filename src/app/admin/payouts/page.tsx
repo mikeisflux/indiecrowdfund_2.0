@@ -47,7 +47,9 @@ import {
   ArrowLeft,
   Send,
   FileText,
+  Coins,
 } from "lucide-react";
+import Link from "next/link";
 import { formatDistanceToNow, format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -270,6 +272,12 @@ export default function PayoutsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/admin/payouts/divinitycoin">
+            <Button variant="outline" className="flex-1 sm:flex-none bg-purple-50 border-purple-200 hover:bg-purple-100 hover:border-purple-300">
+              <Coins className="w-4 h-4 sm:mr-2 text-purple-600" />
+              <span className="hidden sm:inline text-purple-700">DivinityCoin</span>
+            </Button>
+          </Link>
           <Button variant="outline" onClick={fetchPayouts} disabled={loading} className="flex-1 sm:flex-none">
             <RefreshCw className={`w-4 h-4 sm:mr-2 ${loading ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">Refresh</span>
