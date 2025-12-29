@@ -247,6 +247,10 @@ export default function BackerDashboard() {
         }
         const dashboardData = await response.json();
         setData(dashboardData);
+        // Initialize DivinityCoin balance from dashboard data
+        if (dashboardData.stats?.divinityCoinBalance !== undefined) {
+          setDivinityCoinBalance(dashboardData.stats.divinityCoinBalance);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
