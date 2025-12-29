@@ -344,6 +344,8 @@ export default function SurveyBuilderPage() {
   };
 
   const isEditable = !survey || survey.status === "DRAFT";
+  // Allow deletion even after survey is sent (as long as it's not locked)
+  const canDelete = !survey || survey.status !== "LOCKED";
 
   if (isLoading) {
     return (
@@ -543,8 +545,8 @@ export default function SurveyBuilderPage() {
                                 ))}
                               </div>
                             </div>
-                            {isEditable && (
-                              <div className="flex gap-2">
+                            <div className="flex gap-2">
+                              {isEditable && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -555,6 +557,8 @@ export default function SurveyBuilderPage() {
                                 >
                                   Edit
                                 </Button>
+                              )}
+                              {canDelete && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -562,8 +566,8 @@ export default function SurveyBuilderPage() {
                                 >
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -637,8 +641,8 @@ export default function SurveyBuilderPage() {
                                 {q.isRequired && <Badge>Required</Badge>}
                               </div>
                             </div>
-                            {isEditable && (
-                              <div className="flex gap-2">
+                            <div className="flex gap-2">
+                              {isEditable && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -649,6 +653,8 @@ export default function SurveyBuilderPage() {
                                 >
                                   Edit
                                 </Button>
+                              )}
+                              {canDelete && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -656,8 +662,8 @@ export default function SurveyBuilderPage() {
                                 >
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
