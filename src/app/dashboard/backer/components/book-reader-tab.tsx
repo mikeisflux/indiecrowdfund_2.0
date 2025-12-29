@@ -101,8 +101,20 @@ export function BookReaderTab() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragProgress, setDragProgress] = useState(0);
   const [dragStartX, setDragStartX] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1); // For mobile single-page view
   const bookRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Configure PDF.js worker on client side only
   useEffect(() => {
@@ -177,9 +189,12 @@ export function BookReaderTab() {
       // Restore reading progress
       const progress = getReadingProgress(file.id);
       if (progress) {
-        // Convert page number to spread
+        // Set current page for mobile view
+        setCurrentPage(progress.currentPage);
+        // Convert page number to spread for desktop view
         setCurrentSpread(Math.floor((progress.currentPage - 1) / 2));
       } else {
+        setCurrentPage(1);
         setCurrentSpread(0);
       }
     } catch (err) {
@@ -199,10 +214,11 @@ export function BookReaderTab() {
   const closeBook = useCallback(() => {
     // Save progress before closing
     if (selectedFile && numPages > 0) {
-      const currentPage = getCurrentPage();
+      // Use mobile currentPage state if on mobile, otherwise calculate from spread
+      const pageToSave = isMobile ? currentPage : getCurrentPage();
       saveReadingProgress({
         fileId: selectedFile.id,
-        currentPage,
+        currentPage: pageToSave,
         totalPages: numPages,
         lastRead: new Date().toISOString(),
       });
@@ -210,7 +226,7 @@ export function BookReaderTab() {
         ...prev,
         [selectedFile.id]: {
           fileId: selectedFile.id,
-          currentPage,
+          currentPage: pageToSave,
           totalPages: numPages,
           lastRead: new Date().toISOString(),
         },
@@ -221,10 +237,11 @@ export function BookReaderTab() {
     setPdfUrl(null);
     setNumPages(0);
     setCurrentSpread(0);
+    setCurrentPage(1);
     setScale(1.0);
     setIsFullscreen(false);
     setPdfError(null);
-  }, [selectedFile, numPages, getCurrentPage]);
+  }, [selectedFile, numPages, getCurrentPage, isMobile, currentPage]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -255,29 +272,81 @@ export function BookReaderTab() {
   };
 
   const flipToNext = () => {
-    if (isFlipping || currentSpread >= maxSpreads - 1) return;
-    setFlipDirection("next");
-    setIsFlipping(true);
-    setTimeout(() => {
-      goToSpread(currentSpread + 1);
+    if (isFlipping) return;
+
+    if (isMobile) {
+      // Mobile: go page by page
+      if (currentPage >= numPages) return;
+      setFlipDirection("next");
+      setIsFlipping(true);
       setTimeout(() => {
-        setIsFlipping(false);
-        setFlipDirection(null);
-      }, 100);
-    }, 500);
+        setCurrentPage(prev => Math.min(prev + 1, numPages));
+        // Save progress
+        if (selectedFile) {
+          saveReadingProgress({
+            fileId: selectedFile.id,
+            currentPage: currentPage + 1,
+            totalPages: numPages,
+            lastRead: new Date().toISOString(),
+          });
+        }
+        setTimeout(() => {
+          setIsFlipping(false);
+          setFlipDirection(null);
+        }, 100);
+      }, 400);
+    } else {
+      // Desktop: go spread by spread
+      if (currentSpread >= maxSpreads - 1) return;
+      setFlipDirection("next");
+      setIsFlipping(true);
+      setTimeout(() => {
+        goToSpread(currentSpread + 1);
+        setTimeout(() => {
+          setIsFlipping(false);
+          setFlipDirection(null);
+        }, 100);
+      }, 500);
+    }
   };
 
   const flipToPrev = () => {
-    if (isFlipping || currentSpread <= 0) return;
-    setFlipDirection("prev");
-    setIsFlipping(true);
-    setTimeout(() => {
-      goToSpread(currentSpread - 1);
+    if (isFlipping) return;
+
+    if (isMobile) {
+      // Mobile: go page by page
+      if (currentPage <= 1) return;
+      setFlipDirection("prev");
+      setIsFlipping(true);
       setTimeout(() => {
-        setIsFlipping(false);
-        setFlipDirection(null);
-      }, 100);
-    }, 500);
+        setCurrentPage(prev => Math.max(prev - 1, 1));
+        // Save progress
+        if (selectedFile) {
+          saveReadingProgress({
+            fileId: selectedFile.id,
+            currentPage: currentPage - 1,
+            totalPages: numPages,
+            lastRead: new Date().toISOString(),
+          });
+        }
+        setTimeout(() => {
+          setIsFlipping(false);
+          setFlipDirection(null);
+        }, 100);
+      }, 400);
+    } else {
+      // Desktop: go spread by spread
+      if (currentSpread <= 0) return;
+      setFlipDirection("prev");
+      setIsFlipping(true);
+      setTimeout(() => {
+        goToSpread(currentSpread - 1);
+        setTimeout(() => {
+          setIsFlipping(false);
+          setFlipDirection(null);
+        }, 100);
+      }, 500);
+    }
   };
 
   // Drag handlers for page turning
@@ -476,31 +545,137 @@ export function BookReaderTab() {
               <Button onClick={() => openBook(selectedFile)} className="bg-amber-600 hover:bg-amber-700">Try Again</Button>
             </div>
           ) : pdfReady ? (
-            <div
-              ref={bookRef}
-              className="relative"
-              style={{
-                transform: `scale(${scale})`,
-                transformOrigin: "center center",
-                transition: "transform 0.3s ease",
-              }}
-            >
-              {/* Book Container */}
-              <div
-                className={cn(
-                  "relative flex",
-                  isCoverPage ? "justify-center" : "justify-center"
-                )}
-                style={{
-                  transformStyle: "preserve-3d",
-                }}
-              >
-                {/* Book Spine Shadow */}
-                {!isCoverPage && (
-                  <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-8 z-20 pointer-events-none">
-                    <div className="h-full bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
+            <>
+              {/* Mobile Single Page View */}
+              {isMobile ? (
+                <div
+                  ref={bookRef}
+                  className="relative w-full h-full flex items-center justify-center"
+                  style={{ perspective: "1500px" }}
+                >
+                  {/* Current Page */}
+                  <div
+                    className={cn(
+                      "relative bg-[#f5f0e6] shadow-2xl overflow-hidden select-none",
+                      "cursor-grab active:cursor-grabbing",
+                      !isDragging && !isFlipping && "transition-transform duration-300 ease-out"
+                    )}
+                    style={{
+                      width: "min(90vw, 380px)",
+                      height: "min(130vw, 550px)",
+                      boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                      backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 5%, #f8f5ef 95%, #e8e0d0 100%)",
+                      borderRadius: "4px",
+                      transformOrigin: "left center",
+                      transform: isDragging
+                        ? `rotateY(${-dragProgress * 45}deg)`
+                        : isFlipping && flipDirection === "next"
+                        ? "rotateY(-90deg)"
+                        : isFlipping && flipDirection === "prev"
+                        ? "rotateY(90deg)"
+                        : "rotateY(0deg)",
+                      transformStyle: "preserve-3d",
+                      backfaceVisibility: "hidden",
+                    }}
+                    onMouseDown={handleDragStart}
+                    onTouchStart={handleDragStart}
+                  >
+                    {/* Paper Texture */}
+                    <div className="absolute inset-0 opacity-20 pointer-events-none"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")`,
+                      }}
+                    />
+                    {/* Page Content */}
+                    <div className="relative z-10 flex items-center justify-center h-full">
+                      <Document file={pdfUrl} loading={null}>
+                        <Page
+                          pageNumber={currentPage}
+                          width={Math.min(window.innerWidth * 0.85, 360)}
+                          renderTextLayer={false}
+                          renderAnnotationLayer={false}
+                          loading={
+                            <div className="flex items-center justify-center h-full">
+                              <div className="animate-pulse text-stone-400">Loading...</div>
+                            </div>
+                          }
+                        />
+                      </Document>
+                    </div>
+                    {/* Page Number */}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-stone-500 bg-white/60 px-2 py-0.5 rounded">
+                      {currentPage}
+                    </div>
+                    {/* Edge shadows */}
+                    <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
+                    <div className="absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-black/10 to-transparent pointer-events-none" />
                   </div>
-                )}
+
+                  {/* Next Page Preview (behind current) */}
+                  {isDragging && dragProgress > 0.1 && currentPage < numPages && (
+                    <div
+                      className="absolute bg-[#f5f0e6] shadow-xl overflow-hidden"
+                      style={{
+                        width: "min(90vw, 380px)",
+                        height: "min(130vw, 550px)",
+                        opacity: Math.min(1, dragProgress * 2),
+                        zIndex: -1,
+                        borderRadius: "4px",
+                        backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 5%, #f8f5ef 95%, #e8e0d0 100%)",
+                      }}
+                    >
+                      <div className="relative z-10 flex items-center justify-center h-full">
+                        <Document file={pdfUrl} loading={null}>
+                          <Page
+                            pageNumber={currentPage + 1}
+                            width={Math.min(window.innerWidth * 0.85, 360)}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            loading={<div className="animate-pulse text-stone-400">Loading...</div>}
+                          />
+                        </Document>
+                      </div>
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-stone-500 bg-white/60 px-2 py-0.5 rounded">
+                        {currentPage + 1}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Swipe hint */}
+                  {currentPage === 1 && !isDragging && (
+                    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-2 text-white/40 text-xs animate-pulse">
+                      <span>Swipe to turn pages</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Desktop Two-Page Spread View */
+                <div
+                  ref={bookRef}
+                  className="relative"
+                  style={{
+                    transform: `scale(${scale})`,
+                    transformOrigin: "center center",
+                    transition: "transform 0.3s ease",
+                  }}
+                >
+                  {/* Book Container */}
+                  <div
+                    className={cn(
+                      "relative flex",
+                      isCoverPage ? "justify-center" : "justify-center"
+                    )}
+                    style={{
+                      transformStyle: "preserve-3d",
+                    }}
+                  >
+                    {/* Book Spine Shadow */}
+                    {!isCoverPage && (
+                      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-8 z-20 pointer-events-none">
+                        <div className="h-full bg-gradient-to-r from-black/40 via-black/60 to-black/40" />
+                      </div>
+                    )}
 
                 {/* Next Spread Preview - Visible when dragging any page */}
                 {isDragging && dragProgress > 0.1 && (
@@ -789,6 +964,8 @@ export function BookReaderTab() {
                 </div>
               </div>
             </div>
+          )}
+          </>
           ) : null}
         </div>
 
@@ -797,7 +974,7 @@ export function BookReaderTab() {
           <Button
             variant="ghost"
             onClick={flipToPrev}
-            disabled={currentSpread <= 0 || isFlipping}
+            disabled={isMobile ? currentPage <= 1 : currentSpread <= 0 || isFlipping}
             className="gap-2 text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -806,30 +983,34 @@ export function BookReaderTab() {
 
           <div className="flex items-center gap-4">
             <span className="text-sm text-white/60 whitespace-nowrap">
-              {isCoverPage ? "Cover" : `Pages ${spreadPages.left || ""}-${spreadPages.right || ""}`} of {numPages}
+              {isMobile
+                ? `Page ${currentPage} of ${numPages}`
+                : isCoverPage
+                ? "Cover"
+                : `Pages ${spreadPages.left || ""}-${spreadPages.right || ""}`} {!isMobile && `of ${numPages}`}
             </span>
-            {/* Page dots indicator */}
-            <div className="hidden sm:flex gap-1.5">
-              {Array.from({ length: Math.min(maxSpreads, 10) }).map((_, i) => (
+            {/* Page dots indicator - only on desktop */}
+            <div className="hidden md:flex gap-1.5">
+              {Array.from({ length: Math.min(isMobile ? numPages : maxSpreads, 10) }).map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => goToSpread(i)}
+                  onClick={() => isMobile ? setCurrentPage(i + 1) : goToSpread(i)}
                   className={cn(
                     "w-2 h-2 rounded-full transition-all duration-300",
-                    currentSpread === i
+                    (isMobile ? currentPage === i + 1 : currentSpread === i)
                       ? "bg-amber-400 scale-125"
                       : "bg-white/30 hover:bg-white/50"
                   )}
                 />
               ))}
-              {maxSpreads > 10 && <span className="text-white/30 text-xs">...</span>}
+              {(isMobile ? numPages : maxSpreads) > 10 && <span className="text-white/30 text-xs">...</span>}
             </div>
           </div>
 
           <Button
             variant="ghost"
             onClick={flipToNext}
-            disabled={currentSpread >= maxSpreads - 1 || isFlipping}
+            disabled={isMobile ? currentPage >= numPages : currentSpread >= maxSpreads - 1 || isFlipping}
             className="gap-2 text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
           >
             <span className="hidden sm:inline">Next</span>
@@ -855,11 +1036,47 @@ export function BookReaderTab() {
               transform: rotateY(0deg);
             }
           }
+          @keyframes mobilePageFlipNext {
+            0% {
+              transform: rotateY(0deg) scale(1);
+              opacity: 1;
+            }
+            50% {
+              transform: rotateY(-45deg) scale(0.95);
+              opacity: 0.8;
+            }
+            100% {
+              transform: rotateY(-90deg) scale(0.9);
+              opacity: 0;
+            }
+          }
+          @keyframes mobilePageFlipPrev {
+            0% {
+              transform: rotateY(0deg) scale(1);
+              opacity: 1;
+            }
+            50% {
+              transform: rotateY(45deg) scale(0.95);
+              opacity: 0.8;
+            }
+            100% {
+              transform: rotateY(90deg) scale(0.9);
+              opacity: 0;
+            }
+          }
           .animate-page-flip {
             animation: pageFlip 0.6s ease-in-out forwards;
           }
           .animate-page-flip-reverse {
             animation: pageFlipReverse 0.6s ease-in-out forwards;
+          }
+          @media (max-width: 767px) {
+            .animate-page-flip {
+              animation: mobilePageFlipNext 0.4s ease-in-out forwards;
+            }
+            .animate-page-flip-reverse {
+              animation: mobilePageFlipPrev 0.4s ease-in-out forwards;
+            }
           }
         `}</style>
       </div>
