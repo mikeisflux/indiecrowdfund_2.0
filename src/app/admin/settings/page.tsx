@@ -194,6 +194,12 @@ export default function SettingsPage() {
     paymentSettingsRef.current = paymentSettings;
   }, [paymentSettings]);
 
+  // Ref to track latest storage settings for save handler (avoids stale closure)
+  const storageSettingsRef = useRef(storageSettings);
+  useEffect(() => {
+    storageSettingsRef.current = storageSettings;
+  }, [storageSettings]);
+
   const [emailSettings, setEmailSettings] = useState({
     provider: "sendgrid",
     // SMTP settings
@@ -550,14 +556,16 @@ export default function SettingsPage() {
   const testR2 = async () => {
     setR2TestResult("testing");
     try {
+      // Use ref to get latest values (avoids stale closure)
+      const currentStorageSettings = storageSettingsRef.current;
       const response = await fetch("/api/admin/settings/test-r2", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
-          accountId: storageSettings.r2AccountId,
-          accessKeyId: storageSettings.r2AccessKeyId,
-          secretAccessKey: storageSettings.r2SecretAccessKey,
-          bucketName: storageSettings.r2BucketName,
+          accountId: currentStorageSettings.r2AccountId,
+          accessKeyId: currentStorageSettings.r2AccessKeyId,
+          secretAccessKey: currentStorageSettings.r2SecretAccessKey,
+          bucketName: currentStorageSettings.r2BucketName,
         }),
       });
       setR2TestResult(response.ok ? "success" : "error");
@@ -703,19 +711,21 @@ export default function SettingsPage() {
           break;
         case "storage":
           section = "storage";
+          // Use ref to get latest values (avoids stale closure from EditableInput blur events)
+          const currentStorageSettings = storageSettingsRef.current;
           data = {
-            r2Enabled: storageSettings.r2Enabled,
-            r2AccountId: storageSettings.r2AccountId,
-            r2AccessKeyId: storageSettings.r2AccessKeyId,
-            r2SecretAccessKey: storageSettings.r2SecretAccessKey,
-            r2BucketName: storageSettings.r2BucketName,
-            r2PublicDomain: storageSettings.r2PublicDomain,
-            r2Region: storageSettings.r2Region,
-            maxFileSizeMB: parseInt(storageSettings.maxFileSizeMB) || 50,
-            maxProjectStorageMB: parseInt(storageSettings.maxProjectStorageMB) || 200,
-            allowedFileTypes: storageSettings.allowedFileTypes,
-            digitalDownloadsEnabled: storageSettings.digitalDownloadsEnabled,
-            signedUrlExpirationMinutes: parseInt(storageSettings.signedUrlExpirationMinutes) || 60,
+            r2Enabled: currentStorageSettings.r2Enabled,
+            r2AccountId: currentStorageSettings.r2AccountId,
+            r2AccessKeyId: currentStorageSettings.r2AccessKeyId,
+            r2SecretAccessKey: currentStorageSettings.r2SecretAccessKey,
+            r2BucketName: currentStorageSettings.r2BucketName,
+            r2PublicDomain: currentStorageSettings.r2PublicDomain,
+            r2Region: currentStorageSettings.r2Region,
+            maxFileSizeMB: parseInt(currentStorageSettings.maxFileSizeMB) || 50,
+            maxProjectStorageMB: parseInt(currentStorageSettings.maxProjectStorageMB) || 200,
+            allowedFileTypes: currentStorageSettings.allowedFileTypes,
+            digitalDownloadsEnabled: currentStorageSettings.digitalDownloadsEnabled,
+            signedUrlExpirationMinutes: parseInt(currentStorageSettings.signedUrlExpirationMinutes) || 60,
           };
           break;
         default:

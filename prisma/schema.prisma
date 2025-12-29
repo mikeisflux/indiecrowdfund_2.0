@@ -467,6 +467,7 @@ model Pledge {
   reward                Reward?      @relation(fields: [rewardId], references: [id])
   addons                PledgeAddon[]
   emailLogs             EmailLog[]
+  divinityCoinTransactions DivinityCoinTransaction[]
 
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
@@ -841,6 +842,7 @@ model DivinityCoinTransaction {
   createdAt       DateTime @default(now())
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pledge          Pledge?  @relation(fields: [pledgeId], references: [id])
 
   @@index([userId])
   @@index([pledgeId])
