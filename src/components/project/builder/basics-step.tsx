@@ -254,52 +254,60 @@ export function BasicsStep() {
             Project URL
           </div>
         </Label>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
-            indiecrowdfund.com/projects/{userVanityUrl ? `${userVanityUrl}/` : ""}
-          </span>
-          <div className="relative flex-1">
-            <Input
-              id="slug"
-              placeholder="my-awesome-project"
-              value={slugInput}
-              onChange={(e) => {
-                const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
-                setSlugInput(value);
-              }}
-              className={`pr-10 ${
-                slugStatus === "available" ? "border-green-500 focus-visible:ring-green-500" :
-                slugStatus === "taken" || slugStatus === "invalid" ? "border-red-500 focus-visible:ring-red-500" :
-                ""
-              }`}
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              {slugStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-              {slugStatus === "available" && <Check className="h-4 w-4 text-green-500" />}
-              {(slugStatus === "taken" || slugStatus === "invalid") && <X className="h-4 w-4 text-red-500" />}
+        {userVanityUrl ? (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                indiecrowdfund.com/projects/{userVanityUrl}/
+              </span>
+              <div className="relative flex-1">
+                <Input
+                  id="slug"
+                  placeholder="my-awesome-project"
+                  value={slugInput}
+                  onChange={(e) => {
+                    const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                    setSlugInput(value);
+                  }}
+                  className={`pr-10 ${
+                    slugStatus === "available" ? "border-green-500 focus-visible:ring-green-500" :
+                    slugStatus === "taken" || slugStatus === "invalid" ? "border-red-500 focus-visible:ring-red-500" :
+                    ""
+                  }`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {slugStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  {slugStatus === "available" && <Check className="h-4 w-4 text-green-500" />}
+                  {(slugStatus === "taken" || slugStatus === "invalid") && <X className="h-4 w-4 text-red-500" />}
+                </div>
+              </div>
             </div>
+            {slugMessage && (
+              <p className={`text-xs ${
+                slugStatus === "available" ? "text-green-600" :
+                slugStatus === "taken" || slugStatus === "invalid" ? "text-red-600" :
+                "text-muted-foreground"
+              }`}>
+                {slugMessage}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              This will be your project&apos;s permanent URL. Choose something memorable and relevant.
+            </p>
+          </>
+        ) : (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              You need to set up a custom username before creating a project URL.
+            </p>
+            <a
+              href="/dashboard/profile"
+              className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-amber-700 underline hover:no-underline dark:text-amber-300"
+            >
+              Set up your username in profile settings
+              <Link className="h-3 w-3" />
+            </a>
           </div>
-        </div>
-        {slugMessage && (
-          <p className={`text-xs ${
-            slugStatus === "available" ? "text-green-600" :
-            slugStatus === "taken" || slugStatus === "invalid" ? "text-red-600" :
-            "text-muted-foreground"
-          }`}>
-            {slugMessage}
-          </p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          This will be your project&apos;s permanent URL. Choose something memorable and relevant.
-        </p>
-        {!userVanityUrl && (
-          <p className="text-xs text-amber-600 dark:text-amber-400">
-            Tip: Set up a custom username in your{" "}
-            <a href="/dashboard/profile" className="underline hover:no-underline">
-              profile settings
-            </a>{" "}
-            to get a personalized project URL.
-          </p>
         )}
       </div>
 
