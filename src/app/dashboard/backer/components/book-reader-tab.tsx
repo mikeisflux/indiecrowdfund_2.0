@@ -33,6 +33,7 @@ const Page = dynamic(
   () => import("react-pdf").then((mod) => mod.Page),
   { ssr: false }
 );
+const NextImage = dynamic(() => import("next/image"), { ssr: false });
 
 interface DigitalFile {
   id: string;
@@ -101,12 +102,16 @@ export function BookReaderTab() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragProgress, setDragProgress] = useState(0);
   const [dragStartX, setDragStartX] = useState(0);
+  const [dragDirection, setDragDirection] = useState<"forward" | "backward" | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [currentPage, setCurrentPage] = useState(1); // For mobile single-page view
   const [preloadedPages, setPreloadedPages] = useState<Set<number>>(new Set());
+  const [pageCache, setPageCache] = useState<Map<number, string>>(new Map()); // Stores base64 images
   const bookRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const flipToNextRef = useRef<() => void>(() => {});
+  const flipToPrevRef = useRef<() => void>(() => {});
+  const preloadContainerRef = useRef<HTMLDivElement>(null);
 
 
   // Detect mobile screen size
@@ -255,6 +260,28 @@ export function BookReaderTab() {
     setPdfError("Failed to load PDF document");
   }, []);
 
+  // Callback to cache rendered page as data URL
+  const handlePageRenderSuccess = useCallback((pageNum: number) => {
+    // Find the canvas for this page and cache it
+    setTimeout(() => {
+      const canvases = document.querySelectorAll(`[data-page-number="${pageNum}"] canvas`);
+      canvases.forEach((canvas) => {
+        if (canvas instanceof HTMLCanvasElement) {
+          try {
+            const dataUrl = canvas.toDataURL("image/png");
+            setPageCache((prev) => {
+              const newCache = new Map(prev);
+              newCache.set(pageNum, dataUrl);
+              return newCache;
+            });
+          } catch {
+            // Canvas might be tainted, ignore
+          }
+        }
+      });
+    }, 100);
+  }, []);
+
   // Preload nearby pages for smooth transitions (6 pages buffer)
   useEffect(() => {
     if (!pdfUrl || numPages === 0) return;
@@ -335,9 +362,6 @@ export function BookReaderTab() {
     }
   };
 
-  // Keep ref updated for use in handleDragEnd
-  flipToNextRef.current = flipToNext;
-
   const flipToPrev = () => {
     if (isFlipping) return;
 
@@ -377,13 +401,18 @@ export function BookReaderTab() {
     }
   };
 
-  // Drag handlers for page turning
+  // Keep refs updated for use in handleDragEnd
+  flipToNextRef.current = flipToNext;
+  flipToPrevRef.current = flipToPrev;
+
+  // Drag handlers for page turning - supports both forward and backward
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (isFlipping) return;
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     setIsDragging(true);
     setDragStartX(clientX);
     setDragProgress(0);
+    setDragDirection(null);
   };
 
   const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
@@ -391,8 +420,17 @@ export function BookReaderTab() {
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     const delta = dragStartX - clientX;
     const containerWidth = bookRef.current?.offsetWidth || 800;
-    const progress = Math.max(0, Math.min(1, delta / (containerWidth * 0.5)));
-    setDragProgress(progress);
+
+    // Positive delta = dragging left (forward), negative delta = dragging right (backward)
+    if (delta > 0) {
+      setDragDirection("forward");
+      const progress = Math.min(1, delta / (containerWidth * 0.5));
+      setDragProgress(progress);
+    } else {
+      setDragDirection("backward");
+      const progress = Math.min(1, Math.abs(delta) / (containerWidth * 0.5));
+      setDragProgress(progress);
+    }
   }, [isDragging, dragStartX]);
 
   const handleDragEnd = useCallback(() => {
@@ -400,11 +438,16 @@ export function BookReaderTab() {
     setIsDragging(false);
 
     if (dragProgress > 0.3) {
-      // Complete the flip using ref to avoid dependency cycle
-      flipToNextRef.current();
+      // Complete the flip based on direction
+      if (dragDirection === "forward") {
+        flipToNextRef.current();
+      } else if (dragDirection === "backward") {
+        flipToPrevRef.current();
+      }
     }
     setDragProgress(0);
-  }, [isDragging, dragProgress]);
+    setDragDirection(null);
+  }, [isDragging, dragProgress, dragDirection]);
 
   // Attach global mouse/touch listeners for drag
   useEffect(() => {
@@ -1056,18 +1099,23 @@ export function BookReaderTab() {
           </Button>
         </div>
 
-        {/* Hidden preloader for smooth page transitions - preloads 6 pages */}
-        <div className="sr-only" aria-hidden="true">
+        {/* Hidden preloader for smooth page transitions - preloads pages at full size */}
+        <div
+          ref={preloadContainerRef}
+          className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none"
+          aria-hidden="true"
+        >
           <Document file={pdfUrl} loading={null}>
             {Array.from(preloadedPages).map((pageNum) => (
               <Page
                 key={`preload-${pageNum}`}
                 pageNumber={pageNum}
-                width={100}
-                scale={0.5}
+                width={isMobile ? Math.min(window.innerWidth * 0.85, 360) : Math.min(window.innerWidth * 0.4, 380)}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
                 loading={null}
+                onRenderSuccess={() => handlePageRenderSuccess(pageNum)}
+                data-page-number={pageNum}
               />
             ))}
           </Document>
