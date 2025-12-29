@@ -61,7 +61,7 @@ function getCSPHeader(): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https: http:",
-    "connect-src 'self' https://api.stripe.com https://www.google-analytics.com https://vitals.vercel-analytics.com wss:",
+    "connect-src 'self' https://api.stripe.com https://www.google-analytics.com https://vitals.vercel-analytics.com https://*.r2.cloudflarestorage.com wss:",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.youtube.com https://youtube.com https://player.vimeo.com",
     "object-src 'none'",
     "base-uri 'self'",
