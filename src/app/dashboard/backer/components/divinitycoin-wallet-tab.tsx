@@ -185,10 +185,13 @@ export function DivinityCoinWalletTab() {
   if (!data) return null;
 
   return (
-    <div className={cn(
-      "space-y-6 transition-all duration-500",
-      isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-    )}>
+    <div
+      id="wallet-content"
+      className={cn(
+        "space-y-6 transition-all duration-500",
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      )}
+    >
       {/* Wallet Balance Card */}
       <Card className="relative overflow-hidden border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/10 via-background to-[#0066FF]/5">
         {/* Decorative elements */}

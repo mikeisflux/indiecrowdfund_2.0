@@ -499,7 +499,7 @@ export default function ProjectPage() {
                   </Button>
                 </Link>
               ) : project.paymentProcessor === "DIVINITYCOIN" && divinityCoinBalance === 0 ? (
-                <Link href="/dashboard/backer?tab=wallet">
+                <Link href="/dashboard/backer?tab=wallet&scrollTo=wallet-content">
                   <Button className="bg-gradient-to-r from-[#0066FF] to-blue-500 hover:from-[#0052CC] hover:to-blue-600 text-white shadow-lg shadow-[#0066FF]/20">
                     <Coins className="mr-2 h-4 w-4" />
                     Add Credits to Back
@@ -698,7 +698,7 @@ export default function ProjectPage() {
                   No longer available
                 </Button>
               ) : project.paymentProcessor === "DIVINITYCOIN" && divinityCoinBalance === 0 ? (
-                <Link href="/dashboard/backer?tab=wallet" className="block">
+                <Link href="/dashboard/backer?tab=wallet&scrollTo=wallet-content" className="block">
                   <Button className="w-full bg-gradient-to-r from-[#0066FF] to-blue-500 hover:from-[#0052CC] hover:to-blue-600 text-white font-medium shadow-lg shadow-[#0066FF]/20 group" size="lg">
                     <Coins className="mr-2 h-4 w-4" />
                     Add Credits to Back

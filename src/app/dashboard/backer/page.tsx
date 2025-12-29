@@ -152,16 +152,34 @@ export default function BackerDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   // Auto-scroll to tabs section on mobile when tab param is present
+  // Also handle scrollTo parameter for deep linking to specific content
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
-    if (tabParam && tabsRef.current) {
+    const scrollToParam = searchParams?.get("scrollTo");
+
+    if (tabParam) {
       // Check if mobile (screen width < 1024px which is lg breakpoint)
       const isMobile = window.innerWidth < 1024;
       if (isMobile) {
-        // Small delay to ensure content is rendered
-        setTimeout(() => {
-          tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 100);
+        // If scrollTo parameter is present, scroll to that specific element
+        if (scrollToParam) {
+          // Longer delay for wallet tab since it has loading state
+          const delay = tabParam === "wallet" ? 500 : 100;
+          setTimeout(() => {
+            const targetElement = document.getElementById(scrollToParam);
+            if (targetElement) {
+              targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+            } else if (tabsRef.current) {
+              // Fallback to tabs section if element not found
+              tabsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }, delay);
+        } else if (tabsRef.current) {
+          // Default: scroll to tabs section
+          setTimeout(() => {
+            tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 100);
+        }
       }
     }
   }, [searchParams]);
