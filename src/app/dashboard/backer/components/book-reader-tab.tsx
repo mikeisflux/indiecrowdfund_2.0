@@ -108,9 +108,6 @@ export function BookReaderTab() {
   const pageRef = useRef<HTMLDivElement>(null);
   const flipToNextRef = useRef<() => void>(() => {});
 
-  // PDF render scale for crisp text - uses device pixel ratio for retina displays
-  // This offloads high-res rendering to the user's GPU
-  const PDF_RENDER_SCALE = typeof window !== "undefined" ? Math.min(window.devicePixelRatio || 2, 3) : 2;
 
   // Detect mobile screen size
   useEffect(() => {
@@ -628,7 +625,6 @@ export function BookReaderTab() {
                         <Page
                           pageNumber={currentPage}
                           width={Math.min(window.innerWidth * 0.85, 360)}
-                          scale={PDF_RENDER_SCALE}
                           renderTextLayer={false}
                           renderAnnotationLayer={false}
                           loading={
@@ -666,7 +662,6 @@ export function BookReaderTab() {
                           <Page
                             pageNumber={currentPage + 1}
                             width={Math.min(window.innerWidth * 0.85, 360)}
-                            scale={PDF_RENDER_SCALE}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             loading={<div className="animate-pulse text-stone-400">Loading...</div>}
@@ -747,7 +742,6 @@ export function BookReaderTab() {
                                   <Page
                                     pageNumber={nextLeftPage}
                                     width={Math.min(window.innerWidth * 0.4, 380)}
-                                    scale={PDF_RENDER_SCALE}
                                     renderTextLayer={false}
                                     renderAnnotationLayer={false}
                                     loading={<div className="animate-pulse text-stone-400">Loading...</div>}
@@ -775,7 +769,6 @@ export function BookReaderTab() {
                                   <Page
                                     pageNumber={nextRightPage}
                                     width={Math.min(window.innerWidth * 0.4, 380)}
-                                    scale={PDF_RENDER_SCALE}
                                     renderTextLayer={false}
                                     renderAnnotationLayer={false}
                                     loading={<div className="animate-pulse text-stone-400">Loading...</div>}
@@ -819,7 +812,6 @@ export function BookReaderTab() {
                           <Page
                             pageNumber={spreadPages.left}
                             width={Math.min(window.innerWidth * 0.4, 380)}
-                            scale={PDF_RENDER_SCALE}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             loading={
@@ -885,7 +877,6 @@ export function BookReaderTab() {
                           <Page
                             pageNumber={1}
                             width={Math.min(window.innerWidth * 0.45, 430)}
-                            scale={PDF_RENDER_SCALE}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             className="[&>canvas]:rounded-r-lg"
@@ -931,7 +922,6 @@ export function BookReaderTab() {
                             <Page
                               pageNumber={spreadPages.right}
                               width={Math.min(window.innerWidth * 0.4, 380)}
-                              scale={PDF_RENDER_SCALE}
                               renderTextLayer={false}
                               renderAnnotationLayer={false}
                               loading={
