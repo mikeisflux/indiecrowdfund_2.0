@@ -29,7 +29,6 @@ import {
   Download,
   Send,
   Trash2,
-  Play,
   HelpCircle,
   Loader2,
   AlertTriangle,

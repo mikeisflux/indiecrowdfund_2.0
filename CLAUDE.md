@@ -22,6 +22,35 @@
 - Use `eslint-disable-next-line @typescript-eslint/no-explicit-any` sparingly
 - Prefer proper typing when possible
 
+### Images
+- **ALWAYS** use `<Image />` from `next/image` instead of `<img>` tags
+- The `<img>` element triggers `@next/next/no-img-element` lint error
+- Example:
+  ```typescript
+  // CORRECT
+  import Image from "next/image";
+  <Image src="/path.jpg" alt="description" width={100} height={100} />
+
+  // WRONG - will trigger lint error
+  <img src="/path.jpg" alt="description" />
+  ```
+
+### React Hooks Dependencies
+- **ALWAYS** include all dependencies in `useEffect`, `useCallback`, and `useMemo` dependency arrays
+- Missing dependencies trigger `react-hooks/exhaustive-deps` lint error
+- Example:
+  ```typescript
+  // CORRECT
+  useEffect(() => {
+    fetchData(projectId);
+  }, [projectId, fetchData]);
+
+  // WRONG - missing dependency
+  useEffect(() => {
+    fetchData(projectId);
+  }, []);
+  ```
+
 ## Project Patterns
 
 ### API Route Structure
@@ -42,4 +71,6 @@
 ## Pre-Commit Checklist
 1. All imports are used
 2. No unused function parameters
-3. Run lint check mentally before committing
+3. Using `<Image />` from next/image, not `<img>`
+4. All useEffect/useCallback/useMemo dependencies are included
+5. Run lint check mentally before committing
