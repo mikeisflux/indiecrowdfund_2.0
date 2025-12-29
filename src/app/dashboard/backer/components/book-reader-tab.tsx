@@ -418,7 +418,7 @@ export function BookReaderTab() {
 
           {/* Book View */}
           <div className="flex-1 flex items-center justify-center overflow-hidden" ref={bookRef}>
-            <Document file={pdfUrl} onLoadSuccess={({ numPages }) => setNumPages(numPages)} loading={null}>
+            <Document file={pdfUrl} onLoadSuccess={(pdf) => { setNumPages(pdf.numPages); setPdfDocument(pdf); }} loading={null}>
               <Outline onLoadSuccess={handleOutlineLoad} />
               {/* Preload */}
               <div className="absolute opacity-0 pointer-events-none -z-50">
