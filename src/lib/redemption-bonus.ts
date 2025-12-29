@@ -2,8 +2,8 @@
  * DivinityCoin Redemption Bonus System
  *
  * Backers earn achievement badges that provide redemption bonuses:
- * - Each badge provides 0.05% bonus on DivinityCoin redemptions
- * - Maximum bonus is capped at 0.03% on a rolling monthly basis
+ * - Each badge provides 0.5% bonus on DivinityCoin redemptions
+ * - Maximum bonus is capped at 3% on a rolling monthly basis
  *
  * Uses Decimal for financial precision.
  */
@@ -12,8 +12,8 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { db } from "@/lib/db";
 
 // Constants for bonus calculation
-const BONUS_PER_BADGE = new Decimal("0.0005"); // 0.05%
-const MONTHLY_CAP = new Decimal("0.0003"); // 0.03%
+const BONUS_PER_BADGE = new Decimal("0.005"); // 0.5%
+const MONTHLY_CAP = new Decimal("0.03"); // 3%
 
 /**
  * Get the start of the current month for ledger tracking
@@ -31,7 +31,7 @@ export async function calculateRawBonusPercent(userId: string): Promise<Decimal>
     where: { userId },
   });
 
-  // Each badge gives 0.05% bonus
+  // Each badge gives 0.5% bonus
   return BONUS_PER_BADGE.mul(badgeCount);
 }
 

@@ -78,8 +78,8 @@ export async function GET() {
       bonus: {
         rawPercent: summary.rawBonusPercent,
         availablePercent: `${(Number(bonusInfo.availablePercent) * 100).toFixed(2)}%`,
-        perBadge: "0.05%",
-        monthlyCap: "0.03%",
+        perBadge: "0.5%",
+        monthlyCap: "3%",
       },
       monthlyStats: summary.monthlyStats,
     }, { headers: corsHeaders });

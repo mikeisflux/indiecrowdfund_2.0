@@ -205,7 +205,7 @@ export function BadgesDisplay() {
                             {badge.label.description}
                           </p>
                           <p className="text-xs text-amber-500">
-                            +0.05% redemption bonus
+                            +0.5% redemption bonus
                           </p>
                         </div>
                       </TooltipContent>

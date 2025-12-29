@@ -280,7 +280,7 @@ export function DivinityCoinWalletTab() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-4 text-center">
-            Each badge provides 0.05% bonus on redemptions, capped at 0.03% monthly
+            Each badge provides 0.5% bonus on redemptions, capped at 3% monthly
           </p>
         </CardContent>
       </Card>
