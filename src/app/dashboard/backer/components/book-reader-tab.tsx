@@ -619,112 +619,167 @@ export function BookReaderTab() {
             <>
               {/* Mobile Single Page View */}
               {isMobile ? (
-                <div
-                  ref={bookRef}
-                  className="relative w-full h-full flex items-center justify-center"
-                  style={{ perspective: "1500px" }}
+                <Document
+                  file={pdfUrl}
+                  onLoadSuccess={handleDocumentLoadSuccess}
+                  onLoadError={handleDocumentLoadError}
+                  loading={null}
                 >
-                  {/* Current Page */}
                   <div
-                    className={cn(
-                      "relative bg-[#f5f0e6] shadow-2xl overflow-hidden select-none",
-                      "cursor-grab active:cursor-grabbing",
-                      !isDragging && !isFlipping && "transition-transform duration-300 ease-out"
-                    )}
-                    style={{
-                      width: "min(90vw, 380px)",
-                      height: "min(130vw, 550px)",
-                      boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-                      backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 5%, #f8f5ef 95%, #e8e0d0 100%)",
-                      borderRadius: "4px",
-                      transformOrigin: "left center",
-                      transform: isDragging
-                        ? `rotateY(${-dragProgress * 45}deg)`
-                        : isFlipping && flipDirection === "next"
-                        ? "rotateY(-90deg)"
-                        : isFlipping && flipDirection === "prev"
-                        ? "rotateY(90deg)"
-                        : "rotateY(0deg)",
-                      transformStyle: "preserve-3d",
-                      backfaceVisibility: "hidden",
-                    }}
-                    onMouseDown={handleDragStart}
-                    onTouchStart={handleDragStart}
+                    ref={bookRef}
+                    className="relative w-full h-full flex items-center justify-center"
+                    style={{ perspective: "1500px" }}
                   >
-                    {/* Paper Texture */}
-                    <div className="absolute inset-0 opacity-20 pointer-events-none"
-                      style={{
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")`,
-                      }}
-                    />
-                    {/* Page Content */}
-                    <div className="relative z-10 flex items-center justify-center h-full">
-                      <Document
-                        file={pdfUrl}
-                        onLoadSuccess={handleDocumentLoadSuccess}
-                        onLoadError={handleDocumentLoadError}
-                        loading={null}
-                      >
+                    {/* Preload adjacent pages (always rendered but hidden for caching) */}
+                    <div className="absolute opacity-0 pointer-events-none" style={{ zIndex: -10 }}>
+                      {currentPage > 1 && (
                         <Page
-                          pageNumber={currentPage}
+                          pageNumber={currentPage - 1}
                           width={Math.min(window.innerWidth * 0.85, 360)}
                           renderTextLayer={false}
                           renderAnnotationLayer={false}
-                          loading={
-                            <div className="flex items-center justify-center h-full">
-                              <div className="animate-pulse text-stone-400">Loading...</div>
-                            </div>
-                          }
+                          loading={null}
                         />
-                      </Document>
+                      )}
+                      {currentPage < numPages && (
+                        <Page
+                          pageNumber={currentPage + 1}
+                          width={Math.min(window.innerWidth * 0.85, 360)}
+                          renderTextLayer={false}
+                          renderAnnotationLayer={false}
+                          loading={null}
+                        />
+                      )}
+                      {currentPage + 2 <= numPages && (
+                        <Page
+                          pageNumber={currentPage + 2}
+                          width={Math.min(window.innerWidth * 0.85, 360)}
+                          renderTextLayer={false}
+                          renderAnnotationLayer={false}
+                          loading={null}
+                        />
+                      )}
                     </div>
-                    {/* Page Number */}
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-stone-500 bg-white/60 px-2 py-0.5 rounded">
-                      {currentPage}
-                    </div>
-                    {/* Edge shadows */}
-                    <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
-                    <div className="absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-black/10 to-transparent pointer-events-none" />
-                  </div>
 
-                  {/* Next Page Preview (behind current) */}
-                  {isDragging && dragProgress > 0.1 && currentPage < numPages && (
-                    <div
-                      className="absolute bg-[#f5f0e6] shadow-xl overflow-hidden"
-                      style={{
-                        width: "min(90vw, 380px)",
-                        height: "min(130vw, 550px)",
-                        opacity: Math.min(1, dragProgress * 2),
-                        zIndex: -1,
-                        borderRadius: "4px",
-                        backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 5%, #f8f5ef 95%, #e8e0d0 100%)",
-                      }}
-                    >
-                      <div className="relative z-10 flex items-center justify-center h-full">
-                        <Document file={pdfUrl} loading={null}>
+                    {/* Previous Page (behind current, shown when dragging backward) */}
+                    {isDragging && dragDirection === "backward" && currentPage > 1 && (
+                      <div
+                        className="absolute bg-[#f5f0e6] shadow-xl overflow-hidden"
+                        style={{
+                          width: "min(90vw, 380px)",
+                          height: "min(130vw, 550px)",
+                          opacity: Math.min(1, dragProgress * 2),
+                          zIndex: -1,
+                          borderRadius: "4px",
+                          backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 5%, #f8f5ef 95%, #e8e0d0 100%)",
+                        }}
+                      >
+                        <div className="relative z-10 flex items-center justify-center h-full">
+                          <Page
+                            pageNumber={currentPage - 1}
+                            width={Math.min(window.innerWidth * 0.85, 360)}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            loading={null}
+                          />
+                        </div>
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-stone-500 bg-white/60 px-2 py-0.5 rounded">
+                          {currentPage - 1}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Next Page (behind current, shown when dragging forward) */}
+                    {isDragging && dragDirection === "forward" && currentPage < numPages && (
+                      <div
+                        className="absolute bg-[#f5f0e6] shadow-xl overflow-hidden"
+                        style={{
+                          width: "min(90vw, 380px)",
+                          height: "min(130vw, 550px)",
+                          opacity: Math.min(1, dragProgress * 2),
+                          zIndex: -1,
+                          borderRadius: "4px",
+                          backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 5%, #f8f5ef 95%, #e8e0d0 100%)",
+                        }}
+                      >
+                        <div className="relative z-10 flex items-center justify-center h-full">
                           <Page
                             pageNumber={currentPage + 1}
                             width={Math.min(window.innerWidth * 0.85, 360)}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
-                            loading={<div className="animate-pulse text-stone-400">Loading...</div>}
+                            loading={null}
                           />
-                        </Document>
+                        </div>
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-stone-500 bg-white/60 px-2 py-0.5 rounded">
+                          {currentPage + 1}
+                        </div>
                       </div>
-                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-stone-500 bg-white/60 px-2 py-0.5 rounded">
-                        {currentPage + 1}
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Swipe hint */}
-                  {currentPage === 1 && !isDragging && (
-                    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-2 text-white/40 text-xs animate-pulse">
-                      <span>Swipe to turn pages</span>
-                      <ChevronRight className="h-4 w-4" />
+                    {/* Current Page */}
+                    <div
+                      className={cn(
+                        "relative bg-[#f5f0e6] shadow-2xl overflow-hidden select-none",
+                        "cursor-grab active:cursor-grabbing",
+                        !isDragging && !isFlipping && "transition-transform duration-300 ease-out"
+                      )}
+                      style={{
+                        width: "min(90vw, 380px)",
+                        height: "min(130vw, 550px)",
+                        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                        backgroundImage: "linear-gradient(to right, #e8e0d0 0%, #f5f0e6 5%, #f8f5ef 95%, #e8e0d0 100%)",
+                        borderRadius: "4px",
+                        transformOrigin: dragDirection === "backward" ? "right center" : "left center",
+                        transform: isDragging
+                          ? dragDirection === "backward"
+                            ? `rotateY(${dragProgress * 45}deg)`
+                            : `rotateY(${-dragProgress * 45}deg)`
+                          : isFlipping && flipDirection === "next"
+                          ? "rotateY(-90deg)"
+                          : isFlipping && flipDirection === "prev"
+                          ? "rotateY(90deg)"
+                          : "rotateY(0deg)",
+                        transformStyle: "preserve-3d",
+                        backfaceVisibility: "hidden",
+                      }}
+                      onMouseDown={handleDragStart}
+                      onTouchStart={handleDragStart}
+                    >
+                      {/* Paper Texture */}
+                      <div className="absolute inset-0 opacity-20 pointer-events-none"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")`,
+                        }}
+                      />
+                      {/* Page Content */}
+                      <div className="relative z-10 flex items-center justify-center h-full">
+                        <Page
+                          pageNumber={currentPage}
+                          width={Math.min(window.innerWidth * 0.85, 360)}
+                          renderTextLayer={false}
+                          renderAnnotationLayer={false}
+                          loading={null}
+                        />
+                      </div>
+                      {/* Page Number */}
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-stone-500 bg-white/60 px-2 py-0.5 rounded">
+                        {currentPage}
+                      </div>
+                      {/* Edge shadows */}
+                      <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
+                      <div className="absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-black/10 to-transparent pointer-events-none" />
                     </div>
-                  )}
-                </div>
+
+                    {/* Swipe hint */}
+                    {currentPage === 1 && !isDragging && (
+                      <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-2 text-white/40 text-xs animate-pulse">
+                        <span>Swipe to turn pages</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </div>
+                    )}
+                  </div>
+                </Document>
               ) : (
                 /* Desktop Two-Page Spread View */
                 <div
