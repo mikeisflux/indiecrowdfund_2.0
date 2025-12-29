@@ -762,6 +762,8 @@ export default function IndieKitPage() {
       <UploadDialog
         open={isUploadDialogOpen}
         onOpenChange={setIsUploadDialogOpen}
+        projectId={selectedProjectId}
+        onUploaded={() => fetchData()}
       />
 
       <EmailDialog
@@ -793,6 +795,9 @@ export default function IndieKitPage() {
         open={isDistributionDialogOpen}
         onOpenChange={setIsDistributionDialogOpen}
         digitalFiles={digitalFiles}
+        projectId={selectedProjectId}
+        products={products.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))}
+        onCreated={() => fetchData()}
       />
 
       <NPSFeedbackDialog
