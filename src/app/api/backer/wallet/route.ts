@@ -107,10 +107,10 @@ export async function GET() {
       where: { userId: session.user.id },
     });
 
-    // Calculate bonus rate (0.05% per badge, capped at reasonable amount)
-    const rawBonusPercent = Math.min(badgeCount * 0.05, 5); // Cap at 5%
-    const monthlyCap = 0.03; // 0.03% monthly cap per badge
-    const appliedThisMonth = Math.min(rawBonusPercent, monthlyCap * badgeCount);
+    // Calculate bonus rate (0.5% per badge, capped at 3%)
+    const rawBonusPercent = Math.min(badgeCount * 0.5, 3); // Cap at 3%
+    const monthlyCap = 3; // 3% monthly cap
+    const appliedThisMonth = Math.min(rawBonusPercent, monthlyCap);
 
     // Calculate this month's redemptions to get remaining cap
     const startOfMonth = new Date();
