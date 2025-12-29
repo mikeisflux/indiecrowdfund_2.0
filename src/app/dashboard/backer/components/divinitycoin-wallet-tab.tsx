@@ -30,6 +30,7 @@ import {
   Star,
   Loader2,
   CheckCircle,
+  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -251,6 +252,67 @@ export function DivinityCoinWalletTab() {
                 Sync Balance
               </Button>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* What Is DivinityCoin? */}
+      <Card className="glass-card border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 via-transparent to-purple-500/5">
+        <CardContent className="p-6">
+          <h2 className="text-2xl font-bold text-[#0066FF] mb-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-[#0066FF]/20">
+              <HelpCircle className="h-6 w-6 text-[#0066FF]" />
+            </div>
+            What Is DivinityCoin?
+          </h2>
+          <div className="space-y-4 text-muted-foreground">
+            <p className="text-base leading-relaxed">
+              <span className="font-semibold text-foreground">DivinityCoin is a gift card system</span> that allows you to back adult (NSFW) projects on IndieCrowdfund without using traditional payment methods directly.
+            </p>
+            <p className="text-base leading-relaxed">
+              Here&apos;s how it works: You purchase DivinityCoin gift cards from{" "}
+              <a
+                href="https://divinitycoin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#0066FF] hover:underline font-medium"
+              >
+                divinitycoin.com
+              </a>
+              , then redeem the code here to add credits to your account. These credits can then be used to back any NSFW project on the platform.
+            </p>
+            <div className="bg-[#0066FF]/10 rounded-xl p-4 border border-[#0066FF]/20">
+              <h3 className="font-semibold text-foreground mb-2">Why use DivinityCoin?</h3>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <span><span className="font-medium text-foreground">Privacy:</span> Keep adult purchases separate from your main payment methods</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <span><span className="font-medium text-foreground">Discretion:</span> Gift card purchases appear as &quot;DivinityCoin&quot; on statements</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <span><span className="font-medium text-foreground">Bonus Rewards:</span> Earn badge bonuses on redemptions (up to 3% back!)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <span><span className="font-medium text-foreground">Instant:</span> Credits are added immediately after redemption</span>
+                </li>
+              </ul>
+            </div>
+            <p className="text-sm">
+              Ready to get started?{" "}
+              <a
+                href="https://divinitycoin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#0066FF] hover:underline font-medium"
+              >
+                Purchase DivinityCoin gift cards →
+              </a>
+            </p>
           </div>
         </CardContent>
       </Card>
