@@ -456,11 +456,138 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await db.user.delete({
-      where: { id: userId }
+    // Get user info before deletion
+    const userToDelete = await db.user.findUnique({
+      where: { id: userId },
+      select: { email: true }
     });
 
-    return NextResponse.json({ success: true });
+    if (!userToDelete) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    // Get user's projects to delete
+    const userProjects = await db.project.findMany({
+      where: { creatorId: userId },
+      select: { id: true }
+    });
+
+    const projectIds = userProjects.map(p => p.id);
+
+    // Use a transaction to delete everything
+    await db.$transaction(async (tx) => {
+      if (projectIds.length > 0) {
+        // Delete project-related records first (in order of dependencies)
+
+        // Delete rewards and their related items
+        await tx.rewardItem.deleteMany({
+          where: { reward: { projectId: { in: projectIds } } }
+        });
+        await tx.reward.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete pledges and their related records
+        await tx.pledgeReward.deleteMany({
+          where: { pledge: { projectId: { in: projectIds } } }
+        });
+        await tx.pledgeAddon.deleteMany({
+          where: { pledge: { projectId: { in: projectIds } } }
+        });
+        await tx.pledge.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete updates and comments
+        await tx.comment.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+        await tx.projectUpdate.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete followers and collaborators
+        await tx.projectFollower.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+        await tx.projectCollaborator.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete FAQs
+        await tx.projectFAQ.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete reviews
+        await tx.projectReview.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete items
+        await tx.item.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete digital files
+        await tx.digitalFile.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete media files
+        await tx.mediaFile.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete project flags
+        await tx.projectFlag.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete messages related to projects
+        await tx.message.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete backer notes
+        await tx.backerNote.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete shipping info
+        await tx.shippingAddress.deleteMany({
+          where: { pledge: { projectId: { in: projectIds } } }
+        });
+
+        // Delete notification preferences for these projects
+        await tx.projectNotificationPreference.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Finally delete the projects
+        await tx.project.deleteMany({
+          where: { id: { in: projectIds } }
+        });
+      }
+
+      // Delete user-related records that don't cascade automatically
+      await tx.passwordResetToken.deleteMany({
+        where: { email: userToDelete.email }
+      });
+
+      // Delete the user (cascading relations will handle the rest)
+      await tx.user.delete({
+        where: { id: userId }
+      });
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `User and ${projectIds.length} project(s) deleted successfully`
+    });
   } catch (error) {
     console.error("Error deleting user:", error);
     return NextResponse.json(
