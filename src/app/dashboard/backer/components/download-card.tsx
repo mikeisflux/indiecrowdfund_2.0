@@ -90,21 +90,11 @@ export function DownloadCard({
         className
       )}
     >
-      {/* New badge with glow */}
-      {isNew && (
-        <div className="absolute top-3 right-3 z-20">
-          <Badge className="bg-emerald-500 text-white glow-pulse flex items-center gap-1">
-            <Sparkles className="h-3 w-3" />
-            New
-          </Badge>
-        </div>
-      )}
-
       <CardContent className="p-5">
         <div className="flex items-start gap-4">
           {/* File icon with glow */}
           <div className={cn(
-            "relative p-3 rounded-xl transition-all duration-300",
+            "relative p-3 rounded-xl transition-all duration-300 shrink-0",
             isNew ? "bg-emerald-500/20 glow-pulse" : "bg-muted/50",
             "group-hover:bg-emerald-500/30"
           )}>
@@ -158,35 +148,43 @@ export function DownloadCard({
             </div>
           </div>
 
-          {/* Download button */}
-          <Button
-            size="lg"
-            onClick={handleDownload}
-            disabled={isDownloading}
-            className={cn(
-              "download-btn min-w-[120px] transition-all duration-300",
-              isDownloaded
-                ? "bg-emerald-500 hover:bg-emerald-600"
-                : "bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600"
+          {/* Download button and badge column */}
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            {isNew && (
+              <Badge className="bg-emerald-500 text-white glow-pulse flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                New
+              </Badge>
             )}
-          >
-            {isDownloading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 spin-glow" />
-                Loading...
-              </>
-            ) : isDownloaded ? (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Done!
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </>
-            )}
-          </Button>
+            <Button
+              size="lg"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className={cn(
+                "download-btn min-w-[120px] transition-all duration-300",
+                isDownloaded
+                  ? "bg-emerald-500 hover:bg-emerald-600"
+                  : "bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600"
+              )}
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 spin-glow" />
+                  Loading...
+                </>
+              ) : isDownloaded ? (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Done!
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </CardContent>
 
