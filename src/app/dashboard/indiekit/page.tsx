@@ -105,6 +105,7 @@ export default function IndieKitPage() {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [isInitialized, setIsInitialized] = useState(false);
   const [stats, setStats] = useState<FulfillmentStats | null>(null);
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>(WORKFLOW_STEPS);
   const [backers, setBackers] = useState<Backer[]>([]);
@@ -195,17 +196,22 @@ export default function IndieKitPage() {
     }
   }, [selectedProjectId]);
 
-  // Load selected project from localStorage on mount
+  // Load selected project from localStorage on mount and mark as initialized
   useEffect(() => {
     const savedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
     if (savedProjectId) {
       setSelectedProjectId(savedProjectId);
     }
+    // Mark as initialized after reading localStorage (even if no saved project)
+    setIsInitialized(true);
   }, []);
 
+  // Only fetch data after initialization from localStorage is complete
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (isInitialized) {
+      fetchData();
+    }
+  }, [fetchData, isInitialized]);
 
   // Filter backers
   const filteredBackers = backers.filter((backer) => {
