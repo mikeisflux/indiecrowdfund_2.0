@@ -2532,6 +2532,7 @@ model DigitalFile {
   updatedAt         DateTime          @updatedAt
 
   distributions     DigitalDistribution[]
+  distributionRules DistributionRule[]
 
   @@index([projectId])
   @@index([uploadedById])
@@ -2569,6 +2570,7 @@ model DistributionRule {
   id                String                      @id @default(cuid())
   projectId         String
   digitalFileId     String
+  digitalFile       DigitalFile                 @relation(fields: [digitalFileId], references: [id], onDelete: Cascade)
 
   name              String
   description       String?
