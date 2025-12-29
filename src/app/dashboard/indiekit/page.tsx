@@ -90,6 +90,7 @@ import {
   CountsTab,
   SupportTab,
   SurveyBuilderTab,
+  ManageSurveyTab,
   SettingsTab,
   ProductsTab,
   AccountSettingsTab,
@@ -573,6 +574,10 @@ export default function IndieKitPage() {
                   <FormInput className="h-4 w-4 mr-2" />
                   Survey Builder
                 </TabsTrigger>
+                <TabsTrigger value="manage-survey">
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Manage Survey
+                </TabsTrigger>
                 <TabsTrigger value="products">
                   <BoxIcon className="h-4 w-4 mr-2" />
                   Products
@@ -723,6 +728,10 @@ export default function IndieKitPage() {
 
               <TabsContent value="survey-builder">
                 <SurveyBuilderTab projectId={selectedProjectId} questions={surveyQuestions} />
+              </TabsContent>
+
+              <TabsContent value="manage-survey">
+                <ManageSurveyTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="settings">

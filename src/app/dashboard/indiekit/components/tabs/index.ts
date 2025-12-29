@@ -15,6 +15,7 @@ export { TimelineTab } from "./timeline-tab";
 export { CountsTab } from "./counts-tab";
 export { SupportTab } from "./support-tab";
 export { SurveyBuilderTab } from "./survey-builder-tab";
+export { ManageSurveyTab } from "./manage-survey-tab";
 export { SettingsTab } from "./settings-tab";
 export { ProductsTab } from "./products-tab";
 export { AccountSettingsTab } from "./account-settings-tab";
