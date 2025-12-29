@@ -182,7 +182,7 @@ export default function BackerSurveyPage() {
 
       if (response.ok) {
         if (submit) {
-          router.push("/dashboard/pledges");
+          router.push("/dashboard/backer");
         }
       } else {
         const err = await response.json();
