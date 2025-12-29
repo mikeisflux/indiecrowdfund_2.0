@@ -290,23 +290,212 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Handle starting all distributions
-    if (action === "start_all_distributions" && ruleIds && Array.isArray(ruleIds)) {
-      const updatedRules = await db.distributionRule.updateMany({
-        where: {
-          id: { in: ruleIds },
-          projectId,
-          status: "NOT_STARTED",
-        },
+    // Handle starting a single distribution rule
+    if (action === "start_distribution" && body.ruleId) {
+      const rule = await db.distributionRule.findFirst({
+        where: { id: body.ruleId, projectId, status: "NOT_STARTED" },
+        include: { digitalFile: true },
+      });
+
+      if (!rule) {
+        return NextResponse.json({ error: "Rule not found or already started" }, { status: 404 });
+      }
+
+      // Find eligible pledges based on trigger type
+      let eligiblePledges;
+      if (rule.triggerType === "ALL_BACKERS") {
+        eligiblePledges = await db.pledge.findMany({
+          where: {
+            projectId,
+            status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+      } else if (rule.triggerType === "SPECIFIC_REWARD" && rule.triggerRewardId) {
+        eligiblePledges = await db.pledge.findMany({
+          where: {
+            projectId,
+            rewardId: rule.triggerRewardId,
+            status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+      } else if (rule.triggerType === "SPECIFIC_ADDON" && rule.triggerAddonId) {
+        eligiblePledges = await db.pledge.findMany({
+          where: {
+            projectId,
+            addons: { some: { addonId: rule.triggerAddonId } },
+            status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+      } else {
+        eligiblePledges = [];
+      }
+
+      // Create DigitalDistribution records for each eligible pledge
+      const now = new Date();
+      let createdCount = 0;
+      for (const pledge of eligiblePledges) {
+        try {
+          await db.digitalDistribution.upsert({
+            where: {
+              digitalFileId_pledgeId: {
+                digitalFileId: rule.digitalFileId,
+                pledgeId: pledge.id,
+              },
+            },
+            update: {
+              distributedAt: now,
+            },
+            create: {
+              digitalFileId: rule.digitalFileId,
+              pledgeId: pledge.id,
+              distributedAt: now,
+            },
+          });
+          createdCount++;
+        } catch (e) {
+          console.error(`Failed to create distribution for pledge ${pledge.id}:`, e);
+        }
+      }
+
+      // Update rule status
+      await db.distributionRule.update({
+        where: { id: rule.id },
         data: {
-          status: "STARTED",
-          startedAt: new Date(),
+          status: "COMPLETED",
+          startedAt: now,
+          completedAt: now,
+          distributedCount: createdCount,
+          totalEligible: eligiblePledges.length,
+        },
+      });
+
+      // Update file distributed count
+      await db.digitalFile.update({
+        where: { id: rule.digitalFileId },
+        data: {
+          distributedCount: { increment: createdCount },
+          totalEligible: eligiblePledges.length,
         },
       });
 
       return NextResponse.json({
         success: true,
-        updatedCount: updatedRules.count,
+        distributedCount: createdCount,
+        totalEligible: eligiblePledges.length,
+      });
+    }
+
+    // Handle starting all distributions
+    if (action === "start_all_distributions" && ruleIds && Array.isArray(ruleIds)) {
+      let totalDistributed = 0;
+      let totalEligible = 0;
+      const now = new Date();
+
+      for (const ruleId of ruleIds) {
+        const rule = await db.distributionRule.findFirst({
+          where: { id: ruleId, projectId, status: "NOT_STARTED" },
+          include: { digitalFile: true },
+        });
+
+        if (!rule) continue;
+
+        // Find eligible pledges based on trigger type
+        let eligiblePledges;
+        if (rule.triggerType === "ALL_BACKERS") {
+          eligiblePledges = await db.pledge.findMany({
+            where: {
+              projectId,
+              status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
+              deletedAt: null,
+            },
+            select: { id: true },
+          });
+        } else if (rule.triggerType === "SPECIFIC_REWARD" && rule.triggerRewardId) {
+          eligiblePledges = await db.pledge.findMany({
+            where: {
+              projectId,
+              rewardId: rule.triggerRewardId,
+              status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
+              deletedAt: null,
+            },
+            select: { id: true },
+          });
+        } else if (rule.triggerType === "SPECIFIC_ADDON" && rule.triggerAddonId) {
+          eligiblePledges = await db.pledge.findMany({
+            where: {
+              projectId,
+              addons: { some: { addonId: rule.triggerAddonId } },
+              status: rule.requiresPayment ? "COMPLETED" : { in: ["COMPLETED", "PENDING"] },
+              deletedAt: null,
+            },
+            select: { id: true },
+          });
+        } else {
+          eligiblePledges = [];
+        }
+
+        // Create DigitalDistribution records
+        let createdCount = 0;
+        for (const pledge of eligiblePledges) {
+          try {
+            await db.digitalDistribution.upsert({
+              where: {
+                digitalFileId_pledgeId: {
+                  digitalFileId: rule.digitalFileId,
+                  pledgeId: pledge.id,
+                },
+              },
+              update: {
+                distributedAt: now,
+              },
+              create: {
+                digitalFileId: rule.digitalFileId,
+                pledgeId: pledge.id,
+                distributedAt: now,
+              },
+            });
+            createdCount++;
+          } catch (e) {
+            console.error(`Failed to create distribution for pledge ${pledge.id}:`, e);
+          }
+        }
+
+        // Update rule status
+        await db.distributionRule.update({
+          where: { id: rule.id },
+          data: {
+            status: "COMPLETED",
+            startedAt: now,
+            completedAt: now,
+            distributedCount: createdCount,
+            totalEligible: eligiblePledges.length,
+          },
+        });
+
+        // Update file distributed count
+        await db.digitalFile.update({
+          where: { id: rule.digitalFileId },
+          data: {
+            distributedCount: { increment: createdCount },
+            totalEligible: eligiblePledges.length,
+          },
+        });
+
+        totalDistributed += createdCount;
+        totalEligible += eligiblePledges.length;
+      }
+
+      return NextResponse.json({
+        success: true,
+        updatedCount: ruleIds.length,
+        totalDistributed,
+        totalEligible,
       });
     }
 
@@ -329,7 +518,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Handle distribute file
+    // Handle distribute file (legacy - direct file distribution without rule)
     if (action === "distribute_file" && fileId) {
       const file = await db.digitalFile.findFirst({
         where: { id: fileId, projectId },
@@ -339,11 +528,81 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "File not found" }, { status: 404 });
       }
 
-      // TODO: Create DigitalDistribution records for eligible backers
+      // Find all eligible pledges based on file access type
+      let eligiblePledges;
+      if (file.accessType === "ALL_BACKERS") {
+        eligiblePledges = await db.pledge.findMany({
+          where: { projectId, status: "COMPLETED", deletedAt: null },
+          select: { id: true },
+        });
+      } else if (file.accessType === "SPECIFIC_REWARDS" && file.rewardIds.length > 0) {
+        eligiblePledges = await db.pledge.findMany({
+          where: {
+            projectId,
+            rewardId: { in: file.rewardIds },
+            status: "COMPLETED",
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+      } else if (file.accessType === "SPECIFIC_ADDONS" && file.addonIds.length > 0) {
+        eligiblePledges = await db.pledge.findMany({
+          where: {
+            projectId,
+            addons: { some: { addonId: { in: file.addonIds } } },
+            status: "COMPLETED",
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+      } else {
+        eligiblePledges = await db.pledge.findMany({
+          where: { projectId, status: "COMPLETED", deletedAt: null },
+          select: { id: true },
+        });
+      }
+
+      // Create DigitalDistribution records
+      const now = new Date();
+      let createdCount = 0;
+      for (const pledge of eligiblePledges) {
+        try {
+          await db.digitalDistribution.upsert({
+            where: {
+              digitalFileId_pledgeId: {
+                digitalFileId: file.id,
+                pledgeId: pledge.id,
+              },
+            },
+            update: {
+              distributedAt: now,
+            },
+            create: {
+              digitalFileId: file.id,
+              pledgeId: pledge.id,
+              distributedAt: now,
+            },
+          });
+          createdCount++;
+        } catch (e) {
+          console.error(`Failed to create distribution for pledge ${pledge.id}:`, e);
+        }
+      }
+
+      // Update file distributed count
+      await db.digitalFile.update({
+        where: { id: file.id },
+        data: {
+          distributedCount: createdCount,
+          totalEligible: eligiblePledges.length,
+        },
+      });
 
       return NextResponse.json({
         success: true,
-        message: `Distribution started for ${file.name}`,
+        message: `Distribution completed for ${file.name}`,
+        distributedCount: createdCount,
+        totalEligible: eligiblePledges.length,
       });
     }
 

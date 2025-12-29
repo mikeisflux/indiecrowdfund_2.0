@@ -86,12 +86,36 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    // Filter files based on access control
+    // Get all distributions for the backer's pledges (files explicitly distributed)
+    const pledgeIds = pledges.map((p) => p.id);
+    const explicitDistributions = await db.digitalDistribution.findMany({
+      where: {
+        pledgeId: { in: pledgeIds },
+        distributedAt: { not: null },
+      },
+      select: {
+        digitalFileId: true,
+        pledgeId: true,
+      },
+    });
+
+    // Create a set of file IDs that have been explicitly distributed to this backer
+    const explicitlyDistributedFileIds = new Set(
+      explicitDistributions.map((d: { digitalFileId: string }) => d.digitalFileId)
+    );
+
+    // Filter files based on access control OR explicit distribution
     const accessibleFiles = allFiles.filter((file: typeof allFiles[number]) => {
+      // If the file was explicitly distributed to this backer, it's accessible
+      if (explicitlyDistributedFileIds.has(file.id)) {
+        return true;
+      }
+
       // Find the pledge for this project
       const pledge = pledges.find((p) => p.projectId === file.projectId);
       if (!pledge) return false;
 
+      // Check based on access type
       switch (file.accessType) {
         case "ALL_BACKERS":
           return true;
