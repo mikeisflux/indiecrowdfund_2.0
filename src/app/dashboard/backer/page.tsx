@@ -144,7 +144,7 @@ interface DashboardData {
 export default function BackerDashboard() {
   const searchParams = useSearchParams();
   const tabsRef = useRef<HTMLDivElement>(null);
-  const initialTab = searchParams.get("tab") || "backed";
+  const initialTab = searchParams?.get("tab") || "backed";
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [data, setData] = useState<DashboardData | null>(null);
@@ -153,7 +153,7 @@ export default function BackerDashboard() {
 
   // Auto-scroll to tabs section on mobile when tab param is present
   useEffect(() => {
-    const tabParam = searchParams.get("tab");
+    const tabParam = searchParams?.get("tab");
     if (tabParam && tabsRef.current) {
       // Check if mobile (screen width < 1024px which is lg breakpoint)
       const isMobile = window.innerWidth < 1024;

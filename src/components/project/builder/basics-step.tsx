@@ -60,6 +60,23 @@ export function BasicsStep() {
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [slugMessage, setSlugMessage] = useState("");
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [userVanityUrl, setUserVanityUrl] = useState<string | null>(null);
+
+  // Fetch user's vanity URL on mount
+  useEffect(() => {
+    const fetchUserVanityUrl = async () => {
+      try {
+        const res = await fetch("/api/user/me");
+        if (res.ok) {
+          const data = await res.json();
+          setUserVanityUrl(data.vanityUrl || null);
+        }
+      } catch {
+        // Ignore errors - vanity URL is optional
+      }
+    };
+    fetchUserVanityUrl();
+  }, []);
 
   // Handle video file upload
   const handleVideoUpload = async (file: File) => {
@@ -238,7 +255,9 @@ export function BasicsStep() {
           </div>
         </Label>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">indiecrowdfund.com/projects/</span>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            indiecrowdfund.com/projects/{userVanityUrl ? `${userVanityUrl}/` : ""}
+          </span>
           <div className="relative flex-1">
             <Input
               id="slug"
@@ -273,6 +292,15 @@ export function BasicsStep() {
         <p className="text-xs text-muted-foreground">
           This will be your project&apos;s permanent URL. Choose something memorable and relevant.
         </p>
+        {!userVanityUrl && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            Tip: Set up a custom username in your{" "}
+            <a href="/dashboard/profile" className="underline hover:no-underline">
+              profile settings
+            </a>{" "}
+            to get a personalized project URL.
+          </p>
+        )}
       </div>
 
       {/* Tip Banner */}
