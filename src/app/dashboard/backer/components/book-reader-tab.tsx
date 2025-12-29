@@ -119,6 +119,11 @@ export function BookReaderTab() {
 
   const bookRef = useRef<HTMLDivElement>(null);
 
+  // Responsive page dimensions - smaller on mobile
+  const pageWidth = isMobile ? 300 : 450;
+  const pageHeight = isMobile ? 460 : 650;
+  const renderWidth = isMobile ? 280 : 430;
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -177,7 +182,10 @@ export function BookReaderTab() {
 
       const saved = getReadingProgress(file.id);
       if (saved) {
-        const spread = saved.currentPage === 1 ? 0 : Math.floor((saved.currentPage - 1) / 2);
+        // On mobile, spread = page - 1; on desktop, calculate from spread
+        const spread = isMobile
+          ? saved.currentPage - 1
+          : (saved.currentPage === 1 ? 0 : Math.floor((saved.currentPage - 1) / 2));
         setCurrentSpread(spread);
       } else {
         setCurrentSpread(0);
@@ -189,7 +197,8 @@ export function BookReaderTab() {
 
   const closeBook = useCallback(() => {
     if (selectedFile && numPages > 0) {
-      const currentPage = currentSpread === 0 ? 1 : currentSpread * 2;
+      // On mobile, spread = page - 1; on desktop, calculate from spread
+      const currentPage = isMobile ? currentSpread + 1 : (currentSpread === 0 ? 1 : currentSpread * 2);
       saveReadingProgress({
         fileId: selectedFile.id,
         currentPage,
@@ -206,11 +215,18 @@ export function BookReaderTab() {
     setIsFullscreen(false);
     setShowToc(false);
     setShowBookmarks(false);
-  }, [selectedFile, numPages, currentSpread, bookmarks]);
+  }, [selectedFile, numPages, currentSpread, bookmarks, isMobile]);
 
-  const maxSpreads = Math.ceil((numPages + 1) / 2);
+  // On mobile, each "spread" is a single page; on desktop, spreads are 2 pages
+  const maxSpreads = isMobile ? numPages : Math.ceil((numPages + 1) / 2);
 
   const getSpreadPages = () => {
+    if (isMobile) {
+      // Mobile: single page at a time
+      const page = currentSpread + 1;
+      return { left: null, right: page <= numPages ? page : null, cover: currentSpread === 0 };
+    }
+    // Desktop: two-page spread
     if (currentSpread === 0) return { left: null, right: 1, cover: true };
     const left = currentSpread * 2;
     const right = currentSpread * 2 + 1;
@@ -227,7 +243,8 @@ export function BookReaderTab() {
 
     setTimeout(() => {
       setCurrentSpread(newSpread);
-      const page = newSpread === 0 ? 1 : newSpread * 2;
+      // On mobile, spread = page - 1; on desktop, calculate from spread
+      const page = isMobile ? newSpread + 1 : (newSpread === 0 ? 1 : newSpread * 2);
       saveReadingProgress({
         fileId: selectedFile!.id,
         currentPage: page,
@@ -289,19 +306,27 @@ export function BookReaderTab() {
     const range = 8;
     for (let i = -range; i <= range; i++) {
       const spread = currentSpread + i;
-      if (spread === 0) pages.add(1);
-      else if (spread > 0 && spread < maxSpreads) {
-        const left = spread * 2;
-        const right = spread * 2 + 1;
-        if (left <= numPages) pages.add(left);
-        if (right <= numPages) pages.add(right);
+      if (isMobile) {
+        // Mobile: each spread is a single page
+        const page = spread + 1;
+        if (page > 0 && page <= numPages) pages.add(page);
+      } else {
+        // Desktop: spreads of two pages
+        if (spread === 0) pages.add(1);
+        else if (spread > 0 && spread < maxSpreads) {
+          const left = spread * 2;
+          const right = spread * 2 + 1;
+          if (left <= numPages) pages.add(left);
+          if (right <= numPages) pages.add(right);
+        }
       }
     }
     return Array.from(pages);
   };
 
   const addBookmark = () => {
-    const page = currentSpread === 0 ? 1 : currentSpread * 2;
+    // On mobile, spread = page - 1; on desktop, calculate from spread
+    const page = isMobile ? currentSpread + 1 : (currentSpread === 0 ? 1 : currentSpread * 2);
     if (bookmarks.some(b => b.page === page)) return;
     const updated = [...bookmarks, { page, timestamp: new Date().toISOString() }].sort((a, b) => a.page - b.page);
     setBookmarks(updated);
@@ -315,7 +340,8 @@ export function BookReaderTab() {
   };
 
   const goToSpreadFromPage = (page: number) => {
-    const spread = page === 1 ? 0 : Math.floor((page - 1) / 2);
+    // On mobile, spread = page - 1; on desktop, calculate from spread
+    const spread = isMobile ? page - 1 : (page === 1 ? 0 : Math.floor((page - 1) / 2));
     setCurrentSpread(spread);
     setShowToc(false);
     setShowBookmarks(false);
@@ -438,10 +464,12 @@ export function BookReaderTab() {
                 onTouchStart={handleDragStart}
               >
                 <div className="relative flex" style={{ transformStyle: "preserve-3d" }}>
-                  {/* Spine shadow */}
-                  <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-12 z-10 pointer-events-none">
-                    <div className="h-full bg-gradient-to-r from-black/50 via-black/70 to-black/50 opacity-60" />
-                  </div>
+                  {/* Spine shadow - only on desktop with two-page spread */}
+                  {!isMobile && (
+                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-12 z-10 pointer-events-none">
+                      <div className="h-full bg-gradient-to-r from-black/50 via-black/70 to-black/50 opacity-60" />
+                    </div>
+                  )}
 
                   {/* Flipping Page Layer */}
                   {(isFlipping || isDragging) && (
@@ -463,33 +491,39 @@ export function BookReaderTab() {
                       {/* Front side of flipping page (current spread) */}
                       <div className="flex backface-hidden">
                         {!isMobile && left && (
-                          <div className="w-[450px] h-[650px] bg-paper shadow-2xl overflow-hidden">
-                            <Page pageNumber={left} width={430} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                          <div className="bg-paper shadow-2xl overflow-hidden" style={{ width: pageWidth, height: pageHeight }}>
+                            <Page pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
                           </div>
                         )}
-                        <div className={cn("w-[450px] h-[650px] bg-paper shadow-2xl overflow-hidden", cover && "rounded-r-xl")}>
-                          <Page pageNumber={right!} width={430} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                        <div className={cn("bg-paper shadow-2xl overflow-hidden", cover && "rounded-r-xl")} style={{ width: pageWidth, height: pageHeight }}>
+                          <Page pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
                         </div>
                       </div>
 
                       {/* Back side of flipping page (next/prev spread) */}
                       <div className="absolute inset-0 flex" style={{ transform: "rotateY(180deg) translate3d(0,0,0)", backfaceVisibility: "hidden" }}>
                         {!isMobile && (
-                          <div className="w-[450px] h-[650px] bg-paper shadow-2xl overflow-hidden">
-                            <Page 
-                              pageNumber={(flipDirection === "next" || dragDirection === "forward") 
-                                ? (left ? left + 2 : 2) 
-                                : (left || 2)} 
-                              width={430} renderTextLayer={false} renderAnnotationLayer={false} loading={null} 
+                          <div className="bg-paper shadow-2xl overflow-hidden" style={{ width: pageWidth, height: pageHeight }}>
+                            <Page
+                              pageNumber={(flipDirection === "next" || dragDirection === "forward")
+                                ? (left ? left + 2 : 2)
+                                : (left || 2)}
+                              width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null}
                             />
                           </div>
                         )}
-                        <div className="w-[450px] h-[650px] bg-paper shadow-2xl overflow-hidden">
-                          <Page 
-                            pageNumber={(flipDirection === "next" || dragDirection === "forward") 
-                              ? (right! + 2 > numPages ? numPages : right! + 2) 
-                              : right!} 
-                            width={430} renderTextLayer={false} renderAnnotationLayer={false} loading={null} 
+                        <div className="bg-paper shadow-2xl overflow-hidden" style={{ width: pageWidth, height: pageHeight }}>
+                          <Page
+                            pageNumber={
+                              isMobile
+                                ? ((flipDirection === "next" || dragDirection === "forward")
+                                    ? Math.min(right! + 1, numPages)
+                                    : Math.max(right! - 1, 1))
+                                : ((flipDirection === "next" || dragDirection === "forward")
+                                    ? (right! + 2 > numPages ? numPages : right! + 2)
+                                    : right!)
+                            }
+                            width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null}
                           />
                         </div>
                       </div>
@@ -499,18 +533,18 @@ export function BookReaderTab() {
                   {/* Static Current Spread */}
                   <div className="flex">
                     {!isMobile && left && (
-                      <div className="w-[450px] h-[650px] bg-paper shadow-2xl overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
-                        <Page pageNumber={left} width={430} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                      <div className="bg-paper shadow-2xl overflow-hidden relative" style={{ width: pageWidth, height: pageHeight, backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
+                        <Page pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
                         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{left}</div>
                       </div>
                     )}
-                    <div className={cn("w-[450px] h-[650px] bg-paper shadow-2xl overflow-hidden", cover && "rounded-r-xl")} style={{ backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
+                    <div className={cn("bg-paper shadow-2xl overflow-hidden relative", cover && "rounded-r-xl")} style={{ width: pageWidth, height: pageHeight, backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
                       {cover && <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black/30 pointer-events-none" />}
-                      <Page pageNumber={right!} width={430} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                      <Page pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
                       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{right}</div>
                       {cover && (
-                        <div className="absolute inset-0 flex items-center justify-end pr-12 pointer-events-none">
-                          <span className="text-white/70 text-xl animate-pulse">Drag or click to open →</span>
+                        <div className="absolute inset-0 flex items-center justify-end pr-4 md:pr-12 pointer-events-none">
+                          <span className="text-white/70 text-base md:text-xl animate-pulse">{isMobile ? "Swipe →" : "Drag or click to open →"}</span>
                         </div>
                       )}
                     </div>
@@ -524,13 +558,15 @@ export function BookReaderTab() {
         {/* Footer */}
         <div className="flex items-center justify-between p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
           <Button variant="ghost" onClick={() => flipTo("prev")} disabled={currentSpread === 0 || isFlipping || isDragging}>
-            <ChevronLeft className="h-5 w-5 mr-2" /> Previous
+            <ChevronLeft className="h-5 w-5 mr-2" /> {isMobile ? "" : "Previous"}
           </Button>
           <span className="text-sm text-white/80">
-            {cover ? "Cover" : `Pages ${left || ''} - ${right || ''}`} of {numPages}
+            {isMobile
+              ? `Page ${right || 1} of ${numPages}`
+              : `${cover ? "Cover" : `Pages ${left || ''} - ${right || ''}`} of ${numPages}`}
           </span>
           <Button variant="ghost" onClick={() => flipTo("next")} disabled={currentSpread >= maxSpreads - 1 || isFlipping || isDragging}>
-            Next <ChevronRight className="h-5 w-5 ml-2" />
+            {isMobile ? "" : "Next"} <ChevronRight className="h-5 w-5 ml-2" />
           </Button>
         </div>
 
