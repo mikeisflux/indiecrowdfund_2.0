@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     ({ accountId, accessKeyId, secretAccessKey, bucketName } = body);
 
     // If masked values are passed, fetch actual values from database
-    const isMasked = (val: string) => val === "••••••••";
+    const isMasked = (val: string | undefined) => val === "••••••••";
     const isEmpty = (val: string | null | undefined) => !val || val === "";
 
     // Always fetch stored settings if any credential is masked or missing
