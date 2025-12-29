@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { projectId, action, campaignId, name, subject, content, segmentId } = body;
+    const { projectId, action, campaignId, name, subject, content } = body;
 
     if (action === "create") {
       const campaign = await db.emailCampaign.create({
