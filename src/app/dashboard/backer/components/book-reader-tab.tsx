@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import dynamic from "next/dynamic";
+import React, { useState, useEffect, useCallback } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
-  ChevronLeft,
-  ChevronRight,
   X,
   Maximize2,
   Minimize2,
@@ -25,10 +22,7 @@ import {
   Library,
   List,
 } from "lucide-react";
-
-const Document = dynamic(() => import("react-pdf").then((mod) => mod.Document), { ssr: false });
-const Page = dynamic(() => import("react-pdf").then((mod) => mod.Page), { ssr: false });
-const Outline = dynamic(() => import("react-pdf").then((mod) => mod.Outline), { ssr: false });
+import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
 
 interface DigitalFile {
   id: string;
@@ -49,22 +43,6 @@ interface BookmarkItem {
   page: number;
   timestamp: string;
 }
-
-interface OutlineItem {
-  title: string;
-  page: number;
-  children?: OutlineItem[];
-}
-
-// PDF.js types for outline and document
-interface PDFOutlineItem {
-  title: string;
-  dest: string | unknown[] | null;
-  items?: PDFOutlineItem[];
-}
-
-// Use the actual type from pdfjs-dist
-type PDFDocumentProxyType = import("pdfjs-dist").PDFDocumentProxy;
 
 interface DigitalFileWithMime extends DigitalFile {
   mimeType?: string;
@@ -114,69 +92,23 @@ export function BookReaderTab() {
   const [selectedFile, setSelectedFile] = useState<DigitalFile | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState(0);
-  const [currentSpread, setCurrentSpread] = useState(0); // 0 = cover, 1 = pages 2-3, etc.
+  const [currentPage, setCurrentPage] = useState(1);
   const [scale, setScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isFlipping, setIsFlipping] = useState(false);
-  const [flipDirection, setFlipDirection] = useState<"next" | "prev" | null>(null);
-  const [dragProgress, setDragProgress] = useState(0);
-  const [dragDirection, setDragDirection] = useState<"forward" | "backward" | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStartX, setDragStartX] = useState(0);
   const [progressMap, setProgressMap] = useState<Record<string, ReadingProgress>>({});
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
-  const [showToc, setShowToc] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
-  const [outline, setOutline] = useState<OutlineItem[]>([]);
-  const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxyType | null>(null);
-  const [animFromSpread, setAnimFromSpread] = useState<number | null>(null);
-  const [animToSpread, setAnimToSpread] = useState<number | null>(null);
 
-  const bookRef = useRef<HTMLDivElement>(null);
-
-  // Live refs to avoid stale closures in callbacks
-  const isFlippingRef = useRef(false);
-  const isDraggingRef = useRef(false);
-  const currentSpreadRef = useRef(0);
-
-  // Keep refs in sync with state
-  useEffect(() => { isFlippingRef.current = isFlipping; }, [isFlipping]);
-  useEffect(() => { isDraggingRef.current = isDragging; }, [isDragging]);
-  useEffect(() => { currentSpreadRef.current = currentSpread; }, [currentSpread]);
-
-  // Track which pages have actually rendered (avoid white blanks)
-  const renderedPagesRef = useRef<Set<number>>(new Set());
-  const [, forceRerender] = useState(0);
-
-  const markRendered = useCallback((pageNum: number) => {
-    if (!renderedPagesRef.current.has(pageNum)) {
-      renderedPagesRef.current.add(pageNum);
-      forceRerender((x) => x + 1);
-    }
-  }, []);
-
-  const isRendered = useCallback((pageNum: number | null | undefined) => {
-    return !!pageNum && renderedPagesRef.current.has(pageNum);
-  }, []);
-
-  // Responsive page dimensions - smaller on mobile
-  const pageWidth = isMobile ? 300 : 450;
-  const pageHeight = isMobile ? 460 : 650;
-  const renderWidth = isMobile ? 280 : 430;
+  // Page dimensions based on device
+  const pageWidth = isMobile ? 300 : 400;
+  const pageHeight = isMobile ? 450 : 580;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  useEffect(() => {
-    import("react-pdf").then((pdfModule) => {
-      // Use local worker file to avoid CDN latency/CORS issues
-      pdfModule.pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-    });
   }, []);
 
   useEffect(() => {
@@ -206,13 +138,14 @@ export function BookReaderTab() {
   };
 
   const openBook = async (file: DigitalFile) => {
-    // Clear rendered pages cache for new book
-    renderedPagesRef.current = new Set();
     setSelectedFile(file);
     setPdfUrl(null);
     setNumPages(0);
-    setOutline([]);
     setBookmarks(getBookmarks(file.id));
+
+    // Get initial page from saved progress
+    const saved = getReadingProgress(file.id);
+    setCurrentPage(saved?.currentPage ?? 1);
 
     try {
       const res = await fetch("/api/backer/digital-files", {
@@ -223,17 +156,6 @@ export function BookReaderTab() {
       if (!res.ok) throw new Error("Failed to get PDF URL");
       const { downloadUrl } = await res.json();
       setPdfUrl(downloadUrl);
-
-      const saved = getReadingProgress(file.id);
-      if (saved) {
-        // On mobile, spread = page - 1; on desktop, calculate from spread
-        const spread = isMobile
-          ? saved.currentPage - 1
-          : (saved.currentPage === 1 ? 0 : Math.floor((saved.currentPage - 1) / 2));
-        setCurrentSpread(spread);
-      } else {
-        setCurrentSpread(0);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load PDF");
     }
@@ -241,8 +163,6 @@ export function BookReaderTab() {
 
   const closeBook = useCallback(() => {
     if (selectedFile && numPages > 0) {
-      // On mobile, spread = page - 1; on desktop, calculate from spread
-      const currentPage = isMobile ? currentSpread + 1 : (currentSpread === 0 ? 1 : currentSpread * 2);
       saveReadingProgress({
         fileId: selectedFile.id,
         currentPage,
@@ -254,199 +174,40 @@ export function BookReaderTab() {
     setSelectedFile(null);
     setPdfUrl(null);
     setNumPages(0);
-    setCurrentSpread(0);
+    setCurrentPage(1);
     setScale(1);
     setIsFullscreen(false);
-    setShowToc(false);
     setShowBookmarks(false);
-  }, [selectedFile, numPages, currentSpread, bookmarks, isMobile]);
+  }, [selectedFile, numPages, currentPage, bookmarks]);
 
-  // On mobile, each "spread" is a single page; on desktop, spreads are 2 pages
-  const maxSpreads = isMobile ? numPages : Math.ceil((numPages + 1) / 2);
-
-  // Helper to compute pages for ANY spread
-  const getSpreadPagesFor = useCallback((spread: number) => {
-    if (isMobile) {
-      const page = spread + 1;
-      return { left: null as number | null, right: page <= numPages ? page : null, cover: spread === 0 };
-    }
-    if (spread === 0) return { left: null as number | null, right: 1, cover: true };
-    const left = spread * 2;
-    const right = spread * 2 + 1;
-    return {
-      left: left <= numPages ? left : null,
-      right: right <= numPages ? right : null,
-      cover: false,
-    };
-  }, [isMobile, numPages]);
-
-  // Ensure pages are rendered BEFORE we animate (prevents white blanks)
-  const ensurePagesRendered = useCallback(async (spread: number) => {
-    const p = getSpreadPagesFor(spread);
-    const needed = [p.left, p.right].filter((n): n is number => !!n);
-    // If already rendered, done
-    if (needed.every((n) => renderedPagesRef.current.has(n))) return;
-
-    // Wait a couple frames while hidden pre-render runs
-    await new Promise<void>((resolve) => {
-      let tries = 0;
-      const tick = () => {
-        tries++;
-        if (needed.every((n) => renderedPagesRef.current.has(n)) || tries > 20) resolve();
-        else requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    });
-  }, [getSpreadPagesFor]);
-
-  const flipTo = useCallback(async (direction: "next" | "prev") => {
-    // Use refs to avoid stale closure issues
-    if (isFlippingRef.current || isDraggingRef.current) return;
-
-    const from = currentSpreadRef.current;
-    const to = direction === "next" ? from + 1 : from - 1;
-    if (to < 0 || to >= maxSpreads) return;
-
-    // Warm up destination pages to prevent white blanks
-    await ensurePagesRendered(to);
-
-    isFlippingRef.current = true;
-    setFlipDirection(direction);
-    setIsFlipping(true);
-
-    // Snapshot for the animation
-    setAnimFromSpread(from);
-    setAnimToSpread(to);
-
-    // Commit spread immediately using functional update
-    setCurrentSpread(() => to);
-
-    // Persist progress based on TO (not stale currentSpread)
+  const handlePageChange = useCallback((page: number, totalPages: number) => {
+    setCurrentPage(page);
+    setNumPages(totalPages);
     if (selectedFile) {
-      const page = isMobile ? to + 1 : (to === 0 ? 1 : to * 2);
       saveReadingProgress({
         fileId: selectedFile.id,
         currentPage: page,
-        totalPages: numPages,
+        totalPages,
         lastRead: new Date().toISOString(),
       });
     }
+  }, [selectedFile]);
 
-    window.setTimeout(() => {
-      isFlippingRef.current = false;
-      setIsFlipping(false);
-      setFlipDirection(null);
-      setAnimFromSpread(null);
-      setAnimToSpread(null);
-    }, 600);
-  }, [maxSpreads, isMobile, selectedFile, numPages, ensurePagesRendered]);
-
-  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
-    if (isFlippingRef.current) return;
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    isDraggingRef.current = true;
-    setIsDragging(true);
-    setDragStartX(clientX);
-    setDragProgress(0);
-    setDragDirection(null);
-  };
-
-  const endDrag = () => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
-    setDragProgress(0);
-    setDragDirection(null);
-  };
-
-  const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!isDragging) return;
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const delta = dragStartX - clientX;
-    const containerWidth = bookRef.current?.offsetWidth || window.innerWidth;
-    const progress = Math.min(1, Math.abs(delta) / (containerWidth * 0.4));
-    setDragProgress(progress);
-    setDragDirection(delta > 0 ? "forward" : "backward");
-  }, [isDragging, dragStartX]);
-
-  const handleDragEnd = useCallback(() => {
-    if (!isDraggingRef.current) return;
-
-    const shouldFlip = dragProgress > 0.3 && dragDirection;
-    const dir = dragDirection; // capture before we clear state
-
-    // End drag immediately so flipTo isn't blocked
-    endDrag();
-
-    if (shouldFlip && dir) {
-      requestAnimationFrame(() => {
-        flipTo(dir === "forward" ? "next" : "prev");
-      });
-    }
-  }, [dragProgress, dragDirection, flipTo]);
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener("mousemove", handleDragMove);
-      window.addEventListener("mouseup", handleDragEnd);
-      window.addEventListener("touchmove", handleDragMove, { passive: false });
-      window.addEventListener("touchend", handleDragEnd);
-    }
-    return () => {
-      window.removeEventListener("mousemove", handleDragMove);
-      window.removeEventListener("mouseup", handleDragEnd);
-      window.removeEventListener("touchmove", handleDragMove);
-      window.removeEventListener("touchend", handleDragEnd);
-    };
-  }, [isDragging, handleDragMove, handleDragEnd]);
+  const handleReady = useCallback((total: number) => {
+    setNumPages(total);
+  }, []);
 
   const addBookmark = () => {
-    // On mobile, spread = page - 1; on desktop, calculate from spread
-    const page = isMobile ? currentSpread + 1 : (currentSpread === 0 ? 1 : currentSpread * 2);
-    if (bookmarks.some(b => b.page === page)) return;
-    const updated = [...bookmarks, { page, timestamp: new Date().toISOString() }].sort((a, b) => a.page - b.page);
+    if (bookmarks.some(b => b.page === currentPage)) return;
+    const updated = [...bookmarks, { page: currentPage, timestamp: new Date().toISOString() }].sort((a, b) => a.page - b.page);
     setBookmarks(updated);
-    saveBookmarks(selectedFile!.id, updated);
+    if (selectedFile) saveBookmarks(selectedFile.id, updated);
   };
 
   const removeBookmark = (page: number) => {
     const updated = bookmarks.filter(b => b.page !== page);
     setBookmarks(updated);
-    saveBookmarks(selectedFile!.id, updated);
-  };
-
-  const goToSpreadFromPage = (page: number) => {
-    // On mobile, spread = page - 1; on desktop, calculate from spread
-    const spread = isMobile ? page - 1 : (page === 1 ? 0 : Math.floor((page - 1) / 2));
-    setCurrentSpread(spread);
-    setShowToc(false);
-    setShowBookmarks(false);
-  };
-
-  const processOutline = async (items: PDFOutlineItem[]): Promise<OutlineItem[]> => {
-    const result: OutlineItem[] = [];
-    for (const item of items) {
-      if (item.dest && pdfDocument) {
-        // dest can be a string (named destination) or an array (explicit destination)
-        const dest = typeof item.dest === 'string'
-          ? await pdfDocument.getDestination(item.dest)
-          : item.dest;
-        if (dest && dest[0]) {
-          const pageIndex = await pdfDocument.getPageIndex(dest[0]);
-          result.push({ title: item.title, page: pageIndex + 1 });
-        }
-      }
-      if (item.items && item.items.length > 0) {
-        result.push(...await processOutline(item.items));
-      }
-    }
-    return result;
-  };
-
-  const handleOutlineLoad = async (outlineData: PDFOutlineItem[] | null) => {
-    if (pdfDocument && outlineData && outlineData.length > 0) {
-      const processed = await processOutline(outlineData);
-      setOutline(processed);
-    }
+    if (selectedFile) saveBookmarks(selectedFile.id, updated);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -457,59 +218,10 @@ export function BookReaderTab() {
   if (loading) return <div className="grid gap-4 md:grid-cols-3">{[1,2,3].map(i => <Skeleton key={i} className="h-64" />)}</div>;
   if (error && !selectedFile) return <Card><CardContent className="py-12 text-center"><AlertCircle className="h-12 w-12 mx-auto mb-4" /><p>{error}</p></CardContent></Card>;
 
+  // Book reader view
   if (selectedFile && pdfUrl) {
-    // Compute page numbers for static display and animation
-    const base = getSpreadPagesFor(currentSpread); // committed / static
-    const from = animFromSpread ?? currentSpread;  // what the flip shows as "current"
-    const to = animToSpread ?? currentSpread;      // what the flip reveals
-    const fromPages = getSpreadPagesFor(from);
-    const toPages = getSpreadPagesFor(to);
-
-    // Use base for the static spread
-    const { left, right, cover } = base;
-
-    // Compute curl intensity for paper flex effect
-    const curl = isDragging ? dragProgress : isFlipping ? 1 : 0;
-    const shadow = Math.min(1, curl * 1.1);
-    const highlight = Math.min(1, curl * 0.9);
-    const bendSkew = isDragging ? (dragDirection === "forward" ? -6 : 6) * dragProgress : 0;
-
-    // Show loading state while PDF is loading (numPages === 0)
-    if (numPages === 0) {
-      return (
-        <div className={cn("flex flex-col h-screen bg-gradient-to-b from-stone-900 to-stone-950 overflow-hidden", isFullscreen && "fixed inset-0 z-50")}>
-          <div className="flex items-center justify-between p-3 bg-black/60 backdrop-blur-sm border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={closeBook}><X className="h-5 w-5" /></Button>
-              <div>
-                <h3 className="font-semibold text-white line-clamp-1">{selectedFile.name}</h3>
-                <p className="text-xs text-white/60">{selectedFile.project.title}</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <BookOpen className="h-12 w-12 mx-auto mb-4 text-amber-400 animate-pulse" />
-              <p className="text-white/60">Loading book...</p>
-            </div>
-          </div>
-          {/* Hidden Document component to load the PDF and trigger onLoadSuccess */}
-          <div className="hidden">
-            <Document
-              file={pdfUrl}
-              onLoadSuccess={(pdf) => { setNumPages(pdf.numPages); setPdfDocument(pdf); }}
-              onLoadError={(err) => { console.error("PDF load error:", err); setError("Failed to load PDF"); }}
-              loading={null}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    // Guard against invalid page numbers
-    if (!right || right < 1 || right > numPages) {
-      return null;
-    }
+    const isBookmarkPage = bookmarks.some(b => b.page === currentPage);
+    const savedProgress = getReadingProgress(selectedFile.id);
 
     return (
       <div className={cn("flex flex-col h-screen bg-gradient-to-b from-stone-900 to-stone-950 overflow-hidden", isFullscreen && "fixed inset-0 z-50")}>
@@ -523,308 +235,78 @@ export function BookReaderTab() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {outline.length > 0 && <Button variant="ghost" size="icon" onClick={() => setShowToc(t => !t)}><List className="h-4 w-4" /></Button>}
-            <Button variant="ghost" size="icon" onClick={() => setShowBookmarks(t => !t)}><Bookmark className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" onClick={addBookmark}><BookmarkPlus className="h-4 w-4" /></Button>
-            {!isMobile && (
-              <>
-                <Button variant="ghost" size="icon" onClick={() => setScale(s => Math.max(0.6, s - 0.1))}><ZoomOut className="h-4 w-4" /></Button>
-                <span className="text-sm w-12 text-center">{Math.round(scale * 100)}%</span>
-                <Button variant="ghost" size="icon" onClick={() => setScale(s => Math.min(2.5, s + 0.1))}><ZoomIn className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" onClick={() => setScale(1)}><RotateCcw className="h-4 w-4" /></Button>
-              </>
-            )}
-            <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(f => !f)}>
+            <Button variant="ghost" size="icon" onClick={addBookmark} disabled={isBookmarkPage}>
+              {isBookmarkPage ? <Bookmark className="h-5 w-5 text-amber-400 fill-amber-400" /> : <BookmarkPlus className="h-5 w-5" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setShowBookmarks(!showBookmarks)}>
+              <List className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setScale(s => Math.max(0.5, s - 0.1))} disabled={scale <= 0.5}>
+              <ZoomOut className="h-5 w-5" />
+            </Button>
+            <span className="text-xs text-white/60 min-w-[3rem] text-center">{Math.round(scale * 100)}%</span>
+            <Button variant="ghost" size="icon" onClick={() => setScale(s => Math.min(1.5, s + 0.1))} disabled={scale >= 1.5}>
+              <ZoomIn className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setScale(1)}><RotateCcw className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)}>
               {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
             </Button>
           </div>
         </div>
 
-        {/* Side Panels + Book */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* TOC */}
-          {showToc && outline.length > 0 && (
-            <div className="w-72 bg-black/50 backdrop-blur-sm p-4 overflow-y-auto border-r border-white/10">
-              <h4 className="font-semibold mb-4 text-white">Contents</h4>
-              <TocList items={outline} onClick={goToSpreadFromPage} />
+        {/* Bookmarks Panel */}
+        {showBookmarks && (
+          <div className="absolute top-16 right-4 w-64 max-h-80 overflow-y-auto bg-stone-800/95 backdrop-blur-sm rounded-lg border border-white/10 z-50 shadow-xl">
+            <div className="p-3 border-b border-white/10">
+              <h4 className="font-semibold text-white text-sm">Bookmarks</h4>
             </div>
-          )}
-
-          {/* Bookmarks */}
-          {showBookmarks && (
-            <div className="w-72 bg-black/50 backdrop-blur-sm p-4 overflow-y-auto border-r border-white/10">
-              <h4 className="font-semibold mb-4 text-white">Bookmarks ({bookmarks.length})</h4>
-              {bookmarks.length === 0 ? (
-                <p className="text-white/60">No bookmarks</p>
-              ) : (
-                <div className="space-y-2">
-                  {bookmarks.map((b, i) => (
-                    <div key={i} className="flex justify-between items-center bg-white/5 rounded px-2 py-1">
-                      <Button variant="link" className="text-left p-0 text-white/90" onClick={() => goToSpreadFromPage(b.page)}>
-                        Page {b.page}
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeBookmark(b.page)}><X className="h-4 w-4" /></Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Book View */}
-          <div className="flex-1 flex items-center justify-center overflow-hidden" ref={bookRef}>
-            <Document file={pdfUrl} onLoadSuccess={(pdf) => { setNumPages(pdf.numPages); setPdfDocument(pdf); }} loading={null}>
-              <Outline onLoadSuccess={handleOutlineLoad} />
-
-              {/* Pre-render current + next + prev spreads (prevents white blanks) */}
-              {/* Using left:-9999 instead of display:none - display:none can stop canvas from painting */}
-              <div
-                style={{
-                  position: "absolute",
-                  opacity: 0,
-                  pointerEvents: "none",
-                  width: 1,
-                  height: 1,
-                  overflow: "hidden",
-                  left: -9999,
-                  top: -9999,
-                }}
-              >
-                {[currentSpread, currentSpread + 1, currentSpread - 1]
-                  .filter((s) => s >= 0 && s < maxSpreads)
-                  .flatMap((s) => {
-                    const pages = getSpreadPagesFor(s);
-                    const nums = [pages.left, pages.right].filter((n): n is number => !!n);
-                    return nums.map((n) => (
-                      <Page
-                        key={`warm-${n}`}
-                        pageNumber={n}
-                        width={renderWidth}
-                        renderTextLayer={false}
-                        renderAnnotationLayer={false}
-                        onRenderSuccess={() => markRendered(n)}
-                        loading={null}
-                      />
-                    ));
-                  })}
-              </div>
-
-              <div
-                className="relative"
-                style={{
-                  transform: `scale(${scale}) translate3d(0,0,0)`,
-                  perspective: "3000px",
-                  willChange: "transform"
-                }}
-                onMouseDown={handleDragStart}
-                onTouchStart={handleDragStart}
-              >
-                <div className="relative flex shadow-2xl" style={{ transformStyle: "preserve-3d" }}>
-                  {/* Spine shadow - only on desktop with two-page spread */}
-                  {!isMobile && !cover && (
-                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-6 z-30 pointer-events-none">
-                      <div className="h-full bg-gradient-to-r from-transparent via-black/30 to-transparent" />
-                    </div>
-                  )}
-
-                  {/* Flipping Page Layer - forward flip (right page flipping) */}
-                  {(isFlipping || isDragging) && (flipDirection === "next" || dragDirection === "forward") && fromPages.right && (
-                    <div
-                      className="absolute flex"
-                      style={{
-                        left: isMobile ? 0 : pageWidth,
-                        width: pageWidth,
-                        height: pageHeight,
-                        transformStyle: "preserve-3d",
-                        transform: `translateZ(0.1px) skewY(${bendSkew}deg) rotateY(${-(isDragging ? dragProgress * 180 : 180)}deg)`,
-                        transformOrigin: "left center",
-                        transition: isFlipping ? "transform 0.6s cubic-bezier(0.6, 0.05, 0.4, 0.95)" : "none",
-                        zIndex: 50,
-                        pointerEvents: "none",
-                      }}
-                    >
-                      {/* Front of flipping page = fromPages.right */}
-                      <div className={cn("absolute inset-0 bg-paper page-layer overflow-hidden", fromPages.cover && "rounded-r-xl")} style={{ backfaceVisibility: "hidden" }}>
-                        <Page key={`flip-front-s${animFromSpread}-p${fromPages.right}-w${renderWidth}`} pageNumber={fromPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(fromPages.right!)} />
-                        <div className="page-curl" style={{ "--shadow": shadow, "--highlight": highlight } as React.CSSProperties} />
-                      </div>
-                      {/* Back of flipping page = toPages.left (desktop) or toPages.right (mobile) */}
-                      <div className="absolute inset-0 bg-paper page-layer overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                        {(isMobile ? toPages.right : toPages.left) && (
-                          <Page
-                            key={`flip-back-s${animToSpread}-p${isMobile ? toPages.right : toPages.left}-w${renderWidth}`}
-                            pageNumber={(isMobile ? toPages.right : toPages.left)!}
-                            width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
-                            onRenderSuccess={() => markRendered((isMobile ? toPages.right : toPages.left)!)}
-                          />
-                        )}
-                        <div className="page-curl" style={{ "--shadow": shadow, "--highlight": highlight } as React.CSSProperties} />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Flipping Page Layer - backward flip (left page flipping on desktop) */}
-                  {(isFlipping || isDragging) && (flipDirection === "prev" || dragDirection === "backward") && !isMobile && fromPages.left && (
-                    <div
-                      className="absolute flex"
-                      style={{
-                        left: 0,
-                        width: pageWidth,
-                        height: pageHeight,
-                        transformStyle: "preserve-3d",
-                        transform: `translateZ(0.1px) skewY(${-bendSkew}deg) rotateY(${isDragging ? dragProgress * 180 : 180}deg)`,
-                        transformOrigin: "right center",
-                        transition: isFlipping ? "transform 0.6s cubic-bezier(0.6, 0.05, 0.4, 0.95)" : "none",
-                        zIndex: 50,
-                        pointerEvents: "none",
-                      }}
-                    >
-                      {/* Front of flipping page = fromPages.left */}
-                      <div className="absolute inset-0 bg-paper page-layer overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
-                        <Page key={`flip-back-front-s${animFromSpread}-p${fromPages.left}-w${renderWidth}`} pageNumber={fromPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(fromPages.left!)} />
-                        <div className="page-curl" style={{ "--shadow": shadow, "--highlight": highlight } as React.CSSProperties} />
-                      </div>
-                      {/* Back of flipping page = toPages.right */}
-                      <div className="absolute inset-0 bg-paper page-layer overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                        {toPages.right && (
-                          <Page key={`flip-back-back-s${animToSpread}-p${toPages.right}-w${renderWidth}`} pageNumber={toPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(toPages.right!)} />
-                        )}
-                        <div className="page-curl" style={{ "--shadow": shadow, "--highlight": highlight } as React.CSSProperties} />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Next page underneath (visible during forward flip) = toPages.right */}
-                  {(isFlipping || isDragging) && (flipDirection === "next" || dragDirection === "forward") && toPages.right && (
-                    <div className="absolute bg-paper page-layer overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: isMobile ? 0 : pageWidth, zIndex: 5 }}>
-                      <Page
-                        key={`under-next-s${animToSpread}-p${toPages.right}-w${renderWidth}`}
-                        pageNumber={toPages.right}
-                        width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
-                        onRenderSuccess={() => markRendered(toPages.right!)}
-                      />
-                    </div>
-                  )}
-
-                  {/* Previous page underneath (visible during backward flip) = toPages.left */}
-                  {(isFlipping || isDragging) && (flipDirection === "prev" || dragDirection === "backward") && !isMobile && toPages.left && (
-                    <div className="absolute bg-paper page-layer overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: 0, zIndex: 5 }}>
-                      <Page key={`under-prev-s${animToSpread}-p${toPages.left}-w${renderWidth}`} pageNumber={toPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(toPages.left!)} />
-                    </div>
-                  )}
-
-                  {/* Static Current Spread - always visible underneath */}
-                  <div className="flex">
-                    {!isMobile && left && (
-                      <div className="bg-paper page-layer overflow-hidden relative" style={{ width: pageWidth, height: pageHeight }}>
-                        {isRendered(left) ? (
-                          <Page key={`static-left-s${currentSpread}-p${left}-w${renderWidth}`} pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(left)} loading={null} />
-                        ) : (
-                          <div style={{ width: renderWidth, height: pageHeight }} />
-                        )}
-                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{left}</div>
-                      </div>
-                    )}
-                    <div className={cn("bg-paper page-layer overflow-hidden relative", cover && "rounded-r-xl")} style={{ width: pageWidth, height: pageHeight }}>
-                      {cover && <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black/30 pointer-events-none" />}
-                      {isRendered(right) ? (
-                        <Page key={`static-right-s${currentSpread}-p${right}-w${renderWidth}`} pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(right!)} loading={null} />
-                      ) : (
-                        <div style={{ width: renderWidth, height: pageHeight }} />
-                      )}
-                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{right}</div>
-                      {cover && (
-                        <div className="absolute inset-0 flex items-center justify-end pr-4 md:pr-12 pointer-events-none">
-                          <span className="text-white/70 text-base md:text-xl animate-pulse">{isMobile ? "Swipe →" : "Drag or click to open →"}</span>
-                        </div>
-                      )}
-                    </div>
+            {bookmarks.length === 0 ? (
+              <p className="p-4 text-center text-white/40 text-sm">No bookmarks yet</p>
+            ) : (
+              <div className="p-2">
+                {bookmarks.map((b) => (
+                  <div key={b.page} className="flex items-center justify-between p-2 hover:bg-white/5 rounded group">
+                    <span className="flex items-center gap-2 text-white/80 text-sm">
+                      <Bookmark className="h-4 w-4 text-amber-400" />
+                      Page {b.page}
+                    </span>
+                    <button onClick={() => removeBookmark(b.page)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300">
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                </div>
+                ))}
               </div>
-            </Document>
+            )}
+          </div>
+        )}
+
+        {/* Book View */}
+        <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
+          <div style={{ transform: `scale(${scale})`, transformOrigin: "center center", transition: "transform 0.2s" }}>
+            <PdfPageFlipReader
+              pdfUrl={pdfUrl}
+              initialPage={savedProgress?.currentPage ?? 1}
+              onPageChange={handlePageChange}
+              onReady={handleReady}
+              width={pageWidth}
+              height={pageHeight}
+              className="flex items-center justify-center"
+            />
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
-          <Button variant="ghost" onClick={() => flipTo("prev")} disabled={currentSpread === 0 || isFlipping || isDragging}>
-            <ChevronLeft className="h-5 w-5 mr-2" /> {isMobile ? "" : "Previous"}
-          </Button>
-          <span className="text-sm text-white/80">
-            {isMobile
-              ? `Page ${right || 1} of ${numPages}`
-              : `${cover ? "Cover" : `Pages ${left || ''} - ${right || ''}`} of ${numPages}`}
-          </span>
-          <Button variant="ghost" onClick={() => flipTo("next")} disabled={currentSpread >= maxSpreads - 1 || isFlipping || isDragging}>
-            {isMobile ? "" : "Next"} <ChevronRight className="h-5 w-5 ml-2" />
-          </Button>
-        </div>
-
-        <style jsx global>{`
-          .bg-paper {
-            background: #fdfcf8;
-            background-image:
-              linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px);
-            background-size: 20px 20px;
-            box-shadow: inset 8px 0 20px -8px rgba(0,0,0,0.3), inset -8px 0 20px -8px rgba(0,0,0,0.2);
-          }
-          /* GPU + 3D compositing */
-          .book-stage {
-            transform: translateZ(0);
-            will-change: transform;
-            contain: layout paint style;
-          }
-          .page-layer {
-            transform-style: preserve-3d;
-            backface-visibility: hidden;
-            transform: translateZ(0);
-            will-change: transform;
-          }
-          /* Page curl shadow/highlight effect */
-          .page-curl {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-          }
-          .page-curl::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to left, rgba(0,0,0,0.30), transparent 35%);
-            opacity: var(--shadow, 0);
-            transition: opacity 0.08s linear;
-          }
-          .page-curl::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to right, rgba(255,255,255,0.35), transparent 30%);
-            opacity: var(--highlight, 0);
-            transition: opacity 0.08s linear;
-          }
-          canvas {
-            image-rendering: -webkit-optimize-contrast;
-            will-change: transform;
-            transform: translate3d(0,0,0);
-          }
-          .react-pdf__Page {
-            will-change: transform;
-            transform: translate3d(0,0,0);
-          }
-        `}</style>
       </div>
     );
   }
 
-  // Library view (unchanged)
+  // Library view
   if (pdfFiles.length === 0) {
     return (
       <Card className="glass-card">
         <CardContent className="py-16 text-center">
           <Library className="h-12 w-12 mx-auto mb-4 text-amber-400" />
           <h3 className="text-xl font-semibold mb-2">No books available</h3>
+          <p className="text-muted-foreground">Books from your backed projects will appear here</p>
         </CardContent>
       </Card>
     );
@@ -837,31 +319,40 @@ export function BookReaderTab() {
           <BookOpen className="h-6 w-6 text-amber-400" />
         </div>
         <div>
-          <h2 className="text-xl font-semibold">Your Library</h2>
-          <p className="text-sm text-muted-foreground">{pdfFiles.length} book{pdfFiles.length !== 1 ? "s" : ""}</p>
+          <h2 className="text-xl font-bold">My Library</h2>
+          <p className="text-sm text-muted-foreground">{pdfFiles.length} book{pdfFiles.length !== 1 ? 's' : ''} available</p>
         </div>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {pdfFiles.map((file) => {
-          const prog = progressMap[file.id];
-          const percent = prog ? Math.round((prog.currentPage / prog.totalPages) * 100) : 0;
+          const progress = progressMap[file.id];
+          const progressPercent = progress ? Math.round((progress.currentPage / progress.totalPages) * 100) : 0;
+
           return (
-            <Card key={file.id} className="glass-card cursor-pointer hover:ring-2 hover:ring-amber-400/50 transition-all" onClick={() => openBook(file)}>
-              <CardContent className="p-0">
-                <div className="aspect-[3/4] bg-gradient-to-br from-amber-900/40 to-stone-800/60 flex items-center justify-center relative overflow-hidden rounded-t-lg">
-                  <FileText className="h-20 w-20 text-amber-300/70" />
-                  <div className="absolute bottom-0 left-0 right-0 h-2 bg-black/40">
-                    <div className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all" style={{ width: `${percent}%` }} />
+            <Card
+              key={file.id}
+              className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-[1.02] overflow-hidden"
+              onClick={() => openBook(file)}
+            >
+              <div className="relative h-40 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex items-center justify-center">
+                <FileText className="h-16 w-16 text-amber-600/50" />
+                {progress && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30">
+                    <div className="h-full bg-amber-500" style={{ width: `${progressPercent}%` }} />
                   </div>
-                  {prog?.currentPage > 1 && <Badge className="absolute top-3 right-3 bg-amber-600">Page {prog.currentPage}</Badge>}
-                </div>
-                <div className="p-5">
-                  <h3 className="font-semibold line-clamp-2 mb-1">{file.name.replace(/\.pdf$/i, "")}</h3>
-                  <p className="text-sm text-muted-foreground mb-3">{file.project.title}</p>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{formatFileSize(file.fileSize)}</span>
-                    {prog && <span className="text-amber-500">{percent}% read</span>}
-                  </div>
+                )}
+              </div>
+              <CardContent className="p-4">
+                <h3 className="font-semibold line-clamp-1 group-hover:text-amber-600 transition-colors">{file.name}</h3>
+                <p className="text-sm text-muted-foreground line-clamp-1">{file.project.title}</p>
+                <div className="flex items-center justify-between mt-3">
+                  <Badge variant="secondary" className="text-xs">{formatFileSize(file.fileSize)}</Badge>
+                  {progress && (
+                    <span className="text-xs text-muted-foreground">
+                      {progressPercent}% read
+                    </span>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -869,19 +360,5 @@ export function BookReaderTab() {
         })}
       </div>
     </div>
-  );
-}
-
-function TocList({ items, onClick }: { items: OutlineItem[]; onClick: (page: number) => void }) {
-  return (
-    <ul className="space-y-2 text-white/90">
-      {items.map((item, i) => (
-        <li key={i}>
-          <Button variant="link" className="p-0 h-auto text-left" onClick={() => onClick(item.page)}>
-            {item.title}
-          </Button>
-        </li>
-      ))}
-    </ul>
   );
 }
