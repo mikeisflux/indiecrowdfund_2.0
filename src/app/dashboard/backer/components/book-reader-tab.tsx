@@ -101,8 +101,9 @@ export function BookReaderTab() {
   const [showBookmarks, setShowBookmarks] = useState(false);
 
   // Page dimensions based on device - sized to fit comfortably in viewport
-  const pageWidth = isMobile ? 280 : 400;
-  const pageHeight = isMobile ? 400 : 560;
+  // Account for header (~60px), padding (64px), and page indicator (~50px)
+  const pageWidth = isMobile ? 280 : 380;
+  const pageHeight = isMobile ? 380 : 520;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -284,9 +285,9 @@ export function BookReaderTab() {
         )}
 
         {/* Book View */}
-        <div className="flex-1 flex items-center justify-center overflow-auto py-8 px-4">
+        <div className="flex-1 min-h-0 flex items-center justify-center overflow-auto p-4">
           <div
-            className="flex flex-col items-center justify-center"
+            className="flex flex-col items-center"
             style={{
               transform: `scale(${scale})`,
               transformOrigin: "center center",

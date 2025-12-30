@@ -28,8 +28,8 @@ export function PdfPageFlipReader({
   onPageChange,
   onReady,
   className,
-  width = 400,
-  height = 560,
+  width = 380,
+  height = 520,
   singlePage = false,
 }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
