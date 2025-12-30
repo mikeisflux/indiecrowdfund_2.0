@@ -178,9 +178,22 @@ export function PdfPageFlipReader({
           margin: 0 auto;
         }
 
+        .stf__parent {
+          margin: 0 auto;
+        }
+
+        /* Remove gap between pages */
+        .stf__item {
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
         .page {
           background: #fdfcf8;
           overflow: hidden;
+          padding: 0;
+          margin: 0;
+          box-sizing: border-box;
         }
 
         .page-img {
@@ -190,6 +203,8 @@ export function PdfPageFlipReader({
           object-fit: contain;
           user-select: none;
           -webkit-user-drag: none;
+          margin: 0;
+          padding: 0;
         }
       `}</style>
     </div>
