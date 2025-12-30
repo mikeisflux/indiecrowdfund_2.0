@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,29 +23,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   DollarSign,
   AlertTriangle,
   Loader2,
+  Wallet,
+  CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 
 interface RefundDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  backerId: string;
+  pledgeId: string;
   backerName: string;
   backerEmail: string;
   totalPaid: number;
-  onRefund?: (refund: RefundData) => void;
-}
-
-interface RefundData {
-  type: "full" | "partial";
-  amount: number;
-  reason: string;
-  notifyBacker: boolean;
-  cancelOrder: boolean;
+  paymentProcessor?: "STRIPE" | "DIVINITYCOIN";
+  onRefundComplete?: () => void;
 }
 
 const refundReasons = [
@@ -60,12 +57,12 @@ const refundReasons = [
 export function RefundDialog({
   open,
   onOpenChange,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  backerId,
+  pledgeId,
   backerName,
   backerEmail,
   totalPaid,
-  onRefund,
+  paymentProcessor = "STRIPE",
+  onRefundComplete,
 }: RefundDialogProps) {
   const [refundType, setRefundType] = useState<"full" | "partial">("full");
   const [amount, setAmount] = useState(totalPaid.toString());
@@ -76,6 +73,7 @@ export function RefundDialog({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const refundAmount = refundType === "full" ? totalPaid : parseFloat(amount) || 0;
+  const isDivinityCoin = paymentProcessor === "DIVINITYCOIN";
 
   const handleRefund = async () => {
     if (refundAmount <= 0) {
@@ -95,21 +93,38 @@ export function RefundDialog({
 
     setIsProcessing(true);
 
-    // Simulate processing
-    await new Promise(r => setTimeout(r, 1500));
+    try {
+      const res = await fetch(`/api/creator/pledges/${pledgeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          action: "refund",
+          reason: `${reason}${notes ? `: ${notes}` : ""}`,
+          notifyBacker,
+          cancelOrder,
+        }),
+      });
 
-    onRefund?.({
-      type: refundType,
-      amount: refundAmount,
-      reason: `${reason}${notes ? `: ${notes}` : ""}`,
-      notifyBacker,
-      cancelOrder,
-    });
+      const data = await res.json();
 
-    toast.success(`Refund of $${refundAmount.toFixed(2)} processed successfully`);
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to process refund");
+      }
 
-    setIsProcessing(false);
-    onOpenChange(false);
+      if (isDivinityCoin) {
+        toast.success(`$${refundAmount.toFixed(2)} refunded to backer's DivinityCoin wallet`);
+      } else {
+        toast.success(`$${refundAmount.toFixed(2)} refunded to backer's card`);
+      }
+
+      onRefundComplete?.();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Refund error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to process refund");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -130,9 +145,22 @@ export function RefundDialog({
           <div className="rounded-lg bg-muted/50 p-3 text-sm">
             <p className="font-medium">{backerName}</p>
             <p className="text-muted-foreground">{backerEmail}</p>
-            <p className="mt-2">
-              Total Paid: <span className="font-medium">${totalPaid.toFixed(2)}</span>
-            </p>
+            <div className="flex items-center justify-between mt-2">
+              <span>Total Paid: <span className="font-medium">${totalPaid.toFixed(2)}</span></span>
+              <Badge variant="outline" className="flex items-center gap-1">
+                {isDivinityCoin ? (
+                  <>
+                    <Wallet className="h-3 w-3" />
+                    DivinityCoin
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="h-3 w-3" />
+                    Stripe
+                  </>
+                )}
+              </Badge>
+            </div>
           </div>
 
           {/* Refund Type */}
@@ -224,10 +252,12 @@ export function RefundDialog({
           </div>
 
           {/* Warning */}
-          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm dark:bg-amber-950/30 dark:border-amber-800">
             <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-            <p className="text-amber-800">
-              This action cannot be undone. The refund will be processed to the original payment method.
+            <p className="text-amber-800 dark:text-amber-200">
+              {isDivinityCoin
+                ? "This action cannot be undone. The refund will be credited to the backer's DivinityCoin wallet."
+                : "This action cannot be undone. The refund will be processed to the original card on file."}
             </p>
           </div>
         </div>

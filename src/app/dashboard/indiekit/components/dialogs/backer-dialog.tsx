@@ -620,12 +620,13 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
       <RefundDialog
         open={showRefund}
         onOpenChange={setShowRefund}
-        backerId={backer.id}
+        pledgeId={backer.id}
         backerName={backer.name}
         backerEmail={backer.email}
         totalPaid={backer.balance?.pledgeAmount || 0}
-        onRefund={(refund) => {
-          console.log("Refund processed:", refund);
+        paymentProcessor={backer.paymentProcessor}
+        onRefundComplete={() => {
+          onOpenChange(false); // Close backer dialog after refund
         }}
       />
 

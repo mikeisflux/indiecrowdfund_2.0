@@ -30,6 +30,7 @@ async function isProjectOwnerOrCollaborator(userId: string, pledgeId: string): P
         },
       },
     },
+    // Include payment processor fields for refund handling
   });
 
   if (!pledge) {
@@ -72,13 +73,21 @@ export async function GET(
       amount: number;
       status: string;
       createdAt: Date;
+      paymentProcessor: "STRIPE" | "DIVINITYCOIN";
       stripePaymentIntentId: string | null;
       stripeSetupIntentId: string | null;
+      divinityCoinPaymentId: string | null;
       project: { currentAmount: number; goalAmount: number; status: string };
       user: { id: string; name: string | null; email: string | null };
     };
 
     const isFunded = Number(typedPledge.project.currentAmount) >= Number(typedPledge.project.goalAmount) || typedPledge.project.status === "FUNDED";
+
+    // Can refund if completed and has a payment (either Stripe or DivinityCoin)
+    const canRefund = typedPledge.status === "COMPLETED" && (
+      !!typedPledge.stripePaymentIntentId ||
+      typedPledge.paymentProcessor === "DIVINITYCOIN"
+    );
 
     return NextResponse.json({
       pledge: {
@@ -87,8 +96,9 @@ export async function GET(
         status: typedPledge.status,
         createdAt: typedPledge.createdAt,
         user: typedPledge.user,
+        paymentProcessor: typedPledge.paymentProcessor,
         canCancel: typedPledge.status === "PENDING",
-        canRefund: typedPledge.status === "COMPLETED" && !!typedPledge.stripePaymentIntentId,
+        canRefund,
         isFunded,
       },
     });
@@ -127,10 +137,13 @@ export async function PATCH(
       amount: number;
       status: string;
       projectId: string;
+      paymentProcessor: "STRIPE" | "DIVINITYCOIN";
       stripePaymentIntentId: string | null;
       stripeSetupIntentId: string | null;
+      divinityCoinPaymentId: string | null;
       project: {
         id: string;
+        title: string;
         status: string;
         currentAmount: number;
         goalAmount: number;
@@ -189,55 +202,137 @@ export async function PATCH(
         );
       }
 
-      if (!typedPledge.stripePaymentIntentId) {
-        return NextResponse.json(
-          { error: "No payment found to refund" },
-          { status: 400 }
-        );
-      }
+      // Handle based on payment processor
+      if (typedPledge.paymentProcessor === "DIVINITYCOIN") {
+        // DivinityCoin refund - credit back to user's wallet
+        try {
+          const refundAmount = Number(typedPledge.amount);
+          const userId = typedPledge.user.id;
 
-      // Process refund via Stripe
-      try {
-        const stripeClient = await getStripeInstance();
-        await stripeClient.refunds.create({
-          payment_intent: typedPledge.stripePaymentIntentId,
-          reason: "requested_by_customer",
-          metadata: {
-            pledgeId: typedPledge.id,
-            creatorUserId: session.user.id,
-            reason: reason || "Refunded by creator",
+          // Get current balance
+          const user = await db.user.findUnique({
+            where: { id: userId },
+            select: { divinityCoinBalance: true },
+          });
+
+          const previousBalance = Number(user?.divinityCoinBalance || 0);
+          const newBalance = previousBalance + refundAmount;
+
+          // Process refund in a transaction
+          await db.$transaction(async (tx) => {
+            // Credit user's balance
+            await tx.user.update({
+              where: { id: userId },
+              data: { divinityCoinBalance: newBalance },
+            });
+
+            // Create refund transaction record
+            await tx.divinityCoinTransaction.create({
+              data: {
+                userId,
+                pledgeId: typedPledge.id,
+                amount: refundAmount, // Positive because it's a credit back
+                type: "REFUND",
+                description: `Refund for pledge on "${typedPledge.project.title}"`,
+                metadata: JSON.stringify({
+                  creatorUserId: session.user.id,
+                  reason: reason || "Refunded by creator",
+                  previousBalance,
+                  newBalance,
+                  projectId: typedPledge.projectId,
+                  divinityCoinPaymentId: typedPledge.divinityCoinPaymentId,
+                  processedAt: new Date().toISOString(),
+                }),
+              },
+            });
+
+            // Update pledge status
+            await tx.pledge.update({
+              where: { id: pledgeId },
+              data: {
+                status: "REFUNDED",
+                lastFailureReason: reason || "Refunded by creator",
+              },
+            });
+
+            // Update project backer count and amount
+            await tx.project.update({
+              where: { id: typedPledge.projectId },
+              data: {
+                backerCount: { decrement: 1 },
+                currentAmount: { decrement: typedPledge.amount },
+              },
+            });
+          });
+
+          console.log(`[DivinityCoin Refund] Processed refund for pledge ${pledgeId}. User ${userId}: ${previousBalance} -> ${newBalance}`);
+
+          return NextResponse.json({
+            success: true,
+            message: "DivinityCoin refunded to backer's wallet successfully",
+            refundedTo: "wallet",
+            amount: refundAmount,
+          });
+        } catch (divinityError) {
+          console.error("DivinityCoin refund error:", divinityError);
+          return NextResponse.json(
+            { error: "Failed to process DivinityCoin refund" },
+            { status: 500 }
+          );
+        }
+      } else {
+        // Stripe refund
+        if (!typedPledge.stripePaymentIntentId) {
+          return NextResponse.json(
+            { error: "No Stripe payment found to refund" },
+            { status: 400 }
+          );
+        }
+
+        // Process refund via Stripe
+        try {
+          const stripeClient = await getStripeInstance();
+          await stripeClient.refunds.create({
+            payment_intent: typedPledge.stripePaymentIntentId,
+            reason: "requested_by_customer",
+            metadata: {
+              pledgeId: typedPledge.id,
+              creatorUserId: session.user.id,
+              reason: reason || "Refunded by creator",
+            },
+          });
+        } catch (stripeError) {
+          console.error("Stripe refund error:", stripeError);
+          return NextResponse.json(
+            { error: "Failed to process refund with Stripe" },
+            { status: 400 }
+          );
+        }
+
+        // Update pledge status
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            status: "REFUNDED",
+            lastFailureReason: reason || "Refunded by creator",
           },
         });
-      } catch (stripeError) {
-        console.error("Stripe refund error:", stripeError);
-        return NextResponse.json(
-          { error: "Failed to process refund with Stripe" },
-          { status: 400 }
-        );
+
+        // Update project backer count and amount
+        await db.project.update({
+          where: { id: typedPledge.projectId },
+          data: {
+            backerCount: { decrement: 1 },
+            currentAmount: { decrement: typedPledge.amount },
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "Stripe refund processed successfully",
+          refundedTo: "card",
+        });
       }
-
-      // Update pledge status
-      await db.pledge.update({
-        where: { id: pledgeId },
-        data: {
-          status: "REFUNDED",
-          lastFailureReason: reason || "Refunded by creator",
-        },
-      });
-
-      // Update project backer count and amount
-      await db.project.update({
-        where: { id: typedPledge.projectId },
-        data: {
-          backerCount: { decrement: 1 },
-          currentAmount: { decrement: typedPledge.amount },
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: "Pledge refunded successfully",
-      });
     }
 
     return NextResponse.json({ error: "Invalid action. Use 'cancel' or 'refund'" }, { status: 400 });
