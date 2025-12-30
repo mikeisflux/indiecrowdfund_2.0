@@ -252,8 +252,6 @@ export function BookReaderTab() {
     };
   }, [isMobile, numPages]);
 
-  const getSpreadPages = () => getSpreadPagesFor(currentSpread);
-
   const flipTo = useCallback((direction: "next" | "prev") => {
     if (isFlipping || isDragging) return;
 
@@ -341,29 +339,6 @@ export function BookReaderTab() {
       window.removeEventListener("touchend", handleDragEnd);
     };
   }, [isDragging, handleDragMove, handleDragEnd]);
-
-  const preloadPages = () => {
-    const pages = new Set<number>();
-    const range = 8;
-    for (let i = -range; i <= range; i++) {
-      const spread = currentSpread + i;
-      if (isMobile) {
-        // Mobile: each spread is a single page
-        const page = spread + 1;
-        if (page > 0 && page <= numPages) pages.add(page);
-      } else {
-        // Desktop: spreads of two pages
-        if (spread === 0) pages.add(1);
-        else if (spread > 0 && spread < maxSpreads) {
-          const left = spread * 2;
-          const right = spread * 2 + 1;
-          if (left <= numPages) pages.add(left);
-          if (right <= numPages) pages.add(right);
-        }
-      }
-    }
-    return Array.from(pages);
-  };
 
   const addBookmark = () => {
     // On mobile, spread = page - 1; on desktop, calculate from spread
