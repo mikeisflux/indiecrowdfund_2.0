@@ -2,7 +2,7 @@
 
 import { getCSRFHeaders } from "@/lib/csrf";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Bug, CheckCircle2, Heart, Loader2, Send } from "lucide-react";
+import { Bug, CheckCircle2, Heart, Loader2, Send, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 const bugCategories = [
@@ -39,11 +39,35 @@ const severityLevels = [
   { value: "CRITICAL", label: "Critical - Unable to use the platform" },
 ];
 
+// Generate a math challenge
+function generateMathChallenge() {
+  const num1 = Math.floor(Math.random() * 10) + 1;
+  const num2 = Math.floor(Math.random() * 10) + 1;
+  return { num1, num2, answer: num1 + num2 };
+}
+
 export default function BugReportPage() {
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
+
+  // Math challenge for spam protection
+  const [mathChallenge, setMathChallenge] = useState({ num1: 0, num2: 0, answer: 0 });
+  const [mathAnswer, setMathAnswer] = useState("");
+  const [mathError, setMathError] = useState("");
+
+  // Generate a new math challenge
+  const regenerateMathChallenge = useCallback(() => {
+    setMathChallenge(generateMathChallenge());
+    setMathAnswer("");
+    setMathError("");
+  }, []);
+
+  // Initialize math challenge on mount
+  useEffect(() => {
+    regenerateMathChallenge();
+  }, [regenerateMathChallenge]);
 
   const [formData, setFormData] = useState({
     name: session?.user?.name || "",
@@ -60,8 +84,17 @@ export default function BugReportPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setMathError("");
     setError("");
+
+    // Validate math challenge
+    if (parseInt(mathAnswer, 10) !== mathChallenge.answer) {
+      setMathError("Incorrect answer. Please try again.");
+      regenerateMathChallenge();
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       const response = await fetch("/api/bug-reports", {
@@ -345,6 +378,31 @@ export default function BugReportPage() {
                     }
                     placeholder="What actually happened?"
                   />
+                </div>
+              </div>
+
+              {/* Math Challenge - Spam Protection */}
+              <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Spam Protection</span>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mathAnswer">
+                    What is {mathChallenge.num1} + {mathChallenge.num2}? <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="mathAnswer"
+                    type="number"
+                    required
+                    value={mathAnswer}
+                    onChange={(e) => setMathAnswer(e.target.value)}
+                    placeholder="Enter your answer"
+                    className="w-32"
+                  />
+                  {mathError && (
+                    <p className="text-sm text-red-500">{mathError}</p>
+                  )}
                 </div>
               </div>
 

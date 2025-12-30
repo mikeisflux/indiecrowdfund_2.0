@@ -78,7 +78,8 @@ export default function ProjectPage() {
   } | null>(null);
 
   // UI states
-  const [isReminded, setIsReminded] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [activeTab, setActiveTab] = useState<TabValue>("campaign");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
@@ -165,6 +166,61 @@ export default function ProjectPage() {
 
     checkExistingPledge();
   }, [project.id]);
+
+  // Check if user is following this project
+  useEffect(() => {
+    async function checkFollowStatus() {
+      if (!project.id || project.id === "") return;
+
+      try {
+        const response = await fetch(`/api/user/following?projectId=${project.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setIsFollowing(data.isFollowing);
+        }
+      } catch (err) {
+        console.debug("Error checking follow status:", err);
+      }
+    }
+
+    checkFollowStatus();
+  }, [project.id]);
+
+  // Handle follow/unfollow project
+  const handleFollow = async () => {
+    if (!project.id || isFollowLoading) return;
+
+    setIsFollowLoading(true);
+    try {
+      if (isFollowing) {
+        // Unfollow
+        const response = await fetch(`/api/user/following?projectId=${project.id}`, {
+          method: "DELETE",
+        });
+        if (response.ok) {
+          setIsFollowing(false);
+        }
+      } else {
+        // Follow
+        const response = await fetch("/api/user/following", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: project.id, type: "live" }),
+        });
+        if (response.ok) {
+          setIsFollowing(true);
+        } else if (response.status === 401) {
+          // User not logged in - redirect to sign in
+          window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(window.location.href)}`;
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Error toggling follow:", err);
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
 
   // Fetch comments for this project
   useEffect(() => {
@@ -514,11 +570,12 @@ export default function ProjectPage() {
               )}
               <Button
                 variant="outline"
-                onClick={() => setIsReminded(!isReminded)}
-                className={`hidden sm:flex glass-card border-border/50 ${isReminded ? "border-primary text-primary bg-primary/5" : ""}`}
+                onClick={handleFollow}
+                disabled={isFollowLoading}
+                className={`hidden sm:flex glass-card border-border/50 ${isFollowing ? "border-primary text-primary bg-primary/5" : ""}`}
               >
-                <Bookmark className={`mr-2 h-4 w-4 ${isReminded ? "fill-current" : ""}`} />
-                Remind me
+                <Bookmark className={`mr-2 h-4 w-4 ${isFollowing ? "fill-current" : ""}`} />
+                {isFollowing ? "Following" : "Follow"}
               </Button>
             </div>
           </div>
@@ -714,15 +771,16 @@ export default function ProjectPage() {
                 </Link>
               )}
 
-              {/* Remind me + Social sharing */}
+              {/* Follow + Social sharing */}
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  className={`flex-1 glass-card border-border/50 hover:border-primary/50 ${isReminded ? "border-primary text-primary bg-primary/5" : ""}`}
-                  onClick={() => setIsReminded(!isReminded)}
+                  className={`flex-1 glass-card border-border/50 hover:border-primary/50 ${isFollowing ? "border-primary text-primary bg-primary/5" : ""}`}
+                  onClick={handleFollow}
+                  disabled={isFollowLoading}
                 >
-                  <Bookmark className={`mr-2 h-4 w-4 ${isReminded ? "fill-current" : ""}`} />
-                  Remind me
+                  <Bookmark className={`mr-2 h-4 w-4 ${isFollowing ? "fill-current" : ""}`} />
+                  {isFollowing ? "Following" : "Follow"}
                 </Button>
                 <div className="flex items-center glass-card rounded-lg border border-border/50">
                   <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1877f2] hover:bg-[#1877f2]/10 rounded-lg" onClick={() => handleShare("facebook")}>
