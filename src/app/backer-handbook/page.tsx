@@ -9,7 +9,6 @@ import {
   Gift,
   Package,
   CheckCircle2,
-  AlertCircle,
   Info,
   ArrowRight,
   Shield,
@@ -134,38 +133,38 @@ const stripeSteps: Step[] = [
 const divinityCoinSteps: Step[] = [
   {
     title: 'What is DivinityCoin?',
-    description: 'DivinityCoin is an alternative payment method available on some projects. It\'s a cryptocurrency-based payment option that some creators choose to accept alongside card payments.',
-    tip: 'Not all projects accept DivinityCoin - look for the DivinityCoin logo on the project page.',
+    description: 'DivinityCoin is a gift card system - NOT a cryptocurrency. Think of it like a store gift card: 1 DivinityCoin = $1 USD, always. There\'s no blockchain, no crypto wallet, no volatility. It\'s simply platform credit you can use to back projects.',
+    tip: 'Learn more at our "What is DivinityCoin?" page for a complete guide.',
+  },
+  {
+    title: 'Getting DivinityCoin',
+    description: 'You can get DivinityCoin in several ways: purchase gift cards directly from DivinityCoin.com, receive it as a reward from creators, get it during promotional events, or receive it as a refund when projects are cancelled.',
+    tip: 'DivinityCoin purchased from divinitycoin.com can be redeemed on IndieCrowdfund by entering your card code.',
   },
   {
     title: 'Check if the Project Accepts DivinityCoin',
-    description: 'On the project page, look for the "Accepts DivinityCoin" badge or payment method indicator. If you don\'t see it, the project only accepts card payments.',
-    tip: 'Projects that accept DivinityCoin often have special incentives for crypto backers!',
+    description: 'On the project page, look for the "Accepts DivinityCoin" badge. Not all creators choose to accept it, so check before pledging if you want to use your balance.',
+    tip: 'Most projects accept DivinityCoin, but it\'s the creator\'s choice to enable it.',
   },
   {
-    title: 'Select DivinityCoin at Checkout',
-    description: 'At the payment step, choose DivinityCoin instead of card payment. You\'ll be shown the equivalent amount in DivinityCoin based on current exchange rates.',
-    tip: 'Exchange rates are calculated at the time of pledge confirmation.',
+    title: 'Using DivinityCoin at Checkout',
+    description: 'At the payment step, select "Pay with DivinityCoin." Your available balance is shown, and you can use all or part of it. If your pledge exceeds your balance, you can pay the remainder with a credit card.',
+    tip: 'Your balance is stored in your IndieCrowdfund account - check it anytime in your dashboard.',
   },
   {
-    title: 'Connect Your Wallet',
-    description: 'You\'ll need to connect a compatible crypto wallet that holds DivinityCoin. Follow the prompts to connect your wallet and authorize the transaction.',
-    tip: 'Make sure you have enough DivinityCoin in your wallet before starting the pledge process.',
+    title: 'Instant Balance Deduction',
+    description: 'Unlike card payments that wait for campaign success, DivinityCoin is deducted from your balance immediately when you pledge. This is because it\'s already platform credit.',
+    tip: 'Your pledge confirmation shows exactly how much DivinityCoin was used.',
   },
   {
-    title: 'Confirm the Transaction',
-    description: 'Review the transaction details in your wallet, including the amount and recipient. Confirm the transaction to complete your pledge.',
-    tip: 'Crypto transactions cannot be reversed - double-check all details before confirming!',
+    title: 'Refunds for Failed Projects',
+    description: 'If a campaign doesn\'t reach its funding goal, your DivinityCoin is automatically returned to your IndieCrowdfund wallet. No action needed on your part.',
+    tip: 'Check your transaction history in your dashboard to see refund credits.',
   },
   {
-    title: 'Immediate Processing',
-    description: 'Unlike card payments, DivinityCoin payments are processed immediately. Once your transaction is confirmed on the blockchain, your pledge is locked in.',
-    tip: 'Your pledge confirmation will include the transaction hash for your records.',
-  },
-  {
-    title: 'Refunds for DivinityCoin',
-    description: 'If a campaign fails to reach its goal, DivinityCoin refunds are processed by the creator. Refunds go back to the same wallet you used to pledge.',
-    tip: 'Keep your wallet active and accessible in case a refund is needed.',
+    title: 'Refunding Your DivinityCoin Purchase',
+    description: 'If you purchased DivinityCoin directly from DivinityCoin.com and want a refund, you can request one within 30 days through their self-service dashboard at divinitycoin.com/dashboard. No need to contact support.',
+    tip: 'DivinityCoin offers full refunds only (no partial). If already redeemed on IndieCrowdfund but not spent, they\'ll coordinate with us automatically.',
   },
 ];
 
@@ -425,15 +424,15 @@ export default function BackerHandbookPage() {
             <>
               <SectionHeader
                 title="Paying with DivinityCoin"
-                description="A guide to using DivinityCoin cryptocurrency for your crowdfunding pledges."
+                description="A guide to using DivinityCoin gift cards for your crowdfunding pledges - it's like a store gift card, not a cryptocurrency."
               />
               <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
                 <div className="flex gap-3">
-                  <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-600" />
+                  <Coins className="h-5 w-5 flex-shrink-0 text-amber-600" />
                   <div>
-                    <h4 className="font-medium text-amber-800">Cryptocurrency Payments</h4>
+                    <h4 className="font-medium text-amber-800">Gift Card System (Not Cryptocurrency)</h4>
                     <p className="mt-1 text-sm text-amber-700">
-                      DivinityCoin payments are processed immediately and cannot be reversed. Make sure you understand cryptocurrency transactions before using this payment method.
+                      DivinityCoin is a platform gift card, not a cryptocurrency. 1 DivinityCoin = $1 USD, always. No crypto wallet needed - your balance is stored right in your IndieCrowdfund account. Need a refund? Request one within 30 days at divinitycoin.com/dashboard.
                     </p>
                   </div>
                 </div>

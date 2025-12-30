@@ -59,6 +59,18 @@ const faqs: FAQ[] = [
     question: 'Can I transfer DivinityCoin to another user?',
     answer: 'Currently, DivinityCoin cannot be transferred between users. It\'s tied to your account, just like a personal gift card balance. This helps prevent fraud and abuse.',
   },
+  {
+    question: 'Can I get a refund for DivinityCoin I purchased?',
+    answer: 'Yes! DivinityCoin offers a self-service refund system. If you purchased DivinityCoin directly from DivinityCoin.com, you can request a full refund within 30 days of purchase through your DivinityCoin dashboard at divinitycoin.com/dashboard. No need to contact customer support - it\'s completely self-service. Note: Only full refunds are available (no partial refunds).',
+  },
+  {
+    question: 'What if I already redeemed my DivinityCoin on IndieCrowdfund?',
+    answer: 'If you\'ve redeemed your DivinityCoin card on IndieCrowdfund but haven\'t spent the balance, DivinityCoin will automatically coordinate with us to verify your unused balance. If the credits are still available in your IndieCrowdfund wallet, your refund will be processed. This happens automatically - you don\'t need to contact both platforms separately.',
+  },
+  {
+    question: 'What is the refund policy for DivinityCoin?',
+    answer: 'DivinityCoin provides a 30-day refund window from the date of purchase. Refunds are full amount only (no partial refunds). Once redeemed and spent on pledges, the DivinityCoin is no longer eligible for refund from DivinityCoin. However, if a project fails on IndieCrowdfund, your DivinityCoin credits are returned to your IndieCrowdfund wallet automatically.',
+  },
 ];
 
 function FAQItem({ faq }: { faq: FAQ }) {
