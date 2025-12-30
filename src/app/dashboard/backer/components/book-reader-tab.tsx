@@ -135,6 +135,16 @@ export function BookReaderTab() {
 
   const bookRef = useRef<HTMLDivElement>(null);
 
+  // Live refs to avoid stale closures in callbacks
+  const isFlippingRef = useRef(false);
+  const isDraggingRef = useRef(false);
+  const currentSpreadRef = useRef(0);
+
+  // Keep refs in sync with state
+  useEffect(() => { isFlippingRef.current = isFlipping; }, [isFlipping]);
+  useEffect(() => { isDraggingRef.current = isDragging; }, [isDragging]);
+  useEffect(() => { currentSpreadRef.current = currentSpread; }, [currentSpread]);
+
   // Responsive page dimensions - smaller on mobile
   const pageWidth = isMobile ? 300 : 450;
   const pageHeight = isMobile ? 460 : 650;
@@ -253,12 +263,14 @@ export function BookReaderTab() {
   }, [isMobile, numPages]);
 
   const flipTo = useCallback((direction: "next" | "prev") => {
-    if (isFlipping || isDragging) return;
+    // Use refs to avoid stale closure issues
+    if (isFlippingRef.current || isDraggingRef.current) return;
 
-    const from = currentSpread;
+    const from = currentSpreadRef.current;
     const to = direction === "next" ? from + 1 : from - 1;
     if (to < 0 || to >= maxSpreads) return;
 
+    isFlippingRef.current = true;
     setFlipDirection(direction);
     setIsFlipping(true);
 
@@ -266,12 +278,12 @@ export function BookReaderTab() {
     setAnimFromSpread(from);
     setAnimToSpread(to);
 
-    // Commit immediately so the "static spread" underneath is already correct
-    setCurrentSpread(to);
+    // Commit spread immediately using functional update
+    setCurrentSpread(() => to);
 
-    // Persist progress using the committed target
-    const page = isMobile ? to + 1 : (to === 0 ? 1 : to * 2);
+    // Persist progress based on TO (not stale currentSpread)
     if (selectedFile) {
+      const page = isMobile ? to + 1 : (to === 0 ? 1 : to * 2);
       saveReadingProgress({
         fileId: selectedFile.id,
         currentPage: page,
@@ -281,18 +293,27 @@ export function BookReaderTab() {
     }
 
     window.setTimeout(() => {
+      isFlippingRef.current = false;
       setIsFlipping(false);
       setFlipDirection(null);
       setAnimFromSpread(null);
       setAnimToSpread(null);
     }, 600);
-  }, [isFlipping, isDragging, currentSpread, maxSpreads, isMobile, selectedFile, numPages]);
+  }, [maxSpreads, isMobile, selectedFile, numPages]);
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
-    if (isFlipping) return;
+    if (isFlippingRef.current) return;
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    isDraggingRef.current = true;
     setIsDragging(true);
     setDragStartX(clientX);
+    setDragProgress(0);
+    setDragDirection(null);
+  };
+
+  const endDrag = () => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
     setDragProgress(0);
     setDragDirection(null);
   };
@@ -308,22 +329,20 @@ export function BookReaderTab() {
   }, [isDragging, dragStartX]);
 
   const handleDragEnd = useCallback(() => {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
 
     const shouldFlip = dragProgress > 0.3 && dragDirection;
     const dir = dragDirection; // capture before we clear state
 
     // End drag immediately so flipTo isn't blocked
-    setIsDragging(false);
-    setDragProgress(0);
-    setDragDirection(null);
+    endDrag();
 
     if (shouldFlip && dir) {
       requestAnimationFrame(() => {
         flipTo(dir === "forward" ? "next" : "prev");
       });
     }
-  }, [isDragging, dragProgress, dragDirection, flipTo]);
+  }, [dragProgress, dragDirection, flipTo]);
 
   useEffect(() => {
     if (isDragging) {
@@ -553,13 +572,13 @@ export function BookReaderTab() {
                     >
                       {/* Front of flipping page = fromPages.right */}
                       <div className={cn("absolute inset-0 bg-paper overflow-hidden", fromPages.cover && "rounded-r-xl")} style={{ backfaceVisibility: "hidden" }}>
-                        <Page key={`flip-front-${fromPages.right}`} pageNumber={fromPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                        <Page key={`flip-front-s${animFromSpread}-p${fromPages.right}-w${renderWidth}`} pageNumber={fromPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                       </div>
                       {/* Back of flipping page = toPages.left (desktop) or toPages.right (mobile) */}
                       <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
                         {(isMobile ? toPages.right : toPages.left) && (
                           <Page
-                            key={`flip-back-${isMobile ? toPages.right : toPages.left}`}
+                            key={`flip-back-s${animToSpread}-p${isMobile ? toPages.right : toPages.left}-w${renderWidth}`}
                             pageNumber={(isMobile ? toPages.right : toPages.left)!}
                             width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
                           />
@@ -586,12 +605,12 @@ export function BookReaderTab() {
                     >
                       {/* Front of flipping page = fromPages.left */}
                       <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
-                        <Page key={`flip-back-front-${fromPages.left}`} pageNumber={fromPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                        <Page key={`flip-back-front-s${animFromSpread}-p${fromPages.left}-w${renderWidth}`} pageNumber={fromPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                       </div>
                       {/* Back of flipping page = toPages.right */}
                       <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
                         {toPages.right && (
-                          <Page key={`flip-back-back-${toPages.right}`} pageNumber={toPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                          <Page key={`flip-back-back-s${animToSpread}-p${toPages.right}-w${renderWidth}`} pageNumber={toPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                         )}
                       </div>
                     </div>
@@ -601,7 +620,7 @@ export function BookReaderTab() {
                   {(isFlipping || isDragging) && (flipDirection === "next" || dragDirection === "forward") && toPages.right && (
                     <div className="absolute bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: isMobile ? 0 : pageWidth, zIndex: 5 }}>
                       <Page
-                        key={`under-next-${toPages.right}`}
+                        key={`under-next-s${animToSpread}-p${toPages.right}-w${renderWidth}`}
                         pageNumber={toPages.right}
                         width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
                       />
@@ -611,7 +630,7 @@ export function BookReaderTab() {
                   {/* Previous page underneath (visible during backward flip) = toPages.left */}
                   {(isFlipping || isDragging) && (flipDirection === "prev" || dragDirection === "backward") && !isMobile && toPages.left && (
                     <div className="absolute bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: 0, zIndex: 5 }}>
-                      <Page key={`under-prev-${toPages.left}`} pageNumber={toPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                      <Page key={`under-prev-s${animToSpread}-p${toPages.left}-w${renderWidth}`} pageNumber={toPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                     </div>
                   )}
 
@@ -619,13 +638,13 @@ export function BookReaderTab() {
                   <div className="flex">
                     {!isMobile && left && (
                       <div className="bg-paper overflow-hidden relative" style={{ width: pageWidth, height: pageHeight, backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
-                        <Page key={`static-left-${left}`} pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                        <Page key={`static-left-s${currentSpread}-p${left}-w${renderWidth}`} pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{left}</div>
                       </div>
                     )}
                     <div className={cn("bg-paper overflow-hidden relative", cover && "rounded-r-xl")} style={{ width: pageWidth, height: pageHeight, backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
                       {cover && <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black/30 pointer-events-none" />}
-                      <Page key={`static-right-${right}`} pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                      <Page key={`static-right-s${currentSpread}-p${right}-w${renderWidth}`} pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{right}</div>
                       {cover && (
                         <div className="absolute inset-0 flex items-center justify-end pr-4 md:pr-12 pointer-events-none">
