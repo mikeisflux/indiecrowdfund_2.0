@@ -180,6 +180,7 @@ export function PdfPageFlipReader({
 
         .stf__parent {
           margin: 0 auto;
+          height: auto !important;
         }
 
         /* Remove gap between pages */
