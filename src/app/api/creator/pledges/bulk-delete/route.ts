@@ -66,13 +66,13 @@ export async function DELETE(req: Request) {
         where: { pledgeId: { in: validPledgeIds } },
       });
 
-      // Delete related DigitalFileDistributions
-      await tx.digitalFileDistribution.deleteMany({
+      // Delete related DigitalDistributions
+      await tx.digitalDistribution.deleteMany({
         where: { pledgeId: { in: validPledgeIds } },
       });
 
-      // Delete related PledgeFulfillmentNotes
-      await tx.pledgeFulfillmentNote.deleteMany({
+      // Delete related BackerNotes
+      await tx.backerNote.deleteMany({
         where: { pledgeId: { in: validPledgeIds } },
       });
 

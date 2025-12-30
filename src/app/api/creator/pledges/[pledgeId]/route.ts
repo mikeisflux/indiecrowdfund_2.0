@@ -388,17 +388,17 @@ export async function DELETE(
         where: { pledgeId },
       });
 
-      // Delete related DigitalFileDistributions (no cascade in schema)
-      await tx.digitalFileDistribution.deleteMany({
+      // Delete related DigitalDistributions (no cascade in schema)
+      await tx.digitalDistribution.deleteMany({
         where: { pledgeId },
       });
 
-      // Delete related PledgeFulfillmentNotes (no cascade in schema)
-      await tx.pledgeFulfillmentNote.deleteMany({
+      // Delete related BackerNotes (no cascade in schema)
+      await tx.backerNote.deleteMany({
         where: { pledgeId },
       });
 
-      // Delete related EmailCampaignRecipients (no cascade in schema)
+      // Unlink EmailCampaignRecipients (no cascade in schema)
       await tx.emailCampaignRecipient.updateMany({
         where: { pledgeId },
         data: { pledgeId: null },
