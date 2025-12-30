@@ -147,6 +147,7 @@ export function PdfPageFlipReader({
         disableFlipByClick={false}
         startPage={initialPageIndex}
         startZIndex={0}
+        autoSize={true}
         usePortrait={singlePage}
         swipeDistance={30}
         style={{}}
