@@ -829,7 +829,10 @@ export async function sendPledgeConfirmationEmail(
     postalCode: string | null;
     country: string | null;
   } | null,
-  projectUrlPath?: string
+  projectUrlPath?: string,
+  rewardAmount?: number,
+  shippingAmount?: number,
+  paymentMethod?: "STRIPE" | "DIVINITYCOIN"
 ) {
   // Use provided projectUrlPath if available (for vanity URLs), otherwise fallback to legacy format
   const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/projects/${projectSlug}`;
@@ -855,10 +858,13 @@ export async function sendPledgeConfirmationEmail(
   // Build addons HTML
   const addonsHtml = addons.length > 0 ? addons.map(addon => `
     <tr>
-      <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Add-on: ${addon.title}${addon.quantity > 1 ? ` (×${addon.quantity})` : ""}</td>
+      <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Add-on: ${addon.title}${addon.quantity > 1 ? ` × ${addon.quantity}` : ""}</td>
       <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">${formatCurrency(addon.amount)}</td>
     </tr>
   `).join("") : "";
+
+  // Payment method label
+  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : "Card";
 
   // Build shipping HTML
   const hasShipping = shippingInfo && (shippingInfo.address || shippingInfo.city || shippingInfo.country);
@@ -903,22 +909,36 @@ export async function sendPledgeConfirmationEmail(
         </div>
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-          <h3 style="margin-top: 0;">Pledge Details</h3>
+          <h3 style="margin-top: 0;">Pledge Breakdown</h3>
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Reward</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">${rewardTitle || "No reward selected"}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">${rewardTitle || "Pledge (no reward)"}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">${rewardAmount !== undefined ? formatCurrency(rewardAmount) : "—"}</td>
             </tr>
             ${addonsHtml}
+            ${shippingAmount && shippingAmount > 0 ? `
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; font-weight: 600;">Total Amount</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 600;">${formattedAmount}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Shipping${shippingInfo?.country ? ` (${shippingInfo.country})` : ""}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">${formatCurrency(shippingAmount)}</td>
             </tr>
-            <tr>
-              <td style="padding: 8px 0;">Status</td>
-              <td style="padding: 8px 0; text-align: right; color: #028858; font-weight: 600;">${chargedImmediately ? "Paid" : "Card Saved"}</td>
+            ` : ""}
+            <tr style="background: #f0f0f0;">
+              <td style="padding: 12px 8px; font-weight: 600; font-size: 16px;">Total</td>
+              <td style="padding: 12px 8px; text-align: right; font-weight: 600; font-size: 16px; color: #028858;">${formattedAmount}</td>
             </tr>
           </table>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e5e5;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 4px 0; color: #666;">Payment Method</td>
+                <td style="padding: 4px 0; text-align: right; font-weight: 500;">${paymentMethodLabel}</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; color: #666;">Status</td>
+                <td style="padding: 4px 0; text-align: right; font-weight: 600; color: #028858;">${chargedImmediately ? "✓ Paid" : "Card Saved"}</td>
+              </tr>
+            </table>
+          </div>
         </div>
 
         ${shippingHtml}

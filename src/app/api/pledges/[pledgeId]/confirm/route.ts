@@ -59,6 +59,7 @@ export async function POST(
           select: {
             id: true,
             title: true,
+            amount: true,
           },
         },
         addons: {
@@ -210,14 +211,17 @@ export async function POST(
         pledge.user.name || "Backer",
         pledge.project.title,
         pledge.project.slug,
-        pledge.amount,
+        Number(pledge.amount),
         pledge.reward?.title || null,
         pledge.chargedImmediately,
         pledge.project.imageUrl,
         pledge.project.currency || "USD",
         addons,
         shippingInfo,
-        projectUrlPath
+        projectUrlPath,
+        Number(pledge.rewardAmount) || undefined,
+        Number(pledge.shippingAmount) || undefined,
+        pledge.paymentProcessor as "STRIPE" | "DIVINITYCOIN"
       );
       emailSent = emailResult.success;
 
