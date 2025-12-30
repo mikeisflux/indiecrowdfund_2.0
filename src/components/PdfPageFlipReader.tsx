@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { pdfToImages } from "@/lib/pdfToImages";
 import { Loader2 } from "lucide-react";
@@ -61,18 +61,28 @@ export function PdfPageFlipReader({
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Convert PDF page => flipbook "page index" (0-based)
-  const initialFlipIndex = useMemo(() => Math.max(0, initialPage - 1), [initialPage]);
+  // Store callbacks in refs to avoid dependency issues
+  const onReadyRef = useRef(onReady);
+  const onPageChangeRef = useRef(onPageChange);
+  const initialPageRef = useRef(initialPage);
 
+  // Keep refs updated
+  useEffect(() => {
+    onReadyRef.current = onReady;
+    onPageChangeRef.current = onPageChange;
+    initialPageRef.current = initialPage;
+  }, [onReady, onPageChange, initialPage]);
+
+  // Load PDF only when URL changes
   useEffect(() => {
     let alive = true;
     let cleanup: null | (() => void) = null;
 
-    (async () => {
-      setLoading(true);
-      setError(null);
-      setProgress(0);
+    setLoading(true);
+    setError(null);
+    setProgress(0);
 
+    (async () => {
       try {
         const res = await pdfToImages(pdfUrl, 1.6, (p) => {
           if (alive) setProgress(p);
@@ -87,17 +97,7 @@ export function PdfPageFlipReader({
         setUrls(res.urls);
         setNumPages(res.numPages);
         setLoading(false);
-        onReady?.(res.numPages);
-
-        // Jump to initial page once ready
-        requestAnimationFrame(() => {
-          try {
-            bookRef.current?.pageFlip?.().turnToPage(initialFlipIndex);
-            setCurrentPage(initialPage);
-          } catch {
-            // Ignore if not ready
-          }
-        });
+        onReadyRef.current?.(res.numPages);
       } catch (e) {
         if (alive) {
           setError(e instanceof Error ? e.message : "Failed to render PDF");
@@ -110,7 +110,7 @@ export function PdfPageFlipReader({
       alive = false;
       cleanup?.();
     };
-  }, [pdfUrl, initialFlipIndex, initialPage, onReady]);
+  }, [pdfUrl]);
 
   if (loading) {
     return (
@@ -150,11 +150,11 @@ export function PdfPageFlipReader({
         ref={bookRef}
         width={width}
         height={height}
-        size="stretch"
-        minWidth={280}
-        maxWidth={800}
-        minHeight={400}
-        maxHeight={1100}
+        size="fixed"
+        minWidth={width}
+        maxWidth={width}
+        minHeight={height}
+        maxHeight={height}
         maxShadowOpacity={0.4}
         showCover={true}
         mobileScrollSupport={true}
@@ -166,10 +166,10 @@ export function PdfPageFlipReader({
           const flipIndex = e?.data ?? 0;
           const pdfPage = flipIndex + 1;
           setCurrentPage(pdfPage);
-          onPageChange?.(pdfPage, numPages);
+          onPageChangeRef.current?.(pdfPage, numPages);
         }}
         className="book-flip-shadow"
-        startPage={0}
+        startPage={Math.max(0, initialPage - 1)}
         showPageCorners={true}
         disableFlipByClick={false}
         swipeDistance={30}

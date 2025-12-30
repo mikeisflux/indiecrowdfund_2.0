@@ -101,8 +101,8 @@ export function BookReaderTab() {
   const [showBookmarks, setShowBookmarks] = useState(false);
 
   // Page dimensions based on device
-  const pageWidth = isMobile ? 300 : 400;
-  const pageHeight = isMobile ? 450 : 580;
+  const pageWidth = isMobile ? 320 : 500;
+  const pageHeight = isMobile ? 480 : 700;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
