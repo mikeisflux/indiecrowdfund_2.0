@@ -409,7 +409,12 @@ export async function DELETE(
         where: { pledgeId },
       });
 
-      // Now delete the pledge (PledgeAddon has cascade, so it will be auto-deleted)
+      // Delete PledgeAddons explicitly (has cascade but being safe)
+      await tx.pledgeAddon.deleteMany({
+        where: { pledgeId },
+      });
+
+      // Now delete the pledge
       await tx.pledge.delete({
         where: { id: pledgeId },
       });
@@ -421,8 +426,9 @@ export async function DELETE(
     });
   } catch (error) {
     console.error("Creator delete pledge error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to delete pledge" },
+      { error: "Failed to delete pledge", details: errorMessage },
       { status: 500 }
     );
   }

@@ -87,7 +87,12 @@ export async function DELETE(req: Request) {
         where: { pledgeId: { in: validPledgeIds } },
       });
 
-      // Now delete the pledges (PledgeAddon has cascade)
+      // Delete PledgeAddons explicitly (has cascade but being safe)
+      await tx.pledgeAddon.deleteMany({
+        where: { pledgeId: { in: validPledgeIds } },
+      });
+
+      // Now delete the pledges
       return tx.pledge.deleteMany({
         where: {
           id: { in: validPledgeIds },
