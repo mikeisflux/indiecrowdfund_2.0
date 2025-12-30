@@ -886,7 +886,7 @@ export default async function HomePage() {
       {/* Footer */}
       <footer className="relative border-t border-border/50 py-16 bg-gradient-to-b from-transparent to-muted/30 dark:to-muted/10">
         <div className="container">
-          <div className="grid gap-10 md:grid-cols-5">
+          <div className="grid gap-10 md:grid-cols-6">
             {/* Brand */}
             <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
@@ -929,6 +929,16 @@ export default async function HomePage() {
                 <li><Link href="/creator-handbook" className="text-muted-foreground hover:text-primary transition-colors">Creator Handbook</Link></li>
                 <li><Link href="/fees" className="text-muted-foreground hover:text-primary transition-colors">Fees & Pricing</Link></li>
                 <li><Link href="/success-stories" className="text-muted-foreground hover:text-primary transition-colors">Success Stories</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="mb-4 font-semibold text-foreground">For Backers</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link href="/backer-handbook" className="text-muted-foreground hover:text-primary transition-colors">Backer Handbook</Link></li>
+                <li><Link href="/what-is-divinitycoin" className="text-muted-foreground hover:text-primary transition-colors">What is DivinityCoin?</Link></li>
+                <li><Link href="/backer-handbook#stripe" className="text-muted-foreground hover:text-primary transition-colors">Paying with Card</Link></li>
+                <li><Link href="/backer-handbook#divinitycoin" className="text-muted-foreground hover:text-primary transition-colors">Paying with DivinityCoin</Link></li>
+                <li><Link href="/dashboard/backer" className="text-muted-foreground hover:text-primary transition-colors">My Pledges</Link></li>
               </ul>
             </div>
             <div>
