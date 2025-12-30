@@ -398,6 +398,17 @@ export async function DELETE(
         where: { pledgeId },
       });
 
+      // Delete related EmailCampaignRecipients (no cascade in schema)
+      await tx.emailCampaignRecipient.updateMany({
+        where: { pledgeId },
+        data: { pledgeId: null },
+      });
+
+      // Delete related FulfillmentActivities (no cascade in schema)
+      await tx.fulfillmentActivity.deleteMany({
+        where: { pledgeId },
+      });
+
       // Now delete the pledge (PledgeAddon has cascade, so it will be auto-deleted)
       await tx.pledge.delete({
         where: { id: pledgeId },

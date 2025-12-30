@@ -49,12 +49,51 @@ export async function DELETE(req: Request) {
       );
     }
 
-    // Delete the pledges (and associated records via cascade)
-    const deleteResult = await db.pledge.deleteMany({
-      where: {
-        id: { in: validPledgeIds },
-        status: "PENDING", // Double-check status for safety
-      },
+    // Delete in a transaction to handle related records that don't have cascade delete
+    const deleteResult = await db.$transaction(async (tx) => {
+      // Delete related DivinityCoinTransactions
+      await tx.divinityCoinTransaction.deleteMany({
+        where: { pledgeId: { in: validPledgeIds } },
+      });
+
+      // Delete related EmailLogs
+      await tx.emailLog.deleteMany({
+        where: { pledgeId: { in: validPledgeIds } },
+      });
+
+      // Delete related SurveyResponses
+      await tx.surveyResponse.deleteMany({
+        where: { pledgeId: { in: validPledgeIds } },
+      });
+
+      // Delete related DigitalFileDistributions
+      await tx.digitalFileDistribution.deleteMany({
+        where: { pledgeId: { in: validPledgeIds } },
+      });
+
+      // Delete related PledgeFulfillmentNotes
+      await tx.pledgeFulfillmentNote.deleteMany({
+        where: { pledgeId: { in: validPledgeIds } },
+      });
+
+      // Unlink EmailCampaignRecipients
+      await tx.emailCampaignRecipient.updateMany({
+        where: { pledgeId: { in: validPledgeIds } },
+        data: { pledgeId: null },
+      });
+
+      // Delete related FulfillmentActivities
+      await tx.fulfillmentActivity.deleteMany({
+        where: { pledgeId: { in: validPledgeIds } },
+      });
+
+      // Now delete the pledges (PledgeAddon has cascade)
+      return tx.pledge.deleteMany({
+        where: {
+          id: { in: validPledgeIds },
+          status: "PENDING",
+        },
+      });
     });
 
     return NextResponse.json({
