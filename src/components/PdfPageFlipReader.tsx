@@ -135,7 +135,7 @@ export function PdfPageFlipReader({
         minWidth={315}
         maxWidth={1000}
         minHeight={400}
-        maxHeight={1533}
+        maxHeight={2000}
         showCover={true}
         mobileScrollSupport={true}
         useMouseEvents={true}

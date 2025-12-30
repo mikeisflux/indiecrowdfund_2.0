@@ -100,10 +100,9 @@ export function BookReaderTab() {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
   const [showBookmarks, setShowBookmarks] = useState(false);
 
-  // Page dimensions based on device - sized to fit comfortably in viewport
-  // Account for header (~60px), padding (64px), and page indicator (~50px)
+  // Page dimensions based on device - match PDF aspect ratio (roughly 1:1.53)
   const pageWidth = isMobile ? 280 : 380;
-  const pageHeight = isMobile ? 430 : 580;
+  const pageHeight = isMobile ? 428 : 582;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
