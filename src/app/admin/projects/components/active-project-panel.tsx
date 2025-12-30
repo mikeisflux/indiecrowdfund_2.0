@@ -230,7 +230,7 @@ export function ActiveProjectPanel({
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-zinc-500">Backers</p>
-                  <p className="font-semibold">{project._count.pledges}</p>
+                  <p className="font-semibold">{project.backerCount}</p>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-zinc-500">Duration</p>

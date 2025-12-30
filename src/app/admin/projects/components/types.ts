@@ -19,6 +19,7 @@ export interface Project {
   category: string;
   goalAmount: number;
   currentAmount: number;
+  backerCount: number;
   currency: string;
   durationType: "FIXED_DAYS" | "END_DATE" | null;
   durationDays: number | null;

@@ -74,7 +74,7 @@ export function ProjectListItem({
                   </span>
                   <span className="flex items-center gap-1">
                     <User className="h-3 w-3" />
-                    {project._count.pledges} backers
+                    {project.backerCount} backers
                   </span>
                 </>
               ) : (

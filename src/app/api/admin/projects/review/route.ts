@@ -282,6 +282,7 @@ export async function GET(req: NextRequest) {
           category: true,
           goalAmount: true,
           currentAmount: true,
+          backerCount: true,
           currency: true,
           durationType: true,
           durationDays: true,
