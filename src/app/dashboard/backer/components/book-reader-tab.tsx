@@ -284,29 +284,26 @@ export function BookReaderTab() {
           </div>
         )}
 
-        {/* Book View */}
-        <div className="flex-1 min-h-0 overflow-auto p-4">
+        {/* Book View - use padding for vertical position, not flex centering */}
+        <div className="flex-1 min-h-0 overflow-auto">
           <div
-            className="h-full flex items-center justify-center"
+            className="flex justify-center pt-6 pb-4"
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "top center",
+              transition: "transform 0.2s",
+            }}
           >
-            <div
-              style={{
-                transform: `scale(${scale})`,
-                transformOrigin: "center center",
-                transition: "transform 0.2s",
-              }}
-            >
-              <PdfPageFlipReader
-                pdfUrl={pdfUrl}
-                fileId={selectedFile.id}
-                initialPageIndex={Math.max(0, (savedProgress?.currentPage ?? 1) - 1)}
-                onPageChange={handlePageChange}
-                onReady={handleReady}
-                width={pageWidth}
-                height={pageHeight}
-                singlePage={isMobile}
-              />
-            </div>
+            <PdfPageFlipReader
+              pdfUrl={pdfUrl}
+              fileId={selectedFile.id}
+              initialPageIndex={Math.max(0, (savedProgress?.currentPage ?? 1) - 1)}
+              onPageChange={handlePageChange}
+              onReady={handleReady}
+              width={pageWidth}
+              height={pageHeight}
+              singlePage={isMobile}
+            />
           </div>
         </div>
       </div>
