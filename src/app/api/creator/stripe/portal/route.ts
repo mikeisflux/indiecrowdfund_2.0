@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import Stripe from "stripe";
+import { getStripeInstance } from "@/lib/payments/stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-11-17.clover",
-});
+export const dynamic = "force-dynamic";
 
 export async function POST() {
   try {
@@ -28,6 +26,7 @@ export async function POST() {
     }
 
     // Create a billing portal session
+    const stripe = await getStripeInstance();
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/indiekit`,

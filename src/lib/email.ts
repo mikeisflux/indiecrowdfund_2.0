@@ -16,9 +16,13 @@ export const EMAIL_PRIORITY = {
 } as const;
 
 // Secret key for signing unsubscribe tokens - requires proper secret in production
-const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
-if (!UNSUBSCRIBE_SECRET && process.env.NODE_ENV === "production") {
-  throw new Error("UNSUBSCRIBE_SECRET or AUTH_SECRET environment variable is required in production");
+// Lazily get the secret to avoid build-time errors
+function getUnsubscribeSecret(): string {
+  const secret = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("UNSUBSCRIBE_SECRET or AUTH_SECRET environment variable is required in production");
+  }
+  return secret || "development-secret";
 }
 
 interface SendEmailOptions {
@@ -72,7 +76,7 @@ export async function isEmailVerificationRequired(): Promise<boolean> {
 
 // Generate a signed unsubscribe token for an email
 export function generateUnsubscribeToken(email: string): string {
-  const data = `${email}:${UNSUBSCRIBE_SECRET}`;
+  const data = `${email}:${getUnsubscribeSecret()}`;
   const hash = crypto.createHash("sha256").update(data).digest("hex").slice(0, 32);
   const token = Buffer.from(`${email}:${hash}`).toString("base64url");
   return token;

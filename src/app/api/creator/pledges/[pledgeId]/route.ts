@@ -398,8 +398,8 @@ export async function DELETE(
         where: { pledgeId },
       });
 
-      // Unlink EmailCampaignRecipients (no cascade in schema)
-      await tx.emailCampaignRecipient.updateMany({
+      // Unlink EmailCampaignClicks (no cascade in schema)
+      await tx.emailCampaignClick.updateMany({
         where: { pledgeId },
         data: { pledgeId: null },
       });

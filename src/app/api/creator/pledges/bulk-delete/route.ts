@@ -76,8 +76,8 @@ export async function DELETE(req: Request) {
         where: { pledgeId: { in: validPledgeIds } },
       });
 
-      // Unlink EmailCampaignRecipients
-      await tx.emailCampaignRecipient.updateMany({
+      // Unlink EmailCampaignClicks
+      await tx.emailCampaignClick.updateMany({
         where: { pledgeId: { in: validPledgeIds } },
         data: { pledgeId: null },
       });

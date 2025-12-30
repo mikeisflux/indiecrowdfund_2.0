@@ -5,9 +5,13 @@ import crypto from "crypto";
 export const dynamic = "force-dynamic";
 
 // Secret key for signing unsubscribe tokens - requires proper secret in production
-const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
-if (!UNSUBSCRIBE_SECRET && process.env.NODE_ENV === "production") {
-  throw new Error("UNSUBSCRIBE_SECRET or AUTH_SECRET environment variable is required in production");
+// Lazily get the secret to avoid build-time errors
+function getUnsubscribeSecret(): string {
+  const secret = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("UNSUBSCRIBE_SECRET or AUTH_SECRET environment variable is required in production");
+  }
+  return secret || "development-secret";
 }
 
 /**
@@ -21,7 +25,7 @@ function verifyUnsubscribeToken(token: string): string | null {
     if (!email || !hash) return null;
 
     // Verify the hash
-    const expectedData = `${email}:${UNSUBSCRIBE_SECRET}`;
+    const expectedData = `${email}:${getUnsubscribeSecret()}`;
     const expectedHash = crypto.createHash("sha256").update(expectedData).digest("hex").slice(0, 32);
 
     if (hash === expectedHash) {

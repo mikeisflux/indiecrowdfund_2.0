@@ -4,14 +4,14 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
 // Require RETAILER_JWT_SECRET in production - no weak fallback
-const RETAILER_JWT_SECRET = process.env.RETAILER_JWT_SECRET;
-if (!RETAILER_JWT_SECRET && process.env.NODE_ENV === "production") {
-  throw new Error("RETAILER_JWT_SECRET environment variable is required in production");
+// Lazily get the secret to avoid build-time errors
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.RETAILER_JWT_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("RETAILER_JWT_SECRET environment variable is required in production");
+  }
+  return new TextEncoder().encode(secret || "dev-only-secret-not-for-production");
 }
-
-const JWT_SECRET = new TextEncoder().encode(
-  RETAILER_JWT_SECRET || "dev-only-secret-not-for-production"
-);
 
 interface RetailerTokenData {
   retailerId: string;
@@ -138,7 +138,7 @@ async function getRetailerFromToken(): Promise<RetailerTokenData | null> {
   }
 
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return payload as unknown as RetailerTokenData;
   } catch {
     return null;
