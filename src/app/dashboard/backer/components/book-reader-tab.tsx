@@ -226,7 +226,7 @@ export function BookReaderTab() {
     const savedProgress = getReadingProgress(selectedFile.id);
 
     return (
-      <div className={cn("flex flex-col h-screen bg-gradient-to-b from-stone-900 to-stone-950 overflow-hidden", isFullscreen && "fixed inset-0 z-50")}>
+      <div className={cn("flex flex-col h-[100dvh] bg-gradient-to-b from-stone-900 to-stone-950", isFullscreen && "fixed inset-0 z-50")}>
         {/* Header */}
         <div className="flex items-center justify-between p-3 bg-black/60 backdrop-blur-sm border-b border-white/10">
           <div className="flex items-center gap-3">
@@ -284,9 +284,9 @@ export function BookReaderTab() {
         )}
 
         {/* Book View */}
-        <div className="flex-1 flex items-center justify-center overflow-auto p-4">
+        <div className="flex-1 flex items-center justify-center overflow-auto py-8 px-4">
           <div
-            className="flex items-center justify-center"
+            className="flex flex-col items-center justify-center"
             style={{
               transform: `scale(${scale})`,
               transformOrigin: "center center",
