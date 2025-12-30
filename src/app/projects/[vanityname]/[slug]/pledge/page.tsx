@@ -997,11 +997,11 @@ export default function PledgePage() {
               </Link>
             </div>
 
-            {/* Project card */}
+            {/* Pledge Summary Card */}
             {project && (
-              <div className="mt-12 p-6 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border">
-                <p className="text-sm text-muted-foreground mb-3">You backed</p>
-                <div className="flex items-center gap-4">
+              <div className="mt-12 p-6 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border text-left max-w-md mx-auto">
+                {/* Project Header */}
+                <div className="flex items-center gap-4 pb-4 border-b">
                   {project.imageUrl && (
                     <Image
                       src={project.imageUrl}
@@ -1011,11 +1011,89 @@ export default function PledgePage() {
                       className="rounded-lg object-cover"
                     />
                   )}
-                  <div className="text-left">
+                  <div>
                     <h3 className="font-semibold">{project.title}</h3>
                     <p className="text-sm text-muted-foreground">by {project.creator?.name}</p>
                   </div>
                 </div>
+
+                {/* Itemized Breakdown */}
+                <div className="py-4 space-y-3">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pledge Breakdown</h4>
+
+                  {/* Reward Tier */}
+                  {isAddItemsMode ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Adding items to existing pledge</span>
+                    </div>
+                  ) : pledgeWithoutReward ? (
+                    <div className="flex justify-between text-sm">
+                      <span>Pledge (no reward)</span>
+                      <span className="font-medium">${customPledgeAmount.toFixed(2)}</span>
+                    </div>
+                  ) : selectedReward && (
+                    <div className="flex justify-between text-sm">
+                      <span>{selectedReward.title}</span>
+                      <span className="font-medium">${selectedReward.amount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {/* Add-ons */}
+                  {Object.keys(selectedAddons).length > 0 && (
+                    <>
+                      <div className="pt-2 border-t">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Add-ons</p>
+                        {Object.entries(selectedAddons).map(([id, qty]) => {
+                          const addon = addons.find(a => a.id === id);
+                          if (!addon) return null;
+                          return (
+                            <div key={id} className="flex justify-between text-sm py-0.5">
+                              <span>{addon.title} × {qty}</span>
+                              <span className="font-medium">${(addon.amount * qty).toFixed(2)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Bonus Support */}
+                  {!isAddItemsMode && bonusSupport > 0 && (
+                    <div className="flex justify-between text-sm pt-2 border-t">
+                      <span>Bonus support</span>
+                      <span className="font-medium">${bonusSupport.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {/* Shipping */}
+                  {(isAddItemsMode ? addonsShipping : totalShipping) > 0 && (
+                    <div className="flex justify-between text-sm pt-2 border-t">
+                      <span>Shipping to {currentCountry?.name}</span>
+                      <span className="font-medium">${(isAddItemsMode ? addonsShipping : totalShipping).toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Total */}
+                <div className="pt-4 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Total Charged</span>
+                    <span className="text-xl font-bold text-green-600">${(isAddItemsMode ? addItemsTotal : total).toFixed(2)}</span>
+                  </div>
+                  {project.paymentProcessor === "DIVINITYCOIN" && (
+                    <p className="text-xs text-muted-foreground mt-1">Paid with DivinityCoin</p>
+                  )}
+                </div>
+
+                {/* Estimated Delivery */}
+                {!isAddItemsMode && selectedReward?.estimatedDelivery && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Estimated Delivery</span>
+                      <span className="font-medium">{selectedReward.estimatedDelivery}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
