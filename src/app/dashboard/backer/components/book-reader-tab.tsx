@@ -145,6 +145,21 @@ export function BookReaderTab() {
   useEffect(() => { isDraggingRef.current = isDragging; }, [isDragging]);
   useEffect(() => { currentSpreadRef.current = currentSpread; }, [currentSpread]);
 
+  // Track which pages have actually rendered (avoid white blanks)
+  const renderedPagesRef = useRef<Set<number>>(new Set());
+  const [, forceRerender] = useState(0);
+
+  const markRendered = useCallback((pageNum: number) => {
+    if (!renderedPagesRef.current.has(pageNum)) {
+      renderedPagesRef.current.add(pageNum);
+      forceRerender((x) => x + 1);
+    }
+  }, []);
+
+  const isRendered = useCallback((pageNum: number | null | undefined) => {
+    return !!pageNum && renderedPagesRef.current.has(pageNum);
+  }, []);
+
   // Responsive page dimensions - smaller on mobile
   const pageWidth = isMobile ? 300 : 450;
   const pageHeight = isMobile ? 460 : 650;
@@ -159,7 +174,8 @@ export function BookReaderTab() {
 
   useEffect(() => {
     import("react-pdf").then((pdfModule) => {
-      pdfModule.pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfModule.pdfjs.version}/build/pdf.worker.min.mjs`;
+      // Use local worker file to avoid CDN latency/CORS issues
+      pdfModule.pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
     });
   }, []);
 
@@ -190,6 +206,8 @@ export function BookReaderTab() {
   };
 
   const openBook = async (file: DigitalFile) => {
+    // Clear rendered pages cache for new book
+    renderedPagesRef.current = new Set();
     setSelectedFile(file);
     setPdfUrl(null);
     setNumPages(0);
@@ -262,13 +280,35 @@ export function BookReaderTab() {
     };
   }, [isMobile, numPages]);
 
-  const flipTo = useCallback((direction: "next" | "prev") => {
+  // Ensure pages are rendered BEFORE we animate (prevents white blanks)
+  const ensurePagesRendered = useCallback(async (spread: number) => {
+    const p = getSpreadPagesFor(spread);
+    const needed = [p.left, p.right].filter((n): n is number => !!n);
+    // If already rendered, done
+    if (needed.every((n) => renderedPagesRef.current.has(n))) return;
+
+    // Wait a couple frames while hidden pre-render runs
+    await new Promise<void>((resolve) => {
+      let tries = 0;
+      const tick = () => {
+        tries++;
+        if (needed.every((n) => renderedPagesRef.current.has(n)) || tries > 20) resolve();
+        else requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  }, [getSpreadPagesFor]);
+
+  const flipTo = useCallback(async (direction: "next" | "prev") => {
     // Use refs to avoid stale closure issues
     if (isFlippingRef.current || isDraggingRef.current) return;
 
     const from = currentSpreadRef.current;
     const to = direction === "next" ? from + 1 : from - 1;
     if (to < 0 || to >= maxSpreads) return;
+
+    // Warm up destination pages to prevent white blanks
+    await ensurePagesRendered(to);
 
     isFlippingRef.current = true;
     setFlipDirection(direction);
@@ -299,7 +339,7 @@ export function BookReaderTab() {
       setAnimFromSpread(null);
       setAnimToSpread(null);
     }, 600);
-  }, [maxSpreads, isMobile, selectedFile, numPages]);
+  }, [maxSpreads, isMobile, selectedFile, numPages, ensurePagesRendered]);
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (isFlippingRef.current) return;
@@ -428,6 +468,12 @@ export function BookReaderTab() {
     // Use base for the static spread
     const { left, right, cover } = base;
 
+    // Compute curl intensity for paper flex effect
+    const curl = isDragging ? dragProgress : isFlipping ? 1 : 0;
+    const shadow = Math.min(1, curl * 1.1);
+    const highlight = Math.min(1, curl * 0.9);
+    const bendSkew = isDragging ? (dragDirection === "forward" ? -6 : 6) * dragProgress : 0;
+
     // Show loading state while PDF is loading (numPages === 0)
     if (numPages === 0) {
       return (
@@ -529,12 +575,39 @@ export function BookReaderTab() {
           <div className="flex-1 flex items-center justify-center overflow-hidden" ref={bookRef}>
             <Document file={pdfUrl} onLoadSuccess={(pdf) => { setNumPages(pdf.numPages); setPdfDocument(pdf); }} loading={null}>
               <Outline onLoadSuccess={handleOutlineLoad} />
-              {/* TEMP: disable preloading until flipping is stable */}
-              {/* <div className="absolute opacity-0 pointer-events-none -z-50">
-                {preloadPages().map(p => (
-                  <Page key={`pre-${p}`} pageNumber={p} width={900} renderTextLayer={false} renderAnnotationLayer={false} />
-                ))}
-              </div> */}
+
+              {/* Pre-render current + next + prev spreads (prevents white blanks) */}
+              {/* Using left:-9999 instead of display:none - display:none can stop canvas from painting */}
+              <div
+                style={{
+                  position: "absolute",
+                  opacity: 0,
+                  pointerEvents: "none",
+                  width: 1,
+                  height: 1,
+                  overflow: "hidden",
+                  left: -9999,
+                  top: -9999,
+                }}
+              >
+                {[currentSpread, currentSpread + 1, currentSpread - 1]
+                  .filter((s) => s >= 0 && s < maxSpreads)
+                  .flatMap((s) => {
+                    const pages = getSpreadPagesFor(s);
+                    const nums = [pages.left, pages.right].filter((n): n is number => !!n);
+                    return nums.map((n) => (
+                      <Page
+                        key={`warm-${n}`}
+                        pageNumber={n}
+                        width={renderWidth}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        onRenderSuccess={() => markRendered(n)}
+                        loading={null}
+                      />
+                    ));
+                  })}
+              </div>
 
               <div
                 className="relative"
@@ -563,7 +636,7 @@ export function BookReaderTab() {
                         width: pageWidth,
                         height: pageHeight,
                         transformStyle: "preserve-3d",
-                        transform: `rotateY(${-(isDragging ? dragProgress * 180 : 180)}deg)`,
+                        transform: `translateZ(0.1px) skewY(${bendSkew}deg) rotateY(${-(isDragging ? dragProgress * 180 : 180)}deg)`,
                         transformOrigin: "left center",
                         transition: isFlipping ? "transform 0.6s cubic-bezier(0.6, 0.05, 0.4, 0.95)" : "none",
                         zIndex: 50,
@@ -571,18 +644,21 @@ export function BookReaderTab() {
                       }}
                     >
                       {/* Front of flipping page = fromPages.right */}
-                      <div className={cn("absolute inset-0 bg-paper overflow-hidden", fromPages.cover && "rounded-r-xl")} style={{ backfaceVisibility: "hidden" }}>
-                        <Page key={`flip-front-s${animFromSpread}-p${fromPages.right}-w${renderWidth}`} pageNumber={fromPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                      <div className={cn("absolute inset-0 bg-paper page-layer overflow-hidden", fromPages.cover && "rounded-r-xl")} style={{ backfaceVisibility: "hidden" }}>
+                        <Page key={`flip-front-s${animFromSpread}-p${fromPages.right}-w${renderWidth}`} pageNumber={fromPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(fromPages.right!)} />
+                        <div className="page-curl" style={{ "--shadow": shadow, "--highlight": highlight } as React.CSSProperties} />
                       </div>
                       {/* Back of flipping page = toPages.left (desktop) or toPages.right (mobile) */}
-                      <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+                      <div className="absolute inset-0 bg-paper page-layer overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
                         {(isMobile ? toPages.right : toPages.left) && (
                           <Page
                             key={`flip-back-s${animToSpread}-p${isMobile ? toPages.right : toPages.left}-w${renderWidth}`}
                             pageNumber={(isMobile ? toPages.right : toPages.left)!}
                             width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
+                            onRenderSuccess={() => markRendered((isMobile ? toPages.right : toPages.left)!)}
                           />
                         )}
+                        <div className="page-curl" style={{ "--shadow": shadow, "--highlight": highlight } as React.CSSProperties} />
                       </div>
                     </div>
                   )}
@@ -596,7 +672,7 @@ export function BookReaderTab() {
                         width: pageWidth,
                         height: pageHeight,
                         transformStyle: "preserve-3d",
-                        transform: `rotateY(${isDragging ? dragProgress * 180 : 180}deg)`,
+                        transform: `translateZ(0.1px) skewY(${-bendSkew}deg) rotateY(${isDragging ? dragProgress * 180 : 180}deg)`,
                         transformOrigin: "right center",
                         transition: isFlipping ? "transform 0.6s cubic-bezier(0.6, 0.05, 0.4, 0.95)" : "none",
                         zIndex: 50,
@@ -604,47 +680,58 @@ export function BookReaderTab() {
                       }}
                     >
                       {/* Front of flipping page = fromPages.left */}
-                      <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
-                        <Page key={`flip-back-front-s${animFromSpread}-p${fromPages.left}-w${renderWidth}`} pageNumber={fromPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                      <div className="absolute inset-0 bg-paper page-layer overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
+                        <Page key={`flip-back-front-s${animFromSpread}-p${fromPages.left}-w${renderWidth}`} pageNumber={fromPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(fromPages.left!)} />
+                        <div className="page-curl" style={{ "--shadow": shadow, "--highlight": highlight } as React.CSSProperties} />
                       </div>
                       {/* Back of flipping page = toPages.right */}
-                      <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+                      <div className="absolute inset-0 bg-paper page-layer overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
                         {toPages.right && (
-                          <Page key={`flip-back-back-s${animToSpread}-p${toPages.right}-w${renderWidth}`} pageNumber={toPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                          <Page key={`flip-back-back-s${animToSpread}-p${toPages.right}-w${renderWidth}`} pageNumber={toPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(toPages.right!)} />
                         )}
+                        <div className="page-curl" style={{ "--shadow": shadow, "--highlight": highlight } as React.CSSProperties} />
                       </div>
                     </div>
                   )}
 
                   {/* Next page underneath (visible during forward flip) = toPages.right */}
                   {(isFlipping || isDragging) && (flipDirection === "next" || dragDirection === "forward") && toPages.right && (
-                    <div className="absolute bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: isMobile ? 0 : pageWidth, zIndex: 5 }}>
+                    <div className="absolute bg-paper page-layer overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: isMobile ? 0 : pageWidth, zIndex: 5 }}>
                       <Page
                         key={`under-next-s${animToSpread}-p${toPages.right}-w${renderWidth}`}
                         pageNumber={toPages.right}
                         width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
+                        onRenderSuccess={() => markRendered(toPages.right!)}
                       />
                     </div>
                   )}
 
                   {/* Previous page underneath (visible during backward flip) = toPages.left */}
                   {(isFlipping || isDragging) && (flipDirection === "prev" || dragDirection === "backward") && !isMobile && toPages.left && (
-                    <div className="absolute bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: 0, zIndex: 5 }}>
-                      <Page key={`under-prev-s${animToSpread}-p${toPages.left}-w${renderWidth}`} pageNumber={toPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                    <div className="absolute bg-paper page-layer overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: 0, zIndex: 5 }}>
+                      <Page key={`under-prev-s${animToSpread}-p${toPages.left}-w${renderWidth}`} pageNumber={toPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(toPages.left!)} />
                     </div>
                   )}
 
                   {/* Static Current Spread - always visible underneath */}
                   <div className="flex">
                     {!isMobile && left && (
-                      <div className="bg-paper overflow-hidden relative" style={{ width: pageWidth, height: pageHeight, backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
-                        <Page key={`static-left-s${currentSpread}-p${left}-w${renderWidth}`} pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                      <div className="bg-paper page-layer overflow-hidden relative" style={{ width: pageWidth, height: pageHeight }}>
+                        {isRendered(left) ? (
+                          <Page key={`static-left-s${currentSpread}-p${left}-w${renderWidth}`} pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(left)} loading={null} />
+                        ) : (
+                          <div style={{ width: renderWidth, height: pageHeight }} />
+                        )}
                         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{left}</div>
                       </div>
                     )}
-                    <div className={cn("bg-paper overflow-hidden relative", cover && "rounded-r-xl")} style={{ width: pageWidth, height: pageHeight, backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
+                    <div className={cn("bg-paper page-layer overflow-hidden relative", cover && "rounded-r-xl")} style={{ width: pageWidth, height: pageHeight }}>
                       {cover && <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black/30 pointer-events-none" />}
-                      <Page key={`static-right-s${currentSpread}-p${right}-w${renderWidth}`} pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                      {isRendered(right) ? (
+                        <Page key={`static-right-s${currentSpread}-p${right}-w${renderWidth}`} pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} onRenderSuccess={() => markRendered(right!)} loading={null} />
+                      ) : (
+                        <div style={{ width: renderWidth, height: pageHeight }} />
+                      )}
                       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{right}</div>
                       {cover && (
                         <div className="absolute inset-0 flex items-center justify-end pr-4 md:pr-12 pointer-events-none">
@@ -677,11 +764,45 @@ export function BookReaderTab() {
         <style jsx global>{`
           .bg-paper {
             background: #fdfcf8;
-            background-image: 
+            background-image:
               linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px),
               linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px);
             background-size: 20px 20px;
             box-shadow: inset 8px 0 20px -8px rgba(0,0,0,0.3), inset -8px 0 20px -8px rgba(0,0,0,0.2);
+          }
+          /* GPU + 3D compositing */
+          .book-stage {
+            transform: translateZ(0);
+            will-change: transform;
+            contain: layout paint style;
+          }
+          .page-layer {
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+            transform: translateZ(0);
+            will-change: transform;
+          }
+          /* Page curl shadow/highlight effect */
+          .page-curl {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+          }
+          .page-curl::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to left, rgba(0,0,0,0.30), transparent 35%);
+            opacity: var(--shadow, 0);
+            transition: opacity 0.08s linear;
+          }
+          .page-curl::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, rgba(255,255,255,0.35), transparent 30%);
+            opacity: var(--highlight, 0);
+            transition: opacity 0.08s linear;
           }
           canvas {
             image-rendering: -webkit-optimize-contrast;
