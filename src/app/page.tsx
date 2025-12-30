@@ -31,6 +31,7 @@ import {
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { MobileProfileLinks } from "@/components/mobile-profile-links";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Footer } from "@/components/footer";
 import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
@@ -883,88 +884,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative border-t border-border/50 py-16 bg-gradient-to-b from-transparent to-muted/30 dark:to-muted/10">
-        <div className="container">
-          <div className="grid gap-10 md:grid-cols-6">
-            {/* Brand */}
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center">
-                  <Sparkles className="h-4 w-4 text-white" />
-                </div>
-                <h4 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-emerald-600">IndieCrowdfund</h4>
-              </div>
-              <p className="text-sm text-muted-foreground mb-6 max-w-xs">
-                Empowering creators to bring their ideas to life through community funding. Join our global community of innovators.
-              </p>
-              {/* Social links */}
-              <div className="flex gap-3">
-                {['Twitter', 'Discord', 'GitHub'].map((platform) => (
-                  <a
-                    key={platform}
-                    href="#"
-                    className="h-9 w-9 rounded-lg glass-card flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all"
-                  >
-                    <span className="text-xs font-medium">{platform.charAt(0)}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            {/* Links */}
-            <div>
-              <h4 className="mb-4 font-semibold text-foreground">Discover</h4>
-              <ul className="space-y-3 text-sm">
-                <li><Link href="/discover" className="text-muted-foreground hover:text-primary transition-colors">All Projects</Link></li>
-                <li><Link href="/discover?category=games" className="text-muted-foreground hover:text-primary transition-colors">Games</Link></li>
-                <li><Link href="/discover?category=technology" className="text-muted-foreground hover:text-primary transition-colors">Technology</Link></li>
-                <li><Link href="/discover?category=art" className="text-muted-foreground hover:text-primary transition-colors">Art</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-4 font-semibold text-foreground">For Creators</h4>
-              <ul className="space-y-3 text-sm">
-                <li><Link href="/projects/new" className="text-muted-foreground hover:text-primary transition-colors">Start a Project</Link></li>
-                <li><Link href="/creator-handbook" className="text-muted-foreground hover:text-primary transition-colors">Creator Handbook</Link></li>
-                <li><Link href="/fees" className="text-muted-foreground hover:text-primary transition-colors">Fees & Pricing</Link></li>
-                <li><Link href="/success-stories" className="text-muted-foreground hover:text-primary transition-colors">Success Stories</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-4 font-semibold text-foreground">For Backers</h4>
-              <ul className="space-y-3 text-sm">
-                <li><Link href="/backer-handbook" className="text-muted-foreground hover:text-primary transition-colors">Backer Handbook</Link></li>
-                <li><Link href="/what-is-divinitycoin" className="text-muted-foreground hover:text-primary transition-colors">What is DivinityCoin?</Link></li>
-                <li><Link href="/backer-handbook#stripe" className="text-muted-foreground hover:text-primary transition-colors">Paying with Card</Link></li>
-                <li><Link href="/backer-handbook#divinitycoin" className="text-muted-foreground hover:text-primary transition-colors">Paying with DivinityCoin</Link></li>
-                <li><Link href="/dashboard/backer" className="text-muted-foreground hover:text-primary transition-colors">My Pledges</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-4 font-semibold text-foreground">Support</h4>
-              <ul className="space-y-3 text-sm">
-                <li><Link href="/help" className="text-muted-foreground hover:text-primary transition-colors">Help Center</Link></li>
-                <li><Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">Terms of Service</Link></li>
-                <li><Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Contact Us</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom bar */}
-          <div className="mt-12 pt-8 border-t border-border/50 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} IndieCrowdfund. All rights reserved.
-            </p>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
-              <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
-              <Link href="/cookies" className="hover:text-primary transition-colors">Cookies</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
