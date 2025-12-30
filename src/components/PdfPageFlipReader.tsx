@@ -200,7 +200,7 @@ export function PdfPageFlipReader({
           display: block;
           width: 100%;
           height: 100%;
-          object-fit: contain;
+          object-fit: cover;
           user-select: none;
           -webkit-user-drag: none;
           margin: 0;
