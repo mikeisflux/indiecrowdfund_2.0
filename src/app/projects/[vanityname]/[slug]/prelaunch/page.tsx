@@ -162,7 +162,7 @@ export default function PrelaunchPage() {
     };
 
     fetchProject();
-  }, [vanityname, slug, session?.user?.id, projectPath, isLegacyUrl]);
+  }, [vanityname, slug, session?.user?.id, session?.user?.role, projectPath, isLegacyUrl]);
 
   const handleSubscribe = async () => {
     if (!session?.user) {

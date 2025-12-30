@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -128,9 +129,11 @@ export function SurveyDetailDialog({ survey, open, onOpenChange }: SurveyDetailD
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
                     {survey.order.project?.imageUrl && (
-                      <img
+                      <Image
                         src={survey.order.project.imageUrl}
                         alt=""
+                        width={64}
+                        height={64}
                         className="h-16 w-16 rounded object-cover"
                       />
                     )}

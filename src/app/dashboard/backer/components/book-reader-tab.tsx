@@ -56,6 +56,23 @@ interface OutlineItem {
   children?: OutlineItem[];
 }
 
+// PDF.js types for outline and document
+interface PDFOutlineItem {
+  title: string;
+  dest: string | null;
+  items?: PDFOutlineItem[];
+}
+
+interface PDFDocumentProxy {
+  numPages: number;
+  getDestination: (dest: string) => Promise<unknown[] | null>;
+  getPageIndex: (ref: unknown) => Promise<number>;
+}
+
+interface DigitalFileWithMime extends DigitalFile {
+  mimeType?: string;
+}
+
 const READING_PROGRESS_KEY = "indiecrowdfund_reading_progress";
 const BOOKMARKS_KEY = "indiecrowdfund_bookmarks";
 
@@ -115,7 +132,7 @@ export function BookReaderTab() {
   const [showToc, setShowToc] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [outline, setOutline] = useState<OutlineItem[]>([]);
-  const [pdfDocument, setPdfDocument] = useState<any>(null);
+  const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
 
   const bookRef = useRef<HTMLDivElement>(null);
 
@@ -147,7 +164,7 @@ export function BookReaderTab() {
       if (!res.ok) throw new Error("Failed to fetch files");
       const data = await res.json();
       const pdfs = (data.files || []).filter(
-        (f: any) => f.mimeType === "application/pdf" || f.fileName?.toLowerCase().endsWith(".pdf")
+        (f: DigitalFileWithMime) => f.mimeType === "application/pdf" || f.fileName?.toLowerCase().endsWith(".pdf")
       );
       setPdfFiles(pdfs);
       const progress: Record<string, ReadingProgress> = {};
@@ -348,10 +365,10 @@ export function BookReaderTab() {
     setShowBookmarks(false);
   };
 
-  const processOutline = async (items: any[]): Promise<OutlineItem[]> => {
+  const processOutline = async (items: PDFOutlineItem[]): Promise<OutlineItem[]> => {
     const result: OutlineItem[] = [];
     for (const item of items) {
-      if (item.dest) {
+      if (item.dest && pdfDocument) {
         const dest = await pdfDocument.getDestination(item.dest);
         if (dest) {
           const pageIndex = await pdfDocument.getPageIndex(dest[0]);
@@ -365,7 +382,7 @@ export function BookReaderTab() {
     return result;
   };
 
-  const handleOutlineLoad = async (outlineData: any) => {
+  const handleOutlineLoad = async (outlineData: PDFOutlineItem[] | null) => {
     if (pdfDocument && outlineData && outlineData.length > 0) {
       const processed = await processOutline(outlineData);
       setOutline(processed);
