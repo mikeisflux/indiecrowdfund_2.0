@@ -4,7 +4,7 @@ export function Footer() {
   return (
     <footer className="border-t py-12 bg-background">
       <div className="container">
-        <div className="grid gap-8 md:grid-cols-4">
+        <div className="grid gap-8 md:grid-cols-3 lg:grid-cols-5">
           <div>
             <h4 className="mb-4 font-semibold">IndieCrowdfund</h4>
             <p className="text-sm text-muted-foreground">
@@ -27,6 +27,15 @@ export function Footer() {
               <li><Link href="/creator-handbook" className="hover:text-foreground">Creator Handbook</Link></li>
               <li><Link href="/fees" className="hover:text-foreground">Fees & Pricing</Link></li>
               <li><Link href="/success-stories" className="hover:text-foreground">Success Stories</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="mb-4 font-semibold">For Backers</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li><Link href="/backer-handbook" className="hover:text-foreground">Backer Handbook</Link></li>
+              <li><Link href="/backer-handbook#stripe" className="hover:text-foreground">Paying with Card</Link></li>
+              <li><Link href="/backer-handbook#divinitycoin" className="hover:text-foreground">Paying with DivinityCoin</Link></li>
+              <li><Link href="/dashboard/backer" className="hover:text-foreground">My Pledges</Link></li>
             </ul>
           </div>
           <div>
