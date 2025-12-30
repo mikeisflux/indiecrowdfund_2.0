@@ -43,10 +43,12 @@ import {
   Zap,
   CheckCircle,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -467,6 +469,14 @@ export default function CreatorDashboard() {
     pledgeId: "",
   });
 
+  // Bulk selection state
+  const [selectedPledges, setSelectedPledges] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<{ open: boolean; action: "cancel" | "delete" }>({
+    open: false,
+    action: "cancel",
+  });
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -520,6 +530,7 @@ export default function CreatorDashboard() {
   const handleCancelPledge = async () => {
     const pledgeId = cancelConfirm.pledgeId;
     setCancellingPledge(pledgeId);
+    setCancelConfirm({ open: false, pledgeId: "" });
     try {
       const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
         method: "PATCH",
@@ -541,6 +552,116 @@ export default function CreatorDashboard() {
     } finally {
       setCancellingPledge(null);
     }
+  };
+
+  // Get pending pledges for bulk operations
+  const pendingPledges = data?.recentBackers?.filter(b => b.status === "PENDING") || [];
+  const selectedPendingCount = Array.from(selectedPledges).filter(id =>
+    pendingPledges.some(p => p.id === id)
+  ).length;
+
+  // Toggle single pledge selection
+  const togglePledgeSelection = (pledgeId: string) => {
+    setSelectedPledges(prev => {
+      const next = new Set(prev);
+      if (next.has(pledgeId)) {
+        next.delete(pledgeId);
+      } else {
+        next.add(pledgeId);
+      }
+      return next;
+    });
+  };
+
+  // Toggle all pending pledges
+  const toggleAllPending = () => {
+    if (selectedPendingCount === pendingPledges.length && pendingPledges.length > 0) {
+      // Deselect all pending
+      setSelectedPledges(prev => {
+        const next = new Set(prev);
+        pendingPledges.forEach(p => next.delete(p.id));
+        return next;
+      });
+    } else {
+      // Select all pending
+      setSelectedPledges(prev => {
+        const next = new Set(prev);
+        pendingPledges.forEach(p => next.add(p.id));
+        return next;
+      });
+    }
+  };
+
+  // Bulk cancel pending pledges
+  const handleBulkCancel = async () => {
+    setBulkProcessing(true);
+    const pledgeIds = Array.from(selectedPledges).filter(id =>
+      pendingPledges.some(p => p.id === id)
+    );
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const pledgeId of pledgeIds) {
+      try {
+        const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({ action: "cancel", reason: "Bulk cancelled by creator" }),
+        });
+        if (response.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    setBulkProcessing(false);
+    setBulkAction({ open: false, action: "cancel" });
+    setSelectedPledges(new Set());
+    await fetchDashboardData();
+
+    if (successCount > 0) {
+      toast.success(`${successCount} pledge(s) cancelled successfully`);
+    }
+    if (failCount > 0) {
+      toast.error(`${failCount} pledge(s) failed to cancel`);
+    }
+  };
+
+  // Bulk delete pending pledges (hard delete from database)
+  const handleBulkDelete = async () => {
+    setBulkProcessing(true);
+    const pledgeIds = Array.from(selectedPledges).filter(id =>
+      pendingPledges.some(p => p.id === id)
+    );
+
+    try {
+      const response = await fetch(`/api/creator/pledges/bulk-delete`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ pledgeIds }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`${result.deletedCount} pending pledge(s) deleted`);
+      } else {
+        const err = await response.json();
+        toast.error(err.error || "Failed to delete pledges");
+      }
+    } catch (err) {
+      console.error("Bulk delete error:", err);
+      toast.error("Failed to delete pledges");
+    }
+
+    setBulkProcessing(false);
+    setBulkAction({ open: false, action: "delete" });
+    setSelectedPledges(new Set());
+    await fetchDashboardData();
   };
 
   // Refund a completed pledge (creator)
@@ -1242,9 +1363,50 @@ export default function CreatorDashboard() {
                     </Button>
                   </CardHeader>
                   <CardContent>
+                    {/* Bulk Actions Bar */}
+                    {pendingPledges.length > 0 && (
+                      <div className="mb-4 p-3 bg-muted/30 rounded-lg flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="select-all-pending"
+                            checked={selectedPendingCount === pendingPledges.length && pendingPledges.length > 0}
+                            onCheckedChange={toggleAllPending}
+                          />
+                          <label htmlFor="select-all-pending" className="text-sm cursor-pointer">
+                            Select all pending ({pendingPledges.length})
+                          </label>
+                        </div>
+                        {selectedPendingCount > 0 && (
+                          <>
+                            <span className="text-sm text-muted-foreground">
+                              {selectedPendingCount} selected
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                              onClick={() => setBulkAction({ open: true, action: "cancel" })}
+                            >
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Cancel Selected
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                              onClick={() => setBulkAction({ open: true, action: "delete" })}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Delete Selected
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
                     {data.recentBackers.length > 0 ? (
                       <div className="rounded-xl border border-border/50 overflow-x-auto">
-                        <div className="grid grid-cols-6 gap-4 border-b border-border/50 bg-muted/30 p-3 text-sm font-medium min-w-[800px]">
+                        <div className="grid grid-cols-7 gap-4 border-b border-border/50 bg-muted/30 p-3 text-sm font-medium min-w-[900px]">
+                          <div className="w-8"></div>
                           <div>Backer</div>
                           <div>Reward</div>
                           <div>Amount</div>
@@ -1255,9 +1417,17 @@ export default function CreatorDashboard() {
                         {data.recentBackers.map((backer, index) => (
                           <div
                             key={backer.id}
-                            className="grid grid-cols-6 gap-4 border-b border-border/50 p-3 text-sm last:border-0 min-w-[800px] items-center hover:bg-muted/20 transition-colors animate-in fade-in"
+                            className="grid grid-cols-7 gap-4 border-b border-border/50 p-3 text-sm last:border-0 min-w-[900px] items-center hover:bg-muted/20 transition-colors animate-in fade-in"
                             style={{ animationDelay: `${index * 50}ms` }}
                           >
+                            <div className="w-8">
+                              {backer.status === "PENDING" && (
+                                <Checkbox
+                                  checked={selectedPledges.has(backer.id)}
+                                  onCheckedChange={() => togglePledgeSelection(backer.id)}
+                                />
+                              )}
+                            </div>
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6">
                                 {backer.image && <AvatarImage src={backer.image} />}
@@ -1587,6 +1757,30 @@ export default function CreatorDashboard() {
         variant="destructive"
         onConfirm={handleRefundPledge}
         loading={refundingPledge === refundConfirm.pledgeId}
+      />
+
+      {/* Bulk Cancel Confirmation */}
+      <ConfirmDialog
+        open={bulkAction.open && bulkAction.action === "cancel"}
+        onOpenChange={(open) => setBulkAction({ ...bulkAction, open })}
+        title={`Cancel ${selectedPendingCount} Pledge(s)?`}
+        description="Are you sure you want to cancel all selected pending pledges? This will mark them as cancelled and remove them from your campaign totals."
+        confirmText={`Cancel ${selectedPendingCount} Pledge(s)`}
+        variant="destructive"
+        onConfirm={handleBulkCancel}
+        loading={bulkProcessing}
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmDialog
+        open={bulkAction.open && bulkAction.action === "delete"}
+        onOpenChange={(open) => setBulkAction({ ...bulkAction, open })}
+        title={`Delete ${selectedPendingCount} Pledge(s)?`}
+        description="Are you sure you want to permanently delete all selected pending pledges? This will completely remove them from the database and cannot be undone."
+        confirmText={`Delete ${selectedPendingCount} Pledge(s)`}
+        variant="destructive"
+        onConfirm={handleBulkDelete}
+        loading={bulkProcessing}
       />
     </div>
   );
