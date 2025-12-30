@@ -285,25 +285,28 @@ export function BookReaderTab() {
         )}
 
         {/* Book View */}
-        <div className="flex-1 min-h-0 flex items-center justify-center overflow-auto p-4">
+        <div className="flex-1 min-h-0 overflow-auto p-4">
           <div
-            className="flex flex-col items-center"
-            style={{
-              transform: `scale(${scale})`,
-              transformOrigin: "center center",
-              transition: "transform 0.2s",
-            }}
+            className="h-full flex items-center justify-center"
           >
-            <PdfPageFlipReader
-              pdfUrl={pdfUrl}
-              fileId={selectedFile.id}
-              initialPageIndex={Math.max(0, (savedProgress?.currentPage ?? 1) - 1)}
-              onPageChange={handlePageChange}
-              onReady={handleReady}
-              width={pageWidth}
-              height={pageHeight}
-              singlePage={isMobile}
-            />
+            <div
+              style={{
+                transform: `scale(${scale})`,
+                transformOrigin: "center center",
+                transition: "transform 0.2s",
+              }}
+            >
+              <PdfPageFlipReader
+                pdfUrl={pdfUrl}
+                fileId={selectedFile.id}
+                initialPageIndex={Math.max(0, (savedProgress?.currentPage ?? 1) - 1)}
+                onPageChange={handlePageChange}
+                onReady={handleReady}
+                width={pageWidth}
+                height={pageHeight}
+                singlePage={isMobile}
+              />
+            </div>
           </div>
         </div>
       </div>

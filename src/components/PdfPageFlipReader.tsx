@@ -124,9 +124,22 @@ export function PdfPageFlipReader({
     );
   }
 
+  // Calculate the wrapper dimensions - book shows 2 pages side by side when not in single page mode
+  const wrapperWidth = singlePage ? width : width * 2;
+  const wrapperHeight = height;
+
   return (
     <div className={className}>
-      <HTMLFlipBook
+      {/* Wrapper with explicit dimensions to enable proper centering */}
+      <div
+        className="book-wrapper"
+        style={{
+          width: wrapperWidth,
+          height: wrapperHeight,
+          position: 'relative'
+        }}
+      >
+        <HTMLFlipBook
         key={flipKey}
         ref={flipRef}
         width={width}
@@ -167,7 +180,8 @@ export function PdfPageFlipReader({
             />
           </div>
         ))}
-      </HTMLFlipBook>
+        </HTMLFlipBook>
+      </div>
 
       <div className="mt-4 text-center text-sm text-white/70">
         Page <span className="text-white font-medium">{(flipRef.current?.pageFlip?.()?.getCurrentPageIndex?.() ?? initialPageIndex) + 1}</span> of {state.images.length}
@@ -189,8 +203,16 @@ export function PdfPageFlipReader({
           box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
         }
 
+        .book-wrapper {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
         .stf__parent {
-          margin: 0 auto;
+          position: relative !important;
+          left: auto !important;
+          top: auto !important;
         }
 
         .stf__wrapper {
