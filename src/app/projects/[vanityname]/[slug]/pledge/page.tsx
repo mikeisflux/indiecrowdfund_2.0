@@ -1080,9 +1080,6 @@ export default function PledgePage() {
                     <span className="font-semibold">Total Charged</span>
                     <span className="text-xl font-bold text-green-600">${(isAddItemsMode ? addItemsTotal : total).toFixed(2)}</span>
                   </div>
-                  {project.paymentProcessor === "DIVINITYCOIN" && (
-                    <p className="text-xs text-muted-foreground mt-1">Paid with DivinityCoin</p>
-                  )}
                 </div>
 
                 {/* Estimated Delivery */}
@@ -1601,18 +1598,42 @@ export default function PledgePage() {
                           </div>
 
                           {divinityCoinBalance < total && (
-                            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3">
-                              <p className="text-sm text-amber-800 dark:text-amber-200">
-                                You need ${(total - divinityCoinBalance).toFixed(2)} more in credits.{" "}
-                                <a
-                                  href="https://divinitycoin.com"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="font-semibold underline"
-                                >
-                                  Buy more credits →
-                                </a>
+                            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 space-y-3">
+                              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                                You need ${(total - divinityCoinBalance).toFixed(2)} more in credits to complete this pledge.
                               </p>
+                              <div className="text-sm text-amber-700 dark:text-amber-300 space-y-2">
+                                <p className="flex items-start gap-2">
+                                  <span className="font-semibold">1.</span>
+                                  <span>
+                                    <a
+                                      href="https://divinitycoin.com"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="font-semibold underline"
+                                    >
+                                      Purchase DivinityCoin credits
+                                    </a>{" "}
+                                    - you&apos;ll receive a voucher code
+                                  </span>
+                                </p>
+                                <p className="flex items-start gap-2">
+                                  <span className="font-semibold">2.</span>
+                                  <span>
+                                    <a
+                                      href="/dashboard/backer?tab=wallet"
+                                      className="font-semibold underline"
+                                    >
+                                      Redeem your code in your wallet
+                                    </a>{" "}
+                                    to add credits to your balance
+                                  </span>
+                                </p>
+                                <p className="flex items-start gap-2">
+                                  <span className="font-semibold">3.</span>
+                                  <span>Return here to complete your pledge</span>
+                                </p>
+                              </div>
                             </div>
                           )}
 
