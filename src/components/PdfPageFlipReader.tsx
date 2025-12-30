@@ -27,8 +27,8 @@ export function PdfPageFlipReader({
   onPageChange,
   onReady,
   className,
-  width = 500,
-  height = 700,
+  width = 400,
+  height = 560,
 }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const flipRef = useRef<any>(null);

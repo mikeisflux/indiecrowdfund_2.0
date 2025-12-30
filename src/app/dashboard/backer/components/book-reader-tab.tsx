@@ -100,9 +100,9 @@ export function BookReaderTab() {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
   const [showBookmarks, setShowBookmarks] = useState(false);
 
-  // Page dimensions based on device
-  const pageWidth = isMobile ? 320 : 500;
-  const pageHeight = isMobile ? 480 : 700;
+  // Page dimensions based on device - sized to fit comfortably in viewport
+  const pageWidth = isMobile ? 280 : 400;
+  const pageHeight = isMobile ? 400 : 560;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -284,8 +284,15 @@ export function BookReaderTab() {
         )}
 
         {/* Book View */}
-        <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
-          <div style={{ transform: `scale(${scale})`, transformOrigin: "center center", transition: "transform 0.2s" }}>
+        <div className="flex-1 flex items-center justify-center overflow-auto p-4">
+          <div
+            className="flex items-center justify-center"
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "center center",
+              transition: "transform 0.2s",
+            }}
+          >
             <PdfPageFlipReader
               pdfUrl={pdfUrl}
               fileId={selectedFile.id}
@@ -294,7 +301,6 @@ export function BookReaderTab() {
               onReady={handleReady}
               width={pageWidth}
               height={pageHeight}
-              className="flex items-center justify-center"
             />
           </div>
         </div>
