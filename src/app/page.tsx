@@ -860,7 +860,7 @@ export default async function HomePage() {
               </Button>
             </Link>
             <Link href="/discover">
-              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 text-base px-8">
+              <Button size="lg" className="bg-white text-primary hover:bg-white/90 shadow-lg shadow-black/20 text-base px-8">
                 Explore Projects
               </Button>
             </Link>

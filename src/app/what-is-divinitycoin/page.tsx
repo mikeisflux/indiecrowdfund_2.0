@@ -52,6 +52,10 @@ const faqs: FAQ[] = [
     answer: 'Most projects on IndieCrowdfund accept DivinityCoin, but creators can choose whether to accept it. Look for the "Accepts DivinityCoin" badge on the project page to confirm before pledging.',
   },
   {
+    question: 'Do I need DivinityCoin before I can browse rewards?',
+    answer: 'No! You can browse any project, select rewards and add-ons, and see your total before worrying about payment. DivinityCoin is only needed at the final checkout step. If you don\'t have enough balance, you\'ll see clear instructions on how to get more credits and complete your pledge.',
+  },
+  {
     question: 'What happens to my DivinityCoin if a project fails?',
     answer: 'If you pledged with DivinityCoin and the project doesn\'t reach its funding goal, your DivinityCoin is automatically returned to your account balance. No action needed on your part.',
   },
