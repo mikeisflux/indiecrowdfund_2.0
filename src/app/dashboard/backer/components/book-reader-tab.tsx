@@ -400,6 +400,29 @@ export function BookReaderTab() {
   if (selectedFile && pdfUrl) {
     const { left, right, cover } = getSpreadPages();
 
+    // Show loading state while PDF is loading (numPages === 0)
+    if (numPages === 0) {
+      return (
+        <div className={cn("flex flex-col h-screen bg-gradient-to-b from-stone-900 to-stone-950 overflow-hidden", isFullscreen && "fixed inset-0 z-50")}>
+          <div className="flex items-center justify-between p-3 bg-black/60 backdrop-blur-sm border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={closeBook}><X className="h-5 w-5" /></Button>
+              <div>
+                <h3 className="font-semibold text-white line-clamp-1">{selectedFile.name}</h3>
+                <p className="text-xs text-white/60">{selectedFile.project.title}</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <BookOpen className="h-12 w-12 mx-auto mb-4 text-amber-400 animate-pulse" />
+              <p className="text-white/60">Loading book...</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Guard against invalid page numbers
     if (!right || right < 1 || right > numPages) {
       return null;
