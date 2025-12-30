@@ -313,7 +313,9 @@ export async function GET(req: NextRequest) {
           },
           _count: {
             select: {
-              pledges: true,
+              pledges: {
+                where: { status: "COMPLETED" },
+              },
               followers: true,
             },
           },

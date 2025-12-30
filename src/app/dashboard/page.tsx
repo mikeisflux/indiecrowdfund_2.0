@@ -458,6 +458,7 @@ export default function CreatorDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [cancellingPledge, setCancellingPledge] = useState<string | null>(null);
   const [refundingPledge, setRefundingPledge] = useState<string | null>(null);
+  const [deletingPledge, setDeletingPledge] = useState<string | null>(null);
 
   // Confirmation dialog state
   const [cancelConfirm, setCancelConfirm] = useState<{ open: boolean; pledgeId: string }>({
@@ -465,6 +466,10 @@ export default function CreatorDashboard() {
     pledgeId: "",
   });
   const [refundConfirm, setRefundConfirm] = useState<{ open: boolean; pledgeId: string }>({
+    open: false,
+    pledgeId: "",
+  });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; pledgeId: string }>({
     open: false,
     pledgeId: "",
   });
@@ -551,6 +556,33 @@ export default function CreatorDashboard() {
       toast.error("Failed to cancel pledge");
     } finally {
       setCancellingPledge(null);
+    }
+  };
+
+  // Delete a cancelled pledge (creator)
+  const handleDeletePledge = async () => {
+    const pledgeId = deleteConfirm.pledgeId;
+    setDeletingPledge(pledgeId);
+    setDeleteConfirm({ open: false, pledgeId: "" });
+    try {
+      const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
+        method: "DELETE",
+        headers: { ...getCSRFHeaders() },
+      });
+
+      if (response.ok) {
+        // Refresh dashboard data after deletion
+        await fetchDashboardData();
+        toast.success("Pledge deleted successfully");
+      } else {
+        const err = await response.json();
+        toast.error(err.error || "Failed to delete pledge");
+      }
+    } catch (err) {
+      console.error("Failed to delete pledge:", err);
+      toast.error("Failed to delete pledge");
+    } finally {
+      setDeletingPledge(null);
     }
   };
 
@@ -1482,7 +1514,19 @@ export default function CreatorDashboard() {
                                   {refundingPledge === backer.id ? "..." : "Refund"}
                                 </Button>
                               )}
-                              {(backer.status === "CANCELLED" || backer.status === "REFUNDED") && (
+                              {backer.status === "CANCELLED" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                                  onClick={() => setDeleteConfirm({ open: true, pledgeId: backer.id })}
+                                  disabled={deletingPledge === backer.id}
+                                >
+                                  <Trash2 className="h-3 w-3 mr-1" />
+                                  {deletingPledge === backer.id ? "..." : "Delete"}
+                                </Button>
+                              )}
+                              {backer.status === "REFUNDED" && (
                                 <span className="text-xs text-muted-foreground">-</span>
                               )}
                             </div>
@@ -1757,6 +1801,18 @@ export default function CreatorDashboard() {
         variant="destructive"
         onConfirm={handleRefundPledge}
         loading={refundingPledge === refundConfirm.pledgeId}
+      />
+
+      {/* Delete Pledge Confirmation */}
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ ...deleteConfirm, open })}
+        title="Delete Pledge?"
+        description="Are you sure you want to permanently delete this pledge? This cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleDeletePledge}
+        loading={deletingPledge === deleteConfirm.pledgeId}
       />
 
       {/* Bulk Cancel Confirmation */}

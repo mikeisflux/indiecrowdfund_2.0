@@ -208,11 +208,11 @@ export async function GET(req: NextRequest) {
         },
       }),
 
-      // Recent backers with user info - include PENDING pledges too
+      // Recent backers with user info - include all statuses for visibility
       db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
-          status: { in: ["PENDING", "COMPLETED"] },
+          status: { in: ["PENDING", "COMPLETED", "CANCELLED", "REFUNDED"] },
         },
         orderBy: { createdAt: "desc" },
         take: 500, // Increased limit for CSV export

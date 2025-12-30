@@ -170,20 +170,13 @@ export async function PATCH(
       }
 
       // Update pledge status
+      // Note: We do NOT decrement project totals here because PENDING pledges
+      // haven't been counted yet - they only get added when they become COMPLETED
       await db.pledge.update({
         where: { id: pledgeId },
         data: {
           status: "CANCELLED",
           lastFailureReason: reason || "Cancelled by creator",
-        },
-      });
-
-      // Update project backer count and amount
-      await db.project.update({
-        where: { id: typedPledge.projectId },
-        data: {
-          backerCount: { decrement: 1 },
-          currentAmount: { decrement: typedPledge.amount },
         },
       });
 
@@ -340,6 +333,57 @@ export async function PATCH(
     console.error("Creator update pledge error:", error);
     return NextResponse.json(
       { error: "Failed to update pledge" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Delete a CANCELLED or PENDING pledge (creator)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ pledgeId: string }> }
+) {
+  // Consume request to satisfy Next.js dynamic route requirements
+  void request;
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { pledgeId } = await params;
+    const { allowed, pledge } = await isProjectOwnerOrCollaborator(session.user.id, pledgeId);
+
+    if (!allowed || !pledge) {
+      return NextResponse.json({ error: "Pledge not found or access denied" }, { status: 404 });
+    }
+
+    const typedPledge = pledge as {
+      id: string;
+      status: string;
+    };
+
+    // Only allow deleting CANCELLED or PENDING pledges
+    if (typedPledge.status !== "CANCELLED" && typedPledge.status !== "PENDING") {
+      return NextResponse.json(
+        { error: "Can only delete cancelled or pending pledges" },
+        { status: 400 }
+      );
+    }
+
+    // Delete the pledge (and associated records via cascade)
+    await db.pledge.delete({
+      where: { id: pledgeId },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Pledge deleted successfully",
+    });
+  } catch (error) {
+    console.error("Creator delete pledge error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete pledge" },
       { status: 500 }
     );
   }
