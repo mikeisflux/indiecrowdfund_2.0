@@ -23,6 +23,12 @@ import {
   List,
 } from "lucide-react";
 import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DigitalFile {
   id: string;
@@ -226,36 +232,93 @@ export function BookReaderTab() {
     const savedProgress = getReadingProgress(selectedFile.id);
 
     return (
-      <div className={cn("flex flex-col h-[100dvh] bg-neutral-200", isFullscreen && "fixed inset-0 z-50")}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-3 bg-black/60 backdrop-blur-sm border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={closeBook}><X className="h-5 w-5" /></Button>
-            <div>
-              <h3 className="font-semibold text-white line-clamp-1">{selectedFile.name}</h3>
-              <p className="text-xs text-white/60">{selectedFile.project.title}</p>
+      <TooltipProvider delayDuration={300}>
+        <div className={cn("flex flex-col h-[100dvh] bg-neutral-200", isFullscreen && "fixed inset-0 z-50")}>
+          {/* Header */}
+          <div className="flex items-center justify-between p-3 bg-black/60 backdrop-blur-sm border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={closeBook}><X className="h-5 w-5" /></Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Close book and return to library</p>
+                </TooltipContent>
+              </Tooltip>
+              <div>
+                <h3 className="font-semibold text-white line-clamp-1">{selectedFile.name}</h3>
+                <p className="text-xs text-white/60">{selectedFile.project.title}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={addBookmark} disabled={isBookmarkPage}>
+                    {isBookmarkPage ? <Bookmark className="h-5 w-5 text-amber-400 fill-amber-400" /> : <BookmarkPlus className="h-5 w-5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>{isBookmarkPage ? "Page already bookmarked" : "Bookmark this page"}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setShowBookmarks(!showBookmarks)}>
+                    <List className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>{showBookmarks ? "Hide bookmarks" : "View saved bookmarks"}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(s => Math.max(0.5, s - 0.1))} disabled={scale <= 0.5}>
+                    <ZoomOut className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Zoom out (min 50%)</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-xs text-white min-w-[3rem] text-center cursor-default">{Math.round(scale * 100)}%</span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Current zoom level</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(s => Math.min(2, s + 0.1))} disabled={scale >= 2}>
+                    <ZoomIn className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Zoom in (max 200%)</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(1)}><RotateCcw className="h-5 w-5" /></Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Reset zoom to 100%</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setIsFullscreen(!isFullscreen)}>
+                    {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>{isFullscreen ? "Exit fullscreen" : "Enter fullscreen mode"}</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={addBookmark} disabled={isBookmarkPage}>
-              {isBookmarkPage ? <Bookmark className="h-5 w-5 text-amber-400 fill-amber-400" /> : <BookmarkPlus className="h-5 w-5" />}
-            </Button>
-            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setShowBookmarks(!showBookmarks)}>
-              <List className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(s => Math.max(0.5, s - 0.1))} disabled={scale <= 0.5}>
-              <ZoomOut className="h-5 w-5" />
-            </Button>
-            <span className="text-xs text-white min-w-[3rem] text-center">{Math.round(scale * 100)}%</span>
-            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(s => Math.min(2, s + 0.1))} disabled={scale >= 2}>
-              <ZoomIn className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(1)}><RotateCcw className="h-5 w-5" /></Button>
-            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setIsFullscreen(!isFullscreen)}>
-              {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-            </Button>
-          </div>
-        </div>
 
         {/* Bookmarks Panel */}
         {showBookmarks && (
@@ -314,7 +377,8 @@ export function BookReaderTab() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </TooltipProvider>
     );
   }
 
