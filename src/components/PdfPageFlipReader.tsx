@@ -18,6 +18,7 @@ type Props = {
   className?: string;
   width?: number;
   height?: number;
+  singlePage?: boolean; // Show single page instead of spread (for mobile)
 };
 
 export function PdfPageFlipReader({
@@ -29,6 +30,7 @@ export function PdfPageFlipReader({
   className,
   width = 400,
   height = 560,
+  singlePage = false,
 }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const flipRef = useRef<any>(null);
@@ -146,7 +148,7 @@ export function PdfPageFlipReader({
         startPage={initialPageIndex}
         startZIndex={0}
         autoSize={false}
-        usePortrait={false}
+        usePortrait={singlePage}
         swipeDistance={30}
         style={{}}
         onFlip={(e: FlipEvent) => {

@@ -301,6 +301,7 @@ export function BookReaderTab() {
               onReady={handleReady}
               width={pageWidth}
               height={pageHeight}
+              singlePage={isMobile}
             />
           </div>
         </div>
