@@ -471,102 +471,137 @@ export function BookReaderTab() {
                 ))}
               </div>
 
-              <div 
+              <div
                 className="relative"
-                style={{ 
-                  transform: `scale(${scale}) translate3d(0,0,0)`, 
-                  perspective: "3000px", 
-                  willChange: "transform" 
+                style={{
+                  transform: `scale(${scale}) translate3d(0,0,0)`,
+                  perspective: "2000px",
+                  willChange: "transform"
                 }}
                 onMouseDown={handleDragStart}
                 onTouchStart={handleDragStart}
               >
                 <div className="relative flex" style={{ transformStyle: "preserve-3d" }}>
                   {/* Spine shadow - only on desktop with two-page spread */}
-                  {!isMobile && (
-                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-12 z-10 pointer-events-none">
-                      <div className="h-full bg-gradient-to-r from-black/50 via-black/70 to-black/50 opacity-60" />
+                  {!isMobile && !cover && (
+                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-8 z-20 pointer-events-none">
+                      <div className="h-full bg-gradient-to-r from-transparent via-black/40 to-transparent" />
                     </div>
                   )}
 
-                  {/* Flipping Page Layer */}
+                  {/* Base spread (what's underneath during flip) */}
                   {(isFlipping || isDragging) && (
-                    <div
-                      className="absolute inset-0 flex"
-                      style={{
-                        transformStyle: "preserve-3d",
-                        transform: (flipDirection === "next" || dragDirection === "forward")
-                          ? `rotateY(${- (isDragging ? dragProgress * 180 : 180)}deg)`
-                          : `rotateY(${ (isDragging ? dragProgress * 180 : 180)}deg)`,
-                        transformOrigin: (flipDirection === "next" || dragDirection === "forward") ? "left center" : "right center",
-                        transition: isFlipping ? "transform 0.6s cubic-bezier(0.6, 0.05, 0.4, 0.95)" : "none",
-                        zIndex: 50,
-                        pointerEvents: "none",
-                        backfaceVisibility: "hidden",
-                        willChange: "transform",
-                      }}
-                    >
-                      {/* Front side of flipping page (current spread) */}
-                      <div className="flex backface-hidden">
-                        {!isMobile && left && (
-                          <div className="bg-paper shadow-2xl overflow-hidden" style={{ width: pageWidth, height: pageHeight }}>
-                            <Page pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
-                          </div>
-                        )}
-                        <div className={cn("bg-paper shadow-2xl overflow-hidden", cover && "rounded-r-xl")} style={{ width: pageWidth, height: pageHeight }}>
-                          <Page pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
-                        </div>
-                      </div>
-
-                      {/* Back side of flipping page (next/prev spread) */}
-                      <div className="absolute inset-0 flex" style={{ transform: "rotateY(180deg) translate3d(0,0,0)", backfaceVisibility: "hidden" }}>
-                        {!isMobile && (
-                          <div className="bg-paper shadow-2xl overflow-hidden" style={{ width: pageWidth, height: pageHeight }}>
-                            <Page
-                              pageNumber={(flipDirection === "next" || dragDirection === "forward")
-                                ? (left ? left + 2 : 2)
-                                : (left || 2)}
-                              width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null}
-                            />
-                          </div>
-                        )}
-                        <div className="bg-paper shadow-2xl overflow-hidden" style={{ width: pageWidth, height: pageHeight }}>
+                    <div className="absolute inset-0 flex" style={{ zIndex: 1 }}>
+                      {!isMobile && (
+                        <div className="bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight }}>
                           <Page
-                            pageNumber={
-                              isMobile
-                                ? ((flipDirection === "next" || dragDirection === "forward")
-                                    ? Math.min(right! + 1, numPages)
-                                    : Math.max(right! - 1, 1))
-                                : ((flipDirection === "next" || dragDirection === "forward")
-                                    ? (right! + 2 > numPages ? numPages : right! + 2)
-                                    : right!)
-                            }
+                            pageNumber={(flipDirection === "next" || dragDirection === "forward")
+                              ? (left ? left + 2 : 2)
+                              : (left ? left - 2 : 1)}
                             width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null}
                           />
                         </div>
+                      )}
+                      <div className="bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight }}>
+                        <Page
+                          pageNumber={
+                            isMobile
+                              ? ((flipDirection === "next" || dragDirection === "forward")
+                                  ? Math.min(right! + 1, numPages)
+                                  : Math.max(right! - 1, 1))
+                              : ((flipDirection === "next" || dragDirection === "forward")
+                                  ? Math.min(right! + 2, numPages)
+                                  : Math.max(right! - 2, 1))
+                          }
+                          width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null}
+                        />
                       </div>
                     </div>
                   )}
 
-                  {/* Static Current Spread */}
-                  <div className="flex">
-                    {!isMobile && left && (
-                      <div className="bg-paper shadow-2xl overflow-hidden relative" style={{ width: pageWidth, height: pageHeight, backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
-                        <Page pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
-                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{left}</div>
+                  {/* Static left page (stays in place during flip) - desktop only */}
+                  {!isMobile && left && !(isFlipping || isDragging) && (
+                    <div className="bg-paper overflow-hidden relative" style={{ width: pageWidth, height: pageHeight }}>
+                      <Page pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-gray-600 bg-white/80 px-2 py-0.5 rounded">{left}</div>
+                    </div>
+                  )}
+
+                  {/* Flipping page container */}
+                  <div
+                    className="relative"
+                    style={{
+                      width: pageWidth,
+                      height: pageHeight,
+                      transformStyle: "preserve-3d",
+                      zIndex: (isFlipping || isDragging) ? 10 : 2,
+                    }}
+                  >
+                    {/* The flipping page - rotates around the spine edge */}
+                    <div
+                      style={{
+                        width: pageWidth,
+                        height: pageHeight,
+                        transformStyle: "preserve-3d",
+                        transform: (isFlipping || isDragging)
+                          ? (flipDirection === "next" || dragDirection === "forward")
+                            ? `rotateY(${-(isDragging ? dragProgress * 180 : 180)}deg)`
+                            : `rotateY(${(isDragging ? dragProgress * 180 : 180)}deg)`
+                          : "rotateY(0deg)",
+                        transformOrigin: (flipDirection === "next" || dragDirection === "forward") ? "left center" : "right center",
+                        transition: isFlipping ? "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)" : "none",
+                        position: "relative",
+                      }}
+                    >
+                      {/* Front of flipping page */}
+                      <div
+                        className={cn("absolute inset-0 bg-paper overflow-hidden", cover && "rounded-r-lg")}
+                        style={{ backfaceVisibility: "hidden" }}
+                      >
+                        {cover && <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black/20 pointer-events-none z-10" />}
+                        <Page pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-gray-600 bg-white/80 px-2 py-0.5 rounded z-10">{right}</div>
+                        {cover && (
+                          <div className="absolute inset-0 flex items-center justify-end pr-4 md:pr-8 pointer-events-none z-10">
+                            <span className="text-white/80 text-base md:text-lg animate-pulse drop-shadow-lg">{isMobile ? "Swipe →" : "Drag to open →"}</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    <div className={cn("bg-paper shadow-2xl overflow-hidden relative", cover && "rounded-r-xl")} style={{ width: pageWidth, height: pageHeight, backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
-                      {cover && <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black/30 pointer-events-none" />}
-                      <Page pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
-                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{right}</div>
-                      {cover && (
-                        <div className="absolute inset-0 flex items-center justify-end pr-4 md:pr-12 pointer-events-none">
-                          <span className="text-white/70 text-base md:text-xl animate-pulse">{isMobile ? "Swipe →" : "Drag or click to open →"}</span>
-                        </div>
-                      )}
+
+                      {/* Back of flipping page */}
+                      <div
+                        className="absolute inset-0 bg-paper overflow-hidden"
+                        style={{
+                          backfaceVisibility: "hidden",
+                          transform: "rotateY(180deg)",
+                        }}
+                      >
+                        <Page
+                          pageNumber={
+                            isMobile
+                              ? ((flipDirection === "next" || dragDirection === "forward")
+                                  ? Math.min(right! + 1, numPages)
+                                  : Math.max(right! - 1, 1))
+                              : ((flipDirection === "next" || dragDirection === "forward")
+                                  ? Math.min(right! + 2, numPages)
+                                  : Math.max(right! - 2, 1))
+                          }
+                          width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null}
+                        />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Static left page during animation - desktop only */}
+                  {!isMobile && left && (isFlipping || isDragging) && (flipDirection === "next" || dragDirection === "forward") && (
+                    <div
+                      className="absolute bg-paper overflow-hidden"
+                      style={{ width: pageWidth, height: pageHeight, left: 0, zIndex: 5 }}
+                    >
+                      <Page pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-gray-600 bg-white/80 px-2 py-0.5 rounded">{left}</div>
+                    </div>
+                  )}
                 </div>
               </div>
             </Document>
