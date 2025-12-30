@@ -247,8 +247,8 @@ export function BookReaderTab() {
     return { left: left <= numPages ? left : null, right: right <= numPages ? right : null, cover: false };
   };
 
-  const flipTo = (direction: "next" | "prev") => {
-    if (isFlipping || isDragging) return;
+  const flipTo = useCallback((direction: "next" | "prev") => {
+    if (isFlipping) return;
     const newSpread = direction === "next" ? currentSpread + 1 : currentSpread - 1;
     if (newSpread < 0 || newSpread >= maxSpreads) return;
 
@@ -259,16 +259,18 @@ export function BookReaderTab() {
       setCurrentSpread(newSpread);
       // On mobile, spread = page - 1; on desktop, calculate from spread
       const page = isMobile ? newSpread + 1 : (newSpread === 0 ? 1 : newSpread * 2);
-      saveReadingProgress({
-        fileId: selectedFile!.id,
-        currentPage: page,
-        totalPages: numPages,
-        lastRead: new Date().toISOString(),
-      });
+      if (selectedFile) {
+        saveReadingProgress({
+          fileId: selectedFile.id,
+          currentPage: page,
+          totalPages: numPages,
+          lastRead: new Date().toISOString(),
+        });
+      }
       setIsFlipping(false);
       setFlipDirection(null);
     }, 600);
-  };
+  }, [isFlipping, currentSpread, maxSpreads, isMobile, selectedFile, numPages]);
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (isFlipping) return;
@@ -291,15 +293,21 @@ export function BookReaderTab() {
 
   const handleDragEnd = useCallback(() => {
     if (!isDragging) return;
-    if (dragProgress > 0.3) {
-      flipTo(dragDirection === "forward" ? "next" : "prev");
-    } else {
-      setDragProgress(0);
-      setDragDirection(null);
-    }
+
+    const shouldFlip = dragProgress > 0.3 && dragDirection;
+    const dir = dragDirection; // capture before we clear state
+
+    // End drag immediately so flipTo isn't blocked
     setIsDragging(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDragging, dragProgress, dragDirection]);
+    setDragProgress(0);
+    setDragDirection(null);
+
+    if (shouldFlip && dir) {
+      requestAnimationFrame(() => {
+        flipTo(dir === "forward" ? "next" : "prev");
+      });
+    }
+  }, [isDragging, dragProgress, dragDirection, flipTo]);
 
   useEffect(() => {
     if (isDragging) {
