@@ -284,11 +284,14 @@ export function BookReaderTab() {
           </div>
         )}
 
-        {/* Book View - use padding for vertical position, not flex centering */}
-        <div className="flex-1 min-h-0 overflow-auto">
+        {/* Book View - wrapper with explicit height for proper centering */}
+        <div className="flex-1 min-h-0 overflow-auto bg-stone-950">
           <div
-            className="flex justify-center pt-6 pb-4"
+            className="mx-auto"
             style={{
+              width: 'fit-content',
+              paddingTop: '2rem',
+              paddingBottom: '2rem',
               transform: `scale(${scale})`,
               transformOrigin: "top center",
               transition: "transform 0.2s",
