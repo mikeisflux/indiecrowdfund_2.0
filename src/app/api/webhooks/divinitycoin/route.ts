@@ -109,14 +109,14 @@ export async function GET() {
         },
         {
           event: "refund.request",
-          description: "Request to refund/deduct DivinityCoin from a user's balance. Only succeeds if user has sufficient balance.",
+          description: "Request to refund/deduct DivinityCoin from a user's balance. The user is identified by tracing the original card redemption. Only succeeds if user has sufficient balance.",
           payloadRequired: true,
           payloadFormat: {
             refundId: "string (required, unique identifier for this refund)",
-            platformUserId: "string (required, IndieCrowdfund user ID)",
             amount: "number (required, amount to deduct)",
+            originalCardCode: "string (required if no originalTransactionId, the card code that was redeemed)",
+            originalTransactionId: "string (required if no originalCardCode, DivinityCoin's transaction ID from when the card was redeemed)",
             reason: "string (optional, reason for refund)",
-            originalTransactionId: "string (optional, reference to original transaction)",
           },
           responseFormat: {
             success: "boolean",
@@ -124,8 +124,9 @@ export async function GET() {
             amountDeducted: "number",
             previousBalance: "number",
             newBalance: "number",
+            userId: "string (IndieCrowdfund user ID, if found)",
             error: "string (if failed)",
-            errorCode: "INSUFFICIENT_BALANCE | USER_NOT_FOUND | INVALID_AMOUNT | ALREADY_PROCESSED",
+            errorCode: "INSUFFICIENT_BALANCE | USER_NOT_FOUND | REDEMPTION_NOT_FOUND | INVALID_AMOUNT | ALREADY_PROCESSED",
           },
         },
       ],

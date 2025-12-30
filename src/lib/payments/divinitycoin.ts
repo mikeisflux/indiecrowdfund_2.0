@@ -101,7 +101,8 @@ export interface DivinityCoinWebhookRequest {
     refundId?: string;
     amount?: number;
     reason?: string;
-    originalTransactionId?: string;
+    originalTransactionId?: string; // DivinityCoin's transaction ID from when the card was redeemed
+    originalCardCode?: string; // The card code that was redeemed
     [key: string]: unknown;
   };
 }
@@ -134,8 +135,9 @@ export interface RefundRequestResponse {
   amountDeducted: number;
   previousBalance: number;
   newBalance: number;
+  userId?: string; // The user whose balance was affected
   error?: string;
-  errorCode?: "INSUFFICIENT_BALANCE" | "USER_NOT_FOUND" | "INVALID_AMOUNT" | "ALREADY_PROCESSED";
+  errorCode?: "INSUFFICIENT_BALANCE" | "USER_NOT_FOUND" | "REDEMPTION_NOT_FOUND" | "INVALID_AMOUNT" | "ALREADY_PROCESSED";
 }
 
 /**
@@ -277,17 +279,25 @@ export async function handleCardRedeem(
 /**
  * Handle refund.request webhook event
  * DivinityCoin calls this when they need to refund coins from a user's balance.
- * We check if the user has sufficient balance before allowing the refund.
+ *
+ * Since DivinityCoin doesn't know our user IDs, we trace the user by looking up
+ * the original redemption using either:
+ * - originalCardCode: The card code that was redeemed
+ * - originalTransactionId: DivinityCoin's transaction ID from when the card was redeemed
+ *
+ * We then check if the user has sufficient balance before allowing the refund.
  */
 export async function handleRefundRequest(
   refundId: string,
-  platformUserId: string,
   amount: number,
-  reason?: string,
-  originalTransactionId?: string
+  originalCardCode?: string,
+  originalTransactionId?: string,
+  reason?: string
 ): Promise<RefundRequestResponse> {
   console.log(
-    `[DivinityCoin] Refund request: ${refundId} for user ${platformUserId}, amount: ${amount}`
+    `[DivinityCoin] Refund request: ${refundId}, amount: ${amount}, ` +
+    `cardCode: ${originalCardCode ? originalCardCode.substring(0, 4) + '****' : 'N/A'}, ` +
+    `txnId: ${originalTransactionId || 'N/A'}`
   );
 
   // Validate amount
@@ -304,9 +314,110 @@ export async function handleRefundRequest(
     };
   }
 
-  // Find the user
+  // Must have at least one identifier to trace the redemption
+  if (!originalCardCode && !originalTransactionId) {
+    console.warn(`[DivinityCoin] No identifier provided to trace redemption`);
+    return {
+      success: false,
+      refundId,
+      amountDeducted: 0,
+      previousBalance: 0,
+      newBalance: 0,
+      error: "Either originalCardCode or originalTransactionId is required to identify the redemption",
+      errorCode: "REDEMPTION_NOT_FOUND",
+    };
+  }
+
+  // Try to find the user who redeemed this card
+  let userId: string | null = null;
+  let redemptionInfo: { code: string; amount: number; redeemedAt: Date } | null = null;
+
+  // Method 1: Look up by card code in DivinityCoinRedemption table
+  if (originalCardCode) {
+    const cleanCode = originalCardCode.replace(/[-\s]/g, "").toUpperCase();
+    const redemption = await db.divinityCoinRedemption.findUnique({
+      where: { code: cleanCode },
+      select: {
+        userId: true,
+        code: true,
+        amount: true,
+        redeemedAt: true,
+      },
+    });
+
+    if (redemption) {
+      userId = redemption.userId;
+      redemptionInfo = {
+        code: redemption.code,
+        amount: Number(redemption.amount),
+        redeemedAt: redemption.redeemedAt,
+      };
+      console.log(`[DivinityCoin] Found user ${userId} via card code lookup`);
+    }
+  }
+
+  // Method 2: If not found by code, try looking up by external transaction ID in metadata
+  if (!userId && originalTransactionId) {
+    const transaction = await db.divinityCoinTransaction.findFirst({
+      where: {
+        type: "REDEMPTION",
+        metadata: {
+          contains: originalTransactionId,
+        },
+      },
+      select: {
+        userId: true,
+        amount: true,
+        createdAt: true,
+        metadata: true,
+      },
+    });
+
+    if (transaction) {
+      userId = transaction.userId;
+
+      // Try to extract code from metadata
+      let codeInfo = "unknown";
+      try {
+        const metadata = JSON.parse(transaction.metadata || "{}");
+        if (metadata.codePrefix && metadata.codeSuffix) {
+          codeInfo = `${metadata.codePrefix}****${metadata.codeSuffix}`;
+        } else if (metadata.codePrefix) {
+          codeInfo = `${metadata.codePrefix}****`;
+        }
+      } catch {
+        // Ignore parse errors
+      }
+
+      redemptionInfo = {
+        code: codeInfo,
+        amount: Number(transaction.amount),
+        redeemedAt: transaction.createdAt,
+      };
+      console.log(`[DivinityCoin] Found user ${userId} via transaction ID lookup`);
+    }
+  }
+
+  // If we couldn't find the user, return error
+  if (!userId) {
+    console.warn(
+      `[DivinityCoin] Could not find redemption for refund. ` +
+      `cardCode: ${originalCardCode || 'N/A'}, txnId: ${originalTransactionId || 'N/A'}`
+    );
+    return {
+      success: false,
+      refundId,
+      amountDeducted: 0,
+      previousBalance: 0,
+      newBalance: 0,
+      error: "Could not find the original redemption. The card code or transaction ID may be invalid.",
+      errorCode: "REDEMPTION_NOT_FOUND",
+    };
+  }
+
+  // Get the user's current balance
   const user = await db.user.findUnique({
-    where: { id: platformUserId },
+    where: { id: userId },
     select: {
       id: true,
       divinityCoinBalance: true,
@@ -315,14 +426,16 @@ export async function handleRefundRequest(
   });
 
   if (!user) {
-    console.warn(`[DivinityCoin] User not found: ${platformUserId}`);
+    // This shouldn't happen if we found a redemption, but handle it anyway
+    console.warn(`[DivinityCoin] User ${userId} not found (but redemption exists)`);
     return {
       success: false,
       refundId,
       amountDeducted: 0,
       previousBalance: 0,
       newBalance: 0,
-      error: `User not found: ${platformUserId}`,
+      userId,
+      error: `User account not found`,
       errorCode: "USER_NOT_FOUND",
     };
   }
@@ -330,9 +443,8 @@ export async function handleRefundRequest(
   const previousBalance = Number(user.divinityCoinBalance || 0);
 
   // Check if this refund was already processed (idempotency check)
-  const existingTransaction = await db.divinityCoinTransaction.findFirst({
+  const existingRefund = await db.divinityCoinTransaction.findFirst({
     where: {
-      userId: platformUserId,
       metadata: {
         contains: refundId,
       },
@@ -340,7 +452,7 @@ export async function handleRefundRequest(
     },
   });
 
-  if (existingTransaction) {
+  if (existingRefund) {
     console.log(`[DivinityCoin] Refund ${refundId} already processed`);
     return {
       success: false,
@@ -348,6 +460,7 @@ export async function handleRefundRequest(
       amountDeducted: 0,
       previousBalance,
       newBalance: previousBalance,
+      userId,
       error: "Refund already processed",
       errorCode: "ALREADY_PROCESSED",
     };
@@ -357,11 +470,11 @@ export async function handleRefundRequest(
   if (previousBalance < amount) {
     console.warn(
       `[DivinityCoin] Insufficient balance for refund. ` +
-      `User ${platformUserId} has ${previousBalance}, needs ${amount}`
+      `User ${userId} has ${previousBalance}, needs ${amount}`
     );
 
     // Notify DivinityCoin about insufficient balance via callback (if configured)
-    await notifyDivinityCoinRefundFailed(refundId, platformUserId, amount, previousBalance);
+    await notifyDivinityCoinRefundFailed(refundId, userId, amount, previousBalance, originalCardCode, originalTransactionId);
 
     return {
       success: false,
@@ -369,6 +482,7 @@ export async function handleRefundRequest(
       amountDeducted: 0,
       previousBalance,
       newBalance: previousBalance,
+      userId,
       error: `Insufficient balance. User has ${previousBalance} DivinityCoin, refund requires ${amount}`,
       errorCode: "INSUFFICIENT_BALANCE",
     };
@@ -381,7 +495,7 @@ export async function handleRefundRequest(
     await db.$transaction(async (tx) => {
       // Update user's balance
       await tx.user.update({
-        where: { id: platformUserId },
+        where: { id: userId! },
         data: {
           divinityCoinBalance: newBalance,
         },
@@ -390,13 +504,15 @@ export async function handleRefundRequest(
       // Create transaction record for audit
       await tx.divinityCoinTransaction.create({
         data: {
-          userId: platformUserId,
+          userId: userId!,
           amount: -amount, // Negative because it's a deduction
           type: "REFUND_DEDUCTION",
           description: reason || `DivinityCoin refund processed (Ref: ${refundId})`,
           metadata: JSON.stringify({
             refundId,
+            originalCardCode: originalCardCode ? `${originalCardCode.substring(0, 4)}****` : null,
             originalTransactionId,
+            originalRedemption: redemptionInfo,
             reason,
             previousBalance,
             newBalance,
@@ -409,7 +525,7 @@ export async function handleRefundRequest(
 
     console.log(
       `[DivinityCoin] Refund ${refundId} processed successfully. ` +
-      `User ${platformUserId}: ${previousBalance} -> ${newBalance}`
+      `User ${userId}: ${previousBalance} -> ${newBalance}`
     );
 
     return {
@@ -418,6 +534,7 @@ export async function handleRefundRequest(
       amountDeducted: amount,
       previousBalance,
       newBalance,
+      userId,
     };
   } catch (error) {
     console.error(`[DivinityCoin] Error processing refund ${refundId}:`, error);
@@ -434,7 +551,9 @@ async function notifyDivinityCoinRefundFailed(
   refundId: string,
   platformUserId: string,
   requestedAmount: number,
-  availableBalance: number
+  availableBalance: number,
+  originalCardCode?: string,
+  originalTransactionId?: string
 ): Promise<void> {
   try {
     const config = await getDivinityCoinConfig();
@@ -449,6 +568,8 @@ async function notifyDivinityCoinRefundFailed(
       body: JSON.stringify({
         refundId,
         platformUserId,
+        originalCardCode: originalCardCode ? `${originalCardCode.substring(0, 4)}****` : null,
+        originalTransactionId,
         requestedAmount,
         availableBalance,
         shortfall: requestedAmount - availableBalance,
@@ -509,23 +630,34 @@ export async function handleDivinityCoinWebhook(
       );
 
     case "refund.request":
-      if (!request.data?.refundId || !request.data?.platformUserId || !request.data?.amount) {
+      if (!request.data?.refundId || !request.data?.amount) {
         return {
           success: false,
           refundId: request.data?.refundId || "unknown",
           amountDeducted: 0,
           previousBalance: 0,
           newBalance: 0,
-          error: "Missing required fields: refundId, platformUserId, and amount are required",
+          error: "Missing required fields: refundId and amount are required",
           errorCode: "INVALID_AMOUNT",
+        };
+      }
+      if (!request.data?.originalCardCode && !request.data?.originalTransactionId) {
+        return {
+          success: false,
+          refundId: request.data.refundId,
+          amountDeducted: 0,
+          previousBalance: 0,
+          newBalance: 0,
+          error: "Either originalCardCode or originalTransactionId is required to identify the redemption",
+          errorCode: "REDEMPTION_NOT_FOUND",
         };
       }
       return handleRefundRequest(
         request.data.refundId,
-        request.data.platformUserId,
         request.data.amount,
-        request.data.reason,
-        request.data.originalTransactionId
+        request.data.originalCardCode,
+        request.data.originalTransactionId,
+        request.data.reason
       );
 
     default:
