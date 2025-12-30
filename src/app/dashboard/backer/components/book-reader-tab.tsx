@@ -227,7 +227,7 @@ export function BookReaderTab() {
     const savedProgress = getReadingProgress(selectedFile.id);
 
     return (
-      <div className={cn("flex flex-col h-[100dvh] bg-gradient-to-b from-stone-900 to-stone-950", isFullscreen && "fixed inset-0 z-50")}>
+      <div className={cn("flex flex-col h-[100dvh] bg-neutral-200", isFullscreen && "fixed inset-0 z-50")}>
         {/* Header */}
         <div className="flex items-center justify-between p-3 bg-black/60 backdrop-blur-sm border-b border-white/10">
           <div className="flex items-center gap-3">
@@ -284,14 +284,11 @@ export function BookReaderTab() {
           </div>
         )}
 
-        {/* Book View - wrapper with explicit height for proper centering */}
-        <div className="flex-1 min-h-0 overflow-auto bg-stone-950">
+        {/* Book View - container like official demo */}
+        <div className="flex-1 overflow-hidden py-4">
           <div
-            className="mx-auto"
             style={{
-              width: 'fit-content',
-              paddingTop: '2rem',
-              paddingBottom: '2rem',
+              height: '100%',
               transform: `scale(${scale})`,
               transformOrigin: "top center",
               transition: "transform 0.2s",

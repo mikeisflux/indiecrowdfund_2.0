@@ -125,36 +125,35 @@ export function PdfPageFlipReader({
   }
 
   return (
-    <div className={className}>
+    <div className={className} style={{ height: '100%' }}>
       <HTMLFlipBook
         key={flipKey}
         ref={flipRef}
         width={width}
         height={height}
-        size="fixed"
-        minWidth={width}
-        maxWidth={width}
-        minHeight={height}
-        maxHeight={height}
+        size="stretch"
+        minWidth={315}
+        maxWidth={1000}
+        minHeight={400}
+        maxHeight={1533}
         showCover={true}
         mobileScrollSupport={true}
         useMouseEvents={true}
         clickEventForward={false}
         flippingTime={650}
-        maxShadowOpacity={0.35}
+        maxShadowOpacity={0.5}
         drawShadow={true}
         showPageCorners={true}
         disableFlipByClick={false}
         startPage={initialPageIndex}
         startZIndex={0}
-        autoSize={false}
         usePortrait={singlePage}
         swipeDistance={30}
         style={{}}
         onFlip={(e: FlipEvent) => {
           onPageChangeRef.current?.(e.data, state.images.length);
         }}
-        className={ready ? "gpu-book" : "gpu-book opacity-0"}
+        className={ready ? "demo-book" : "demo-book opacity-0"}
       >
         {state.images.map((src, idx) => (
           <div key={src} className="page">
@@ -174,44 +173,20 @@ export function PdfPageFlipReader({
       </div>
 
       <style jsx global>{`
-        /* GPU acceleration and seam fixes */
-        .gpu-book,
-        .gpu-book * {
-          transform-style: preserve-3d;
-          backface-visibility: hidden;
-          -webkit-font-smoothing: antialiased;
+        .demo-book {
+          margin: 0 auto;
         }
 
-        .gpu-book {
-          will-change: transform;
-          transform: translateZ(0);
-          perspective: 2400px;
-          box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
-        }
-
-        .stf__wrapper {
-          background: transparent !important;
-        }
-
-        /* Each page */
         .page {
-          background: #fdfcf8 !important;
+          background: #fdfcf8;
           overflow: hidden;
-          border-radius: 4px;
         }
 
-        /* Remove white edge / border look */
         .page-img {
           display: block;
           width: 100%;
           height: 100%;
-          object-fit: cover;
-
-          /* kills 1px seams on rotated images */
-          transform: translateZ(0) scale(1.01);
-          will-change: transform;
-
-          /* prevent selection/drag artifacts */
+          object-fit: contain;
           user-select: none;
           -webkit-user-drag: none;
         }
