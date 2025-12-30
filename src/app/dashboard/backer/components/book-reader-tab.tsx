@@ -130,6 +130,8 @@ export function BookReaderTab() {
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [outline, setOutline] = useState<OutlineItem[]>([]);
   const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxyType | null>(null);
+  const [animFromSpread, setAnimFromSpread] = useState<number | null>(null);
+  const [animToSpread, setAnimToSpread] = useState<number | null>(null);
 
   const bookRef = useRef<HTMLDivElement>(null);
 
@@ -234,43 +236,59 @@ export function BookReaderTab() {
   // On mobile, each "spread" is a single page; on desktop, spreads are 2 pages
   const maxSpreads = isMobile ? numPages : Math.ceil((numPages + 1) / 2);
 
-  const getSpreadPages = () => {
+  // Helper to compute pages for ANY spread
+  const getSpreadPagesFor = useCallback((spread: number) => {
     if (isMobile) {
-      // Mobile: single page at a time
-      const page = currentSpread + 1;
-      return { left: null, right: page <= numPages ? page : null, cover: currentSpread === 0 };
+      const page = spread + 1;
+      return { left: null as number | null, right: page <= numPages ? page : null, cover: spread === 0 };
     }
-    // Desktop: two-page spread
-    if (currentSpread === 0) return { left: null, right: 1, cover: true };
-    const left = currentSpread * 2;
-    const right = currentSpread * 2 + 1;
-    return { left: left <= numPages ? left : null, right: right <= numPages ? right : null, cover: false };
-  };
+    if (spread === 0) return { left: null as number | null, right: 1, cover: true };
+    const left = spread * 2;
+    const right = spread * 2 + 1;
+    return {
+      left: left <= numPages ? left : null,
+      right: right <= numPages ? right : null,
+      cover: false,
+    };
+  }, [isMobile, numPages]);
+
+  const getSpreadPages = () => getSpreadPagesFor(currentSpread);
 
   const flipTo = useCallback((direction: "next" | "prev") => {
-    if (isFlipping) return;
-    const newSpread = direction === "next" ? currentSpread + 1 : currentSpread - 1;
-    if (newSpread < 0 || newSpread >= maxSpreads) return;
+    if (isFlipping || isDragging) return;
+
+    const from = currentSpread;
+    const to = direction === "next" ? from + 1 : from - 1;
+    if (to < 0 || to >= maxSpreads) return;
 
     setFlipDirection(direction);
     setIsFlipping(true);
 
-    setTimeout(() => {
-      setCurrentSpread(newSpread);
-      // On mobile, spread = page - 1; on desktop, calculate from spread
-      const page = isMobile ? newSpread + 1 : (newSpread === 0 ? 1 : newSpread * 2);
-      if (selectedFile) {
-        saveReadingProgress({
-          fileId: selectedFile.id,
-          currentPage: page,
-          totalPages: numPages,
-          lastRead: new Date().toISOString(),
-        });
-      }
+    // Snapshot for the animation
+    setAnimFromSpread(from);
+    setAnimToSpread(to);
+
+    // Commit immediately so the "static spread" underneath is already correct
+    setCurrentSpread(to);
+
+    // Persist progress using the committed target
+    const page = isMobile ? to + 1 : (to === 0 ? 1 : to * 2);
+    if (selectedFile) {
+      saveReadingProgress({
+        fileId: selectedFile.id,
+        currentPage: page,
+        totalPages: numPages,
+        lastRead: new Date().toISOString(),
+      });
+    }
+
+    window.setTimeout(() => {
       setIsFlipping(false);
       setFlipDirection(null);
+      setAnimFromSpread(null);
+      setAnimToSpread(null);
     }, 600);
-  }, [isFlipping, currentSpread, maxSpreads, isMobile, selectedFile, numPages]);
+  }, [isFlipping, isDragging, currentSpread, maxSpreads, isMobile, selectedFile, numPages]);
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (isFlipping) return;
@@ -406,7 +424,15 @@ export function BookReaderTab() {
   if (error && !selectedFile) return <Card><CardContent className="py-12 text-center"><AlertCircle className="h-12 w-12 mx-auto mb-4" /><p>{error}</p></CardContent></Card>;
 
   if (selectedFile && pdfUrl) {
-    const { left, right, cover } = getSpreadPages();
+    // Compute page numbers for static display and animation
+    const base = getSpreadPagesFor(currentSpread); // committed / static
+    const from = animFromSpread ?? currentSpread;  // what the flip shows as "current"
+    const to = animToSpread ?? currentSpread;      // what the flip reveals
+    const fromPages = getSpreadPagesFor(from);
+    const toPages = getSpreadPagesFor(to);
+
+    // Use base for the static spread
+    const { left, right, cover } = base;
 
     // Show loading state while PDF is loading (numPages === 0)
     if (numPages === 0) {
@@ -509,19 +535,19 @@ export function BookReaderTab() {
           <div className="flex-1 flex items-center justify-center overflow-hidden" ref={bookRef}>
             <Document file={pdfUrl} onLoadSuccess={(pdf) => { setNumPages(pdf.numPages); setPdfDocument(pdf); }} loading={null}>
               <Outline onLoadSuccess={handleOutlineLoad} />
-              {/* Preload */}
-              <div className="absolute opacity-0 pointer-events-none -z-50">
+              {/* TEMP: disable preloading until flipping is stable */}
+              {/* <div className="absolute opacity-0 pointer-events-none -z-50">
                 {preloadPages().map(p => (
                   <Page key={`pre-${p}`} pageNumber={p} width={900} renderTextLayer={false} renderAnnotationLayer={false} />
                 ))}
-              </div>
+              </div> */}
 
-              <div 
+              <div
                 className="relative"
-                style={{ 
-                  transform: `scale(${scale}) translate3d(0,0,0)`, 
-                  perspective: "3000px", 
-                  willChange: "transform" 
+                style={{
+                  transform: `scale(${scale}) translate3d(0,0,0)`,
+                  perspective: "3000px",
+                  willChange: "transform"
                 }}
                 onMouseDown={handleDragStart}
                 onTouchStart={handleDragStart}
@@ -534,8 +560,8 @@ export function BookReaderTab() {
                     </div>
                   )}
 
-                  {/* Flipping Page Layer - only the right page for forward, left page for backward */}
-                  {(isFlipping || isDragging) && (flipDirection === "next" || dragDirection === "forward") && (
+                  {/* Flipping Page Layer - forward flip (right page flipping) */}
+                  {(isFlipping || isDragging) && (flipDirection === "next" || dragDirection === "forward") && fromPages.right && (
                     <div
                       className="absolute flex"
                       style={{
@@ -550,23 +576,25 @@ export function BookReaderTab() {
                         pointerEvents: "none",
                       }}
                     >
-                      {/* Front of flipping page (current right page) */}
-                      <div className={cn("absolute inset-0 bg-paper overflow-hidden", cover && "rounded-r-xl")} style={{ backfaceVisibility: "hidden" }}>
-                        <Page key={`flip-front-${right}`} pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                      {/* Front of flipping page = fromPages.right */}
+                      <div className={cn("absolute inset-0 bg-paper overflow-hidden", fromPages.cover && "rounded-r-xl")} style={{ backfaceVisibility: "hidden" }}>
+                        <Page key={`flip-front-${fromPages.right}`} pageNumber={fromPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                       </div>
-                      {/* Back of flipping page (next left page) */}
+                      {/* Back of flipping page = toPages.left (desktop) or toPages.right (mobile) */}
                       <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                        <Page
-                          key={`flip-back-${isMobile ? right! + 1 : (left ? left + 2 : 2)}`}
-                          pageNumber={isMobile ? Math.min(right! + 1, numPages) : (left ? left + 2 : 2)}
-                          width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
-                        />
+                        {(isMobile ? toPages.right : toPages.left) && (
+                          <Page
+                            key={`flip-back-${isMobile ? toPages.right : toPages.left}`}
+                            pageNumber={(isMobile ? toPages.right : toPages.left)!}
+                            width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
+                          />
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* Flipping Page Layer - left page for backward */}
-                  {(isFlipping || isDragging) && (flipDirection === "prev" || dragDirection === "backward") && !isMobile && left && (
+                  {/* Flipping Page Layer - backward flip (left page flipping on desktop) */}
+                  {(isFlipping || isDragging) && (flipDirection === "prev" || dragDirection === "backward") && !isMobile && fromPages.left && (
                     <div
                       className="absolute flex"
                       style={{
@@ -581,32 +609,34 @@ export function BookReaderTab() {
                         pointerEvents: "none",
                       }}
                     >
-                      {/* Front of flipping page (current left page) */}
+                      {/* Front of flipping page = fromPages.left */}
                       <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
-                        <Page key={`flip-back-front-${left}`} pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                        <Page key={`flip-back-front-${fromPages.left}`} pageNumber={fromPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                       </div>
-                      {/* Back of flipping page (previous right page) */}
+                      {/* Back of flipping page = toPages.right */}
                       <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                        <Page key={`flip-back-back-${Math.max(right! - 2, 1)}`} pageNumber={Math.max(right! - 2, 1)} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                        {toPages.right && (
+                          <Page key={`flip-back-back-${toPages.right}`} pageNumber={toPages.right} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* Next right page underneath (visible during forward flip) */}
-                  {(isFlipping || isDragging) && (flipDirection === "next" || dragDirection === "forward") && (
+                  {/* Next page underneath (visible during forward flip) = toPages.right */}
+                  {(isFlipping || isDragging) && (flipDirection === "next" || dragDirection === "forward") && toPages.right && (
                     <div className="absolute bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: isMobile ? 0 : pageWidth, zIndex: 5 }}>
                       <Page
-                        key={`under-next-${currentSpread}-${isMobile ? right! + 1 : right! + 2}`}
-                        pageNumber={isMobile ? Math.min(right! + 1, numPages) : Math.min(right! + 2, numPages)}
+                        key={`under-next-${toPages.right}`}
+                        pageNumber={toPages.right}
                         width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
                       />
                     </div>
                   )}
 
-                  {/* Previous left page underneath (visible during backward flip) */}
-                  {(isFlipping || isDragging) && (flipDirection === "prev" || dragDirection === "backward") && !isMobile && left && (
+                  {/* Previous page underneath (visible during backward flip) = toPages.left */}
+                  {(isFlipping || isDragging) && (flipDirection === "prev" || dragDirection === "backward") && !isMobile && toPages.left && (
                     <div className="absolute bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: 0, zIndex: 5 }}>
-                      <Page key={`under-prev-${currentSpread}-${Math.max(left - 2, 1)}`} pageNumber={Math.max(left - 2, 1)} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
+                      <Page key={`under-prev-${toPages.left}`} pageNumber={toPages.left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                     </div>
                   )}
 
