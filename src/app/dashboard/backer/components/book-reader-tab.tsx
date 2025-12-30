@@ -419,6 +419,15 @@ export function BookReaderTab() {
               <p className="text-white/60">Loading book...</p>
             </div>
           </div>
+          {/* Hidden Document component to load the PDF and trigger onLoadSuccess */}
+          <div className="hidden">
+            <Document
+              file={pdfUrl}
+              onLoadSuccess={(pdf) => { setNumPages(pdf.numPages); setPdfDocument(pdf); }}
+              onLoadError={(err) => { console.error("PDF load error:", err); setError("Failed to load PDF"); }}
+              loading={null}
+            />
+          </div>
         </div>
       );
     }
