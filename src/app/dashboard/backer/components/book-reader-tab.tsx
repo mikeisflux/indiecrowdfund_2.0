@@ -59,15 +59,12 @@ interface OutlineItem {
 // PDF.js types for outline and document
 interface PDFOutlineItem {
   title: string;
-  dest: string | null;
+  dest: string | unknown[] | null;
   items?: PDFOutlineItem[];
 }
 
-interface PDFDocumentProxy {
-  numPages: number;
-  getDestination: (dest: string) => Promise<unknown[] | null>;
-  getPageIndex: (ref: unknown) => Promise<number>;
-}
+// Use the actual type from pdfjs-dist
+type PDFDocumentProxyType = import("pdfjs-dist").PDFDocumentProxy;
 
 interface DigitalFileWithMime extends DigitalFile {
   mimeType?: string;
@@ -132,7 +129,7 @@ export function BookReaderTab() {
   const [showToc, setShowToc] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [outline, setOutline] = useState<OutlineItem[]>([]);
-  const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
+  const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxyType | null>(null);
 
   const bookRef = useRef<HTMLDivElement>(null);
 
@@ -369,8 +366,11 @@ export function BookReaderTab() {
     const result: OutlineItem[] = [];
     for (const item of items) {
       if (item.dest && pdfDocument) {
-        const dest = await pdfDocument.getDestination(item.dest);
-        if (dest) {
+        // dest can be a string (named destination) or an array (explicit destination)
+        const dest = typeof item.dest === 'string'
+          ? await pdfDocument.getDestination(item.dest)
+          : item.dest;
+        if (dest && dest[0]) {
           const pageIndex = await pdfDocument.getPageIndex(dest[0]);
           result.push({ title: item.title, page: pageIndex + 1 });
         }
