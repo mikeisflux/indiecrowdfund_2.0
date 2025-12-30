@@ -33,6 +33,7 @@ export function Footer() {
             <h4 className="mb-4 font-semibold">For Backers</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/backer-handbook" className="hover:text-foreground">Backer Handbook</Link></li>
+              <li><Link href="/what-is-divinitycoin" className="hover:text-foreground">What is DivinityCoin?</Link></li>
               <li><Link href="/backer-handbook#stripe" className="hover:text-foreground">Paying with Card</Link></li>
               <li><Link href="/backer-handbook#divinitycoin" className="hover:text-foreground">Paying with DivinityCoin</Link></li>
               <li><Link href="/dashboard/backer" className="hover:text-foreground">My Pledges</Link></li>
