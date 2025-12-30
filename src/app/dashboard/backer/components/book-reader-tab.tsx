@@ -284,6 +284,7 @@ export function BookReaderTab() {
       setDragDirection(null);
     }
     setIsDragging(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDragging, dragProgress, dragDirection]);
 
   useEffect(() => {
