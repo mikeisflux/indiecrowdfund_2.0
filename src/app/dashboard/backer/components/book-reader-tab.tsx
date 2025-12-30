@@ -283,26 +283,35 @@ export function BookReaderTab() {
           </div>
         )}
 
-        {/* Book View - container like official demo */}
-        <div className="flex-1 overflow-hidden py-4">
+        {/* Book View - container with scroll when zoomed */}
+        <div className="flex-1 overflow-auto py-4">
           <div
             style={{
-              height: '100%',
-              transform: `scale(${scale})`,
-              transformOrigin: "top center",
-              transition: "transform 0.2s",
+              minWidth: scale > 1 ? `${100 * scale}%` : '100%',
+              minHeight: scale > 1 ? `${100 * scale}%` : '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              transition: "min-width 0.2s, min-height 0.2s",
             }}
           >
-            <PdfPageFlipReader
-              pdfUrl={pdfUrl}
-              fileId={selectedFile.id}
-              initialPageIndex={Math.max(0, (savedProgress?.currentPage ?? 1) - 1)}
-              onPageChange={handlePageChange}
-              onReady={handleReady}
-              width={pageWidth}
-              height={pageHeight}
-              singlePage={isMobile}
-            />
+            <div
+              style={{
+                transform: `scale(${scale})`,
+                transformOrigin: "top center",
+                transition: "transform 0.2s",
+              }}
+            >
+              <PdfPageFlipReader
+                pdfUrl={pdfUrl}
+                fileId={selectedFile.id}
+                initialPageIndex={Math.max(0, (savedProgress?.currentPage ?? 1) - 1)}
+                onPageChange={handlePageChange}
+                onReady={handleReady}
+                width={pageWidth}
+                height={pageHeight}
+                singlePage={isMobile}
+              />
+            </div>
           </div>
         </div>
       </div>

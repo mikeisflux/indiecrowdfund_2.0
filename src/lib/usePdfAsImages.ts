@@ -47,7 +47,19 @@ export function usePdfAsImages(
       try {
         setState({ status: "loading", progress: 0 });
 
-        const loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
+        // Fetch PDF as ArrayBuffer to avoid CORS issues on mobile
+        let pdfData: ArrayBuffer;
+        try {
+          const response = await fetch(pdfUrl);
+          if (!response.ok) {
+            throw new Error(`PDF fetch failed: ${response.status}`);
+          }
+          pdfData = await response.arrayBuffer();
+        } catch (fetchError) {
+          throw new Error(`PDF Fetch Error: ${fetchError instanceof Error ? fetchError.message : 'Network error'}`);
+        }
+
+        const loadingTask = pdfjsLib.getDocument({ data: pdfData });
         const pdf = await loadingTask.promise;
 
         const total = pdf.numPages;
