@@ -280,14 +280,15 @@ export default function PrelaunchPage() {
 
       {/* Hero Section */}
       <div className="relative">
-        {/* Background Image with Overlay */}
-        <div className="absolute inset-0 h-[400px] overflow-hidden">
+        {/* Background Image with Overlay - responsive height based on screen width */}
+        <div className="absolute inset-x-0 top-0 h-[50vw] max-h-[500px] min-h-[300px] overflow-hidden">
           {project.imageUrl ? (
             <Image
               src={project.imageUrl}
               alt={project.title}
               fill
-              className="object-cover"
+              sizes="100vw"
+              className="object-cover object-center"
               priority
             />
           ) : (
