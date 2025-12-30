@@ -504,7 +504,7 @@ export function BookReaderTab() {
               {/* Preload */}
               <div className="absolute opacity-0 pointer-events-none -z-50">
                 {preloadPages().map(p => (
-                  <Page key={`pre-${p}`} pageNumber={p} width={900} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                  <Page key={`pre-${p}`} pageNumber={p} width={900} renderTextLayer={false} renderAnnotationLayer={false} />
                 ))}
               </div>
 
@@ -544,14 +544,14 @@ export function BookReaderTab() {
                     >
                       {/* Front of flipping page (current right page) */}
                       <div className={cn("absolute inset-0 bg-paper overflow-hidden", cover && "rounded-r-xl")} style={{ backfaceVisibility: "hidden" }}>
-                        <Page key={`flip-front-${right}`} pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                        <Page key={`flip-front-${right}`} pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                       </div>
                       {/* Back of flipping page (next left page) */}
                       <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
                         <Page
                           key={`flip-back-${isMobile ? right! + 1 : (left ? left + 2 : 2)}`}
                           pageNumber={isMobile ? Math.min(right! + 1, numPages) : (left ? left + 2 : 2)}
-                          width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null}
+                          width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
                         />
                       </div>
                     </div>
@@ -575,11 +575,11 @@ export function BookReaderTab() {
                     >
                       {/* Front of flipping page (current left page) */}
                       <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
-                        <Page key={`flip-back-front-${left}`} pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                        <Page key={`flip-back-front-${left}`} pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                       </div>
                       {/* Back of flipping page (previous right page) */}
                       <div className="absolute inset-0 bg-paper overflow-hidden" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                        <Page key={`flip-back-back-${Math.max(right! - 2, 1)}`} pageNumber={Math.max(right! - 2, 1)} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                        <Page key={`flip-back-back-${Math.max(right! - 2, 1)}`} pageNumber={Math.max(right! - 2, 1)} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                       </div>
                     </div>
                   )}
@@ -590,7 +590,7 @@ export function BookReaderTab() {
                       <Page
                         key={`under-next-${currentSpread}-${isMobile ? right! + 1 : right! + 2}`}
                         pageNumber={isMobile ? Math.min(right! + 1, numPages) : Math.min(right! + 2, numPages)}
-                        width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null}
+                        width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false}
                       />
                     </div>
                   )}
@@ -598,7 +598,7 @@ export function BookReaderTab() {
                   {/* Previous left page underneath (visible during backward flip) */}
                   {(isFlipping || isDragging) && (flipDirection === "prev" || dragDirection === "backward") && !isMobile && left && (
                     <div className="absolute bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: 0, zIndex: 5 }}>
-                      <Page key={`under-prev-${currentSpread}-${Math.max(left - 2, 1)}`} pageNumber={Math.max(left - 2, 1)} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                      <Page key={`under-prev-${currentSpread}-${Math.max(left - 2, 1)}`} pageNumber={Math.max(left - 2, 1)} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                     </div>
                   )}
 
@@ -606,13 +606,13 @@ export function BookReaderTab() {
                   <div className="flex">
                     {!isMobile && left && (
                       <div className="bg-paper overflow-hidden relative" style={{ width: pageWidth, height: pageHeight, backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
-                        <Page key={`static-left-${left}`} pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                        <Page key={`static-left-${left}`} pageNumber={left} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{left}</div>
                       </div>
                     )}
                     <div className={cn("bg-paper overflow-hidden relative", cover && "rounded-r-xl")} style={{ width: pageWidth, height: pageHeight, backfaceVisibility: "hidden", transform: "translate3d(0,0,0)" }}>
                       {cover && <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black/30 pointer-events-none" />}
-                      <Page key={`static-right-${right}`} pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                      <Page key={`static-right-${right}`} pageNumber={right!} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} />
                       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-gray-700 bg-white/70 px-2 py-1 rounded">{right}</div>
                       {cover && (
                         <div className="absolute inset-0 flex items-center justify-end pr-4 md:pr-12 pointer-events-none">
