@@ -371,9 +371,37 @@ export async function DELETE(
       );
     }
 
-    // Delete the pledge (and associated records via cascade)
-    await db.pledge.delete({
-      where: { id: pledgeId },
+    // Delete in a transaction to handle related records that don't have cascade delete
+    await db.$transaction(async (tx) => {
+      // Delete related DivinityCoinTransactions (no cascade in schema)
+      await tx.divinityCoinTransaction.deleteMany({
+        where: { pledgeId },
+      });
+
+      // Delete related EmailLogs (no cascade in schema)
+      await tx.emailLog.deleteMany({
+        where: { pledgeId },
+      });
+
+      // Delete related SurveyResponses (no cascade in schema)
+      await tx.surveyResponse.deleteMany({
+        where: { pledgeId },
+      });
+
+      // Delete related DigitalFileDistributions (no cascade in schema)
+      await tx.digitalFileDistribution.deleteMany({
+        where: { pledgeId },
+      });
+
+      // Delete related PledgeFulfillmentNotes (no cascade in schema)
+      await tx.pledgeFulfillmentNote.deleteMany({
+        where: { pledgeId },
+      });
+
+      // Now delete the pledge (PledgeAddon has cascade, so it will be auto-deleted)
+      await tx.pledge.delete({
+        where: { id: pledgeId },
+      });
     });
 
     return NextResponse.json({
