@@ -943,3 +943,25 @@
     transparent 100%
   );
 }
+
+/* ============================================ */
+/* USER-GENERATED CONTENT IMAGE CONSTRAINTS */
+/* ============================================ */
+
+/* Ensure images in prose/user-generated content don't overflow their containers */
+.prose img,
+.prose-sm img,
+.prose-lg img,
+[class*="prose"] img {
+  max-width: 100% !important;
+  height: auto !important;
+  width: auto;
+}
+
+/* For content rendered via dangerouslySetInnerHTML */
+.user-content img,
+[dangerouslySetInnerHTML] img {
+  max-width: 100%;
+  height: auto;
+  width: auto;
+}

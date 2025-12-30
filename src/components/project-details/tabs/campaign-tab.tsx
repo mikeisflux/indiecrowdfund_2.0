@@ -103,12 +103,12 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
       </div>
 
       {/* Main Content */}
-      <div className="lg:col-span-6">
-        <div className="prose prose-sm sm:prose lg:prose-lg max-w-none dark:prose-invert prose-headings:font-serif prose-img:rounded-lg prose-img:my-4 prose-a:text-primary prose-a:underline">
+      <div className="lg:col-span-6 min-w-0">
+        <div className="prose prose-sm sm:prose lg:prose-lg max-w-none dark:prose-invert prose-headings:font-serif prose-img:rounded-lg prose-img:my-4 prose-img:max-w-full prose-img:h-auto prose-a:text-primary prose-a:underline">
           <h2 className="text-2xl font-serif">Story</h2>
           <div
             ref={storyContentRef}
-            className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+            className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_img]:max-w-full [&_img]:h-auto [&_img]:w-auto overflow-hidden"
             dangerouslySetInnerHTML={{ __html: processedDescription }}
           />
 
