@@ -102,7 +102,7 @@ export function BookReaderTab() {
 
   // Page dimensions based on device - match PDF aspect ratio (roughly 1:1.53)
   const pageWidth = isMobile ? 280 : 380;
-  const pageHeight = isMobile ? 428 : 582;
+  const pageHeight = isMobile ? 430 : 580;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
