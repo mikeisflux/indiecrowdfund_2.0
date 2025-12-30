@@ -546,6 +546,23 @@ export function BookReaderTab() {
                     </div>
                   )}
 
+                  {/* Next right page underneath (visible during forward flip) */}
+                  {(isFlipping || isDragging) && (flipDirection === "next" || dragDirection === "forward") && (
+                    <div className="absolute bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: isMobile ? 0 : pageWidth, zIndex: 5 }}>
+                      <Page
+                        pageNumber={isMobile ? Math.min(right! + 1, numPages) : Math.min(right! + 2, numPages)}
+                        width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null}
+                      />
+                    </div>
+                  )}
+
+                  {/* Previous left page underneath (visible during backward flip) */}
+                  {(isFlipping || isDragging) && (flipDirection === "prev" || dragDirection === "backward") && !isMobile && left && (
+                    <div className="absolute bg-paper overflow-hidden" style={{ width: pageWidth, height: pageHeight, left: 0, zIndex: 5 }}>
+                      <Page pageNumber={Math.max(left - 2, 1)} width={renderWidth} renderTextLayer={false} renderAnnotationLayer={false} loading={null} />
+                    </div>
+                  )}
+
                   {/* Static Current Spread - always visible underneath */}
                   <div className="flex">
                     {!isMobile && left && (
