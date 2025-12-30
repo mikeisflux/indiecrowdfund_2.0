@@ -180,13 +180,15 @@ export function BookReaderTab() {
     setShowBookmarks(false);
   }, [selectedFile, numPages, currentPage, bookmarks]);
 
-  const handlePageChange = useCallback((page: number, totalPages: number) => {
-    setCurrentPage(page);
+  // pageIndex is 0-based from the flip component
+  const handlePageChange = useCallback((pageIndex: number, totalPages: number) => {
+    const pageNumber = pageIndex + 1; // Convert to 1-based for storage/display
+    setCurrentPage(pageNumber);
     setNumPages(totalPages);
     if (selectedFile) {
       saveReadingProgress({
         fileId: selectedFile.id,
-        currentPage: page,
+        currentPage: pageNumber,
         totalPages,
         lastRead: new Date().toISOString(),
       });
@@ -235,21 +237,21 @@ export function BookReaderTab() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={addBookmark} disabled={isBookmarkPage}>
+            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={addBookmark} disabled={isBookmarkPage}>
               {isBookmarkPage ? <Bookmark className="h-5 w-5 text-amber-400 fill-amber-400" /> : <BookmarkPlus className="h-5 w-5" />}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setShowBookmarks(!showBookmarks)}>
+            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setShowBookmarks(!showBookmarks)}>
               <List className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setScale(s => Math.max(0.5, s - 0.1))} disabled={scale <= 0.5}>
+            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(s => Math.max(0.5, s - 0.1))} disabled={scale <= 0.5}>
               <ZoomOut className="h-5 w-5" />
             </Button>
-            <span className="text-xs text-white/60 min-w-[3rem] text-center">{Math.round(scale * 100)}%</span>
-            <Button variant="ghost" size="icon" onClick={() => setScale(s => Math.min(1.5, s + 0.1))} disabled={scale >= 1.5}>
+            <span className="text-xs text-white min-w-[3rem] text-center">{Math.round(scale * 100)}%</span>
+            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(s => Math.min(2, s + 0.1))} disabled={scale >= 2}>
               <ZoomIn className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setScale(1)}><RotateCcw className="h-5 w-5" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)}>
+            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(1)}><RotateCcw className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setIsFullscreen(!isFullscreen)}>
               {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
             </Button>
           </div>
@@ -286,7 +288,8 @@ export function BookReaderTab() {
           <div style={{ transform: `scale(${scale})`, transformOrigin: "center center", transition: "transform 0.2s" }}>
             <PdfPageFlipReader
               pdfUrl={pdfUrl}
-              initialPage={savedProgress?.currentPage ?? 1}
+              fileId={selectedFile.id}
+              initialPageIndex={Math.max(0, (savedProgress?.currentPage ?? 1) - 1)}
               onPageChange={handlePageChange}
               onReady={handleReady}
               width={pageWidth}
