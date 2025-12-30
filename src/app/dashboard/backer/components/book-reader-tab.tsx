@@ -103,7 +103,7 @@ export function BookReaderTab() {
   // Page dimensions based on device - sized to fit comfortably in viewport
   // Account for header (~60px), padding (64px), and page indicator (~50px)
   const pageWidth = isMobile ? 280 : 380;
-  const pageHeight = isMobile ? 380 : 520;
+  const pageHeight = isMobile ? 430 : 580;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
