@@ -88,7 +88,8 @@ export function clearDivinityCoinConfigCache(): void {
 export type DivinityCoinEventType =
   | "test.ping"
   | "card.validate"
-  | "card.redeem";
+  | "card.redeem"
+  | "refund.request";
 
 // Webhook request structure from DivinityCoin
 export interface DivinityCoinWebhookRequest {
@@ -96,6 +97,11 @@ export interface DivinityCoinWebhookRequest {
   data?: {
     cardCode?: string;
     platformUserId?: string;
+    // Refund request fields
+    refundId?: string;
+    amount?: number;
+    reason?: string;
+    originalTransactionId?: string;
     [key: string]: unknown;
   };
 }
@@ -120,6 +126,16 @@ export interface CardRedeemResponse {
   amount: number;
   newBalance?: number;
   error?: string;
+}
+
+export interface RefundRequestResponse {
+  success: boolean;
+  refundId: string;
+  amountDeducted: number;
+  previousBalance: number;
+  newBalance: number;
+  error?: string;
+  errorCode?: "INSUFFICIENT_BALANCE" | "USER_NOT_FOUND" | "INVALID_AMOUNT" | "ALREADY_PROCESSED";
 }
 
 /**
@@ -259,12 +275,209 @@ export async function handleCardRedeem(
 }
 
 /**
+ * Handle refund.request webhook event
+ * DivinityCoin calls this when they need to refund coins from a user's balance.
+ * We check if the user has sufficient balance before allowing the refund.
+ */
+export async function handleRefundRequest(
+  refundId: string,
+  platformUserId: string,
+  amount: number,
+  reason?: string,
+  originalTransactionId?: string
+): Promise<RefundRequestResponse> {
+  console.log(
+    `[DivinityCoin] Refund request: ${refundId} for user ${platformUserId}, amount: ${amount}`
+  );
+
+  // Validate amount
+  if (!amount || amount <= 0) {
+    console.warn(`[DivinityCoin] Invalid refund amount: ${amount}`);
+    return {
+      success: false,
+      refundId,
+      amountDeducted: 0,
+      previousBalance: 0,
+      newBalance: 0,
+      error: "Invalid refund amount",
+      errorCode: "INVALID_AMOUNT",
+    };
+  }
+
+  // Find the user
+  const user = await db.user.findUnique({
+    where: { id: platformUserId },
+    select: {
+      id: true,
+      divinityCoinBalance: true,
+      email: true,
+    },
+  });
+
+  if (!user) {
+    console.warn(`[DivinityCoin] User not found: ${platformUserId}`);
+    return {
+      success: false,
+      refundId,
+      amountDeducted: 0,
+      previousBalance: 0,
+      newBalance: 0,
+      error: `User not found: ${platformUserId}`,
+      errorCode: "USER_NOT_FOUND",
+    };
+  }
+
+  const previousBalance = Number(user.divinityCoinBalance || 0);
+
+  // Check if this refund was already processed (idempotency check)
+  const existingTransaction = await db.divinityCoinTransaction.findFirst({
+    where: {
+      userId: platformUserId,
+      metadata: {
+        contains: refundId,
+      },
+      type: "REFUND_DEDUCTION",
+    },
+  });
+
+  if (existingTransaction) {
+    console.log(`[DivinityCoin] Refund ${refundId} already processed`);
+    return {
+      success: false,
+      refundId,
+      amountDeducted: 0,
+      previousBalance,
+      newBalance: previousBalance,
+      error: "Refund already processed",
+      errorCode: "ALREADY_PROCESSED",
+    };
+  }
+
+  // Check if user has sufficient balance
+  if (previousBalance < amount) {
+    console.warn(
+      `[DivinityCoin] Insufficient balance for refund. ` +
+      `User ${platformUserId} has ${previousBalance}, needs ${amount}`
+    );
+
+    // Notify DivinityCoin about insufficient balance via callback (if configured)
+    await notifyDivinityCoinRefundFailed(refundId, platformUserId, amount, previousBalance);
+
+    return {
+      success: false,
+      refundId,
+      amountDeducted: 0,
+      previousBalance,
+      newBalance: previousBalance,
+      error: `Insufficient balance. User has ${previousBalance} DivinityCoin, refund requires ${amount}`,
+      errorCode: "INSUFFICIENT_BALANCE",
+    };
+  }
+
+  // Process the refund - deduct coins from user's balance
+  const newBalance = previousBalance - amount;
+
+  try {
+    await db.$transaction(async (tx) => {
+      // Update user's balance
+      await tx.user.update({
+        where: { id: platformUserId },
+        data: {
+          divinityCoinBalance: newBalance,
+        },
+      });
+
+      // Create transaction record for audit
+      await tx.divinityCoinTransaction.create({
+        data: {
+          userId: platformUserId,
+          amount: -amount, // Negative because it's a deduction
+          type: "REFUND_DEDUCTION",
+          description: reason || `DivinityCoin refund processed (Ref: ${refundId})`,
+          metadata: JSON.stringify({
+            refundId,
+            originalTransactionId,
+            reason,
+            previousBalance,
+            newBalance,
+            processedAt: new Date().toISOString(),
+            source: "divinitycoin_webhook",
+          }),
+        },
+      });
+    });
+
+    console.log(
+      `[DivinityCoin] Refund ${refundId} processed successfully. ` +
+      `User ${platformUserId}: ${previousBalance} -> ${newBalance}`
+    );
+
+    return {
+      success: true,
+      refundId,
+      amountDeducted: amount,
+      previousBalance,
+      newBalance,
+    };
+  } catch (error) {
+    console.error(`[DivinityCoin] Error processing refund ${refundId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Notify DivinityCoin when a refund cannot be processed due to insufficient balance.
+ * This allows DivinityCoin to take appropriate action (e.g., flag the account,
+ * contact the user, or handle the refund differently).
+ */
+async function notifyDivinityCoinRefundFailed(
+  refundId: string,
+  platformUserId: string,
+  requestedAmount: number,
+  availableBalance: number
+): Promise<void> {
+  try {
+    const config = await getDivinityCoinConfig();
+
+    const response = await fetch(`${config.baseUrl}/webhooks/refund-failed`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.apiKey}`,
+        "X-Partner-ID": config.partnerId,
+      },
+      body: JSON.stringify({
+        refundId,
+        platformUserId,
+        requestedAmount,
+        availableBalance,
+        shortfall: requestedAmount - availableBalance,
+        timestamp: new Date().toISOString(),
+        platform: "indiecrowdfund",
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(
+        `[DivinityCoin] Failed to notify about refund failure. ` +
+        `Status: ${response.status}`
+      );
+    } else {
+      console.log(`[DivinityCoin] Successfully notified about refund failure: ${refundId}`);
+    }
+  } catch (error) {
+    // Don't throw - this is a best-effort notification
+    console.warn(`[DivinityCoin] Error notifying about refund failure:`, error);
+  }
+}
+
+/**
  * Main webhook event handler
  * Processes incoming webhook requests from DivinityCoin
  */
 export async function handleDivinityCoinWebhook(
   request: DivinityCoinWebhookRequest
-): Promise<TestPingResponse | CardValidateResponse | CardRedeemResponse> {
+): Promise<TestPingResponse | CardValidateResponse | CardRedeemResponse | RefundRequestResponse> {
   console.log(`[DivinityCoin Webhook] Received event: ${request.event}`);
 
   switch (request.event) {
@@ -293,6 +506,26 @@ export async function handleDivinityCoinWebhook(
       return handleCardRedeem(
         request.data.cardCode,
         request.data.platformUserId
+      );
+
+    case "refund.request":
+      if (!request.data?.refundId || !request.data?.platformUserId || !request.data?.amount) {
+        return {
+          success: false,
+          refundId: request.data?.refundId || "unknown",
+          amountDeducted: 0,
+          previousBalance: 0,
+          newBalance: 0,
+          error: "Missing required fields: refundId, platformUserId, and amount are required",
+          errorCode: "INVALID_AMOUNT",
+        };
+      }
+      return handleRefundRequest(
+        request.data.refundId,
+        request.data.platformUserId,
+        request.data.amount,
+        request.data.reason,
+        request.data.originalTransactionId
       );
 
     default:
