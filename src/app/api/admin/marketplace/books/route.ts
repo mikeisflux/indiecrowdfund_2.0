@@ -92,6 +92,8 @@ export async function GET() {
       status: book.status,
       isFeatured: book.isFeatured,
       isStaffPick: book.isStaffPick,
+      featuredOrder: book.featuredOrder,
+      staffPickOrder: book.staffPickOrder,
       submittedAt: book.submittedAt?.toISOString() || null,
       createdAt: book.createdAt.toISOString(),
       creator: {
