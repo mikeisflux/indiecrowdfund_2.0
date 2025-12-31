@@ -15,6 +15,7 @@ export function Footer() {
             <h4 className="mb-4 font-semibold">Discover</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/discover" className="hover:text-foreground">All Projects</Link></li>
+              <li><Link href="/marketplace" className="hover:text-foreground">Digital Marketplace</Link></li>
               <li><Link href="/discover?category=games" className="hover:text-foreground">Games</Link></li>
               <li><Link href="/discover?category=technology" className="hover:text-foreground">Technology</Link></li>
               <li><Link href="/discover?category=art" className="hover:text-foreground">Art</Link></li>

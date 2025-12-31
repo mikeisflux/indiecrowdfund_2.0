@@ -1150,7 +1150,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 ### Phase 3: Marketplace API Routes
 - [x] Public marketplace endpoints (GET /api/marketplace/books, companies)
 - [x] Creator CRUD endpoints (POST/PUT/DELETE /api/marketplace/books)
-- [ ] Admin management endpoints
+- [x] Admin management endpoints
 - [x] Purchase and delivery endpoints (POST /api/marketplace/purchase)
 
 ### Phase 4: Marketplace Frontend
@@ -1161,23 +1161,26 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 - [x] View all pages (all books with filtering)
 
 ### Phase 5: Creator Dashboard
-- [ ] Marketplace tab in dashboard
-- [ ] Book creation form (multi-step with promo image/video)
-- [ ] Book edit/management
-- [ ] Company profile editor with rich text
-- [ ] Submit for review flow
+- [x] Marketplace tab in dashboard
+- [x] Book creation form (multi-step with promo image/video)
+- [x] Book edit/management
+- [x] Company profile editor with rich text
+- [x] Submit for review flow
 
 ### Phase 6: Admin Panel
-- [ ] Marketplace admin section
-- [ ] Review queue with AI moderation
-- [ ] Featured/Staff Picks drag-and-drop management
+- [x] Marketplace admin section
+- [x] Review queue with approval/rejection
+- [x] Featured/Staff Picks toggle management
+- [ ] AI moderation integration
+- [ ] Drag-and-drop ordering for Featured/Staff Picks
 - [ ] Deactivation controls
 
 ### Phase 7: Purchase Flow
-- [ ] Payment integration (Stripe + DivinityCoin based on NSFW flags)
-- [ ] Instant delivery system with cover extraction trigger
-- [ ] Purchase success modal with "Go to Digital Library" CTA
-- [ ] Integration with unified Digital Library
+- [x] DivinityCoin payment integration for NSFW content
+- [ ] Stripe payment integration
+- [x] Instant delivery system
+- [x] Purchase success modal with "Go to Digital Library" CTA
+- [x] Integration with unified Digital Library
 
 ### Phase 8: Polish & Testing
 - [ ] End-to-end testing

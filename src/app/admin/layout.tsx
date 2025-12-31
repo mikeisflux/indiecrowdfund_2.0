@@ -46,6 +46,7 @@ import {
   RefreshCw,
   Store,
   Link2,
+  BookOpen,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -93,6 +94,7 @@ const navigation: NavSection[] = [
       { name: "Users", href: "/admin/users", icon: Users, badgeKey: "users" },
       { name: "Retailers", href: "/admin/retailers", icon: Store, badgeKey: "retailers" },
       { name: "Projects", href: "/admin/projects", icon: FolderKanban, badgeKey: "projects" },
+      { name: "Marketplace", href: "/admin/marketplace", icon: BookOpen },
       { name: "Payouts", href: "/admin/payouts", icon: DollarSign, badgeKey: "payouts" },
       { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "moderation" },
       { name: "Bug Reports", href: "/admin/bug-reports", icon: Bug, badgeKey: "bugReports" },

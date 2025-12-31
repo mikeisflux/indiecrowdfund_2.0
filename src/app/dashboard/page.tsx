@@ -44,6 +44,7 @@ import {
   CheckCircle,
   FileText,
   Trash2,
+  ShoppingCart,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
@@ -1141,6 +1142,14 @@ export default function CreatorDashboard() {
                       <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
                         <Package className="mr-2 h-4 w-4" />
                         IndieKit
+                      </div>
+                    </TabsTrigger>
+                  </Link>
+                  <Link href="/dashboard/marketplace">
+                    <TabsTrigger value="marketplace" asChild>
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        Marketplace
                       </div>
                     </TabsTrigger>
                   </Link>
