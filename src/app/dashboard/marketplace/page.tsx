@@ -118,7 +118,7 @@ function BookCard({
   onSubmit: (id: string) => void;
 }) {
   return (
-    <div className="group relative rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/10 hover:border-purple-400/30 transition-all duration-300">
+    <div className="group relative rounded-xl overflow-hidden bg-card border border-border hover:border-purple-400/30 transition-all duration-300">
       {/* Cover Image */}
       <div className="relative aspect-video">
         {book.coverImage ? (
@@ -130,7 +130,7 @@ function BookCard({
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-indigo-900/50 flex items-center justify-center">
-            <BookOpen className="h-12 w-12 text-white/30" />
+            <BookOpen className="h-12 w-12 text-muted-foreground/50" />
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -199,39 +199,39 @@ function BookCard({
       {/* Content */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-2 mb-3">
-          <h3 className="font-semibold text-white line-clamp-1">{book.title}</h3>
+          <h3 className="font-semibold text-foreground line-clamp-1">{book.title}</h3>
           <StatusBadge status={book.status} />
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="p-2 rounded-lg bg-white/5">
-            <p className="text-lg font-bold text-emerald-400">${book.stats.revenue.toFixed(2)}</p>
-            <p className="text-xs text-white/50">Revenue</p>
+          <div className="p-2 rounded-lg bg-muted">
+            <p className="text-lg font-bold text-emerald-500 dark:text-emerald-400">${book.stats.revenue.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Revenue</p>
           </div>
-          <div className="p-2 rounded-lg bg-white/5">
-            <p className="text-lg font-bold text-white">{book.stats.purchases}</p>
-            <p className="text-xs text-white/50">Sales</p>
+          <div className="p-2 rounded-lg bg-muted">
+            <p className="text-lg font-bold text-foreground">{book.stats.purchases}</p>
+            <p className="text-xs text-muted-foreground">Sales</p>
           </div>
-          <div className="p-2 rounded-lg bg-white/5">
-            <p className="text-lg font-bold text-white">{book.stats.views}</p>
-            <p className="text-xs text-white/50">Views</p>
+          <div className="p-2 rounded-lg bg-muted">
+            <p className="text-lg font-bold text-foreground">{book.stats.views}</p>
+            <p className="text-xs text-muted-foreground">Views</p>
           </div>
         </div>
 
         {/* Rejection Reason */}
         {book.status === "REJECTED" && book.rejectionReason && (
           <div className="mt-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20">
-            <p className="text-xs text-rose-400">
+            <p className="text-xs text-rose-500 dark:text-rose-400">
               <strong>Rejection Reason:</strong> {book.rejectionReason}
             </p>
           </div>
         )}
 
         {/* Price */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
-          <span className="text-white/60 text-sm">Price</span>
-          <span className="text-lg font-bold text-emerald-400">
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+          <span className="text-muted-foreground text-sm">Price</span>
+          <span className="text-lg font-bold text-emerald-500 dark:text-emerald-400">
             ${book.price.toFixed(2)}
           </span>
         </div>
@@ -266,19 +266,19 @@ function StatsCard({
   const styles = colorStyles[color];
 
   return (
-    <Card className="bg-white/5 backdrop-blur-md border-white/10">
+    <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-white/70">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <div className={cn("p-2 rounded-xl", styles.iconBg)}>
           <Icon className={cn("h-4 w-4", styles.iconColor)} />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-white">
+        <div className="text-2xl font-bold text-foreground">
           {prefix}{typeof value === "number" ? value.toLocaleString() : value}
         </div>
         {subtitle && (
-          <p className="text-xs text-white/50 mt-1">{subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
         )}
       </CardContent>
     </Card>
@@ -365,11 +365,11 @@ export default function CreatorMarketplaceDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+      <div className="min-h-screen bg-background">
         <div className="flex min-h-screen items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
-            <p className="text-white/60">Loading marketplace dashboard...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-purple-500 dark:text-purple-400" />
+            <p className="text-muted-foreground">Loading marketplace dashboard...</p>
           </div>
         </div>
       </div>
@@ -377,7 +377,7 @@ export default function CreatorMarketplaceDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+    <div className="min-h-screen bg-background">
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -385,16 +385,16 @@ export default function CreatorMarketplaceDashboard() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"
+              className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"
             >
               IndieCrowdfund
             </Link>
-            <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border-purple-500/30">
+            <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
               <ShoppingCart className="w-3 h-3 mr-1" />
               Creator Marketplace
             </Badge>
@@ -402,7 +402,7 @@ export default function CreatorMarketplaceDashboard() {
           <div className="flex items-center gap-2">
             <NotificationsDropdown />
             <Link href="/dashboard/settings">
-              <Button variant="ghost" size="icon" className="text-white/70 hover:text-white">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                 <Settings className="h-5 w-5" />
               </Button>
             </Link>
@@ -412,24 +412,24 @@ export default function CreatorMarketplaceDashboard() {
       </header>
 
       {/* Sub Navigation */}
-      <div className="border-b border-white/10 bg-zinc-950/60 backdrop-blur-sm">
+      <div className="border-b border-border bg-muted/50 backdrop-blur-sm">
         <div className="container flex items-center justify-between py-3">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
           <div className="flex items-center gap-2">
             <Link href="/dashboard/marketplace/company">
-              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+              <Button variant="outline" className="border-border">
                 <Building2 className="w-4 h-4 mr-2" />
                 {company ? "Edit Company" : "Create Company"}
               </Button>
             </Link>
             <Link href="/dashboard/marketplace/books/new">
-              <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+              <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
                 <Plus className="w-4 h-4 mr-2" />
                 New Book
               </Button>
@@ -475,7 +475,7 @@ export default function CreatorMarketplaceDashboard() {
 
         {/* Company Profile Card */}
         {company && (
-          <Card className="bg-white/5 backdrop-blur-md border-white/10 mb-8 overflow-hidden">
+          <Card className="bg-card border-border mb-8 overflow-hidden">
             {/* Banner */}
             <div className="relative h-32">
               {company.banner ? (
@@ -486,15 +486,15 @@ export default function CreatorMarketplaceDashboard() {
                   className="object-cover"
                 />
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-cyan-900/50" />
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-200 to-cyan-200 dark:from-purple-900/50 dark:to-cyan-900/50" />
               )}
-              <div className="absolute inset-0 bg-black/30" />
+              <div className="absolute inset-0 bg-black/10 dark:bg-black/30" />
             </div>
 
             {/* Logo & Info */}
             <div className="relative px-6 pb-6">
               <div className="absolute -top-10 left-6">
-                <div className="w-20 h-20 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 overflow-hidden flex items-center justify-center">
+                <div className="w-20 h-20 rounded-xl bg-card backdrop-blur-md border border-border overflow-hidden flex items-center justify-center">
                   {company.logo ? (
                     <Image
                       src={company.logo}
@@ -504,7 +504,7 @@ export default function CreatorMarketplaceDashboard() {
                       className="object-cover"
                     />
                   ) : (
-                    <Building2 className="h-10 w-10 text-white/40" />
+                    <Building2 className="h-10 w-10 text-muted-foreground/50" />
                   )}
                 </div>
               </div>
@@ -513,19 +513,19 @@ export default function CreatorMarketplaceDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h2 className="text-xl font-bold text-white">{company.name}</h2>
+                      <h2 className="text-xl font-bold text-foreground">{company.name}</h2>
                       {company.isVerified && (
-                        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                        <Badge className="bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/30">
                           Verified
                         </Badge>
                       )}
                     </div>
                     {company.tagline && (
-                      <p className="text-white/60 mt-1">{company.tagline}</p>
+                      <p className="text-muted-foreground mt-1">{company.tagline}</p>
                     )}
                   </div>
                   <Link href="/dashboard/marketplace/company">
-                    <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10">
+                    <Button variant="outline" size="sm">
                       <Edit className="w-4 h-4 mr-2" />
                       Edit Profile
                     </Button>
@@ -534,17 +534,17 @@ export default function CreatorMarketplaceDashboard() {
 
                 {/* Company Stats */}
                 <div className="grid grid-cols-3 gap-4 mt-6">
-                  <div className="p-4 rounded-xl bg-white/5">
-                    <p className="text-2xl font-bold text-white">{company.stats.books}</p>
-                    <p className="text-sm text-white/50">Published Books</p>
+                  <div className="p-4 rounded-xl bg-muted">
+                    <p className="text-2xl font-bold text-foreground">{company.stats.books}</p>
+                    <p className="text-sm text-muted-foreground">Published Books</p>
                   </div>
-                  <div className="p-4 rounded-xl bg-white/5">
-                    <p className="text-2xl font-bold text-white">{company.stats.totalSales}</p>
-                    <p className="text-sm text-white/50">Total Sales</p>
+                  <div className="p-4 rounded-xl bg-muted">
+                    <p className="text-2xl font-bold text-foreground">{company.stats.totalSales}</p>
+                    <p className="text-sm text-muted-foreground">Total Sales</p>
                   </div>
-                  <div className="p-4 rounded-xl bg-white/5">
-                    <p className="text-2xl font-bold text-emerald-400">${company.stats.totalRevenue.toFixed(2)}</p>
-                    <p className="text-sm text-white/50">Total Revenue</p>
+                  <div className="p-4 rounded-xl bg-muted">
+                    <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">${company.stats.totalRevenue.toFixed(2)}</p>
+                    <p className="text-sm text-muted-foreground">Total Revenue</p>
                   </div>
                 </div>
               </div>
@@ -555,45 +555,45 @@ export default function CreatorMarketplaceDashboard() {
         {/* Books Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex items-center justify-between">
-            <TabsList className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-1">
+            <TabsList className="bg-muted/50 backdrop-blur-sm border border-border rounded-xl p-1">
               <TabsTrigger
                 value="books"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-white rounded-lg px-4 py-2 text-white/70"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <BookOpen className="w-4 h-4 mr-2" />
                 All Books ({books.length})
               </TabsTrigger>
               <TabsTrigger
                 value="live"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-white rounded-lg px-4 py-2 text-white/70"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Live ({books.filter(b => b.status === "LIVE").length})
               </TabsTrigger>
               <TabsTrigger
                 value="pending"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-white rounded-lg px-4 py-2 text-white/70"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <Clock className="w-4 h-4 mr-2" />
                 Pending ({books.filter(b => b.status === "PENDING_REVIEW").length})
               </TabsTrigger>
               <TabsTrigger
                 value="drafts"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-white rounded-lg px-4 py-2 text-white/70"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <Edit className="w-4 h-4 mr-2" />
                 Drafts ({books.filter(b => b.status === "DRAFT").length})
               </TabsTrigger>
               <TabsTrigger
                 value="analytics"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-white rounded-lg px-4 py-2 text-white/70"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Analytics
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-white rounded-lg px-4 py-2 text-white/70"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
@@ -603,18 +603,18 @@ export default function CreatorMarketplaceDashboard() {
 
           <TabsContent value="books" className="space-y-4">
             {books.length === 0 ? (
-              <Card className="bg-white/5 backdrop-blur-md border-white/10">
+              <Card className="bg-card border-border">
                 <CardContent className="flex flex-col items-center justify-center py-16">
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mb-6">
-                    <BookOpen className="h-10 w-10 text-purple-400" />
+                    <BookOpen className="h-10 w-10 text-purple-500 dark:text-purple-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">No books yet</h3>
-                  <p className="text-white/60 text-center max-w-md mb-6">
+                  <h3 className="text-xl font-semibold text-foreground mb-2">No books yet</h3>
+                  <p className="text-muted-foreground text-center max-w-md mb-6">
                     Start selling your digital books on the marketplace. Upload your PDF,
                     set your price, and reach readers worldwide.
                   </p>
                   <Link href="/dashboard/marketplace/books/new">
-                    <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+                    <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
                       <Plus className="w-4 h-4 mr-2" />
                       Create Your First Book
                     </Button>
@@ -637,10 +637,10 @@ export default function CreatorMarketplaceDashboard() {
 
           <TabsContent value="live" className="space-y-4">
             {books.filter(b => b.status === "LIVE").length === 0 ? (
-              <Card className="bg-white/5 backdrop-blur-md border-white/10">
+              <Card className="bg-card border-border">
                 <CardContent className="py-12 text-center">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-white/30" />
-                  <p className="text-white/60">No live books yet</p>
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No live books yet</p>
                 </CardContent>
               </Card>
             ) : (
@@ -659,10 +659,10 @@ export default function CreatorMarketplaceDashboard() {
 
           <TabsContent value="pending" className="space-y-4">
             {books.filter(b => b.status === "PENDING_REVIEW").length === 0 ? (
-              <Card className="bg-white/5 backdrop-blur-md border-white/10">
+              <Card className="bg-card border-border">
                 <CardContent className="py-12 text-center">
-                  <Clock className="h-12 w-12 mx-auto mb-4 text-white/30" />
-                  <p className="text-white/60">No books pending review</p>
+                  <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No books pending review</p>
                 </CardContent>
               </Card>
             ) : (
@@ -681,10 +681,10 @@ export default function CreatorMarketplaceDashboard() {
 
           <TabsContent value="drafts" className="space-y-4">
             {books.filter(b => b.status === "DRAFT").length === 0 ? (
-              <Card className="bg-white/5 backdrop-blur-md border-white/10">
+              <Card className="bg-card border-border">
                 <CardContent className="py-12 text-center">
-                  <Edit className="h-12 w-12 mx-auto mb-4 text-white/30" />
-                  <p className="text-white/60">No draft books</p>
+                  <Edit className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No draft books</p>
                 </CardContent>
               </Card>
             ) : (
@@ -702,18 +702,18 @@ export default function CreatorMarketplaceDashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
-            <Card className="bg-white/5 backdrop-blur-md border-white/10">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <BarChart3 className="h-5 w-5 text-purple-400" />
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <BarChart3 className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                   Sales Analytics
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {books.filter(b => b.status === "LIVE").length === 0 ? (
                   <div className="py-12 text-center">
-                    <TrendingUp className="h-12 w-12 mx-auto mb-4 text-white/30" />
-                    <p className="text-white/60">
+                    <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">
                       Analytics will appear once you have live books with sales
                     </p>
                   </div>
@@ -721,7 +721,7 @@ export default function CreatorMarketplaceDashboard() {
                   <div className="space-y-6">
                     {/* Top Performing Books */}
                     <div>
-                      <h4 className="text-sm font-medium text-white/70 mb-4">Top Performing Books</h4>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-4">Top Performing Books</h4>
                       <div className="space-y-3">
                         {books
                           .filter(b => b.status === "LIVE")
@@ -730,12 +730,12 @@ export default function CreatorMarketplaceDashboard() {
                           .map((book, index) => (
                             <div
                               key={book.id}
-                              className="flex items-center gap-4 p-3 rounded-lg bg-white/5"
+                              className="flex items-center gap-4 p-3 rounded-lg bg-muted"
                             >
-                              <span className="text-2xl font-bold text-white/30">
+                              <span className="text-2xl font-bold text-muted-foreground/50">
                                 #{index + 1}
                               </span>
-                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/10">
+                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted-foreground/10">
                                 {book.coverImage ? (
                                   <Image
                                     src={book.coverImage}
@@ -746,21 +746,21 @@ export default function CreatorMarketplaceDashboard() {
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center">
-                                    <BookOpen className="h-6 w-6 text-white/30" />
+                                    <BookOpen className="h-6 w-6 text-muted-foreground/50" />
                                   </div>
                                 )}
                               </div>
                               <div className="flex-1">
-                                <p className="font-medium text-white">{book.title}</p>
-                                <p className="text-sm text-white/50">
+                                <p className="font-medium text-foreground">{book.title}</p>
+                                <p className="text-sm text-muted-foreground">
                                   {book.stats.purchases} sales
                                 </p>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-bold text-emerald-400">
+                                <p className="text-lg font-bold text-emerald-500 dark:text-emerald-400">
                                   ${book.stats.revenue.toFixed(2)}
                                 </p>
-                                <p className="text-xs text-white/50">revenue</p>
+                                <p className="text-xs text-muted-foreground">revenue</p>
                               </div>
                             </div>
                           ))}

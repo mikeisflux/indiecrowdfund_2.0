@@ -50,7 +50,7 @@ interface Company {
 function BookTile({ book }: { book: Book }) {
   return (
     <Link href={`/marketplace/books/${book.slug}`}>
-      <div className="group relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/10 shadow-lg shadow-black/20 hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-400/30 transition-all duration-300">
+      <div className="group relative aspect-video rounded-xl overflow-hidden bg-card border border-border shadow-lg hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-400/30 transition-all duration-300">
         {/* Cover Image */}
         {book.coverImage ? (
           <Image
@@ -61,7 +61,7 @@ function BookTile({ book }: { book: Book }) {
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-indigo-900/50 flex items-center justify-center">
-            <BookOpen className="h-12 w-12 text-white/30" />
+            <BookOpen className="h-12 w-12 text-muted-foreground/50" />
           </div>
         )}
 
@@ -112,7 +112,7 @@ function BookTile({ book }: { book: Book }) {
 function CompanyTile({ company }: { company: Company }) {
   return (
     <Link href={`/marketplace/companies/${company.slug}`}>
-      <div className="group relative rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/10 shadow-lg hover:shadow-xl hover:border-cyan-400/30 transition-all duration-300">
+      <div className="group relative rounded-xl overflow-hidden bg-card border border-border shadow-lg hover:shadow-xl hover:border-cyan-400/30 transition-all duration-300">
         {/* Banner */}
         <div className="relative h-24 bg-gradient-to-br from-cyan-900/50 to-blue-900/50">
           {company.banner && (
@@ -128,7 +128,7 @@ function CompanyTile({ company }: { company: Company }) {
 
         {/* Logo */}
         <div className="absolute top-12 left-4">
-          <div className="w-16 h-16 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 overflow-hidden flex items-center justify-center">
+          <div className="w-16 h-16 rounded-xl bg-card backdrop-blur-md border border-border overflow-hidden flex items-center justify-center">
             {company.logo ? (
               <Image
                 src={company.logo}
@@ -138,7 +138,7 @@ function CompanyTile({ company }: { company: Company }) {
                 className="object-cover"
               />
             ) : (
-              <Building2 className="h-8 w-8 text-white/50" />
+              <Building2 className="h-8 w-8 text-muted-foreground/50" />
             )}
           </div>
         </div>
@@ -146,21 +146,21 @@ function CompanyTile({ company }: { company: Company }) {
         {/* Content */}
         <div className="p-4 pt-10">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-white group-hover:text-cyan-300 transition-colors">
+            <h3 className="font-semibold text-foreground group-hover:text-cyan-500 dark:group-hover:text-cyan-300 transition-colors">
               {company.name}
             </h3>
             {company.isVerified && (
-              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-xs">
+              <Badge className="bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/30 text-xs">
                 Verified
               </Badge>
             )}
           </div>
           {company.tagline && (
-            <p className="text-white/60 text-sm mt-1 line-clamp-2">
+            <p className="text-muted-foreground text-sm mt-1 line-clamp-2">
               {company.tagline}
             </p>
           )}
-          <div className="flex items-center gap-4 mt-3 text-sm text-white/50">
+          <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
             <span>{company.stats.books} books</span>
             <span>{company.stats.totalSales} sales</span>
           </div>
@@ -189,13 +189,13 @@ function BookSection({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-            <Icon className="h-5 w-5 text-purple-400" />
+            <Icon className="h-5 w-5 text-purple-500 dark:text-purple-400" />
           </div>
-          <h2 className="text-xl font-bold text-white">{title}</h2>
+          <h2 className="text-xl font-bold text-foreground">{title}</h2>
         </div>
         <Link
           href={viewAllHref}
-          className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1 group"
+          className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-300 flex items-center gap-1 group"
         >
           View All
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -209,7 +209,7 @@ function BookSection({
           ))}
         </div>
       ) : books.length === 0 ? (
-        <div className="text-center py-12 text-white/50">
+        <div className="text-center py-12 text-muted-foreground">
           <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>No books available yet</p>
         </div>
@@ -291,7 +291,7 @@ export default function MarketplacePage() {
     : companies;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+    <div className="min-h-screen bg-background">
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -300,28 +300,28 @@ export default function MarketplacePage() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"
+              className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"
             >
               IndieCrowdfund
             </Link>
-            <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border-purple-500/30">
+            <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
               <BookOpen className="w-3 h-3 mr-1" />
               Marketplace
             </Badge>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/discover">
-              <Button variant="ghost" className="text-white/70 hover:text-white">
+              <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
                 Crowdfunding
               </Button>
             </Link>
             <Link href="/dashboard/backer?tab=digital-library">
-              <Button variant="outline" className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10">
+              <Button variant="outline" className="border-purple-500/30 text-purple-600 dark:text-purple-300 hover:bg-purple-500/10">
                 My Library
               </Button>
             </Link>
@@ -331,38 +331,38 @@ export default function MarketplacePage() {
 
       <main className="container relative py-8">
         {/* Hero Section */}
-        <div className="relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900/50 via-pink-900/30 to-cyan-900/50 border border-white/10 p-8 md:p-12">
-          <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
+        <div className="relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-r from-purple-100 via-pink-50 to-cyan-100 dark:from-purple-900/50 dark:via-pink-900/30 dark:to-cyan-900/50 border border-purple-200 dark:border-white/10 p-8 md:p-12">
+          <div className="absolute inset-0 bg-grid-black/5 dark:bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
           <div className="relative">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Digital Marketplace
             </h1>
-            <p className="text-lg text-white/70 max-w-2xl mb-6">
+            <p className="text-lg text-muted-foreground max-w-2xl mb-6">
               Discover and purchase digital books from independent creators.
               Instant delivery to your Digital Library.
             </p>
             <div className="relative max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 placeholder="Search books and publishers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 bg-white/10 border-white/20 text-white placeholder:text-white/40 h-12 rounded-xl"
+                className="pl-12 bg-background border-border h-12 rounded-xl"
               />
             </div>
           </div>
         </div>
 
         {/* Old School Physical Media Section */}
-        <div className="mb-12 p-6 rounded-2xl bg-gradient-to-r from-amber-900/30 via-orange-900/20 to-amber-900/30 border border-amber-500/20">
+        <div className="mb-12 p-6 rounded-2xl bg-gradient-to-r from-amber-100 via-orange-50 to-amber-100 dark:from-amber-900/30 dark:via-orange-900/20 dark:to-amber-900/30 border border-amber-300 dark:border-amber-500/20">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-xl bg-amber-500/20 border border-amber-500/30">
-                <BookIcon className="h-6 w-6 text-amber-400" />
+                <BookIcon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Are you old school?</h3>
-                <p className="text-white/60">Do you prefer physical books? Some of our creators offer printed editions.</p>
+                <h3 className="text-lg font-semibold text-foreground">Are you old school?</h3>
+                <p className="text-muted-foreground">Do you prefer physical books? Some of our creators offer printed editions.</p>
               </div>
             </div>
             <Link href="/marketplace/physical-media">
@@ -376,17 +376,17 @@ export default function MarketplacePage() {
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-1.5 w-fit">
+          <TabsList className="bg-muted/50 backdrop-blur-sm border border-border rounded-xl p-1.5 w-fit">
             <TabsTrigger
               value="books"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-white rounded-lg px-6 py-2.5 text-white/70"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-6 py-2.5 text-muted-foreground"
             >
               <BookOpen className="w-4 h-4 mr-2" />
               Sort by Book
             </TabsTrigger>
             <TabsTrigger
               value="companies"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/30 data-[state=active]:to-blue-500/30 data-[state=active]:text-white rounded-lg px-6 py-2.5 text-white/70"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/30 data-[state=active]:to-blue-500/30 data-[state=active]:text-foreground rounded-lg px-6 py-2.5 text-muted-foreground"
             >
               <Building2 className="w-4 h-4 mr-2" />
               Sort by Company
@@ -397,11 +397,11 @@ export default function MarketplacePage() {
           <TabsContent value="books" className="space-y-12">
             {searchQuery ? (
               <section className="space-y-4">
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-xl font-bold text-foreground">
                   Search Results for &quot;{searchQuery}&quot;
                 </h2>
                 {filteredBooks.length === 0 ? (
-                  <div className="text-center py-12 text-white/50">
+                  <div className="text-center py-12 text-muted-foreground">
                     <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No books found matching your search</p>
                   </div>
@@ -450,9 +450,9 @@ export default function MarketplacePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20">
-                  <Building2 className="h-5 w-5 text-cyan-400" />
+                  <Building2 className="h-5 w-5 text-cyan-500 dark:text-cyan-400" />
                 </div>
-                <h2 className="text-xl font-bold text-white">Publishers & Creators</h2>
+                <h2 className="text-xl font-bold text-foreground">Publishers & Creators</h2>
               </div>
             </div>
 
@@ -463,7 +463,7 @@ export default function MarketplacePage() {
                 ))}
               </div>
             ) : filteredCompanies.length === 0 ? (
-              <div className="text-center py-12 text-white/50">
+              <div className="text-center py-12 text-muted-foreground">
                 <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>
                   {searchQuery

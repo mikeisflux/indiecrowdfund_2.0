@@ -101,20 +101,20 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                 "flex items-center gap-2 px-4 py-2 rounded-full transition-all",
                 isActive && "bg-gradient-to-r from-purple-500/30 to-pink-500/30 border border-purple-500/50",
                 isCompleted && "bg-emerald-500/20 border border-emerald-500/50",
-                !isActive && !isCompleted && "bg-white/5 border border-white/10"
+                !isActive && !isCompleted && "bg-muted border border-border"
               )}
             >
               {isCompleted ? (
-                <Check className="w-4 h-4 text-emerald-400" />
+                <Check className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
               ) : (
                 <Icon className={cn(
                   "w-4 h-4",
-                  isActive ? "text-purple-400" : "text-white/50"
+                  isActive ? "text-purple-500 dark:text-purple-400" : "text-muted-foreground"
                 )} />
               )}
               <span className={cn(
                 "text-sm font-medium",
-                isActive ? "text-white" : isCompleted ? "text-emerald-400" : "text-white/50"
+                isActive ? "text-foreground" : isCompleted ? "text-emerald-500 dark:text-emerald-400" : "text-muted-foreground"
               )}>
                 {step.title}
               </span>
@@ -122,7 +122,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
             {index < STEPS.length - 1 && (
               <div className={cn(
                 "w-8 h-0.5 mx-2",
-                currentStep > step.id ? "bg-emerald-500/50" : "bg-white/10"
+                currentStep > step.id ? "bg-emerald-500/50" : "bg-border"
               )} />
             )}
           </div>
@@ -246,21 +246,20 @@ function PDFFilePicker({
   if (currentUrl) {
     return (
       <div className="space-y-3">
-        <Label className="text-white">PDF File *</Label>
+        <Label>PDF File *</Label>
         <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-emerald-500/20">
-              <FileText className="w-6 h-6 text-emerald-400" />
+              <FileText className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-medium truncate">{currentFileName || "Selected PDF"}</p>
-              <p className="text-emerald-400 text-sm">File selected</p>
+              <p className="text-foreground font-medium truncate">{currentFileName || "Selected PDF"}</p>
+              <p className="text-emerald-500 dark:text-emerald-400 text-sm">File selected</p>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => onSelect("", "", "")}
-              className="border-white/20 text-white hover:bg-white/10"
             >
               Change
             </Button>
@@ -273,15 +272,15 @@ function PDFFilePicker({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Label className="text-white">PDF File *</Label>
+        <Label>PDF File *</Label>
         <div className="flex gap-2">
           <Button
             variant={mode === "select" ? "default" : "outline"}
             size="sm"
             onClick={() => setMode("select")}
             className={mode === "select"
-              ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-              : "border-white/20 text-white/70 hover:bg-white/10"
+              ? "bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30"
+              : ""
             }
           >
             <FolderOpen className="w-4 h-4 mr-2" />
@@ -292,8 +291,8 @@ function PDFFilePicker({
             size="sm"
             onClick={() => setMode("upload")}
             className={mode === "upload"
-              ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-              : "border-white/20 text-white/70 hover:bg-white/10"
+              ? "bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30"
+              : ""
             }
           >
             <Upload className="w-4 h-4 mr-2" />
@@ -306,16 +305,16 @@ function PDFFilePicker({
         <div className="space-y-3">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-purple-500 dark:text-purple-400" />
             </div>
           ) : existingFiles.length === 0 ? (
-            <div className="text-center py-8 border-2 border-dashed border-white/20 rounded-xl">
-              <FileText className="w-10 h-10 mx-auto text-white/30 mb-3" />
-              <p className="text-white/60">No PDFs uploaded yet</p>
+            <div className="text-center py-8 border-2 border-dashed border-border rounded-xl">
+              <FileText className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-muted-foreground">No PDFs uploaded yet</p>
               <Button
                 variant="outline"
                 size="sm"
-                className="mt-3 border-white/20 text-white hover:bg-white/10"
+                className="mt-3"
                 onClick={() => setMode("upload")}
               >
                 Upload your first PDF
@@ -327,16 +326,16 @@ function PDFFilePicker({
                 <button
                   key={file.id}
                   onClick={() => handleSelectExisting(file)}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/30 transition-all text-left"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-muted hover:bg-muted/80 border border-border hover:border-purple-500/30 transition-all text-left"
                 >
                   <div className="p-2 rounded-lg bg-purple-500/20">
-                    <FileText className="w-5 h-5 text-purple-400" />
+                    <FileText className="w-5 h-5 text-purple-500 dark:text-purple-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium truncate">{file.name}</p>
-                    <p className="text-white/50 text-sm">{file.sizeFormatted}</p>
+                    <p className="text-foreground font-medium truncate">{file.name}</p>
+                    <p className="text-muted-foreground text-sm">{file.sizeFormatted}</p>
                   </div>
-                  <Check className="w-5 h-5 text-white/30" />
+                  <Check className="w-5 h-5 text-muted-foreground/50" />
                 </button>
               ))}
             </div>
@@ -348,7 +347,7 @@ function PDFFilePicker({
         <div
           className={cn(
             "relative border-2 border-dashed rounded-xl p-8 text-center transition-all",
-            uploading ? "border-purple-500 bg-purple-500/10" : "border-white/20 hover:border-purple-500/50 cursor-pointer"
+            uploading ? "border-purple-500 bg-purple-500/10" : "border-border hover:border-purple-500/50 cursor-pointer"
           )}
           onClick={() => {
             if (uploading) return;
@@ -364,20 +363,20 @@ function PDFFilePicker({
         >
           {uploading ? (
             <div className="flex flex-col items-center gap-3">
-              <Loader2 className="h-10 w-10 animate-spin text-purple-400" />
-              <div className="w-48 h-2 bg-white/10 rounded-full overflow-hidden">
+              <Loader2 className="h-10 w-10 animate-spin text-purple-500 dark:text-purple-400" />
+              <div className="w-48 h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-purple-500 transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
-              <p className="text-white/60">Uploading to cloud storage...</p>
+              <p className="text-muted-foreground">Uploading to cloud storage...</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
-              <Upload className="h-10 w-10 text-white/40" />
-              <p className="text-white/60">Click to upload or drag & drop</p>
-              <p className="text-xs text-white/40">PDF files only (max 100MB)</p>
+              <Upload className="h-10 w-10 text-muted-foreground" />
+              <p className="text-muted-foreground">Click to upload or drag & drop</p>
+              <p className="text-xs text-muted-foreground/70">PDF files only (max 100MB)</p>
             </div>
           )}
         </div>
@@ -443,11 +442,11 @@ function FileUpload({
 
   return (
     <div className="space-y-2">
-      <Label className="text-white">{label}</Label>
+      <Label>{label}</Label>
       <div
         className={cn(
           "relative border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer",
-          dragActive ? "border-purple-500 bg-purple-500/10" : "border-white/20 hover:border-purple-500/50",
+          dragActive ? "border-purple-500 bg-purple-500/10" : "border-border hover:border-purple-500/50",
           currentUrl && "border-emerald-500/50 bg-emerald-500/5"
         )}
         onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
@@ -466,20 +465,20 @@ function FileUpload({
       >
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-10 w-10 animate-spin text-purple-400" />
-            <p className="text-white/60">Uploading...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-purple-500 dark:text-purple-400" />
+            <p className="text-muted-foreground">Uploading...</p>
           </div>
         ) : currentUrl ? (
           <div className="flex flex-col items-center gap-2">
-            <Check className="h-10 w-10 text-emerald-400" />
-            <p className="text-emerald-400">File uploaded</p>
-            <p className="text-xs text-white/50 truncate max-w-xs">{currentUrl}</p>
+            <Check className="h-10 w-10 text-emerald-500 dark:text-emerald-400" />
+            <p className="text-emerald-500 dark:text-emerald-400">File uploaded</p>
+            <p className="text-xs text-muted-foreground truncate max-w-xs">{currentUrl}</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <Icon className="h-10 w-10 text-white/40" />
-            <p className="text-white/60">{description}</p>
-            <p className="text-xs text-white/40">Click or drag & drop</p>
+            <Icon className="h-10 w-10 text-muted-foreground" />
+            <p className="text-muted-foreground">{description}</p>
+            <p className="text-xs text-muted-foreground/70">Click or drag & drop</p>
           </div>
         )}
       </div>
@@ -590,7 +589,7 @@ export default function NewBookPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+    <div className="min-h-screen bg-background">
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -598,18 +597,18 @@ export default function NewBookPage() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard/marketplace"
-              className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Marketplace
             </Link>
           </div>
-          <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border-purple-500/30">
+          <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
             <ShoppingCart className="w-3 h-3 mr-1" />
             New Book
           </Badge>
@@ -622,44 +621,43 @@ export default function NewBookPage() {
 
         {/* Step 1: Basic Info */}
         {currentStep === 1 && (
-          <Card className="bg-white/5 backdrop-blur-md border-white/10">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <FileText className="h-5 w-5 text-purple-400" />
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <FileText className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                 Basic Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label className="text-white">Book Title *</Label>
+                <Label>Book Title *</Label>
                 <Input
                   placeholder="Enter your book title"
                   value={formData.title}
                   onChange={(e) => updateForm("title", e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white">Description *</Label>
+                <Label>Description *</Label>
                 <Textarea
                   placeholder="Describe your book (minimum 100 characters recommended)"
                   value={formData.description}
                   onChange={(e) => updateForm("description", e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 min-h-32"
+                  className="min-h-32"
                 />
-                <p className="text-xs text-white/50">
+                <p className="text-xs text-muted-foreground">
                   {formData.description.length} characters
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white">Category *</Label>
+                <Label>Category *</Label>
                 <Select
                   value={formData.category}
                   onValueChange={(value) => updateForm("category", value)}
                 >
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -673,21 +671,20 @@ export default function NewBookPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white">Tags (comma-separated)</Label>
+                <Label>Tags (comma-separated)</Label>
                 <Input
                   placeholder="e.g., fantasy, adventure, magic"
                   value={formData.tags.join(", ")}
                   onChange={(e) => updateForm("tags", e.target.value.split(",").map(t => t.trim()).filter(Boolean))}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                 />
               </div>
 
               <div className="flex items-center justify-between p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
                 <div className="flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-400" />
+                  <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-400" />
                   <div>
-                    <p className="font-medium text-white">Contains NSFW Content</p>
-                    <p className="text-sm text-white/60">
+                    <p className="font-medium text-foreground">Contains NSFW Content</p>
+                    <p className="text-sm text-muted-foreground">
                       If enabled, payments will be processed via DivinityCoin only
                     </p>
                   </div>
@@ -708,10 +705,10 @@ export default function NewBookPage() {
 
         {/* Step 2: Media */}
         {currentStep === 2 && (
-          <Card className="bg-white/5 backdrop-blur-md border-white/10">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <ImageIcon className="h-5 w-5 text-purple-400" />
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <ImageIcon className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                 Media Files
               </CardTitle>
             </CardHeader>
@@ -747,8 +744,8 @@ export default function NewBookPage() {
               {/* Preview */}
               {(formData.promoImageUrl || formData.promoVideoUrl) && (
                 <div className="space-y-2">
-                  <Label className="text-white">Preview</Label>
-                  <div className="aspect-video rounded-xl overflow-hidden bg-white/5 relative">
+                  <Label>Preview</Label>
+                  <div className="aspect-video rounded-xl overflow-hidden bg-muted relative">
                     {formData.promoVideoUrl ? (
                       <video
                         src={formData.promoVideoUrl}
@@ -772,19 +769,19 @@ export default function NewBookPage() {
 
         {/* Step 3: Pricing */}
         {currentStep === 3 && (
-          <Card className="bg-white/5 backdrop-blur-md border-white/10">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <DollarSign className="h-5 w-5 text-purple-400" />
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <DollarSign className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                 Pricing & Payment
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-white">Price *</Label>
+                  <Label>Price *</Label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="number"
                       step="0.01"
@@ -792,18 +789,18 @@ export default function NewBookPage() {
                       placeholder="9.99"
                       value={formData.price}
                       onChange={(e) => updateForm("price", e.target.value)}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      className="pl-10"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white">Currency</Label>
+                  <Label>Currency</Label>
                   <Select
                     value={formData.currency}
                     onValueChange={(value) => updateForm("currency", value)}
                   >
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -816,13 +813,13 @@ export default function NewBookPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white">Payment Processor</Label>
+                <Label>Payment Processor</Label>
                 <Select
                   value={formData.paymentProcessor}
                   onValueChange={(value: "STRIPE" | "DIVINITYCOIN") => updateForm("paymentProcessor", value)}
                   disabled={formData.isNsfw}
                 >
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -831,25 +828,25 @@ export default function NewBookPage() {
                   </SelectContent>
                 </Select>
                 {formData.isNsfw && (
-                  <p className="text-xs text-amber-400">
+                  <p className="text-xs text-amber-500 dark:text-amber-400">
                     NSFW content requires DivinityCoin payment
                   </p>
                 )}
               </div>
 
               {/* Fee Breakdown */}
-              <div className="p-4 rounded-xl bg-white/5 space-y-3">
-                <h4 className="font-medium text-white">Fee Breakdown</h4>
+              <div className="p-4 rounded-xl bg-muted space-y-3">
+                <h4 className="font-medium text-foreground">Fee Breakdown</h4>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between text-white/60">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Your Price</span>
                     <span>${parseFloat(formData.price || "0").toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-white/60">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Platform Fee (3%)</span>
                     <span>-${(parseFloat(formData.price || "0") * 0.03).toFixed(2)}</span>
                   </div>
-                  <div className="border-t border-white/10 pt-2 flex justify-between font-semibold text-emerald-400">
+                  <div className="border-t border-border pt-2 flex justify-between font-semibold text-emerald-500 dark:text-emerald-400">
                     <span>You Receive</span>
                     <span>${(parseFloat(formData.price || "0") * 0.97).toFixed(2)}</span>
                   </div>
@@ -861,16 +858,16 @@ export default function NewBookPage() {
 
         {/* Step 4: Review */}
         {currentStep === 4 && (
-          <Card className="bg-white/5 backdrop-blur-md border-white/10">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Eye className="h-5 w-5 text-purple-400" />
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <Eye className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                 Review Your Book
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Preview Card */}
-              <div className="rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-white/5 border border-white/10">
+              <div className="rounded-xl overflow-hidden bg-card border border-border">
                 <div className="aspect-video relative">
                   {formData.promoImageUrl ? (
                     <Image
@@ -881,7 +878,7 @@ export default function NewBookPage() {
                     />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-indigo-900/50 flex items-center justify-center">
-                      <BookOpen className="h-16 w-16 text-white/30" />
+                      <BookOpen className="h-16 w-16 text-muted-foreground/50" />
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -891,12 +888,12 @@ export default function NewBookPage() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <p className="text-white/70 text-sm line-clamp-3">{formData.description || "No description"}</p>
+                  <p className="text-muted-foreground text-sm line-clamp-3">{formData.description || "No description"}</p>
                   <div className="flex items-center justify-between mt-4">
-                    <span className="text-2xl font-bold text-emerald-400">
+                    <span className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">
                       ${parseFloat(formData.price || "0").toFixed(2)}
                     </span>
-                    <Badge className={formData.paymentProcessor === "DIVINITYCOIN" ? "bg-purple-500/20 text-purple-300" : "bg-blue-500/20 text-blue-300"}>
+                    <Badge className={formData.paymentProcessor === "DIVINITYCOIN" ? "bg-purple-500/20 text-purple-600 dark:text-purple-300" : "bg-blue-500/20 text-blue-600 dark:text-blue-300"}>
                       {formData.paymentProcessor === "DIVINITYCOIN" ? "DivinityCoin" : "Stripe"}
                     </Badge>
                   </div>
@@ -905,27 +902,27 @@ export default function NewBookPage() {
 
               {/* Summary */}
               <div className="space-y-4">
-                <div className="flex justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-white/60">PDF File</span>
-                  <span className="text-white">{formData.pdfFileName || "Uploaded"}</span>
+                <div className="flex justify-between p-3 rounded-lg bg-muted">
+                  <span className="text-muted-foreground">PDF File</span>
+                  <span className="text-foreground">{formData.pdfFileName || "Uploaded"}</span>
                 </div>
-                <div className="flex justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-white/60">Cover Image</span>
-                  <span className="text-white">{formData.promoImageUrl ? "Uploaded" : "Not uploaded"}</span>
+                <div className="flex justify-between p-3 rounded-lg bg-muted">
+                  <span className="text-muted-foreground">Cover Image</span>
+                  <span className="text-foreground">{formData.promoImageUrl ? "Uploaded" : "Not uploaded"}</span>
                 </div>
-                <div className="flex justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-white/60">Promo Video</span>
-                  <span className="text-white">{formData.promoVideoUrl ? "Uploaded" : "Not uploaded"}</span>
+                <div className="flex justify-between p-3 rounded-lg bg-muted">
+                  <span className="text-muted-foreground">Promo Video</span>
+                  <span className="text-foreground">{formData.promoVideoUrl ? "Uploaded" : "Not uploaded"}</span>
                 </div>
-                <div className="flex justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-white/60">NSFW Content</span>
-                  <span className={formData.isNsfw ? "text-amber-400" : "text-white"}>
+                <div className="flex justify-between p-3 rounded-lg bg-muted">
+                  <span className="text-muted-foreground">NSFW Content</span>
+                  <span className={formData.isNsfw ? "text-amber-500 dark:text-amber-400" : "text-foreground"}>
                     {formData.isNsfw ? "Yes" : "No"}
                   </span>
                 </div>
                 {formData.tags.length > 0 && (
-                  <div className="flex justify-between p-3 rounded-lg bg-white/5">
-                    <span className="text-white/60">Tags</span>
+                  <div className="flex justify-between p-3 rounded-lg bg-muted">
+                    <span className="text-muted-foreground">Tags</span>
                     <div className="flex flex-wrap gap-1 justify-end">
                       {formData.tags.map((tag) => (
                         <Badge key={tag} variant="secondary" className="text-xs">
@@ -939,7 +936,7 @@ export default function NewBookPage() {
 
               {/* Info Box */}
               <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                <p className="text-sm text-blue-300">
+                <p className="text-sm text-blue-600 dark:text-blue-300">
                   <strong>What happens next?</strong> Your book will be reviewed by our team
                   within 24-48 hours. You&apos;ll receive a notification once it&apos;s approved
                   and live on the marketplace.
@@ -955,7 +952,6 @@ export default function NewBookPage() {
             variant="outline"
             onClick={prevStep}
             disabled={currentStep === 1}
-            className="border-white/20 text-white hover:bg-white/10"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Previous
@@ -967,7 +963,6 @@ export default function NewBookPage() {
                 variant="outline"
                 onClick={() => handleSubmit(true)}
                 disabled={saving}
-                className="border-white/20 text-white hover:bg-white/10"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -979,7 +974,7 @@ export default function NewBookPage() {
             {currentStep < 4 ? (
               <Button
                 onClick={nextStep}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
               >
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -988,7 +983,7 @@ export default function NewBookPage() {
               <Button
                 onClick={() => handleSubmit(false)}
                 disabled={saving}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

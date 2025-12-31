@@ -32,7 +32,7 @@ import dynamic from "next/dynamic";
 // Dynamic import for TipTap editor to avoid SSR issues
 const TipTapEditor = dynamic(
   () => import("@/components/tiptap-editor").then((mod) => mod.TipTapEditor),
-  { ssr: false, loading: () => <div className="h-64 bg-white/5 rounded-lg animate-pulse" /> }
+  { ssr: false, loading: () => <div className="h-64 bg-muted rounded-lg animate-pulse" /> }
 );
 
 interface CompanyFormData {
@@ -106,12 +106,12 @@ function FileUpload({
 
   return (
     <div className="space-y-2">
-      <Label className="text-white">{label}</Label>
+      <Label>{label}</Label>
       <div
         className={cn(
           "relative border-2 border-dashed rounded-xl overflow-hidden text-center transition-all cursor-pointer",
           aspectRatio === "banner" ? "aspect-[4/1]" : "aspect-square w-32",
-          dragActive ? "border-purple-500 bg-purple-500/10" : "border-white/20 hover:border-purple-500/50",
+          dragActive ? "border-purple-500 bg-purple-500/10" : "border-border hover:border-purple-500/50",
           currentUrl && "border-emerald-500/50"
         )}
         onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
@@ -130,7 +130,7 @@ function FileUpload({
       >
         {uploading ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-purple-500 dark:text-purple-400" />
           </div>
         ) : currentUrl ? (
           <>
@@ -146,8 +146,8 @@ function FileUpload({
           </>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <ImageIcon className="h-8 w-8 text-white/40 mb-2" />
-            <p className="text-xs text-white/40 px-2">{description}</p>
+            <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-xs text-muted-foreground px-2">{description}</p>
           </div>
         )}
       </div>
@@ -283,11 +283,11 @@ export default function CompanyProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+      <div className="min-h-screen bg-background">
         <div className="flex min-h-screen items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
-            <p className="text-white/60">Loading company profile...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-purple-500 dark:text-purple-400" />
+            <p className="text-muted-foreground">Loading company profile...</p>
           </div>
         </div>
       </div>
@@ -295,7 +295,7 @@ export default function CompanyProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+    <div className="min-h-screen bg-background">
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -303,18 +303,18 @@ export default function CompanyProfilePage() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard/marketplace"
-              className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Marketplace
             </Link>
           </div>
-          <Badge className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border-cyan-500/30">
+          <Badge className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/30">
             <Building2 className="w-3 h-3 mr-1" />
             {isNew ? "New Company" : "Edit Company"}
           </Badge>
@@ -323,9 +323,9 @@ export default function CompanyProfilePage() {
 
       <main className="container relative py-8 max-w-4xl">
         {/* Preview Card */}
-        <Card className="bg-white/5 backdrop-blur-md border-white/10 mb-8 overflow-hidden">
+        <Card className="bg-card border-border mb-8 overflow-hidden">
           {/* Banner */}
-          <div className="relative h-32 bg-gradient-to-br from-cyan-900/50 to-blue-900/50">
+          <div className="relative h-32 bg-gradient-to-br from-cyan-200 to-blue-200 dark:from-cyan-900/50 dark:to-blue-900/50">
             {formData.banner && (
               <Image
                 src={formData.banner}
@@ -334,13 +334,13 @@ export default function CompanyProfilePage() {
                 className="object-cover"
               />
             )}
-            <div className="absolute inset-0 bg-black/30" />
+            <div className="absolute inset-0 bg-black/10 dark:bg-black/30" />
           </div>
 
           {/* Logo & Basic Info */}
           <div className="relative px-6 pb-6">
             <div className="absolute -top-10 left-6">
-              <div className="w-20 h-20 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 overflow-hidden flex items-center justify-center">
+              <div className="w-20 h-20 rounded-xl bg-card backdrop-blur-md border border-border overflow-hidden flex items-center justify-center">
                 {formData.logo ? (
                   <Image
                     src={formData.logo}
@@ -350,24 +350,24 @@ export default function CompanyProfilePage() {
                     className="object-cover"
                   />
                 ) : (
-                  <Building2 className="h-10 w-10 text-white/40" />
+                  <Building2 className="h-10 w-10 text-muted-foreground/50" />
                 )}
               </div>
             </div>
 
             <div className="pt-14">
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-foreground">
                 {formData.name || "Your Company Name"}
               </h2>
               {formData.tagline && (
-                <p className="text-white/60 mt-1">{formData.tagline}</p>
+                <p className="text-muted-foreground mt-1">{formData.tagline}</p>
               )}
               {formData.website && (
                 <a
                   href={formData.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 text-sm mt-2"
+                  className="inline-flex items-center gap-1 text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 text-sm mt-2"
                 >
                   <Globe className="w-3 h-3" />
                   {formData.website.replace(/^https?:\/\//, "")}
@@ -380,10 +380,10 @@ export default function CompanyProfilePage() {
         {/* Form */}
         <div className="space-y-6">
           {/* Branding */}
-          <Card className="bg-white/5 backdrop-blur-md border-white/10">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <ImageIcon className="h-5 w-5 text-purple-400" />
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <ImageIcon className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                 Branding
               </CardTitle>
             </CardHeader>
@@ -410,59 +410,57 @@ export default function CompanyProfilePage() {
           </Card>
 
           {/* Basic Info */}
-          <Card className="bg-white/5 backdrop-blur-md border-white/10">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Building2 className="h-5 w-5 text-purple-400" />
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <Building2 className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                 Company Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-white">Company Name *</Label>
+                  <Label>Company Name *</Label>
                   <Input
                     placeholder="Your Company Name"
                     value={formData.name}
                     onChange={(e) => updateForm("name", e.target.value)}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-white">URL Slug *</Label>
+                  <Label>URL Slug *</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                       /marketplace/companies/
                     </span>
                     <Input
                       placeholder="your-company"
                       value={formData.slug}
                       onChange={(e) => updateForm("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                      className="pl-44 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      className="pl-44"
                       disabled={!isNew}
                     />
                   </div>
                   {!isNew && (
-                    <p className="text-xs text-white/50">Slug cannot be changed after creation</p>
+                    <p className="text-xs text-muted-foreground">Slug cannot be changed after creation</p>
                   )}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white">Tagline</Label>
+                <Label>Tagline</Label>
                 <Input
                   placeholder="A short description of your company"
                   value={formData.tagline}
                   onChange={(e) => updateForm("tagline", e.target.value)}
                   maxLength={150}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                 />
-                <p className="text-xs text-white/50">{formData.tagline.length}/150</p>
+                <p className="text-xs text-muted-foreground">{formData.tagline.length}/150</p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white">About</Label>
-                <div className="rounded-lg overflow-hidden border border-white/20">
+                <Label>About</Label>
+                <div className="rounded-lg overflow-hidden border border-border">
                   <TipTapEditor
                     content={formData.about}
                     onChange={(html) => updateForm("about", html)}
@@ -474,88 +472,88 @@ export default function CompanyProfilePage() {
           </Card>
 
           {/* Links */}
-          <Card className="bg-white/5 backdrop-blur-md border-white/10">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <LinkIcon className="h-5 w-5 text-purple-400" />
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <LinkIcon className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                 Links & Social Media
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-white">Website</Label>
+                  <Label>Website</Label>
                   <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="https://yourcompany.com"
                       value={formData.website}
                       onChange={(e) => updateForm("website", e.target.value)}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      className="pl-10"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-white">Physical Media Orders</Label>
+                  <Label>Physical Media Orders</Label>
                   <div className="relative">
-                    <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="https://shop.yourcompany.com"
                       value={formData.physicalMediaUrl}
                       onChange={(e) => updateForm("physicalMediaUrl", e.target.value)}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      className="pl-10"
                     />
                   </div>
-                  <p className="text-xs text-white/50">Link where customers can order physical copies</p>
+                  <p className="text-xs text-muted-foreground">Link where customers can order physical copies</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-white">Twitter</Label>
+                  <Label>Twitter</Label>
                   <div className="relative">
-                    <Twitter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Twitter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="@username"
                       value={formData.socialLinks.twitter}
                       onChange={(e) => updateSocialLink("twitter", e.target.value)}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      className="pl-10"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-white">Instagram</Label>
+                  <Label>Instagram</Label>
                   <div className="relative">
-                    <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="@username"
                       value={formData.socialLinks.instagram}
                       onChange={(e) => updateSocialLink("instagram", e.target.value)}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      className="pl-10"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-white">Facebook</Label>
+                  <Label>Facebook</Label>
                   <div className="relative">
-                    <Facebook className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Facebook className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="facebook.com/yourpage"
                       value={formData.socialLinks.facebook}
                       onChange={(e) => updateSocialLink("facebook", e.target.value)}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      className="pl-10"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-white">YouTube</Label>
+                  <Label>YouTube</Label>
                   <div className="relative">
-                    <Youtube className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Youtube className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="youtube.com/@yourchannel"
                       value={formData.socialLinks.youtube}
                       onChange={(e) => updateSocialLink("youtube", e.target.value)}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      className="pl-10"
                     />
                   </div>
                 </div>
@@ -566,17 +564,14 @@ export default function CompanyProfilePage() {
           {/* Actions */}
           <div className="flex items-center justify-between pt-4">
             <Link href="/dashboard/marketplace">
-              <Button
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10"
-              >
+              <Button variant="outline">
                 Cancel
               </Button>
             </Link>
             <Button
               onClick={handleSubmit}
               disabled={saving}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
             >
               {saving ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
