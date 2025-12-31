@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * Submit a book for review
  */
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -34,10 +34,10 @@ export async function POST(
       return NextResponse.json({ error: "Book not found" }, { status: 404 });
     }
 
-    // Validate book can be submitted
+    // Can only submit drafts or rejected books
     if (book.status !== "DRAFT" && book.status !== "REJECTED") {
       return NextResponse.json(
-        { error: "Only draft or rejected books can be submitted for review" },
+        { error: `Cannot submit book with status ${book.status}` },
         { status: 400 }
       );
     }
@@ -45,14 +45,14 @@ export async function POST(
     // Validate required fields
     if (!book.title?.trim()) {
       return NextResponse.json(
-        { error: "Title is required" },
+        { error: "Book title is required" },
         { status: 400 }
       );
     }
 
     if (!book.description?.trim()) {
       return NextResponse.json(
-        { error: "Description is required" },
+        { error: "Book description is required" },
         { status: 400 }
       );
     }
@@ -71,18 +71,24 @@ export async function POST(
       );
     }
 
-    // Submit for review
-    await prisma.marketplaceBook.update({
+    // Update status to pending review
+    const updatedBook = await prisma.marketplaceBook.update({
       where: { id },
       data: {
         status: "PENDING_REVIEW",
         submittedAt: new Date(),
         rejectionReason: null,
+        updatedAt: new Date(),
       },
     });
 
     return NextResponse.json({
       success: true,
+      book: {
+        id: updatedBook.id,
+        title: updatedBook.title,
+        status: updatedBook.status,
+      },
       message: "Book submitted for review",
     });
   } catch (error) {

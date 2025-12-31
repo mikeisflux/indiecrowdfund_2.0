@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,9 @@ import {
   Check,
   Loader2,
   AlertTriangle,
-  ShoppingCart,
+  Edit,
   Eye,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -49,6 +50,24 @@ interface BookFormData {
   pdfFileName: string;
   isNsfw: boolean;
   tags: string[];
+}
+
+interface BookData {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  category: string;
+  price: number;
+  currency: string;
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN";
+  coverImage: string | null;
+  promoVideoUrl: string | null;
+  pdfFileUrl: string;
+  isNsfw: boolean;
+  tags: string[];
+  status: string;
+  rejectionReason: string | null;
 }
 
 const CATEGORIES = [
@@ -208,6 +227,7 @@ function FileUpload({
             <Check className="h-10 w-10 text-emerald-400" />
             <p className="text-emerald-400">File uploaded</p>
             <p className="text-xs text-white/50 truncate max-w-xs">{currentUrl}</p>
+            <p className="text-xs text-purple-400 mt-1">Click to replace</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
@@ -221,10 +241,16 @@ function FileUpload({
   );
 }
 
-export default function NewBookPage() {
+export default function EditBookPage() {
   const router = useRouter();
+  const params = useParams();
+  const bookId = params?.id as string;
+
+  const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [bookStatus, setBookStatus] = useState<string>("");
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [formData, setFormData] = useState<BookFormData>({
     title: "",
     description: "",
@@ -239,6 +265,51 @@ export default function NewBookPage() {
     isNsfw: false,
     tags: [],
   });
+
+  // Fetch existing book data
+  useEffect(() => {
+    async function fetchBook() {
+      try {
+        const res = await fetch(`/api/creator/marketplace/books/${bookId}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            toast.error("Book not found");
+            router.push("/dashboard/marketplace");
+            return;
+          }
+          throw new Error("Failed to fetch book");
+        }
+
+        const data = await res.json();
+        const book: BookData = data.book;
+
+        setFormData({
+          title: book.title,
+          description: book.description,
+          category: book.category || "",
+          price: book.price.toString(),
+          currency: book.currency,
+          paymentProcessor: book.paymentProcessor,
+          promoImageUrl: book.coverImage || "",
+          promoVideoUrl: book.promoVideoUrl || "",
+          pdfFileUrl: book.pdfFileUrl,
+          pdfFileName: "",
+          isNsfw: book.isNsfw,
+          tags: book.tags || [],
+        });
+        setBookStatus(book.status);
+        setRejectionReason(book.rejectionReason);
+      } catch (error) {
+        console.error("Error fetching book:", error);
+        toast.error("Failed to load book");
+        router.push("/dashboard/marketplace");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchBook();
+  }, [bookId, router]);
 
   const updateForm = (field: keyof BookFormData, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -287,15 +358,15 @@ export default function NewBookPage() {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleSubmit = async (asDraft: boolean = true) => {
+  const handleSubmit = async (submitForReview: boolean = false) => {
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
       return;
     }
 
     setSaving(true);
     try {
-      const res = await fetch("/api/creator/marketplace/books", {
-        method: "POST",
+      const res = await fetch(`/api/creator/marketplace/books/${bookId}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           ...getCSRFHeaders(),
@@ -303,24 +374,53 @@ export default function NewBookPage() {
         body: JSON.stringify({
           ...formData,
           price: parseFloat(formData.price),
-          submitForReview: !asDraft,
         }),
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to create book");
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update book");
       }
 
-      toast.success(asDraft ? "Book saved as draft" : "Book submitted for review");
+      // If user wants to submit for review after saving
+      if (submitForReview) {
+        const submitRes = await fetch(`/api/creator/marketplace/books/${bookId}/submit`, {
+          method: "POST",
+          headers: getCSRFHeaders(),
+        });
+
+        if (!submitRes.ok) {
+          const data = await submitRes.json();
+          throw new Error(data.error || "Failed to submit for review");
+        }
+        toast.success("Book submitted for review");
+      } else {
+        toast.success("Book updated successfully");
+      }
+
       router.push("/dashboard/marketplace");
     } catch (error) {
-      console.error("Error creating book:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to create book");
+      console.error("Error updating book:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update book");
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-purple-400" />
+          <p className="text-white/60">Loading book...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const canEdit = bookStatus === "DRAFT" || bookStatus === "REJECTED";
+  const isPendingReview = bookStatus === "PENDING_REVIEW";
+  const isLive = bookStatus === "LIVE";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
@@ -343,13 +443,42 @@ export default function NewBookPage() {
             </Link>
           </div>
           <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border-purple-500/30">
-            <ShoppingCart className="w-3 h-3 mr-1" />
-            New Book
+            <Edit className="w-3 h-3 mr-1" />
+            Edit Book
           </Badge>
         </div>
       </header>
 
       <main className="container relative py-8 max-w-4xl">
+        {/* Status Banner */}
+        {isPendingReview && (
+          <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <p className="text-amber-300">
+              This book is pending review. You cannot edit it until the review is complete.
+            </p>
+          </div>
+        )}
+
+        {isLive && (
+          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3">
+            <Check className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+            <p className="text-emerald-300">
+              This book is live on the marketplace. Editing will require re-approval.
+            </p>
+          </div>
+        )}
+
+        {rejectionReason && (
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
+            <div className="flex items-center gap-3 mb-2">
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <p className="text-red-300 font-medium">Rejection Reason</p>
+            </div>
+            <p className="text-red-300/80 ml-8">{rejectionReason}</p>
+          </div>
+        )}
+
         {/* Step Indicator */}
         <StepIndicator currentStep={currentStep} />
 
@@ -369,7 +498,8 @@ export default function NewBookPage() {
                   placeholder="Enter your book title"
                   value={formData.title}
                   onChange={(e) => updateForm("title", e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                  disabled={!canEdit && !isLive}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 disabled:opacity-50"
                 />
               </div>
 
@@ -379,7 +509,8 @@ export default function NewBookPage() {
                   placeholder="Describe your book (minimum 100 characters recommended)"
                   value={formData.description}
                   onChange={(e) => updateForm("description", e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 min-h-32"
+                  disabled={!canEdit && !isLive}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 min-h-32 disabled:opacity-50"
                 />
                 <p className="text-xs text-white/50">
                   {formData.description.length} characters
@@ -391,8 +522,9 @@ export default function NewBookPage() {
                 <Select
                   value={formData.category}
                   onValueChange={(value) => updateForm("category", value)}
+                  disabled={!canEdit && !isLive}
                 >
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white disabled:opacity-50">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -411,7 +543,8 @@ export default function NewBookPage() {
                   placeholder="e.g., fantasy, adventure, magic"
                   value={formData.tags.join(", ")}
                   onChange={(e) => updateForm("tags", e.target.value.split(",").map(t => t.trim()).filter(Boolean))}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                  disabled={!canEdit && !isLive}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 disabled:opacity-50"
                 />
               </div>
 
@@ -433,6 +566,7 @@ export default function NewBookPage() {
                       updateForm("paymentProcessor", "DIVINITYCOIN");
                     }
                   }}
+                  disabled={!canEdit && !isLive}
                 />
               </div>
             </CardContent>
@@ -527,7 +661,8 @@ export default function NewBookPage() {
                       placeholder="9.99"
                       value={formData.price}
                       onChange={(e) => updateForm("price", e.target.value)}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      disabled={!canEdit && !isLive}
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40 disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -537,8 +672,9 @@ export default function NewBookPage() {
                   <Select
                     value={formData.currency}
                     onValueChange={(value) => updateForm("currency", value)}
+                    disabled={!canEdit && !isLive}
                   >
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white disabled:opacity-50">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -555,9 +691,9 @@ export default function NewBookPage() {
                 <Select
                   value={formData.paymentProcessor}
                   onValueChange={(value: "STRIPE" | "DIVINITYCOIN") => updateForm("paymentProcessor", value)}
-                  disabled={formData.isNsfw}
+                  disabled={formData.isNsfw || (!canEdit && !isLive)}
                 >
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white disabled:opacity-50">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -675,9 +811,9 @@ export default function NewBookPage() {
               {/* Info Box */}
               <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
                 <p className="text-sm text-blue-300">
-                  <strong>What happens next?</strong> Your book will be reviewed by our team
-                  within 24-48 hours. You&apos;ll receive a notification once it&apos;s approved
-                  and live on the marketplace.
+                  <strong>What happens next?</strong> {bookStatus === "LIVE"
+                    ? "Since your book is already live, saving changes will require re-approval."
+                    : "Your book will be reviewed by our team within 24-48 hours. You'll receive a notification once it's approved and live on the marketplace."}
                 </p>
               </div>
             </CardContent>
@@ -697,17 +833,17 @@ export default function NewBookPage() {
           </Button>
 
           <div className="flex items-center gap-3">
-            {currentStep === 4 && (
+            {currentStep === 4 && (canEdit || isLive) && (
               <Button
                 variant="outline"
-                onClick={() => handleSubmit(true)}
+                onClick={() => handleSubmit(false)}
                 disabled={saving}
                 className="border-white/20 text-white hover:bg-white/10"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : null}
-                Save as Draft
+                Save Changes
               </Button>
             )}
 
@@ -719,9 +855,9 @@ export default function NewBookPage() {
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-            ) : (
+            ) : (canEdit || isLive) ? (
               <Button
-                onClick={() => handleSubmit(false)}
+                onClick={() => handleSubmit(true)}
                 disabled={saving}
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               >
@@ -730,9 +866,9 @@ export default function NewBookPage() {
                 ) : (
                   <Check className="w-4 h-4 mr-2" />
                 )}
-                Submit for Review
+                Save & Submit for Review
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
       </main>
