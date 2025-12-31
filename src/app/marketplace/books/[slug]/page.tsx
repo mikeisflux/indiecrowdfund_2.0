@@ -22,7 +22,6 @@ import {
   Sparkles,
   ShoppingCart,
   CheckCircle,
-  AlertCircle,
   Play,
   Building2,
   User,
