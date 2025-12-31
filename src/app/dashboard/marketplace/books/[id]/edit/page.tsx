@@ -32,7 +32,18 @@ import {
   Edit,
   Eye,
   AlertCircle,
+  Upload,
+  FolderOpen,
 } from "lucide-react";
+
+interface ExistingFile {
+  id: string;
+  key: string;
+  name: string;
+  size: number;
+  uploadedAt: string | null;
+  sizeFormatted: string;
+}
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { cn } from "@/lib/utils";
@@ -48,6 +59,7 @@ interface BookFormData {
   promoVideoUrl: string;
   pdfFileUrl: string;
   pdfFileName: string;
+  pdfStorageKey: string;
   isNsfw: boolean;
   tags: string[];
 }
@@ -135,6 +147,249 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * PDF File Picker - Shows existing files from R2 or allows uploading new ones
+ */
+function PDFFilePicker({
+  onSelect,
+  currentUrl,
+  currentFileName,
+}: {
+  onSelect: (url: string, fileName: string, storageKey: string) => void;
+  currentUrl: string;
+  currentFileName: string;
+}) {
+  const [existingFiles, setExistingFiles] = useState<ExistingFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [mode, setMode] = useState<"select" | "upload">("select");
+
+  // Fetch existing files on mount
+  useEffect(() => {
+    fetchExistingFiles();
+  }, []);
+
+  const fetchExistingFiles = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/creator/marketplace/files");
+      if (res.ok) {
+        const data = await res.json();
+        setExistingFiles(data.files || []);
+      }
+    } catch (error) {
+      console.error("Error fetching files:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleSelectExisting = (file: ExistingFile) => {
+    const publicUrl = `/api/r2/serve/${encodeURIComponent(file.key)}`;
+    onSelect(publicUrl, file.name, file.key);
+    toast.success(`Selected: ${file.name}`);
+  };
+
+  const handleUploadNew = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Only PDF files are allowed");
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const presignRes = await fetch("/api/creator/marketplace/files", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: "application/pdf",
+        }),
+      });
+
+      if (!presignRes.ok) {
+        const error = await presignRes.json();
+        throw new Error(error.error || "Failed to get upload URL");
+      }
+
+      const { uploadUrl, storageKey } = await presignRes.json();
+      setUploadProgress(10);
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": "application/pdf" },
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Failed to upload file to storage");
+      }
+
+      setUploadProgress(100);
+      const publicUrl = `/api/r2/serve/${encodeURIComponent(storageKey)}`;
+      onSelect(publicUrl, file.name, storageKey);
+      toast.success("PDF uploaded successfully!");
+      await fetchExistingFiles();
+      setMode("select");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  if (currentUrl) {
+    return (
+      <div className="space-y-3">
+        <Label className="text-white">PDF File *</Label>
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-emerald-500/20">
+              <FileText className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-medium truncate">{currentFileName || "Selected PDF"}</p>
+              <p className="text-emerald-400 text-sm">File selected</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onSelect("", "", "")}
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              Change
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Label className="text-white">PDF File *</Label>
+        <div className="flex gap-2">
+          <Button
+            variant={mode === "select" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setMode("select")}
+            className={mode === "select"
+              ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+              : "border-white/20 text-white/70 hover:bg-white/10"
+            }
+          >
+            <FolderOpen className="w-4 h-4 mr-2" />
+            Choose Existing
+          </Button>
+          <Button
+            variant={mode === "upload" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setMode("upload")}
+            className={mode === "upload"
+              ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+              : "border-white/20 text-white/70 hover:bg-white/10"
+            }
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload New
+          </Button>
+        </div>
+      </div>
+
+      {mode === "select" && (
+        <div className="space-y-3">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+            </div>
+          ) : existingFiles.length === 0 ? (
+            <div className="text-center py-8 border-2 border-dashed border-white/20 rounded-xl">
+              <FileText className="w-10 h-10 mx-auto text-white/30 mb-3" />
+              <p className="text-white/60">No PDFs uploaded yet</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 border-white/20 text-white hover:bg-white/10"
+                onClick={() => setMode("upload")}
+              >
+                Upload your first PDF
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-2 max-h-64 overflow-y-auto">
+              {existingFiles.map((file) => (
+                <button
+                  key={file.id}
+                  onClick={() => handleSelectExisting(file)}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/30 transition-all text-left"
+                >
+                  <div className="p-2 rounded-lg bg-purple-500/20">
+                    <FileText className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium truncate">{file.name}</p>
+                    <p className="text-white/50 text-sm">{file.sizeFormatted}</p>
+                  </div>
+                  <Check className="w-5 h-5 text-white/30" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === "upload" && (
+        <div
+          className={cn(
+            "relative border-2 border-dashed rounded-xl p-8 text-center transition-all",
+            uploading ? "border-purple-500 bg-purple-500/10" : "border-white/20 hover:border-purple-500/50 cursor-pointer"
+          )}
+          onClick={() => {
+            if (uploading) return;
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".pdf,application/pdf";
+            input.onchange = (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (file) handleUploadNew(file);
+            };
+            input.click();
+          }}
+        >
+          {uploading ? (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-10 w-10 animate-spin text-purple-400" />
+              <div className="w-48 h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-purple-500 transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-white/60">Uploading to cloud storage...</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <Upload className="h-10 w-10 text-white/40" />
+              <p className="text-white/60">Click to upload or drag & drop</p>
+              <p className="text-xs text-white/40">PDF files only (max 100MB)</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -262,6 +517,7 @@ export default function EditBookPage() {
     promoVideoUrl: "",
     pdfFileUrl: "",
     pdfFileName: "",
+    pdfStorageKey: "",
     isNsfw: false,
     tags: [],
   });
@@ -294,6 +550,7 @@ export default function EditBookPage() {
           promoVideoUrl: book.promoVideoUrl || "",
           pdfFileUrl: book.pdfFileUrl,
           pdfFileName: "",
+          pdfStorageKey: "",
           isNsfw: book.isNsfw,
           tags: book.tags || [],
         });
@@ -583,16 +840,14 @@ export default function EditBookPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <FileUpload
-                label="PDF File *"
-                accept=".pdf"
-                onUpload={(url, fileName) => {
+              <PDFFilePicker
+                onSelect={(url, fileName, storageKey) => {
                   updateForm("pdfFileUrl", url);
-                  if (fileName) updateForm("pdfFileName", fileName);
+                  updateForm("pdfFileName", fileName);
+                  updateForm("pdfStorageKey", storageKey);
                 }}
                 currentUrl={formData.pdfFileUrl}
-                icon={FileText}
-                description="Upload your book PDF (max 100MB)"
+                currentFileName={formData.pdfFileName}
               />
 
               <FileUpload

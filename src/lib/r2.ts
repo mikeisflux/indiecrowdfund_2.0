@@ -374,6 +374,41 @@ export function generateFileKey(
 }
 
 /**
+ * Generate a unique file key for marketplace uploads
+ * Organized by: marketplace/{userId}/pdfs/{fileId}_{sanitizedName}
+ */
+export function generateMarketplaceFileKey(
+  userId: string,
+  originalFilename: string,
+  fileId?: string
+): string {
+  const id = fileId || crypto.randomUUID();
+  const sanitizedName = originalFilename
+    .replace(/[^a-zA-Z0-9.-]/g, "_")
+    .substring(0, 50);
+  return `marketplace/${userId}/pdfs/${id}_${sanitizedName}`;
+}
+
+/**
+ * Parse marketplace file key to extract components
+ */
+export function parseMarketplaceFileKey(key: string): {
+  userId: string;
+  fileId: string;
+  filename: string;
+} | null {
+  const match = key.match(/^marketplace\/([^/]+)\/pdfs\/([^_]+)_(.+)$/);
+  if (match) {
+    return {
+      userId: match[1],
+      fileId: match[2],
+      filename: match[3],
+    };
+  }
+  return null;
+}
+
+/**
  * Parse file key to extract components
  */
 export function parseFileKey(key: string): {
