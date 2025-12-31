@@ -16,8 +16,6 @@ import {
   Save,
   Loader2,
   Globe,
-  Check,
-  ShoppingCart,
   ImageIcon,
   Link as LinkIcon,
   Twitter,

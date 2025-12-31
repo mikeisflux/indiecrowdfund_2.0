@@ -16,10 +16,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const company = await prisma.companyProfile.findFirst({
+    const company = await prisma.companyProfile.findUnique({
       where: {
-        ownerId: session.user.id,
-        deletedAt: null,
+        userId: session.user.id,
       },
     });
 
@@ -34,8 +33,8 @@ export async function GET() {
         slug: company.slug,
         tagline: company.tagline,
         about: company.about,
-        logo: company.logo,
-        banner: company.banner,
+        logo: company.logoUrl,
+        banner: company.bannerImageUrl,
         website: company.website,
         socialLinks: company.socialLinks,
         isVerified: company.isVerified,
@@ -63,10 +62,9 @@ export async function POST(request: Request) {
     }
 
     // Check if user already has a company
-    const existingCompany = await prisma.companyProfile.findFirst({
+    const existingCompany = await prisma.companyProfile.findUnique({
       where: {
-        ownerId: session.user.id,
-        deletedAt: null,
+        userId: session.user.id,
       },
     });
 
@@ -96,10 +94,9 @@ export async function POST(request: Request) {
     }
 
     // Check slug uniqueness
-    const slugExists = await prisma.companyProfile.findFirst({
+    const slugExists = await prisma.companyProfile.findUnique({
       where: {
         slug: slug.toLowerCase(),
-        deletedAt: null,
       },
     });
 
@@ -113,13 +110,13 @@ export async function POST(request: Request) {
     // Create company
     const company = await prisma.companyProfile.create({
       data: {
-        ownerId: session.user.id,
+        userId: session.user.id,
         name: name.trim(),
         slug: slug.toLowerCase(),
         tagline: tagline?.trim() || null,
         about: about || null,
-        logo: logo || null,
-        banner: banner || null,
+        logoUrl: logo || null,
+        bannerImageUrl: banner || null,
         website: website?.trim() || null,
         socialLinks: socialLinks || {},
       },
@@ -166,10 +163,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const company = await prisma.companyProfile.findFirst({
+    const company = await prisma.companyProfile.findUnique({
       where: {
-        ownerId: session.user.id,
-        deletedAt: null,
+        userId: session.user.id,
       },
     });
 
@@ -198,11 +194,10 @@ export async function PUT(request: Request) {
         name: name.trim(),
         tagline: tagline?.trim() || null,
         about: about || null,
-        logo: logo || null,
-        banner: banner || null,
+        logoUrl: logo || null,
+        bannerImageUrl: banner || null,
         website: website?.trim() || null,
         socialLinks: socialLinks || {},
-        updatedAt: new Date(),
       },
     });
 
