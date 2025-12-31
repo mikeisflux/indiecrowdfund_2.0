@@ -186,7 +186,7 @@ export async function POST(
       );
     }
 
-    // Update project to LIVE status
+    // Update project to LIVE status and clear prelaunch data
     const updatedProject = await db.project.update({
       where: { id: projectId },
       data: {
@@ -194,6 +194,10 @@ export async function POST(
         launchDate: now,
         launchedAt: now,
         endDate,
+        // Clear prelaunch data - no longer needed once live
+        prelaunchActive: false,
+        prelaunchDescription: null,
+        prelaunchStatus: "DRAFT", // Reset to draft for any future use
       },
     });
 

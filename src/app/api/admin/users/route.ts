@@ -422,7 +422,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE - Delete user
+// DELETE - Delete user and ALL associated data
 export async function DELETE(req: NextRequest) {
   try {
     const authResult = await requireAdmin();
@@ -477,10 +477,83 @@ export async function DELETE(req: NextRequest) {
 
     const projectIds = userProjects.map(p => p.id);
 
+    // Get user's marketplace books
+    const userBooks = await db.marketplaceBook.findMany({
+      where: { creatorId: userId },
+      select: { id: true }
+    });
+    const bookIds = userBooks.map(b => b.id);
+
     // Use a transaction to delete everything
     await db.$transaction(async (tx) => {
+      // =====================================================
+      // PHASE 1: Delete Marketplace data
+      // =====================================================
+      if (bookIds.length > 0) {
+        // Delete marketplace book reviews
+        await tx.marketplaceBookReview.deleteMany({
+          where: { bookId: { in: bookIds } }
+        });
+
+        // Delete marketplace purchases
+        await tx.marketplacePurchase.deleteMany({
+          where: { bookId: { in: bookIds } }
+        });
+
+        // Delete the marketplace books
+        await tx.marketplaceBook.deleteMany({
+          where: { id: { in: bookIds } }
+        });
+      }
+
+      // Delete company profile
+      await tx.companyProfile.deleteMany({
+        where: { userId }
+      });
+
+      // =====================================================
+      // PHASE 2: Delete Project-related records
+      // =====================================================
       if (projectIds.length > 0) {
-        // Delete project-related records first (in order of dependencies)
+        // Delete survey responses first (depend on surveys)
+        await tx.surveyResponse.deleteMany({
+          where: { survey: { projectId: { in: projectIds } } }
+        });
+
+        // Delete survey item variants
+        await tx.surveyItemVariant.deleteMany({
+          where: { surveyItemQuestion: { survey: { projectId: { in: projectIds } } } }
+        });
+
+        // Delete survey item questions
+        await tx.surveyItemQuestion.deleteMany({
+          where: { survey: { projectId: { in: projectIds } } }
+        });
+
+        // Delete survey item custom questions
+        await tx.surveyItemCustomQuestion.deleteMany({
+          where: { survey: { projectId: { in: projectIds } } }
+        });
+
+        // Delete survey backer questions
+        await tx.surveyBackerQuestion.deleteMany({
+          where: { survey: { projectId: { in: projectIds } } }
+        });
+
+        // Delete surveys
+        await tx.survey.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete distribution rules (depend on digital files)
+        await tx.distributionRule.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete digital distributions
+        await tx.digitalDistribution.deleteMany({
+          where: { file: { projectId: { in: projectIds } } }
+        });
 
         // Delete rewards and their related items
         await tx.rewardItem.deleteMany({
@@ -490,22 +563,33 @@ export async function DELETE(req: NextRequest) {
           where: { projectId: { in: projectIds } }
         });
 
-        // Delete pledges and their related records
-        await tx.pledgeReward.deleteMany({
-          where: { pledge: { projectId: { in: projectIds } } }
-        });
+        // Delete pledge addons
         await tx.pledgeAddon.deleteMany({
           where: { pledge: { projectId: { in: projectIds } } }
         });
+
+        // Delete pledges
         await tx.pledge.deleteMany({
           where: { projectId: { in: projectIds } }
         });
 
-        // Delete updates and comments
+        // Delete payouts
+        await tx.payout.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete comments on updates first
+        await tx.comment.deleteMany({
+          where: { update: { projectId: { in: projectIds } } }
+        });
+
+        // Delete comments on projects
         await tx.comment.deleteMany({
           where: { projectId: { in: projectIds } }
         });
-        await tx.projectUpdate.deleteMany({
+
+        // Delete updates (correct model name)
+        await tx.update.deleteMany({
           where: { projectId: { in: projectIds } }
         });
 
@@ -517,19 +601,27 @@ export async function DELETE(req: NextRequest) {
           where: { projectId: { in: projectIds } }
         });
 
-        // Delete FAQs
-        await tx.projectFAQ.deleteMany({
-          where: { projectId: { in: projectIds } }
-        });
-
-        // Delete reviews
+        // Delete project reviews
         await tx.projectReview.deleteMany({
           where: { projectId: { in: projectIds } }
         });
 
-        // Delete items
-        await tx.item.deleteMany({
+        // Delete project items
+        await tx.projectItem.deleteMany({
           where: { projectId: { in: projectIds } }
+        });
+
+        // Delete project tags
+        await tx.projectTag.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete project similarity scores
+        await tx.projectSimilarity.deleteMany({
+          where: { OR: [
+            { projectId: { in: projectIds } },
+            { similarProjectId: { in: projectIds } }
+          ]}
         });
 
         // Delete digital files
@@ -537,13 +629,8 @@ export async function DELETE(req: NextRequest) {
           where: { projectId: { in: projectIds } }
         });
 
-        // Delete media files
+        // Delete media files for projects
         await tx.mediaFile.deleteMany({
-          where: { projectId: { in: projectIds } }
-        });
-
-        // Delete project flags
-        await tx.projectFlag.deleteMany({
           where: { projectId: { in: projectIds } }
         });
 
@@ -557,13 +644,51 @@ export async function DELETE(req: NextRequest) {
           where: { projectId: { in: projectIds } }
         });
 
-        // Delete shipping info
-        await tx.shippingAddress.deleteMany({
-          where: { pledge: { projectId: { in: projectIds } } }
-        });
-
         // Delete notification preferences for these projects
         await tx.projectNotificationPreference.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete project views
+        await tx.projectView.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete referral trackers
+        await tx.referralTracker.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete fulfillment activities
+        await tx.fulfillmentActivity.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete fulfillment products
+        await tx.fulfillmentProduct.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete backer segments
+        await tx.backerSegment.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete email campaigns
+        await tx.emailCampaignClick.deleteMany({
+          where: { campaign: { projectId: { in: projectIds } } }
+        });
+        await tx.emailCampaign.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete project collection items
+        await tx.projectCollectionItem.deleteMany({
+          where: { projectId: { in: projectIds } }
+        });
+
+        // Delete custom pages
+        await tx.customPage.deleteMany({
           where: { projectId: { in: projectIds } }
         });
 
@@ -573,25 +698,120 @@ export async function DELETE(req: NextRequest) {
         });
       }
 
-      // Delete user-related records that don't cascade automatically
+      // =====================================================
+      // PHASE 3: Delete User-specific records (not project-related)
+      // =====================================================
+
+      // Delete email list subscribers created by this user
+      await tx.emailListSubscriber.deleteMany({
+        where: { creatorId: userId }
+      });
+
+      // Delete messages sent or received by user (that aren't tied to projects)
+      await tx.message.deleteMany({
+        where: { OR: [
+          { senderId: userId },
+          { recipientId: userId }
+        ]}
+      });
+
+      // Delete creator follows (both directions)
+      await tx.creatorFollow.deleteMany({
+        where: { OR: [
+          { followerId: userId },
+          { creatorId: userId }
+        ]}
+      });
+
+      // Delete Stripe config
+      await tx.stripeConfig.deleteMany({
+        where: { userId }
+      });
+
+      // Delete password reset tokens
       await tx.passwordResetToken.deleteMany({
         where: { email: userToDelete.email }
       });
 
-      // Delete the user (cascading relations will handle the rest)
+      // Delete reports created by user
+      await tx.report.deleteMany({
+        where: { reporterId: userId }
+      });
+
+      // Delete user behavior data
+      await tx.userBehavior.deleteMany({
+        where: { userId }
+      });
+
+      // Delete analytics events
+      await tx.analyticsEvent.deleteMany({
+        where: { userId }
+      });
+
+      // Delete email logs
+      await tx.emailLog.deleteMany({
+        where: { userId }
+      });
+
+      // Delete email campaign clicks
+      await tx.emailCampaignClick.deleteMany({
+        where: { userId }
+      });
+
+      // Delete retailer pledges (if user is a retailer)
+      await tx.retailerPledge.deleteMany({
+        where: { userId }
+      });
+
+      // Delete retailer satisfaction surveys
+      await tx.retailerSatisfactionSurvey.deleteMany({
+        where: { userId }
+      });
+
+      // Delete retailer (if user is a retailer)
+      await tx.retailer.deleteMany({
+        where: { userId }
+      });
+
+      // Delete API keys created by user
+      await tx.apiKey.deleteMany({
+        where: { createdById: userId }
+      });
+
+      // Delete mailboxes
+      await tx.mailbox.deleteMany({
+        where: { userId }
+      });
+
+      // Delete admin emails sent by user
+      await tx.adminEmail.deleteMany({
+        where: { sentById: userId }
+      });
+
+      // =====================================================
+      // PHASE 4: Delete the user (cascading relations handle the rest)
+      // These will be auto-deleted due to onDelete: Cascade:
+      // - Account, Session, DivinityCoinBankAccount, DivinityCoinRedemption,
+      // - DivinityCoinTransaction, UserInterestProfile, UserPreference,
+      // - IDVerification, Notification, UserAchievement, RedemptionBonusLedger,
+      // - RedemptionBonusApplication, UserAddress, ProjectCollection,
+      // - ProjectNotificationPreference
+      // =====================================================
       await tx.user.delete({
         where: { id: userId }
       });
+    }, {
+      timeout: 60000 // 60 second timeout for large deletions
     });
 
     return NextResponse.json({
       success: true,
-      message: `User and ${projectIds.length} project(s) deleted successfully`
+      message: `User and all associated data deleted successfully (${projectIds.length} project(s), ${bookIds.length} marketplace book(s))`
     });
   } catch (error) {
     console.error("Error deleting user:", error);
     return NextResponse.json(
-      { error: "Failed to delete user" },
+      { error: "Failed to delete user. Please check server logs for details." },
       { status: 500 }
     );
   }

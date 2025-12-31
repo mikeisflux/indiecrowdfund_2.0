@@ -761,32 +761,245 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = params.id;
+
     const project = await db.project.findUnique({
-      where: { id: params.id },
-      select: { creatorId: true, status: true },
+      where: { id: projectId },
+      select: {
+        creatorId: true,
+        status: true,
+        title: true,
+        _count: {
+          select: { pledges: true },
+        },
+      },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    // Check permission - creator or super admin
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+
+    if (project.creatorId !== session.user.id && user?.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Can only delete draft projects
-    if (project.status !== "DRAFT") {
+    // Projects with pledges can only be soft-deleted (archived)
+    if (project._count.pledges > 0) {
+      await db.project.update({
+        where: { id: projectId },
+        data: { deletedAt: new Date() },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Project archived (has pledges)",
+        softDeleted: true,
+      });
+    }
+
+    // For projects without pledges, can only hard delete if in DRAFT status
+    // (unless super admin)
+    if (project.status !== "DRAFT" && user?.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Can only delete draft projects" },
+        { error: "Can only delete draft projects. Submit a request to delete launched projects." },
         { status: 400 }
       );
     }
 
-    await db.project.delete({
-      where: { id: params.id },
+    // Hard delete project and all related records
+    await db.$transaction(async (tx) => {
+      // Delete survey responses first (depend on surveys)
+      await tx.surveyResponse.deleteMany({
+        where: { survey: { projectId } },
+      });
+
+      // Delete survey item variants
+      await tx.surveyItemVariant.deleteMany({
+        where: { surveyItemQuestion: { survey: { projectId } } },
+      });
+
+      // Delete survey item questions
+      await tx.surveyItemQuestion.deleteMany({
+        where: { survey: { projectId } },
+      });
+
+      // Delete survey item custom questions
+      await tx.surveyItemCustomQuestion.deleteMany({
+        where: { survey: { projectId } },
+      });
+
+      // Delete survey backer questions
+      await tx.surveyBackerQuestion.deleteMany({
+        where: { survey: { projectId } },
+      });
+
+      // Delete surveys
+      await tx.survey.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete distribution rules
+      await tx.distributionRule.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete digital distributions
+      await tx.digitalDistribution.deleteMany({
+        where: { file: { projectId } },
+      });
+
+      // Delete rewards and their related items
+      await tx.rewardItem.deleteMany({
+        where: { reward: { projectId } },
+      });
+      await tx.reward.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete pledge addons
+      await tx.pledgeAddon.deleteMany({
+        where: { pledge: { projectId } },
+      });
+
+      // Delete pledges
+      await tx.pledge.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete payouts
+      await tx.payout.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete comments on updates first
+      await tx.comment.deleteMany({
+        where: { update: { projectId } },
+      });
+
+      // Delete comments on projects
+      await tx.comment.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete updates
+      await tx.update.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete followers and collaborators
+      await tx.projectFollower.deleteMany({
+        where: { projectId },
+      });
+      await tx.projectCollaborator.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete project reviews
+      await tx.projectReview.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete project items
+      await tx.projectItem.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete project tags
+      await tx.projectTag.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete project similarity scores
+      await tx.projectSimilarity.deleteMany({
+        where: {
+          OR: [{ projectId }, { similarProjectId: projectId }],
+        },
+      });
+
+      // Delete digital files
+      await tx.digitalFile.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete media files for projects
+      await tx.mediaFile.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete messages related to projects
+      await tx.message.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete backer notes
+      await tx.backerNote.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete notification preferences for this project
+      await tx.projectNotificationPreference.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete project views
+      await tx.projectView.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete referral trackers
+      await tx.referralTracker.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete fulfillment activities
+      await tx.fulfillmentActivity.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete fulfillment products
+      await tx.fulfillmentProduct.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete backer segments
+      await tx.backerSegment.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete email campaigns
+      await tx.emailCampaignClick.deleteMany({
+        where: { campaign: { projectId } },
+      });
+      await tx.emailCampaign.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete project collection items
+      await tx.projectCollectionItem.deleteMany({
+        where: { projectId },
+      });
+
+      // Delete custom pages
+      await tx.customPage.deleteMany({
+        where: { projectId },
+      });
+
+      // Finally delete the project
+      await tx.project.delete({
+        where: { id: projectId },
+      });
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      message: "Project deleted successfully",
+    });
   } catch (error) {
     console.error("Delete project error:", error);
     return NextResponse.json(
