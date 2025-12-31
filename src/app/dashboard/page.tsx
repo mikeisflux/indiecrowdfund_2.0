@@ -495,7 +495,8 @@ export default function CreatorDashboard() {
           window.location.href = "/login";
           return;
         }
-        throw new Error("Failed to fetch dashboard data");
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${res.status}`);
       }
 
       const dashboardData = await res.json();
@@ -507,7 +508,10 @@ export default function CreatorDashboard() {
         localStorage.setItem(SELECTED_PROJECT_KEY, dashboardData.selectedProject.id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const message = err instanceof Error ? err.message : "An error occurred";
+      // Distinguish network errors from server errors
+      const isNetworkError = message.includes("Failed to fetch") || message.includes("NetworkError");
+      setError(isNetworkError ? "Network error - check your connection" : message);
     } finally {
       setLoading(false);
     }
