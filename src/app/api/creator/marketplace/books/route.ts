@@ -78,8 +78,8 @@ export async function POST(request: Request) {
     // Get creator's company if they have one
     const company = await prisma.companyProfile.findFirst({
       where: {
-        ownerId: session.user.id,
-        deletedAt: null,
+        userId: session.user.id,
+        isActive: true,
       },
       select: { id: true },
     });

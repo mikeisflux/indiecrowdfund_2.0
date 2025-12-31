@@ -21,16 +21,16 @@ export async function GET() {
     // Get creator's company profile
     const company = await prisma.companyProfile.findFirst({
       where: {
-        ownerId: userId,
-        deletedAt: null,
+        userId: userId,
+        isActive: true,
       },
       select: {
         id: true,
         name: true,
         slug: true,
         tagline: true,
-        logo: true,
-        banner: true,
+        logoUrl: true,
+        bannerImageUrl: true,
         isVerified: true,
         totalSales: true,
       },
@@ -132,8 +132,8 @@ export async function GET() {
             name: company.name,
             slug: company.slug,
             tagline: company.tagline,
-            logo: company.logo,
-            banner: company.banner,
+            logo: company.logoUrl,
+            banner: company.bannerImageUrl,
             isVerified: company.isVerified,
             stats: companyStats,
           }
