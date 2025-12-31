@@ -566,6 +566,7 @@ export default function CreatorDashboard() {
   // Delete a cancelled pledge (creator)
   const handleDeletePledge = async () => {
     const pledgeId = deleteConfirm.pledgeId;
+    console.log(`[DELETE] Starting delete for pledge ${pledgeId}`);
     setDeletingPledge(pledgeId);
     setDeleteConfirm({ open: false, pledgeId: "" });
     try {
@@ -574,16 +575,19 @@ export default function CreatorDashboard() {
         headers: { ...getCSRFHeaders() },
       });
 
+      console.log(`[DELETE] Response status: ${response.status}`);
+      const responseData = await response.json();
+      console.log(`[DELETE] Response data:`, responseData);
+
       if (response.ok) {
         // Refresh dashboard data after deletion
         await fetchDashboardData();
         toast.success("Pledge deleted successfully");
       } else {
-        const err = await response.json();
-        toast.error(err.error || "Failed to delete pledge");
+        toast.error(responseData.error || "Failed to delete pledge");
       }
     } catch (err) {
-      console.error("Failed to delete pledge:", err);
+      console.error("[DELETE] Failed:", err);
       toast.error("Failed to delete pledge");
     } finally {
       setDeletingPledge(null);
