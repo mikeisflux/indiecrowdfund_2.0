@@ -580,9 +580,16 @@ export default function CreatorDashboard() {
       console.log(`[DELETE] Response data:`, responseData);
 
       if (response.ok) {
-        // Refresh dashboard data after deletion
-        await fetchDashboardData();
-        toast.success("Pledge deleted successfully");
+        // Optimistically remove the pledge from local state immediately
+        if (data) {
+          setData({
+            ...data,
+            recentBackers: data.recentBackers.filter(b => b.id !== pledgeId),
+          });
+        }
+        toast.success(`Pledge ${pledgeId.slice(-6)} deleted`);
+        // Then refresh in background
+        fetchDashboardData();
       } else {
         toast.error(responseData.error || "Failed to delete pledge");
       }
