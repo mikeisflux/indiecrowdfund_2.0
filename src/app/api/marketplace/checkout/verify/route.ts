@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getStripeInstance } from "@/lib/payments/stripe";
+import { notifyMarketplacePurchase, notifyMarketplaceSale } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,10 @@ export async function GET(request: Request) {
         },
       });
     }
+
+    // Send notifications (don't await to avoid blocking the response)
+    notifyMarketplacePurchase(purchase.id, "STRIPE").catch(console.error);
+    notifyMarketplaceSale(purchase.id, "STRIPE").catch(console.error);
 
     return NextResponse.json({
       success: true,

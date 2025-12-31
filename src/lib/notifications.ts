@@ -22,6 +22,8 @@ type NotificationType =
   | "SURVEY_SENT"
   | "SURVEY_REMINDER"
   | "FOLLOWED_PROJECT_LAUNCHED"
+  | "MARKETPLACE_PURCHASE"
+  | "MARKETPLACE_SALE"
   | "SYSTEM";
 
 interface CreateNotificationParams {
@@ -1258,4 +1260,301 @@ export async function processUnsentConfirmationEmails() {
   }
 
   return results;
+}
+
+// ============================================================================
+// MARKETPLACE NOTIFICATIONS
+// ============================================================================
+
+/**
+ * Send marketplace purchase confirmation email to buyer
+ */
+async function sendMarketplacePurchaseEmail(
+  email: string,
+  buyerName: string,
+  bookTitle: string,
+  bookSlug: string,
+  amount: number,
+  currency: string,
+  paymentMethod: "STRIPE" | "DIVINITYCOIN",
+  coverImageUrl?: string | null
+) {
+  const libraryUrl = `${APP_URL}/dashboard/backer?tab=digital-library`;
+
+  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : "Card";
+  const amountFormatted = paymentMethod === "DIVINITYCOIN"
+    ? `${amount.toFixed(2)} DC`
+    : `$${amount.toFixed(2)} ${currency}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Purchase Confirmed!</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME} Marketplace</h1>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <h2 style="margin-top: 0; color: white; text-align: center;">Purchase Confirmed!</h2>
+
+          ${coverImageUrl ? `<img src="${coverImageUrl}" alt="${bookTitle}" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin: 20px auto; display: block; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">` : ""}
+
+          <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
+            <h3 style="margin: 0 0 10px 0; color: white;">${bookTitle}</h3>
+            <p style="margin: 0; color: rgba(255,255,255,0.9);">has been added to your Digital Library!</p>
+          </div>
+
+          <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 15px; margin-top: 20px;">
+            <table style="width: 100%; color: white;">
+              <tr>
+                <td style="padding: 5px 0;">Payment Method:</td>
+                <td style="text-align: right; padding: 5px 0;">${paymentMethodLabel}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0;"><strong>Total:</strong></td>
+                <td style="text-align: right; padding: 5px 0;"><strong>${amountFormatted}</strong></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${libraryUrl}" style="display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); color: #fff; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+            Read in Digital Library
+          </a>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 15px 0;"><strong>What's next?</strong></p>
+          <p style="margin: 0; color: #666;">Your book is now available in your Digital Library. You can read it anytime, on any device. Just sign in to your account and visit the Digital Library.</p>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>You received this email because you made a purchase on ${APP_NAME} Marketplace.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Purchase confirmed: "${bookTitle}"`,
+    html,
+  });
+}
+
+/**
+ * Send marketplace sale notification email to creator
+ */
+async function sendMarketplaceSaleEmail(
+  email: string,
+  creatorName: string,
+  bookTitle: string,
+  bookSlug: string,
+  saleAmount: number,
+  platformFee: number,
+  payout: number,
+  currency: string,
+  paymentMethod: "STRIPE" | "DIVINITYCOIN",
+  buyerName: string
+) {
+  const dashboardUrl = `${APP_URL}/dashboard/marketplace`;
+
+  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : "Stripe";
+  const formatAmount = (amt: number) => paymentMethod === "DIVINITYCOIN"
+    ? `${amt.toFixed(2)} DC`
+    : `$${amt.toFixed(2)} ${currency}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Sale!</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME} Marketplace</h1>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <h2 style="margin-top: 0; color: white; text-align: center;">You made a sale!</h2>
+
+          <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
+            <h3 style="margin: 0 0 10px 0; color: white;">${bookTitle}</h3>
+            <p style="margin: 0; color: rgba(255,255,255,0.9);">purchased by ${buyerName}</p>
+          </div>
+
+          <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 15px; margin-top: 20px;">
+            <table style="width: 100%; color: white;">
+              <tr>
+                <td style="padding: 5px 0;">Sale Amount:</td>
+                <td style="text-align: right; padding: 5px 0;">${formatAmount(saleAmount)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0;">Platform Fee (3%):</td>
+                <td style="text-align: right; padding: 5px 0;">-${formatAmount(platformFee)}</td>
+              </tr>
+              <tr style="border-top: 1px solid rgba(255,255,255,0.3);">
+                <td style="padding: 10px 0 5px 0;"><strong>Your Payout:</strong></td>
+                <td style="text-align: right; padding: 10px 0 5px 0;"><strong>${formatAmount(payout)}</strong></td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-size: 14px;">Payment Method:</td>
+                <td style="text-align: right; padding: 5px 0; font-size: 14px;">${paymentMethodLabel}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+            View Dashboard
+          </a>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <p style="margin: 0; color: #666;">
+            ${paymentMethod === "DIVINITYCOIN"
+              ? "Your DivinityCoin balance has been credited automatically."
+              : "Your payout will be processed according to your Stripe Connect settings."}
+          </p>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>You received this email because someone purchased your book on ${APP_NAME} Marketplace.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `New sale: "${bookTitle}" - ${formatAmount(payout)} earned!`,
+    html,
+  });
+}
+
+/**
+ * Notify buyer when their marketplace purchase is confirmed
+ */
+export async function notifyMarketplacePurchase(
+  purchaseId: string,
+  paymentMethod: "STRIPE" | "DIVINITYCOIN"
+) {
+  const purchase = await db.marketplacePurchase.findUnique({
+    where: { id: purchaseId },
+    include: {
+      book: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          coverImageUrl: true,
+          pdfCoverImageUrl: true,
+        },
+      },
+      buyer: {
+        select: { id: true, email: true, name: true },
+      },
+    },
+  });
+
+  if (!purchase || !purchase.buyer.email) return;
+
+  const libraryUrl = `/dashboard/backer?tab=digital-library`;
+
+  // Create in-app notification for buyer
+  await createNotification({
+    userId: purchase.buyer.id,
+    type: "MARKETPLACE_PURCHASE",
+    title: "Purchase Confirmed!",
+    message: `"${purchase.book.title}" has been added to your Digital Library.`,
+    actionUrl: libraryUrl,
+  });
+
+  // Send email to buyer
+  try {
+    await sendMarketplacePurchaseEmail(
+      purchase.buyer.email,
+      purchase.buyer.name || "there",
+      purchase.book.title,
+      purchase.book.slug,
+      Number(purchase.amount),
+      purchase.currency,
+      paymentMethod,
+      purchase.book.coverImageUrl || purchase.book.pdfCoverImageUrl
+    );
+    console.log(`Sent marketplace purchase email to ${purchase.buyer.email} for purchase ${purchaseId}`);
+  } catch (error) {
+    console.error(`Failed to send marketplace purchase email for ${purchaseId}:`, error);
+  }
+}
+
+/**
+ * Notify creator when they receive a marketplace sale
+ */
+export async function notifyMarketplaceSale(
+  purchaseId: string,
+  paymentMethod: "STRIPE" | "DIVINITYCOIN"
+) {
+  const purchase = await db.marketplacePurchase.findUnique({
+    where: { id: purchaseId },
+    include: {
+      book: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          creator: {
+            select: { id: true, email: true, name: true },
+          },
+        },
+      },
+      buyer: {
+        select: { name: true },
+      },
+    },
+  });
+
+  if (!purchase || !purchase.book.creator.email) return;
+
+  const dashboardUrl = `/dashboard/marketplace`;
+  const buyerName = purchase.buyer.name || "A customer";
+
+  // Create in-app notification for creator
+  await createNotification({
+    userId: purchase.book.creator.id,
+    type: "MARKETPLACE_SALE",
+    title: "New Sale!",
+    message: `${buyerName} purchased "${purchase.book.title}" for $${Number(purchase.amount).toFixed(2)}`,
+    actionUrl: dashboardUrl,
+  });
+
+  // Send email to creator
+  try {
+    await sendMarketplaceSaleEmail(
+      purchase.book.creator.email,
+      purchase.book.creator.name || "Creator",
+      purchase.book.title,
+      purchase.book.slug,
+      Number(purchase.amount),
+      Number(purchase.platformFee),
+      Number(purchase.creatorPayout),
+      purchase.currency,
+      paymentMethod,
+      buyerName
+    );
+    console.log(`Sent marketplace sale email to ${purchase.book.creator.email} for purchase ${purchaseId}`);
+  } catch (error) {
+    console.error(`Failed to send marketplace sale email for ${purchaseId}:`, error);
+  }
 }

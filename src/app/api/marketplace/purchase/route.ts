@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyMarketplacePurchase, notifyMarketplaceSale } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -149,6 +150,10 @@ export async function POST(request: Request) {
           },
         });
       }
+
+      // Send notifications (don't await to avoid blocking the response)
+      notifyMarketplacePurchase(completedPurchase.id, "DIVINITYCOIN").catch(console.error);
+      notifyMarketplaceSale(completedPurchase.id, "DIVINITYCOIN").catch(console.error);
 
       return NextResponse.json({
         success: true,

@@ -5,6 +5,8 @@ import {
   notifyPledgeFailed,
   notifyProjectFunded,
   notifyBackerPledgeConfirmed,
+  notifyMarketplacePurchase,
+  notifyMarketplaceSale,
 } from "@/lib/notifications";
 
 let stripeInstance: Stripe | null = null;
@@ -1622,6 +1624,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       },
     });
   }
+
+  // Send notifications (don't await to avoid blocking webhook response)
+  notifyMarketplacePurchase(purchaseId, "STRIPE").catch(console.error);
+  notifyMarketplaceSale(purchaseId, "STRIPE").catch(console.error);
 
   console.log(`[Webhook] Marketplace purchase ${purchaseId} completed successfully`);
 }
