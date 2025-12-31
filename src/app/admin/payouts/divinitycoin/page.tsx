@@ -121,6 +121,42 @@ interface BankAccountDetails {
   verifiedAt: string | null;
 }
 
+// Creator balance interface for marketplace/indiekit earnings
+interface CreatorBalance {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  balance: number;
+  marketplaceSales: {
+    totalAmount: number;
+    creatorEarnings: number;
+    count: number;
+  };
+  hasBank: boolean;
+  bankVerified: boolean;
+  bankAccount: {
+    id: string;
+    bankName: string | null;
+    accountLastFour: string | null;
+    accountType: string;
+    isVerified: boolean;
+  } | null;
+  settlements: {
+    id: string;
+    amount: number;
+    status: string;
+    processedAt: string | null;
+    completedAt: string | null;
+  }[];
+}
+
+interface BalanceStats {
+  totalCreatorsWithBalance: number;
+  totalBalance: number;
+  creatorsWithoutBank: number;
+}
+
 export default function DivinityCoinPayoutsPage() {
   const [projects, setProjects] = useState<DivinityCoinProject[]>([]);
   const [stats, setStats] = useState<DivinityCoinStats>({
@@ -144,6 +180,17 @@ export default function DivinityCoinPayoutsPage() {
   const [settlementAmount, setSettlementAmount] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
   const [processing, setProcessing] = useState(false);
+
+  // Creator balances state (for marketplace/indiekit earnings)
+  const [creatorBalances, setCreatorBalances] = useState<CreatorBalance[]>([]);
+  const [balanceStats, setBalanceStats] = useState<BalanceStats>({
+    totalCreatorsWithBalance: 0,
+    totalBalance: 0,
+    creatorsWithoutBank: 0,
+  });
+  const [selectedCreator, setSelectedCreator] = useState<CreatorBalance | null>(null);
+  const [showCreatorBalanceDialog, setShowCreatorBalanceDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState<"projects" | "balances">("projects");
 
   // Fetch DivinityCoin projects
   const fetchProjects = useCallback(async () => {
@@ -173,6 +220,13 @@ export default function DivinityCoinPayoutsPage() {
         totalAmountSettled: 0,
         totalRemaining: 0,
         projectsWithoutBank: 0,
+      });
+      // Set creator balances from marketplace/indiekit earnings
+      setCreatorBalances(data.creatorBalances || []);
+      setBalanceStats(data.balanceStats || {
+        totalCreatorsWithBalance: 0,
+        totalBalance: 0,
+        creatorsWithoutBank: 0,
       });
     } catch (error) {
       console.error("Error fetching DivinityCoin payouts:", error);
@@ -275,6 +329,45 @@ export default function DivinityCoinPayoutsPage() {
     } catch (error) {
       console.error("Error creating settlement:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create settlement");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Create balance payout for marketplace/indiekit earnings
+  const createBalancePayout = async () => {
+    if (!selectedCreator || !settlementAmount) return;
+
+    setProcessing(true);
+    try {
+      const response = await fetch("/api/admin/payouts/divinitycoin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify({
+          creatorId: selectedCreator.id,
+          amount: parseFloat(settlementAmount),
+          adminNotes,
+          type: "BALANCE_PAYOUT",
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create balance payout");
+      }
+
+      toast.success("Balance payout created successfully");
+      setShowCreatorBalanceDialog(false);
+      setSettlementAmount("");
+      setAdminNotes("");
+      setSelectedCreator(null);
+      fetchProjects();
+    } catch (error) {
+      console.error("Error creating balance payout:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create balance payout");
     } finally {
       setProcessing(false);
     }
@@ -421,8 +514,49 @@ export default function DivinityCoinPayoutsPage() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
+      {/* Creator Balances Stats (from Marketplace/IndieKit) */}
+      {balanceStats.totalCreatorsWithBalance > 0 && (
+        <Alert className="border-purple-200 bg-purple-50">
+          <Coins className="h-4 w-4 text-purple-600" />
+          <AlertTitle className="text-purple-800">Creator Balances Available</AlertTitle>
+          <AlertDescription className="text-purple-700">
+            {balanceStats.totalCreatorsWithBalance} creator(s) have DivinityCoin balances totaling {formatCurrency(balanceStats.totalBalance)} from Marketplace and IndieKit sales.
+            {balanceStats.creatorsWithoutBank > 0 && (
+              <span className="font-medium"> ({balanceStats.creatorsWithoutBank} need bank setup)</span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-zinc-200">
+        <button
+          onClick={() => setActiveTab("projects")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "projects"
+              ? "border-purple-600 text-purple-600"
+              : "border-transparent text-zinc-500 hover:text-zinc-700"
+          }`}
+        >
+          Crowdfunding Projects ({stats.totalProjects})
+        </button>
+        <button
+          onClick={() => setActiveTab("balances")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "balances"
+              ? "border-purple-600 text-purple-600"
+              : "border-transparent text-zinc-500 hover:text-zinc-700"
+          }`}
+        >
+          Creator Balances ({balanceStats.totalCreatorsWithBalance})
+        </button>
+      </div>
+
+      {/* Projects Tab Content */}
+      {activeTab === "projects" && (
+        <>
+          {/* Filters */}
+          <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -556,6 +690,183 @@ export default function DivinityCoinPayoutsPage() {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
+
+      {/* Creator Balances Tab Content */}
+      {activeTab === "balances" && (
+        <Card>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+              </div>
+            ) : creatorBalances.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+                <DollarSign className="w-12 h-12 mb-4 text-zinc-300" />
+                <p className="text-lg font-medium">No Creator Balances</p>
+                <p className="text-sm">Creators with DivinityCoin earnings from Marketplace or IndieKit will appear here</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Creator</TableHead>
+                    <TableHead>Bank Status</TableHead>
+                    <TableHead className="text-right">Balance</TableHead>
+                    <TableHead className="text-right">Marketplace Sales</TableHead>
+                    <TableHead className="text-right">Creator Earnings</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {creatorBalances.map((creator) => (
+                    <TableRow key={creator.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center">
+                            <User className="w-4 h-4 text-zinc-400" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{creator.name || "Unknown"}</p>
+                            <p className="text-xs text-zinc-500">{creator.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {creator.hasBank ? (
+                          <div className="flex items-center gap-2">
+                            <Building className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm">
+                              {creator.bankAccount?.bankName} ****{creator.bankAccount?.accountLastFour}
+                            </span>
+                            {creator.bankVerified && <CheckCircle className="w-3 h-3 text-emerald-600" />}
+                          </div>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs">No Bank</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-purple-600">
+                        {formatCurrency(creator.balance)}
+                      </TableCell>
+                      <TableCell className="text-right text-sm text-zinc-500">
+                        {creator.marketplaceSales.count} sales
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {formatCurrency(creator.marketplaceSales.creatorEarnings)}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!creator.hasBank || creator.balance <= 0}
+                          onClick={() => {
+                            setSelectedCreator(creator);
+                            setSettlementAmount(creator.balance.toFixed(2));
+                            setShowCreatorBalanceDialog(true);
+                          }}
+                        >
+                          <Send className="w-3 h-3 mr-1" />
+                          Payout
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Creator Balance Payout Dialog */}
+      <Dialog open={showCreatorBalanceDialog} onOpenChange={setShowCreatorBalanceDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Balance Payout</DialogTitle>
+            <DialogDescription>
+              Pay out DivinityCoin balance to creator&apos;s bank account
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCreator && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-zinc-50">
+                <p className="text-sm text-zinc-500">Creator</p>
+                <p className="font-medium">{selectedCreator.name || selectedCreator.email}</p>
+                <p className="text-xs text-zinc-500">{selectedCreator.email}</p>
+              </div>
+
+              <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
+                <p className="text-sm text-purple-600">Available Balance</p>
+                <p className="text-2xl font-bold text-purple-700">{formatCurrency(selectedCreator.balance)}</p>
+                <p className="text-xs text-purple-500 mt-1">
+                  From {selectedCreator.marketplaceSales.count} marketplace sales
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Payout Amount</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={settlementAmount}
+                  onChange={(e) => setSettlementAmount(e.target.value)}
+                  max={selectedCreator.balance}
+                />
+                <p className="text-xs text-zinc-500">
+                  Max: {formatCurrency(selectedCreator.balance)}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Admin Notes (optional)</Label>
+                <Textarea
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Internal notes about this payout..."
+                  rows={3}
+                />
+              </div>
+
+              {selectedCreator.bankAccount && (
+                <div className="p-4 rounded-lg bg-zinc-50 border">
+                  <p className="text-sm text-zinc-500 mb-2">Bank Account</p>
+                  <div className="flex items-center gap-2">
+                    <Building className="w-4 h-4 text-zinc-500" />
+                    <span className="font-medium">{selectedCreator.bankAccount.bankName}</span>
+                    <span className="text-zinc-500">****{selectedCreator.bankAccount.accountLastFour}</span>
+                    {selectedCreator.bankAccount.isVerified && (
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreatorBalanceDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={createBalancePayout}
+              disabled={processing || !settlementAmount || parseFloat(settlementAmount) <= 0}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Create Payout
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Project Detail Dialog */}
       <Dialog open={!!selectedProject} onOpenChange={() => setSelectedProject(null)}>

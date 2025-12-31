@@ -194,9 +194,105 @@ export async function GET(request: NextRequest) {
       projectsWithoutBank: filteredProjects.filter((p) => !p.hasBank).length,
     };
 
+    // Fetch creators with DivinityCoin balances (from marketplace sales, IndieKit, etc.)
+    const creatorsWithBalances = await db.user.findMany({
+      where: {
+        divinityCoinBalance: { gt: 0 },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        divinityCoinBalance: true,
+        divinityCoinBankAccount: {
+          select: {
+            id: true,
+            bankNameDisplay: true,
+            accountLastFour: true,
+            accountType: true,
+            isVerified: true,
+          },
+        },
+      },
+      orderBy: { divinityCoinBalance: "desc" },
+    });
+
+    // Get marketplace sales info per creator
+    const marketplaceSalesPromises = creatorsWithBalances.map(async (creator) => {
+      const sales = await db.marketplacePurchase.aggregate({
+        where: {
+          book: { creatorId: creator.id },
+          paymentProcessor: "DIVINITYCOIN",
+          status: "COMPLETED",
+        },
+        _sum: { amount: true, creatorPayout: true },
+        _count: true,
+      });
+
+      // Get existing non-project settlements for this creator
+      const existingSettlements = creator.divinityCoinBankAccount
+        ? await db.divinityCoinSettlement.findMany({
+            where: {
+              bankAccountId: creator.divinityCoinBankAccount.id,
+              projectId: null, // Non-project settlements (for balance payouts)
+            },
+            select: {
+              id: true,
+              amount: true,
+              status: true,
+              processedAt: true,
+              completedAt: true,
+            },
+          })
+        : [];
+
+      return {
+        id: creator.id,
+        name: creator.name,
+        email: creator.email,
+        image: creator.image,
+        balance: Number(creator.divinityCoinBalance),
+        marketplaceSales: {
+          totalAmount: Number(sales._sum.amount || 0),
+          creatorEarnings: Number(sales._sum.creatorPayout || 0),
+          count: sales._count,
+        },
+        hasBank: !!creator.divinityCoinBankAccount,
+        bankVerified: creator.divinityCoinBankAccount?.isVerified || false,
+        bankAccount: creator.divinityCoinBankAccount
+          ? {
+              id: creator.divinityCoinBankAccount.id,
+              bankName: creator.divinityCoinBankAccount.bankNameDisplay,
+              accountLastFour: creator.divinityCoinBankAccount.accountLastFour,
+              accountType: creator.divinityCoinBankAccount.accountType,
+              isVerified: creator.divinityCoinBankAccount.isVerified,
+            }
+          : null,
+        settlements: existingSettlements.map((s) => ({
+          id: s.id,
+          amount: Number(s.amount),
+          status: s.status,
+          processedAt: s.processedAt,
+          completedAt: s.completedAt,
+        })),
+      };
+    });
+
+    const creatorBalances = await Promise.all(marketplaceSalesPromises);
+
+    // Calculate creator balance stats
+    const balanceStats = {
+      totalCreatorsWithBalance: creatorBalances.length,
+      totalBalance: creatorBalances.reduce((sum, c) => sum + c.balance, 0),
+      creatorsWithoutBank: creatorBalances.filter((c) => !c.hasBank).length,
+    };
+
     return NextResponse.json({
       projects: filteredProjects,
       stats,
+      creatorBalances,
+      balanceStats,
     });
   } catch (error) {
     console.error("Error fetching DivinityCoin payouts:", error);
@@ -207,7 +303,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create a DivinityCoin settlement for a project
+// POST - Create a DivinityCoin settlement for a project OR a creator balance payout
 export async function POST(request: NextRequest) {
   try {
     const authResult = await requireAdmin();
@@ -216,11 +312,100 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { projectId, amount, adminNotes } = body;
+    const { projectId, creatorId, amount, adminNotes, type } = body;
 
-    if (!projectId || !amount) {
+    if (!amount) {
       return NextResponse.json(
-        { error: "Project ID and amount are required" },
+        { error: "Amount is required" },
+        { status: 400 }
+      );
+    }
+
+    // Handle creator balance payout (from marketplace, etc.)
+    if (type === "BALANCE_PAYOUT" || (!projectId && creatorId)) {
+      if (!creatorId) {
+        return NextResponse.json(
+          { error: "Creator ID is required for balance payouts" },
+          { status: 400 }
+        );
+      }
+
+      const creator = await db.user.findUnique({
+        where: { id: creatorId },
+        include: {
+          divinityCoinBankAccount: true,
+        },
+      });
+
+      if (!creator) {
+        return NextResponse.json(
+          { error: "Creator not found" },
+          { status: 404 }
+        );
+      }
+
+      if (!creator.divinityCoinBankAccount) {
+        return NextResponse.json(
+          { error: "Creator has no bank account on file" },
+          { status: 400 }
+        );
+      }
+
+      const creatorBalance = Number(creator.divinityCoinBalance || 0);
+      if (amount > creatorBalance) {
+        return NextResponse.json(
+          { error: `Amount exceeds creator balance (${creatorBalance.toFixed(2)})` },
+          { status: 400 }
+        );
+      }
+
+      // Create the settlement record (without projectId - for balance payout)
+      const settlement = await db.divinityCoinSettlement.create({
+        data: {
+          bankAccountId: creator.divinityCoinBankAccount.id,
+          projectId: null,
+          projectName: `Balance Payout - ${creator.name || creator.email}`,
+          amount,
+          status: "PENDING",
+          adminNotes: adminNotes || `DivinityCoin balance payout for ${creator.email}`,
+          processedBy: authResult.user.id,
+        },
+      });
+
+      // Deduct from creator's balance
+      await db.user.update({
+        where: { id: creatorId },
+        data: {
+          divinityCoinBalance: { decrement: amount },
+        },
+      });
+
+      // Create transaction record for audit
+      await db.divinityCoinTransaction.create({
+        data: {
+          userId: creatorId,
+          amount: -amount, // Negative for payout
+          type: "PAYOUT",
+          description: `Balance payout - Settlement #${settlement.id}`,
+          metadata: JSON.stringify({
+            settlementId: settlement.id,
+            processedBy: authResult.user.id,
+            payoutDate: new Date().toISOString(),
+          }),
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        settlement,
+        type: "BALANCE_PAYOUT",
+      });
+    }
+
+    // Handle project-specific settlement
+    if (!projectId) {
+      return NextResponse.json(
+        { error: "Project ID or Creator ID is required" },
         { status: 400 }
       );
     }
@@ -274,6 +459,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       settlement,
+      type: "PROJECT_PAYOUT",
     });
   } catch (error) {
     console.error("Error creating DivinityCoin settlement:", error);
