@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyMarketplaceBookReview } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,12 @@ export async function POST(
       },
     });
 
-    // TODO: Send notification to creator
+    // Send notification to creator (don't await to avoid blocking response)
+    notifyMarketplaceBookReview(
+      id,
+      action === "approve" ? "APPROVED" : "REJECTED",
+      reason
+    ).catch(console.error);
 
     return NextResponse.json({
       success: true,
