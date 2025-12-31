@@ -102,9 +102,9 @@ export async function POST(request: Request) {
     const stripe = await getStripeInstance();
     const baseUrl = getSecureAppUrl();
 
-    // Calculate platform fee (10% for marketplace)
+    // Calculate platform fee (3% for marketplace, same as crowdfunding)
     const amountInCents = Math.round(Number(book.price) * 100);
-    const platformFee = Math.round(amountInCents * 0.10); // 10% platform fee
+    const platformFee = Math.round(amountInCents * 0.03); // 3% platform fee
 
     // Create Stripe Checkout Session
     const checkoutSession = await stripe.checkout.sessions.create({
