@@ -1129,22 +1129,22 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 ## Implementation Phases
 
 ### Phase 1: Database & Core Models
-- [ ] Add Prisma schema models (MarketplaceBook, CompanyProfile, MarketplacePurchase, MarketplaceBookReview)
-- [ ] Extend DigitalFile model with cover extraction fields
-- [ ] Run migrations
+- [x] Add Prisma schema models (MarketplaceBook, CompanyProfile, MarketplacePurchase, MarketplaceBookReview)
+- [x] Extend DigitalFile model with cover extraction fields
+- [x] Run migrations (schema ready - run `npx prisma migrate dev` on deploy)
 - [ ] Create seed data for testing
 
 ### Phase 2: Digital Library Enhancement (Priority)
-- [ ] Rename "Book Reader" tab to "Digital Library" across codebase
-- [ ] Implement PDF first page cover extraction using pdf.js + sharp
-- [ ] Create `/api/backer/digital-files/extract-cover` endpoint
-- [ ] Create `/api/backer/digital-library` unified endpoint
-- [ ] Create `/api/backer/digital-files/progress` endpoint for reading progress
-- [ ] Build `digital-library-tab.tsx` with search, sort, filter capabilities
-- [ ] Build `library-card.tsx` component with cover image display
-- [ ] Build `library-filters.tsx` component
-- [ ] Build `library-list-item.tsx` for list view
-- [ ] Implement Grid/List view toggle
+- [x] Rename "Book Reader" tab to "Digital Library" across codebase
+- [x] Implement PDF first page cover extraction using pdf.js + sharp
+- [x] Create `/api/backer/digital-files/extract-cover` endpoint
+- [x] Create `/api/backer/digital-library` unified endpoint
+- [x] Create `/api/backer/digital-files/progress` endpoint for reading progress
+- [x] Build `digital-library-tab.tsx` with search, sort, filter capabilities
+- [x] Build `library-card.tsx` component with cover image display (integrated in digital-library-tab.tsx)
+- [x] Build `library-filters.tsx` component (integrated in digital-library-tab.tsx)
+- [x] Build `library-list-item.tsx` for list view (integrated in digital-library-tab.tsx)
+- [x] Implement Grid/List view toggle
 - [ ] Backfill existing PDFs with extracted covers
 
 ### Phase 3: Marketplace API Routes

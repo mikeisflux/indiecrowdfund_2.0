@@ -52,7 +52,7 @@ import {
   FolderHeart,
   BellRing,
   Users,
-  BookOpen,
+  Library,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { formatTimeRemaining } from "@/lib/utils";
@@ -68,7 +68,7 @@ import {
   CollectionsTab,
   NotificationPreferencesTab,
   FollowingTab,
-  BookReaderTab,
+  DigitalLibraryTab,
 } from "./components";
 
 interface BackedProject {
@@ -614,9 +614,9 @@ export default function BackerDashboard() {
                   <Users className="mr-2 h-4 w-4" />
                   Following
                 </TabsTrigger>
-                <TabsTrigger value="bookreader" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white">
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Book Reader
+                <TabsTrigger value="digital-library" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white">
+                  <Library className="mr-2 h-4 w-4" />
+                  Digital Library
                 </TabsTrigger>
               </TabsList>
 
@@ -917,9 +917,9 @@ export default function BackerDashboard() {
                 <FollowingTab />
               </TabsContent>
 
-              {/* Book Reader Tab */}
-              <TabsContent value="bookreader" className="space-y-4">
-                <BookReaderTab />
+              {/* Digital Library Tab */}
+              <TabsContent value="digital-library" className="space-y-4">
+                <DigitalLibraryTab />
               </TabsContent>
             </Tabs>
           </div>

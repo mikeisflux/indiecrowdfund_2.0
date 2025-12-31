@@ -84,6 +84,12 @@ model User {
   // Creator email list (per-user subscriber list)
   emailListSubscribers EmailListSubscriber[] @relation("CreatorEmailList")
 
+  // Marketplace relations
+  marketplaceBooks     MarketplaceBook[]     @relation("MarketplaceCreator")
+  marketplacePurchases MarketplacePurchase[] @relation("MarketplaceBuyer")
+  marketplaceReviews   MarketplaceBookReview[] @relation("MarketplaceReviewer")
+  companyProfile       CompanyProfile?
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?  // Soft delete timestamp
@@ -2524,6 +2530,12 @@ model DigitalFile {
   distributedCount  Int               @default(0)
   downloadCount     Int               @default(0)
 
+  // PDF Cover Extraction (for Digital Library)
+  coverImageUrl     String?           // Generated PDF first page thumbnail
+  coverExtractedAt  DateTime?         // When cover was generated
+  coverExtractionFailed Boolean       @default(false)  // If extraction failed
+  totalPages        Int?              // Total page count in PDF
+
   // Uploaded by
   uploadedById      String?
   uploadedBy        User?             @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
@@ -2556,13 +2568,25 @@ model DigitalDistribution {
   downloadedAt      DateTime?
   downloadCount     Int               @default(0)
 
+  // Reading Progress (for Digital Library)
+  readingProgress   Json?             // { currentPage: number, totalPages: number, lastPosition: string }
+  lastReadAt        DateTime?
+  readingStatus     ReadingStatus     @default(UNREAD)
+
   digitalFile       DigitalFile       @relation(fields: [digitalFileId], references: [id], onDelete: Cascade)
 
   createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@unique([digitalFileId, pledgeId])
   @@index([digitalFileId])
   @@index([pledgeId])
+}
+
+enum ReadingStatus {
+  UNREAD
+  IN_PROGRESS
+  COMPLETED
 }
 
 // Distribution rules - defines which file gets distributed when conditions are met
@@ -2803,4 +2827,223 @@ model CreatorFollow {
   @@unique([followerId, creatorId])
   @@index([followerId])
   @@index([creatorId])
+}
+
+// ============================================
+// DIGITAL MARKETPLACE
+// ============================================
+
+model MarketplaceBook {
+  id                String   @id @default(cuid())
+  creatorId         String
+  creator           User     @relation("MarketplaceCreator", fields: [creatorId], references: [id])
+
+  // Basic Info
+  title             String
+  slug              String
+  description       String   @db.Text  // Rich text HTML
+  shortDescription  String?  @db.VarChar(300)
+
+  // Media
+  coverImageUrl     String?
+  promoVideoUrl     String?
+  galleryImages     Json?    // Array of image URLs
+
+  // Pricing
+  price             Decimal  @db.Decimal(10, 2)
+  currency          String   @default("USD")
+
+  // Digital File
+  pdfFileUrl        String   // R2 storage URL
+  pdfFileName       String?
+  pdfFileSize       Int?     // In bytes
+
+  // PDF Cover Extraction
+  pdfCoverImageUrl  String?  // Auto-extracted first page as cover
+  pdfCoverExtractedAt DateTime?
+  pdfCoverExtractionFailed Boolean @default(false)
+  pdfTotalPages     Int?     // Total page count
+
+  // Content Flags
+  hasAdultContent   Boolean  @default(false)
+  hasRiskyContent   Boolean  @default(false)
+  promoContentSfw   Boolean  @default(true)
+  paymentProcessor  PaymentProcessor @default(STRIPE)
+
+  // Status & Moderation
+  status            MarketplaceBookStatus @default(DRAFT)
+  submittedAt       DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   String?
+  deactivatedAt     DateTime?
+  deactivationReason String?
+
+  // Featured/Curated
+  isFeatured        Boolean  @default(false)
+  isStaffPick       Boolean  @default(false)
+  featuredOrder     Int?
+  staffPickOrder    Int?
+
+  // Categorization
+  category          String?
+  tags              String[] @default([])
+
+  // Stats
+  purchaseCount     Int      @default(0)
+  viewCount         Int      @default(0)
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  publishedAt       DateTime?
+  deletedAt         DateTime?  // Soft delete
+
+  // Relations
+  purchases         MarketplacePurchase[]
+  reviews           MarketplaceBookReview[]
+  companyId         String?
+  company           CompanyProfile? @relation(fields: [companyId], references: [id])
+
+  @@unique([creatorId, slug])
+  @@index([status])
+  @@index([isFeatured])
+  @@index([isStaffPick])
+  @@index([category])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+enum MarketplaceBookStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  LIVE
+  DEACTIVATED
+}
+
+model CompanyProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+
+  // Profile Info
+  name              String
+  slug              String   @unique
+  tagline           String?  @db.VarChar(200)
+  about             String?  @db.Text  // Rich text HTML
+
+  // Media
+  bannerImageUrl    String?
+  logoUrl           String?
+
+  // Contact & Social
+  website           String?
+  socialLinks       Json?    // { twitter, facebook, instagram, etc. }
+
+  // Status
+  isActive          Boolean  @default(true)
+  isVerified        Boolean  @default(false)
+
+  // Stats
+  bookCount         Int      @default(0)
+  totalSales        Int      @default(0)
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  books             MarketplaceBook[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model MarketplacePurchase {
+  id                String   @id @default(cuid())
+  bookId            String
+  book              MarketplaceBook @relation(fields: [bookId], references: [id])
+  buyerId           String
+  buyer             User     @relation("MarketplaceBuyer", fields: [buyerId], references: [id])
+
+  // Transaction
+  amount            Decimal  @db.Decimal(10, 2)
+  currency          String   @default("USD")
+  paymentProcessor  PaymentProcessor
+  transactionId     String?  // Stripe or DivinityCoin transaction ID
+
+  // Stripe fields
+  stripePaymentIntentId String?  @unique
+  stripeCustomerId  String?
+
+  // DivinityCoin fields
+  divinityCoinPaymentId String?  @unique
+
+  // Status
+  status            MarketplacePurchaseStatus @default(PENDING)
+  completedAt       DateTime?
+  refundedAt        DateTime?
+  refundReason      String?
+
+  // Delivery
+  deliveredAt       DateTime?
+  downloadCount     Int      @default(0)
+  lastDownloadedAt  DateTime?
+
+  // Reading Progress (synced from Digital Library)
+  readingProgress   Json?    // { currentPage: number, totalPages: number }
+  lastReadAt        DateTime?
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([buyerId])
+  @@index([bookId])
+  @@index([status])
+}
+
+enum MarketplacePurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model MarketplaceBookReview {
+  id                String   @id @default(cuid())
+  bookId            String
+  book              MarketplaceBook @relation(fields: [bookId], references: [id])
+  reviewerId        String
+  reviewer          User     @relation("MarketplaceReviewer", fields: [reviewerId], references: [id])
+
+  // Review Content
+  action            MarketplaceReviewAction
+  previousStatus    MarketplaceBookStatus?
+  newStatus         MarketplaceBookStatus
+  notes             String?  @db.Text
+  internalNotes     String?  @db.Text
+  rejectionReason   String?
+
+  // AI Analysis
+  flagsRaised       String[] @default([])
+  aiConfidenceScore Float?
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+
+  @@index([bookId])
+  @@index([reviewerId])
+}
+
+enum MarketplaceReviewAction {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REQUESTED_CHANGES
+  FLAGGED
+  DEACTIVATED
+  REACTIVATED
 }
