@@ -90,6 +90,11 @@ model User {
   marketplaceReviews   MarketplaceBookReview[] @relation("MarketplaceReviewer")
   companyProfile       CompanyProfile?
 
+  // Account locking (for fraud/abuse)
+  lockedAt          DateTime?  // When account was locked
+  lockedReason      String?    @db.Text  // Admin notes on why account was locked
+  lockedById        String?    // Admin who locked the account
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?  // Soft delete timestamp
@@ -98,6 +103,7 @@ model User {
   @@index([vanityUrl])
   @@index([creatorEmailHandle])
   @@index([deletedAt])  // For soft delete filtering
+  @@index([lockedAt])   // For locked account filtering
 }
 
 enum UserRole {

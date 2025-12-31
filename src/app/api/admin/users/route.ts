@@ -82,6 +82,8 @@ export async function GET(req: NextRequest) {
           retailerAccess: true,
           createdAt: true,
           emailVerified: true,
+          lockedAt: true,
+          lockedReason: true,
           _count: {
             select: {
               createdProjects: true,
@@ -302,6 +304,39 @@ export async function PATCH(req: NextRequest) {
           );
         }
 
+      case "LOCK_ACCOUNT":
+        // Only SUPER_ADMIN can lock accounts
+        if (authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Only super admins can lock accounts" },
+            { status: 403 }
+          );
+        }
+        // Can't lock your own account
+        if (userId === authResult.user.id) {
+          return NextResponse.json(
+            { error: "Cannot lock your own account" },
+            { status: 400 }
+          );
+        }
+        updateData.lockedAt = new Date();
+        updateData.lockedReason = data?.reason || "Account locked by administrator";
+        updateData.lockedById = authResult.user.id;
+        break;
+
+      case "UNLOCK_ACCOUNT":
+        // Only SUPER_ADMIN can unlock accounts
+        if (authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Only super admins can unlock accounts" },
+            { status: 403 }
+          );
+        }
+        updateData.lockedAt = null;
+        updateData.lockedReason = null;
+        updateData.lockedById = null;
+        break;
+
       default:
         return NextResponse.json(
           { error: "Invalid action" },
@@ -318,7 +353,9 @@ export async function PATCH(req: NextRequest) {
         name: true,
         role: true,
         retailerAccess: true,
-        emailVerified: true
+        emailVerified: true,
+        lockedAt: true,
+        lockedReason: true,
       }
     });
 

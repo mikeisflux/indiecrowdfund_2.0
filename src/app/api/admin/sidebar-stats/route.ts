@@ -92,6 +92,7 @@ export async function GET() {
       totalMedia,
       newBugReports,
       pendingRetailers,
+      pendingPrelaunch,
     ] = await Promise.all([
       // Total users count
       db.user.count(),
@@ -132,6 +133,14 @@ export async function GET() {
           status: "PENDING",
         },
       }),
+
+      // Pending prelaunch pages (awaiting review)
+      db.project.count({
+        where: {
+          prelaunchStatus: "SUBMITTED",
+          deletedAt: null,
+        },
+      }),
     ]);
 
     // Format large numbers
@@ -157,6 +166,7 @@ export async function GET() {
       mediaRaw: totalMedia,
       bugReports: newBugReports,
       retailers: pendingRetailers,
+      prelaunch: pendingPrelaunch,
     });
   } catch (error) {
     console.error("Error fetching sidebar stats:", error);
