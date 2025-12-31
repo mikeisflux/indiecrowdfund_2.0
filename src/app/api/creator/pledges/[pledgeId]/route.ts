@@ -375,51 +375,53 @@ export async function DELETE(
 
     // Delete in a transaction to handle related records that don't have cascade delete
     await db.$transaction(async (tx) => {
-      // Delete related DivinityCoinTransactions (no cascade in schema)
+      console.log(`[DELETE] Step 1: Deleting DivinityCoinTransactions`);
       await tx.divinityCoinTransaction.deleteMany({
         where: { pledgeId },
       });
 
-      // Delete related EmailLogs (no cascade in schema)
+      console.log(`[DELETE] Step 2: Deleting EmailLogs`);
       await tx.emailLog.deleteMany({
         where: { pledgeId },
       });
 
-      // Delete related SurveyResponses (no cascade in schema)
+      console.log(`[DELETE] Step 3: Deleting SurveyResponses`);
       await tx.surveyResponse.deleteMany({
         where: { pledgeId },
       });
 
-      // Delete related DigitalDistributions (no cascade in schema)
+      console.log(`[DELETE] Step 4: Deleting DigitalDistributions`);
       await tx.digitalDistribution.deleteMany({
         where: { pledgeId },
       });
 
-      // Delete related BackerNotes (no cascade in schema)
+      console.log(`[DELETE] Step 5: Deleting BackerNotes`);
       await tx.backerNote.deleteMany({
         where: { pledgeId },
       });
 
-      // Unlink EmailCampaignClicks (no cascade in schema)
+      console.log(`[DELETE] Step 6: Unlinking EmailCampaignClicks`);
       await tx.emailCampaignClick.updateMany({
         where: { pledgeId },
         data: { pledgeId: null },
       });
 
-      // Delete related FulfillmentActivities (no cascade in schema)
+      console.log(`[DELETE] Step 7: Deleting FulfillmentActivities`);
       await tx.fulfillmentActivity.deleteMany({
         where: { pledgeId },
       });
 
-      // Delete PledgeAddons explicitly (has cascade but being safe)
+      console.log(`[DELETE] Step 8: Deleting PledgeAddons`);
       await tx.pledgeAddon.deleteMany({
         where: { pledgeId },
       });
 
-      // Now delete the pledge
+      console.log(`[DELETE] Step 9: Deleting the Pledge itself`);
       await tx.pledge.delete({
         where: { id: pledgeId },
       });
+
+      console.log(`[DELETE] Step 10: Transaction complete`);
     });
 
     console.log(`[DELETE] Successfully deleted pledge ${pledgeId}`);
