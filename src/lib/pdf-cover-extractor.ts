@@ -50,6 +50,7 @@ export async function extractPdfCover(
   try {
     // Dynamic imports to handle optional dependencies
     const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    // @ts-expect-error - canvas is an optional peer dependency
     const { createCanvas } = await import("canvas");
     const sharp = (await import("sharp")).default;
 
@@ -107,9 +108,9 @@ export async function extractPdfCover(
     const context = canvas.getContext("2d");
 
     // Render page to canvas
+    // @ts-expect-error - pdfjs-dist types may not match canvas types exactly
     await page.render({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      canvasContext: context as any,
+      canvasContext: context,
       viewport,
     }).promise;
 
@@ -202,7 +203,7 @@ export async function extractAndSaveCover(
     await prisma.digitalFile.update({
       where: { id: fileId },
       data: {
-        coverImageUrl: result.success ? result.coverUrl : null,
+        coverImageUrl: result.success ? result.coverUrl ?? null : null,
         coverExtractedAt: result.success ? new Date() : null,
         coverExtractionFailed: !result.success,
         totalPages: result.totalPages || null,
@@ -212,7 +213,7 @@ export async function extractAndSaveCover(
     await prisma.marketplaceBook.update({
       where: { id: fileId },
       data: {
-        pdfCoverImageUrl: result.success ? result.coverUrl : null,
+        pdfCoverImageUrl: result.success ? result.coverUrl ?? null : null,
         pdfCoverExtractedAt: result.success ? new Date() : null,
         pdfCoverExtractionFailed: !result.success,
         pdfTotalPages: result.totalPages || null,

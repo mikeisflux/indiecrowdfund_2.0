@@ -50,8 +50,9 @@ export async function GET() {
     });
 
     // Separate by status
-    const pendingBooks = allBooks.filter((b) => b.status === "PENDING_REVIEW");
-    const liveBooks = allBooks.filter((b) => b.status === "LIVE");
+    type BookType = (typeof allBooks)[number];
+    const pendingBooks = allBooks.filter((b: BookType) => b.status === "PENDING_REVIEW");
+    const liveBooks = allBooks.filter((b: BookType) => b.status === "LIVE");
 
     // Calculate stats
     const today = new Date();
@@ -64,8 +65,9 @@ export async function GET() {
       select: { action: true },
     });
 
-    const approvedToday = todayReviews.filter((r) => r.action === "APPROVED").length;
-    const rejectedToday = todayReviews.filter((r) => r.action === "REJECTED").length;
+    type ReviewType = (typeof todayReviews)[number];
+    const approvedToday = todayReviews.filter((r: ReviewType) => r.action === "APPROVED").length;
+    const rejectedToday = todayReviews.filter((r: ReviewType) => r.action === "REJECTED").length;
 
     // Total revenue and sales
     const purchases = await prisma.marketplacePurchase.aggregate({

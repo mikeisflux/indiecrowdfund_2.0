@@ -220,8 +220,9 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
+    type PurchaseType = (typeof purchases)[number];
     return NextResponse.json({
-      purchases: purchases.map((p) => ({
+      purchases: purchases.map((p: PurchaseType) => ({
         id: p.id,
         status: p.status,
         amount: Number(p.amount),

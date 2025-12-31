@@ -45,8 +45,9 @@ export async function GET() {
       },
     });
 
+    type ReviewType = (typeof reviews)[number];
     return NextResponse.json({
-      reviews: reviews.map((review) => ({
+      reviews: reviews.map((review: ReviewType) => ({
         id: review.id,
         bookId: review.book.id,
         bookTitle: review.book.title,

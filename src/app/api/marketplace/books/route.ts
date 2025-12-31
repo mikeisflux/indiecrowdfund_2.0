@@ -100,7 +100,8 @@ export async function GET(request: Request) {
     });
 
     // Transform for response
-    const transformedBooks = books.map((book) => ({
+    type BookType = (typeof books)[number];
+    const transformedBooks = books.map((book: BookType) => ({
       id: book.id,
       title: book.title,
       slug: book.slug,

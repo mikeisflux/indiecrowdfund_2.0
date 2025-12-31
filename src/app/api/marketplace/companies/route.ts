@@ -75,7 +75,8 @@ export async function GET(request: Request) {
       take: limit,
     });
 
-    const transformedCompanies = companies.map((company) => ({
+    type CompanyType = (typeof companies)[number];
+    const transformedCompanies = companies.map((company: CompanyType) => ({
       id: company.id,
       name: company.name,
       slug: company.slug,

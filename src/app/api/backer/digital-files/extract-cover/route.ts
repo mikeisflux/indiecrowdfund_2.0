@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
     // Extract cover
     const result = await extractAndSaveCover(
-      prisma,
+      { digitalFile: prisma.digitalFile },
       fileId,
       pdfUrl,
       "digital-file"

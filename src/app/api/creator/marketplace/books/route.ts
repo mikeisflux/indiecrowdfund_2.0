@@ -161,8 +161,9 @@ export async function GET() {
       },
     });
 
+    type BookType = (typeof books)[number];
     return NextResponse.json({
-      books: books.map((book) => ({
+      books: books.map((book: BookType) => ({
         id: book.id,
         title: book.title,
         slug: book.slug,

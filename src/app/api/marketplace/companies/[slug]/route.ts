@@ -83,7 +83,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         },
         createdAt: company.createdAt,
       },
-      books: company.books.map((book) => ({
+      books: company.books.map((book: (typeof company.books)[number]) => ({
         id: book.id,
         title: book.title,
         slug: book.slug,

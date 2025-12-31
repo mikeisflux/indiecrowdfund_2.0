@@ -63,11 +63,12 @@ export async function GET() {
     });
 
     // Calculate stats
+    type BookType = (typeof books)[number];
     const totalRevenue = books
-      .filter((b) => b.status === "LIVE")
-      .reduce((sum, b) => sum + Number(b.price) * b.purchaseCount, 0);
+      .filter((b: BookType) => b.status === "LIVE")
+      .reduce((sum: number, b: BookType) => sum + Number(b.price) * b.purchaseCount, 0);
 
-    const totalSales = books.reduce((sum, b) => sum + b.purchaseCount, 0);
+    const totalSales = books.reduce((sum: number, b: BookType) => sum + b.purchaseCount, 0);
 
     // Get monthly stats (last 30 days)
     const thirtyDaysAgo = new Date();
@@ -86,14 +87,15 @@ export async function GET() {
       },
     });
 
+    type PurchaseType = (typeof monthlyPurchases)[number];
     const monthlyRevenue = monthlyPurchases.reduce(
-      (sum, p) => sum + Number(p.amount),
+      (sum: number, p: PurchaseType) => sum + Number(p.amount),
       0
     );
     const monthlySales = monthlyPurchases.length;
 
     // Format books for response
-    const formattedBooks = books.map((book) => ({
+    const formattedBooks = books.map((book: BookType) => ({
       id: book.id,
       title: book.title,
       slug: book.slug,
@@ -116,7 +118,7 @@ export async function GET() {
     // Company stats
     let companyStats = null;
     if (company) {
-      const companyBooks = books.filter((b) => b.status === "LIVE");
+      const companyBooks = books.filter((b: BookType) => b.status === "LIVE");
       companyStats = {
         books: companyBooks.length,
         totalSales: company.totalSales,
@@ -140,8 +142,8 @@ export async function GET() {
         : null,
       stats: {
         totalBooks: books.length,
-        liveBooks: books.filter((b) => b.status === "LIVE").length,
-        pendingBooks: books.filter((b) => b.status === "PENDING_REVIEW").length,
+        liveBooks: books.filter((b: BookType) => b.status === "LIVE").length,
+        pendingBooks: books.filter((b: BookType) => b.status === "PENDING_REVIEW").length,
         totalRevenue,
         totalSales,
         monthlyRevenue,
