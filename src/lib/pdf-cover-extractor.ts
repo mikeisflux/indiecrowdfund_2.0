@@ -3,6 +3,9 @@
  *
  * Extracts the first page of a PDF and converts it to a thumbnail image.
  * Uses pdf.js for rendering and sharp for image processing.
+ *
+ * Note: This feature requires optional dependencies (canvas, pdfjs-dist, sharp)
+ * that may not be installed. The functions will return graceful errors if missing.
  */
 
 import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -32,6 +35,25 @@ export interface CoverExtractionResult {
 }
 
 /**
+ * Check if optional dependencies are available
+ */
+async function checkDependencies(): Promise<{ available: boolean; error?: string }> {
+  try {
+    // Use eval to prevent webpack from trying to bundle these optional deps
+    const requireModule = eval("require");
+    requireModule.resolve("canvas");
+    requireModule.resolve("pdfjs-dist");
+    requireModule.resolve("sharp");
+    return { available: true };
+  } catch {
+    return {
+      available: false,
+      error: "PDF cover extraction requires canvas, pdfjs-dist, and sharp packages. Install them with: npm install canvas pdfjs-dist sharp"
+    };
+  }
+}
+
+/**
  * Extract the first page of a PDF as a cover image
  *
  * Note: This function requires the following packages to be installed:
@@ -47,12 +69,18 @@ export async function extractPdfCover(
   pdfUrl: string,
   outputKey: string
 ): Promise<CoverExtractionResult> {
+  // Check dependencies first
+  const depCheck = await checkDependencies();
+  if (!depCheck.available) {
+    return { success: false, error: depCheck.error };
+  }
+
   try {
-    // Dynamic imports to handle optional dependencies
-    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    // @ts-expect-error - canvas is an optional peer dependency
-    const { createCanvas } = await import("canvas");
-    const sharp = (await import("sharp")).default;
+    // Use eval to prevent webpack from bundling these optional dependencies
+    const requireModule = eval("require");
+    const pdfjsLib = requireModule("pdfjs-dist/legacy/build/pdf.mjs");
+    const { createCanvas } = requireModule("canvas");
+    const sharp = requireModule("sharp");
 
     // Set up PDF.js worker
     // In Node.js environment, we don't need a worker
@@ -108,7 +136,6 @@ export async function extractPdfCover(
     const context = canvas.getContext("2d");
 
     // Render page to canvas
-    // @ts-expect-error - pdfjs-dist types may not match canvas types exactly
     await page.render({
       canvasContext: context,
       viewport,
@@ -230,6 +257,7 @@ export async function extractAndSaveCover(
  */
 export async function queueCoverExtraction(
   fileIds: string[],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   type: "digital-file" | "marketplace-book"
 ): Promise<{ queued: number; errors: string[] }> {
   const errors: string[] = [];

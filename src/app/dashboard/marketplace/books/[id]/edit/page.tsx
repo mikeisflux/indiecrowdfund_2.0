@@ -169,11 +169,6 @@ function PDFFilePicker({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [mode, setMode] = useState<"select" | "upload">("select");
 
-  // Fetch existing files on mount
-  useEffect(() => {
-    fetchExistingFiles();
-  }, []);
-
   const fetchExistingFiles = useCallback(async () => {
     try {
       setLoading(true);
@@ -188,6 +183,11 @@ function PDFFilePicker({
       setLoading(false);
     }
   }, []);
+
+  // Fetch existing files on mount
+  useEffect(() => {
+    fetchExistingFiles();
+  }, [fetchExistingFiles]);
 
   const handleSelectExisting = (file: ExistingFile) => {
     const publicUrl = `/api/r2/serve/${encodeURIComponent(file.key)}`;

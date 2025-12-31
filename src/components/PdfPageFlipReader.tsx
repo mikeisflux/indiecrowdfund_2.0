@@ -55,6 +55,9 @@ export function PdfPageFlipReader({
     setReady(false);
   }, [fileId]);
 
+  // Track image count only when ready to avoid re-running effect during loading
+  const imageCount = state.status === "ready" ? state.images.length : 0;
+
   // When images are ready, turn to saved page ONCE
   useEffect(() => {
     if (state.status !== "ready") return;
@@ -86,7 +89,8 @@ export function PdfPageFlipReader({
       // Ignore errors
     }
     setReady(true);
-  }, [state.status, state.status === "ready" ? state.images.length : 0, initialPageIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.status, imageCount, initialPageIndex]);
 
   if (state.status === "idle") {
     return null;

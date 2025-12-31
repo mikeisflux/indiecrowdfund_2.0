@@ -66,7 +66,7 @@ function FileUpload({
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = useCallback(async (file: File) => {
     setUploading(true);
     try {
       const formData = new FormData();
@@ -93,14 +93,14 @@ function FileUpload({
     } finally {
       setUploading(false);
     }
-  };
+  }, [onUpload, label]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
     const file = e.dataTransfer.files[0];
     if (file) handleUpload(file);
-  }, []);
+  }, [handleUpload]);
 
   return (
     <div className="space-y-2">
