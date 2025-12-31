@@ -2576,7 +2576,7 @@ model DigitalDistribution {
   digitalFile       DigitalFile       @relation(fields: [digitalFileId], references: [id], onDelete: Cascade)
 
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  updatedAt         DateTime          @updatedAt @default(now())
 
   @@unique([digitalFileId, pledgeId])
   @@index([digitalFileId])
