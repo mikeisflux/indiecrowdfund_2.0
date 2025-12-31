@@ -15,6 +15,7 @@ import {
   Sparkles,
   TrendingUp,
   Search,
+  Book as BookIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -349,6 +350,27 @@ export default function MarketplacePage() {
                 className="pl-12 bg-white/10 border-white/20 text-white placeholder:text-white/40 h-12 rounded-xl"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Old School Physical Media Section */}
+        <div className="mb-12 p-6 rounded-2xl bg-gradient-to-r from-amber-900/30 via-orange-900/20 to-amber-900/30 border border-amber-500/20">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-amber-500/20 border border-amber-500/30">
+                <BookIcon className="h-6 w-6 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Are you old school?</h3>
+                <p className="text-white/60">Do you prefer physical books? Some of our creators offer printed editions.</p>
+              </div>
+            </div>
+            <Link href="/marketplace/physical-media">
+              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">
+                Click Here
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
 

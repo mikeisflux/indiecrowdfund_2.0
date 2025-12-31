@@ -22,6 +22,7 @@ import {
   Instagram,
   Facebook,
   Youtube,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -42,6 +43,7 @@ interface CompanyFormData {
   logo: string;
   banner: string;
   website: string;
+  physicalMediaUrl: string;
   socialLinks: {
     twitter: string;
     instagram: string;
@@ -166,6 +168,7 @@ export default function CompanyProfilePage() {
     logo: "",
     banner: "",
     website: "",
+    physicalMediaUrl: "",
     socialLinks: {
       twitter: "",
       instagram: "",
@@ -197,6 +200,7 @@ export default function CompanyProfilePage() {
           logo: data.company.logo || "",
           banner: data.company.banner || "",
           website: data.company.website || "",
+          physicalMediaUrl: data.company.physicalMediaUrl || "",
           socialLinks: {
             twitter: data.company.socialLinks?.twitter || "",
             instagram: data.company.socialLinks?.instagram || "",
@@ -478,16 +482,31 @@ export default function CompanyProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label className="text-white">Website</Label>
-                <div className="relative">
-                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                  <Input
-                    placeholder="https://yourcompany.com"
-                    value={formData.website}
-                    onChange={(e) => updateForm("website", e.target.value)}
-                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-white">Website</Label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Input
+                      placeholder="https://yourcompany.com"
+                      value={formData.website}
+                      onChange={(e) => updateForm("website", e.target.value)}
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white">Physical Media Orders</Label>
+                  <div className="relative">
+                    <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Input
+                      placeholder="https://shop.yourcompany.com"
+                      value={formData.physicalMediaUrl}
+                      onChange={(e) => updateForm("physicalMediaUrl", e.target.value)}
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                    />
+                  </div>
+                  <p className="text-xs text-white/50">Link where customers can order physical copies</p>
                 </div>
               </div>
 

@@ -12,6 +12,8 @@ import {
   Info,
   ArrowRight,
   Shield,
+  BookOpen,
+  ShoppingCart,
 } from 'lucide-react';
 import { Footer } from "@/components/footer";
 
@@ -22,6 +24,7 @@ const tabs = [
   { id: 'divinitycoin', label: 'Paying with DivinityCoin', icon: Coins },
   { id: 'rewards', label: 'Rewards & Add-ons', icon: Gift },
   { id: 'after', label: 'After You Pledge', icon: Package },
+  { id: 'marketplace', label: 'Digital Marketplace', icon: BookOpen },
 ];
 
 interface Step {
@@ -231,6 +234,49 @@ const afterPledgeSteps: Step[] = [
     title: 'Receiving Your Rewards',
     description: 'When your rewards arrive, celebrate! You helped make something real. Consider sharing your experience - posting photos or reviews helps the creator and future backers.',
     tip: 'Having issues with your reward? Contact the creator directly through the project page before leaving negative feedback.',
+  },
+];
+
+const marketplaceSteps: Step[] = [
+  {
+    title: 'What is the Digital Marketplace?',
+    description: 'The Digital Marketplace is a dedicated storefront for digital content created by indie creators. Unlike crowdfunding campaigns where you pledge toward a goal, the marketplace offers completed works available for immediate purchase and instant download.',
+    tip: 'Perfect for when you want to support creators and get content right away without waiting for a campaign to fund.',
+  },
+  {
+    title: 'Browsing the Marketplace',
+    description: 'Visit the Digital Marketplace from the main navigation to explore available digital books and content. Browse by Featured titles, Staff Picks, or explore all available works. Use the search function to find specific titles or creators.',
+    tip: 'Check out Staff Picks for hand-curated recommendations from our team.',
+  },
+  {
+    title: 'Understanding Pricing',
+    description: 'Each digital product has a fixed price set by the creator. Prices are displayed in USD. When you purchase, you\'re directly supporting the creator - they receive the majority of the sale.',
+    tip: 'Digital purchases often cost less than physical editions since there are no printing or shipping costs.',
+  },
+  {
+    title: 'Making a Purchase',
+    description: 'Click on any book to view details, then select "Purchase" to proceed to checkout. You can pay with a credit/debit card through our secure Stripe payment processing. Your purchase is charged immediately.',
+    tip: 'Unlike crowdfunding pledges, marketplace purchases are charged right away and content is delivered instantly.',
+  },
+  {
+    title: 'Accessing Your Digital Library',
+    description: 'After purchase, your content is immediately added to your Digital Library in your Backer Dashboard. You can access, download, and read your purchases anytime. Your library syncs across devices when logged in.',
+    tip: 'Bookmark your Digital Library tab for quick access to all your purchased content.',
+  },
+  {
+    title: 'Reading and Downloads',
+    description: 'Digital books can be read directly in your browser using our built-in reader, or downloaded as PDF files for offline reading on your preferred device or e-reader.',
+    tip: 'Downloaded files are yours to keep. Save them to your preferred cloud storage for backup.',
+  },
+  {
+    title: 'Finding Physical Editions',
+    description: 'Prefer physical books? Some creators offer printed editions through their own stores. Look for the "Order Physical Copies" link on the creator\'s company profile page to find where you can purchase physical versions.',
+    tip: 'Visit our Physical Media guide from the marketplace to learn how to find creators who offer printed editions.',
+  },
+  {
+    title: 'Supporting Creators',
+    description: 'Every purchase directly supports independent creators. By buying from the Digital Marketplace, you\'re helping creators continue making the content you love. Leave reviews and share your favorites!',
+    tip: 'Following creators lets you know when they release new content or launch new campaigns.',
   },
 ];
 
@@ -469,6 +515,40 @@ export default function BackerHandbookPage() {
                 {afterPledgeSteps.map((step, index) => (
                   <StepCard key={step.title} step={step} number={index + 1} />
                 ))}
+              </div>
+            </>
+          )}
+
+          {activeTab === 'marketplace' && (
+            <>
+              <SectionHeader
+                title="Digital Marketplace"
+                description="Buy digital books and content directly from indie creators. Instant purchase, instant delivery to your Digital Library."
+              />
+              <div className="mb-6 rounded-lg border border-purple-200 bg-purple-50 p-4">
+                <div className="flex gap-3">
+                  <ShoppingCart className="h-5 w-5 flex-shrink-0 text-purple-600" />
+                  <div>
+                    <h4 className="font-medium text-purple-800">Instant Digital Delivery</h4>
+                    <p className="mt-1 text-sm text-purple-700">
+                      Unlike crowdfunding, marketplace purchases are charged immediately and content is delivered instantly to your Digital Library. Browse, buy, and read in minutes!
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {marketplaceSteps.map((step, index) => (
+                  <StepCard key={step.title} step={step} number={index + 1} />
+                ))}
+              </div>
+              <div className="mt-8 flex justify-center">
+                <a
+                  href="/marketplace"
+                  className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-6 py-3 font-medium text-white hover:bg-purple-700 transition-colors"
+                >
+                  <BookOpen className="h-5 w-5" />
+                  Visit the Digital Marketplace
+                </a>
               </div>
             </>
           )}

@@ -11,6 +11,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
+  ShoppingBag,
+  Upload,
+  DollarSign,
+  Building2,
 } from 'lucide-react';
 import { Footer } from "@/components/footer";
 
@@ -21,6 +25,7 @@ const tabs = [
   { id: 'people', label: 'People', icon: Users },
   { id: 'payment', label: 'Payment', icon: CreditCard },
   { id: 'promotion', label: 'Promotion', icon: Megaphone },
+  { id: 'marketplace', label: 'Digital Marketplace', icon: ShoppingBag },
 ];
 
 interface FieldInfo {
@@ -372,6 +377,75 @@ const promotionFields: FieldInfo[] = [
   },
 ];
 
+const marketplaceFields: FieldInfo[] = [
+  {
+    name: 'What is the Digital Marketplace?',
+    required: false,
+    description: 'The Digital Marketplace is a dedicated storefront where you can sell completed digital works directly to customers. Unlike crowdfunding campaigns, there\'s no funding goal - customers can purchase and download instantly.',
+    tips: 'Perfect for selling completed works, backlist titles, or digital-only content that doesn\'t need crowdfunding.',
+  },
+  {
+    name: 'Company Profile Setup',
+    required: true,
+    description: 'Before listing products, create your Company Profile in the Creator Dashboard. This includes your company name, logo, banner, description, and links. Your profile is your storefront in the marketplace.',
+    tips: 'A professional profile builds trust. Include your website, social links, and a compelling about section.',
+  },
+  {
+    name: 'Physical Media Link',
+    required: false,
+    description: 'Add a link to where customers can order physical copies of your books. This appears on your company profile and helps customers who prefer print editions.',
+    tips: 'If you sell physical books through your own store, Amazon, or a print-on-demand service, add that link here.',
+  },
+  {
+    name: 'Uploading Your Digital Book',
+    required: true,
+    description: 'Upload your digital book as a PDF file. You\'ll also add a cover image, title, description, category, and price. The upload process guides you through each step.',
+    tips: 'Use high-quality PDF files optimized for digital reading. Cover images should be eye-catching at thumbnail size.',
+  },
+  {
+    name: 'Setting Your Price',
+    required: true,
+    description: 'Set your own price in USD. Consider your costs, market rates for similar content, and the value you\'re providing. You can adjust pricing anytime.',
+    tips: 'Research similar products in the marketplace. Lower prices can drive volume, but don\'t undervalue your work.',
+  },
+  {
+    name: 'Platform Fee: 3%',
+    required: false,
+    description: 'IndieCrowdfund charges a 3% platform fee on each sale. This is separate from Stripe\'s payment processing fees (approximately 2.9% + $0.30 per transaction). Your payout is the sale price minus these fees.',
+    tips: 'Example: On a $10 sale, platform fee is $0.30, Stripe fee is approximately $0.59, so you receive about $9.11.',
+  },
+  {
+    name: 'Stripe Payment Setup',
+    required: true,
+    description: 'Connect your Stripe account to receive payouts. The same Stripe Connect setup used for crowdfunding works for marketplace sales. Payouts are processed on a regular schedule.',
+    tips: 'If you\'ve already connected Stripe for crowdfunding, you\'re all set for marketplace sales too!',
+  },
+  {
+    name: 'Review Process',
+    required: false,
+    description: 'After submission, your book goes through a brief review to ensure it meets our content guidelines. Once approved, it goes live on the marketplace.',
+    tips: 'Review typically takes 1-2 business days. Ensure your content follows our guidelines to avoid delays.',
+  },
+  {
+    name: 'Managing Your Listings',
+    required: false,
+    description: 'From your Creator Dashboard, you can edit listings, update prices, view sales analytics, and manage your catalog. Pause or unpublish listings at any time.',
+    tips: 'Keep your listings updated. Fresh cover images and updated descriptions can revive interest in older titles.',
+  },
+  {
+    name: 'Sales & Analytics',
+    required: false,
+    description: 'Track your marketplace performance with sales analytics. See purchase history, revenue over time, and which products perform best.',
+    tips: 'Use analytics to inform pricing decisions and identify which types of content resonate with your audience.',
+  },
+  {
+    name: 'Customer Support',
+    required: false,
+    description: 'You\'re responsible for customer support related to your content. Respond to customer questions promptly. We handle payment-related issues.',
+    tips: 'Good customer service leads to positive reviews and repeat customers. Be responsive and helpful.',
+  },
+];
+
 function FieldCard({ field }: { field: FieldInfo }) {
   return (
     <div className="rounded-lg border border-border bg-card/80 backdrop-blur-sm p-5 hover:shadow-lg transition-all duration-300">
@@ -574,6 +648,51 @@ export default function CreatorHandbookPage() {
                 {promotionFields.map((field) => (
                   <FieldCard key={field.name} field={field} />
                 ))}
+              </div>
+            </>
+          )}
+
+          {activeTab === 'marketplace' && (
+            <>
+              <SectionHeader
+                title="Digital Marketplace"
+                description="Sell your completed digital works directly to customers. No funding goal needed - instant purchase, instant delivery."
+              />
+              <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
+                <div className="flex gap-3">
+                  <DollarSign className="h-5 w-5 flex-shrink-0 text-green-600" />
+                  <div>
+                    <h4 className="font-medium text-green-800">Low Platform Fee: Just 3%</h4>
+                    <p className="mt-1 text-sm text-green-700">
+                      IndieCrowdfund charges only a 3% platform fee on marketplace sales, plus standard Stripe processing fees (approximately 2.9% + $0.30). You keep the vast majority of every sale!
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mb-6 rounded-lg border border-purple-200 bg-purple-50 p-4">
+                <div className="flex gap-3">
+                  <Building2 className="h-5 w-5 flex-shrink-0 text-purple-600" />
+                  <div>
+                    <h4 className="font-medium text-purple-800">Your Company Profile</h4>
+                    <p className="mt-1 text-sm text-purple-700">
+                      Create a professional storefront with your company profile. Add your logo, banner, description, and links - including a link to your physical media store for customers who prefer print editions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                {marketplaceFields.map((field) => (
+                  <FieldCard key={field.name} field={field} />
+                ))}
+              </div>
+              <div className="mt-8 flex justify-center">
+                <a
+                  href="/dashboard/marketplace"
+                  className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-6 py-3 font-medium text-white hover:bg-purple-700 transition-colors"
+                >
+                  <Upload className="h-5 w-5" />
+                  Go to Marketplace Dashboard
+                </a>
               </div>
             </>
           )}

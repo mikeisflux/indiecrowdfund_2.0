@@ -2941,6 +2941,7 @@ model CompanyProfile {
   // Contact & Social
   website           String?
   socialLinks       Json?    // { twitter, facebook, instagram, etc. }
+  physicalMediaUrl  String?  // Link to order physical copies (books, merch, etc.)
 
   // Status
   isActive          Boolean  @default(true)

@@ -37,6 +37,7 @@ export async function GET() {
         banner: company.bannerImageUrl,
         website: company.website,
         socialLinks: company.socialLinks,
+        physicalMediaUrl: company.physicalMediaUrl,
         isVerified: company.isVerified,
       },
     });
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, slug, tagline, about, logo, banner, website, socialLinks } = body;
+    const { name, slug, tagline, about, logo, banner, website, socialLinks, physicalMediaUrl } = body;
 
     // Validation
     if (!name?.trim()) {
@@ -119,6 +120,7 @@ export async function POST(request: Request) {
         bannerImageUrl: banner || null,
         website: website?.trim() || null,
         socialLinks: socialLinks || {},
+        physicalMediaUrl: physicalMediaUrl?.trim() || null,
       },
     });
 
@@ -177,7 +179,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { name, tagline, about, logo, banner, website, socialLinks } = body;
+    const { name, tagline, about, logo, banner, website, socialLinks, physicalMediaUrl } = body;
 
     // Validation
     if (!name?.trim()) {
@@ -198,6 +200,7 @@ export async function PUT(request: Request) {
         bannerImageUrl: banner || null,
         website: website?.trim() || null,
         socialLinks: socialLinks || {},
+        physicalMediaUrl: physicalMediaUrl?.trim() || null,
       },
     });
 
