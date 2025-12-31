@@ -1148,17 +1148,17 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 - [ ] Backfill existing PDFs with extracted covers
 
 ### Phase 3: Marketplace API Routes
-- [ ] Public marketplace endpoints
-- [ ] Creator CRUD endpoints
+- [x] Public marketplace endpoints (GET /api/marketplace/books, companies)
+- [x] Creator CRUD endpoints (POST/PUT/DELETE /api/marketplace/books)
 - [ ] Admin management endpoints
-- [ ] Purchase and delivery endpoints
+- [x] Purchase and delivery endpoints (POST /api/marketplace/purchase)
 
 ### Phase 4: Marketplace Frontend
-- [ ] `/marketplace` main page with tabs
-- [ ] Book grid and tile components (16:9, glassmorphism)
-- [ ] Book detail page (prelaunch-style format)
-- [ ] Company profile pages
-- [ ] View all pages (featured, staff picks, all)
+- [x] `/marketplace` main page with tabs (Sort by Book / Sort by Company)
+- [x] Book grid and tile components (16:9, glassmorphism)
+- [x] Book detail page (prelaunch-style format with purchase flow)
+- [x] Company profile pages
+- [x] View all pages (all books with filtering)
 
 ### Phase 5: Creator Dashboard
 - [ ] Marketplace tab in dashboard
