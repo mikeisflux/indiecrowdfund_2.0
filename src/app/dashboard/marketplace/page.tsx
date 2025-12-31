@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   BookOpen,
   Building2,
@@ -38,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
+import { PaymentSettings } from "@/components/payment-settings";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { cn } from "@/lib/utils";
@@ -591,6 +591,13 @@ export default function CreatorMarketplaceDashboard() {
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Analytics
               </TabsTrigger>
+              <TabsTrigger
+                value="settings"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-white rounded-lg px-4 py-2 text-white/70"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -763,6 +770,17 @@ export default function CreatorMarketplaceDashboard() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <div className="max-w-2xl">
+              <PaymentSettings
+                compact={true}
+                title="Stripe Connect"
+                description="Connect your Stripe account to receive payments from marketplace sales. This is the same Stripe account used across all your IndieCrowdfund projects."
+                showDivinityCoin={true}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </main>

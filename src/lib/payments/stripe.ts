@@ -1206,6 +1206,10 @@ export async function handleStripeWebhook(
     case "account.updated":
       await handleAccountUpdate(event.data.object as Stripe.Account);
       break;
+
+    case "checkout.session.completed":
+      await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+      break;
   }
 }
 
@@ -1540,6 +1544,86 @@ async function handleAccountUpdate(account: Stripe.Account) {
     where: { id: config.id },
     data: { isOnboarded },
   });
+}
+
+/**
+ * Handle Stripe Checkout Session completion
+ * Used for marketplace purchases
+ */
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  console.log(`[Webhook] handleCheckoutSessionCompleted called for session ${session.id}`);
+
+  // Check if this is a marketplace purchase
+  const purchaseId = session.metadata?.purchaseId;
+  const type = session.metadata?.type;
+
+  if (type !== "marketplace_purchase" || !purchaseId) {
+    console.log(`[Webhook] Session ${session.id} is not a marketplace purchase, skipping`);
+    return;
+  }
+
+  // Verify payment was successful
+  if (session.payment_status !== "paid") {
+    console.log(`[Webhook] Session ${session.id} payment status is ${session.payment_status}, skipping`);
+    return;
+  }
+
+  // Find and update the purchase
+  const purchase = await db.marketplacePurchase.findUnique({
+    where: { id: purchaseId },
+    include: {
+      book: {
+        select: {
+          id: true,
+          companyId: true,
+        },
+      },
+    },
+  });
+
+  if (!purchase) {
+    console.log(`[Webhook] Purchase ${purchaseId} not found`);
+    return;
+  }
+
+  // Skip if already completed
+  if (purchase.status === "COMPLETED") {
+    console.log(`[Webhook] Purchase ${purchaseId} already completed`);
+    return;
+  }
+
+  // Complete the purchase
+  await db.marketplacePurchase.update({
+    where: { id: purchaseId },
+    data: {
+      status: "COMPLETED",
+      completedAt: new Date(),
+      deliveredAt: new Date(),
+      stripePaymentIntentId: typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent || undefined,
+    },
+  });
+
+  // Update book purchase count
+  await db.marketplaceBook.update({
+    where: { id: purchase.bookId },
+    data: {
+      purchaseCount: { increment: 1 },
+    },
+  });
+
+  // Update company total sales if applicable
+  if (purchase.book.companyId) {
+    await db.companyProfile.update({
+      where: { id: purchase.book.companyId },
+      data: {
+        totalSales: { increment: 1 },
+      },
+    });
+  }
+
+  console.log(`[Webhook] Marketplace purchase ${purchaseId} completed successfully`);
 }
 
 export { stripe };

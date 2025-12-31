@@ -119,34 +119,54 @@ export default function BookDetailPage({
     setShowPaymentModal(false);
 
     try {
-      const res = await fetch("/api/marketplace/purchase", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getCSRFHeaders(),
-        },
-        body: JSON.stringify({
-          bookId: book.id,
-          paymentMethod,
-        }),
-      });
+      if (paymentMethod === "stripe") {
+        // Use Stripe Checkout
+        const res = await fetch("/api/marketplace/checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getCSRFHeaders(),
+          },
+          body: JSON.stringify({
+            bookId: book.id,
+          }),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Purchase failed");
-      }
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to create checkout session");
+        }
 
-      if (data.success && !data.paymentRequired) {
-        // Purchase completed immediately (DivinityCoin)
-        setHasPurchased(true);
-        setShowSuccessModal(true);
-      } else if (data.paymentRequired) {
-        // Redirect to Stripe checkout
-        toast.info("Redirecting to payment...");
-        // In production, this would redirect to Stripe Checkout
-        // For now, show a message
-        toast.error("Stripe integration coming soon");
+        if (data.checkoutUrl) {
+          toast.info("Redirecting to payment...");
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+      } else {
+        // DivinityCoin payment
+        const res = await fetch("/api/marketplace/purchase", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getCSRFHeaders(),
+          },
+          body: JSON.stringify({
+            bookId: book.id,
+            paymentMethod,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Purchase failed");
+        }
+
+        if (data.success) {
+          setHasPurchased(true);
+          setShowSuccessModal(true);
+        }
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Purchase failed");

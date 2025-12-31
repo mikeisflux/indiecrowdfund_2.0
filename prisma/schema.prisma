@@ -2975,8 +2975,9 @@ model MarketplacePurchase {
   transactionId     String?  // Stripe or DivinityCoin transaction ID
 
   // Stripe fields
-  stripePaymentIntentId String?  @unique
-  stripeCustomerId  String?
+  stripePaymentIntentId    String?  @unique
+  stripeCheckoutSessionId  String?  @unique
+  stripeCustomerId         String?
 
   // DivinityCoin fields
   divinityCoinPaymentId String?  @unique
