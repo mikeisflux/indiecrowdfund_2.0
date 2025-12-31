@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db as prisma } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
 import { notifyMarketplacePurchase, notifyMarketplaceSale } from "@/lib/notifications";
 

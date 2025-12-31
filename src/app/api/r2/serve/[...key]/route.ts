@@ -36,9 +36,9 @@ export async function GET(
       const userIdFromKey = key.split("/")[1];
       if (userIdFromKey !== session.user.id) {
         // User is not the owner - check if they have purchased a book using this file
-        const { prisma } = await import("@/lib/prisma");
+        const { db } = await import("@/lib/db");
 
-        const purchase = await prisma.marketplacePurchase.findFirst({
+        const purchase = await db.marketplacePurchase.findFirst({
           where: {
             buyerId: session.user.id,
             status: "COMPLETED",
