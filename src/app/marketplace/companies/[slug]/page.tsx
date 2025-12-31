@@ -1,0 +1,333 @@
+"use client";
+
+import { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Building2,
+  BookOpen,
+  ArrowLeft,
+  Globe,
+  CheckCircle,
+  User,
+  Calendar,
+  TrendingUp,
+  ExternalLink,
+} from "lucide-react";
+import { toast } from "sonner";
+
+interface Book {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  coverImage: string | null;
+  price: number;
+  currency: string;
+  category: string | null;
+  purchases: number;
+  isFeatured: boolean;
+  isStaffPick: boolean;
+  publishedAt: string | null;
+}
+
+interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  tagline: string | null;
+  about: string | null;
+  logo: string | null;
+  banner: string | null;
+  website: string | null;
+  socialLinks: Record<string, string> | null;
+  isVerified: boolean;
+  stats: { books: number; totalSales: number };
+  owner: {
+    id: string;
+    name: string | null;
+    avatar: string | null;
+    memberSince: string;
+  };
+  createdAt: string;
+}
+
+// Book Tile Component
+function BookTile({ book }: { book: Book }) {
+  return (
+    <Link href={`/marketplace/books/${book.slug}`}>
+      <div className="group relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/10 hover:border-purple-400/30 transition-all duration-300">
+        {book.coverImage ? (
+          <Image
+            src={book.coverImage}
+            alt={book.title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-indigo-900/50 flex items-center justify-center">
+            <BookOpen className="h-12 w-12 text-white/30" />
+          </div>
+        )}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <h3 className="text-white font-semibold line-clamp-2">{book.title}</h3>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-emerald-400 font-bold">
+              ${book.price.toFixed(2)}
+            </span>
+            {book.purchases > 0 && (
+              <span className="text-white/50 text-xs">{book.purchases} sold</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+export default function CompanyProfilePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = use(params);
+  const router = useRouter();
+  const [company, setCompany] = useState<Company | null>(null);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCompany();
+  }, [slug]);
+
+  const fetchCompany = async () => {
+    try {
+      const res = await fetch(`/api/marketplace/companies/${slug}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          router.push("/marketplace");
+          return;
+        }
+        throw new Error("Failed to fetch company");
+      }
+      const data = await res.json();
+      setCompany(data.company);
+      setBooks(data.books || []);
+    } catch (error) {
+      console.error("Error fetching company:", error);
+      toast.error("Failed to load company profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+        <Skeleton className="h-64 w-full" />
+        <div className="container py-8">
+          <Skeleton className="h-8 w-64 mb-4" />
+          <Skeleton className="h-24 w-full max-w-2xl mb-8" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="aspect-video rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!company) {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+      {/* Background effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      </div>
+
+      {/* Banner */}
+      <div className="relative h-64 md:h-80">
+        {company.banner ? (
+          <Image
+            src={company.banner}
+            alt={company.name}
+            fill
+            className="object-cover"
+            priority
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/50 to-blue-900/50" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent" />
+
+        {/* Back Button */}
+        <div className="container relative pt-8">
+          <Link
+            href="/marketplace"
+            className="inline-flex items-center gap-2 text-white/60 hover:text-white group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            Back to Marketplace
+          </Link>
+        </div>
+      </div>
+
+      <div className="container relative -mt-24">
+        {/* Company Header */}
+        <div className="flex flex-col md:flex-row items-start gap-6 mb-8">
+          {/* Logo */}
+          <div className="w-32 h-32 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 overflow-hidden flex items-center justify-center shadow-xl">
+            {company.logo ? (
+              <Image
+                src={company.logo}
+                alt={company.name}
+                width={128}
+                height={128}
+                className="object-cover"
+              />
+            ) : (
+              <Building2 className="h-16 w-16 text-white/40" />
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-white">{company.name}</h1>
+              {company.isVerified && (
+                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Verified
+                </Badge>
+              )}
+            </div>
+            {company.tagline && (
+              <p className="text-lg text-white/70 mb-4">{company.tagline}</p>
+            )}
+
+            {/* Stats */}
+            <div className="flex items-center gap-6 text-white/60">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                <span>{company.stats.books} books</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                <span>{company.stats.totalSales} total sales</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>
+                  Member since{" "}
+                  {new Date(company.createdAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+            </div>
+
+            {/* Website */}
+            {company.website && (
+              <a
+                href={company.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 mt-4 text-cyan-400 hover:text-cyan-300"
+              >
+                <Globe className="w-4 h-4" />
+                {company.website.replace(/^https?:\/\//, "")}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* About Section */}
+        {company.about && (
+          <Card className="bg-white/5 backdrop-blur-md border-white/10 mb-8">
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">About</h2>
+              <div
+                className="prose prose-invert prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: company.about }}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Owner Info */}
+        <Card className="bg-white/5 backdrop-blur-md border-white/10 mb-8">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Owner</h2>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
+                {company.owner.avatar ? (
+                  <Image
+                    src={company.owner.avatar}
+                    alt={company.owner.name || "Owner"}
+                    width={48}
+                    height={48}
+                    className="object-cover"
+                  />
+                ) : (
+                  <User className="w-6 h-6 text-white/40" />
+                )}
+              </div>
+              <div>
+                <p className="font-semibold text-white">{company.owner.name}</p>
+                <p className="text-sm text-white/60">
+                  Member since{" "}
+                  {new Date(company.owner.memberSince).toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Books Section */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white">
+              Books by {company.name}
+            </h2>
+            <Badge variant="outline" className="text-white/60 border-white/20">
+              {books.length} books
+            </Badge>
+          </div>
+
+          {books.length === 0 ? (
+            <Card className="bg-white/5 backdrop-blur-md border-white/10">
+              <CardContent className="py-12 text-center">
+                <BookOpen className="h-12 w-12 mx-auto mb-4 text-white/30" />
+                <p className="text-white/60">No books published yet</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {books.map((book) => (
+                <BookTile key={book.id} book={book} />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
