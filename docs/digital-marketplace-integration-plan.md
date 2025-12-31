@@ -15,6 +15,8 @@ This document outlines the complete integration plan for adding a Digital Market
 5. [Admin Panel Integration](#admin-panel-integration)
 6. [Creator Dashboard Integration](#creator-dashboard-integration)
 7. [Backer Dashboard Integration](#backer-dashboard-integration)
+   - [Digital Library Enhancement](#enhanced-digital-library-tab)
+   - [PDF Cover Extraction](#pdf-cover-extraction-implementation)
 8. [Content Moderation & NSFW Handling](#content-moderation--nsfw-handling)
 9. [UI/UX Guidelines](#uiux-guidelines)
 10. [Implementation Phases](#implementation-phases)
@@ -67,9 +69,18 @@ This document outlines the complete integration plan for adding a Digital Market
   - About section (rich text)
 
 ### Backer Dashboard Integration
+- **Rename "Book Reader" tab to "Digital Library"**
 - Purchased books appear in `/dashboard/backer`
 - Instant delivery on purchase
 - Success message with "Go read it now" option
+
+### Digital Library Enhancement (Existing Tab Upgrade)
+- **PDF First Page as Cover Image** - Extract and display actual book covers instead of generic icons
+- **Searchable** - Full-text search across all library items by title
+- **Sortable** - Sort by Title, Date Added, File Size, Reading Progress
+- **Filterable** - Filter by Source (Crowdfunding/Marketplace), Status (Unread/In Progress/Completed)
+- **Grid/List View Toggle** - Switch between card grid and compact list views
+- **Reading Progress Tracking** - Show percentage read, resume from last position
 
 ### Admin Panel Integration
 - New "Marketplace" section in `/admin`
@@ -599,33 +610,282 @@ const pdfConfig = {
 
 ### Location: `/dashboard/backer` → Extended Tabs
 
-### Purchased Books Tab
+### Tab Rename: "Book Reader" → "Digital Library"
 
-Add to existing backer dashboard tabs:
+**IMPORTANT:** Rename the existing "Book Reader" tab to "Digital Library" across the entire codebase.
 
 ```tsx
-<TabsTrigger value="purchased-books">
+// OLD
+<TabsTrigger value="book-reader">
   <BookOpen className="w-4 h-4 mr-2" />
-  My Books
+  Book Reader
+</TabsTrigger>
+
+// NEW
+<TabsTrigger value="digital-library">
+  <Library className="w-4 h-4 mr-2" />
+  Digital Library
 </TabsTrigger>
 ```
 
-### Content
+### Enhanced Digital Library Tab
 
-- Grid of purchased books with cover images
-- Download button for each book
-- Purchase date
-- Download count
-- "Read Now" button (opens book reader)
+Replace the current basic book reader with a complete digital library experience:
 
-### Integration with Existing Book Reader
+#### Features
 
-Extend existing `book-reader-tab.tsx` to support marketplace purchases:
+1. **PDF First Page as Cover Image**
+   - Extract first page of PDF on upload using `pdf.js`
+   - Generate thumbnail image and store in R2
+   - Use this as the preview image instead of generic icon
+   - Fallback to generic icon if extraction fails
+
+2. **Sortable Library**
+   - Sort by: Title (A-Z, Z-A), Date Added (Newest, Oldest), File Size, Progress
+   - Persist sort preference in localStorage
+
+3. **Filterable Library**
+   - Filter by: Source (Crowdfunding Rewards, Marketplace Purchases, All)
+   - Filter by: Status (Unread, In Progress, Completed)
+   - Filter by: File Type (PDF, EPUB, etc.)
+   - Search by title
+
+4. **Reading Progress Tracking**
+   - Track current page / total pages
+   - Show percentage read on card
+   - Resume reading from last position
+
+5. **Grid/List View Toggle**
+   - Grid view: Card-based layout with cover images
+   - List view: Compact rows with metadata
+
+### Digital Library UI Components
+
+#### Library Card Component
 
 ```tsx
-// Existing: DigitalFile model for crowdfunding rewards
-// New: MarketplacePurchase for bought books
-// Book reader should support both sources
+interface LibraryCardProps {
+  file: DigitalFile | MarketplacePurchase;
+  coverUrl: string;        // Generated from PDF first page
+  title: string;
+  source: 'crowdfunding' | 'marketplace';
+  fileSize: number;
+  progress: number;        // 0-100 percentage read
+  dateAdded: Date;
+  lastRead?: Date;
+}
+
+// Card Design
+<div className="
+  group relative rounded-xl overflow-hidden
+  bg-gradient-to-br from-zinc-800/80 to-zinc-900/80
+  backdrop-blur-md border border-white/10
+  hover:border-amber-400/30 hover:shadow-lg hover:shadow-amber-500/10
+  transition-all duration-300
+">
+  {/* Cover Image - PDF First Page */}
+  <div className="aspect-[3/4] relative">
+    <Image
+      src={coverUrl}
+      alt={title}
+      fill
+      className="object-cover"
+    />
+    {/* Progress Overlay */}
+    <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
+      <div
+        className="h-full bg-amber-500"
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+  </div>
+
+  {/* Content */}
+  <div className="p-3 space-y-1">
+    <h3 className="font-medium text-white line-clamp-2">{title}</h3>
+    <div className="flex items-center justify-between text-xs text-zinc-400">
+      <span>{formatFileSize(fileSize)}</span>
+      <span>{progress}% read</span>
+    </div>
+    {/* Source Badge */}
+    <Badge variant={source === 'marketplace' ? 'default' : 'secondary'}>
+      {source === 'marketplace' ? 'Purchased' : 'Reward'}
+    </Badge>
+  </div>
+</div>
+```
+
+#### Filter/Sort Bar Component
+
+```tsx
+<div className="flex flex-wrap items-center gap-4 mb-6">
+  {/* Search */}
+  <div className="relative flex-1 min-w-[200px]">
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+    <Input
+      placeholder="Search your library..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className="pl-10"
+    />
+  </div>
+
+  {/* Source Filter */}
+  <Select value={sourceFilter} onValueChange={setSourceFilter}>
+    <SelectTrigger className="w-[160px]">
+      <SelectValue placeholder="All Sources" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">All Sources</SelectItem>
+      <SelectItem value="crowdfunding">Crowdfunding Rewards</SelectItem>
+      <SelectItem value="marketplace">Marketplace Purchases</SelectItem>
+    </SelectContent>
+  </Select>
+
+  {/* Status Filter */}
+  <Select value={statusFilter} onValueChange={setStatusFilter}>
+    <SelectTrigger className="w-[140px]">
+      <SelectValue placeholder="All Status" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">All Status</SelectItem>
+      <SelectItem value="unread">Unread</SelectItem>
+      <SelectItem value="in-progress">In Progress</SelectItem>
+      <SelectItem value="completed">Completed</SelectItem>
+    </SelectContent>
+  </Select>
+
+  {/* Sort */}
+  <Select value={sortBy} onValueChange={setSortBy}>
+    <SelectTrigger className="w-[160px]">
+      <SelectValue placeholder="Sort by" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="date-desc">Newest First</SelectItem>
+      <SelectItem value="date-asc">Oldest First</SelectItem>
+      <SelectItem value="title-asc">Title A-Z</SelectItem>
+      <SelectItem value="title-desc">Title Z-A</SelectItem>
+      <SelectItem value="progress-desc">Most Progress</SelectItem>
+      <SelectItem value="progress-asc">Least Progress</SelectItem>
+      <SelectItem value="size-desc">Largest</SelectItem>
+      <SelectItem value="size-asc">Smallest</SelectItem>
+    </SelectContent>
+  </Select>
+
+  {/* View Toggle */}
+  <div className="flex border border-zinc-700 rounded-lg overflow-hidden">
+    <Button
+      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+      size="sm"
+      onClick={() => setViewMode('grid')}
+    >
+      <Grid className="w-4 h-4" />
+    </Button>
+    <Button
+      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+      size="sm"
+      onClick={() => setViewMode('list')}
+    >
+      <List className="w-4 h-4" />
+    </Button>
+  </div>
+</div>
+```
+
+### PDF Cover Extraction Implementation
+
+#### API Endpoint: `/api/backer/digital-files/extract-cover`
+
+```typescript
+// Server-side PDF first page extraction
+import { getDocument } from 'pdfjs-dist';
+import sharp from 'sharp';
+
+export async function extractPdfCover(pdfUrl: string, fileId: string): Promise<string> {
+  // 1. Fetch PDF from R2
+  const pdfBuffer = await fetchFromR2(pdfUrl);
+
+  // 2. Load PDF with pdf.js
+  const pdf = await getDocument({ data: pdfBuffer }).promise;
+
+  // 3. Get first page
+  const page = await pdf.getPage(1);
+
+  // 4. Render to canvas (server-side using node-canvas)
+  const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for quality
+  const canvas = createCanvas(viewport.width, viewport.height);
+  const context = canvas.getContext('2d');
+
+  await page.render({
+    canvasContext: context,
+    viewport: viewport,
+  }).promise;
+
+  // 5. Convert to WebP and resize
+  const coverBuffer = await sharp(canvas.toBuffer())
+    .resize(400, 600, { fit: 'cover' })
+    .webp({ quality: 85 })
+    .toBuffer();
+
+  // 6. Upload to R2
+  const coverUrl = await uploadToR2(
+    coverBuffer,
+    `covers/${fileId}.webp`,
+    'image/webp'
+  );
+
+  return coverUrl;
+}
+```
+
+#### Database Schema Addition
+
+Add to existing `DigitalFile` model:
+
+```prisma
+model DigitalFile {
+  // ... existing fields ...
+
+  // Cover extraction
+  coverImageUrl     String?           // Generated PDF first page thumbnail
+  coverExtractedAt  DateTime?         // When cover was generated
+  coverExtractionFailed Boolean @default(false)  // If extraction failed
+
+  // Reading progress
+  readingProgress   Json?             // { currentPage: number, totalPages: number, lastPosition: string }
+  lastReadAt        DateTime?
+}
+```
+
+### Integration with Marketplace Purchases
+
+The Digital Library should display items from TWO sources:
+
+1. **Crowdfunding Digital Rewards** (existing `DigitalFile` + `DigitalDistribution` models)
+2. **Marketplace Purchases** (new `MarketplacePurchase` model)
+
+```typescript
+// Unified library item type
+interface LibraryItem {
+  id: string;
+  title: string;
+  fileUrl: string;
+  coverImageUrl: string | null;
+  fileSize: number;
+  source: 'crowdfunding' | 'marketplace';
+  sourceId: string;  // projectId or bookId
+  sourceName: string;  // Project title or Book title
+  dateAdded: Date;
+  progress: {
+    currentPage: number;
+    totalPages: number;
+    percentage: number;
+  };
+  lastReadAt: Date | null;
+}
+
+// API endpoint combines both sources
+// GET /api/backer/digital-library
 ```
 
 ### Purchase Success Flow
@@ -633,15 +893,30 @@ Extend existing `book-reader-tab.tsx` to support marketplace purchases:
 1. User clicks "Buy Now" on book detail page
 2. Payment processed (Stripe or DivinityCoin based on content flags)
 3. Purchase record created with `COMPLETED` status
-4. Success modal displays:
+4. **Cover extraction job triggered** for the purchased PDF
+5. Success modal displays:
    ```
    Purchase Successful!
 
-   "[Book Title]" has been delivered to your dashboard.
+   "[Book Title]" has been delivered to your Digital Library.
 
    [Go Read It Now] [Continue Browsing]
    ```
-5. "Go Read It Now" navigates to `/dashboard/backer?tab=purchased-books`
+6. "Go Read It Now" navigates to `/dashboard/backer?tab=digital-library`
+
+### Component Files to Create/Modify
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/app/dashboard/backer/components/book-reader-tab.tsx` | **RENAME & REFACTOR** | Rename to `digital-library-tab.tsx`, complete rewrite |
+| `src/app/dashboard/backer/components/digital-library-tab.tsx` | **CREATE** | New enhanced library component |
+| `src/app/dashboard/backer/components/library-card.tsx` | **CREATE** | Individual book card with cover |
+| `src/app/dashboard/backer/components/library-filters.tsx` | **CREATE** | Filter/sort bar component |
+| `src/app/dashboard/backer/components/library-list-item.tsx` | **CREATE** | List view row component |
+| `src/app/api/backer/digital-library/route.ts` | **CREATE** | Unified library endpoint |
+| `src/app/api/backer/digital-files/extract-cover/route.ts` | **CREATE** | PDF cover extraction |
+| `src/app/api/backer/digital-files/progress/route.ts` | **CREATE** | Save/load reading progress |
+| `src/lib/pdf-cover-extractor.ts` | **CREATE** | Server-side PDF rendering utility |
 
 ---
 
@@ -853,46 +1128,60 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 ## Implementation Phases
 
-### Phase 1: Database & Core Models (Week 1)
-- [ ] Add Prisma schema models
+### Phase 1: Database & Core Models
+- [ ] Add Prisma schema models (MarketplaceBook, CompanyProfile, MarketplacePurchase, MarketplaceBookReview)
+- [ ] Extend DigitalFile model with cover extraction fields
 - [ ] Run migrations
 - [ ] Create seed data for testing
 
-### Phase 2: API Routes (Week 1-2)
+### Phase 2: Digital Library Enhancement (Priority)
+- [ ] Rename "Book Reader" tab to "Digital Library" across codebase
+- [ ] Implement PDF first page cover extraction using pdf.js + sharp
+- [ ] Create `/api/backer/digital-files/extract-cover` endpoint
+- [ ] Create `/api/backer/digital-library` unified endpoint
+- [ ] Create `/api/backer/digital-files/progress` endpoint for reading progress
+- [ ] Build `digital-library-tab.tsx` with search, sort, filter capabilities
+- [ ] Build `library-card.tsx` component with cover image display
+- [ ] Build `library-filters.tsx` component
+- [ ] Build `library-list-item.tsx` for list view
+- [ ] Implement Grid/List view toggle
+- [ ] Backfill existing PDFs with extracted covers
+
+### Phase 3: Marketplace API Routes
 - [ ] Public marketplace endpoints
 - [ ] Creator CRUD endpoints
 - [ ] Admin management endpoints
 - [ ] Purchase and delivery endpoints
 
-### Phase 3: Marketplace Frontend (Week 2-3)
+### Phase 4: Marketplace Frontend
 - [ ] `/marketplace` main page with tabs
-- [ ] Book grid and tile components
-- [ ] Book detail page
+- [ ] Book grid and tile components (16:9, glassmorphism)
+- [ ] Book detail page (prelaunch-style format)
 - [ ] Company profile pages
 - [ ] View all pages (featured, staff picks, all)
 
-### Phase 4: Creator Dashboard (Week 3-4)
+### Phase 5: Creator Dashboard
 - [ ] Marketplace tab in dashboard
-- [ ] Book creation form (multi-step)
+- [ ] Book creation form (multi-step with promo image/video)
 - [ ] Book edit/management
-- [ ] Company profile editor
+- [ ] Company profile editor with rich text
 - [ ] Submit for review flow
 
-### Phase 5: Admin Panel (Week 4-5)
+### Phase 6: Admin Panel
 - [ ] Marketplace admin section
-- [ ] Review queue with moderation
-- [ ] Featured/Staff Picks management
+- [ ] Review queue with AI moderation
+- [ ] Featured/Staff Picks drag-and-drop management
 - [ ] Deactivation controls
 
-### Phase 6: Purchase Flow (Week 5-6)
-- [ ] Payment integration (Stripe + DivinityCoin)
-- [ ] Instant delivery system
-- [ ] Purchase success modal
-- [ ] Backer dashboard integration
+### Phase 7: Purchase Flow
+- [ ] Payment integration (Stripe + DivinityCoin based on NSFW flags)
+- [ ] Instant delivery system with cover extraction trigger
+- [ ] Purchase success modal with "Go to Digital Library" CTA
+- [ ] Integration with unified Digital Library
 
-### Phase 7: Polish & Testing (Week 6-7)
+### Phase 8: Polish & Testing
 - [ ] End-to-end testing
-- [ ] Performance optimization
+- [ ] Performance optimization for cover extraction
 - [ ] Mobile responsiveness
 - [ ] Accessibility review
 
@@ -1005,12 +1294,32 @@ src/
 │           ├── featured-manager.tsx
 │           └── staff-picks-manager.tsx
 │
-└── lib/
-    └── marketplace/
-        ├── types.ts                   # TypeScript interfaces
-        ├── utils.ts                   # Helper functions
-        ├── store.ts                   # Zustand store (if needed)
-        └── hooks.ts                   # React hooks
+├── lib/
+│   ├── marketplace/
+│   │   ├── types.ts                   # TypeScript interfaces
+│   │   ├── utils.ts                   # Helper functions
+│   │   ├── store.ts                   # Zustand store (if needed)
+│   │   └── hooks.ts                   # React hooks
+│   └── pdf-cover-extractor.ts         # Server-side PDF rendering utility
+│
+└── (existing files to modify)
+    ├── src/app/dashboard/backer/
+    │   ├── page.tsx                   # Update tab name Book Reader → Digital Library
+    │   └── components/
+    │       ├── book-reader-tab.tsx    # RENAME to digital-library-tab.tsx
+    │       ├── digital-library-tab.tsx  # NEW - Complete rewrite
+    │       ├── library-card.tsx       # NEW - Book card with cover
+    │       ├── library-filters.tsx    # NEW - Search/sort/filter bar
+    │       ├── library-list-item.tsx  # NEW - List view row
+    │       └── index.ts               # Update exports
+    └── src/app/api/backer/
+        ├── digital-library/
+        │   └── route.ts               # NEW - Unified library endpoint
+        └── digital-files/
+            ├── extract-cover/
+            │   └── route.ts           # NEW - PDF cover extraction
+            └── progress/
+                └── route.ts           # NEW - Reading progress save/load
 ```
 
 ---
