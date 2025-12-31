@@ -48,8 +48,8 @@ export function NotificationsDropdown() {
         setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
       }
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
+    } catch {
+      // Silently fail - this is background polling, network errors are expected on mobile
     }
   }, []);
 

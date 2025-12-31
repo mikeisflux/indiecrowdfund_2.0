@@ -57,8 +57,8 @@ export function UserProfileDropdown() {
         const data = await res.json();
         setProfileData(data);
       }
-    } catch (error) {
-      console.error("Failed to fetch profile data:", error);
+    } catch {
+      // Silently fail - dropdown data is non-critical
     } finally {
       setLoading(false);
     }

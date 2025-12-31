@@ -371,6 +371,8 @@ export async function DELETE(
       );
     }
 
+    console.log(`[DELETE] Starting deletion of pledge ${pledgeId}, current status: ${typedPledge.status}`);
+
     // Delete in a transaction to handle related records that don't have cascade delete
     await db.$transaction(async (tx) => {
       // Delete related DivinityCoinTransactions (no cascade in schema)
@@ -419,6 +421,8 @@ export async function DELETE(
         where: { id: pledgeId },
       });
     });
+
+    console.log(`[DELETE] Successfully deleted pledge ${pledgeId}`);
 
     return NextResponse.json({
       success: true,
