@@ -93,6 +93,7 @@ export default function AllBooksPage() {
 
   useEffect(() => {
     fetchBooks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, category]);
 
   const fetchBooks = async () => {
