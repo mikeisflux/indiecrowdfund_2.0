@@ -269,7 +269,7 @@ export async function GET(request: NextRequest) {
               isVerified: creator.divinityCoinBankAccount.isVerified,
             }
           : null,
-        settlements: existingSettlements.map((s) => ({
+        settlements: existingSettlements.map((s: { id: string; amount: unknown; status: string; processedAt: Date | null; completedAt: Date | null }) => ({
           id: s.id,
           amount: Number(s.amount),
           status: s.status,
