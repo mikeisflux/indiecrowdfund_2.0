@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,6 @@ import {
   CreditCard,
   Shield,
   ExternalLink,
-  Plus,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,12 +35,18 @@ interface AccountSettingsTabProps {
 }
 
 export function AccountSettingsTab({
-  userName = "J.D. Artist",
-  userEmail = "jdaguestposts@gmail.com",
+  userName = "",
+  userEmail = "",
   userAvatar = "",
 }: AccountSettingsTabProps) {
-  const [name, setName] = useState(userName);
-  const [email, setEmail] = useState(userEmail);
+  const [name, setName] = useState(userName || "");
+  const [email, setEmail] = useState(userEmail || "");
+
+  // Update state when props change
+  useEffect(() => {
+    if (userName) setName(userName);
+    if (userEmail) setEmail(userEmail);
+  }, [userName, userEmail]);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -52,6 +57,7 @@ export function AccountSettingsTab({
     paymentFailed: true,
     productUpdates: true,
   });
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Loading states
@@ -60,7 +66,27 @@ export function AccountSettingsTab({
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
-  const [showEditCardDialog, setShowEditCardDialog] = useState(false);
+
+  // Load notification preferences from API on mount
+  const loadPreferences = useCallback(async () => {
+    try {
+      const res = await fetch("/api/creator/account/preferences");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.preferences?.notifications) {
+          setNotifications(data.preferences.notifications);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load preferences:", error);
+    } finally {
+      setIsLoadingPreferences(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
 
   const handleChangePhoto = () => {
     fileInputRef.current?.click();
@@ -335,81 +361,89 @@ export function AccountSettingsTab({
           <CardDescription>Choose what emails you receive</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="surveyCompleted"
-              checked={notifications.surveyCompleted}
-              onCheckedChange={(checked) =>
-                setNotifications({ ...notifications, surveyCompleted: checked as boolean })
-              }
-            />
-            <Label htmlFor="surveyCompleted">
-              Email me when a backer completes their survey
-            </Label>
-          </div>
+          {isLoadingPreferences ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="surveyCompleted"
+                  checked={notifications.surveyCompleted}
+                  onCheckedChange={(checked) =>
+                    setNotifications({ ...notifications, surveyCompleted: checked as boolean })
+                  }
+                />
+                <Label htmlFor="surveyCompleted">
+                  Email me when a backer completes their survey
+                </Label>
+              </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="dailySummary"
-              checked={notifications.dailySummary}
-              onCheckedChange={(checked) =>
-                setNotifications({ ...notifications, dailySummary: checked as boolean })
-              }
-            />
-            <Label htmlFor="dailySummary">
-              Email me daily summary of new orders
-            </Label>
-          </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="dailySummary"
+                  checked={notifications.dailySummary}
+                  onCheckedChange={(checked) =>
+                    setNotifications({ ...notifications, dailySummary: checked as boolean })
+                  }
+                />
+                <Label htmlFor="dailySummary">
+                  Email me daily summary of new orders
+                </Label>
+              </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="eachOrder"
-              checked={notifications.eachOrder}
-              onCheckedChange={(checked) =>
-                setNotifications({ ...notifications, eachOrder: checked as boolean })
-              }
-            />
-            <Label htmlFor="eachOrder">
-              Email me for each new order
-            </Label>
-          </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="eachOrder"
+                  checked={notifications.eachOrder}
+                  onCheckedChange={(checked) =>
+                    setNotifications({ ...notifications, eachOrder: checked as boolean })
+                  }
+                />
+                <Label htmlFor="eachOrder">
+                  Email me for each new order
+                </Label>
+              </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="paymentFailed"
-              checked={notifications.paymentFailed}
-              onCheckedChange={(checked) =>
-                setNotifications({ ...notifications, paymentFailed: checked as boolean })
-              }
-            />
-            <Label htmlFor="paymentFailed">
-              Email me when a payment fails
-            </Label>
-          </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="paymentFailed"
+                  checked={notifications.paymentFailed}
+                  onCheckedChange={(checked) =>
+                    setNotifications({ ...notifications, paymentFailed: checked as boolean })
+                  }
+                />
+                <Label htmlFor="paymentFailed">
+                  Email me when a payment fails
+                </Label>
+              </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="productUpdates"
-              checked={notifications.productUpdates}
-              onCheckedChange={(checked) =>
-                setNotifications({ ...notifications, productUpdates: checked as boolean })
-              }
-            />
-            <Label htmlFor="productUpdates">
-              Email me product updates and tips
-            </Label>
-          </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="productUpdates"
+                  checked={notifications.productUpdates}
+                  onCheckedChange={(checked) =>
+                    setNotifications({ ...notifications, productUpdates: checked as boolean })
+                  }
+                />
+                <Label htmlFor="productUpdates">
+                  Email me product updates and tips
+                </Label>
+              </div>
 
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSavePreferences} disabled={isSavingPreferences}>
-            {isSavingPreferences ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Preferences"
-            )}
-          </Button>
+              <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSavePreferences} disabled={isSavingPreferences}>
+                {isSavingPreferences ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Preferences"
+                )}
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -425,22 +459,20 @@ export function AccountSettingsTab({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded bg-blue-100 flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Visa ending in 4242</p>
-                    <p className="text-xs text-muted-foreground">Expires 12/25</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setShowEditCardDialog(true)}>Edit</Button>
+              <div className="p-4 border rounded-lg text-center">
+                <CreditCard className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mb-3">
+                  Payment methods are securely managed through Stripe
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowAddPaymentDialog(true)}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Manage in Stripe Portal
+                </Button>
               </div>
-              <Button variant="outline" className="w-full" onClick={() => setShowAddPaymentDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Payment Method
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -458,16 +490,16 @@ export function AccountSettingsTab({
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">Two-Factor Authentication</p>
-                  <p className="text-xs text-muted-foreground">Not enabled</p>
+                  <p className="text-xs text-muted-foreground">Coming soon</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => window.location.href = "/dashboard/settings/security/2fa"}>Enable</Button>
+                <Button variant="outline" size="sm" disabled>Enable</Button>
               </div>
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">Active Sessions</p>
-                  <p className="text-xs text-muted-foreground">2 devices</p>
+                  <p className="text-xs text-muted-foreground">Coming soon</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => window.location.href = "/dashboard/settings/security/sessions"}>
+                <Button variant="outline" size="sm" disabled>
                   Manage
                   <ExternalLink className="h-3 w-3 ml-1" />
                 </Button>
@@ -505,32 +537,6 @@ export function AccountSettingsTab({
         </DialogContent>
       </Dialog>
 
-      {/* Edit Card Dialog */}
-      <Dialog open={showEditCardDialog} onOpenChange={setShowEditCardDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Payment Method</DialogTitle>
-            <DialogDescription>
-              Manage your existing payment method through Stripe
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 text-center text-muted-foreground">
-            <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Card editing is handled through Stripe&apos;s secure portal.</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditCardDialog(false)}>
-              Cancel
-            </Button>
-            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
-              window.open("/api/creator/stripe/portal", "_blank");
-              setShowEditCardDialog(false);
-            }}>
-              Open Stripe Portal
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
