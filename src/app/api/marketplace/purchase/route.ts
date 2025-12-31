@@ -23,12 +23,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "bookId is required" }, { status: 400 });
     }
 
-    // Get the book
+    // Get the book with creator info
     const book = await prisma.marketplaceBook.findFirst({
       where: {
         id: bookId,
         status: "LIVE",
         deletedAt: null,
+      },
+      include: {
+        creator: {
+          select: { id: true },
+        },
       },
     });
 
@@ -94,7 +99,11 @@ export async function POST(request: Request) {
         );
       }
 
-      // Deduct from user's balance
+      // Calculate platform fee (3%) and creator payout (97%)
+      const platformFee = Math.round(bookPrice * 0.03 * 100) / 100; // Round to 2 decimal places
+      const creatorPayout = Math.round((bookPrice - platformFee) * 100) / 100;
+
+      // Deduct from buyer's balance
       await prisma.user.update({
         where: { id: session.user.id },
         data: {
@@ -102,7 +111,15 @@ export async function POST(request: Request) {
         },
       });
 
-      // Complete the purchase
+      // Credit creator's DivinityCoin balance (97%)
+      await prisma.user.update({
+        where: { id: book.creator.id },
+        data: {
+          divinityCoinBalance: { increment: creatorPayout },
+        },
+      });
+
+      // Complete the purchase with fee details
       const completedPurchase = await prisma.marketplacePurchase.update({
         where: { id: purchase.id },
         data: {
@@ -110,6 +127,8 @@ export async function POST(request: Request) {
           completedAt: new Date(),
           deliveredAt: new Date(),
           divinityCoinPaymentId: `dc_${Date.now()}_${purchase.id}`,
+          platformFee,
+          creatorPayout,
         },
       });
 

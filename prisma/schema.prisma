@@ -2970,6 +2970,8 @@ model MarketplacePurchase {
 
   // Transaction
   amount            Decimal  @db.Decimal(10, 2)
+  platformFee       Decimal  @default(0) @db.Decimal(10, 2)
+  creatorPayout     Decimal  @default(0) @db.Decimal(10, 2)
   currency          String   @default("USD")
   paymentProcessor  PaymentProcessor
   transactionId     String?  // Stripe or DivinityCoin transaction ID

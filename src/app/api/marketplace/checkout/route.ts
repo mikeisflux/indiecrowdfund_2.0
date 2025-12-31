@@ -85,12 +85,19 @@ export async function POST(request: Request) {
       },
     });
 
+    // Calculate platform fee (3%) and creator payout (97%)
+    const bookPrice = Number(book.price);
+    const platformFeeAmount = Math.round(bookPrice * 0.03 * 100) / 100;
+    const creatorPayoutAmount = Math.round((bookPrice - platformFeeAmount) * 100) / 100;
+
     if (!purchase) {
       purchase = await prisma.marketplacePurchase.create({
         data: {
           bookId,
           buyerId: session.user.id,
           amount: book.price,
+          platformFee: platformFeeAmount,
+          creatorPayout: creatorPayoutAmount,
           currency: book.currency,
           paymentProcessor: "STRIPE",
           status: "PENDING",
@@ -102,8 +109,8 @@ export async function POST(request: Request) {
     const stripe = await getStripeInstance();
     const baseUrl = getSecureAppUrl();
 
-    // Calculate platform fee (3% for marketplace, same as crowdfunding)
-    const amountInCents = Math.round(Number(book.price) * 100);
+    // Calculate platform fee in cents for Stripe
+    const amountInCents = Math.round(bookPrice * 100);
     const platformFee = Math.round(amountInCents * 0.03); // 3% platform fee
 
     // Create Stripe Checkout Session
