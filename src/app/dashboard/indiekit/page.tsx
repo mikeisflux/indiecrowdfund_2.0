@@ -506,7 +506,7 @@ export default function IndieKitPage() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              {/* Row 1 */}
+              {/* Row 1: Dashboard & Core Management */}
               <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="overview">
                   <LayoutDashboard className="h-4 w-4 mr-2" />
@@ -516,13 +516,32 @@ export default function IndieKitPage() {
                   <Users className="h-4 w-4 mr-2" />
                   Backers
                 </TabsTrigger>
-                <TabsTrigger value="addons">
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Add-ons
+                <TabsTrigger value="projects">
+                  <FolderKanban className="h-4 w-4 mr-2" />
+                  Projects
                 </TabsTrigger>
+                <TabsTrigger value="updates">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Updates
+                </TabsTrigger>
+                <TabsTrigger value="timeline">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Timeline
+                </TabsTrigger>
+                <TabsTrigger value="support">
+                  <HeadphonesIcon className="h-4 w-4 mr-2" />
+                  Support
+                </TabsTrigger>
+              </TabsList>
+              {/* Row 2: Fulfillment & Products */}
+              <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="packages">
                   <Box className="h-4 w-4 mr-2" />
                   Packages
+                </TabsTrigger>
+                <TabsTrigger value="products">
+                  <BoxIcon className="h-4 w-4 mr-2" />
+                  Products
                 </TabsTrigger>
                 <TabsTrigger value="shipping">
                   <Truck className="h-4 w-4 mr-2" />
@@ -532,55 +551,47 @@ export default function IndieKitPage() {
                   <Download className="h-4 w-4 mr-2" />
                   Digital
                 </TabsTrigger>
+                <TabsTrigger value="addons">
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Add-ons
+                </TabsTrigger>
                 <TabsTrigger value="preorders">
                   <TrendingUp className="h-4 w-4 mr-2" />
                   Pre-Orders
                 </TabsTrigger>
               </TabsList>
-              {/* Row 2 */}
+              {/* Row 3: Communication & Marketing */}
               <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
+                <TabsTrigger value="inbox">
+                  <Inbox className="h-4 w-4 mr-2" />
+                  Inbox
+                </TabsTrigger>
                 <TabsTrigger value="emails">
                   <Mail className="h-4 w-4 mr-2" />
                   Email Campaigns
-                </TabsTrigger>
-                <TabsTrigger value="teaser">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Teaser Pages
                 </TabsTrigger>
                 <TabsTrigger value="email-list">
                   <UsersRound className="h-4 w-4 mr-2" />
                   Email List
                 </TabsTrigger>
-                <TabsTrigger value="projects">
-                  <FolderKanban className="h-4 w-4 mr-2" />
-                  Projects
+                <TabsTrigger value="teaser">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Teaser Pages
                 </TabsTrigger>
                 <TabsTrigger value="segments">
                   <Layers className="h-4 w-4 mr-2" />
                   Segments
                 </TabsTrigger>
-                <TabsTrigger value="export">
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export
-                </TabsTrigger>
-                <TabsTrigger value="timeline">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Timeline
-                </TabsTrigger>
-                <TabsTrigger value="updates">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Updates
-                </TabsTrigger>
               </TabsList>
-              {/* Row 3 */}
+              {/* Row 4: Data, Surveys & Settings */}
               <TabsList className="mb-6 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="counts">
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Counts
                 </TabsTrigger>
-                <TabsTrigger value="support">
-                  <HeadphonesIcon className="h-4 w-4 mr-2" />
-                  Support
+                <TabsTrigger value="export">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export
                 </TabsTrigger>
                 <TabsTrigger value="survey-builder">
                   <FormInput className="h-4 w-4 mr-2" />
@@ -590,10 +601,6 @@ export default function IndieKitPage() {
                   <ClipboardList className="h-4 w-4 mr-2" />
                   Manage Survey
                 </TabsTrigger>
-                <TabsTrigger value="products">
-                  <BoxIcon className="h-4 w-4 mr-2" />
-                  Products
-                </TabsTrigger>
                 <TabsTrigger value="settings">
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
@@ -601,10 +608,6 @@ export default function IndieKitPage() {
                 <TabsTrigger value="account">
                   <UserCircle className="h-4 w-4 mr-2" />
                   Account
-                </TabsTrigger>
-                <TabsTrigger value="inbox">
-                  <Inbox className="h-4 w-4 mr-2" />
-                  Inbox
                 </TabsTrigger>
               </TabsList>
 
