@@ -233,8 +233,8 @@ export default function BookDetailPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Cover Image / Video */}
-            <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border border-border">
-              {book.videoUrl ? (
+            {book.videoUrl ? (
+              <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border border-border">
                 <div className="relative w-full h-full">
                   <video
                     src={book.videoUrl}
@@ -248,41 +248,64 @@ export default function BookDetailPage() {
                     </div>
                   )}
                 </div>
-              ) : book.coverImage && typeof book.coverImage === 'string' ? (
-                <Image
-                  src={book.coverImage}
-                  alt={book.title}
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <BookOpen className="w-24 h-24 text-muted-foreground/50" />
+                {/* Badges */}
+                <div className="absolute top-4 left-4 flex gap-2">
+                  {book.isFeatured && (
+                    <Badge className="bg-amber-500/90 text-white border-0 backdrop-blur-sm">
+                      <Star className="w-3 h-3 mr-1 fill-current" />
+                      Featured
+                    </Badge>
+                  )}
+                  {book.isStaffPick && (
+                    <Badge className="bg-purple-500/90 text-white border-0 backdrop-blur-sm">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Staff Pick
+                    </Badge>
+                  )}
+                  {book.hasAdultContent && (
+                    <Badge className="bg-red-500/90 text-white border-0 backdrop-blur-sm">
+                      18+
+                    </Badge>
+                  )}
                 </div>
-              )}
-
-              {/* Badges */}
-              <div className="absolute top-4 left-4 flex gap-2">
-                {book.isFeatured && (
-                  <Badge className="bg-amber-500/90 text-white border-0 backdrop-blur-sm">
-                    <Star className="w-3 h-3 mr-1 fill-current" />
-                    Featured
-                  </Badge>
-                )}
-                {book.isStaffPick && (
-                  <Badge className="bg-purple-500/90 text-white border-0 backdrop-blur-sm">
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    Staff Pick
-                  </Badge>
-                )}
-                {book.hasAdultContent && (
-                  <Badge className="bg-red-500/90 text-white border-0 backdrop-blur-sm">
-                    18+
-                  </Badge>
-                )}
               </div>
-            </div>
+            ) : (
+              <div className="relative aspect-[2/3] max-w-md rounded-2xl overflow-hidden bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border border-border">
+                {book.coverImage && typeof book.coverImage === 'string' ? (
+                  <Image
+                    src={book.coverImage}
+                    alt={book.title}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <BookOpen className="w-24 h-24 text-muted-foreground/50" />
+                  </div>
+                )}
+                {/* Badges */}
+                <div className="absolute top-4 left-4 flex gap-2">
+                  {book.isFeatured && (
+                    <Badge className="bg-amber-500/90 text-white border-0 backdrop-blur-sm">
+                      <Star className="w-3 h-3 mr-1 fill-current" />
+                      Featured
+                    </Badge>
+                  )}
+                  {book.isStaffPick && (
+                    <Badge className="bg-purple-500/90 text-white border-0 backdrop-blur-sm">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Staff Pick
+                    </Badge>
+                  )}
+                  {book.hasAdultContent && (
+                    <Badge className="bg-red-500/90 text-white border-0 backdrop-blur-sm">
+                      18+
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Gallery */}
             {book.galleryImages && book.galleryImages.length > 0 && (
