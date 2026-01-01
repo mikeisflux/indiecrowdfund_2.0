@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Award,
   Target,
+  Bookmark,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { MobileProfileLinks } from "@/components/mobile-profile-links";
@@ -36,6 +37,7 @@ import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
 import { formatTimeRemaining } from "@/lib/utils";
+import { auth } from "@/lib/auth";
 
 // Force dynamic rendering to ensure database is available
 export const dynamic = "force-dynamic";
@@ -260,13 +262,33 @@ async function getPastCampaigns() {
   }
 }
 
+// Get user's followed project IDs
+async function getUserFollowedProjectIds(userId: string | undefined): Promise<Set<string>> {
+  if (!userId) return new Set();
+
+  try {
+    const follows = await db.projectFollower.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+    return new Set(follows.map((f: { projectId: string }) => f.projectId));
+  } catch (error) {
+    console.error("Error fetching user follows:", error);
+    return new Set();
+  }
+}
+
 export default async function HomePage() {
-  const [stats, featuredProjects, categories, prelaunchProjects, pastCampaigns] = await Promise.all([
+  const session = await auth();
+  const userId = session?.user?.id;
+
+  const [stats, featuredProjects, categories, prelaunchProjects, pastCampaigns, followedProjectIds] = await Promise.all([
     getPlatformStats(),
     getFeaturedProjects(),
     getCategoryCounts(),
     getPrelaunchProjects(),
     getPastCampaigns(),
+    getUserFollowedProjectIds(userId),
   ]);
 
   return (
@@ -514,9 +536,17 @@ export default async function HomePage() {
                     <Badge className="absolute left-3 top-3 bg-gradient-to-r from-primary to-emerald-600 border-0 shadow-lg">
                       {project.category}
                     </Badge>
-                    <div className="absolute right-3 top-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
-                      <div className="w-2 h-2 rounded-full bg-emerald-400 live-indicator" />
-                      Live
+                    <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 live-indicator" />
+                        Live
+                      </div>
+                      {followedProjectIds.has(project.id) && (
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-500/80 backdrop-blur-sm text-white text-xs">
+                          <Bookmark className="w-3 h-3 fill-current" />
+                          Following
+                        </div>
+                      )}
                     </div>
                   </div>
                   <CardContent className="pt-4">
@@ -606,9 +636,17 @@ export default async function HomePage() {
                         <Sparkles className="w-3 h-3 mr-1" />
                         Coming Soon
                       </Badge>
-                      <Badge className="absolute right-3 top-3 bg-background/80 backdrop-blur-sm" variant="secondary">
-                        {project.category}
-                      </Badge>
+                      <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
+                        <Badge className="bg-background/80 backdrop-blur-sm" variant="secondary">
+                          {project.category}
+                        </Badge>
+                        {followedProjectIds.has(project.id) && (
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-500/80 backdrop-blur-sm text-white text-xs">
+                            <Bookmark className="w-3 h-3 fill-current" />
+                            Following
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <CardContent className="pt-4">
                       <h3 className="mb-1 font-semibold line-clamp-1">{project.title}</h3>
