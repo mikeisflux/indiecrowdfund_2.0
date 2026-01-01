@@ -860,6 +860,9 @@ function ComposeEmailDialog({
   }, [open, prefill]);
 
   const handleSend = async () => {
+    // Prevent double-submit
+    if (isSending) return;
+
     if (!fromMailboxId || !to || !subject || !body) {
       setError("Please fill in all fields");
       return;
@@ -996,6 +999,7 @@ function ComposeEmailDialog({
             Cancel
           </Button>
           <Button
+            type="button"
             className="bg-emerald-600 hover:bg-emerald-700"
             onClick={handleSend}
             disabled={isSending}
