@@ -156,16 +156,27 @@ export default function AllBooksPage() {
               />
             </div>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-48">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="fiction">Fiction</SelectItem>
-                <SelectItem value="non-fiction">Non-Fiction</SelectItem>
-                <SelectItem value="comics">Comics</SelectItem>
-                <SelectItem value="art">Art Books</SelectItem>
-                <SelectItem value="educational">Educational</SelectItem>
+                <SelectItem value="all">All Genres</SelectItem>
+                <SelectItem value="superhero">Superhero</SelectItem>
+                <SelectItem value="manga">Manga</SelectItem>
+                <SelectItem value="action-adventure">Action/Adventure</SelectItem>
+                <SelectItem value="fantasy">Fantasy</SelectItem>
+                <SelectItem value="sci-fi">Sci-Fi</SelectItem>
+                <SelectItem value="horror">Horror</SelectItem>
+                <SelectItem value="romance">Romance</SelectItem>
+                <SelectItem value="slice-of-life">Slice of Life</SelectItem>
+                <SelectItem value="mystery-thriller">Mystery/Thriller</SelectItem>
+                <SelectItem value="comedy">Comedy/Humor</SelectItem>
+                <SelectItem value="drama">Drama</SelectItem>
+                <SelectItem value="indie">Indie/Alternative</SelectItem>
+                <SelectItem value="anthology">Anthology</SelectItem>
+                <SelectItem value="webcomic">Webcomic</SelectItem>
+                <SelectItem value="children">Children&apos;s/All Ages</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>

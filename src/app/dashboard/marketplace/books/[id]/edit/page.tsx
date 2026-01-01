@@ -84,18 +84,21 @@ interface BookData {
 }
 
 const CATEGORIES = [
-  { value: "fiction", label: "Fiction" },
-  { value: "non-fiction", label: "Non-Fiction" },
-  { value: "comics", label: "Comics & Graphic Novels" },
-  { value: "art", label: "Art Books" },
-  { value: "educational", label: "Educational" },
-  { value: "poetry", label: "Poetry" },
-  { value: "children", label: "Children's Books" },
-  { value: "self-help", label: "Self-Help" },
-  { value: "business", label: "Business" },
-  { value: "technology", label: "Technology" },
-  { value: "cooking", label: "Cooking & Food" },
-  { value: "travel", label: "Travel" },
+  { value: "superhero", label: "Superhero" },
+  { value: "manga", label: "Manga" },
+  { value: "action-adventure", label: "Action/Adventure" },
+  { value: "fantasy", label: "Fantasy" },
+  { value: "sci-fi", label: "Sci-Fi" },
+  { value: "horror", label: "Horror" },
+  { value: "romance", label: "Romance" },
+  { value: "slice-of-life", label: "Slice of Life" },
+  { value: "mystery-thriller", label: "Mystery/Thriller" },
+  { value: "comedy", label: "Comedy/Humor" },
+  { value: "drama", label: "Drama" },
+  { value: "indie", label: "Indie/Alternative" },
+  { value: "anthology", label: "Anthology" },
+  { value: "webcomic", label: "Webcomic" },
+  { value: "children", label: "Children's/All Ages" },
   { value: "other", label: "Other" },
 ];
 
