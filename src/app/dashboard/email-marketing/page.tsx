@@ -1,7 +1,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -38,7 +37,6 @@ import {
   FileSpreadsheet,
   Loader2,
   CheckCircle,
-  XCircle,
   Download,
   BarChart3,
   Megaphone,
@@ -51,6 +49,7 @@ import {
 import { toast } from "sonner";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
+import { ImportEmailDialog } from "@/app/dashboard/indiekit/components/dialogs";
 
 interface Subscriber {
   id: string;
@@ -88,12 +87,8 @@ export default function EmailMarketingPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"subscribers" | "campaigns">("subscribers");
 
-  // CSV Upload state
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadResult, setUploadResult] = useState<{ success: number; failed: number; errors: string[] } | null>(null);
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Import dialog state
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Campaign composer state
   const [showCampaignDialog, setShowCampaignDialog] = useState(false);
@@ -160,67 +155,10 @@ export default function EmailMarketingPage() {
     fetchData();
   }, [fetchData]);
 
-  // Handle CSV file upload
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith(".csv")) {
-      toast.error("Please upload a CSV file");
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadProgress(0);
-    setUploadResult(null);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      // Simulate progress for UX
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => Math.min(prev + 10, 90));
-      }, 200);
-
-      const res = await fetch("/api/creator/email-marketing/subscribers/import", {
-        method: "POST",
-        headers: getCSRFHeaders(),
-        body: formData,
-      });
-
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to import subscribers");
-      }
-
-      const data = await res.json();
-      setUploadResult({
-        success: data.imported || 0,
-        failed: data.failed || 0,
-        errors: data.errors || [],
-      });
-
-      if (data.imported > 0) {
-        toast.success(`Successfully imported ${data.imported} subscribers`);
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to upload file");
-      setUploadResult({
-        success: 0,
-        failed: 1,
-        errors: [error instanceof Error ? error.message : "Unknown error"],
-      });
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+  // Handle import complete callback
+  const handleImportComplete = (count: number) => {
+    if (count > 0) {
+      fetchData();
     }
   };
 
@@ -578,83 +516,10 @@ export default function EmailMarketingPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-4">
-                  <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <FileSpreadsheet className="h-4 w-4 mr-2" />
-                        Upload CSV
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Import Subscribers from CSV</DialogTitle>
-                        <DialogDescription>
-                          Upload a CSV file with &quot;name&quot; and &quot;email&quot; columns. Imported subscribers will also be added to the admin AI marketing system with your creator tag.
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <div className="space-y-4 py-4">
-                        <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".csv"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            id="csv-upload"
-                          />
-                          {isUploading ? (
-                            <div className="space-y-3">
-                              <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
-                              <p className="text-sm text-muted-foreground">Uploading...</p>
-                              <Progress value={uploadProgress} className="w-full" />
-                            </div>
-                          ) : uploadResult ? (
-                            <div className="space-y-3">
-                              {uploadResult.success > 0 ? (
-                                <CheckCircle className="h-10 w-10 mx-auto text-green-500" />
-                              ) : (
-                                <XCircle className="h-10 w-10 mx-auto text-red-500" />
-                              )}
-                              <p className="font-medium">
-                                {uploadResult.success} imported, {uploadResult.failed} failed
-                              </p>
-                              {uploadResult.errors.length > 0 && (
-                                <div className="text-xs text-red-500 max-h-20 overflow-y-auto">
-                                  {uploadResult.errors.slice(0, 5).map((error, i) => (
-                                    <p key={i}>{error}</p>
-                                  ))}
-                                </div>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setUploadResult(null);
-                                  fileInputRef.current?.click();
-                                }}
-                              >
-                                Upload Another
-                              </Button>
-                            </div>
-                          ) : (
-                            <label htmlFor="csv-upload" className="cursor-pointer">
-                              <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                              <p className="font-medium">Click to upload CSV</p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                or drag and drop
-                              </p>
-                            </label>
-                          )}
-                        </div>
-
-                        <Button variant="link" size="sm" onClick={downloadTemplate}>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download CSV Template
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Button onClick={() => setShowImportDialog(true)}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Upload CSV
+                  </Button>
 
                   <Button variant="outline" onClick={downloadTemplate}>
                     <Download className="h-4 w-4 mr-2" />
@@ -922,6 +787,13 @@ export default function EmailMarketingPage() {
             </Card>
           </div>
         )}
+
+        {/* Import Dialog */}
+        <ImportEmailDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          onImport={handleImportComplete}
+        />
       </div>
     </div>
   );
