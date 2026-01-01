@@ -386,10 +386,9 @@ export default async function HomePage() {
 
         <div className="container relative">
           <div className="mx-auto max-w-3xl text-center">
-            <Badge className="mb-6 px-4 py-1.5 bg-gradient-to-r from-primary/20 to-cyan-500/20 border-primary/30 text-primary animate-fade-in-up">
-              <Sparkles className="w-3 h-3 mr-1.5" />
-              Free speech advocates
-            </Badge>
+            <p className="mb-6 text-lg font-medium text-primary animate-fade-in-up">
+              IndieCrowdfund leads the way!
+            </p>
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <span className="gradient-text">Support</span> Who You{" "}
               <span className="relative">
