@@ -591,12 +591,18 @@ export default function NewBookPage() {
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
+  const [draftCheckComplete, setDraftCheckComplete] = useState(false);
   const [showDraftDialog, setShowDraftDialog] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<{ formData: BookFormData; currentStep: number; savedAt: string } | null>(null);
   const [formData, setFormData] = useState<BookFormData>(INITIAL_FORM_DATA);
 
   // Check for saved draft on mount and show dialog if found
   useEffect(() => {
+    // Reset form data on mount to ensure clean state
+    setFormData(INITIAL_FORM_DATA);
+    setTagsInput("");
+    setCurrentStep(1);
+
     try {
       const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (savedDraft) {
@@ -605,17 +611,22 @@ export default function NewBookPage() {
         if (parsed.formData?.title?.trim()) {
           setPendingDraft(parsed);
           setShowDraftDialog(true);
+          setDraftCheckComplete(true);
         } else {
           // Empty draft, just clear it
           localStorage.removeItem(DRAFT_STORAGE_KEY);
           setIsInitialized(true);
+          setDraftCheckComplete(true);
         }
       } else {
         setIsInitialized(true);
+        setDraftCheckComplete(true);
       }
     } catch (error) {
       console.error("Error loading draft:", error);
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
       setIsInitialized(true);
+      setDraftCheckComplete(true);
     }
   }, []);
 
@@ -789,6 +800,21 @@ export default function NewBookPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Show loading while checking for draft, or while dialog is showing */}
+      {(!draftCheckComplete || showDraftDialog) && (
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-purple-500 dark:text-purple-400" />
+            <p className="text-muted-foreground">
+              {showDraftDialog ? "Choose how to continue..." : "Loading..."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Only render form after draft check is complete AND dialog is dismissed */}
+      {draftCheckComplete && !showDraftDialog && (
+        <>
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -1209,6 +1235,8 @@ export default function NewBookPage() {
           </div>
         </div>
       </main>
+        </>
+      )}
     </div>
   );
 }
