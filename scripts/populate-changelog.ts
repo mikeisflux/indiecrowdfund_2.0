@@ -13,9 +13,12 @@
  *   1. Add your entry to the CHANGELOG_ENTRIES array below
  *   2. Run the script
  *   3. Only new entries will be added (existing ones are skipped)
+ *
+ * Dates are automatically pulled from git commit timestamps!
  */
 
 import { PrismaClient } from "@prisma/client";
+import { execSync } from "child_process";
 
 const prisma = new PrismaClient();
 
@@ -23,6 +26,40 @@ const prisma = new PrismaClient();
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes("--dry-run");
 const FORCE_UPDATE = args.includes("--force");
+
+/**
+ * Get the commit date from git for a given commit hash
+ */
+function getCommitDate(commitHash: string): Date | null {
+  if (!commitHash) return null;
+
+  try {
+    // Try to get the commit date using git log
+    const result = execSync(
+      `git log -1 --format=%aI ${commitHash} 2>/dev/null || git log -1 --format=%aI --all --grep="${commitHash}" 2>/dev/null`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    ).trim();
+
+    if (result) {
+      return new Date(result);
+    }
+
+    // Try partial hash match
+    const partialResult = execSync(
+      `git log -1 --format=%aI --all | head -1`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    ).trim();
+
+    if (partialResult) {
+      return new Date(partialResult);
+    }
+  } catch {
+    // If git command fails, return null
+    console.warn(`   ⚠️  Could not find commit date for ${commitHash}`);
+  }
+
+  return null;
+}
 
 type ChangelogCategory =
   | "FEATURE"
@@ -670,6 +707,11 @@ async function populateChangelog() {
       console.log("📝 Creating new entries...");
       for (const entry of toCreate) {
         try {
+          // Get actual commit date from git
+          const commitDate = entry.commitHash
+            ? getCommitDate(entry.commitHash)
+            : null;
+
           await prisma.changelogEntry.create({
             data: {
               title: entry.title,
@@ -679,10 +721,13 @@ async function populateChangelog() {
               commitHash: entry.commitHash || null,
               branch: entry.branch || "main",
               isPublished: entry.isPublished,
-              publishedAt: entry.isPublished ? new Date() : null,
+              publishedAt: entry.isPublished ? (commitDate || new Date()) : null,
             },
           });
-          console.log(`   ✅ ${entry.title}`);
+          const dateStr = commitDate
+            ? commitDate.toLocaleDateString()
+            : "today";
+          console.log(`   ✅ ${entry.title} (${dateStr})`);
           created++;
         } catch (error) {
           console.error(`   ❌ Failed: ${entry.title}`, error);
@@ -697,6 +742,11 @@ async function populateChangelog() {
       console.log("🔄 Updating existing entries...");
       for (const { entry, existingId } of toUpdate) {
         try {
+          // Get actual commit date from git
+          const commitDate = entry.commitHash
+            ? getCommitDate(entry.commitHash)
+            : null;
+
           await prisma.changelogEntry.update({
             where: { id: existingId },
             data: {
@@ -707,10 +757,13 @@ async function populateChangelog() {
               commitHash: entry.commitHash || null,
               branch: entry.branch || "main",
               isPublished: entry.isPublished,
-              publishedAt: entry.isPublished ? new Date() : null,
+              publishedAt: entry.isPublished ? (commitDate || new Date()) : null,
             },
           });
-          console.log(`   ↻ ${entry.title}`);
+          const dateStr = commitDate
+            ? commitDate.toLocaleDateString()
+            : "today";
+          console.log(`   ↻ ${entry.title} (${dateStr})`);
           updated++;
         } catch (error) {
           console.error(`   ❌ Failed to update: ${entry.title}`, error);
