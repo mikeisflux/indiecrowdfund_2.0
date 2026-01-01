@@ -19,6 +19,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   BookOpen,
   ArrowLeft,
   ArrowRight,
@@ -34,6 +44,7 @@ import {
   Upload,
   FolderOpen,
   X,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -556,46 +567,88 @@ function FileUpload({
 
 const DRAFT_STORAGE_KEY = "marketplace_book_draft";
 
+const INITIAL_FORM_DATA: BookFormData = {
+  title: "",
+  description: "",
+  category: "",
+  price: "",
+  currency: "USD",
+  paymentProcessor: "STRIPE",
+  promoImageUrl: "",
+  promoVideoUrl: "",
+  pdfFileUrl: "",
+  pdfFileName: "",
+  pdfStorageKey: "",
+  isNsfw: false,
+  tags: [],
+};
+
 export default function NewBookPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
-  const [formData, setFormData] = useState<BookFormData>({
-    title: "",
-    description: "",
-    category: "",
-    price: "",
-    currency: "USD",
-    paymentProcessor: "STRIPE",
-    promoImageUrl: "",
-    promoVideoUrl: "",
-    pdfFileUrl: "",
-    pdfFileName: "",
-    pdfStorageKey: "",
-    isNsfw: false,
-    tags: [],
-  });
+  const [showDraftDialog, setShowDraftDialog] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState<{ formData: BookFormData; currentStep: number; savedAt: string } | null>(null);
+  const [formData, setFormData] = useState<BookFormData>(INITIAL_FORM_DATA);
 
-  // Load saved draft from localStorage on mount
+  // Check for saved draft on mount and show dialog if found
   useEffect(() => {
     try {
       const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (savedDraft) {
         const parsed = JSON.parse(savedDraft);
-        // Merge with defaults to ensure all fields exist
-        if (parsed.formData) {
-          setFormData(prev => ({ ...prev, ...parsed.formData }));
-          setTagsInput(parsed.formData.tags?.join(", ") || "");
+        // Only show dialog if draft has meaningful content (at least a title)
+        if (parsed.formData?.title?.trim()) {
+          setPendingDraft(parsed);
+          setShowDraftDialog(true);
+        } else {
+          // Empty draft, just clear it
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+          setIsInitialized(true);
         }
-        setCurrentStep(parsed.currentStep || 1);
+      } else {
+        setIsInitialized(true);
       }
     } catch (error) {
       console.error("Error loading draft:", error);
+      setIsInitialized(true);
     }
-    setIsInitialized(true);
   }, []);
+
+  // Handle user choosing to continue with saved draft
+  const handleContinueDraft = () => {
+    if (pendingDraft?.formData) {
+      setFormData(prev => ({ ...prev, ...pendingDraft.formData }));
+      setTagsInput(pendingDraft.formData.tags?.join(", ") || "");
+      setCurrentStep(pendingDraft.currentStep || 1);
+    }
+    setShowDraftDialog(false);
+    setPendingDraft(null);
+    setIsInitialized(true);
+  };
+
+  // Handle user choosing to start fresh
+  const handleStartFresh = () => {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+    setFormData(INITIAL_FORM_DATA);
+    setTagsInput("");
+    setCurrentStep(1);
+    setShowDraftDialog(false);
+    setPendingDraft(null);
+    setIsInitialized(true);
+    toast.success("Starting fresh - previous draft cleared");
+  };
+
+  // Clear draft manually at any time
+  const handleClearDraft = () => {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+    setFormData(INITIAL_FORM_DATA);
+    setTagsInput("");
+    setCurrentStep(1);
+    toast.success("Draft cleared - starting fresh");
+  };
 
   // Autosave to localStorage when formData or currentStep changes
   useEffect(() => {
@@ -703,6 +756,31 @@ export default function NewBookPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Draft Detection Dialog */}
+      <AlertDialog open={showDraftDialog} onOpenChange={setShowDraftDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Continue Previous Draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              We found a saved draft for &quot;{pendingDraft?.formData?.title || "Untitled"}&quot;
+              {pendingDraft?.savedAt && (
+                <span className="block mt-1 text-xs text-muted-foreground">
+                  Last saved: {new Date(pendingDraft.savedAt).toLocaleString()}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleStartFresh}>
+              Start Fresh
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleContinueDraft}>
+              Continue Draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -721,10 +799,24 @@ export default function NewBookPage() {
               Back to Marketplace
             </Link>
           </div>
-          <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
-            <ShoppingCart className="w-3 h-3 mr-1" />
-            New Book
-          </Badge>
+          <div className="flex items-center gap-3">
+            {/* Clear Draft Button - only show if form has content */}
+            {isInitialized && formData.title.trim() && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearDraft}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Clear Draft
+              </Button>
+            )}
+            <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
+              <ShoppingCart className="w-3 h-3 mr-1" />
+              New Book
+            </Badge>
+          </div>
         </div>
       </header>
 

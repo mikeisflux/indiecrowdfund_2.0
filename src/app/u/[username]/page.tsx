@@ -432,7 +432,7 @@ function ProjectCard({ project }: { project: ProjectSummary }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <h3 className="font-semibold truncate">{project.title}</h3>
-              <Badge variant={project.status === "ACTIVE" ? "default" : "secondary"}>
+              <Badge variant={project.status === "LIVE" ? "default" : "secondary"}>
                 {project.status}
               </Badge>
             </div>

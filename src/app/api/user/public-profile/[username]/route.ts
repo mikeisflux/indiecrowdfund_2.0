@@ -59,11 +59,11 @@ export async function GET(
         createdProjects: {
           where: {
             status: {
-              in: ["ACTIVE", "FUNDED", "COMPLETED"],
+              in: ["LIVE", "FUNDED", "PAUSED"],
             },
           },
           orderBy: { createdAt: "desc" },
-          take: 10,
+          take: 20,
           select: {
             id: true,
             title: true,
@@ -86,12 +86,12 @@ export async function GET(
             status: "COMPLETED",
             project: {
               status: {
-                in: ["ACTIVE", "FUNDED", "COMPLETED"],
+                in: ["LIVE", "FUNDED", "PAUSED"],
               },
             },
           },
           orderBy: { createdAt: "desc" },
-          take: 10,
+          take: 50,
           select: {
             project: {
               select: {
