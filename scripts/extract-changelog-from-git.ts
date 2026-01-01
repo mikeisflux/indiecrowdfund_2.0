@@ -289,8 +289,9 @@ async function main() {
   console.log(`   Found ${existing.length} existing entries\n`);
 
   // Find new entries (not already in database)
-  const existingHashes = new Set(existing.map((e) => e.commitHash).filter(Boolean));
-  const existingTitles = new Set(existing.map((e) => e.title.toLowerCase()));
+  type ExistingEntry = { id: string; title: string; commitHash: string | null };
+  const existingHashes = new Set(existing.map((e: ExistingEntry) => e.commitHash).filter(Boolean));
+  const existingTitles = new Set(existing.map((e: ExistingEntry) => e.title.toLowerCase()));
 
   const newEntries = entries.filter((e) => {
     if (existingHashes.has(e.commitHash)) return false;
@@ -362,7 +363,7 @@ async function main() {
     if (FORCE_UPDATE && toUpdate.length > 0) {
       console.log("\n🔄 Updating existing entries...");
       for (const entry of toUpdate) {
-        const existingEntry = existing.find((e) => e.commitHash === entry.commitHash);
+        const existingEntry = existing.find((e: ExistingEntry) => e.commitHash === entry.commitHash);
         if (existingEntry) {
           try {
             await prisma.changelogEntry.update({
