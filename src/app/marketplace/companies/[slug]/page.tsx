@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
@@ -92,12 +92,9 @@ function BookTile({ book }: { book: Book }) {
   );
 }
 
-export default function CompanyProfilePage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = use(params);
+export default function CompanyProfilePage() {
+  const params = useParams();
+  const slug = params.slug as string;
   const router = useRouter();
   const [company, setCompany] = useState<Company | null>(null);
   const [books, setBooks] = useState<Book[]>([]);

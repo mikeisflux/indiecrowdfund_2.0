@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -72,12 +72,9 @@ interface Book {
   } | null;
 }
 
-export default function BookDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = use(params);
+export default function BookDetailPage() {
+  const params = useParams();
+  const slug = params.slug as string;
   const router = useRouter();
   const [book, setBook] = useState<Book | null>(null);
   const [hasPurchased, setHasPurchased] = useState(false);

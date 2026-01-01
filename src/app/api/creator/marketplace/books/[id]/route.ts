@@ -152,6 +152,18 @@ export async function PUT(
     const coverImageChanged = promoImageUrl !== undefined && promoImageUrl !== existingBook.coverImageUrl;
     const requiresReReview = existingBook.status === "LIVE" && (pdfChanged || coverImageChanged);
 
+    // Debug logging
+    console.log("[Book Update Debug]", {
+      bookStatus: existingBook.status,
+      promoImageUrl,
+      existingCoverImageUrl: existingBook.coverImageUrl,
+      pdfFileUrl,
+      existingPdfFileUrl: existingBook.pdfFileUrl,
+      pdfChanged,
+      coverImageChanged,
+      requiresReReview,
+    });
+
     if (requiresReReview) {
       updateData.status = "PENDING_REVIEW";
       updateData.submittedAt = new Date();
