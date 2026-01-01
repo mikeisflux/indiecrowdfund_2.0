@@ -545,6 +545,20 @@ function FileUpload({
             <p className="text-xs text-white/40">Click or drag & drop</p>
           </div>
         )}
+        {/* Delete button - positioned in corner */}
+        {currentUrl && !uploading && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpload("");
+              toast.info(`${label} removed`);
+            }}
+            className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
