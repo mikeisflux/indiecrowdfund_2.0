@@ -248,7 +248,7 @@ function PDFFilePicker({
     return (
       <div className="space-y-3">
         <Label>PDF File *</Label>
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 relative">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-emerald-500/20">
               <FileText className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
@@ -265,6 +265,17 @@ function PDFFilePicker({
               Change
             </Button>
           </div>
+          {/* Delete button */}
+          <button
+            type="button"
+            onClick={() => {
+              onSelect("", "", "");
+              toast.info("PDF file removed");
+            }}
+            className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-500 dark:text-red-400 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       </div>
     );
@@ -531,8 +542,11 @@ export default function NewBookPage() {
       const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (savedDraft) {
         const parsed = JSON.parse(savedDraft);
-        setFormData(parsed.formData || {});
-        setTagsInput(parsed.formData?.tags?.join(", ") || "");
+        // Merge with defaults to ensure all fields exist
+        if (parsed.formData) {
+          setFormData(prev => ({ ...prev, ...parsed.formData }));
+          setTagsInput(parsed.formData.tags?.join(", ") || "");
+        }
         setCurrentStep(parsed.currentStep || 1);
       }
     } catch (error) {
