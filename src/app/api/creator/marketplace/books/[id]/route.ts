@@ -147,9 +147,12 @@ export async function PUT(
       updateData.rejectionReason = null;
     }
 
-    // If the book is LIVE and the PDF file was changed, require re-review
+    // If the book is LIVE and PDF or cover image was changed, require re-review
     const pdfChanged = pdfFileUrl !== undefined && pdfFileUrl !== existingBook.pdfFileUrl;
-    if (pdfChanged && existingBook.status === "LIVE") {
+    const coverImageChanged = promoImageUrl !== undefined && promoImageUrl !== existingBook.coverImageUrl;
+    const requiresReReview = existingBook.status === "LIVE" && (pdfChanged || coverImageChanged);
+
+    if (requiresReReview) {
       updateData.status = "PENDING_REVIEW";
       updateData.submittedAt = new Date();
       updateData.approvedAt = null;
@@ -163,8 +166,12 @@ export async function PUT(
       data: updateData,
     });
 
-    // Create review history entry if sent for re-review due to PDF change
-    if (pdfChanged && existingBook.status === "LIVE") {
+    // Create review history entry if sent for re-review
+    if (requiresReReview) {
+      const changedItems = [];
+      if (pdfChanged) changedItems.push("PDF file");
+      if (coverImageChanged) changedItems.push("cover image");
+
       await prisma.marketplaceBookReview.create({
         data: {
           bookId: id,
@@ -172,7 +179,7 @@ export async function PUT(
           action: "SUBMITTED",
           previousStatus: "LIVE",
           newStatus: "PENDING_REVIEW",
-          notes: "PDF file updated - sent for re-review",
+          notes: `${changedItems.join(" and ")} updated - sent for re-review`,
         },
       });
     }
@@ -185,7 +192,7 @@ export async function PUT(
         slug: book.slug,
         status: book.status,
       },
-      requiresReReview: pdfChanged && existingBook.status === "LIVE",
+      requiresReReview,
     });
   } catch (error) {
     console.error("Error updating book:", error);
