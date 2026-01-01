@@ -117,6 +117,7 @@ export async function PUT(
       promoImageUrl,
       promoVideoUrl,
       pdfFileUrl,
+      pdfFileName,
       isNsfw,
       tags,
     } = body;
@@ -133,6 +134,7 @@ export async function PUT(
     if (promoImageUrl !== undefined) updateData.coverImageUrl = promoImageUrl;
     if (promoVideoUrl !== undefined) updateData.promoVideoUrl = promoVideoUrl;
     if (pdfFileUrl !== undefined) updateData.pdfFileUrl = pdfFileUrl;
+    if (pdfFileName !== undefined) updateData.pdfFileName = pdfFileName;
     if (isNsfw !== undefined) {
       updateData.hasAdultContent = isNsfw;
       updateData.promoContentSfw = !isNsfw;
@@ -145,12 +147,35 @@ export async function PUT(
       updateData.rejectionReason = null;
     }
 
+    // If the book is LIVE and the PDF file was changed, require re-review
+    const pdfChanged = pdfFileUrl !== undefined && pdfFileUrl !== existingBook.pdfFileUrl;
+    if (pdfChanged && existingBook.status === "LIVE") {
+      updateData.status = "PENDING_REVIEW";
+      updateData.submittedAt = new Date();
+      updateData.approvedAt = null;
+      updateData.publishedAt = null;
+    }
+
     updateData.updatedAt = new Date();
 
     const book = await prisma.marketplaceBook.update({
       where: { id },
       data: updateData,
     });
+
+    // Create review history entry if sent for re-review due to PDF change
+    if (pdfChanged && existingBook.status === "LIVE") {
+      await prisma.marketplaceBookReview.create({
+        data: {
+          bookId: id,
+          reviewerId: session.user.id,
+          action: "SUBMITTED",
+          previousStatus: "LIVE",
+          newStatus: "PENDING_REVIEW",
+          notes: "PDF file updated - sent for re-review",
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -160,6 +185,7 @@ export async function PUT(
         slug: book.slug,
         status: book.status,
       },
+      requiresReReview: pdfChanged && existingBook.status === "LIVE",
     });
   } catch (error) {
     console.error("Error updating book:", error);

@@ -557,6 +557,7 @@ export default function EditBookPage() {
   const [saving, setSaving] = useState(false);
   const [bookStatus, setBookStatus] = useState<string>("");
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
+  const [originalPdfUrl, setOriginalPdfUrl] = useState<string>("");
   const [formData, setFormData] = useState<BookFormData>({
     title: "",
     description: "",
@@ -607,6 +608,7 @@ export default function EditBookPage() {
         });
         setBookStatus(book.status);
         setRejectionReason(book.rejectionReason);
+        setOriginalPdfUrl(book.pdfFileUrl);
       } catch (error) {
         console.error("Error fetching book:", error);
         toast.error("Failed to load book");
@@ -690,6 +692,15 @@ export default function EditBookPage() {
         throw new Error(data.error || "Failed to update book");
       }
 
+      const updateResult = await res.json();
+
+      // If PDF changed on a live book, it was sent for re-review
+      if (updateResult.requiresReReview) {
+        toast.info("Book sent for re-review due to PDF file change. It will be unavailable until approved.");
+        router.push("/dashboard/marketplace");
+        return;
+      }
+
       // If user wants to submit for review after saving
       if (submitForReview) {
         const submitRes = await fetch(`/api/creator/marketplace/books/${bookId}/submit`, {
@@ -729,6 +740,7 @@ export default function EditBookPage() {
   const canEdit = bookStatus === "DRAFT" || bookStatus === "REJECTED";
   const isPendingReview = bookStatus === "PENDING_REVIEW";
   const isLive = bookStatus === "LIVE";
+  const pdfChanged = isLive && originalPdfUrl && formData.pdfFileUrl !== originalPdfUrl;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
@@ -768,12 +780,28 @@ export default function EditBookPage() {
           </div>
         )}
 
-        {isLive && (
+        {isLive && !pdfChanged && (
           <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3">
             <Check className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-            <p className="text-emerald-300">
-              This book is live on the marketplace. Editing will require re-approval.
-            </p>
+            <div className="text-emerald-300">
+              <p>This book is live on the marketplace.</p>
+              <p className="text-sm text-emerald-300/70 mt-1">
+                Note: Changing the PDF file will require re-approval before going live again.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {pdfChanged && (
+          <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <div className="text-amber-300">
+              <p className="font-medium">PDF File Changed - Re-Review Required</p>
+              <p className="text-sm text-amber-300/70 mt-1">
+                You&apos;ve updated the PDF file. Saving these changes will send the book for re-review,
+                and it will be temporarily unavailable on the marketplace until approved.
+              </p>
+            </div>
           </div>
         )}
 
