@@ -519,7 +519,7 @@ export async function DELETE(req: NextRequest) {
       where: { creatorId: userId },
       select: { id: true }
     });
-    const bookIds = userBooks.map(b => b.id);
+    const bookIds = userBooks.map((b: { id: string }) => b.id);
 
     // Use a transaction to delete everything
     await db.$transaction(async (tx) => {
@@ -837,8 +837,6 @@ export async function DELETE(req: NextRequest) {
       await tx.user.delete({
         where: { id: userId }
       });
-    }, {
-      timeout: 60000 // 60 second timeout for large deletions
     });
 
     return NextResponse.json({
