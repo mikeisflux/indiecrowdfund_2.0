@@ -548,6 +548,16 @@ export async function DELETE(req: NextRequest) {
         where: { userId }
       });
 
+      // Delete marketplace book reviews made BY this user (as reviewer)
+      await tx.marketplaceBookReview.deleteMany({
+        where: { reviewerId: userId }
+      });
+
+      // Delete marketplace purchases made BY this user (as buyer)
+      await tx.marketplacePurchase.deleteMany({
+        where: { buyerId: userId }
+      });
+
       // =====================================================
       // PHASE 2: Delete Project-related records
       // =====================================================
@@ -795,20 +805,28 @@ export async function DELETE(req: NextRequest) {
         where: { userId }
       });
 
-      // Delete retailer pledges (if user is a retailer)
-      await tx.retailerPledge.deleteMany({
-        where: { userId }
+      // Get the retailer associated with this user (if any)
+      const userRetailer = await tx.retailer.findUnique({
+        where: { userId },
+        select: { id: true }
       });
 
-      // Delete retailer satisfaction surveys
-      await tx.retailerSatisfactionSurvey.deleteMany({
-        where: { userId }
-      });
+      if (userRetailer) {
+        // Delete retailer satisfaction surveys
+        await tx.retailerSatisfactionSurvey.deleteMany({
+          where: { retailerId: userRetailer.id }
+        });
 
-      // Delete retailer (if user is a retailer)
-      await tx.retailer.deleteMany({
-        where: { userId }
-      });
+        // Delete retailer pledges
+        await tx.retailerPledge.deleteMany({
+          where: { retailerId: userRetailer.id }
+        });
+
+        // Delete retailer
+        await tx.retailer.delete({
+          where: { id: userRetailer.id }
+        });
+      }
 
       // Delete API keys created by user
       await tx.apiKey.deleteMany({
