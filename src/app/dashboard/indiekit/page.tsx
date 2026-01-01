@@ -44,6 +44,7 @@ import {
   FormInput,
   BoxIcon,
   UserCircle,
+  Inbox,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -95,6 +96,7 @@ import {
   ProductsTab,
   AccountSettingsTab,
   UpdatesTab,
+  InboxTab,
 } from "./components/tabs";
 import { WhatsNextBanner } from "./components/whats-next-banner";
 
@@ -600,6 +602,10 @@ export default function IndieKitPage() {
                   <UserCircle className="h-4 w-4 mr-2" />
                   Account
                 </TabsTrigger>
+                <TabsTrigger value="inbox">
+                  <Inbox className="h-4 w-4 mr-2" />
+                  Inbox
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview">
@@ -756,6 +762,10 @@ export default function IndieKitPage() {
 
               <TabsContent value="account">
                 <AccountSettingsTab />
+              </TabsContent>
+
+              <TabsContent value="inbox">
+                <InboxTab />
               </TabsContent>
             </Tabs>
           </div>
