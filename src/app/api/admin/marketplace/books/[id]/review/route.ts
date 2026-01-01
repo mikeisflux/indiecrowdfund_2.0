@@ -73,8 +73,8 @@ export async function POST(
       data: {
         status: newStatus,
         rejectionReason: action === "reject" ? reason : null,
-        reviewedAt: new Date(),
-        reviewedById: session.user.id,
+        approvedAt: action === "approve" ? new Date() : null,
+        rejectedAt: action === "reject" ? new Date() : null,
         publishedAt: action === "approve" ? new Date() : null,
       },
     });
@@ -85,6 +85,8 @@ export async function POST(
         bookId: id,
         reviewerId: session.user.id,
         action: action === "approve" ? "APPROVED" : "REJECTED",
+        previousStatus: "PENDING_REVIEW",
+        newStatus: newStatus,
         notes: reason || null,
       },
     });
