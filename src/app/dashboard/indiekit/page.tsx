@@ -539,7 +539,7 @@ export default function IndieKitPage() {
               <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
                 <TabsTrigger value="emails">
                   <Mail className="h-4 w-4 mr-2" />
-                  Emails
+                  Email Campaigns
                 </TabsTrigger>
                 <TabsTrigger value="teaser">
                   <FileText className="h-4 w-4 mr-2" />

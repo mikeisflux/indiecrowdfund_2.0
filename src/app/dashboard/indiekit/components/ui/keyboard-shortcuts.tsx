@@ -197,7 +197,7 @@ export const indieKitShortcuts = [
   { key: "g", modifiers: ["shift"] as const, description: "Go to Dashboard", category: "Navigation" },
   { key: "b", modifiers: ["shift"] as const, description: "Go to Backers", category: "Navigation" },
   { key: "o", modifiers: ["shift"] as const, description: "Go to Orders", category: "Navigation" },
-  { key: "e", modifiers: ["shift"] as const, description: "Go to Emails", category: "Navigation" },
+  { key: "e", modifiers: ["shift"] as const, description: "Go to Email Campaigns", category: "Navigation" },
   { key: "s", modifiers: ["shift"] as const, description: "Go to Settings", category: "Navigation" },
 
   // Actions
@@ -252,7 +252,7 @@ export function useIndieKitShortcuts(
       { key: "g", modifiers: ["shift"], description: "Go to Dashboard", action: () => handlers.onNavigate!("overview") },
       { key: "b", modifiers: ["shift"], description: "Go to Backers", action: () => handlers.onNavigate!("backers") },
       { key: "o", modifiers: ["shift"], description: "Go to Orders", action: () => handlers.onNavigate!("orders") },
-      { key: "e", modifiers: ["shift"], description: "Go to Emails", action: () => handlers.onNavigate!("emails") },
+      { key: "e", modifiers: ["shift"], description: "Go to Email Campaigns", action: () => handlers.onNavigate!("emails") },
       { key: "s", modifiers: ["shift"], description: "Go to Settings", action: () => handlers.onNavigate!("settings") }
     );
   }

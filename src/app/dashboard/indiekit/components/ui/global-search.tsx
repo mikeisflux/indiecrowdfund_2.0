@@ -70,7 +70,7 @@ const demoResults: SearchResult[] = [
 const quickActions = [
   { label: "Go to Backers", shortcut: "⇧B", action: "backers" },
   { label: "Go to Orders", shortcut: "⇧O", action: "orders" },
-  { label: "Go to Emails", shortcut: "⇧E", action: "emails" },
+  { label: "Go to Email Campaigns", shortcut: "⇧E", action: "emails" },
   { label: "Go to Settings", shortcut: "⇧S", action: "settings" },
 ];
 

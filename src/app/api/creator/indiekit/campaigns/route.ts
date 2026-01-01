@@ -41,32 +41,63 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { projectId, action, campaignId, name, subject, content } = body;
+    const { projectId, action, campaignId, name, title, subject, content, stageId } = body;
+    // Support both 'body' and 'content' for template content
+    const htmlContent = body.body || content || "";
 
-    if (action === "create") {
+    if (action === "create" || action === "create_draft") {
+      const campaignName = name || title || "New Campaign";
+
       const campaign = await db.emailCampaign.create({
         data: {
-          name: name || "New Campaign",
+          name: campaignName,
           subject: subject || "",
-          htmlContent: content || "",
+          htmlContent: htmlContent,
           textContent: "",
           status: "DRAFT",
           recipientCount: 0,
           createdBy: session.user.id,
-          filters: projectId ? { projectId } : {},
+          filters: projectId ? { projectId, stageId } : { stageId },
         },
       });
 
-      return NextResponse.json({ campaign });
+      return NextResponse.json({ campaign, campaignId: campaign.id });
+    }
+
+    if (action === "duplicate" && campaignId) {
+      // Get the original campaign
+      const original = await db.emailCampaign.findUnique({
+        where: { id: campaignId },
+      });
+
+      if (!original) {
+        return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      }
+
+      // Create a copy
+      const campaign = await db.emailCampaign.create({
+        data: {
+          name: `${original.name} (Copy)`,
+          subject: original.subject,
+          htmlContent: original.htmlContent,
+          textContent: original.textContent || "",
+          status: "DRAFT",
+          recipientCount: 0,
+          createdBy: session.user.id,
+          filters: original.filters || {},
+        },
+      });
+
+      return NextResponse.json({ campaign, campaignId: campaign.id });
     }
 
     if (action === "update" && campaignId) {
       const campaign = await db.emailCampaign.update({
         where: { id: campaignId },
         data: {
-          name,
+          name: name || title,
           subject,
-          htmlContent: content,
+          htmlContent: htmlContent || undefined,
         },
       });
 
@@ -107,5 +138,49 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Campaigns POST error:", error);
     return NextResponse.json({ error: "Failed to process campaign request" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const campaignId = searchParams.get("campaignId");
+    const projectId = searchParams.get("projectId");
+
+    if (!campaignId) {
+      return NextResponse.json({ error: "Campaign ID required" }, { status: 400 });
+    }
+
+    // Verify ownership
+    const campaign = await db.emailCampaign.findFirst({
+      where: {
+        id: campaignId,
+        createdBy: session.user.id,
+        ...(projectId && {
+          filters: {
+            path: ["projectId"],
+            equals: projectId,
+          },
+        }),
+      },
+    });
+
+    if (!campaign) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
+
+    await db.emailCampaign.delete({
+      where: { id: campaignId },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Campaigns DELETE error:", error);
+    return NextResponse.json({ error: "Failed to delete campaign" }, { status: 500 });
   }
 }
