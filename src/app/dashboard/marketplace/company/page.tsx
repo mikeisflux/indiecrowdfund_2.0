@@ -578,7 +578,7 @@ export default function CompanyProfilePage() {
               ) : (
                 <Save className="w-4 h-4 mr-2" />
               )}
-              {isNew ? "Create Company" : "Save Changes"}
+              {isNew ? "Company Profile Setup" : "Save Changes"}
             </Button>
           </div>
         </div>
