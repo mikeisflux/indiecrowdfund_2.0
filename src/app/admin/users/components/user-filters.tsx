@@ -46,6 +46,7 @@ export function UserFilters({
           <SelectContent>
             <SelectItem value="all">All Roles</SelectItem>
             <SelectItem value="USER">User</SelectItem>
+            <SelectItem value="CREATOR">Creator</SelectItem>
             <SelectItem value="COOL_KIDS">Cool Kids</SelectItem>
             <SelectItem value="ADMIN">Admin</SelectItem>
             <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>

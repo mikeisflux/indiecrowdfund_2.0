@@ -68,6 +68,7 @@ export function RoleDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="USER">User</SelectItem>
+                <SelectItem value="CREATOR">Creator</SelectItem>
                 <SelectItem value="COOL_KIDS">Cool Kids</SelectItem>
                 <SelectItem value="ADMIN">Admin</SelectItem>
                 <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
@@ -75,6 +76,7 @@ export function RoleDialog({
             </Select>
             <p className="text-xs text-zinc-500">
               {selectedRole === "USER" && "Regular user with standard access."}
+              {selectedRole === "CREATOR" && "Creators have activated prelaunch pages or marketplace books."}
               {selectedRole === "COOL_KIDS" && "Cool Kids users have enhanced campaign limits."}
               {selectedRole === "ADMIN" && "Admin users can manage projects and users."}
               {selectedRole === "SUPER_ADMIN" && "Super admins have full platform access including role changes."}

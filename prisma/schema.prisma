@@ -109,6 +109,7 @@ model User {
 
 enum UserRole {
   USER
+  CREATOR
   COOL_KIDS
   ADMIN
   SUPER_ADMIN

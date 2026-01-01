@@ -41,11 +41,16 @@ export async function POST(
       );
     }
 
-    // Get the book
+    // Get the book with creator info
     const book = await prisma.marketplaceBook.findFirst({
       where: {
         id,
         deletedAt: null,
+      },
+      include: {
+        creator: {
+          select: { id: true, role: true },
+        },
       },
     });
 
@@ -83,6 +88,14 @@ export async function POST(
         notes: reason || null,
       },
     });
+
+    // Auto-promote user to CREATOR role when marketplace book is approved
+    if (action === "approve" && book.creator?.role === "USER") {
+      await prisma.user.update({
+        where: { id: book.creator.id },
+        data: { role: "CREATOR" },
+      });
+    }
 
     // Send notification to creator (don't await to avoid blocking response)
     notifyMarketplaceBookReview(

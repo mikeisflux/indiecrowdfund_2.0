@@ -161,11 +161,12 @@ export async function PUT(req: NextRequest) {
       select: {
         id: true,
         title: true,
+        creatorId: true,
         prelaunchStatus: true,
         prelaunchActive: true,
         status: true,
         creator: {
-          select: { email: true, name: true },
+          select: { id: true, email: true, name: true, role: true },
         },
       },
     });
@@ -238,6 +239,18 @@ export async function PUT(req: NextRequest) {
         prelaunchActive: true,
       },
     });
+
+    // Auto-promote user to CREATOR role when prelaunch is activated
+    if (
+      updatedProject.prelaunchActive &&
+      project.creator?.role === "USER" &&
+      project.creatorId
+    ) {
+      await db.user.update({
+        where: { id: project.creatorId },
+        data: { role: "CREATOR" },
+      });
+    }
 
     // Create a review record
     await db.projectReview.create({

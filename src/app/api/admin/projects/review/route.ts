@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         prelaunchStatus: true,
         contactEmail: true, // Email from payment settings
         creator: {
-          select: { id: true, email: true, name: true },
+          select: { id: true, email: true, name: true, role: true },
         },
       },
     });
@@ -154,6 +154,18 @@ export async function POST(req: NextRequest) {
         },
       }),
     ]);
+
+    // Auto-promote user to CREATOR role when prelaunch is approved
+    if (
+      isPrelaunch &&
+      action === "APPROVED" &&
+      project.creator?.role === "USER"
+    ) {
+      await db.user.update({
+        where: { id: project.creator.id },
+        data: { role: "CREATOR" },
+      });
+    }
 
     // Send email notification if enabled
     if (sendEmail) {

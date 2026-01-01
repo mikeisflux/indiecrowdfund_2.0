@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Crown, Shield, Clock, CheckCircle, XCircle, Ban } from "lucide-react";
+import { Crown, Shield, Clock, CheckCircle, XCircle, Ban, Palette } from "lucide-react";
 
 export function getRoleBadge(role: string) {
   switch (role) {
@@ -9,6 +9,8 @@ export function getRoleBadge(role: string) {
       return <Badge className="bg-violet-100 text-violet-700"><Shield className="h-3 w-3 mr-1" /> Admin</Badge>;
     case "COOL_KIDS":
       return <Badge className="bg-blue-100 text-blue-700">Cool Kids</Badge>;
+    case "CREATOR":
+      return <Badge className="bg-emerald-100 text-emerald-700"><Palette className="h-3 w-3 mr-1" /> Creator</Badge>;
     default:
       return <Badge variant="outline">User</Badge>;
   }
