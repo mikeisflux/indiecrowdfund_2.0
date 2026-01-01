@@ -140,16 +140,19 @@ function PDFFilePicker({
   onSelect,
   currentUrl,
   currentFileName,
+  currentStorageKey,
 }: {
   onSelect: (url: string, fileName: string, storageKey: string) => void;
   currentUrl: string;
   currentFileName: string;
+  currentStorageKey: string;
 }) {
   const [existingFiles, setExistingFiles] = useState<ExistingFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [mode, setMode] = useState<"select" | "upload">("select");
+  const [deleting, setDeleting] = useState(false);
 
   const fetchExistingFiles = useCallback(async () => {
     try {
@@ -244,6 +247,51 @@ function PDFFilePicker({
     }
   };
 
+  const handleDelete = async () => {
+    if (!currentStorageKey) {
+      // No storage key means it's just a selection, just clear it
+      onSelect("", "", "");
+      toast.info("PDF file removed");
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      // Delete from R2 bucket
+      const response = await fetch(
+        `/api/creator/marketplace/files?key=${encodeURIComponent(currentStorageKey)}`,
+        {
+          method: "DELETE",
+          headers: getCSRFHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        // If file is in use, just clear the selection but don't delete from bucket
+        if (error.error?.includes("in use")) {
+          onSelect("", "", "");
+          toast.info("PDF file unselected (file kept in storage as it's used by another book)");
+          return;
+        }
+        throw new Error(error.error || "Failed to delete file");
+      }
+
+      // Clear form selection
+      onSelect("", "", "");
+
+      // Refresh file list
+      await fetchExistingFiles();
+
+      toast.success("PDF file deleted successfully");
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete file");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (currentUrl) {
     return (
       <div className="space-y-3">
@@ -268,13 +316,11 @@ function PDFFilePicker({
           {/* Delete button */}
           <button
             type="button"
-            onClick={() => {
-              onSelect("", "", "");
-              toast.info("PDF file removed");
-            }}
-            className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-500 dark:text-red-400 transition-colors"
+            disabled={deleting}
+            onClick={handleDelete}
+            className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-500 dark:text-red-400 transition-colors disabled:opacity-50"
           >
-            <X className="h-4 w-4" />
+            {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
           </button>
         </div>
       </div>
@@ -796,6 +842,7 @@ export default function NewBookPage() {
                 }}
                 currentUrl={formData.pdfFileUrl}
                 currentFileName={formData.pdfFileName}
+                currentStorageKey={formData.pdfStorageKey}
               />
 
               <FileUpload

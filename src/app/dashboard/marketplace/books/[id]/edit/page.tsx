@@ -34,6 +34,7 @@ import {
   AlertCircle,
   Upload,
   FolderOpen,
+  X,
 } from "lucide-react";
 
 interface ExistingFile {
@@ -158,16 +159,19 @@ function PDFFilePicker({
   onSelect,
   currentUrl,
   currentFileName,
+  currentStorageKey,
 }: {
   onSelect: (url: string, fileName: string, storageKey: string) => void;
   currentUrl: string;
   currentFileName: string;
+  currentStorageKey: string;
 }) {
   const [existingFiles, setExistingFiles] = useState<ExistingFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [mode, setMode] = useState<"select" | "upload">("select");
+  const [deleting, setDeleting] = useState(false);
 
   const fetchExistingFiles = useCallback(async () => {
     try {
@@ -251,11 +255,49 @@ function PDFFilePicker({
     }
   };
 
+  const handleDelete = async () => {
+    if (!currentStorageKey) {
+      onSelect("", "", "");
+      toast.info("PDF file removed");
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/creator/marketplace/files?key=${encodeURIComponent(currentStorageKey)}`,
+        {
+          method: "DELETE",
+          headers: getCSRFHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        if (error.error?.includes("in use")) {
+          onSelect("", "", "");
+          toast.info("PDF file unselected (file kept in storage as it's used by another book)");
+          return;
+        }
+        throw new Error(error.error || "Failed to delete file");
+      }
+
+      onSelect("", "", "");
+      await fetchExistingFiles();
+      toast.success("PDF file deleted successfully");
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete file");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (currentUrl) {
     return (
       <div className="space-y-3">
         <Label className="text-white">PDF File *</Label>
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 relative">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-emerald-500/20">
               <FileText className="w-6 h-6 text-emerald-400" />
@@ -273,6 +315,15 @@ function PDFFilePicker({
               Change
             </Button>
           </div>
+          {/* Delete button */}
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={handleDelete}
+            className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors disabled:opacity-50"
+          >
+            {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+          </button>
         </div>
       </div>
     );
@@ -848,6 +899,7 @@ export default function EditBookPage() {
                 }}
                 currentUrl={formData.pdfFileUrl}
                 currentFileName={formData.pdfFileName}
+                currentStorageKey={formData.pdfStorageKey}
               />
 
               <FileUpload
