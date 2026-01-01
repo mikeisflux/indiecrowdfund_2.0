@@ -52,6 +52,7 @@ import {
   CommunityTab,
 } from "@/components/project-details";
 import { CountdownTimer } from "@/components/ui/countdown-timer";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -192,6 +193,7 @@ export default function ProjectPage() {
         // Unfollow
         const response = await fetch(`/api/user/following?projectId=${project.id}`, {
           method: "DELETE",
+          headers: getCSRFHeaders(),
         });
         if (response.ok) {
           setIsFollowing(false);
@@ -200,7 +202,7 @@ export default function ProjectPage() {
         // Follow
         const response = await fetch("/api/user/following", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify({ projectId: project.id, type: "live" }),
         });
         if (response.ok) {
