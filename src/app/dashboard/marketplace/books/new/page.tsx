@@ -33,6 +33,7 @@ import {
   Eye,
   Upload,
   FolderOpen,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -481,16 +482,33 @@ function FileUpload({
             <p className="text-xs text-muted-foreground/70">Click or drag & drop</p>
           </div>
         )}
+        {/* Delete button - positioned in corner */}
+        {currentUrl && !uploading && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpload("");
+              toast.info(`${label} removed`);
+            }}
+            className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-500 dark:text-red-400 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
 }
+
+const DRAFT_STORAGE_KEY = "marketplace_book_draft";
 
 export default function NewBookPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState("");
+  const [isInitialized, setIsInitialized] = useState(false);
   const [formData, setFormData] = useState<BookFormData>({
     title: "",
     description: "",
@@ -506,6 +524,41 @@ export default function NewBookPage() {
     isNsfw: false,
     tags: [],
   });
+
+  // Load saved draft from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        setFormData(parsed.formData || {});
+        setTagsInput(parsed.formData?.tags?.join(", ") || "");
+        setCurrentStep(parsed.currentStep || 1);
+      }
+    } catch (error) {
+      console.error("Error loading draft:", error);
+    }
+    setIsInitialized(true);
+  }, []);
+
+  // Autosave to localStorage when formData or currentStep changes
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const saveTimeout = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+          formData,
+          currentStep,
+          savedAt: new Date().toISOString(),
+        }));
+      } catch (error) {
+        console.error("Error saving draft:", error);
+      }
+    }, 500); // Debounce saves by 500ms
+
+    return () => clearTimeout(saveTimeout);
+  }, [formData, currentStep, isInitialized]);
 
   const updateForm = (field: keyof BookFormData, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -578,6 +631,9 @@ export default function NewBookPage() {
         const errorData = await res.json();
         throw new Error(errorData.error || "Failed to create book");
       }
+
+      // Clear the draft from localStorage on successful submission
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
 
       toast.success(asDraft ? "Book saved as draft" : "Book submitted for review");
       router.push("/dashboard/marketplace");
