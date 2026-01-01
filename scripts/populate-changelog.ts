@@ -1,23 +1,84 @@
 /**
- * Script to populate changelog entries from git history
- * Run with: npx ts-node scripts/populate-changelog.ts
+ * Changelog Population Script
+ *
+ * This script is idempotent - run it as many times as you want!
+ * It will only add NEW entries that don't already exist.
+ *
+ * Usage:
+ *   npx tsx scripts/populate-changelog.ts           # Normal run
+ *   npx tsx scripts/populate-changelog.ts --dry-run # Preview what would be added
+ *   npx tsx scripts/populate-changelog.ts --force   # Update existing entries too
+ *
+ * To add new changelog entries:
+ *   1. Add your entry to the CHANGELOG_ENTRIES array below
+ *   2. Run the script
+ *   3. Only new entries will be added (existing ones are skipped)
  */
 
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// Parse CLI arguments
+const args = process.argv.slice(2);
+const DRY_RUN = args.includes("--dry-run");
+const FORCE_UPDATE = args.includes("--force");
+
+type ChangelogCategory =
+  | "FEATURE"
+  | "BUGFIX"
+  | "IMPROVEMENT"
+  | "SECURITY"
+  | "PERFORMANCE"
+  | "UI_UX"
+  | "API"
+  | "DOCUMENTATION"
+  | "OTHER";
+
 interface ChangelogEntryData {
   title: string;
   description: string;
-  category: string;
+  category: ChangelogCategory;
   commitHash?: string;
   branch?: string;
   isPublished: boolean;
+  version?: string;
 }
 
-const changelogEntries: ChangelogEntryData[] = [
-  // Digital Marketplace Integration (Most Recent Major Feature)
+/**
+ * ============================================================
+ * ADD NEW CHANGELOG ENTRIES HERE
+ * ============================================================
+ *
+ * Each entry should have:
+ *   - title: Short, descriptive title (used as unique identifier)
+ *   - description: Detailed description of the change
+ *   - category: One of FEATURE, BUGFIX, IMPROVEMENT, SECURITY, PERFORMANCE, UI_UX, API, DOCUMENTATION, OTHER
+ *   - commitHash: (optional) Git commit hash for reference
+ *   - branch: (optional) Branch name, defaults to "main"
+ *   - isPublished: Whether to show on public changelog
+ *   - version: (optional) Version number like "1.0.0"
+ *
+ * The script checks for duplicates by BOTH title AND commitHash.
+ * If either matches, the entry is skipped (unless --force is used).
+ */
+const CHANGELOG_ENTRIES: ChangelogEntryData[] = [
+  // ==========================================================
+  // 🆕 ADD NEW ENTRIES AT THE TOP (most recent first)
+  // ==========================================================
+
+  {
+    title: "Changelog Feature with Admin Management",
+    description: "Added changelog system with public blog-style page at /changelog and admin management at /admin/changelog. Includes categories, version tracking, and commit hash references.",
+    category: "FEATURE",
+    commitHash: "9017218",
+    isPublished: true,
+  },
+
+  // ==========================================================
+  // DIGITAL MARKETPLACE (Recent Major Feature)
+  // ==========================================================
+
   {
     title: "Digital Marketplace for E-books and Digital Content",
     description: "Launched comprehensive digital marketplace allowing creators to sell e-books, PDFs, and digital content. Includes book reader with page-flip animation, staff picks, featured categories, and DivinityCoin payment support.",
@@ -40,7 +101,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // DivinityCoin Integration
+  // ==========================================================
+  // DIVINITYCOIN INTEGRATION
+  // ==========================================================
+
   {
     title: "DivinityCoin Payment Integration",
     description: "Replaced CCBill with DivinityCoin as primary payment processor. Users can redeem DivinityCoin codes to add credits and use them for backing projects and marketplace purchases.",
@@ -70,7 +134,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // IndieKit Creator Dashboard
+  // ==========================================================
+  // INDIEKIT CREATOR DASHBOARD
+  // ==========================================================
+
   {
     title: "IndieKit Fulfillment Dashboard",
     description: "Comprehensive creator dashboard for managing campaigns including fulfillment tracking, backer management, email campaigns, surveys, and digital file distribution.",
@@ -100,7 +167,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // Backer Dashboard Improvements
+  // ==========================================================
+  // BACKER DASHBOARD IMPROVEMENTS
+  // ==========================================================
+
   {
     title: "PDF Book Reader with Page Flip Animation",
     description: "Added immersive book reading experience with realistic page-flip animation, bookmarks, zoom controls, and mobile support.",
@@ -123,7 +193,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // Security Improvements
+  // ==========================================================
+  // SECURITY IMPROVEMENTS
+  // ==========================================================
+
   {
     title: "CSRF Protection Implementation",
     description: "Added comprehensive CSRF token protection across all state-changing API endpoints with automatic header injection.",
@@ -153,7 +226,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // Payment System Fixes
+  // ==========================================================
+  // PAYMENT SYSTEM FIXES
+  // ==========================================================
+
   {
     title: "Stripe Payment Processing Fixes",
     description: "Fixed multiple payment processing issues including duplicate pledges, webhook handling, and payment confirmation flows.",
@@ -183,7 +259,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // Vanity URL System
+  // ==========================================================
+  // VANITY URL SYSTEM
+  // ==========================================================
+
   {
     title: "Vanity URL System for Projects",
     description: "Implemented custom vanity URLs allowing creators to have memorable project links like /username/project-name.",
@@ -199,7 +278,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // Pre-launch Pages
+  // ==========================================================
+  // PRE-LAUNCH PAGES
+  // ==========================================================
+
   {
     title: "Pre-launch Page System",
     description: "Creators can now create pre-launch pages to build an audience before campaign launch, with follower tracking and email notifications.",
@@ -215,7 +297,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // UI/UX Improvements
+  // ==========================================================
+  // UI/UX IMPROVEMENTS
+  // ==========================================================
+
   {
     title: "Dark Mode with Gradient Branding",
     description: "Made dark mode the permanent theme with beautiful gradient branding and modern styling throughout the site.",
@@ -245,7 +330,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // Email System
+  // ==========================================================
+  // EMAIL SYSTEM
+  // ==========================================================
+
   {
     title: "Mailgun Email Provider Support",
     description: "Added Mailgun as an alternative email provider with automatic fallback and queue management.",
@@ -268,7 +356,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // Bug Fixes (Grouped by Area)
+  // ==========================================================
+  // BUG FIXES
+  // ==========================================================
+
   {
     title: "Book Reader Stability Fixes",
     description: "Fixed numerous issues with the PDF book reader including page cropping, infinite reload loops, zoom handling, and mobile rendering.",
@@ -340,7 +431,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // Performance Improvements
+  // ==========================================================
+  // PERFORMANCE IMPROVEMENTS
+  // ==========================================================
+
   {
     title: "Image Caching and GPU Rendering",
     description: "Improved book reader performance with image caching and GPU-accelerated rendering.",
@@ -363,7 +457,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // Admin Features
+  // ==========================================================
+  // ADMIN FEATURES
+  // ==========================================================
+
   {
     title: "AI Marketing System",
     description: "Added AI-powered marketing campaign creation with user interest matching and automated targeting.",
@@ -375,7 +472,7 @@ const changelogEntries: ChangelogEntryData[] = [
     title: "Retailer Management Portal",
     description: "Comprehensive retailer management including application review, satisfaction surveys, and access control.",
     category: "FEATURE",
-    commitHash: "80eb963",
+    commitHash: "80eb963a",
     isPublished: true,
   },
   {
@@ -393,7 +490,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // API Improvements
+  // ==========================================================
+  // API IMPROVEMENTS
+  // ==========================================================
+
   {
     title: "Batch Rewards Endpoint",
     description: "Added batch rewards API endpoint to work around nginx rate limiting issues.",
@@ -416,7 +516,10 @@ const changelogEntries: ChangelogEntryData[] = [
     isPublished: true,
   },
 
-  // Documentation
+  // ==========================================================
+  // DOCUMENTATION
+  // ==========================================================
+
   {
     title: "Backer Handbook",
     description: "Added comprehensive backer handbook with complete guide to backing projects, payments, and pledge management.",
@@ -440,53 +543,216 @@ const changelogEntries: ChangelogEntryData[] = [
   },
 ];
 
-async function populateChangelog() {
-  console.log("Starting changelog population...\n");
+// ==========================================================
+// SCRIPT LOGIC (no need to modify below)
+// ==========================================================
 
-  let created = 0;
-  let skipped = 0;
+interface ExistingEntry {
+  id: string;
+  title: string;
+  commitHash: string | null;
+}
 
-  for (const entry of changelogEntries) {
-    // Check if entry with same title already exists
-    const existing = await prisma.changelogEntry.findFirst({
-      where: { title: entry.title },
-    });
+async function checkForDuplicate(
+  entry: ChangelogEntryData,
+  existingEntries: ExistingEntry[]
+): Promise<{ isDuplicate: boolean; matchedBy: string | null; existingId: string | null }> {
+  // Check by title (exact match)
+  const titleMatch = existingEntries.find(
+    (e) => e.title.toLowerCase() === entry.title.toLowerCase()
+  );
+  if (titleMatch) {
+    return { isDuplicate: true, matchedBy: "title", existingId: titleMatch.id };
+  }
 
-    if (existing) {
-      console.log(`⏭️  Skipped (exists): ${entry.title}`);
-      skipped++;
-      continue;
-    }
-
-    try {
-      await prisma.changelogEntry.create({
-        data: {
-          title: entry.title,
-          description: entry.description,
-          category: entry.category as "FEATURE" | "BUGFIX" | "IMPROVEMENT" | "SECURITY" | "PERFORMANCE" | "UI_UX" | "API" | "DOCUMENTATION" | "OTHER",
-          commitHash: entry.commitHash || null,
-          branch: entry.branch || "main",
-          isPublished: entry.isPublished,
-          publishedAt: entry.isPublished ? new Date() : null,
-        },
-      });
-      console.log(`✅ Created: ${entry.title}`);
-      created++;
-    } catch (error) {
-      console.error(`❌ Failed to create: ${entry.title}`, error);
+  // Check by commit hash (if provided)
+  if (entry.commitHash) {
+    const commitMatch = existingEntries.find(
+      (e) => e.commitHash && e.commitHash.startsWith(entry.commitHash!)
+    );
+    if (commitMatch) {
+      return { isDuplicate: true, matchedBy: "commitHash", existingId: commitMatch.id };
     }
   }
 
-  console.log(`\n📊 Summary: ${created} created, ${skipped} skipped`);
+  return { isDuplicate: false, matchedBy: null, existingId: null };
+}
+
+async function populateChangelog() {
+  console.log("╔════════════════════════════════════════════════════════════╗");
+  console.log("║           CHANGELOG POPULATION SCRIPT                      ║");
+  console.log("╚════════════════════════════════════════════════════════════╝\n");
+
+  if (DRY_RUN) {
+    console.log("🔍 DRY RUN MODE - No changes will be made\n");
+  }
+  if (FORCE_UPDATE) {
+    console.log("⚠️  FORCE MODE - Existing entries will be updated\n");
+  }
+
+  // Fetch all existing entries once
+  console.log("📥 Fetching existing changelog entries...");
+  const existingEntries = await prisma.changelogEntry.findMany({
+    select: {
+      id: true,
+      title: true,
+      commitHash: true,
+    },
+  });
+  console.log(`   Found ${existingEntries.length} existing entries\n`);
+
+  let created = 0;
+  let skipped = 0;
+  let updated = 0;
+  let errors = 0;
+
+  const toCreate: ChangelogEntryData[] = [];
+  const toSkip: { entry: ChangelogEntryData; reason: string }[] = [];
+  const toUpdate: { entry: ChangelogEntryData; existingId: string }[] = [];
+
+  // First pass: categorize entries
+  for (const entry of CHANGELOG_ENTRIES) {
+    const { isDuplicate, matchedBy, existingId } = await checkForDuplicate(
+      entry,
+      existingEntries
+    );
+
+    if (isDuplicate) {
+      if (FORCE_UPDATE && existingId) {
+        toUpdate.push({ entry, existingId });
+      } else {
+        toSkip.push({ entry, reason: `matched by ${matchedBy}` });
+      }
+    } else {
+      toCreate.push(entry);
+    }
+  }
+
+  // Report what will happen
+  console.log("📊 Analysis Complete:");
+  console.log(`   • ${toCreate.length} new entries to create`);
+  console.log(`   • ${toSkip.length} entries to skip (already exist)`);
+  if (FORCE_UPDATE) {
+    console.log(`   • ${toUpdate.length} entries to update`);
+  }
+  console.log("");
+
+  if (DRY_RUN) {
+    // Just show what would happen
+    if (toCreate.length > 0) {
+      console.log("📝 Would CREATE:");
+      for (const entry of toCreate) {
+        console.log(`   ✚ ${entry.title}`);
+      }
+      console.log("");
+    }
+
+    if (toSkip.length > 0) {
+      console.log("⏭️  Would SKIP:");
+      for (const { entry, reason } of toSkip) {
+        console.log(`   • ${entry.title} (${reason})`);
+      }
+      console.log("");
+    }
+
+    if (FORCE_UPDATE && toUpdate.length > 0) {
+      console.log("🔄 Would UPDATE:");
+      for (const { entry } of toUpdate) {
+        console.log(`   ↻ ${entry.title}`);
+      }
+      console.log("");
+    }
+  } else {
+    // Actually make changes
+
+    // Create new entries
+    if (toCreate.length > 0) {
+      console.log("📝 Creating new entries...");
+      for (const entry of toCreate) {
+        try {
+          await prisma.changelogEntry.create({
+            data: {
+              title: entry.title,
+              description: entry.description,
+              category: entry.category,
+              version: entry.version || null,
+              commitHash: entry.commitHash || null,
+              branch: entry.branch || "main",
+              isPublished: entry.isPublished,
+              publishedAt: entry.isPublished ? new Date() : null,
+            },
+          });
+          console.log(`   ✅ ${entry.title}`);
+          created++;
+        } catch (error) {
+          console.error(`   ❌ Failed: ${entry.title}`, error);
+          errors++;
+        }
+      }
+      console.log("");
+    }
+
+    // Update existing entries (if --force)
+    if (FORCE_UPDATE && toUpdate.length > 0) {
+      console.log("🔄 Updating existing entries...");
+      for (const { entry, existingId } of toUpdate) {
+        try {
+          await prisma.changelogEntry.update({
+            where: { id: existingId },
+            data: {
+              title: entry.title,
+              description: entry.description,
+              category: entry.category,
+              version: entry.version || null,
+              commitHash: entry.commitHash || null,
+              branch: entry.branch || "main",
+              isPublished: entry.isPublished,
+              publishedAt: entry.isPublished ? new Date() : null,
+            },
+          });
+          console.log(`   ↻ ${entry.title}`);
+          updated++;
+        } catch (error) {
+          console.error(`   ❌ Failed to update: ${entry.title}`, error);
+          errors++;
+        }
+      }
+      console.log("");
+    }
+
+    // Log skipped entries
+    if (toSkip.length > 0) {
+      console.log("⏭️  Skipped (already exist):");
+      for (const { entry, reason } of toSkip) {
+        console.log(`   • ${entry.title} (${reason})`);
+      }
+      console.log("");
+    }
+
+    skipped = toSkip.length;
+  }
+
+  // Summary
+  console.log("╔════════════════════════════════════════════════════════════╗");
+  console.log("║                       SUMMARY                              ║");
+  console.log("╠════════════════════════════════════════════════════════════╣");
+  if (DRY_RUN) {
+    console.log(`║  Would create: ${toCreate.length.toString().padEnd(3)} | Would skip: ${toSkip.length.toString().padEnd(3)} | Would update: ${toUpdate.length.toString().padEnd(3)}  ║`);
+    console.log("║                                                            ║");
+    console.log("║  Run without --dry-run to apply changes                    ║");
+  } else {
+    console.log(`║  Created: ${created.toString().padEnd(3)} | Skipped: ${skipped.toString().padEnd(3)} | Updated: ${updated.toString().padEnd(3)} | Errors: ${errors.toString().padEnd(3)}  ║`);
+  }
+  console.log("╚════════════════════════════════════════════════════════════╝");
 }
 
 populateChangelog()
   .then(() => {
-    console.log("\nChangelog population complete!");
+    console.log("\n✨ Done!");
     process.exit(0);
   })
   .catch((error) => {
-    console.error("Error:", error);
+    console.error("\n💥 Fatal error:", error);
     process.exit(1);
   })
   .finally(() => {
