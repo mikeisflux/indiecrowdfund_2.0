@@ -50,6 +50,7 @@ import {
   Code,
   Package,
   ExternalLink,
+  GitBranch,
 } from "lucide-react";
 
 interface ChangelogEntry {
@@ -88,6 +89,7 @@ export default function AdminChangelogPage() {
   const [editingEntry, setEditingEntry] = useState<ChangelogEntry | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [extracting, setExtracting] = useState(false);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -228,6 +230,35 @@ export default function AdminChangelogPage() {
     }
   };
 
+  const handleExtractFromGit = async () => {
+    setExtracting(true);
+    try {
+      const response = await fetch("/api/admin/changelog/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ force: true }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const { stats } = data;
+        toast.success(
+          `Sync complete! Created: ${stats.created}, Updated: ${stats.updated}, Skipped: ${stats.skipped}`
+        );
+        fetchEntries();
+      } else {
+        toast.error(data.error || "Failed to extract changelog");
+        console.error("Extraction failed:", data.details, data.output);
+      }
+    } catch (error) {
+      console.error("Error extracting from git:", error);
+      toast.error("Failed to run extraction script");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   const getCategoryIcon = (cat: string) => {
     const found = CATEGORIES.find(c => c.value === cat);
     if (!found) return Package;
@@ -255,6 +286,18 @@ export default function AdminChangelogPage() {
               <ExternalLink className="h-4 w-4 mr-2" />
               View Public Page
             </a>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExtractFromGit}
+            disabled={extracting}
+          >
+            {extracting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <GitBranch className="h-4 w-4 mr-2" />
+            )}
+            {extracting ? "Syncing..." : "Sync from Git"}
           </Button>
           <Button onClick={openNewDialog}>
             <Plus className="h-4 w-4 mr-2" />
