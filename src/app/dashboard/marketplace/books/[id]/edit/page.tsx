@@ -908,14 +908,14 @@ export default function EditBookPage() {
                 onUpload={(url) => updateForm("promoImageUrl", url)}
                 currentUrl={formData.promoImageUrl}
                 icon={ImageIcon}
-                description="Upload a cover image (16:9 recommended)"
+                description="Portrait 2:3 aspect ratio recommended (600×900px or 800×1200px for best quality)"
               />
 
               {/* Preview */}
               {formData.promoImageUrl && (
                 <div className="space-y-2">
                   <Label className="text-white">Preview</Label>
-                  <div className="aspect-video rounded-xl overflow-hidden bg-white/5 relative">
+                  <div className="aspect-[2/3] max-w-[200px] rounded-xl overflow-hidden bg-white/5 relative">
                     <Image
                       src={formData.promoImageUrl}
                       alt="Cover preview"
@@ -1040,8 +1040,8 @@ export default function EditBookPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Preview Card */}
-              <div className="rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-white/5 border border-white/10">
-                <div className="aspect-video relative">
+              <div className="rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-white/5 border border-white/10 max-w-[200px]">
+                <div className="aspect-[2/3] relative">
                   {formData.promoImageUrl ? (
                     <Image
                       src={formData.promoImageUrl}
@@ -1056,7 +1056,7 @@ export default function EditBookPage() {
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
-                    <h3 className="text-xl font-bold text-white">{formData.title || "Untitled"}</h3>
+                    <h3 className="text-lg font-bold text-white line-clamp-2">{formData.title || "Untitled"}</h3>
                     <p className="text-white/70 mt-1">{CATEGORIES.find(c => c.value === formData.category)?.label || "No category"}</p>
                   </div>
                 </div>

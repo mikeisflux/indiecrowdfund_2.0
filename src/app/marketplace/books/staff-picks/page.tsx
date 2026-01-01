@@ -24,26 +24,26 @@ interface Book {
 function BookTile({ book }: { book: Book }) {
   return (
     <Link href={`/marketplace/books/${book.slug}`}>
-      <div className="group relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/10 shadow-lg hover:shadow-xl hover:border-purple-400/30 transition-all duration-300">
+      <div className="group relative aspect-[2/3] rounded-xl overflow-hidden bg-card border border-border shadow-lg hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-400/30 transition-all duration-300">
         {book.coverImage ? (
           <Image src={book.coverImage} alt={book.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-pink-900/50 flex items-center justify-center">
-            <BookOpen className="h-12 w-12 text-white/30" />
+            <BookOpen className="h-12 w-12 text-muted-foreground/50" />
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className="absolute top-3 left-3">
-          <Badge className="bg-purple-500/90 text-white border-0 backdrop-blur-sm">
-            <Sparkles className="w-3 h-3 mr-1" />
+        <div className="absolute top-2 left-2">
+          <Badge className="bg-purple-500/90 text-white border-0 backdrop-blur-sm text-xs px-1.5 py-0.5">
+            <Sparkles className="w-2.5 h-2.5 mr-0.5" />
             Staff Pick
           </Badge>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <h3 className="text-white font-semibold line-clamp-2 group-hover:text-purple-200 transition-colors">{book.title}</h3>
-          <p className="text-white/70 text-sm mt-1">{book.company?.name || book.creator.name}</p>
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-emerald-400 font-bold">${book.price.toFixed(2)}</span>
+        <div className="absolute bottom-0 left-0 right-0 p-3">
+          <h3 className="text-white font-semibold text-sm line-clamp-2 group-hover:text-purple-200 transition-colors">{book.title}</h3>
+          <p className="text-white/70 text-xs mt-0.5 truncate">{book.company?.name || book.creator.name}</p>
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-emerald-400 font-bold text-sm">${book.price.toFixed(2)}</span>
             {book.stats.purchases > 0 && <span className="text-white/50 text-xs">{book.stats.purchases} sold</span>}
           </div>
         </div>
@@ -66,7 +66,7 @@ export default function StaffPicksPage() {
   const fetchBooks = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/marketplace/books?staffPick=true&page=${page}&limit=20`);
+      const res = await fetch(`/api/marketplace/books?staffPick=true&page=${page}&limit=24`);
       if (res.ok) {
         const data = await res.json();
         setBooks(data.books || []);
@@ -80,21 +80,21 @@ export default function StaffPicksPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+    <div className="min-h-screen bg-background">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
 
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/marketplace" className="flex items-center gap-2 text-white/60 hover:text-white transition-colors">
+            <Link href="/marketplace" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4" />
               Back to Marketplace
             </Link>
           </div>
-          <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border-purple-500/30">
+          <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
             <Sparkles className="w-3 h-3 mr-1" />
             Staff Picks
           </Badge>
@@ -103,35 +103,35 @@ export default function StaffPicksPage() {
 
       <main className="container relative py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Staff Picks</h1>
-          <p className="text-white/60">Curated recommendations from our team</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Staff Picks</h1>
+          <p className="text-muted-foreground">Curated recommendations from our team</p>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <Skeleton key={i} className="aspect-video rounded-xl" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map((i) => (
+              <Skeleton key={i} className="aspect-[2/3] rounded-xl" />
             ))}
           </div>
         ) : books.length === 0 ? (
-          <div className="text-center py-12 text-white/50">
+          <div className="text-center py-12 text-muted-foreground">
             <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No staff picks available yet</p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
               {books.map((book) => (
                 <BookTile key={book.id} book={book} />
               ))}
             </div>
             {totalPages > 1 && (
               <div className="flex justify-center gap-2 mt-8">
-                <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="border-white/20 text-white hover:bg-white/10">
+                <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
                   Previous
                 </Button>
-                <span className="flex items-center px-4 text-white/60">Page {page} of {totalPages}</span>
-                <Button variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="border-white/20 text-white hover:bg-white/10">
+                <span className="flex items-center px-4 text-muted-foreground">Page {page} of {totalPages}</span>
+                <Button variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
                   Next
                 </Button>
               </div>

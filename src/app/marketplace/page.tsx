@@ -46,11 +46,11 @@ interface Company {
   stats: { books: number; totalSales: number };
 }
 
-// Book Tile Component with 16:9 Glassmorphism Design
+// Book Tile Component with 2:3 Portrait Book Cover Design
 function BookTile({ book }: { book: Book }) {
   return (
     <Link href={`/marketplace/books/${book.slug}`}>
-      <div className="group relative aspect-video rounded-xl overflow-hidden bg-card border border-border shadow-lg hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-400/30 transition-all duration-300">
+      <div className="group relative aspect-[2/3] rounded-xl overflow-hidden bg-card border border-border shadow-lg hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-400/30 transition-all duration-300">
         {/* Cover Image */}
         {book.coverImage ? (
           <Image
@@ -69,31 +69,31 @@ function BookTile({ book }: { book: Book }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex gap-2">
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
           {book.isFeatured && (
-            <Badge className="bg-amber-500/90 text-white border-0 backdrop-blur-sm">
-              <Star className="w-3 h-3 mr-1 fill-current" />
+            <Badge className="bg-amber-500/90 text-white border-0 backdrop-blur-sm text-xs px-1.5 py-0.5">
+              <Star className="w-2.5 h-2.5 mr-0.5 fill-current" />
               Featured
             </Badge>
           )}
           {book.isStaffPick && (
-            <Badge className="bg-purple-500/90 text-white border-0 backdrop-blur-sm">
-              <Sparkles className="w-3 h-3 mr-1" />
+            <Badge className="bg-purple-500/90 text-white border-0 backdrop-blur-sm text-xs px-1.5 py-0.5">
+              <Sparkles className="w-2.5 h-2.5 mr-0.5" />
               Staff Pick
             </Badge>
           )}
         </div>
 
         {/* Content */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <h3 className="text-white font-semibold line-clamp-2 group-hover:text-purple-200 transition-colors">
+        <div className="absolute bottom-0 left-0 right-0 p-3">
+          <h3 className="text-white font-semibold text-sm line-clamp-2 group-hover:text-purple-200 transition-colors">
             {book.title}
           </h3>
-          <p className="text-white/70 text-sm mt-1">
+          <p className="text-white/70 text-xs mt-0.5 truncate">
             {book.company?.name || book.creator.name}
           </p>
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-emerald-400 font-bold">
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-emerald-400 font-bold text-sm">
               ${book.price.toFixed(2)}
             </span>
             {book.stats.purchases > 0 && (
@@ -203,9 +203,9 @@ function BookSection({
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
-            <Skeleton key={i} className="aspect-video rounded-xl" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map((i) => (
+            <Skeleton key={i} className="aspect-[2/3] rounded-xl" />
           ))}
         </div>
       ) : books.length === 0 ? (
@@ -214,8 +214,8 @@ function BookSection({
           <p>No books available yet</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {books.slice(0, 12).map((book) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+          {books.slice(0, 16).map((book) => (
             <BookTile key={book.id} book={book} />
           ))}
         </div>
@@ -406,7 +406,7 @@ export default function MarketplacePage() {
                     <p>No books found matching your search</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                     {filteredBooks.map((book) => (
                       <BookTile key={book.id} book={book} />
                     ))}

@@ -56,11 +56,11 @@ interface Company {
   createdAt: string;
 }
 
-// Book Tile Component
+// Book Tile Component with 2:3 Portrait aspect ratio
 function BookTile({ book }: { book: Book }) {
   return (
     <Link href={`/marketplace/books/${book.slug}`}>
-      <div className="group relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/10 hover:border-purple-400/30 transition-all duration-300">
+      <div className="group relative aspect-[2/3] rounded-xl overflow-hidden bg-card border border-border shadow-lg hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-400/30 transition-all duration-300">
         {book.coverImage ? (
           <Image
             src={book.coverImage}
@@ -70,16 +70,16 @@ function BookTile({ book }: { book: Book }) {
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-indigo-900/50 flex items-center justify-center">
-            <BookOpen className="h-12 w-12 text-white/30" />
+            <BookOpen className="h-12 w-12 text-muted-foreground/50" />
           </div>
         )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <h3 className="text-white font-semibold line-clamp-2">{book.title}</h3>
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-emerald-400 font-bold">
+        <div className="absolute bottom-0 left-0 right-0 p-3">
+          <h3 className="text-white font-semibold text-sm line-clamp-2">{book.title}</h3>
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-emerald-400 font-bold text-sm">
               ${book.price.toFixed(2)}
             </span>
             {book.purchases > 0 && (
@@ -131,14 +131,14 @@ export default function CompanyProfilePage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+      <div className="min-h-screen bg-background">
         <Skeleton className="h-64 w-full" />
         <div className="container py-8">
           <Skeleton className="h-8 w-64 mb-4" />
           <Skeleton className="h-24 w-full max-w-2xl mb-8" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="aspect-video rounded-xl" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Skeleton key={i} className="aspect-[2/3] rounded-xl" />
             ))}
           </div>
         </div>
@@ -151,7 +151,7 @@ export default function CompanyProfilePage({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+    <div className="min-h-screen bg-background">
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
@@ -171,13 +171,13 @@ export default function CompanyProfilePage({
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/50 to-blue-900/50" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
 
         {/* Back Button */}
         <div className="container relative pt-8">
           <Link
             href="/marketplace"
-            className="inline-flex items-center gap-2 text-white/60 hover:text-white group"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Back to Marketplace
@@ -189,7 +189,7 @@ export default function CompanyProfilePage({
         {/* Company Header */}
         <div className="flex flex-col md:flex-row items-start gap-6 mb-8">
           {/* Logo */}
-          <div className="w-32 h-32 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 overflow-hidden flex items-center justify-center shadow-xl">
+          <div className="w-32 h-32 rounded-2xl bg-card backdrop-blur-md border border-border overflow-hidden flex items-center justify-center shadow-xl">
             {company.logo ? (
               <Image
                 src={company.logo}
@@ -199,27 +199,27 @@ export default function CompanyProfilePage({
                 className="object-cover"
               />
             ) : (
-              <Building2 className="h-16 w-16 text-white/40" />
+              <Building2 className="h-16 w-16 text-muted-foreground/40" />
             )}
           </div>
 
           {/* Info */}
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-white">{company.name}</h1>
+              <h1 className="text-3xl font-bold text-foreground">{company.name}</h1>
               {company.isVerified && (
-                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                <Badge className="bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/30">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Verified
                 </Badge>
               )}
             </div>
             {company.tagline && (
-              <p className="text-lg text-white/70 mb-4">{company.tagline}</p>
+              <p className="text-lg text-muted-foreground mb-4">{company.tagline}</p>
             )}
 
             {/* Stats */}
-            <div className="flex items-center gap-6 text-white/60">
+            <div className="flex items-center gap-6 text-muted-foreground">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4" />
                 <span>{company.stats.books} books</span>
@@ -246,7 +246,7 @@ export default function CompanyProfilePage({
                 href={company.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 mt-4 text-cyan-400 hover:text-cyan-300"
+                className="inline-flex items-center gap-2 mt-4 text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300"
               >
                 <Globe className="w-4 h-4" />
                 {company.website.replace(/^https?:\/\//, "")}
@@ -258,11 +258,11 @@ export default function CompanyProfilePage({
 
         {/* About Section */}
         {company.about && (
-          <Card className="bg-white/5 backdrop-blur-md border-white/10 mb-8">
+          <Card className="bg-card border-border mb-8">
             <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">About</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">About</h2>
               <div
-                className="prose prose-invert prose-sm max-w-none"
+                className="prose prose-sm max-w-none dark:prose-invert"
                 dangerouslySetInnerHTML={{ __html: company.about }}
               />
             </CardContent>
@@ -270,11 +270,11 @@ export default function CompanyProfilePage({
         )}
 
         {/* Owner Info */}
-        <Card className="bg-white/5 backdrop-blur-md border-white/10 mb-8">
+        <Card className="bg-card border-border mb-8">
           <CardContent className="p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Owner</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Owner</h2>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
                 {company.owner.avatar ? (
                   <Image
                     src={company.owner.avatar}
@@ -284,12 +284,12 @@ export default function CompanyProfilePage({
                     className="object-cover"
                   />
                 ) : (
-                  <User className="w-6 h-6 text-white/40" />
+                  <User className="w-6 h-6 text-muted-foreground/40" />
                 )}
               </div>
               <div>
-                <p className="font-semibold text-white">{company.owner.name}</p>
-                <p className="text-sm text-white/60">
+                <p className="font-semibold text-foreground">{company.owner.name}</p>
+                <p className="text-sm text-muted-foreground">
                   Member since{" "}
                   {new Date(company.owner.memberSince).toLocaleDateString("en-US", {
                     month: "long",
@@ -304,23 +304,23 @@ export default function CompanyProfilePage({
         {/* Books Section */}
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white">
+            <h2 className="text-xl font-bold text-foreground">
               Books by {company.name}
             </h2>
-            <Badge variant="outline" className="text-white/60 border-white/20">
+            <Badge variant="outline" className="text-muted-foreground">
               {books.length} books
             </Badge>
           </div>
 
           {books.length === 0 ? (
-            <Card className="bg-white/5 backdrop-blur-md border-white/10">
+            <Card className="bg-card border-border">
               <CardContent className="py-12 text-center">
-                <BookOpen className="h-12 w-12 mx-auto mb-4 text-white/30" />
-                <p className="text-white/60">No books published yet</p>
+                <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                <p className="text-muted-foreground">No books published yet</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
               {books.map((book) => (
                 <BookTile key={book.id} book={book} />
               ))}

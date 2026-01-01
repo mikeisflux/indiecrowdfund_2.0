@@ -851,14 +851,14 @@ export default function NewBookPage() {
                 onUpload={(url) => updateForm("promoImageUrl", url)}
                 currentUrl={formData.promoImageUrl}
                 icon={ImageIcon}
-                description="Upload a cover image (16:9 recommended)"
+                description="Portrait 2:3 aspect ratio recommended (600×900px or 800×1200px for best quality)"
               />
 
               {/* Preview */}
               {formData.promoImageUrl && (
                 <div className="space-y-2">
                   <Label>Preview</Label>
-                  <div className="aspect-video rounded-xl overflow-hidden bg-muted relative">
+                  <div className="aspect-[2/3] max-w-[200px] rounded-xl overflow-hidden bg-muted relative">
                     <Image
                       src={formData.promoImageUrl}
                       alt="Cover preview"
@@ -981,8 +981,8 @@ export default function NewBookPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Preview Card */}
-              <div className="rounded-xl overflow-hidden bg-card border border-border">
-                <div className="aspect-video relative">
+              <div className="rounded-xl overflow-hidden bg-card border border-border max-w-[200px]">
+                <div className="aspect-[2/3] relative">
                   {formData.promoImageUrl ? (
                     <Image
                       src={formData.promoImageUrl}
