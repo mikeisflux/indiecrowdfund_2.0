@@ -854,6 +854,21 @@ export default function NewBookPage() {
                 description="Upload a cover image (16:9 recommended)"
               />
 
+              {/* Preview */}
+              {formData.promoImageUrl && (
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <div className="aspect-video rounded-xl overflow-hidden bg-muted relative">
+                    <Image
+                      src={formData.promoImageUrl}
+                      alt="Cover preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                </div>
+              )}
+
               <FileUpload
                 label="Promotional Video (optional)"
                 accept="video/*"
@@ -862,29 +877,6 @@ export default function NewBookPage() {
                 icon={Video}
                 description="Upload a promo video (max 500MB)"
               />
-
-              {/* Preview */}
-              {(formData.promoImageUrl || formData.promoVideoUrl) && (
-                <div className="space-y-2">
-                  <Label>Preview</Label>
-                  <div className="aspect-video rounded-xl overflow-hidden bg-muted relative">
-                    {formData.promoVideoUrl ? (
-                      <video
-                        src={formData.promoVideoUrl}
-                        controls
-                        className="w-full h-full object-cover"
-                      />
-                    ) : formData.promoImageUrl ? (
-                      <Image
-                        src={formData.promoImageUrl}
-                        alt="Cover preview"
-                        fill
-                        className="object-cover"
-                      />
-                    ) : null}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         )}
