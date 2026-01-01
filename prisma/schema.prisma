@@ -88,6 +88,8 @@ model User {
   marketplaceBooks     MarketplaceBook[]     @relation("MarketplaceCreator")
   marketplacePurchases MarketplacePurchase[] @relation("MarketplaceBuyer")
   marketplaceReviews   MarketplaceBookReview[] @relation("MarketplaceReviewer")
+  marketplaceDiscountCodes MarketplaceDiscountCode[] @relation("MarketplaceDiscountCreator")
+  marketplaceCodeRedemptions MarketplaceCodeRedemption[] @relation("MarketplaceCodeCustomer")
   changelogEntries     ChangelogEntry[]        @relation("ChangelogAuthor")
   companyProfile       CompanyProfile?
 
@@ -2910,6 +2912,7 @@ model MarketplaceBook {
   // Relations
   purchases         MarketplacePurchase[]
   reviews           MarketplaceBookReview[]
+  codeRedemptions   MarketplaceCodeRedemption[]
   companyId         String?
   company           CompanyProfile? @relation(fields: [companyId], references: [id])
 
@@ -3010,6 +3013,9 @@ model MarketplacePurchase {
   readingProgress   Json?    // { currentPage: number, totalPages: number }
   lastReadAt        DateTime?
 
+  // Discount code relation
+  codeRedemption    MarketplaceCodeRedemption?
+
   // Timestamps
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -3060,6 +3066,73 @@ enum MarketplaceReviewAction {
   FLAGGED
   DEACTIVATED
   REACTIVATED
+}
+
+// ============================================
+// MARKETPLACE DISCOUNT CODES
+// ============================================
+
+model MarketplaceDiscountCode {
+  id                String   @id @default(cuid())
+  creatorId         String
+  creator           User     @relation("MarketplaceDiscountCreator", fields: [creatorId], references: [id])
+
+  // Code details
+  code              String   @unique
+  type              MarketplaceDiscountType @default(FREE_BOOK)
+
+  // Validity period (monthly)
+  validFrom         DateTime
+  validUntil        DateTime
+
+  // Usage limits
+  maxRedemptions    Int      @default(1)  // Max times this code can be used total
+  maxPerCustomer    Int      @default(1)  // Max times per customer
+  usageCount        Int      @default(0)  // Current usage count
+
+  // Status
+  isActive          Boolean  @default(true)
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  redemptions       MarketplaceCodeRedemption[]
+
+  @@index([creatorId])
+  @@index([code])
+  @@index([validFrom, validUntil])
+  @@index([isActive])
+}
+
+model MarketplaceCodeRedemption {
+  id                String   @id @default(cuid())
+  codeId            String
+  code              MarketplaceDiscountCode @relation(fields: [codeId], references: [id])
+  customerId        String
+  customer          User     @relation("MarketplaceCodeCustomer", fields: [customerId], references: [id])
+  bookId            String
+  book              MarketplaceBook @relation(fields: [bookId], references: [id])
+  purchaseId        String?  @unique
+  purchase          MarketplacePurchase? @relation(fields: [purchaseId], references: [id])
+
+  // Amount saved
+  discountAmount    Decimal  @db.Decimal(10, 2)
+
+  // Timestamps
+  redeemedAt        DateTime @default(now())
+
+  @@unique([codeId, customerId, bookId])
+  @@index([codeId])
+  @@index([customerId])
+  @@index([bookId])
+}
+
+enum MarketplaceDiscountType {
+  FREE_BOOK         // 100% off one book
+  PERCENTAGE        // Future: percentage discount
+  FIXED_AMOUNT      // Future: fixed dollar amount off
 }
 
 // ==================== CHANGELOG ====================

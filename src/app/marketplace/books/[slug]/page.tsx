@@ -33,7 +33,11 @@ import {
   Coins,
   CreditCard,
   Library,
+  Ticket,
+  X,
+  Gift,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 interface Book {
@@ -82,6 +86,14 @@ export default function BookDetailPage() {
   const [purchasing, setPurchasing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [validatingCode, setValidatingCode] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<{
+    code: string;
+    discountAmount: number;
+    finalPrice: number;
+    creatorName: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchBook();
@@ -109,6 +121,52 @@ export default function BookDetailPage() {
     }
   };
 
+  const validatePromoCode = async () => {
+    if (!promoCode.trim() || !book) return;
+
+    setValidatingCode(true);
+    try {
+      const res = await fetch("/api/marketplace/validate-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify({
+          code: promoCode.trim(),
+          bookId: book.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || "Invalid promo code");
+        setAppliedPromo(null);
+        return;
+      }
+
+      setAppliedPromo({
+        code: data.code,
+        discountAmount: data.discountAmount,
+        finalPrice: data.finalPrice,
+        creatorName: data.creatorName,
+      });
+      toast.success(`Promo code applied! You save $${data.discountAmount.toFixed(2)}`);
+    } catch (error) {
+      console.error("Error validating promo code:", error);
+      toast.error("Failed to validate promo code");
+      setAppliedPromo(null);
+    } finally {
+      setValidatingCode(false);
+    }
+  };
+
+  const clearPromoCode = () => {
+    setPromoCode("");
+    setAppliedPromo(null);
+  };
+
   const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin") => {
     if (!book) return;
 
@@ -116,6 +174,34 @@ export default function BookDetailPage() {
     setShowPaymentModal(false);
 
     try {
+      // If there's a free promo code applied, use a special endpoint
+      if (appliedPromo && appliedPromo.finalPrice === 0) {
+        const res = await fetch("/api/marketplace/redeem-code", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getCSRFHeaders(),
+          },
+          body: JSON.stringify({
+            bookId: book.id,
+            code: appliedPromo.code,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to redeem promo code");
+        }
+
+        if (data.success) {
+          setHasPurchased(true);
+          setShowSuccessModal(true);
+          clearPromoCode();
+        }
+        return;
+      }
+
       if (paymentMethod === "stripe") {
         // Use Stripe Checkout
         const res = await fetch("/api/marketplace/checkout", {
@@ -126,6 +212,7 @@ export default function BookDetailPage() {
           },
           body: JSON.stringify({
             bookId: book.id,
+            promoCode: appliedPromo?.code,
           }),
         });
 
@@ -151,6 +238,7 @@ export default function BookDetailPage() {
           body: JSON.stringify({
             bookId: book.id,
             paymentMethod,
+            promoCode: appliedPromo?.code,
           }),
         });
 
@@ -163,6 +251,7 @@ export default function BookDetailPage() {
         if (data.success) {
           setHasPurchased(true);
           setShowSuccessModal(true);
+          clearPromoCode();
         }
       }
     } catch (error) {
@@ -493,40 +582,147 @@ export default function BookDetailPage() {
       </div>
 
       {/* Payment Method Modal */}
-      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+      <Dialog open={showPaymentModal} onOpenChange={(open) => {
+        setShowPaymentModal(open);
+        if (!open) {
+          // Don't clear promo code when closing
+        }
+      }}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle>Choose Payment Method</DialogTitle>
+            <DialogTitle>
+              {appliedPromo && appliedPromo.finalPrice === 0 ? "Get Your Free Book" : "Choose Payment Method"}
+            </DialogTitle>
             <DialogDescription>
-              Select how you&apos;d like to pay for &quot;{book?.title}&quot;
+              {appliedPromo && appliedPromo.finalPrice === 0
+                ? `Redeem your promo code to get "${book?.title}" for free!`
+                : `Select how you'd like to pay for "${book?.title}"`
+              }
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {book?.paymentProcessor !== "DIVINITYCOIN" && (
+
+          {/* Price Summary */}
+          <div className="p-4 rounded-lg bg-muted/50 border border-border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-muted-foreground">Original Price</span>
+              <span className={appliedPromo ? "line-through text-muted-foreground" : "font-semibold text-foreground"}>
+                ${(book?.price ?? 0).toFixed(2)}
+              </span>
+            </div>
+            {appliedPromo && (
+              <>
+                <div className="flex items-center justify-between mb-2 text-emerald-500">
+                  <span className="flex items-center gap-2">
+                    <Gift className="w-4 h-4" />
+                    Promo Discount
+                  </span>
+                  <span>-${appliedPromo.discountAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <span className="font-semibold text-foreground">You Pay</span>
+                  <span className="text-xl font-bold text-emerald-500">
+                    {appliedPromo.finalPrice === 0 ? "FREE" : `$${appliedPromo.finalPrice.toFixed(2)}`}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Promo Code Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Ticket className="w-4 h-4" />
+              Have a promo code?
+            </label>
+            {appliedPromo ? (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <CheckCircle className="w-5 h-5 text-emerald-500" />
+                <div className="flex-1">
+                  <code className="font-mono font-bold">{appliedPromo.code}</code>
+                  <p className="text-xs text-muted-foreground">from {appliedPromo.creatorName}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={clearPromoCode}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter promo code"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  className="font-mono"
+                  onKeyDown={(e) => e.key === "Enter" && validatePromoCode()}
+                />
+                <Button
+                  variant="outline"
+                  onClick={validatePromoCode}
+                  disabled={validatingCode || !promoCode.trim()}
+                >
+                  {validatingCode ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Apply"
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-4 py-2">
+            {/* If free with promo code, show single button */}
+            {appliedPromo && appliedPromo.finalPrice === 0 ? (
               <Button
-                variant="outline"
-                className="h-16 justify-start"
+                className="h-16 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600"
                 onClick={() => handlePurchase("stripe")}
+                disabled={purchasing}
               >
-                <CreditCard className="w-6 h-6 mr-4" />
+                {purchasing ? (
+                  <Loader2 className="w-6 h-6 mr-4 animate-spin" />
+                ) : (
+                  <Gift className="w-6 h-6 mr-4" />
+                )}
                 <div className="text-left">
-                  <div className="font-semibold">Credit/Debit Card</div>
-                  <div className="text-sm text-muted-foreground">Pay with Stripe</div>
+                  <div className="font-semibold">Get Free Book</div>
+                  <div className="text-sm opacity-80">Redeem your promo code</div>
                 </div>
               </Button>
+            ) : (
+              <>
+                {book?.paymentProcessor !== "DIVINITYCOIN" && (
+                  <Button
+                    variant="outline"
+                    className="h-16 justify-start"
+                    onClick={() => handlePurchase("stripe")}
+                    disabled={purchasing}
+                  >
+                    <CreditCard className="w-6 h-6 mr-4" />
+                    <div className="text-left">
+                      <div className="font-semibold">Credit/Debit Card</div>
+                      <div className="text-sm text-muted-foreground">Pay with Stripe</div>
+                    </div>
+                  </Button>
+                )}
+                <Button
+                  className="h-16 bg-[#0066FF] hover:bg-[#0052CC] justify-start"
+                  onClick={() => handlePurchase("divinitycoin")}
+                  disabled={purchasing}
+                >
+                  <Coins className="w-6 h-6 mr-4" />
+                  <div className="text-left">
+                    <div className="font-semibold">DivinityCoin</div>
+                    <div className="text-sm opacity-80">
+                      Pay from your wallet balance
+                    </div>
+                  </div>
+                </Button>
+              </>
             )}
-            <Button
-              className="h-16 bg-[#0066FF] hover:bg-[#0052CC] justify-start"
-              onClick={() => handlePurchase("divinitycoin")}
-            >
-              <Coins className="w-6 h-6 mr-4" />
-              <div className="text-left">
-                <div className="font-semibold">DivinityCoin</div>
-                <div className="text-sm opacity-80">
-                  Pay from your wallet balance
-                </div>
-              </div>
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

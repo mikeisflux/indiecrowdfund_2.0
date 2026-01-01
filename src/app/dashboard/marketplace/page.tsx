@@ -28,6 +28,13 @@ import {
   ShoppingCart,
   BarChart3,
   Loader2,
+  Ticket,
+  Copy,
+  ExternalLink,
+  Mail,
+  Gift,
+  Users,
+  Calendar,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -85,6 +92,35 @@ interface MarketplaceStats {
   totalSales: number;
   monthlyRevenue: number;
   monthlySales: number;
+}
+
+interface DiscountCodeRedemption {
+  id: string;
+  redeemedAt: string;
+  discountAmount: number;
+  customer: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+  book: {
+    id: string;
+    title: string;
+    slug: string;
+  };
+}
+
+interface DiscountCode {
+  id: string;
+  code: string;
+  type: "FREE_BOOK" | "PERCENTAGE" | "FIXED_AMOUNT";
+  validFrom: string;
+  validUntil: string;
+  maxRedemptions: number;
+  usageCount: number;
+  isActive: boolean;
+  createdAt: string;
+  redemptions: DiscountCodeRedemption[];
 }
 
 function StatusBadge({ status }: { status: MarketplaceBook["status"] }) {
@@ -291,6 +327,51 @@ export default function CreatorMarketplaceDashboard() {
   const [stats, setStats] = useState<MarketplaceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("books");
+  const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>([]);
+  const [currentMonthCode, setCurrentMonthCode] = useState<DiscountCode | null>(null);
+  const [hasLiveBooks, setHasLiveBooks] = useState(false);
+  const [creatingCode, setCreatingCode] = useState(false);
+
+  const fetchDiscountCodes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/creator/marketplace/discount-codes");
+      if (res.ok) {
+        const data = await res.json();
+        setDiscountCodes(data.discountCodes || []);
+        setCurrentMonthCode(data.currentMonthCode || null);
+        setHasLiveBooks(data.hasLiveBooks || false);
+      }
+    } catch (error) {
+      console.error("Error fetching discount codes:", error);
+    }
+  }, []);
+
+  const handleCreateCode = async () => {
+    setCreatingCode(true);
+    try {
+      const res = await fetch("/api/creator/marketplace/discount-codes", {
+        method: "POST",
+        headers: getCSRFHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to create promo code");
+        return;
+      }
+      toast.success("Promo code created successfully!");
+      fetchDiscountCodes();
+    } catch (error) {
+      console.error("Error creating promo code:", error);
+      toast.error("Failed to create promo code");
+    } finally {
+      setCreatingCode(false);
+    }
+  };
+
+  const copyCodeToClipboard = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success("Promo code copied to clipboard!");
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -317,7 +398,8 @@ export default function CreatorMarketplaceDashboard() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchDiscountCodes();
+  }, [fetchData, fetchDiscountCodes]);
 
   const handleDelete = async (bookId: string) => {
     if (!confirm("Are you sure you want to delete this book? This action cannot be undone.")) {
@@ -587,6 +669,13 @@ export default function CreatorMarketplaceDashboard() {
                 Drafts ({books.filter(b => b.status === "DRAFT").length})
               </TabsTrigger>
               <TabsTrigger
+                value="promo-codes"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
+              >
+                <Ticket className="w-4 h-4 mr-2" />
+                Promo Codes
+              </TabsTrigger>
+              <TabsTrigger
                 value="analytics"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
@@ -700,6 +789,227 @@ export default function CreatorMarketplaceDashboard() {
                   />
                 ))}
               </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="promo-codes" className="space-y-6">
+            {/* Current Month's Code Section */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Gift className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                    Monthly Free Book Code
+                  </CardTitle>
+                  {!hasLiveBooks && (
+                    <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                      Requires Live Book
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!hasLiveBooks ? (
+                  <div className="py-8 text-center">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-4 text-amber-500/50" />
+                    <p className="text-muted-foreground mb-4">
+                      You need at least one live book to create promo codes.
+                    </p>
+                    <Link href="/dashboard/marketplace/books/new">
+                      <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Your First Book
+                      </Button>
+                    </Link>
+                  </div>
+                ) : currentMonthCode ? (
+                  <div className="space-y-4">
+                    <div className="p-6 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm text-muted-foreground">Your promo code for this month:</span>
+                        <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Active
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <code className="text-2xl font-bold tracking-wider text-foreground bg-muted px-4 py-2 rounded-lg">
+                          {currentMonthCode.code}
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => copyCodeToClipboard(currentMonthCode.code)}
+                          className="shrink-0"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div className="p-3 rounded-lg bg-muted">
+                          <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                          <p className="text-lg font-bold text-foreground">{currentMonthCode.usageCount}/{currentMonthCode.maxRedemptions}</p>
+                          <p className="text-xs text-muted-foreground">Redemptions</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted">
+                          <Calendar className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                          <p className="text-lg font-bold text-foreground">
+                            {new Date(currentMonthCode.validUntil).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Expires</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted">
+                          <Gift className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                          <p className="text-lg font-bold text-foreground">100%</p>
+                          <p className="text-xs text-muted-foreground">Off 1 Book</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 border border-border">
+                      <Mail className="h-5 w-5 text-purple-500 shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">Share via Email Campaign</p>
+                        <p className="text-xs text-muted-foreground">Send this code to your audience through IndieKit</p>
+                      </div>
+                      <Link href="/dashboard/indiekit?tab=emails">
+                        <Button variant="outline" size="sm">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Open IndieKit
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center">
+                    <Ticket className="h-12 w-12 mx-auto mb-4 text-purple-500/50" />
+                    <p className="text-muted-foreground mb-2">
+                      Generate your monthly promo code to offer one free PDF to a customer.
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      Each code is valid for one redemption per customer, per month.
+                    </p>
+                    <Button
+                      onClick={handleCreateCode}
+                      disabled={creatingCode}
+                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                    >
+                      {creatingCode ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Generate Promo Code
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Redemption History */}
+            {discountCodes.length > 0 && (
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Users className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                    Redemption History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {discountCodes.flatMap(code => code.redemptions).length === 0 ? (
+                    <div className="py-8 text-center">
+                      <Ticket className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                      <p className="text-muted-foreground">No redemptions yet</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Share your promo code to see redemptions here
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {discountCodes.flatMap(code =>
+                        code.redemptions.map(redemption => ({
+                          ...redemption,
+                          codeValue: code.code,
+                        }))
+                      ).sort((a, b) => new Date(b.redeemedAt).getTime() - new Date(a.redeemedAt).getTime())
+                        .map((redemption) => (
+                          <div
+                            key={redemption.id}
+                            className="flex items-center gap-4 p-4 rounded-lg bg-muted"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                              <CheckCircle className="h-5 w-5 text-emerald-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-foreground truncate">
+                                {redemption.customer.name || redemption.customer.email}
+                              </p>
+                              <p className="text-sm text-muted-foreground truncate">
+                                Redeemed <code className="text-xs bg-muted-foreground/20 px-1.5 py-0.5 rounded">{redemption.codeValue}</code> for &quot;{redemption.book.title}&quot;
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-medium text-emerald-500">
+                                -${Number(redemption.discountAmount).toFixed(2)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(redemption.redeemedAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* All Codes History */}
+            {discountCodes.length > 1 && (
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Clock className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                    Past Promo Codes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {discountCodes
+                      .filter(code => code.id !== currentMonthCode?.id)
+                      .map((code) => (
+                        <div
+                          key={code.id}
+                          className="flex items-center justify-between p-3 rounded-lg bg-muted"
+                        >
+                          <div className="flex items-center gap-3">
+                            <code className="text-sm font-mono bg-muted-foreground/20 px-2 py-1 rounded">
+                              {code.code}
+                            </code>
+                            <Badge
+                              className={cn(
+                                "border",
+                                code.isActive && new Date(code.validUntil) > new Date()
+                                  ? "bg-emerald-500/20 text-emerald-600 border-emerald-500/30"
+                                  : "bg-gray-500/20 text-gray-600 border-gray-500/30"
+                              )}
+                            >
+                              {code.isActive && new Date(code.validUntil) > new Date() ? "Active" : "Expired"}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {code.usageCount}/{code.maxRedemptions} used • {new Date(code.validFrom).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 
