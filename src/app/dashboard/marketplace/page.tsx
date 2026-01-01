@@ -206,15 +206,15 @@ function BookCard({
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="p-2 rounded-lg bg-muted">
-            <p className="text-lg font-bold text-emerald-500 dark:text-emerald-400">${book.stats.revenue.toFixed(2)}</p>
+            <p className="text-lg font-bold text-emerald-500 dark:text-emerald-400">${(book.stats?.revenue ?? 0).toFixed(2)}</p>
             <p className="text-xs text-muted-foreground">Revenue</p>
           </div>
           <div className="p-2 rounded-lg bg-muted">
-            <p className="text-lg font-bold text-foreground">{book.stats.purchases}</p>
+            <p className="text-lg font-bold text-foreground">{book.stats?.purchases ?? 0}</p>
             <p className="text-xs text-muted-foreground">Sales</p>
           </div>
           <div className="p-2 rounded-lg bg-muted">
-            <p className="text-lg font-bold text-foreground">{book.stats.views}</p>
+            <p className="text-lg font-bold text-foreground">{book.stats?.views ?? 0}</p>
             <p className="text-xs text-muted-foreground">Views</p>
           </div>
         </div>
@@ -232,7 +232,7 @@ function BookCard({
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
           <span className="text-muted-foreground text-sm">Price</span>
           <span className="text-lg font-bold text-emerald-500 dark:text-emerald-400">
-            ${book.price.toFixed(2)}
+            ${(book.price ?? 0).toFixed(2)}
           </span>
         </div>
       </div>
@@ -444,11 +444,11 @@ export default function CreatorMarketplaceDashboard() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
             <StatsCard
               title="Total Revenue"
-              value={stats.totalRevenue}
+              value={stats.totalRevenue ?? 0}
               prefix="$"
               icon={DollarSign}
               color="green"
-              subtitle={`$${stats.monthlyRevenue.toFixed(2)} this month`}
+              subtitle={`$${(stats.monthlyRevenue ?? 0).toFixed(2)} this month`}
             />
             <StatsCard
               title="Total Sales"
@@ -533,20 +533,22 @@ export default function CreatorMarketplaceDashboard() {
                 </div>
 
                 {/* Company Stats */}
-                <div className="grid grid-cols-3 gap-4 mt-6">
-                  <div className="p-4 rounded-xl bg-muted">
-                    <p className="text-2xl font-bold text-foreground">{company.stats.books}</p>
-                    <p className="text-sm text-muted-foreground">Published Books</p>
+                {company.stats && (
+                  <div className="grid grid-cols-3 gap-4 mt-6">
+                    <div className="p-4 rounded-xl bg-muted">
+                      <p className="text-2xl font-bold text-foreground">{company.stats.books ?? 0}</p>
+                      <p className="text-sm text-muted-foreground">Published Books</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-muted">
+                      <p className="text-2xl font-bold text-foreground">{company.stats.totalSales ?? 0}</p>
+                      <p className="text-sm text-muted-foreground">Total Sales</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-muted">
+                      <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">${(company.stats.totalRevenue ?? 0).toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">Total Revenue</p>
+                    </div>
                   </div>
-                  <div className="p-4 rounded-xl bg-muted">
-                    <p className="text-2xl font-bold text-foreground">{company.stats.totalSales}</p>
-                    <p className="text-sm text-muted-foreground">Total Sales</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-muted">
-                    <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">${company.stats.totalRevenue.toFixed(2)}</p>
-                    <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </Card>
@@ -753,12 +755,12 @@ export default function CreatorMarketplaceDashboard() {
                               <div className="flex-1">
                                 <p className="font-medium text-foreground">{book.title}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  {book.stats.purchases} sales
+                                  {book.stats?.purchases ?? 0} sales
                                 </p>
                               </div>
                               <div className="text-right">
                                 <p className="text-lg font-bold text-emerald-500 dark:text-emerald-400">
-                                  ${book.stats.revenue.toFixed(2)}
+                                  ${(book.stats?.revenue ?? 0).toFixed(2)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">revenue</p>
                               </div>

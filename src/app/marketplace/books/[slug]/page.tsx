@@ -241,7 +241,7 @@ export default function BookDetailPage({
                 <div className="relative w-full h-full">
                   <video
                     src={book.videoUrl}
-                    poster={book.coverImage || undefined}
+                    poster={book.coverImage && typeof book.coverImage === 'string' ? book.coverImage : undefined}
                     controls
                     className="w-full h-full object-cover"
                   />
@@ -251,7 +251,7 @@ export default function BookDetailPage({
                     </div>
                   )}
                 </div>
-              ) : book.coverImage ? (
+              ) : book.coverImage && typeof book.coverImage === 'string' ? (
                 <Image
                   src={book.coverImage}
                   alt={book.title}
@@ -382,7 +382,7 @@ export default function BookDetailPage({
 
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold text-emerald-400">
-                    ${book.price.toFixed(2)}
+                    ${(book.price ?? 0).toFixed(2)}
                   </span>
                   <span className="text-white/50">{book.currency}</span>
                 </div>
@@ -391,11 +391,11 @@ export default function BookDetailPage({
                 <div className="flex items-center gap-4 text-sm text-white/60">
                   <span className="flex items-center gap-1">
                     <Download className="w-4 h-4" />
-                    {book.stats.purchases} purchases
+                    {book.stats?.purchases ?? 0} purchases
                   </span>
                   <span className="flex items-center gap-1">
                     <Eye className="w-4 h-4" />
-                    {book.stats.views} views
+                    {book.stats?.views ?? 0} views
                   </span>
                 </div>
 
@@ -453,7 +453,7 @@ export default function BookDetailPage({
                 </Button>
 
                 {/* Tags */}
-                {book.tags.length > 0 && (
+                {book.tags && book.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {book.tags.map((tag) => (
                       <Badge
