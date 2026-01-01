@@ -308,20 +308,13 @@ function PDFFilePicker({
               <p className="text-foreground font-medium truncate">{currentFileName || "Selected PDF"}</p>
               <p className="text-emerald-500 dark:text-emerald-400 text-sm">File selected</p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onSelect("", "", "")}
-            >
-              Change
-            </Button>
           </div>
           {/* Delete button */}
           <button
             type="button"
             disabled={deleting}
             onClick={handleDelete}
-            className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-500 dark:text-red-400 transition-colors disabled:opacity-50"
+            className="absolute top-2 right-2 p-2 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg transition-colors disabled:opacity-50"
           >
             {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
           </button>
@@ -551,7 +544,7 @@ function FileUpload({
               onUpload("");
               toast.info(`${label} removed`);
             }}
-            className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-500 dark:text-red-400 transition-colors"
+            className="absolute top-2 right-2 p-2 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
