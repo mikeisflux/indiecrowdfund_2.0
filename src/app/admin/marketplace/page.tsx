@@ -216,14 +216,14 @@ function CategoryBookItem({
   isUpdating: boolean;
 }) {
   return (
-    <div className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors">
+    <div className="flex items-center gap-4 p-4 bg-muted/50 border border-border rounded-lg hover:bg-muted transition-colors">
       {/* Order number */}
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center text-white font-bold text-sm">
+      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center text-purple-700 font-bold text-sm">
         {index + 1}
       </div>
 
       {/* Cover */}
-      <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+      <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
         {book.coverImage ? (
           <Image
             src={book.coverImage}
@@ -234,18 +234,18 @@ function CategoryBookItem({
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <BookOpen className="w-5 h-5 text-white/30" />
+            <BookOpen className="w-5 h-5 text-muted-foreground/50" />
           </div>
         )}
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-white truncate">{book.title}</h4>
-        <div className="flex items-center gap-2 text-sm text-white/60">
+        <h4 className="font-medium text-foreground truncate">{book.title}</h4>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>{book.creator.name}</span>
           <span>•</span>
-          <span className="text-emerald-400">${book.price.toFixed(2)}</span>
+          <span className="text-emerald-600">${book.price.toFixed(2)}</span>
         </div>
       </div>
 
@@ -254,7 +254,7 @@ function CategoryBookItem({
         <Button
           size="sm"
           variant="ghost"
-          className="h-8 w-8 p-0 text-white/60 hover:text-white hover:bg-white/10"
+          className="h-8 w-8 p-0"
           onClick={onMoveUp}
           disabled={index === 0 || isUpdating}
         >
@@ -263,7 +263,7 @@ function CategoryBookItem({
         <Button
           size="sm"
           variant="ghost"
-          className="h-8 w-8 p-0 text-white/60 hover:text-white hover:bg-white/10"
+          className="h-8 w-8 p-0"
           onClick={onMoveDown}
           disabled={index === totalCount - 1 || isUpdating}
         >
@@ -275,7 +275,7 @@ function CategoryBookItem({
       <Button
         size="sm"
         variant="ghost"
-        className="h-8 w-8 p-0 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+        className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
         onClick={onRemove}
         disabled={isUpdating}
       >
@@ -304,7 +304,7 @@ function BookDetailPanel({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <div className="w-24 h-24 rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
+        <div className="w-24 h-24 rounded-xl overflow-hidden bg-muted/50 flex-shrink-0">
           {book.coverImage ? (
             <Image
               src={book.coverImage}
@@ -315,69 +315,69 @@ function BookDetailPanel({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <BookOpen className="w-10 h-10 text-white/30" />
+              <BookOpen className="w-10 h-10 text-muted-foreground/50" />
             </div>
           )}
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-xl font-bold text-white">{book.title}</h2>
+            <h2 className="text-xl font-bold text-foreground">{book.title}</h2>
             <StatusBadge status={book.status} />
             {book.isNsfw && (
               <Badge variant="destructive">NSFW</Badge>
             )}
             {book.isFeatured && (
-              <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              <Badge className="bg-amber-100 text-amber-600 border border-amber-200">
                 <Star className="w-3 h-3 mr-1 fill-current" />
                 Featured
               </Badge>
             )}
             {book.isStaffPick && (
-              <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">
+              <Badge className="bg-purple-100 text-purple-600 border border-purple-200">
                 <Sparkles className="w-3 h-3 mr-1" />
                 Staff Pick
               </Badge>
             )}
           </div>
-          <p className="text-white/60 mt-1">{book.category || "Uncategorized"}</p>
+          <p className="text-muted-foreground mt-1">{book.category || "Uncategorized"}</p>
         </div>
       </div>
 
       {/* Quick Info */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-          <div className="flex items-center gap-2 text-white/60 text-sm">
+        <div className="p-4 rounded-xl bg-muted/50 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <DollarSign className="w-4 h-4" />
             Price
           </div>
-          <p className="text-lg font-bold text-white mt-1">
+          <p className="text-lg font-bold text-foreground mt-1">
             ${book.price.toFixed(2)} {book.currency}
           </p>
         </div>
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-          <div className="flex items-center gap-2 text-white/60 text-sm">
+        <div className="p-4 rounded-xl bg-muted/50 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <FileText className="w-4 h-4" />
             Payment
           </div>
-          <p className="text-lg font-bold text-white mt-1">
+          <p className="text-lg font-bold text-foreground mt-1">
             {book.paymentProcessor}
           </p>
         </div>
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-          <div className="flex items-center gap-2 text-white/60 text-sm">
+        <div className="p-4 rounded-xl bg-muted/50 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <User className="w-4 h-4" />
             Creator
           </div>
-          <p className="text-sm font-medium text-white mt-1 truncate">
+          <p className="text-sm font-medium text-foreground mt-1 truncate">
             {book.creator.name}
           </p>
         </div>
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-          <div className="flex items-center gap-2 text-white/60 text-sm">
+        <div className="p-4 rounded-xl bg-muted/50 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <Calendar className="w-4 h-4" />
             Submitted
           </div>
-          <p className="text-sm font-medium text-white mt-1">
+          <p className="text-sm font-medium text-foreground mt-1">
             {book.submittedAt
               ? new Date(book.submittedAt).toLocaleDateString()
               : "Not submitted"}
@@ -386,18 +386,18 @@ function BookDetailPanel({
       </div>
 
       {/* Description */}
-      <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-        <h3 className="text-sm font-medium text-white/60 mb-2">Description</h3>
-        <p className="text-sm text-white/80 whitespace-pre-wrap">
+      <div className="p-4 rounded-xl bg-muted/50 border border-border">
+        <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
+        <p className="text-sm text-foreground whitespace-pre-wrap">
           {book.description || "No description provided"}
         </p>
       </div>
 
       {/* Creator Info */}
-      <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-        <h3 className="text-sm font-medium text-white/60 mb-3">Creator Information</h3>
+      <div className="p-4 rounded-xl bg-muted/50 border border-border">
+        <h3 className="text-sm font-medium text-muted-foreground mb-3">Creator Information</h3>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10">
+          <div className="w-12 h-12 rounded-full overflow-hidden bg-muted">
             {book.creator.avatar ? (
               <Image
                 src={book.creator.avatar}
@@ -408,23 +408,23 @@ function BookDetailPanel({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <User className="w-6 h-6 text-white/30" />
+                <User className="w-6 h-6 text-muted-foreground/50" />
               </div>
             )}
           </div>
           <div>
-            <p className="font-medium text-white">{book.creator.name}</p>
-            <p className="text-sm text-white/60">{book.creator.email}</p>
+            <p className="font-medium text-foreground">{book.creator.name}</p>
+            <p className="text-sm text-muted-foreground">{book.creator.email}</p>
           </div>
         </div>
         {book.company && (
-          <div className="flex items-center gap-2 mt-4 p-3 rounded-lg bg-white/5">
-            <Building2 className="w-4 h-4 text-white/60" />
-            <span className="text-sm text-white">Company: {book.company.name}</span>
+          <div className="flex items-center gap-2 mt-4 p-3 rounded-lg bg-muted/50">
+            <Building2 className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-foreground">Company: {book.company.name}</span>
             <Link
               href={`/marketplace/companies/${book.company.slug}`}
               target="_blank"
-              className="ml-auto text-purple-400 hover:text-purple-300 text-sm"
+              className="ml-auto text-purple-600 hover:text-purple-700 text-sm"
             >
               View
             </Link>
@@ -433,13 +433,13 @@ function BookDetailPanel({
       </div>
 
       {/* Links */}
-      <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
-        <h3 className="text-sm font-medium text-white/60 mb-3">Files & Links</h3>
+      <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-2">
+        <h3 className="text-sm font-medium text-muted-foreground mb-3">Files & Links</h3>
         <a
           href={book.pdfFileUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300"
+          className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700"
         >
           <FileText className="w-4 h-4" />
           View PDF File
@@ -450,7 +450,7 @@ function BookDetailPanel({
             href={book.promoVideoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300"
+            className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700"
           >
             <Eye className="w-4 h-4" />
             View Promo Video
@@ -461,15 +461,15 @@ function BookDetailPanel({
 
       {/* Admin Actions for Live Books */}
       {book.status === "LIVE" && (
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-4">
-          <h3 className="text-sm font-medium text-white/60">Homepage Categories</h3>
-          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+        <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-4">
+          <h3 className="text-sm font-medium text-muted-foreground">Homepage Categories</h3>
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
             <div>
-              <p className="font-medium text-white flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-400" />
+              <p className="font-medium text-foreground flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-600" />
                 Featured
               </p>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-muted-foreground">
                 Show in Featured section on marketplace homepage
               </p>
             </div>
@@ -479,13 +479,13 @@ function BookDetailPanel({
               disabled={isSubmitting}
             />
           </div>
-          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
             <div>
-              <p className="font-medium text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-400" />
+              <p className="font-medium text-foreground flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-600" />
                 Staff Pick
               </p>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-muted-foreground">
                 Show in Staff Picks section on marketplace homepage
               </p>
             </div>
@@ -811,127 +811,113 @@ export default function AdminMarketplacePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
-      {/* Background effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Marketplace Management</h1>
+          <p className="text-muted-foreground">
+            Review submissions and manage homepage categories
+          </p>
+        </div>
+        <Button
+          onClick={fetchBooks}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
-      <div className="container py-8 relative">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-                <BookOpen className="w-6 h-6 text-purple-400" />
-              </div>
-              Marketplace Management
-            </h1>
-            <p className="text-white/60 mt-1">
-              Review submissions and manage homepage categories
-            </p>
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="p-4 rounded-xl bg-card border">
+          <div className="flex items-center gap-2 text-amber-600">
+            <Clock className="w-4 h-4" />
+            <span className="text-sm font-medium">Pending</span>
           </div>
-          <Button
-            onClick={fetchBooks}
-            variant="outline"
-            size="sm"
-            className="border-white/20 text-white hover:bg-white/10"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
+          <p className="text-2xl font-bold mt-1">{stats.pending}</p>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-          <div className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-white/10">
-            <div className="flex items-center gap-2 text-amber-400">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm font-medium">Pending</span>
-            </div>
-            <p className="text-2xl font-bold text-white mt-1">{stats.pending}</p>
+        <div className="p-4 rounded-xl bg-card border">
+          <div className="flex items-center gap-2 text-emerald-600">
+            <CheckCircle className="w-4 h-4" />
+            <span className="text-sm font-medium">Live</span>
           </div>
-          <div className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-white/10">
-            <div className="flex items-center gap-2 text-emerald-400">
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-sm font-medium">Live</span>
-            </div>
-            <p className="text-2xl font-bold text-white mt-1">{stats.live}</p>
-          </div>
-          <div className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-white/10">
-            <div className="flex items-center gap-2 text-blue-400">
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-sm font-medium">Approved Today</span>
-            </div>
-            <p className="text-2xl font-bold text-white mt-1">{stats.approvedToday}</p>
-          </div>
-          <div className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-white/10">
-            <div className="flex items-center gap-2 text-rose-400">
-              <XCircle className="w-4 h-4" />
-              <span className="text-sm font-medium">Rejected Today</span>
-            </div>
-            <p className="text-2xl font-bold text-white mt-1">{stats.rejectedToday}</p>
-          </div>
-          <div className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-white/10">
-            <div className="flex items-center gap-2 text-purple-400">
-              <DollarSign className="w-4 h-4" />
-              <span className="text-sm font-medium">Total Revenue</span>
-            </div>
-            <p className="text-2xl font-bold text-white mt-1">${stats.totalRevenue.toFixed(0)}</p>
-          </div>
-          <div className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-white/10">
-            <div className="flex items-center gap-2 text-cyan-400">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-medium">Total Sales</span>
-            </div>
-            <p className="text-2xl font-bold text-white mt-1">{stats.totalSales}</p>
-          </div>
+          <p className="text-2xl font-bold mt-1">{stats.live}</p>
         </div>
+        <div className="p-4 rounded-xl bg-card border">
+          <div className="flex items-center gap-2 text-blue-600">
+            <CheckCircle className="w-4 h-4" />
+            <span className="text-sm font-medium">Approved Today</span>
+          </div>
+          <p className="text-2xl font-bold mt-1">{stats.approvedToday}</p>
+        </div>
+        <div className="p-4 rounded-xl bg-card border">
+          <div className="flex items-center gap-2 text-rose-600">
+            <XCircle className="w-4 h-4" />
+            <span className="text-sm font-medium">Rejected Today</span>
+          </div>
+          <p className="text-2xl font-bold mt-1">{stats.rejectedToday}</p>
+        </div>
+        <div className="p-4 rounded-xl bg-card border">
+          <div className="flex items-center gap-2 text-purple-600">
+            <DollarSign className="w-4 h-4" />
+            <span className="text-sm font-medium">Total Revenue</span>
+          </div>
+          <p className="text-2xl font-bold mt-1">${stats.totalRevenue.toFixed(0)}</p>
+        </div>
+        <div className="p-4 rounded-xl bg-card border">
+          <div className="flex items-center gap-2 text-cyan-600">
+            <Sparkles className="w-4 h-4" />
+            <span className="text-sm font-medium">Total Sales</span>
+          </div>
+          <p className="text-2xl font-bold mt-1">{stats.totalSales}</p>
+        </div>
+      </div>
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="flex items-center justify-between mb-6">
-            <TabsList className="bg-white/5 border border-white/10">
-              <TabsTrigger value="pending" className="data-[state=active]:bg-white/10 text-white/70 data-[state=active]:text-white">
+            <TabsList className="bg-muted/50 border border-border">
+              <TabsTrigger value="pending" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
                 <Clock className="w-4 h-4 mr-2" />
                 Pending
                 {stats.pending > 0 && (
-                  <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">{stats.pending}</Badge>
+                  <Badge className="ml-2 bg-amber-100 text-amber-600 border-amber-200">{stats.pending}</Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="featured" className="data-[state=active]:bg-white/10 text-white/70 data-[state=active]:text-white">
+              <TabsTrigger value="featured" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
                 <Star className="w-4 h-4 mr-2" />
                 Featured
-                <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">{featuredBooks.length}</Badge>
+                <Badge className="ml-2 bg-amber-100 text-amber-600 border-amber-200">{featuredBooks.length}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="staffpicks" className="data-[state=active]:bg-white/10 text-white/70 data-[state=active]:text-white">
+              <TabsTrigger value="staffpicks" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
                 <Sparkles className="w-4 h-4 mr-2" />
                 Staff Picks
-                <Badge className="ml-2 bg-purple-500/20 text-purple-400 border-purple-500/30">{staffPickBooks.length}</Badge>
+                <Badge className="ml-2 bg-purple-100 text-purple-600 border-purple-200">{staffPickBooks.length}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="live" className="data-[state=active]:bg-white/10 text-white/70 data-[state=active]:text-white">
+              <TabsTrigger value="live" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Live
               </TabsTrigger>
-              <TabsTrigger value="all" className="data-[state=active]:bg-white/10 text-white/70 data-[state=active]:text-white">
+              <TabsTrigger value="all" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
                 <BookOpen className="w-4 h-4 mr-2" />
                 All Books
               </TabsTrigger>
-              <TabsTrigger value="history" className="data-[state=active]:bg-white/10 text-white/70 data-[state=active]:text-white">
+              <TabsTrigger value="history" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
                 <History className="w-4 h-4 mr-2" />
                 History
               </TabsTrigger>
             </TabsList>
 
             <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
               <Input
                 placeholder="Search books..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                className="pl-10 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/70"
               />
             </div>
           </div>
@@ -940,17 +926,17 @@ export default function AdminMarketplacePage() {
           <TabsContent value="pending">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Book List */}
-              <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 overflow-hidden max-h-[800px]">
-                <div className="p-4 border-b border-white/10">
-                  <h3 className="font-medium text-white">Pending Submissions ({filteredPending.length})</h3>
+              <div className="rounded-xl bg-muted/50 border border-border overflow-hidden max-h-[800px]">
+                <div className="p-4 border-b border-border">
+                  <h3 className="font-medium text-foreground">Pending Submissions ({filteredPending.length})</h3>
                 </div>
                 <div className="p-4 overflow-y-auto max-h-[700px] space-y-2">
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+                      <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
                     </div>
                   ) : filteredPending.length === 0 ? (
-                    <div className="text-center py-12 text-white/50">
+                    <div className="text-center py-12 text-muted-foreground">
                       <CheckCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No pending submissions</p>
                     </div>
@@ -968,7 +954,7 @@ export default function AdminMarketplacePage() {
               </div>
 
               {/* Detail Panel */}
-              <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 overflow-hidden max-h-[800px] overflow-y-auto">
+              <div className="rounded-xl bg-muted/50 border border-border overflow-hidden max-h-[800px] overflow-y-auto">
                 <div className="p-6">
                   {selectedBook ? (
                     <BookDetailPanel
@@ -980,7 +966,7 @@ export default function AdminMarketplacePage() {
                       isSubmitting={isSubmitting}
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-white/50">
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                       <Eye className="w-12 h-12 mb-4 opacity-50" />
                       <p>Select a book to view details</p>
                     </div>
@@ -992,15 +978,15 @@ export default function AdminMarketplacePage() {
 
           {/* Featured Tab */}
           <TabsContent value="featured">
-            <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 overflow-hidden">
-              <div className="p-4 border-b border-white/10 flex items-center justify-between">
+            <div className="rounded-xl bg-muted/50 border border-border overflow-hidden">
+              <div className="p-4 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/20">
-                    <Star className="w-5 h-5 text-amber-400" />
+                  <div className="p-2 rounded-lg bg-amber-100">
+                    <Star className="w-5 h-5 text-amber-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-white">Featured Books</h3>
-                    <p className="text-sm text-white/60">Shown in the Featured section on marketplace homepage</p>
+                    <h3 className="font-medium text-foreground">Featured Books</h3>
+                    <p className="text-sm text-muted-foreground">Shown in the Featured section on marketplace homepage</p>
                   </div>
                 </div>
                 <Button
@@ -1008,7 +994,7 @@ export default function AdminMarketplacePage() {
                     setAddDialogCategory("featured");
                     setShowAddDialog(true);
                   }}
-                  className="bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30"
+                  className="bg-amber-100 text-amber-600 hover:bg-amber-200 border border-amber-200"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Book
@@ -1016,7 +1002,7 @@ export default function AdminMarketplacePage() {
               </div>
               <div className="p-4 space-y-2">
                 {featuredBooks.length === 0 ? (
-                  <div className="text-center py-12 text-white/50">
+                  <div className="text-center py-12 text-muted-foreground">
                     <Star className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No featured books yet</p>
                     <p className="text-sm mt-2">Add books to show them in the Featured section</p>
@@ -1041,15 +1027,15 @@ export default function AdminMarketplacePage() {
 
           {/* Staff Picks Tab */}
           <TabsContent value="staffpicks">
-            <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 overflow-hidden">
-              <div className="p-4 border-b border-white/10 flex items-center justify-between">
+            <div className="rounded-xl bg-muted/50 border border-border overflow-hidden">
+              <div className="p-4 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-500/20">
-                    <Sparkles className="w-5 h-5 text-purple-400" />
+                  <div className="p-2 rounded-lg bg-purple-100">
+                    <Sparkles className="w-5 h-5 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-white">Staff Picks</h3>
-                    <p className="text-sm text-white/60">Shown in the Staff Picks section on marketplace homepage</p>
+                    <h3 className="font-medium text-foreground">Staff Picks</h3>
+                    <p className="text-sm text-muted-foreground">Shown in the Staff Picks section on marketplace homepage</p>
                   </div>
                 </div>
                 <Button
@@ -1057,7 +1043,7 @@ export default function AdminMarketplacePage() {
                     setAddDialogCategory("staffPick");
                     setShowAddDialog(true);
                   }}
-                  className="bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border border-purple-500/30"
+                  className="bg-purple-100 text-purple-600 hover:bg-purple-200 border border-purple-200"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Book
@@ -1065,7 +1051,7 @@ export default function AdminMarketplacePage() {
               </div>
               <div className="p-4 space-y-2">
                 {staffPickBooks.length === 0 ? (
-                  <div className="text-center py-12 text-white/50">
+                  <div className="text-center py-12 text-muted-foreground">
                     <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No staff picks yet</p>
                     <p className="text-sm mt-2">Add books to show them in the Staff Picks section</p>
@@ -1091,13 +1077,13 @@ export default function AdminMarketplacePage() {
           {/* Live Tab */}
           <TabsContent value="live">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 overflow-hidden max-h-[800px]">
-                <div className="p-4 border-b border-white/10">
-                  <h3 className="font-medium text-white">Live Books ({filteredLive.length})</h3>
+              <div className="rounded-xl bg-muted/50 border border-border overflow-hidden max-h-[800px]">
+                <div className="p-4 border-b border-border">
+                  <h3 className="font-medium text-foreground">Live Books ({filteredLive.length})</h3>
                 </div>
                 <div className="p-4 overflow-y-auto max-h-[700px] space-y-2">
                   {filteredLive.length === 0 ? (
-                    <div className="text-center py-12 text-white/50">
+                    <div className="text-center py-12 text-muted-foreground">
                       <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No live books</p>
                     </div>
@@ -1114,7 +1100,7 @@ export default function AdminMarketplacePage() {
                 </div>
               </div>
 
-              <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 overflow-hidden max-h-[800px] overflow-y-auto">
+              <div className="rounded-xl bg-muted/50 border border-border overflow-hidden max-h-[800px] overflow-y-auto">
                 <div className="p-6">
                   {selectedBook ? (
                     <BookDetailPanel
@@ -1126,7 +1112,7 @@ export default function AdminMarketplacePage() {
                       isSubmitting={isSubmitting}
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-white/50">
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                       <Eye className="w-12 h-12 mb-4 opacity-50" />
                       <p>Select a book to manage</p>
                     </div>
@@ -1138,13 +1124,13 @@ export default function AdminMarketplacePage() {
 
           {/* All Books Tab */}
           <TabsContent value="all">
-            <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 overflow-hidden">
-              <div className="p-4 border-b border-white/10">
-                <h3 className="font-medium text-white">All Books ({filteredAll.length})</h3>
+            <div className="rounded-xl bg-muted/50 border border-border overflow-hidden">
+              <div className="p-4 border-b border-border">
+                <h3 className="font-medium text-foreground">All Books ({filteredAll.length})</h3>
               </div>
               <div className="p-4 space-y-2 max-h-[700px] overflow-y-auto">
                 {filteredAll.length === 0 ? (
-                  <div className="text-center py-12 text-white/50">
+                  <div className="text-center py-12 text-muted-foreground">
                     <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No books found</p>
                   </div>
@@ -1167,42 +1153,42 @@ export default function AdminMarketplacePage() {
 
           {/* History Tab */}
           <TabsContent value="history">
-            <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 overflow-hidden">
-              <div className="p-4 border-b border-white/10">
-                <h3 className="font-medium text-white">Review History</h3>
+            <div className="rounded-xl bg-muted/50 border border-border overflow-hidden">
+              <div className="p-4 border-b border-border">
+                <h3 className="font-medium text-foreground">Review History</h3>
               </div>
               <div className="p-4 space-y-2 max-h-[700px] overflow-y-auto">
                 {reviewHistory.length === 0 ? (
-                  <div className="text-center py-12 text-white/50">
+                  <div className="text-center py-12 text-muted-foreground">
                     <History className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No review history</p>
                   </div>
                 ) : (
                   reviewHistory.map((review) => (
-                    <div key={review.id} className="p-4 rounded-lg bg-white/5 border border-white/10">
+                    <div key={review.id} className="p-4 rounded-lg bg-muted/50 border border-border">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-white">{review.bookTitle}</p>
-                          <p className="text-sm text-white/60">
+                          <p className="font-medium text-foreground">{review.bookTitle}</p>
+                          <p className="text-sm text-muted-foreground">
                             {review.action} by {review.reviewedBy}
                           </p>
                         </div>
                         <Badge
                           className={
                             review.action === "APPROVED"
-                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                              : "bg-rose-500/20 text-rose-400 border-rose-500/30"
+                              ? "bg-emerald-100 text-emerald-400 border-emerald-200"
+                              : "bg-rose-100 text-rose-400 border-rose-200"
                           }
                         >
                           {review.action}
                         </Badge>
                       </div>
                       {review.notes && (
-                        <p className="text-sm text-white/60 mt-2">
+                        <p className="text-sm text-muted-foreground mt-2">
                           {review.notes}
                         </p>
                       )}
-                      <p className="text-xs text-white/40 mt-2">
+                      <p className="text-xs text-muted-foreground/70 mt-2">
                         {new Date(review.createdAt).toLocaleString()}
                       </p>
                     </div>
@@ -1215,25 +1201,25 @@ export default function AdminMarketplacePage() {
 
         {/* Rejection Dialog */}
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-          <DialogContent className="bg-zinc-900 border-white/10 text-white">
+          <DialogContent className="bg-background">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-destructive" />
                 Reject Book
               </DialogTitle>
-              <DialogDescription className="text-white/60">
+              <DialogDescription className="text-muted-foreground">
                 Please provide a reason for rejecting this book. This will be sent to the creator.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-white">Rejection Reason *</Label>
+                <Label className="text-foreground">Rejection Reason *</Label>
                 <Textarea
                   placeholder="Explain why this book is being rejected..."
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   rows={4}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                  className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/70"
                 />
               </div>
             </div>
@@ -1244,7 +1230,7 @@ export default function AdminMarketplacePage() {
                   setShowRejectDialog(false);
                   setRejectionReason("");
                 }}
-                className="border-white/20 text-white hover:bg-white/10"
+                className="border-white/20 text-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
@@ -1262,28 +1248,28 @@ export default function AdminMarketplacePage() {
 
         {/* Add to Category Dialog */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-2xl max-h-[80vh]">
+          <DialogContent className="bg-background max-w-2xl max-h-[80vh]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 {addDialogCategory === "featured" ? (
                   <>
-                    <Star className="w-5 h-5 text-amber-400" />
+                    <Star className="w-5 h-5 text-amber-600" />
                     Add to Featured
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    <Sparkles className="w-5 h-5 text-purple-600" />
                     Add to Staff Picks
                   </>
                 )}
               </DialogTitle>
-              <DialogDescription className="text-white/60">
+              <DialogDescription className="text-muted-foreground">
                 Select a book to add to the {addDialogCategory === "featured" ? "Featured" : "Staff Picks"} section
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
               {(addDialogCategory === "featured" ? availableForFeatured : availableForStaffPick).length === 0 ? (
-                <div className="text-center py-8 text-white/50">
+                <div className="text-center py-8 text-muted-foreground">
                   <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>All live books are already in this category</p>
                 </div>
@@ -1291,10 +1277,10 @@ export default function AdminMarketplacePage() {
                 (addDialogCategory === "featured" ? availableForFeatured : availableForStaffPick).map((book) => (
                   <div
                     key={book.id}
-                    className="flex items-center gap-4 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 cursor-pointer transition-colors"
+                    className="flex items-center gap-4 p-3 rounded-lg bg-muted/50 border border-border hover:bg-muted cursor-pointer transition-colors"
                     onClick={() => handleAddToCategory(book.id)}
                   >
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted/50 flex-shrink-0">
                       {book.coverImage ? (
                         <Image
                           src={book.coverImage}
@@ -1305,19 +1291,19 @@ export default function AdminMarketplacePage() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <BookOpen className="w-5 h-5 text-white/30" />
+                          <BookOpen className="w-5 h-5 text-muted-foreground/50" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-white truncate">{book.title}</h4>
-                      <p className="text-sm text-white/60">{book.creator.name}</p>
+                      <h4 className="font-medium text-foreground truncate">{book.title}</h4>
+                      <p className="text-sm text-muted-foreground">{book.creator.name}</p>
                     </div>
                     <Button
                       size="sm"
                       className={addDialogCategory === "featured"
-                        ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
-                        : "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
+                        ? "bg-amber-100 text-amber-600 hover:bg-amber-200"
+                        : "bg-purple-100 text-purple-600 hover:bg-purple-200"
                       }
                     >
                       <Plus className="w-4 h-4 mr-1" />
@@ -1329,7 +1315,6 @@ export default function AdminMarketplacePage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
     </div>
   );
 }
