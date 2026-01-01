@@ -61,45 +61,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If projectId provided, verify user has access (creator or collaborator)
-    let project = null;
-    if (projectId) {
-      // First check if user is the creator
-      project = await db.project.findFirst({
+    // Require projectId - users must have an active project to send emails
+    if (!projectId) {
+      return NextResponse.json(
+        { error: "You must have an active project or prelaunch page to send emails. Please select a project." },
+        { status: 400 }
+      );
+    }
+
+    // Verify user has access and project is active (LIVE or prelaunchActive)
+    let project = await db.project.findFirst({
+      where: {
+        id: projectId,
+        creatorId: session.user.id,
+        OR: [
+          { status: "LIVE" },
+          { prelaunchActive: true },
+        ],
+      },
+      select: { id: true, title: true },
+    });
+
+    // If not creator, check if user is a collaborator with permission
+    if (!project) {
+      const collaborator = await db.projectCollaborator.findFirst({
         where: {
-          id: projectId,
-          creatorId: session.user.id,
+          projectId,
+          userId: session.user.id,
+          status: "ACCEPTED",
+          canManageCommunity: true,
+          project: {
+            OR: [
+              { status: "LIVE" },
+              { prelaunchActive: true },
+            ],
+          },
         },
-        select: { id: true, title: true },
+        include: {
+          project: {
+            select: { id: true, title: true },
+          },
+        },
       });
 
-      // If not creator, check if user is a collaborator with permission
-      if (!project) {
-        const collaborator = await db.projectCollaborator.findFirst({
-          where: {
-            projectId,
-            userId: session.user.id,
-            status: "ACCEPTED",
-            canManageCommunity: true,
-          },
-          include: {
-            project: {
-              select: { id: true, title: true },
-            },
-          },
-        });
-
-        if (collaborator) {
-          project = collaborator.project;
-        }
+      if (collaborator) {
+        project = collaborator.project;
       }
+    }
 
-      if (!project) {
-        return NextResponse.json(
-          { error: "Project not found or you don't have permission to send emails for this project" },
-          { status: 404 }
-        );
-      }
+    if (!project) {
+      return NextResponse.json(
+        { error: "You must have an active project (LIVE or with active prelaunch page) to send emails" },
+        { status: 403 }
+      );
     }
 
     // Build email HTML

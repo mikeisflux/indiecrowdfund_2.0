@@ -124,6 +124,10 @@ export default function CreatorEmailInbox() {
   const [composeContent, setComposeContent] = useState("");
   const [isComposing, setIsComposing] = useState(false);
 
+  // Project state for email association
+  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+
   // Email setup state
   const [emailSetup, setEmailSetup] = useState<EmailSetupState | null>(null);
   const [checkingSetup, setCheckingSetup] = useState(true);
@@ -161,6 +165,27 @@ export default function CreatorEmailInbox() {
       }
     };
     checkEmailSetup();
+  }, []);
+
+  // Fetch user's projects for email association
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const res = await fetch("/api/creator/indiekit");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.projects?.length > 0) {
+            setProjects(data.projects);
+            // Auto-select the first project (or one with prelaunchActive)
+            const activeProject = data.projects.find((p: { prelaunchActive?: boolean }) => p.prelaunchActive) || data.projects[0];
+            setSelectedProjectId(activeProject.id);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      }
+    };
+    fetchProjects();
   }, []);
 
   // Handle email setup submission
@@ -418,6 +443,11 @@ export default function CreatorEmailInbox() {
 
   // Send composed email
   const handleSendComposed = async () => {
+    // Require project for new emails
+    if (composeMode === "new" && !selectedProjectId) {
+      toast.error("Please select a project. You must have an active project or prelaunch page to send emails.");
+      return;
+    }
     if (!composeTo.trim()) {
       toast.error("Please enter a recipient email");
       return;
@@ -456,6 +486,7 @@ export default function CreatorEmailInbox() {
             to: composeTo,
             subject: composeSubject,
             content: composeContent,
+            projectId: selectedProjectId || undefined,
           }),
         });
       }
@@ -914,6 +945,29 @@ export default function CreatorEmailInbox() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Project selector for new emails */}
+            {composeMode === "new" && (
+              <div className="space-y-2">
+                <Label htmlFor="compose-project">Project</Label>
+                {projects.length > 0 ? (
+                  <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                    <SelectTrigger id="compose-project">
+                      <SelectValue placeholder="Select a project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    You need an active project or prelaunch page to send emails.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* To */}
             <div className="space-y-2">
               <Label htmlFor="compose-to">To</Label>
@@ -958,7 +1012,10 @@ export default function CreatorEmailInbox() {
             <Button variant="outline" onClick={() => setShowComposeDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSendComposed} disabled={isComposing}>
+            <Button
+              onClick={handleSendComposed}
+              disabled={isComposing || (composeMode === "new" && !selectedProjectId)}
+            >
               {isComposing ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
