@@ -833,10 +833,7 @@ export async function DELETE(req: NextRequest) {
         where: { createdById: userId }
       });
 
-      // Delete mailboxes
-      await tx.mailbox.deleteMany({
-        where: { userId }
-      });
+      // Note: Mailboxes are shared admin resources, not user-specific
 
       // Delete admin emails sent by user
       await tx.adminEmail.deleteMany({
