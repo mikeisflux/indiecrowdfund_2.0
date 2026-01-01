@@ -834,11 +834,7 @@ export async function DELETE(req: NextRequest) {
       });
 
       // Note: Mailboxes are shared admin resources, not user-specific
-
-      // Delete admin emails sent by user
-      await tx.adminEmail.deleteMany({
-        where: { sentById: userId }
-      });
+      // Note: AdminEmails are mailbox-based, not user-specific
 
       // =====================================================
       // PHASE 4: Delete the user (cascading relations handle the rest)
