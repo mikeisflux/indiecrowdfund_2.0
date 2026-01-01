@@ -18,12 +18,15 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Thread ID format: senderId-projectId
+    // Thread ID format: senderId-projectId (projectId may be "null" or empty for direct messages)
     const [recipientId, projectId] = params.threadId.split("-");
 
-    if (!recipientId || !projectId) {
+    if (!recipientId) {
       return NextResponse.json({ error: "Invalid thread ID" }, { status: 400 });
     }
+
+    // Handle null/undefined/empty projectId (direct messages without project association)
+    const hasProject = projectId && projectId !== "null" && projectId !== "undefined";
 
     const body = await request.json();
     const { content } = body;
@@ -53,41 +56,46 @@ export async function POST(
     const creatorEmail = `${creator.creatorEmailHandle}@indiecrowdfund.com`;
     const creatorName = creator.name || creator.email || "Creator";
 
-    // Verify the project exists and user has access (creator or collaborator)
-    let project = await db.project.findFirst({
-      where: {
-        id: projectId,
-        creatorId: session.user.id,
-      },
-      select: { id: true, title: true },
-    });
+    // For messages with a project, verify access
+    let project: { id: string; title: string } | null = null;
 
-    // If not creator, check if user is a collaborator with permission
-    if (!project) {
-      const collaborator = await db.projectCollaborator.findFirst({
+    if (hasProject) {
+      // Verify the project exists and user has access (creator or collaborator)
+      project = await db.project.findFirst({
         where: {
-          projectId,
-          userId: session.user.id,
-          status: "ACCEPTED",
-          canManageCommunity: true,
+          id: projectId,
+          creatorId: session.user.id,
         },
-        include: {
-          project: {
-            select: { id: true, title: true },
-          },
-        },
+        select: { id: true, title: true },
       });
 
-      if (collaborator) {
-        project = collaborator.project;
-      }
-    }
+      // If not creator, check if user is a collaborator with permission
+      if (!project) {
+        const collaborator = await db.projectCollaborator.findFirst({
+          where: {
+            projectId,
+            userId: session.user.id,
+            status: "ACCEPTED",
+            canManageCommunity: true,
+          },
+          include: {
+            project: {
+              select: { id: true, title: true },
+            },
+          },
+        });
 
-    if (!project) {
-      return NextResponse.json(
-        { error: "Project not found or you don't have permission to send emails for this project" },
-        { status: 404 }
-      );
+        if (collaborator) {
+          project = collaborator.project;
+        }
+      }
+
+      if (!project) {
+        return NextResponse.json(
+          { error: "Project not found or you don't have permission to send emails for this project" },
+          { status: 404 }
+        );
+      }
     }
 
     // Get the recipient's info
@@ -103,14 +111,18 @@ export async function POST(
     // Get the original thread to copy the subject
     const originalMessage = await db.message.findFirst({
       where: {
-        projectId,
+        projectId: hasProject ? projectId : null,
         senderId: recipientId,
         recipientId: session.user.id,
       },
       orderBy: { createdAt: "desc" },
     });
 
-    const subject = originalMessage?.subject ? `Re: ${originalMessage.subject}` : `Reply about "${project.title}"`;
+    const subject = originalMessage?.subject
+      ? `Re: ${originalMessage.subject}`
+      : project
+        ? `Reply about "${project.title}"`
+        : "Reply";
 
     // Send the actual email
     const htmlBody = `
@@ -127,7 +139,7 @@ export async function POST(
 
           <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
             <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">
-              Reply from <strong>${creatorName}</strong> about "${project.title}"
+              Reply from <strong>${creatorName}</strong>${project ? ` about "${project.title}"` : ""}
             </p>
           </div>
 
@@ -160,7 +172,7 @@ export async function POST(
     // Create the reply message record
     const message = await db.message.create({
       data: {
-        projectId,
+        projectId: hasProject ? projectId : null,
         senderId: session.user.id,
         recipientId,
         subject,
