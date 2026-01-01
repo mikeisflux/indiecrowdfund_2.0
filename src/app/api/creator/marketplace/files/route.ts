@@ -75,13 +75,26 @@ export async function GET() {
  * Get presigned URL to upload a new PDF to marketplace
  */
 export async function POST(request: NextRequest) {
+  console.log("[Marketplace Files] POST request received");
+
   try {
+    console.log("[Marketplace Files] Checking session...");
     const session = await auth();
     if (!session?.user?.id) {
+      console.log("[Marketplace Files] Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    console.log("[Marketplace Files] Session valid for user:", session.user.id);
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+      console.log("[Marketplace Files] Request body:", JSON.stringify(body));
+    } catch (parseError) {
+      console.error("[Marketplace Files] Failed to parse request body:", parseError);
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+
     const { fileName, fileSize, mimeType } = body;
 
     if (!fileName || !fileSize) {
@@ -123,11 +136,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log("[Marketplace Files] Getting R2 storage...");
     let r2;
     try {
       r2 = await getR2Storage();
     } catch (r2Error) {
-      console.error("Error initializing R2 storage:", r2Error);
+      console.error("[Marketplace Files] Error initializing R2 storage:", r2Error);
       return NextResponse.json(
         { error: "Storage initialization failed" },
         { status: 500 }
@@ -135,20 +149,23 @@ export async function POST(request: NextRequest) {
     }
 
     if (!r2) {
-      console.error("R2 storage not configured - check platform settings");
+      console.error("[Marketplace Files] R2 storage not configured - check platform settings");
       return NextResponse.json(
         { error: "Storage not configured. Please configure R2 storage in admin settings." },
         { status: 500 }
       );
     }
+    console.log("[Marketplace Files] R2 storage initialized successfully");
 
     // Generate storage key
     const fileId = crypto.randomUUID();
     const storageKey = generateMarketplaceFileKey(session.user.id, fileName, fileId);
+    console.log("[Marketplace Files] Generated storage key:", storageKey);
 
     // Get presigned upload URL
     let uploadUrl: string;
     try {
+      console.log("[Marketplace Files] Generating presigned URL...");
       uploadUrl = await r2.getUploadUrl(storageKey, {
         contentType: "application/pdf",
         expiresIn: 3600,
@@ -157,8 +174,9 @@ export async function POST(request: NextRequest) {
           originalName: fileName,
         },
       });
+      console.log("[Marketplace Files] Presigned URL generated successfully");
     } catch (signError) {
-      console.error("Error generating presigned URL:", signError);
+      console.error("[Marketplace Files] Error generating presigned URL:", signError);
       // Check for common R2/S3 errors
       const errorMessage = signError instanceof Error ? signError.message : "Unknown error";
       if (errorMessage.includes("digest") || errorMessage.includes("credential")) {
@@ -173,6 +191,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log("[Marketplace Files] Returning success response");
     return NextResponse.json({
       uploadUrl,
       fileId,
@@ -180,8 +199,10 @@ export async function POST(request: NextRequest) {
       expiresIn: 3600,
     });
   } catch (error) {
-    console.error("Error creating upload URL:", error);
+    console.error("[Marketplace Files] Unexpected error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : "";
+    console.error("[Marketplace Files] Error stack:", errorStack);
     return NextResponse.json(
       { error: `Failed to create upload URL: ${errorMessage}` },
       { status: 500 }
