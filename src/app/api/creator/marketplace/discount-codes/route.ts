@@ -60,7 +60,7 @@ export async function GET() {
 
     // Find the current month's code
     const currentMonthCode = discountCodes.find(
-      (code) =>
+      (code: { validFrom: Date; validUntil: Date; type: string }) =>
         code.validFrom >= monthStart &&
         code.validUntil <= monthEnd &&
         code.type === "FREE_BOOK"

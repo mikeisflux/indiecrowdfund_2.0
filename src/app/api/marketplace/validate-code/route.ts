@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if customer already redeemed for this specific book
-    const existingRedemption = discountCode.redemptions.find(r => r.bookId === bookId);
+    const existingRedemption = discountCode.redemptions.find((r: { bookId: string }) => r.bookId === bookId);
     if (existingRedemption) {
       return NextResponse.json({ error: "You have already used a promo code for this book" }, { status: 400 });
     }

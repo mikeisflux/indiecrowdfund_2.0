@@ -340,6 +340,7 @@ function PDFFilePicker({
         <Label>PDF File *</Label>
         <div className="flex gap-2">
           <Button
+            type="button"
             variant={mode === "select" ? "default" : "outline"}
             size="sm"
             onClick={() => setMode("select")}
@@ -352,6 +353,7 @@ function PDFFilePicker({
             Choose Existing
           </Button>
           <Button
+            type="button"
             variant={mode === "upload" ? "default" : "outline"}
             size="sm"
             onClick={() => setMode("upload")}
@@ -756,8 +758,14 @@ export default function NewBookPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Draft Detection Dialog */}
-      <AlertDialog open={showDraftDialog} onOpenChange={setShowDraftDialog}>
+      {/* Draft Detection Dialog - prevents dismissal without choice */}
+      <AlertDialog open={showDraftDialog} onOpenChange={(open) => {
+        // Only allow closing via button clicks, not ESC/outside click
+        if (!open && showDraftDialog) {
+          // User tried to dismiss without choosing - default to Start Fresh
+          handleStartFresh();
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Continue Previous Draft?</AlertDialogTitle>
@@ -946,12 +954,15 @@ export default function NewBookPage() {
               {formData.promoImageUrl && (
                 <div className="space-y-2">
                   <Label>Preview</Label>
-                  <div className="aspect-[2/3] max-w-[200px] rounded-xl overflow-hidden bg-muted relative">
+                  <div className="max-w-[200px] rounded-xl overflow-hidden bg-muted">
                     <Image
+                      key={formData.promoImageUrl}
                       src={formData.promoImageUrl}
                       alt="Cover preview"
-                      fill
-                      className="object-cover"
+                      width={200}
+                      height={300}
+                      className="w-full h-auto object-contain"
+                      unoptimized
                     />
                   </div>
                 </div>
