@@ -102,12 +102,12 @@ interface Stats {
 
 function StatusBadge({ status }: { status: string }) {
   const configs: Record<string, { label: string; className: string }> = {
-    DRAFT: { label: "Draft", className: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
-    PENDING_REVIEW: { label: "Pending Review", className: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
-    APPROVED: { label: "Approved", className: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-    LIVE: { label: "Live", className: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-    REJECTED: { label: "Rejected", className: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
-    ARCHIVED: { label: "Archived", className: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30" },
+    DRAFT: { label: "Draft", className: "bg-gray-100 text-gray-700 border-gray-200" },
+    PENDING_REVIEW: { label: "Pending Review", className: "bg-amber-100 text-amber-700 border-amber-200" },
+    APPROVED: { label: "Approved", className: "bg-blue-100 text-blue-700 border-blue-200" },
+    LIVE: { label: "Live", className: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+    REJECTED: { label: "Rejected", className: "bg-rose-100 text-rose-700 border-rose-200" },
+    ARCHIVED: { label: "Archived", className: "bg-zinc-100 text-zinc-700 border-zinc-200" },
   };
 
   const config = configs[status] || { label: status, className: "bg-gray-500/20 text-gray-400 border-gray-500/30" };
@@ -133,13 +133,13 @@ function BookListItem({
       className={cn(
         "flex items-center gap-4 p-4 cursor-pointer rounded-lg transition-all border",
         isSelected
-          ? "bg-purple-500/10 border-purple-500/30"
-          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+          ? "bg-purple-50 border-purple-300"
+          : "bg-muted/50 border-border hover:bg-muted hover:border-border"
       )}
       onClick={onClick}
     >
       {/* Cover */}
-      <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+      <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
         {book.coverImage ? (
           <Image
             src={book.coverImage}
@@ -150,7 +150,7 @@ function BookListItem({
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <BookOpen className="w-6 h-6 text-white/30" />
+            <BookOpen className="w-6 h-6 text-muted-foreground/50" />
           </div>
         )}
       </div>
@@ -158,20 +158,20 @@ function BookListItem({
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h4 className="font-medium text-white truncate">{book.title}</h4>
+          <h4 className="font-medium text-foreground truncate">{book.title}</h4>
           {book.isNsfw && (
             <Badge variant="destructive" className="text-xs">
               NSFW
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
           <span>{book.creator.name}</span>
           <span>•</span>
-          <span className="text-emerald-400">${book.price.toFixed(2)}</span>
+          <span className="text-emerald-600">${book.price.toFixed(2)}</span>
         </div>
         {book.submittedAt && (
-          <p className="text-xs text-white/40 mt-1">
+          <p className="text-xs text-muted-foreground/70 mt-1">
             Submitted {new Date(book.submittedAt).toLocaleDateString()}
           </p>
         )}
@@ -180,13 +180,13 @@ function BookListItem({
       {/* Badges */}
       <div className="flex items-center gap-2">
         {book.isFeatured && (
-          <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30">
+          <Badge className="bg-amber-100 text-amber-700 border border-amber-200">
             <Star className="w-3 h-3 mr-1 fill-current" />
             Featured
           </Badge>
         )}
         {book.isStaffPick && (
-          <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">
+          <Badge className="bg-purple-100 text-purple-700 border border-purple-200">
             <Sparkles className="w-3 h-3 mr-1" />
             Staff Pick
           </Badge>

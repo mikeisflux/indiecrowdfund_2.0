@@ -2925,10 +2925,12 @@ model MarketplaceBook {
 enum MarketplaceBookStatus {
   DRAFT
   SUBMITTED
+  PENDING_REVIEW
   APPROVED
   REJECTED
   LIVE
   DEACTIVATED
+  ARCHIVED
 }
 
 model CompanyProfile {
