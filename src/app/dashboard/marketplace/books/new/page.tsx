@@ -490,6 +490,7 @@ export default function NewBookPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [tagsInput, setTagsInput] = useState("");
   const [formData, setFormData] = useState<BookFormData>({
     title: "",
     description: "",
@@ -674,8 +675,12 @@ export default function NewBookPage() {
                 <Label>Tags (comma-separated)</Label>
                 <Input
                   placeholder="e.g., fantasy, adventure, magic"
-                  value={formData.tags.join(", ")}
-                  onChange={(e) => updateForm("tags", e.target.value.split(",").map(t => t.trim()).filter(Boolean))}
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  onBlur={() => {
+                    const parsedTags = tagsInput.split(",").map(t => t.trim()).filter(Boolean);
+                    updateForm("tags", parsedTags);
+                  }}
                 />
               </div>
 
