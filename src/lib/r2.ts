@@ -90,6 +90,11 @@ export async function getR2Config(): Promise<R2Config | null> {
  * Create S3 client configured for Cloudflare R2
  */
 export function createR2Client(config: R2Config): S3Client {
+  // Validate config before creating client
+  if (!config.accountId || !config.accessKeyId || !config.secretAccessKey || !config.bucketName) {
+    throw new Error("R2 configuration incomplete - missing required credentials");
+  }
+
   const endpoint = `https://${config.accountId}.r2.cloudflarestorage.com`;
 
   return new S3Client({
@@ -121,16 +126,22 @@ export class R2Storage {
     key: string,
     options: UploadOptions = {}
   ): Promise<string> {
-    const command = new PutObjectCommand({
-      Bucket: this.config.bucketName,
-      Key: key,
-      ContentType: options.contentType,
-      Metadata: options.metadata,
-    });
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.config.bucketName,
+        Key: key,
+        ContentType: options.contentType,
+        Metadata: options.metadata,
+      });
 
-    return getSignedUrl(this.client, command, {
-      expiresIn: options.expiresIn || 3600,
-    });
+      return await getSignedUrl(this.client, command, {
+        expiresIn: options.expiresIn || 3600,
+      });
+    } catch (error) {
+      console.error("R2 getUploadUrl error:", error);
+      // Re-throw with more context
+      throw new Error(`Failed to generate presigned upload URL: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   }
 
   /**

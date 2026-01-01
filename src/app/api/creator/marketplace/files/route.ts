@@ -123,10 +123,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const r2 = await getR2Storage();
-    if (!r2) {
+    let r2;
+    try {
+      r2 = await getR2Storage();
+    } catch (r2Error) {
+      console.error("Error initializing R2 storage:", r2Error);
       return NextResponse.json(
-        { error: "Storage not configured" },
+        { error: "Storage initialization failed" },
+        { status: 500 }
+      );
+    }
+
+    if (!r2) {
+      console.error("R2 storage not configured - check platform settings");
+      return NextResponse.json(
+        { error: "Storage not configured. Please configure R2 storage in admin settings." },
         { status: 500 }
       );
     }
@@ -136,14 +147,31 @@ export async function POST(request: NextRequest) {
     const storageKey = generateMarketplaceFileKey(session.user.id, fileName, fileId);
 
     // Get presigned upload URL
-    const uploadUrl = await r2.getUploadUrl(storageKey, {
-      contentType: "application/pdf",
-      expiresIn: 3600,
-      metadata: {
-        uploaderId: session.user.id,
-        originalName: fileName,
-      },
-    });
+    let uploadUrl: string;
+    try {
+      uploadUrl = await r2.getUploadUrl(storageKey, {
+        contentType: "application/pdf",
+        expiresIn: 3600,
+        metadata: {
+          uploaderId: session.user.id,
+          originalName: fileName,
+        },
+      });
+    } catch (signError) {
+      console.error("Error generating presigned URL:", signError);
+      // Check for common R2/S3 errors
+      const errorMessage = signError instanceof Error ? signError.message : "Unknown error";
+      if (errorMessage.includes("digest") || errorMessage.includes("credential")) {
+        return NextResponse.json(
+          { error: "Storage credentials error. Please check R2 configuration." },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json(
+        { error: `Failed to generate upload URL: ${errorMessage}` },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       uploadUrl,
@@ -153,8 +181,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error creating upload URL:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to create upload URL" },
+      { error: `Failed to create upload URL: ${errorMessage}` },
       { status: 500 }
     );
   }
