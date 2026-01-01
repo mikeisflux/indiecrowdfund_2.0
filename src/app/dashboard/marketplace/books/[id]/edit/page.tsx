@@ -1205,7 +1205,7 @@ export default function EditBookPage() {
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-            ) : (canEdit || isLive) ? (
+            ) : canEdit ? (
               <Button
                 onClick={() => handleSubmit(true)}
                 disabled={saving}
