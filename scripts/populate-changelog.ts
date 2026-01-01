@@ -61,6 +61,38 @@ function getCommitDate(commitHash: string): Date | null {
   return null;
 }
 
+/**
+ * Forbidden words that should never appear in public changelog
+ * (competitor names, internal terminology, etc.)
+ */
+const FORBIDDEN_WORDS = [
+  "kickstarter",
+  "backerkit",
+  "indiegogo",
+  "patreon",
+  "gofundme",
+  "clone",
+  "competitor",
+  "copy",
+  "ripoff",
+  "rip-off",
+];
+
+/**
+ * Check if entry contains forbidden words
+ */
+function containsForbiddenWords(entry: ChangelogEntryData): string | null {
+  const textToCheck = `${entry.title} ${entry.description}`.toLowerCase();
+
+  for (const word of FORBIDDEN_WORDS) {
+    if (textToCheck.includes(word.toLowerCase())) {
+      return word;
+    }
+  }
+
+  return null;
+}
+
 type ChangelogCategory =
   | "FEATURE"
   | "BUGFIX"
@@ -679,7 +711,12 @@ async function populateChangelog() {
     if (toCreate.length > 0) {
       console.log("📝 Would CREATE:");
       for (const entry of toCreate) {
-        console.log(`   ✚ ${entry.title}`);
+        const forbidden = containsForbiddenWords(entry);
+        if (forbidden) {
+          console.log(`   🚫 ${entry.title} (BLOCKED: contains "${forbidden}")`);
+        } else {
+          console.log(`   ✚ ${entry.title}`);
+        }
       }
       console.log("");
     }
@@ -695,7 +732,12 @@ async function populateChangelog() {
     if (FORCE_UPDATE && toUpdate.length > 0) {
       console.log("🔄 Would UPDATE:");
       for (const { entry } of toUpdate) {
-        console.log(`   ↻ ${entry.title}`);
+        const forbidden = containsForbiddenWords(entry);
+        if (forbidden) {
+          console.log(`   🚫 ${entry.title} (BLOCKED: contains "${forbidden}")`);
+        } else {
+          console.log(`   ↻ ${entry.title}`);
+        }
       }
       console.log("");
     }
@@ -706,6 +748,14 @@ async function populateChangelog() {
     if (toCreate.length > 0) {
       console.log("📝 Creating new entries...");
       for (const entry of toCreate) {
+        // Check for forbidden words
+        const forbiddenWord = containsForbiddenWords(entry);
+        if (forbiddenWord) {
+          console.log(`   🚫 BLOCKED: "${entry.title}" contains forbidden word: "${forbiddenWord}"`);
+          errors++;
+          continue;
+        }
+
         try {
           // Get actual commit date from git
           const commitDate = entry.commitHash
@@ -741,6 +791,14 @@ async function populateChangelog() {
     if (FORCE_UPDATE && toUpdate.length > 0) {
       console.log("🔄 Updating existing entries...");
       for (const { entry, existingId } of toUpdate) {
+        // Check for forbidden words
+        const forbiddenWord = containsForbiddenWords(entry);
+        if (forbiddenWord) {
+          console.log(`   🚫 BLOCKED: "${entry.title}" contains forbidden word: "${forbiddenWord}"`);
+          errors++;
+          continue;
+        }
+
         try {
           // Get actual commit date from git
           const commitDate = entry.commitHash
