@@ -56,12 +56,8 @@ export function TipTapEditor({
         class: cn(
           "prose prose-sm max-w-none dark:prose-invert",
           "min-h-[200px] p-4 focus:outline-none",
-          "prose-p:text-foreground/80 prose-p:leading-relaxed",
-          "prose-headings:text-foreground prose-headings:font-semibold",
-          "prose-strong:text-foreground prose-em:text-foreground/90",
-          "prose-ul:text-foreground/80 prose-ol:text-foreground/80",
-          "prose-blockquote:text-foreground/70 prose-blockquote:border-purple-500",
-          "prose-a:text-purple-600 dark:prose-a:text-purple-400 prose-a:no-underline hover:prose-a:underline",
+          "[&_p]:leading-relaxed",
+          "[&_blockquote]:border-purple-500",
           className
         ),
       },
@@ -215,7 +211,7 @@ export function TipTapEditor({
       {/* Editor Content */}
       <EditorContent editor={editor} />
 
-      {/* Styles for placeholder */}
+      {/* Styles for placeholder and editor content */}
       <style jsx global>{`
         .is-editor-empty:first-child::before {
           content: attr(data-placeholder);
@@ -224,8 +220,26 @@ export function TipTapEditor({
           pointer-events: none;
           height: 0;
         }
+        .ProseMirror {
+          color: hsl(var(--foreground));
+        }
         .ProseMirror:focus {
           outline: none;
+        }
+        .ProseMirror p {
+          color: hsl(var(--foreground) / 0.9);
+        }
+        .ProseMirror h2, .ProseMirror h3 {
+          color: hsl(var(--foreground));
+        }
+        .ProseMirror strong {
+          color: hsl(var(--foreground));
+        }
+        .ProseMirror ul, .ProseMirror ol {
+          color: hsl(var(--foreground) / 0.9);
+        }
+        .ProseMirror blockquote {
+          color: hsl(var(--foreground) / 0.8);
         }
       `}</style>
     </div>
