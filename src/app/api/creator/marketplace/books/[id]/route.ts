@@ -46,7 +46,7 @@ export async function GET(
         coverImage: book.coverImageUrl || book.pdfCoverImageUrl,
         promoVideoUrl: book.promoVideoUrl,
         pdfFileUrl: book.pdfFileUrl,
-        isNsfw: book.isNsfw,
+        isNsfw: book.hasAdultContent,
         tags: book.tags,
         status: book.status,
         isFeatured: book.isFeatured,
@@ -133,7 +133,10 @@ export async function PUT(
     if (promoImageUrl !== undefined) updateData.coverImageUrl = promoImageUrl;
     if (promoVideoUrl !== undefined) updateData.promoVideoUrl = promoVideoUrl;
     if (pdfFileUrl !== undefined) updateData.pdfFileUrl = pdfFileUrl;
-    if (isNsfw !== undefined) updateData.isNsfw = isNsfw;
+    if (isNsfw !== undefined) {
+      updateData.hasAdultContent = isNsfw;
+      updateData.promoContentSfw = !isNsfw;
+    }
     if (tags !== undefined) updateData.tags = tags;
 
     // If rejected, reset to draft when editing
