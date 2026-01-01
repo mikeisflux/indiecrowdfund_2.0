@@ -74,7 +74,7 @@ interface Book {
 
 export default function BookDetailPage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const slug = params?.slug as string;
   const router = useRouter();
   const [book, setBook] = useState<Book | null>(null);
   const [hasPurchased, setHasPurchased] = useState(false);

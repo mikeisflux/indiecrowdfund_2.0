@@ -94,7 +94,7 @@ function BookTile({ book }: { book: Book }) {
 
 export default function CompanyProfilePage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const slug = params?.slug as string;
   const router = useRouter();
   const [company, setCompany] = useState<Company | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
