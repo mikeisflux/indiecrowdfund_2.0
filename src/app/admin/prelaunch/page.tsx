@@ -174,9 +174,10 @@ export default function AdminPrelaunchPage() {
 
   const getPageUrl = (page: PrelaunchPage) => {
     if (page.creator?.vanityUrl) {
-      return `/${page.creator.vanityUrl}/${page.slug}/prelaunch`;
+      return `/projects/${page.creator.vanityUrl}/${page.slug}/prelaunch`;
     }
-    return `/projects/${page.id}/prelaunch`;
+    // Use legacy format with "_" placeholder when no vanity URL
+    return `/projects/_/${page.slug}/prelaunch`;
   };
 
   return (
