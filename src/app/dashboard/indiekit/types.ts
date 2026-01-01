@@ -5,6 +5,7 @@ export interface Project {
   title: string;
   slug: string;
   status: string;
+  prelaunchActive?: boolean;
 }
 
 export interface CountBreakdown {
