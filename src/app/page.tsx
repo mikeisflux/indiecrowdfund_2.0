@@ -11,6 +11,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   ArrowRight,
   Play,
   Users,
@@ -28,6 +34,9 @@ import {
   Award,
   Target,
   Bookmark,
+  ChevronDown,
+  Bug,
+  FileText,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { MobileProfileLinks } from "@/components/mobile-profile-links";
@@ -335,10 +344,27 @@ export default async function HomePage() {
                 FAQ
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
               </Link>
-              <Link href="/bug-report" className="text-sm font-medium hover:text-primary transition-colors relative group">
-                Bug Report
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
-              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors relative group flex items-center gap-1 outline-none">
+                  Feedback
+                  <ChevronDown className="h-3 w-3" />
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href="/bug-report" className="flex items-center gap-2 cursor-pointer">
+                      <Bug className="h-4 w-4" />
+                      Bug Submission
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/changelog" className="flex items-center gap-2 cursor-pointer">
+                      <FileText className="h-4 w-4" />
+                      Change Log
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -384,8 +410,14 @@ export default async function HomePage() {
                   <Link href="/faq" className="text-sm font-medium hover:text-primary py-2">
                     FAQ
                   </Link>
-                  <Link href="/bug-report" className="text-sm font-medium hover:text-primary py-2">
-                    Bug Report
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pt-4 pb-2">Feedback</div>
+                  <Link href="/bug-report" className="text-sm font-medium hover:text-primary py-2 flex items-center gap-2">
+                    <Bug className="h-4 w-4" />
+                    Bug Submission
+                  </Link>
+                  <Link href="/changelog" className="text-sm font-medium hover:text-primary py-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Change Log
                   </Link>
                   <div className="border-t pt-4 mt-2 flex items-center justify-between">
                     <span className="text-sm font-medium">Theme</span>
@@ -536,21 +568,21 @@ export default async function HomePage() {
                     <Badge className="absolute left-3 top-3 bg-gradient-to-r from-primary to-emerald-600 border-0 shadow-lg">
                       {project.category}
                     </Badge>
-                    <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400 live-indicator" />
-                        Live
-                      </div>
-                      {followedProjectIds.has(project.id) && (
-                        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-500/80 backdrop-blur-sm text-white text-xs">
-                          <Bookmark className="w-3 h-3 fill-current" />
-                          Following
-                        </div>
-                      )}
+                    <div className="absolute right-3 top-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400 live-indicator" />
+                      Live
                     </div>
                   </div>
                   <CardContent className="pt-4">
-                    <h3 className="mb-1 font-semibold line-clamp-1 group-hover:text-primary transition-colors">{project.title}</h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold line-clamp-1 group-hover:text-primary transition-colors flex-1">{project.title}</h3>
+                      {followedProjectIds.has(project.id) && (
+                        <Badge variant="secondary" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
+                          <Bookmark className="w-3 h-3 mr-1 fill-current" />
+                          Following
+                        </Badge>
+                      )}
+                    </div>
                     <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
                       {project.subtitle}
                     </p>
@@ -636,20 +668,20 @@ export default async function HomePage() {
                         <Sparkles className="w-3 h-3 mr-1" />
                         Coming Soon
                       </Badge>
-                      <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
-                        <Badge className="bg-background/80 backdrop-blur-sm" variant="secondary">
-                          {project.category}
-                        </Badge>
-                        {followedProjectIds.has(project.id) && (
-                          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-500/80 backdrop-blur-sm text-white text-xs">
-                            <Bookmark className="w-3 h-3 fill-current" />
-                            Following
-                          </div>
-                        )}
-                      </div>
+                      <Badge className="absolute right-3 top-3 bg-background/80 backdrop-blur-sm" variant="secondary">
+                        {project.category}
+                      </Badge>
                     </div>
                     <CardContent className="pt-4">
-                      <h3 className="mb-1 font-semibold line-clamp-1">{project.title}</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold line-clamp-1 flex-1">{project.title}</h3>
+                        {followedProjectIds.has(project.id) && (
+                          <Badge variant="secondary" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
+                            <Bookmark className="w-3 h-3 mr-1 fill-current" />
+                            Following
+                          </Badge>
+                        )}
+                      </div>
                       <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
                         {project.subtitle}
                       </p>

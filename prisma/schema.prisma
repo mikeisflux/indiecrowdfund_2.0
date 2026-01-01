@@ -88,6 +88,7 @@ model User {
   marketplaceBooks     MarketplaceBook[]     @relation("MarketplaceCreator")
   marketplacePurchases MarketplacePurchase[] @relation("MarketplaceBuyer")
   marketplaceReviews   MarketplaceBookReview[] @relation("MarketplaceReviewer")
+  changelogEntries     ChangelogEntry[]        @relation("ChangelogAuthor")
   companyProfile       CompanyProfile?
 
   // Account locking (for fraud/abuse)
@@ -3056,4 +3057,48 @@ enum MarketplaceReviewAction {
   FLAGGED
   DEACTIVATED
   REACTIVATED
+}
+
+// ==================== CHANGELOG ====================
+
+model ChangelogEntry {
+  id          String   @id @default(cuid())
+
+  // Content
+  title       String
+  description String   @db.Text
+  category    ChangelogCategory
+  version     String?  // e.g., "1.0.0", "2024-01"
+
+  // Git reference
+  commitHash  String?
+  branch      String?
+
+  // Publishing
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Author (admin who created)
+  authorId    String?
+  author      User?    @relation("ChangelogAuthor", fields: [authorId], references: [id])
+
+  @@index([category])
+  @@index([isPublished])
+  @@index([publishedAt])
+}
+
+enum ChangelogCategory {
+  FEATURE
+  BUGFIX
+  IMPROVEMENT
+  SECURITY
+  PERFORMANCE
+  UI_UX
+  API
+  DOCUMENTATION
+  OTHER
 }

@@ -101,6 +101,7 @@ const navigation: NavSection[] = [
       { name: "Payouts", href: "/admin/payouts", icon: DollarSign, badgeKey: "payouts" },
       { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "moderation" },
       { name: "Bug Reports", href: "/admin/bug-reports", icon: Bug, badgeKey: "bugReports" },
+      { name: "Changelog", href: "/admin/changelog", icon: FileEdit },
     ],
   },
   {
