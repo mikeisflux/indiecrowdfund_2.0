@@ -192,7 +192,7 @@ export default function BookDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+      <div className="min-h-screen bg-background">
         <div className="container py-8">
           <Skeleton className="h-8 w-32 mb-8" />
           <div className="grid lg:grid-cols-3 gap-8">
@@ -215,7 +215,7 @@ export default function BookDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-purple-950">
+    <div className="min-h-screen bg-background">
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -224,7 +224,7 @@ export default function BookDetailPage() {
 
       <div className="container relative py-8">
         {/* Back Button */}
-        <Link href="/marketplace" className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 group">
+        <Link href="/marketplace" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           Back to Marketplace
         </Link>
@@ -233,7 +233,7 @@ export default function BookDetailPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Cover Image / Video */}
-            <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border border-white/10">
+            <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border border-border">
               {book.videoUrl ? (
                 <div className="relative w-full h-full">
                   <video
@@ -258,7 +258,7 @@ export default function BookDetailPage() {
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <BookOpen className="w-24 h-24 text-white/20" />
+                  <BookOpen className="w-24 h-24 text-muted-foreground/50" />
                 </div>
               )}
 
@@ -288,7 +288,7 @@ export default function BookDetailPage() {
             {book.galleryImages && book.galleryImages.length > 0 && (
               <div className="grid grid-cols-4 gap-2">
                 {(book.galleryImages as string[]).slice(0, 4).map((img, i) => (
-                  <div key={i} className="relative aspect-video rounded-lg overflow-hidden border border-white/10">
+                  <div key={i} className="relative aspect-video rounded-lg overflow-hidden border border-border">
                     <Image src={img} alt={`Gallery ${i + 1}`} fill className="object-cover" />
                   </div>
                 ))}
@@ -296,26 +296,26 @@ export default function BookDetailPage() {
             )}
 
             {/* Description */}
-            <Card className="bg-white/5 backdrop-blur-md border-white/10">
+            <Card className="bg-card border-border">
               <CardContent className="p-6">
-                <h2 className="text-lg font-semibold text-white mb-4">About this book</h2>
+                <h2 className="text-lg font-semibold text-foreground mb-4">About this book</h2>
                 <div
-                  className="prose prose-invert prose-sm max-w-none"
+                  className="prose prose-sm max-w-none dark:prose-invert"
                   dangerouslySetInnerHTML={{ __html: book.description }}
                 />
               </CardContent>
             </Card>
 
             {/* Creator/Company Info */}
-            <Card className="bg-white/5 backdrop-blur-md border-white/10">
+            <Card className="bg-card border-border">
               <CardContent className="p-6">
-                <h2 className="text-lg font-semibold text-white mb-4">
+                <h2 className="text-lg font-semibold text-foreground mb-4">
                   About the {book.company ? "Publisher" : "Creator"}
                 </h2>
                 {book.company ? (
                   <Link href={`/marketplace/companies/${book.company.slug}`}>
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center">
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-muted hover:bg-muted/80 transition-colors">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted-foreground/10 flex items-center justify-center">
                         {book.company.logo ? (
                           <Image
                             src={book.company.logo}
@@ -325,20 +325,20 @@ export default function BookDetailPage() {
                             className="object-cover"
                           />
                         ) : (
-                          <Building2 className="w-8 h-8 text-white/40" />
+                          <Building2 className="w-8 h-8 text-muted-foreground" />
                         )}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white">{book.company.name}</h3>
+                        <h3 className="font-semibold text-foreground">{book.company.name}</h3>
                         {book.company.tagline && (
-                          <p className="text-white/60 text-sm">{book.company.tagline}</p>
+                          <p className="text-muted-foreground text-sm">{book.company.tagline}</p>
                         )}
                       </div>
                     </div>
                   </Link>
                 ) : (
-                  <div className="flex items-center gap-4 p-4 rounded-xl bg-white/5">
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
+                  <div className="flex items-center gap-4 p-4 rounded-xl bg-muted">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-muted-foreground/10 flex items-center justify-center">
                       {book.creator.avatar ? (
                         <Image
                           src={book.creator.avatar}
@@ -348,13 +348,13 @@ export default function BookDetailPage() {
                           className="object-cover"
                         />
                       ) : (
-                        <User className="w-8 h-8 text-white/40" />
+                        <User className="w-8 h-8 text-muted-foreground" />
                       )}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white">{book.creator.name}</h3>
+                      <h3 className="font-semibold text-foreground">{book.creator.name}</h3>
                       {book.creator.bio && (
-                        <p className="text-white/60 text-sm line-clamp-2">{book.creator.bio}</p>
+                        <p className="text-muted-foreground text-sm line-clamp-2">{book.creator.bio}</p>
                       )}
                     </div>
                   </div>
@@ -366,26 +366,26 @@ export default function BookDetailPage() {
           {/* Sidebar */}
           <div className="space-y-4">
             {/* Purchase Card */}
-            <Card className="bg-white/5 backdrop-blur-md border-white/10 sticky top-24">
+            <Card className="bg-card backdrop-blur-md border-border sticky top-24">
               <CardContent className="p-6 space-y-6">
                 <div>
-                  <h1 className="text-2xl font-bold text-white mb-2">{book.title}</h1>
+                  <h1 className="text-2xl font-bold text-foreground mb-2">{book.title}</h1>
                   {book.category && (
-                    <Badge variant="outline" className="text-white/60 border-white/20">
+                    <Badge variant="outline" className="text-muted-foreground border-border">
                       {book.category}
                     </Badge>
                   )}
                 </div>
 
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-emerald-400">
+                  <span className="text-4xl font-bold text-emerald-500 dark:text-emerald-400">
                     ${(book.price ?? 0).toFixed(2)}
                   </span>
-                  <span className="text-white/50">{book.currency}</span>
+                  <span className="text-muted-foreground">{book.currency}</span>
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center gap-4 text-sm text-white/60">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Download className="w-4 h-4" />
                     {book.stats?.purchases ?? 0} purchases
@@ -442,7 +442,7 @@ export default function BookDetailPage() {
 
                 <Button
                   variant="outline"
-                  className="w-full border-white/20 text-white hover:bg-white/10"
+                  className="w-full"
                   onClick={handleShare}
                 >
                   <Share2 className="w-4 h-4 mr-2" />
@@ -456,7 +456,7 @@ export default function BookDetailPage() {
                       <Badge
                         key={tag}
                         variant="outline"
-                        className="text-white/50 border-white/10 text-xs"
+                        className="text-muted-foreground text-xs"
                       >
                         {tag}
                       </Badge>
@@ -471,10 +471,10 @@ export default function BookDetailPage() {
 
       {/* Payment Method Modal */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-white">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle>Choose Payment Method</DialogTitle>
-            <DialogDescription className="text-white/60">
+            <DialogDescription>
               Select how you&apos;d like to pay for &quot;{book?.title}&quot;
             </DialogDescription>
           </DialogHeader>
@@ -482,13 +482,13 @@ export default function BookDetailPage() {
             {book?.paymentProcessor !== "DIVINITYCOIN" && (
               <Button
                 variant="outline"
-                className="h-16 border-white/20 text-white hover:bg-white/10 justify-start"
+                className="h-16 justify-start"
                 onClick={() => handlePurchase("stripe")}
               >
                 <CreditCard className="w-6 h-6 mr-4" />
                 <div className="text-left">
                   <div className="font-semibold">Credit/Debit Card</div>
-                  <div className="text-sm text-white/60">Pay with Stripe</div>
+                  <div className="text-sm text-muted-foreground">Pay with Stripe</div>
                 </div>
               </Button>
             )}
@@ -499,7 +499,7 @@ export default function BookDetailPage() {
               <Coins className="w-6 h-6 mr-4" />
               <div className="text-left">
                 <div className="font-semibold">DivinityCoin</div>
-                <div className="text-sm text-white/80">
+                <div className="text-sm opacity-80">
                   Pay from your wallet balance
                 </div>
               </div>
@@ -510,13 +510,13 @@ export default function BookDetailPage() {
 
       {/* Success Modal */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-white text-center">
+        <DialogContent className="bg-card border-border text-center">
           <div className="py-6">
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-emerald-400" />
+              <CheckCircle className="w-10 h-10 text-emerald-500 dark:text-emerald-400" />
             </div>
             <DialogTitle className="text-2xl mb-2">Purchase Successful!</DialogTitle>
-            <DialogDescription className="text-white/60 text-base">
+            <DialogDescription className="text-base">
               &quot;{book?.title}&quot; has been delivered to your Digital Library.
             </DialogDescription>
           </div>
@@ -529,7 +529,7 @@ export default function BookDetailPage() {
             </Link>
             <Button
               variant="outline"
-              className="w-full border-white/20 text-white hover:bg-white/10"
+              className="w-full"
               onClick={() => setShowSuccessModal(false)}
             >
               Continue Browsing
