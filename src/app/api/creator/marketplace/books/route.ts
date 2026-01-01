@@ -58,17 +58,22 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate unique slug
+    // Generate unique slug (must be unique per creator)
     const baseSlug = title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-    let slug = baseSlug;
+      .replace(/^-|-$/g, "")
+      .substring(0, 100); // Limit slug length
+    let slug = baseSlug || "untitled";
     let counter = 1;
 
+    // Check for both active and soft-deleted books since unique constraint is on [creatorId, slug]
     while (
       await prisma.marketplaceBook.findFirst({
-        where: { slug, deletedAt: null },
+        where: {
+          creatorId: session.user.id,
+          slug,
+        },
       })
     ) {
       slug = `${baseSlug}-${counter}`;
@@ -118,6 +123,11 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Error creating marketplace book:", error);
+    // Log more details for debugging
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
