@@ -539,32 +539,29 @@ function FileUpload({
   );
 }
 
-const INITIAL_FORM_DATA: BookFormData = {
-  title: "",
-  description: "",
-  category: "",
-  price: "",
-  currency: "USD",
-  paymentProcessor: "STRIPE",
-  promoImageUrl: "",
-  promoVideoUrl: "",
-  pdfFileUrl: "",
-  pdfFileName: "",
-  pdfStorageKey: "",
-  isNsfw: false,
-  tags: [],
-};
+// Factory function to create fresh initial state - NEVER reuse objects
+function createInitialFormData(): BookFormData {
+  return {
+    title: "",
+    description: "",
+    category: "",
+    price: "",
+    currency: "USD",
+    paymentProcessor: "STRIPE",
+    promoImageUrl: "",
+    promoVideoUrl: "",
+    pdfFileUrl: "",
+    pdfFileName: "",
+    pdfStorageKey: "",
+    isNsfw: false,
+    tags: [],
+  };
+}
 
 export default function NewBookPage() {
-  // Force complete remount on every navigation by using a key
-  const [mountKey, setMountKey] = useState(() => Date.now());
-
-  // Reset the key whenever this page component mounts/navigates
-  useEffect(() => {
-    setMountKey(Date.now());
-  }, []);
-
-  return <NewBookForm key={mountKey} />;
+  // Force a completely fresh render every single time this page loads
+  // Using both Date.now() and Math.random() to guarantee uniqueness
+  return <NewBookForm key={`new-book-form-${Date.now()}-${Math.random()}`} />;
 }
 
 function NewBookForm() {
@@ -572,15 +569,43 @@ function NewBookForm() {
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState("");
-  const [formData, setFormData] = useState<BookFormData>(INITIAL_FORM_DATA);
+  // CRITICAL: Always create a fresh object, never reuse a constant
+  const [formData, setFormData] = useState<BookFormData>(() => createInitialFormData());
 
-  // Clear any old drafts from localStorage on mount
+  // Aggressively clear ALL possible cached state on mount
   useEffect(() => {
+    // Clear localStorage
     try {
       localStorage.removeItem("marketplace_book_draft");
+      localStorage.removeItem("marketplace_pdf_selection");
+      localStorage.removeItem("marketplace_form_data");
+      // Clear any keys that start with marketplace_
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith("marketplace_")) {
+          localStorage.removeItem(key);
+        }
+      });
     } catch {
       // Ignore localStorage errors
     }
+
+    // Clear sessionStorage too
+    try {
+      sessionStorage.removeItem("marketplace_book_draft");
+      sessionStorage.removeItem("marketplace_pdf_selection");
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith("marketplace_")) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch {
+      // Ignore sessionStorage errors
+    }
+
+    // Force reset the form data state to be absolutely sure
+    setFormData(createInitialFormData());
+    setTagsInput("");
+    setCurrentStep(1);
   }, []);
 
   const updateForm = (field: keyof BookFormData, value: string | boolean | string[]) => {
