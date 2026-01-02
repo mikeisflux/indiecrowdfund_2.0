@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { EmailEditor } from "@/components/ui/email-editor";
 import {
   Dialog,
   DialogContent,
@@ -91,13 +91,10 @@ export function EmailDialog({
   useEffect(() => {
     if (currentProject) {
       setEmailTitle(`Special Early Access: ${currentProject.title}`);
-      setEmailBody(`Hi!
-
-We're excited to launch our next project: ${currentProject.title}.
-
-As a fan of ours, we want to ask for your commitment to pledge on day ONE so that we can have the strongest launch possible.
-
-Click here to see the project and back us today!`);
+      setEmailBody(`<p>Hi!</p>
+<p>We're excited to launch our next project: <strong>${currentProject.title}</strong>.</p>
+<p>As a fan of ours, we want to ask for your commitment to pledge on day ONE so that we can have the strongest launch possible.</p>
+<p>Click here to see the project and back us today!</p>`);
     }
   }, [currentProject]);
 
@@ -384,11 +381,11 @@ Click here to see the project and back us today!`);
 
                   <div className="space-y-2">
                     <Label htmlFor="email-body">Email Body</Label>
-                    <Textarea
-                      id="email-body"
-                      rows={10}
+                    <EmailEditor
                       value={emailBody}
-                      onChange={(e) => setEmailBody(e.target.value)}
+                      onChange={setEmailBody}
+                      placeholder="Compose your email..."
+                      minHeight="250px"
                     />
                   </div>
                 </div>

@@ -4,9 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { EmailEditor } from "@/components/ui/email-editor";
 import {
   Dialog,
   DialogContent,
@@ -26,11 +26,6 @@ import {
   Mail,
   Send,
   Eye,
-  Bold,
-  Italic,
-  Link,
-  List,
-  Image as ImageIcon,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -85,50 +80,36 @@ export function EmailComposerDialog({
   const handleTemplateChange = (templateId: string) => {
     setTemplate(templateId);
 
-    // Populate with template content
+    // Populate with template content (HTML format for EmailEditor)
     switch (templateId) {
       case "survey_reminder":
         setSubject("Please complete your backer survey");
-        setBody(`Hi {{backer_name}},
-
-We noticed you haven't completed your backer survey yet for {{project_name}}.
-
-Please take a moment to fill it out so we can ship your rewards!
-
-{{survey_link}}
-
-Thank you for your support!`);
+        setBody(`<p>Hi {{backer_name}},</p>
+<p>We noticed you haven't completed your backer survey yet for <strong>{{project_name}}</strong>.</p>
+<p>Please take a moment to fill it out so we can ship your rewards!</p>
+<p>{{survey_link}}</p>
+<p>Thank you for your support!</p>`);
         break;
       case "shipping_update":
         setSubject("Your order is on its way!");
-        setBody(`Hi {{backer_name}},
-
-Great news! Your {{project_name}} rewards are on their way.
-
-You can track your package using the link in your backer dashboard.
-
-Thank you for your patience and support!`);
+        setBody(`<p>Hi {{backer_name}},</p>
+<p>Great news! Your <strong>{{project_name}}</strong> rewards are on their way.</p>
+<p>You can track your package using the link in your backer dashboard.</p>
+<p>Thank you for your patience and support!</p>`);
         break;
       case "payment_reminder":
         setSubject("Action needed: Complete your payment");
-        setBody(`Hi {{backer_name}},
-
-You have an outstanding balance of {{pledge_amount}} for your {{pledge_level}} pledge.
-
-Please update your payment method to ensure you receive your rewards.
-
-Thank you!`);
+        setBody(`<p>Hi {{backer_name}},</p>
+<p>You have an outstanding balance of <strong>{{pledge_amount}}</strong> for your <strong>{{pledge_level}}</strong> pledge.</p>
+<p>Please update your payment method to ensure you receive your rewards.</p>
+<p>Thank you!</p>`);
         break;
       case "thank_you":
         setSubject("Thank you for backing {{project_name}}!");
-        setBody(`Hi {{backer_name}},
-
-Thank you so much for backing {{project_name}}! Your support means the world to us.
-
-We're working hard to deliver your rewards and will keep you updated on our progress.
-
-Best regards,
-The {{project_name}} Team`);
+        setBody(`<p>Hi {{backer_name}},</p>
+<p>Thank you so much for backing <strong>{{project_name}}</strong>! Your support means the world to us.</p>
+<p>We're working hard to deliver your rewards and will keep you updated on our progress.</p>
+<p>Best regards,<br>The {{project_name}} Team</p>`);
         break;
       default:
         setSubject("");
@@ -245,33 +226,12 @@ The {{project_name}} Team`);
 
           {/* Body */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Message</Label>
-              {/* Formatting Toolbar */}
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Bold className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Italic className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Link className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <List className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <ImageIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <Textarea
-              placeholder="Write your message..."
+            <Label>Message</Label>
+            <EmailEditor
               value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={8}
-              className="font-mono text-sm"
+              onChange={setBody}
+              placeholder="Write your message..."
+              minHeight="200px"
             />
           </div>
 
