@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
     console.log("[Marketplace Upload] Upload successful");
 
     // Generate the public URL for the file
-    const publicUrl = `/api/r2/serve/${encodeURIComponent(storageKey)}`;
+    // Don't encode the entire storageKey since it contains slashes that are part of the path
+    const publicUrl = `/api/r2/serve/${storageKey}`;
 
     return NextResponse.json({
       success: true,

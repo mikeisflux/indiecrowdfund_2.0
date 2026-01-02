@@ -197,7 +197,8 @@ function PDFFilePicker({
   }, [fetchExistingFiles]);
 
   const handleSelectExisting = (file: ExistingFile) => {
-    const publicUrl = `/api/r2/serve/${encodeURIComponent(file.key)}`;
+    // Don't encode slashes in the path
+    const publicUrl = `/api/r2/serve/${file.key}`;
     onSelect(publicUrl, file.name, file.key);
     toast.success(`Selected: ${file.name}`);
   };
@@ -224,14 +225,27 @@ function PDFFilePicker({
         body: formData,
       });
 
+      // Check Content-Type to handle non-JSON error responses
+      const contentType = uploadRes.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        // Server returned HTML error page (like 413 Payload Too Large)
+        const text = await uploadRes.text();
+        console.error("Non-JSON response:", text.substring(0, 500));
+        if (uploadRes.status === 413) {
+          throw new Error("File is too large. Maximum size is 100MB.");
+        }
+        throw new Error(`Server error: ${uploadRes.status} ${uploadRes.statusText}`);
+      }
+
+      const result = await uploadRes.json();
+
       if (!uploadRes.ok) {
-        const error = await uploadRes.json();
-        throw new Error(error.error || "Failed to upload file");
+        throw new Error(result.error || "Failed to upload file");
       }
 
       setUploadProgress(90);
 
-      const { publicUrl, storageKey } = await uploadRes.json();
+      const { publicUrl, storageKey } = result;
 
       setUploadProgress(100);
       onSelect(publicUrl, file.name, storageKey);
