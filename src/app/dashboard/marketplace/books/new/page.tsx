@@ -194,46 +194,29 @@ function PDFFilePicker({
     setUploadProgress(0);
 
     try {
-      // Step 1: Get presigned upload URL
-      const presignRes = await fetch("/api/creator/marketplace/files", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getCSRFHeaders(),
-        },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileSize: file.size,
-          mimeType: "application/pdf",
-        }),
-      });
+      // Use server-side upload proxy to bypass CORS issues with R2
+      const formData = new FormData();
+      formData.append("file", file);
 
-      if (!presignRes.ok) {
-        const error = await presignRes.json();
-        throw new Error(error.error || "Failed to get upload URL");
-      }
-
-      const { uploadUrl, storageKey } = await presignRes.json();
-
-      // Step 2: Upload directly to R2 using presigned URL
       setUploadProgress(10);
 
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": "application/pdf",
-        },
+      const uploadRes = await fetch("/api/creator/marketplace/files/upload", {
+        method: "POST",
+        headers: getCSRFHeaders(),
+        body: formData,
       });
 
       if (!uploadRes.ok) {
-        throw new Error("Failed to upload file to storage");
+        const error = await uploadRes.json();
+        throw new Error(error.error || "Failed to upload file");
       }
+
+      setUploadProgress(90);
+
+      const { publicUrl, storageKey } = await uploadRes.json();
 
       setUploadProgress(100);
 
-      // Generate public URL
-      const publicUrl = `/api/r2/serve/${encodeURIComponent(storageKey)}`;
       onSelect(publicUrl, file.name, storageKey);
 
       toast.success("PDF uploaded successfully!");
