@@ -331,7 +331,7 @@ export default function MarketplacePage() {
 
       <main className="container relative py-8">
         {/* Old School Physical Media Section */}
-        <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-amber-100 via-orange-50 to-amber-100 dark:from-amber-900/30 dark:via-orange-900/20 dark:to-amber-900/30 border border-amber-300 dark:border-amber-500/20">
+        <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-amber-100 via-orange-50 to-amber-100 dark:from-amber-900/30 dark:via-orange-900/20 dark:to-amber-900/30 border border-amber-300 dark:border-amber-500/20">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-xl bg-amber-500/20 border border-amber-500/30">
@@ -352,7 +352,7 @@ export default function MarketplacePage() {
         </div>
 
         {/* Hero Section */}
-        <div className="relative mb-12 overflow-hidden rounded-2xl bg-gradient-to-r from-purple-100 via-pink-50 to-cyan-100 dark:from-purple-900/50 dark:via-pink-900/30 dark:to-cyan-900/50 border border-purple-200 dark:border-white/10 p-4 md:p-6">
+        <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-purple-100 via-pink-50 to-cyan-100 dark:from-purple-900/50 dark:via-pink-900/30 dark:to-cyan-900/50 border border-purple-200 dark:border-white/10 p-4 md:p-6">
           <div className="absolute inset-0 bg-grid-black/5 dark:bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
           <div className="relative">
             <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">

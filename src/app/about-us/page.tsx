@@ -644,16 +644,16 @@ export default function AboutUsPage() {
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
-        <div className="relative container mx-auto px-4 py-24 z-10">
+        <div className="relative container mx-auto px-4 py-12 z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge className="bg-white/20 text-white border-0 mb-6 animate-in fade-in zoom-in duration-500">
+            <Badge className="bg-white/20 text-white border-0 mb-4 animate-in fade-in zoom-in duration-500">
               About IndieCrowdfund
             </Badge>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <h1 className="text-4xl md:text-6xl font-bold mb-4 text-white animate-in fade-in slide-in-from-bottom-4 duration-700">
               Empowering Independent Creators Since 2024
             </h1>
             <p
-              className="text-xl md:text-2xl text-white/80 mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700"
+              className="text-xl md:text-2xl text-white/80 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700"
               style={{ animationDelay: '100ms' }}
             >
               We&apos;re building the most powerful and creator-friendly crowdfunding platform for comics, games, art, and creative projects.
@@ -711,12 +711,12 @@ export default function AboutUsPage() {
       </section>
 
       {/* Our Mission */}
-      <section className="relative py-16">
+      <section className="relative py-8">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">Our Mission</h2>
             <p
-              className="text-xl text-muted-foreground mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+              className="text-xl text-muted-foreground mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
               style={{ animationDelay: '100ms' }}
             >
               We believe every creative idea deserves a chance to exist. Our mission is to provide creators with the tools, community, and support they need to bring their visions to life—while giving fans a direct way to support the projects they love.
@@ -743,10 +743,10 @@ export default function AboutUsPage() {
       </section>
 
       {/* Platform Features */}
-      <section className="relative py-16">
+      <section className="relative py-8">
         <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
         <div className="relative container mx-auto px-4">
-          <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="text-center mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Badge className="mb-4 bg-primary/10 text-primary border-0">
               <Sparkles className="mr-1 h-3 w-3" />
               Platform Features
@@ -801,13 +801,13 @@ export default function AboutUsPage() {
       </section>
 
       {/* Why Choose Us */}
-      <section className="relative py-16 overflow-hidden">
+      <section className="relative py-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600" />
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
 
         <div className="relative container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="text-center mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-3xl font-bold mb-4 text-white">Why Choose IndieCrowdfund?</h2>
               <p className="text-xl text-white/80">
                 We&apos;re not just another crowdfunding platform. Here&apos;s what sets us apart.
@@ -857,7 +857,7 @@ export default function AboutUsPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-16">
+      <section className="relative py-8">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>

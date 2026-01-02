@@ -163,7 +163,7 @@ export default async function RetailersPage() {
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
             <Badge className="mb-4 bg-white/20 text-white hover:bg-white/30 border-0">
               <Store className="mr-1 h-3 w-3" />
@@ -225,7 +225,7 @@ export default async function RetailersPage() {
       </section>
 
       {/* Features Section */}
-      <section className="relative py-20">
+      <section className="relative py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Badge className="mb-4 bg-primary/10 text-primary border-0">
@@ -263,7 +263,7 @@ export default async function RetailersPage() {
       </section>
 
       {/* How It Works Section */}
-      <section className="relative py-20">
+      <section className="relative py-10">
         <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -299,7 +299,7 @@ export default async function RetailersPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="relative py-20">
+      <section className="relative py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div className="animate-in fade-in slide-in-from-left-4 duration-500">
@@ -361,7 +361,7 @@ export default async function RetailersPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="relative py-20">
+      <section className="relative py-10">
         <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -401,7 +401,7 @@ export default async function RetailersPage() {
       </section>
 
       {/* Support Section */}
-      <section className="relative py-20">
+      <section className="relative py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div
             className="rounded-2xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 p-8 md:p-12 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500"
@@ -448,7 +448,7 @@ export default async function RetailersPage() {
       </section>
 
       {/* FAQ Preview */}
-      <section className="relative py-20 border-t">
+      <section className="relative py-10 border-t">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
           <h2 className="text-2xl font-bold">Have Questions?</h2>
           <p className="mt-4 text-muted-foreground">

@@ -109,7 +109,7 @@ function DiscoverPageSkeleton() {
           </div>
         </div>
       </header>
-      <section className="relative border-b border-border/50 py-16 hero-gradient">
+      <section className="relative border-b border-border/50 py-8 hero-gradient">
         <div className="container">
           <div className="h-8 w-48 bg-muted/50 rounded-lg animate-pulse mb-4" />
           <div className="h-4 w-72 bg-muted/30 rounded animate-pulse" />
@@ -334,7 +334,7 @@ function DiscoverContent() {
       </header>
 
       {/* Hero */}
-      <section className="relative border-b border-border/50 py-16 hero-gradient overflow-hidden">
+      <section className="relative border-b border-border/50 py-8 hero-gradient overflow-hidden">
         {/* Decorative grid */}
         <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.02]" style={{
           backgroundImage: `linear-gradient(to right, currentColor 1px, transparent 1px),
@@ -611,7 +611,7 @@ function DiscoverContent() {
         </div>
 
         {filteredProjects.length === 0 && !isLoading ? (
-          <div className="py-16 text-center">
+          <div className="py-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-card mb-6">
               <Sparkles className="h-10 w-10 text-muted-foreground" />
             </div>
@@ -624,7 +624,7 @@ function DiscoverContent() {
             </Button>
           </div>
         ) : filteredProjects.length === 0 && isLoading ? (
-          <div className="py-16 text-center">
+          <div className="py-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-card mb-6 relative">
               <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-ping" />
               <Loader2 className="h-10 w-10 text-primary animate-spin" />
