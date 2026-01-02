@@ -495,10 +495,10 @@ export default async function HomePage() {
 
       {/* Projects in Prelaunch */}
       {prelaunchProjects.length > 0 && (
-        <section className="relative border-t border-border/50 py-16 md:py-24 overflow-hidden">
+        <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent" />
           <div className="container relative">
-            <div className="mb-10 flex items-center justify-between">
+            <div className="mb-6 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 glow-pulse">
@@ -578,7 +578,7 @@ export default async function HomePage() {
       )}
 
       {/* Stats Section */}
-      <section className="relative border-y border-border/50 py-16 overflow-hidden">
+      <section className="relative border-y border-border/50 py-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-cyan-500/5 to-purple-500/5" />
         <div className="container relative">
           <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
@@ -623,9 +623,9 @@ export default async function HomePage() {
       </section>
 
       {/* Featured Projects */}
-      <section className="py-16 md:py-24 relative">
+      <section className="py-8 md:py-12 relative">
         <div className="container">
-          <div className="mb-10 flex items-center justify-between">
+          <div className="mb-6 flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-500/20 glow-pulse">
@@ -721,10 +721,10 @@ export default async function HomePage() {
       </section>
 
       {/* Categories */}
-      <section className="relative border-t border-border/50 py-16 md:py-24 overflow-hidden">
+      <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-transparent" />
         <div className="container relative">
-          <div className="mb-10 text-center">
+          <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold md:text-3xl mb-2">Browse by Category</h2>
             <p className="text-muted-foreground">
               Find projects in your favorite creative space
@@ -752,10 +752,10 @@ export default async function HomePage() {
       </section>
 
       {/* How It Works */}
-      <section className="relative py-16 md:py-24 overflow-hidden">
+      <section className="relative py-8 md:py-12 overflow-hidden">
         <div className="absolute inset-0 hero-gradient opacity-50" />
         <div className="container relative">
-          <div className="mb-12 text-center">
+          <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold md:text-3xl mb-2">How It Works</h2>
             <p className="text-muted-foreground">
               Three simple steps to fund your creative vision
@@ -814,10 +814,10 @@ export default async function HomePage() {
 
       {/* Past Campaigns */}
       {pastCampaigns.length > 0 && (
-        <section className="relative border-t border-border/50 py-16 md:py-24 overflow-hidden">
+        <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-muted/20 to-transparent" />
           <div className="container relative">
-            <div className="mb-10 flex items-center justify-between">
+            <div className="mb-6 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="p-2 rounded-lg bg-gradient-to-br from-zinc-500/20 to-slate-500/20">
@@ -905,7 +905,7 @@ export default async function HomePage() {
       )}
 
       {/* CTA Section */}
-      <section className="relative py-20 md:py-28 overflow-hidden">
+      <section className="relative py-12 md:py-16 overflow-hidden">
         {/* Gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-emerald-600 to-cyan-600 dark:from-primary dark:via-emerald-700 dark:to-cyan-700" />
 
@@ -935,7 +935,7 @@ export default async function HomePage() {
             </span>
           </h2>
 
-          <p className="mb-10 text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
+          <p className="mb-6 text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
             Join thousands of creators who have funded their dreams on IndieCrowdfund.
             Your next big project is just a click away.
           </p>
