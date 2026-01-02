@@ -434,7 +434,7 @@ export default async function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden hero-gradient py-20 md:py-32">
+      <section className="relative overflow-hidden hero-gradient py-1.5">
         {/* Animated grid background */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,black_40%,transparent_100%)]" />
 
