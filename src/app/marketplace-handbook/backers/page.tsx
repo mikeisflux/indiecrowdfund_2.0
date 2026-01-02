@@ -226,7 +226,7 @@ const supportSteps: Step[] = [
   },
   {
     title: 'Finding Physical Editions',
-    description: 'Prefer physical books? Look for the "Order Physical Copy" button on the book detail page - it appears right below the Share button when the publisher has set up a link to order printed editions. This takes you directly to where you can purchase physical versions.',
+    description: 'Prefer physical books? Look for the "Order Physical Copy" button on the book detail page - it appears right above the Share button when the publisher has set up a link to order printed editions. This takes you directly to where you can purchase physical versions.',
     example: 'Viewing "Dragon\'s Legacy Vol. 1" → Click "Order Physical Copy" → Opens the publisher\'s store page where you can buy the printed edition.',
   },
 ];

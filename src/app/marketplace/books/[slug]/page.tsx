@@ -554,15 +554,6 @@ export default function BookDetailPage() {
                   </Button>
                 )}
 
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleShare}
-                >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
-
                 {/* Order Physical Copy Button */}
                 {book.company?.physicalMediaUrl && (
                   <a
@@ -580,6 +571,15 @@ export default function BookDetailPage() {
                     </Button>
                   </a>
                 )}
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleShare}
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Share
+                </Button>
 
                 {/* Tags */}
                 {book.tags && book.tags.length > 0 && (
