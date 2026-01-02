@@ -232,7 +232,7 @@ function PDFFilePicker({
         const text = await uploadRes.text();
         console.error("Non-JSON response:", text.substring(0, 500));
         if (uploadRes.status === 413) {
-          throw new Error("File is too large. Maximum size is 100MB.");
+          throw new Error("File is too large for the server. Check nginx/proxy client_max_body_size setting.");
         }
         throw new Error(`Server error: ${uploadRes.status} ${uploadRes.statusText}`);
       }
