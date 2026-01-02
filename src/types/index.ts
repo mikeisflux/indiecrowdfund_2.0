@@ -39,6 +39,7 @@ export type FulfillmentStatus =
 // Project categories
 // Shipping countries list
 export const SHIPPING_COUNTRIES = [
+  { code: "WW", name: "Worldwide" },
   { code: "US", name: "United States" },
   { code: "CA", name: "Canada" },
   { code: "GB", name: "United Kingdom" },
