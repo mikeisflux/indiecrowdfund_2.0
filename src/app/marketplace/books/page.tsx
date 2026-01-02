@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BookOpen, Star, Sparkles, ArrowLeft, Search } from "lucide-react";
+import { BookOpen, Star, Sparkles, ArrowLeft, Search, ChevronRight } from "lucide-react";
 
 interface Book {
   id: string;
@@ -30,6 +30,21 @@ interface Book {
   isStaffPick: boolean;
   creator: { id: string; name: string | null };
   company: { name: string; slug: string } | null;
+}
+
+// Next Page Tile Component
+function NextPageTile({ onClick }: { onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="w-full text-left">
+      <div className="group relative aspect-[2/3] rounded-xl overflow-hidden bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-2 border-dashed border-purple-500/30 hover:border-purple-500/50 hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-300 flex flex-col items-center justify-center">
+        <div className="p-3 rounded-full bg-purple-500/20 mb-3 group-hover:bg-purple-500/30 transition-colors">
+          <ChevronRight className="h-6 w-6 text-purple-500 dark:text-purple-400 group-hover:translate-x-1 transition-transform" />
+        </div>
+        <span className="text-purple-600 dark:text-purple-400 font-semibold text-sm">Next Page</span>
+        <span className="text-muted-foreground text-xs mt-1">View more books</span>
+      </div>
+    </button>
+  );
 }
 
 function BookTile({ book }: { book: Book }) {
@@ -199,6 +214,9 @@ export default function AllBooksPage() {
               {filteredBooks.map((book) => (
                 <BookTile key={book.id} book={book} />
               ))}
+              {page < totalPages && (
+                <NextPageTile onClick={() => setPage((p) => p + 1)} />
+              )}
             </div>
 
             {totalPages > 1 && (
