@@ -36,6 +36,7 @@ import {
   Ticket,
   X,
   Gift,
+  ExternalLink,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -73,6 +74,7 @@ interface Book {
     logo: string | null;
     banner: string | null;
     tagline: string | null;
+    physicalMediaUrl: string | null;
   } | null;
 }
 
@@ -560,6 +562,24 @@ export default function BookDetailPage() {
                   <Share2 className="w-4 h-4 mr-2" />
                   Share
                 </Button>
+
+                {/* Order Physical Copy Button */}
+                {book.company?.physicalMediaUrl && (
+                  <a
+                    href={book.company.physicalMediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full"
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Order Physical Copy
+                    </Button>
+                  </a>
+                )}
 
                 {/* Tags */}
                 {book.tags && book.tags.length > 0 && (

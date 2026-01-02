@@ -226,8 +226,8 @@ const supportSteps: Step[] = [
   },
   {
     title: 'Finding Physical Editions',
-    description: 'Prefer physical books? Some creators offer printed editions through their own stores. Look for the "Order Physical Copies" link on the creator\'s profile page to find where you can purchase print versions.',
-    example: 'A creator might sell prints through their personal website or a print-on-demand service.',
+    description: 'Prefer physical books? Look for the "Order Physical Copy" button on the book detail page - it appears right below the Share button when the publisher has set up a link to order printed editions. This takes you directly to where you can purchase physical versions.',
+    example: 'Viewing "Dragon\'s Legacy Vol. 1" → Click "Order Physical Copy" → Opens the publisher\'s store page where you can buy the printed edition.',
   },
 ];
 

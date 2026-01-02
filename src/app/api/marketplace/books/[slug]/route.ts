@@ -40,6 +40,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             logoUrl: true,
             bannerImageUrl: true,
             tagline: true,
+            physicalMediaUrl: true,
           },
         },
       },
@@ -107,6 +108,7 @@ export async function GET(request: Request, { params }: RouteParams) {
               logo: book.company.logoUrl,
               banner: book.company.bannerImageUrl,
               tagline: book.company.tagline,
+              physicalMediaUrl: book.company.physicalMediaUrl,
             }
           : null,
       },
