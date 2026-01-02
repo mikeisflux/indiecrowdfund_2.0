@@ -122,46 +122,6 @@ async function getFeaturedProjects() {
   }
 }
 
-// Fetch category counts from database
-async function getCategoryCounts() {
-  try {
-    const categoryCounts = await db.project.groupBy({
-      by: ["category"],
-      where: {
-        status: "LIVE",
-      },
-      _count: true,
-    });
-
-    const categoryMap = new Map(categoryCounts.map(c => [c.category.toLowerCase(), c._count]));
-
-    const categories = [
-      { name: "Art", count: categoryMap.get("art") || 0 },
-      { name: "Comics", count: categoryMap.get("comics") || 0 },
-      { name: "Design", count: categoryMap.get("design") || 0 },
-      { name: "Film", count: categoryMap.get("film") || 0 },
-      { name: "Games", count: categoryMap.get("games") || 0 },
-      { name: "Music", count: categoryMap.get("music") || 0 },
-      { name: "Publishing", count: categoryMap.get("publishing") || 0 },
-      { name: "Technology", count: categoryMap.get("technology") || 0 },
-    ];
-
-    return categories;
-  } catch (error) {
-    console.error("Error fetching category counts:", error);
-    return [
-      { name: "Art", count: 0 },
-      { name: "Comics", count: 0 },
-      { name: "Design", count: 0 },
-      { name: "Film", count: 0 },
-      { name: "Games", count: 0 },
-      { name: "Music", count: 0 },
-      { name: "Publishing", count: 0 },
-      { name: "Technology", count: 0 },
-    ];
-  }
-}
-
 // Fetch projects in prelaunch from database
 async function getPrelaunchProjects() {
   try {
@@ -303,10 +263,9 @@ export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [stats, featuredProjects, categories, prelaunchProjects, pastCampaigns, followedProjectIds] = await Promise.all([
+  const [stats, featuredProjects, prelaunchProjects, pastCampaigns, followedProjectIds] = await Promise.all([
     getPlatformStats(),
     getFeaturedProjects(),
-    getCategoryCounts(),
     getPrelaunchProjects(),
     getPastCampaigns(),
     getUserFollowedProjectIds(userId),
@@ -702,37 +661,6 @@ export default async function HomePage() {
                     </div>
                   </CardFooter>
                 </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Categories */}
-      <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-transparent" />
-        <div className="container relative">
-          <div className="mb-6 text-center">
-            <h2 className="text-2xl font-bold md:text-3xl mb-2">Browse by Category</h2>
-            <p className="text-muted-foreground">
-              Find projects in your favorite creative space
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {categories.map((category, index) => (
-              <Link
-                key={category.name}
-                href={`/discover?category=${category.name.toLowerCase()}`}
-                className="category-card group flex items-center justify-between rounded-xl glass-card p-5 border-border/50 animate-fade-in-up"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <span className="font-medium group-hover:text-primary transition-colors">
-                  {category.name}
-                </span>
-                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                  {category.count}
-                </Badge>
               </Link>
             ))}
           </div>
