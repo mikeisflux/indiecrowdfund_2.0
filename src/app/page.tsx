@@ -440,10 +440,10 @@ export default async function HomePage() {
 
         <div className="container relative">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-6 text-lg font-medium text-primary animate-fade-in-up">
+            <p className="mb-2 text-lg font-medium text-primary animate-fade-in-up">
               IndieCrowdfund leads the way!
             </p>
-            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <h1 className="mb-2 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <span className="gradient-text">Support</span> Who You{" "}
               <span className="relative">
                 Love
@@ -459,7 +459,7 @@ export default async function HomePage() {
                 </svg>
               </span>
             </h1>
-            <p className="mb-10 text-lg text-muted-foreground md:text-xl max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <p className="mb-4 text-lg text-muted-foreground md:text-xl max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               IndieCrowdfund is the future home to thousands of creative projects in art, design,
               film, games, music, and more. Back a project or start your own today.
             </p>
