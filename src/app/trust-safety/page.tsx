@@ -138,7 +138,7 @@ export default function TrustSafetyPage() {
       <div className="floating-orb w-64 h-64 bg-slate-500/10 bottom-40 right-1/4" style={{ animationDelay: "4s" }} />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-20 relative overflow-hidden">
+      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
@@ -173,7 +173,7 @@ export default function TrustSafetyPage() {
       </section>
 
       {/* Trust Pillars */}
-      <section className="py-16 bg-background/50 backdrop-blur-sm relative">
+      <section className="py-12 bg-background/50 backdrop-blur-sm relative">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
@@ -205,7 +205,7 @@ export default function TrustSafetyPage() {
       </section>
 
       {/* Backer Protections */}
-      <section className="py-16 bg-muted/30 relative">
+      <section className="py-12 bg-muted/30 relative">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
@@ -232,7 +232,7 @@ export default function TrustSafetyPage() {
       </section>
 
       {/* Creator Responsibilities */}
-      <section className="py-16 bg-background/50 backdrop-blur-sm relative">
+      <section className="py-12 bg-background/50 backdrop-blur-sm relative">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
@@ -263,7 +263,7 @@ export default function TrustSafetyPage() {
       </section>
 
       {/* Dispute Resolution */}
-      <section className="py-16 bg-muted/30 relative">
+      <section className="py-12 bg-muted/30 relative">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
@@ -310,7 +310,7 @@ export default function TrustSafetyPage() {
       </section>
 
       {/* Prohibited Content */}
-      <section className="py-16 bg-background/50 backdrop-blur-sm relative">
+      <section className="py-12 bg-background/50 backdrop-blur-sm relative">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
@@ -343,7 +343,7 @@ export default function TrustSafetyPage() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-16 bg-muted/30 relative">
+      <section className="py-12 bg-muted/30 relative">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
@@ -405,7 +405,7 @@ export default function TrustSafetyPage() {
       </section>
 
       {/* Contact Section */}
-      <section className="py-16 bg-background/50 backdrop-blur-sm relative">
+      <section className="py-12 bg-background/50 backdrop-blur-sm relative">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <Mail className="h-12 w-12 text-primary mx-auto mb-4" />

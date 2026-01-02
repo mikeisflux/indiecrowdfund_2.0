@@ -377,7 +377,7 @@ export default function BackerHandbookPage() {
       <div className="floating-orb w-64 h-64 bg-primary/10 bottom-40 right-1/4" style={{ animationDelay: "4s" }} />
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-500 py-16 text-center text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-500 py-12 text-center text-white relative overflow-hidden">
         <div className="relative z-10">
           <h1 className="text-4xl font-bold">Backer Handbook</h1>
           <p className="mt-2 text-emerald-100">

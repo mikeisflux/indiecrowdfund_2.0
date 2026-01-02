@@ -108,7 +108,7 @@ export default async function SuccessStoriesPage() {
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
           <div className="text-center">
             <Badge className="mb-4 bg-white/20 text-white hover:bg-white/30">
               <Trophy className="mr-1 h-3 w-3" />
@@ -141,7 +141,7 @@ export default async function SuccessStoriesPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 border-b">
+      <section className="py-12 border-b">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {stats.map((stat) => (
@@ -158,7 +158,7 @@ export default async function SuccessStoriesPage() {
       </section>
 
       {/* Featured Stories */}
-      <section className="py-20">
+      <section className="py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <Badge variant="outline" className="mb-4">
@@ -265,7 +265,7 @@ export default async function SuccessStoriesPage() {
       </section>
 
       {/* Category Breakdown */}
-      <section className="py-20 bg-muted/30 dark:bg-zinc-900 relative">
+      <section className="py-12 bg-muted/30 dark:bg-zinc-900 relative">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
@@ -304,7 +304,7 @@ export default async function SuccessStoriesPage() {
       </section>
 
       {/* Community Section - replaces hardcoded testimonials */}
-      <section className="py-20">
+      <section className="py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
@@ -366,7 +366,7 @@ export default async function SuccessStoriesPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-orange-500 to-rose-500">
+      <section className="py-12 bg-gradient-to-r from-orange-500 to-rose-500">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
           <Sparkles className="mx-auto h-12 w-12 text-white/80 mb-6" />
           <h2 className="text-3xl font-bold text-white sm:text-4xl">

@@ -146,7 +146,7 @@ export default function FeesPage() {
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
             <Badge className="mb-4 bg-white/20 text-white hover:bg-white/30 border-0">
               <DollarSign className="mr-1 h-3 w-3" />
@@ -170,7 +170,7 @@ export default function FeesPage() {
       </section>
 
       {/* Payment Method Selection */}
-      <section className="relative py-20">
+      <section className="relative py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -301,7 +301,7 @@ export default function FeesPage() {
       </section>
 
       {/* Interactive Calculator Section */}
-      <section className="relative py-20">
+      <section className="relative py-12">
         <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
         <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -475,7 +475,7 @@ export default function FeesPage() {
       </section>
 
       {/* Features */}
-      <section className="relative py-20">
+      <section className="relative py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -505,7 +505,7 @@ export default function FeesPage() {
       </section>
 
       {/* Comparison Table */}
-      <section className="relative py-20">
+      <section className="relative py-12">
         <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -548,7 +548,7 @@ export default function FeesPage() {
       </section>
 
       {/* FAQ Preview */}
-      <section className="py-20">
+      <section className="py-12">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <HelpCircle className="mx-auto h-12 w-12 text-emerald-600" />
@@ -591,7 +591,7 @@ export default function FeesPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-20 overflow-hidden">
+      <section className="relative py-12 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600" />
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
 

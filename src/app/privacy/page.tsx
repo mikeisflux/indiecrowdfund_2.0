@@ -250,7 +250,7 @@ export default function PrivacyPage() {
       </div>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-20 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-12 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -370,7 +370,7 @@ export default function PrivacyPage() {
       </section>
 
       {/* Contact Section */}
-      <section className="relative py-16">
+      <section className="relative py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <Mail className="h-12 w-12 text-primary mx-auto mb-4" />

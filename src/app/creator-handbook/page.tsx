@@ -493,7 +493,7 @@ export default function CreatorHandbookPage() {
       <div className="floating-orb w-64 h-64 bg-primary/10 bottom-40 right-1/4" style={{ animationDelay: "4s" }} />
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-500 py-16 text-center text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-purple-600 to-pink-500 py-12 text-center text-white relative overflow-hidden">
         <h1 className="text-4xl font-bold">Creator Handbook</h1>
         <p className="mt-2 text-purple-100">
           Everything you need to know about creating a successful project
