@@ -21,7 +21,10 @@ export function UpdatesTab({ updates }: UpdatesTabProps) {
               {formatDate(update.createdAt)}
             </div>
             <h3 className="font-semibold mb-2">{update.title}</h3>
-            <p className="text-muted-foreground">{update.content}</p>
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
+              dangerouslySetInnerHTML={{ __html: update.content }}
+            />
           </CardContent>
         </Card>
       ))}
