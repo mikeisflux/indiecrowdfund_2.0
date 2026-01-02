@@ -170,6 +170,21 @@ function CompanyTile({ company }: { company: Company }) {
   );
 }
 
+// Show More Tile Component
+function ShowMoreTile({ href }: { href: string }) {
+  return (
+    <Link href={href}>
+      <div className="group relative aspect-[2/3] rounded-xl overflow-hidden bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-2 border-dashed border-purple-500/30 hover:border-purple-500/50 hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-300 flex flex-col items-center justify-center">
+        <div className="p-3 rounded-full bg-purple-500/20 mb-3 group-hover:bg-purple-500/30 transition-colors">
+          <ArrowRight className="h-6 w-6 text-purple-500 dark:text-purple-400 group-hover:translate-x-1 transition-transform" />
+        </div>
+        <span className="text-purple-600 dark:text-purple-400 font-semibold text-sm">Show More</span>
+        <span className="text-muted-foreground text-xs mt-1">View all books</span>
+      </div>
+    </Link>
+  );
+}
+
 // Section Component
 function BookSection({
   title,
@@ -184,6 +199,9 @@ function BookSection({
   loading: boolean;
   icon: React.ComponentType<{ className?: string }>;
 }) {
+  // Show 15 books max to leave room for Show More tile (fills 2 rows of 8)
+  const displayBooks = books.slice(0, 15);
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
@@ -215,9 +233,10 @@ function BookSection({
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
-          {books.slice(0, 16).map((book) => (
+          {displayBooks.map((book) => (
             <BookTile key={book.id} book={book} />
           ))}
+          <ShowMoreTile href={viewAllHref} />
         </div>
       )}
     </section>
@@ -254,8 +273,8 @@ export default function MarketplacePage() {
         setStaffPicks(data.books || []);
       }
 
-      // Fetch all books
-      const allRes = await fetch("/api/marketplace/books?limit=12");
+      // Fetch all books (15 for display + Show More tile fills 2 rows of 8)
+      const allRes = await fetch("/api/marketplace/books?limit=15");
       if (allRes.ok) {
         const data = await allRes.json();
         setAllBooks(data.books || []);
