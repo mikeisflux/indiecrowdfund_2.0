@@ -9,7 +9,9 @@ import { EmailEditor } from "@/components/ui/email-editor";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -209,6 +211,9 @@ export function EmailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <VisuallyHidden>
+          <DialogTitle>Email Campaign Composer</DialogTitle>
+        </VisuallyHidden>
         {/* Header */}
         <div className="px-6 py-4 border-b">
           <div className="flex items-center justify-between">

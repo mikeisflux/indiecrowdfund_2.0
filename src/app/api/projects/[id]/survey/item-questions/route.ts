@@ -56,7 +56,7 @@ async function verifyProjectAccess(projectId: string, userId: string) {
 // GET - Get all item questions for a survey
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -64,13 +64,14 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await verifyProjectAccess(params.id, session.user.id);
+    const { id: projectId } = await params;
+    const project = await verifyProjectAccess(projectId, session.user.id);
     if (!project) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const survey = await db.survey.findUnique({
-      where: { projectId: params.id },
+      where: { projectId },
     });
 
     if (!survey) {
@@ -99,7 +100,7 @@ export async function GET(
 // POST - Create a new item question
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -107,20 +108,21 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await verifyProjectAccess(params.id, session.user.id);
+    const { id: projectId } = await params;
+    const project = await verifyProjectAccess(projectId, session.user.id);
     if (!project) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Auto-create survey if it doesn't exist
     let survey = await db.survey.findUnique({
-      where: { projectId: params.id },
+      where: { projectId },
     });
 
     if (!survey) {
       survey = await db.survey.create({
         data: {
-          projectId: params.id,
+          projectId,
           introTitle: "Backer Survey",
           introMessage: "Please complete this survey to help us fulfill your order.",
           collectAddresses: true,
@@ -140,7 +142,7 @@ export async function POST(
 
     // Verify the reward belongs to this project
     const reward = await db.reward.findFirst({
-      where: { id: data.rewardId, projectId: params.id },
+      where: { id: data.rewardId, projectId },
     });
 
     if (!reward) {
@@ -198,7 +200,7 @@ export async function POST(
 // PUT - Update an item question
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -206,13 +208,14 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await verifyProjectAccess(params.id, session.user.id);
+    const { id: projectId } = await params;
+    const project = await verifyProjectAccess(projectId, session.user.id);
     if (!project) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const survey = await db.survey.findUnique({
-      where: { projectId: params.id },
+      where: { projectId },
     });
 
     if (!survey) {
@@ -325,7 +328,7 @@ export async function PUT(
 // DELETE - Delete an item question
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -333,13 +336,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await verifyProjectAccess(params.id, session.user.id);
+    const { id: projectId } = await params;
+    const project = await verifyProjectAccess(projectId, session.user.id);
     if (!project) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const survey = await db.survey.findUnique({
-      where: { projectId: params.id },
+      where: { projectId },
     });
 
     if (!survey) {
