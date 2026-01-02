@@ -154,7 +154,7 @@ function PDFFilePicker({
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [mode, setMode] = useState<"select" | "upload">("select");
+  const [mode, setMode] = useState<"select" | "upload">("upload");
   const [deleting, setDeleting] = useState(false);
 
   const fetchExistingFiles = useCallback(async () => {
