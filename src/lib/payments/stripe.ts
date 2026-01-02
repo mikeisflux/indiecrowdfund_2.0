@@ -8,6 +8,7 @@ import {
   notifyMarketplacePurchase,
   notifyMarketplaceSale,
 } from "@/lib/notifications";
+import { addToCreatorEmailList } from "@/lib/email";
 
 let stripeInstance: Stripe | null = null;
 let cachedSecretKey: string | null = null;
@@ -1278,6 +1279,21 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   // Track conversion if this pledge came from an email campaign
   if (existingPledge?.sourceCampaignId) {
     await trackCampaignConversion(pledgeId, existingPledge.sourceCampaignId);
+  }
+
+  // Auto-add backer to creator's email list (non-blocking)
+  if (pledge.user?.email) {
+    try {
+      await addToCreatorEmailList({
+        creatorId: pledge.project.creatorId,
+        email: pledge.user.email,
+        name: pledge.user.name,
+        source: "pledge",
+        sourceProjectId: pledge.projectId,
+      });
+    } catch (emailListError) {
+      console.error(`[Webhook] Failed to add backer to email list:`, emailListError);
+    }
   }
 
   // Only update project funding if this was an immediate charge (chargedImmediately = true)

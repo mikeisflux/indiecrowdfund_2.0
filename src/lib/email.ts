@@ -1255,3 +1255,71 @@ export async function sendSurveyAvailableEmail(
     priority: EMAIL_PRIORITY.CREATOR,
   });
 }
+
+/**
+ * Add a user to a creator's email list.
+ * Used when:
+ * - A backer pledges to a project (source: "pledge")
+ * - A user follows a project for updates (source: "follow")
+ * - A user signs up for prelaunch notifications (source: "prelaunch")
+ *
+ * @param options - Options for adding to email list
+ * @returns The created or existing email list subscriber record
+ */
+export async function addToCreatorEmailList(options: {
+  creatorId: string;
+  email: string;
+  name?: string | null;
+  source: "pledge" | "follow" | "prelaunch" | "import" | "manual";
+  sourceProjectId?: string;
+}): Promise<{ success: boolean; isNew: boolean; subscriberId?: string }> {
+  const { creatorId, email, name, source, sourceProjectId } = options;
+
+  if (!email || !email.includes("@")) {
+    console.log(`[addToCreatorEmailList] Invalid email: ${email}`);
+    return { success: false, isNew: false };
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  try {
+    // Check if already exists in creator's email list
+    const existing = await db.emailListSubscriber.findUnique({
+      where: {
+        creatorId_email: {
+          creatorId,
+          email: normalizedEmail,
+        },
+      },
+    });
+
+    if (existing) {
+      console.log(`[addToCreatorEmailList] Email ${normalizedEmail} already in list for creator ${creatorId}`);
+      return { success: true, isNew: false, subscriberId: existing.id };
+    }
+
+    // Add to creator's email list
+    const subscriber = await db.emailListSubscriber.create({
+      data: {
+        creatorId,
+        email: normalizedEmail,
+        name: name || null,
+        source,
+        sourceProjectId: sourceProjectId || null,
+        status: "subscribed",
+      },
+    });
+
+    console.log(`[addToCreatorEmailList] Added ${normalizedEmail} to list for creator ${creatorId} (source: ${source})`);
+    return { success: true, isNew: true, subscriberId: subscriber.id };
+  } catch (error) {
+    // Handle race condition where another request added the same email
+    if ((error as { code?: string })?.code === "P2002") {
+      console.log(`[addToCreatorEmailList] Race condition: ${normalizedEmail} already exists`);
+      return { success: true, isNew: false };
+    }
+
+    console.error(`[addToCreatorEmailList] Error adding ${normalizedEmail}:`, error);
+    return { success: false, isNew: false };
+  }
+}

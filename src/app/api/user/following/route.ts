@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { addToCreatorEmailList } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -216,6 +217,31 @@ export async function POST(request: Request) {
         isPrelaunch,
       },
     });
+
+    // Get project creator ID to add follower to their email list
+    const projectDetails = await db.project.findUnique({
+      where: { id: projectId },
+      select: { creatorId: true },
+    });
+
+    // Auto-add follower to creator's email list (non-blocking)
+    if (user?.email && projectDetails?.creatorId) {
+      try {
+        const userDetails = await db.user.findUnique({
+          where: { id: userId },
+          select: { name: true },
+        });
+        await addToCreatorEmailList({
+          creatorId: projectDetails.creatorId,
+          email: user.email,
+          name: userDetails?.name,
+          source: isPrelaunch ? "prelaunch" : "follow",
+          sourceProjectId: projectId,
+        });
+      } catch (emailListError) {
+        console.error("[Follow] Failed to add follower to email list:", emailListError);
+      }
+    }
 
     // Update follower count on the project
     await db.project.update({
