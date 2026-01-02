@@ -330,6 +330,27 @@ export default function MarketplacePage() {
       </header>
 
       <main className="container relative py-8">
+        {/* Old School Physical Media Section */}
+        <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-amber-100 via-orange-50 to-amber-100 dark:from-amber-900/30 dark:via-orange-900/20 dark:to-amber-900/30 border border-amber-300 dark:border-amber-500/20">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-amber-500/20 border border-amber-500/30">
+                <BookIcon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Are you old school?</h3>
+                <p className="text-muted-foreground">Do you prefer physical books? Some of our creators offer printed editions.</p>
+              </div>
+            </div>
+            <Link href="/marketplace/physical-media">
+              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">
+                Click Here
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+
         {/* Hero Section */}
         <div className="relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-r from-purple-100 via-pink-50 to-cyan-100 dark:from-purple-900/50 dark:via-pink-900/30 dark:to-cyan-900/50 border border-purple-200 dark:border-white/10 p-8 md:p-12">
           <div className="absolute inset-0 bg-grid-black/5 dark:bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
@@ -350,27 +371,6 @@ export default function MarketplacePage() {
                 className="pl-12 bg-background border-border h-12 rounded-xl"
               />
             </div>
-          </div>
-        </div>
-
-        {/* Old School Physical Media Section */}
-        <div className="mb-12 p-6 rounded-2xl bg-gradient-to-r from-amber-100 via-orange-50 to-amber-100 dark:from-amber-900/30 dark:via-orange-900/20 dark:to-amber-900/30 border border-amber-300 dark:border-amber-500/20">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-amber-500/20 border border-amber-500/30">
-                <BookIcon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Are you old school?</h3>
-                <p className="text-muted-foreground">Do you prefer physical books? Some of our creators offer printed editions.</p>
-              </div>
-            </div>
-            <Link href="/marketplace/physical-media">
-              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">
-                Click Here
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
           </div>
         </div>
 
