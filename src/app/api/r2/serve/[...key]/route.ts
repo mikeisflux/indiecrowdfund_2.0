@@ -21,52 +21,64 @@ export async function GET(
     }
 
     const { key: keyParts } = await params;
-    const key = keyParts.join("/");
+    // Decode each segment and join with slashes
+    // This handles cases where slashes are URL-encoded as %2F
+    const key = keyParts.map((part) => decodeURIComponent(part)).join("/");
 
     if (!key) {
       return NextResponse.json({ error: "File key required" }, { status: 400 });
     }
 
-    // Security check: Only allow access to files the user owns or has purchased
+    // Security check: Only allow access to files the user owns, has purchased, or is admin
     const isMarketplaceFile = key.startsWith("marketplace/");
     const isDigitalRewardsFile = key.startsWith("digital-rewards/");
 
+    // Check if user is admin (for approval workflow)
+    const { db } = await import("@/lib/db");
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+
     if (isMarketplaceFile) {
-      // For marketplace files, check if user is the owner
-      const userIdFromKey = key.split("/")[1];
-      if (userIdFromKey !== session.user.id) {
-        // User is not the owner - check if they have purchased a book using this file
-        const { db } = await import("@/lib/db");
-
-        const purchase = await db.marketplacePurchase.findFirst({
-          where: {
-            buyerId: session.user.id,
-            status: "COMPLETED",
-            book: {
-              pdfFileUrl: { contains: key },
+      // Admins can access all marketplace files (for approval workflow)
+      if (!isAdmin) {
+        // For non-admins, check if user is the owner
+        const userIdFromKey = key.split("/")[1];
+        if (userIdFromKey !== session.user.id) {
+          // User is not the owner - check if they have purchased a book using this file
+          const purchase = await db.marketplacePurchase.findFirst({
+            where: {
+              buyerId: session.user.id,
+              status: "COMPLETED",
+              book: {
+                pdfFileUrl: { contains: key },
+              },
             },
-          },
-        });
+          });
 
-        if (!purchase) {
-          return NextResponse.json({ error: "Access denied" }, { status: 403 });
+          if (!purchase) {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 });
+          }
         }
       }
     } else if (isDigitalRewardsFile) {
-      // For digital rewards, check if user has a valid pledge
-      const { db } = await import("@/lib/db");
+      // Admins can access all digital reward files
+      if (!isAdmin) {
+        // For non-admins, check if user has a valid pledge
+        const projectIdFromKey = key.split("/")[1];
+        const hasAccess = await db.pledge.findFirst({
+          where: {
+            userId: session.user.id,
+            projectId: projectIdFromKey,
+            status: "COMPLETED",
+          },
+        });
 
-      const projectIdFromKey = key.split("/")[1];
-      const hasAccess = await db.pledge.findFirst({
-        where: {
-          userId: session.user.id,
-          projectId: projectIdFromKey,
-          status: "COMPLETED",
-        },
-      });
-
-      if (!hasAccess) {
-        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        if (!hasAccess) {
+          return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        }
       }
     } else {
       return NextResponse.json({ error: "Invalid file key" }, { status: 400 });
