@@ -573,24 +573,31 @@ const INITIAL_FORM_DATA: BookFormData = {
 };
 
 export default function NewBookPage() {
+  // Force complete remount on every navigation by using a key
+  const [mountKey, setMountKey] = useState(() => Date.now());
+
+  // Reset the key whenever this page component mounts/navigates
+  useEffect(() => {
+    setMountKey(Date.now());
+  }, []);
+
+  return <NewBookForm key={mountKey} />;
+}
+
+function NewBookForm() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState("");
   const [formData, setFormData] = useState<BookFormData>(INITIAL_FORM_DATA);
 
-  // Always start with a completely clean state on mount
+  // Clear any old drafts from localStorage on mount
   useEffect(() => {
-    // Clear any potential old drafts from localStorage
     try {
       localStorage.removeItem("marketplace_book_draft");
     } catch {
       // Ignore localStorage errors
     }
-    // Reset all form state to initial values
-    setFormData(INITIAL_FORM_DATA);
-    setTagsInput("");
-    setCurrentStep(1);
   }, []);
 
   const updateForm = (field: keyof BookFormData, value: string | boolean | string[]) => {
