@@ -67,6 +67,10 @@ async function getFeaturedProjects() {
           { endDate: null },
           { endDate: { gt: now } },
         ],
+        // Hide test projects from home page
+        NOT: {
+          title: { contains: "test", mode: "insensitive" },
+        },
       },
       include: {
         creator: {
@@ -167,6 +171,10 @@ async function getPrelaunchProjects() {
         status: {
           not: "LIVE", // Exclude projects that are already live
         },
+        // Hide test projects from home page
+        NOT: {
+          title: { contains: "test", mode: "insensitive" },
+        },
       },
       include: {
         creator: {
@@ -221,6 +229,10 @@ async function getPastCampaigns() {
         status: "LIVE",
         // Only include projects that have ended
         endDate: { lte: now },
+        // Hide test projects from home page
+        NOT: {
+          title: { contains: "test", mode: "insensitive" },
+        },
       },
       include: {
         creator: {
