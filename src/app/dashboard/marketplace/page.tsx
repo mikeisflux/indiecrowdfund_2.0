@@ -154,7 +154,7 @@ function BookCard({
   onSubmit: (id: string) => void;
 }) {
   return (
-    <div className="group relative rounded-xl overflow-hidden bg-card border border-border hover:border-purple-400/30 transition-all duration-300">
+    <div className="group relative rounded-xl overflow-hidden bg-card border border-border hover:border-primary/30 transition-all duration-300">
       {/* Cover Image */}
       <div className="relative aspect-video">
         {book.coverImage ? (
@@ -165,7 +165,7 @@ function BookCard({
             className="object-cover"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-indigo-900/50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
             <BookOpen className="h-12 w-12 text-muted-foreground/50" />
           </div>
         )}
@@ -180,7 +180,7 @@ function BookCard({
             </Badge>
           )}
           {book.isStaffPick && (
-            <Badge className="bg-purple-500/90 text-white border-0 backdrop-blur-sm">
+            <Badge className="bg-primary/90 text-primary-foreground border-0 backdrop-blur-sm">
               <Sparkles className="w-3 h-3 mr-1" />
               Staff Pick
             </Badge>
@@ -295,7 +295,7 @@ function StatsCard({
     primary: { iconBg: "bg-primary/20", iconColor: "text-primary" },
     green: { iconBg: "bg-emerald-500/20", iconColor: "text-emerald-500" },
     blue: { iconBg: "bg-blue-500/20", iconColor: "text-blue-500" },
-    purple: { iconBg: "bg-purple-500/20", iconColor: "text-purple-500" },
+    purple: { iconBg: "bg-primary/20", iconColor: "text-primary" },
     amber: { iconBg: "bg-amber-500/20", iconColor: "text-amber-500" },
   };
 
@@ -450,7 +450,7 @@ export default function CreatorMarketplaceDashboard() {
       <div className="min-h-screen bg-background">
         <div className="flex min-h-screen items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-500 dark:text-purple-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-muted-foreground">Loading marketplace dashboard...</p>
           </div>
         </div>
@@ -462,8 +462,8 @@ export default function CreatorMarketplaceDashboard() {
     <div className="min-h-screen bg-background">
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       </div>
 
       {/* Header */}
@@ -472,11 +472,11 @@ export default function CreatorMarketplaceDashboard() {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"
+              className="text-xl font-bold text-foreground"
             >
               IndieCrowdfund
             </Link>
-            <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
+            <Badge className="bg-primary/20 text-primary border-primary/30">
               <ShoppingCart className="w-3 h-3 mr-1" />
               Creator Marketplace
             </Badge>
@@ -511,7 +511,7 @@ export default function CreatorMarketplaceDashboard() {
               </Button>
             </Link>
             <Link href="/dashboard/marketplace/books/new">
-              <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Plus className="w-4 h-4 mr-2" />
                 New Book
               </Button>
@@ -568,7 +568,7 @@ export default function CreatorMarketplaceDashboard() {
                   className="object-cover"
                 />
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-200 to-cyan-200 dark:from-purple-900/50 dark:to-cyan-900/50" />
+                <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50" />
               )}
               <div className="absolute inset-0 bg-black/10 dark:bg-black/30" />
             </div>
@@ -597,7 +597,7 @@ export default function CreatorMarketplaceDashboard() {
                     <div className="flex items-center gap-2">
                       <h2 className="text-xl font-bold text-foreground">{company.name}</h2>
                       {company.isVerified && (
-                        <Badge className="bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/30">
+                        <Badge className="bg-primary/20 text-primary border-primary/30">
                           Verified
                         </Badge>
                       )}
@@ -638,53 +638,53 @@ export default function CreatorMarketplaceDashboard() {
 
         {/* Books Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <TabsList className="bg-muted/50 backdrop-blur-sm border border-border rounded-xl p-1">
+          <div className="flex items-center justify-between overflow-x-auto">
+            <TabsList className="bg-muted/50 backdrop-blur-sm border border-border rounded-xl p-1 flex-wrap md:flex-nowrap">
               <TabsTrigger
                 value="books"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <BookOpen className="w-4 h-4 mr-2" />
                 All Books ({books.length})
               </TabsTrigger>
               <TabsTrigger
                 value="live"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Live ({books.filter(b => b.status === "LIVE").length})
               </TabsTrigger>
               <TabsTrigger
                 value="pending"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <Clock className="w-4 h-4 mr-2" />
                 Pending ({books.filter(b => b.status === "PENDING_REVIEW").length})
               </TabsTrigger>
               <TabsTrigger
                 value="drafts"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <Edit className="w-4 h-4 mr-2" />
                 Drafts ({books.filter(b => b.status === "DRAFT").length})
               </TabsTrigger>
               <TabsTrigger
                 value="promo-codes"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <Ticket className="w-4 h-4 mr-2" />
-                Promo Codes
+                Discount Codes
               </TabsTrigger>
               <TabsTrigger
                 value="analytics"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Analytics
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"
               >
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
@@ -696,8 +696,8 @@ export default function CreatorMarketplaceDashboard() {
             {books.length === 0 ? (
               <Card className="bg-card border-border">
                 <CardContent className="flex flex-col items-center justify-center py-16">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mb-6">
-                    <BookOpen className="h-10 w-10 text-purple-500 dark:text-purple-400" />
+                  <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mb-6">
+                    <BookOpen className="h-10 w-10 text-primary" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">No books yet</h3>
                   <p className="text-muted-foreground text-center max-w-md mb-6">
@@ -705,7 +705,7 @@ export default function CreatorMarketplaceDashboard() {
                     set your price, and reach readers worldwide.
                   </p>
                   <Link href="/dashboard/marketplace/books/new">
-                    <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
+                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                       <Plus className="w-4 h-4 mr-2" />
                       Create Your First Book
                     </Button>
@@ -798,7 +798,7 @@ export default function CreatorMarketplaceDashboard() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Gift className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                    <Gift className="h-5 w-5 text-primary" />
                     Monthly Free Book Code
                   </CardTitle>
                   {!hasLiveBooks && (
@@ -816,7 +816,7 @@ export default function CreatorMarketplaceDashboard() {
                       You need at least one live book to create promo codes.
                     </p>
                     <Link href="/dashboard/marketplace/books/new">
-                      <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
+                      <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                         <Plus className="w-4 h-4 mr-2" />
                         Create Your First Book
                       </Button>
@@ -824,7 +824,7 @@ export default function CreatorMarketplaceDashboard() {
                   </div>
                 ) : currentMonthCode ? (
                   <div className="space-y-4">
-                    <div className="p-6 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                    <div className="p-6 rounded-xl bg-primary/10 border border-primary/20">
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-sm text-muted-foreground">Your promo code for this month:</span>
                         <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
@@ -867,7 +867,7 @@ export default function CreatorMarketplaceDashboard() {
                     </div>
 
                     <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 border border-border">
-                      <Mail className="h-5 w-5 text-purple-500 shrink-0" />
+                      <Mail className="h-5 w-5 text-primary shrink-0" />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-foreground">Share via Email Campaign</p>
                         <p className="text-xs text-muted-foreground">Send this code to your audience through IndieKit</p>
@@ -882,7 +882,7 @@ export default function CreatorMarketplaceDashboard() {
                   </div>
                 ) : (
                   <div className="py-8 text-center">
-                    <Ticket className="h-12 w-12 mx-auto mb-4 text-purple-500/50" />
+                    <Ticket className="h-12 w-12 mx-auto mb-4 text-primary/50" />
                     <p className="text-muted-foreground mb-2">
                       Generate your monthly promo code to offer one free PDF to a customer.
                     </p>
@@ -892,7 +892,7 @@ export default function CreatorMarketplaceDashboard() {
                     <Button
                       onClick={handleCreateCode}
                       disabled={creatingCode}
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {creatingCode ? (
                         <>
@@ -916,7 +916,7 @@ export default function CreatorMarketplaceDashboard() {
               <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Users className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                    <Users className="h-5 w-5 text-primary" />
                     Redemption History
                   </CardTitle>
                 </CardHeader>
@@ -974,7 +974,7 @@ export default function CreatorMarketplaceDashboard() {
               <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Clock className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                    <Clock className="h-5 w-5 text-primary" />
                     Past Promo Codes
                   </CardTitle>
                 </CardHeader>
@@ -1017,7 +1017,7 @@ export default function CreatorMarketplaceDashboard() {
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
-                  <BarChart3 className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                  <BarChart3 className="h-5 w-5 text-primary" />
                   Sales Analytics
                 </CardTitle>
               </CardHeader>
@@ -1087,7 +1087,7 @@ export default function CreatorMarketplaceDashboard() {
           <TabsContent value="settings" className="space-y-6">
             <div className="max-w-2xl">
               <PaymentSettings
-                compact={true}
+                compact={false}
                 title="Stripe Connect"
                 description="Connect your Stripe account to receive payments from marketplace sales. This is the same Stripe account used across all your IndieCrowdfund projects."
                 showDivinityCoin={true}
