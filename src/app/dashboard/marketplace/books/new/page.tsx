@@ -754,8 +754,14 @@ export default function NewBookPage() {
         throw new Error(errorData.error || "Failed to create book");
       }
 
-      // Clear the draft from localStorage on successful submission
+      // Disable autosave FIRST to prevent race condition
+      setIsInitialized(false);
+
+      // Clear the draft from localStorage
       localStorage.removeItem(DRAFT_STORAGE_KEY);
+
+      // Reset form data to prevent any stale data
+      setFormData(INITIAL_FORM_DATA);
 
       toast.success(asDraft ? "Book saved as draft" : "Book submitted for review");
       router.push("/dashboard/marketplace");
