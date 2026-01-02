@@ -394,7 +394,7 @@ export default function MarketplacePage() {
           </TabsList>
 
           {/* Books Tab Content */}
-          <TabsContent value="books" className="space-y-12">
+          <TabsContent value="books" className="space-y-8">
             {searchQuery ? (
               <section className="space-y-4">
                 <h2 className="text-xl font-bold text-foreground">
@@ -415,25 +415,84 @@ export default function MarketplacePage() {
               </section>
             ) : (
               <>
-                {/* Featured Section */}
-                <BookSection
-                  title="Featured"
-                  books={featuredBooks}
-                  viewAllHref="/marketplace/books/featured"
-                  loading={loading}
-                  icon={Star}
-                />
+                {/* Featured & Staff Picks - Split Columns */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Featured Column */}
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20">
+                          <Star className="h-5 w-5 text-amber-500" />
+                        </div>
+                        <h2 className="text-xl font-bold text-foreground">Featured</h2>
+                      </div>
+                      <Link
+                        href="/marketplace/books/featured"
+                        className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-300 flex items-center gap-1 group"
+                      >
+                        View All
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    </div>
+                    {loading ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                          <Skeleton key={i} className="aspect-[2/3] rounded-xl" />
+                        ))}
+                      </div>
+                    ) : featuredBooks.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">No featured books yet</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {featuredBooks.slice(0, 6).map((book) => (
+                          <BookTile key={book.id} book={book} />
+                        ))}
+                      </div>
+                    )}
+                  </section>
 
-                {/* Staff Picks Section */}
-                <BookSection
-                  title="Staff Picks"
-                  books={staffPicks}
-                  viewAllHref="/marketplace/books/staff-picks"
-                  loading={loading}
-                  icon={Sparkles}
-                />
+                  {/* Staff Picks Column */}
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20">
+                          <Sparkles className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                        </div>
+                        <h2 className="text-xl font-bold text-foreground">Staff Picks</h2>
+                      </div>
+                      <Link
+                        href="/marketplace/books/staff-picks"
+                        className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-300 flex items-center gap-1 group"
+                      >
+                        View All
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    </div>
+                    {loading ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                          <Skeleton key={i} className="aspect-[2/3] rounded-xl" />
+                        ))}
+                      </div>
+                    ) : staffPicks.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">No staff picks yet</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {staffPicks.slice(0, 6).map((book) => (
+                          <BookTile key={book.id} book={book} />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                </div>
 
-                {/* All Books Section */}
+                {/* All Books Section - Full Width */}
                 <BookSection
                   title="All Books"
                   books={allBooks}
