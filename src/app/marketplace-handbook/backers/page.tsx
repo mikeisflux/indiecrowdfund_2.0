@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   Search,
   CreditCard,
-  Download,
   Library,
   BookOpen,
   ShoppingCart,
@@ -15,7 +14,6 @@ import {
   Info,
   ArrowRight,
   ArrowLeft,
-  CheckCircle2,
   Smartphone,
   Monitor,
   FileText,

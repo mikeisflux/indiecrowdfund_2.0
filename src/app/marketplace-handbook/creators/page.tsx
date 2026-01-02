@@ -10,7 +10,6 @@ import {
   Users,
   Settings,
   FileText,
-  Image as ImageIcon,
   CheckCircle,
   Clock,
   BarChart3,
