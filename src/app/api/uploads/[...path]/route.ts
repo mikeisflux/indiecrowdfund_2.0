@@ -35,12 +35,6 @@ export async function GET(
     const uploadsDir = path.resolve(UPLOADS_BASE);
     const resolvedPath = path.resolve(filePath);
 
-    // Debug logging
-    console.log(`[Uploads] Request: ${relativePath}`);
-    console.log(`[Uploads] UPLOADS_BASE: ${UPLOADS_BASE}`);
-    console.log(`[Uploads] Resolved path: ${resolvedPath}`);
-    console.log(`[Uploads] File exists: ${existsSync(resolvedPath)}`);
-
     if (!resolvedPath.startsWith(uploadsDir)) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
@@ -57,10 +51,13 @@ export async function GET(
         if (existsSync(webpPath)) {
           finalPath = webpPath;
           ext = ".webp";
+          // Silent fallback - no logging needed for expected behavior
         } else {
+          console.warn(`[Uploads] File not found: ${relativePath} (no .webp fallback)`);
           return NextResponse.json({ error: "File not found" }, { status: 404 });
         }
       } else {
+        console.warn(`[Uploads] File not found: ${relativePath}`);
         return NextResponse.json({ error: "File not found" }, { status: 404 });
       }
     }
