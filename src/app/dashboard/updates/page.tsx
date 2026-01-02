@@ -241,6 +241,7 @@ export default function UpdatesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
+          projectId: selectedProjectId,
           action: newStatus === "published" ? "publish" : "unpublish",
           updateId: update.id,
         }),
@@ -265,7 +266,7 @@ export default function UpdatesPage() {
 
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/updates?updateId=${confirmDeleteUpdate.id}`, {
+      const res = await fetch(`/api/creator/indiekit/updates?projectId=${selectedProjectId}&updateId=${confirmDeleteUpdate.id}`, {
         method: "DELETE",
         headers: getCSRFHeaders(),
       });
