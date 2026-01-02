@@ -374,7 +374,15 @@ export default function PledgePage() {
     if (shippingType === "WORLDWIDE") {
       return shippingCost["WORLDWIDE"] || 0;
     }
-    return shippingCost[country] || 0;
+    // For SELECTED_COUNTRIES: check specific country first, then fallback to Worldwide (WW)
+    if (shippingCost[country] !== undefined) {
+      return shippingCost[country];
+    }
+    // If Worldwide (WW) is selected, use that rate for any country
+    if (shippingCost["WW"] !== undefined) {
+      return shippingCost["WW"];
+    }
+    return 0;
   };
 
   // Calculate totals
@@ -1196,7 +1204,8 @@ export default function PledgePage() {
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {SHIPPING_COUNTRIES.map((country) => (
+                        {/* Filter out WW (Worldwide) - it's a creator option, not a user location */}
+                        {SHIPPING_COUNTRIES.filter(c => c.code !== "WW").map((country) => (
                           <SelectItem key={country.code} value={country.code}>
                             {country.name}
                           </SelectItem>
