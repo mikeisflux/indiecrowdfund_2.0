@@ -100,7 +100,7 @@ export default async function ChangelogPage() {
         <div className="absolute top-1/2 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="container relative max-w-4xl py-8 md:py-16">
+      <div className="container relative max-w-4xl py-8 md:py-12">
         {/* Header */}
         <div className="mb-10">
           <Link href="/">

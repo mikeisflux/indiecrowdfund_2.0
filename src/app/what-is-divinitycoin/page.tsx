@@ -106,7 +106,7 @@ export default function WhatIsDivinityCoinPage() {
       <div className="floating-orb w-64 h-64 bg-orange-500/10 bottom-40 right-1/4" style={{ animationDelay: "4s" }} />
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-amber-600 to-orange-500 py-16 text-center text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-amber-600 to-orange-500 py-12 text-center text-white relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex justify-center mb-4">
             <div className="p-4 bg-white/20 rounded-full">

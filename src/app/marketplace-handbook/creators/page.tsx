@@ -345,7 +345,7 @@ export default function MarketplaceCreatorHandbookPage() {
       <div className="floating-orb w-64 h-64 bg-primary/10 bottom-40 right-1/4" style={{ animationDelay: "4s" }} />
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary to-primary/80 py-16 text-center text-primary-foreground relative overflow-hidden">
+      <div className="bg-gradient-to-r from-primary to-primary/80 py-12 text-center text-primary-foreground relative overflow-hidden">
         <div className="relative z-10 px-4">
           <div className="flex items-center justify-center gap-3 mb-4">
             <BookOpen className="h-10 w-10" />

@@ -92,7 +92,7 @@ export default function ContactPage() {
           <div className="floating-orb absolute -bottom-40 right-1/4 w-[350px] h-[350px] bg-cyan-500/10" style={{ animationDelay: '-12s' }} />
         </div>
 
-        <div className="container relative py-16">
+        <div className="container relative py-12">
           <div
             className="mx-auto max-w-lg text-center animate-in fade-in slide-in-from-bottom-4 duration-500"
           >

@@ -91,7 +91,7 @@ export default function RedeemPage() {
   if (status === "unauthenticated") {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container max-w-2xl py-16">
+        <div className="container max-w-2xl py-12">
           <Card className="border-[#0066FF]/20">
             <CardContent className="py-12 text-center">
               <Coins className="h-16 w-16 mx-auto mb-6 text-[#0066FF]" />
