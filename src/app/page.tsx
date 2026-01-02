@@ -349,14 +349,6 @@ export default async function HomePage() {
                 Retailers
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
               </Link>
-              <Link href="/about-us" className="text-sm font-medium hover:text-primary transition-colors relative group">
-                About Us
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
-              </Link>
-              <Link href="/faq" className="text-sm font-medium hover:text-primary transition-colors relative group">
-                FAQ
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
-              </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors relative group flex items-center gap-1 outline-none">
                   Feedback
@@ -417,12 +409,6 @@ export default async function HomePage() {
                   </Link>
                   <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2">
                     Retailers
-                  </Link>
-                  <Link href="/about-us" className="text-sm font-medium hover:text-primary py-2">
-                    About Us
-                  </Link>
-                  <Link href="/faq" className="text-sm font-medium hover:text-primary py-2">
-                    FAQ
                   </Link>
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pt-4 pb-2">Feedback</div>
                   <Link href="/bug-report" className="text-sm font-medium hover:text-primary py-2 flex items-center gap-2">
