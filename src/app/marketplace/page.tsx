@@ -352,13 +352,13 @@ export default function MarketplacePage() {
         </div>
 
         {/* Hero Section */}
-        <div className="relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-r from-purple-100 via-pink-50 to-cyan-100 dark:from-purple-900/50 dark:via-pink-900/30 dark:to-cyan-900/50 border border-purple-200 dark:border-white/10 p-8 md:p-12">
+        <div className="relative mb-12 overflow-hidden rounded-2xl bg-gradient-to-r from-purple-100 via-pink-50 to-cyan-100 dark:from-purple-900/50 dark:via-pink-900/30 dark:to-cyan-900/50 border border-purple-200 dark:border-white/10 p-4 md:p-6">
           <div className="absolute inset-0 bg-grid-black/5 dark:bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
           <div className="relative">
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
               Digital Marketplace
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mb-6">
+            <p className="text-sm text-muted-foreground max-w-xl mb-4">
               Discover and purchase digital books from independent creators.
               Instant delivery to your Digital Library.
             </p>
