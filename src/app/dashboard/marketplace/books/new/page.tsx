@@ -360,23 +360,28 @@ function PDFFilePicker({
               </Button>
             </div>
           ) : (
-            <div className="grid gap-2 max-h-64 overflow-y-auto">
-              {existingFiles.map((file) => (
-                <button
-                  key={file.id}
-                  onClick={() => handleSelectExisting(file)}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-muted hover:bg-muted/80 border border-border hover:border-purple-500/30 transition-all text-left"
-                >
-                  <div className="p-2 rounded-lg bg-purple-500/20">
-                    <FileText className="w-5 h-5 text-purple-500 dark:text-purple-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-foreground font-medium truncate">{file.name}</p>
-                    <p className="text-muted-foreground text-sm">{file.sizeFormatted}</p>
-                  </div>
-                  <Check className="w-5 h-5 text-muted-foreground/50" />
-                </button>
-              ))}
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">Click a file below to select it:</p>
+              <div className="grid gap-2 max-h-64 overflow-y-auto">
+                {existingFiles.map((file) => (
+                  <button
+                    key={file.id}
+                    onClick={() => handleSelectExisting(file)}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-purple-500/10 border border-border hover:border-purple-500/50 transition-all text-left group"
+                  >
+                    <div className="p-2 rounded-lg bg-muted group-hover:bg-purple-500/20 transition-colors">
+                      <FileText className="w-5 h-5 text-muted-foreground group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-foreground font-medium truncate">{file.name}</p>
+                      <p className="text-muted-foreground text-sm">{file.sizeFormatted}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors">
+                      Select →
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
