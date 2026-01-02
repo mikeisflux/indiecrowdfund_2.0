@@ -194,18 +194,19 @@ export default function UpdatesPage() {
       const method = isEditing ? "PATCH" : "POST";
       const body = isEditing
         ? {
+            projectId: selectedProjectId,
             updateId: editingUpdate.id,
             title,
             content,
             visibility: isBackersOnly ? "backers_only" : "public",
-            status: publish ? "published" : editingUpdate.status,
+            publish: publish || editingUpdate.status === "published",
           }
         : {
             projectId: selectedProjectId,
             title,
             content,
             visibility: isBackersOnly ? "backers_only" : "public",
-            status: publish ? "published" : "draft",
+            publish: publish,
           };
 
       const res = await fetch("/api/creator/indiekit/updates", {
