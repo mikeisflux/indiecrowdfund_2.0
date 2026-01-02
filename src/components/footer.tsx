@@ -26,6 +26,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/projects/new" className="hover:text-foreground">Start a Project</Link></li>
               <li><Link href="/creator-handbook" className="hover:text-foreground">Creator Handbook</Link></li>
+              <li><Link href="/marketplace-handbook/creators" className="hover:text-foreground">Marketplace Handbook</Link></li>
               <li><Link href="/fees" className="hover:text-foreground">Fees & Pricing</Link></li>
               <li><Link href="/success-stories" className="hover:text-foreground">Success Stories</Link></li>
             </ul>
@@ -34,6 +35,7 @@ export function Footer() {
             <h4 className="mb-4 font-semibold">For Backers</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/backer-handbook" className="hover:text-foreground">Backer Handbook</Link></li>
+              <li><Link href="/marketplace-handbook/backers" className="hover:text-foreground">Marketplace Handbook</Link></li>
               <li><Link href="/what-is-divinitycoin" className="hover:text-foreground">What is DivinityCoin?</Link></li>
               <li><Link href="/backer-handbook#stripe" className="hover:text-foreground">Paying with Card</Link></li>
               <li><Link href="/backer-handbook#divinitycoin" className="hover:text-foreground">Paying with DivinityCoin</Link></li>

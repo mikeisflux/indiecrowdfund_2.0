@@ -19,16 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   BookOpen,
   ArrowLeft,
   ArrowRight,
@@ -44,7 +34,6 @@ import {
   Upload,
   FolderOpen,
   X,
-  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -567,8 +556,6 @@ function FileUpload({
   );
 }
 
-const DRAFT_STORAGE_KEY = "marketplace_book_draft";
-
 const INITIAL_FORM_DATA: BookFormData = {
   title: "",
   description: "",
@@ -590,97 +577,21 @@ export default function NewBookPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState("");
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [draftCheckComplete, setDraftCheckComplete] = useState(false);
-  const [showDraftDialog, setShowDraftDialog] = useState(false);
-  const [pendingDraft, setPendingDraft] = useState<{ formData: BookFormData; currentStep: number; savedAt: string } | null>(null);
   const [formData, setFormData] = useState<BookFormData>(INITIAL_FORM_DATA);
 
-  // Check for saved draft on mount and show dialog if found
+  // Always start with a completely clean state on mount
   useEffect(() => {
-    // Reset form data on mount to ensure clean state
-    setFormData(INITIAL_FORM_DATA);
-    setTagsInput("");
-    setCurrentStep(1);
-
+    // Clear any potential old drafts from localStorage
     try {
-      const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
-      if (savedDraft) {
-        const parsed = JSON.parse(savedDraft);
-        // Only show dialog if draft has meaningful content (at least a title)
-        if (parsed.formData?.title?.trim()) {
-          setPendingDraft(parsed);
-          setShowDraftDialog(true);
-          setDraftCheckComplete(true);
-        } else {
-          // Empty draft, just clear it
-          localStorage.removeItem(DRAFT_STORAGE_KEY);
-          setIsInitialized(true);
-          setDraftCheckComplete(true);
-        }
-      } else {
-        setIsInitialized(true);
-        setDraftCheckComplete(true);
-      }
-    } catch (error) {
-      console.error("Error loading draft:", error);
-      localStorage.removeItem(DRAFT_STORAGE_KEY);
-      setIsInitialized(true);
-      setDraftCheckComplete(true);
+      localStorage.removeItem("marketplace_book_draft");
+    } catch {
+      // Ignore localStorage errors
     }
+    // Reset all form state to initial values
+    setFormData(INITIAL_FORM_DATA);
+    setTagsInput("");
+    setCurrentStep(1);
   }, []);
-
-  // Handle user choosing to continue with saved draft
-  const handleContinueDraft = () => {
-    if (pendingDraft?.formData) {
-      setFormData(prev => ({ ...prev, ...pendingDraft.formData }));
-      setTagsInput(pendingDraft.formData.tags?.join(", ") || "");
-      setCurrentStep(pendingDraft.currentStep || 1);
-    }
-    setShowDraftDialog(false);
-    setPendingDraft(null);
-    setIsInitialized(true);
-  };
-
-  // Handle user choosing to start fresh
-  const handleStartFresh = () => {
-    localStorage.removeItem(DRAFT_STORAGE_KEY);
-    setFormData(INITIAL_FORM_DATA);
-    setTagsInput("");
-    setCurrentStep(1);
-    setShowDraftDialog(false);
-    setPendingDraft(null);
-    setIsInitialized(true);
-    toast.success("Starting fresh - previous draft cleared");
-  };
-
-  // Clear draft manually at any time
-  const handleClearDraft = () => {
-    localStorage.removeItem(DRAFT_STORAGE_KEY);
-    setFormData(INITIAL_FORM_DATA);
-    setTagsInput("");
-    setCurrentStep(1);
-    toast.success("Draft cleared - starting fresh");
-  };
-
-  // Autosave to localStorage when formData or currentStep changes
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    const saveTimeout = setTimeout(() => {
-      try {
-        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
-          formData,
-          currentStep,
-          savedAt: new Date().toISOString(),
-        }));
-      } catch (error) {
-        console.error("Error saving draft:", error);
-      }
-    }, 500); // Debounce saves by 500ms
-
-    return () => clearTimeout(saveTimeout);
-  }, [formData, currentStep, isInitialized]);
 
   const updateForm = (field: keyof BookFormData, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -754,15 +665,6 @@ export default function NewBookPage() {
         throw new Error(errorData.error || "Failed to create book");
       }
 
-      // Disable autosave FIRST to prevent race condition
-      setIsInitialized(false);
-
-      // Clear the draft from localStorage
-      localStorage.removeItem(DRAFT_STORAGE_KEY);
-
-      // Reset form data to prevent any stale data
-      setFormData(INITIAL_FORM_DATA);
-
       toast.success(asDraft ? "Book saved as draft" : "Book submitted for review");
       router.push("/dashboard/marketplace");
     } catch (error) {
@@ -775,52 +677,6 @@ export default function NewBookPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Draft Detection Dialog - prevents dismissal without choice */}
-      <AlertDialog open={showDraftDialog} onOpenChange={(open) => {
-        // Only allow closing via button clicks, not ESC/outside click
-        if (!open && showDraftDialog) {
-          // User tried to dismiss without choosing - default to Start Fresh
-          handleStartFresh();
-        }
-      }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Continue Previous Draft?</AlertDialogTitle>
-            <AlertDialogDescription>
-              We found a saved draft for &quot;{pendingDraft?.formData?.title || "Untitled"}&quot;
-              {pendingDraft?.savedAt && (
-                <span className="block mt-1 text-xs text-muted-foreground">
-                  Last saved: {new Date(pendingDraft.savedAt).toLocaleString()}
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleStartFresh}>
-              Start Fresh
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleContinueDraft}>
-              Continue Draft
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Show loading while checking for draft, or while dialog is showing */}
-      {(!draftCheckComplete || showDraftDialog) && (
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-500 dark:text-purple-400" />
-            <p className="text-muted-foreground">
-              {showDraftDialog ? "Choose how to continue..." : "Loading..."}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Only render form after draft check is complete AND dialog is dismissed */}
-      {draftCheckComplete && !showDraftDialog && (
-        <>
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -839,24 +695,10 @@ export default function NewBookPage() {
               Back to Marketplace
             </Link>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Clear Draft Button - only show if form has content */}
-            {isInitialized && formData.title.trim() && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearDraft}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Clear Draft
-              </Button>
-            )}
-            <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
-              <ShoppingCart className="w-3 h-3 mr-1" />
-              New Book
-            </Badge>
-          </div>
+          <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
+            <ShoppingCart className="w-3 h-3 mr-1" />
+            New Book
+          </Badge>
         </div>
       </header>
 
@@ -1241,8 +1083,6 @@ export default function NewBookPage() {
           </div>
         </div>
       </main>
-        </>
-      )}
     </div>
   );
 }
