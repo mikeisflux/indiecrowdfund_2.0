@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { createStripeConnectAccount } from "@/lib/payments/stripe";
+import { createStripeConnectAccount, getStripeInstance } from "@/lib/payments/stripe";
 import { db } from "@/lib/db";
 
 export async function POST() {
@@ -64,6 +64,33 @@ export async function GET() {
         connected: false,
         onboarded: false,
       });
+    }
+
+    // If not onboarded in DB, check with Stripe directly (webhook might be delayed)
+    if (!config.isOnboarded && config.stripeAccountId) {
+      try {
+        const stripeClient = await getStripeInstance();
+        const account = await stripeClient.accounts.retrieve(config.stripeAccountId);
+
+        const isOnboarded = account.charges_enabled && account.payouts_enabled;
+
+        if (isOnboarded) {
+          // Update database since webhook might have been delayed
+          await db.stripeConfig.update({
+            where: { id: config.id },
+            data: { isOnboarded: true },
+          });
+
+          return NextResponse.json({
+            connected: true,
+            onboarded: true,
+            accountId: config.stripeAccountId,
+          });
+        }
+      } catch (stripeError) {
+        console.error("Error checking Stripe account status:", stripeError);
+        // Continue with DB value if Stripe check fails
+      }
     }
 
     return NextResponse.json({
