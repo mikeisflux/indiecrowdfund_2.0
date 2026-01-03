@@ -868,10 +868,10 @@ export default function AIControlPage() {
                           </div>
                           <p className="text-xs text-zinc-500 mb-2">{segment.description}</p>
                           <div className="flex flex-wrap gap-1">
-                            {segment.criteria.slice(0, 2).map((c, j) => (
+                            {(Array.isArray(segment.criteria) ? segment.criteria : []).slice(0, 2).map((c, j) => (
                               <Badge key={j} variant="outline" className="text-xs">{c}</Badge>
                             ))}
-                            {segment.criteria.length > 2 && (
+                            {Array.isArray(segment.criteria) && segment.criteria.length > 2 && (
                               <Badge variant="outline" className="text-xs">+{segment.criteria.length - 2}</Badge>
                             )}
                           </div>

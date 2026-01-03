@@ -327,10 +327,10 @@ function SegmentationContent({ data }: { data: any }) {
                 </div>
               </div>
               <div className="flex flex-wrap gap-1 mt-2">
-                {segment.criteria.slice(0, 3).map((c: string, j: number) => (
+                {(Array.isArray(segment.criteria) ? segment.criteria : []).slice(0, 3).map((c: string, j: number) => (
                   <Badge key={j} variant="outline" className="text-xs">{c}</Badge>
                 ))}
-                {segment.criteria.length > 3 && (
+                {Array.isArray(segment.criteria) && segment.criteria.length > 3 && (
                   <Badge variant="outline" className="text-xs">+{segment.criteria.length - 3} more</Badge>
                 )}
               </div>
