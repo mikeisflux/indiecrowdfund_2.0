@@ -584,6 +584,7 @@ export default function AIControlPage() {
                               <SelectItem value="0 3 * * *">Daily at 3:00 AM</SelectItem>
                               <SelectItem value="0 4 * * *">Daily at 4:00 AM</SelectItem>
                               <SelectItem value="0 0 * * 0">Weekly (Sunday midnight)</SelectItem>
+                              <SelectItem value="0 4 * * 0">Weekly (Sunday 4:00 AM)</SelectItem>
                               <SelectItem value="0 0 * * 1">Weekly (Monday midnight)</SelectItem>
                               <SelectItem value="0 0 1 * *">Monthly (1st at midnight)</SelectItem>
                             </SelectContent>
