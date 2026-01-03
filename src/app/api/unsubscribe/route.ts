@@ -81,19 +81,47 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Handle unsubscribe via API
+// POST - Handle unsubscribe via API (supports both JSON and RFC 8058 one-click unsubscribe)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { token, email } = body;
-
+    const contentType = request.headers.get("content-type") || "";
     let targetEmail: string | null = null;
 
-    if (token) {
-      targetEmail = verifyUnsubscribeToken(token);
-    } else if (email) {
-      // Direct email unsubscribe (for admin use)
-      targetEmail = email;
+    // Check for RFC 8058 one-click unsubscribe (form-encoded with token in URL)
+    // Mail clients send POST with body "List-Unsubscribe=One-Click" to the URL with token
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      const { searchParams } = new URL(request.url);
+      const token = searchParams.get("token");
+
+      if (token) {
+        targetEmail = verifyUnsubscribeToken(token);
+      }
+
+      // If this is a valid one-click unsubscribe, process it
+      if (targetEmail) {
+        const result = await unsubscribeEmail(targetEmail);
+        console.log(`[Unsubscribe] One-click unsubscribe for: ${targetEmail}, success: ${result.success}`);
+
+        if (result.success) {
+          // Return 200 OK for successful one-click unsubscribe
+          return new NextResponse("Unsubscribed successfully", { status: 200 });
+        } else {
+          return new NextResponse("Failed to unsubscribe", { status: 500 });
+        }
+      }
+    }
+
+    // Handle JSON API requests
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      const { token, email } = body;
+
+      if (token) {
+        targetEmail = verifyUnsubscribeToken(token);
+      } else if (email) {
+        // Direct email unsubscribe (for admin use)
+        targetEmail = email;
+      }
     }
 
     if (!targetEmail) {
@@ -114,13 +142,13 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Unsubscribe an email from all platform emails
+ * Unsubscribe an email from all platform emails (site-wide, including creator lists)
  */
 async function unsubscribeEmail(email: string): Promise<{ success: boolean; error?: string }> {
   try {
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 1. Update User record if exists
+    // 1. Update User record if exists (site-wide unsubscribe)
     const user = await db.user.findUnique({
       where: { email: normalizedEmail },
     });
@@ -132,7 +160,7 @@ async function unsubscribeEmail(email: string): Promise<{ success: boolean; erro
       });
     }
 
-    // 2. Update NewsletterSubscriber if exists
+    // 2. Update NewsletterSubscriber if exists (platform newsletter)
     try {
       await db.newsletterSubscriber.updateMany({
         where: { email: normalizedEmail },
@@ -145,7 +173,31 @@ async function unsubscribeEmail(email: string): Promise<{ success: boolean; erro
       // Table might not exist or no record
     }
 
-    console.log(`[Unsubscribe] Successfully unsubscribed: ${normalizedEmail}`);
+    // 3. Update EmailListSubscriber (creator email lists from IndieKit)
+    try {
+      await db.emailListSubscriber.updateMany({
+        where: { email: normalizedEmail },
+        data: {
+          status: "unsubscribed",
+        },
+      });
+    } catch {
+      // Table might not exist or no record
+    }
+
+    // 4. Update ProjectFollower (prelaunch email signups)
+    try {
+      await db.projectFollower.updateMany({
+        where: { email: normalizedEmail },
+        data: {
+          isActive: false,
+        },
+      });
+    } catch {
+      // Table might not exist or no record
+    }
+
+    console.log(`[Unsubscribe] Successfully unsubscribed from all lists: ${normalizedEmail}`);
     return { success: true };
   } catch (error) {
     console.error("[Unsubscribe] Error:", error);
