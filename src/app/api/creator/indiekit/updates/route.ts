@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { notifyProjectUpdate } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -131,6 +132,15 @@ export async function POST(req: NextRequest) {
           publishedAt: new Date(),
         },
       });
+
+      // Send notifications to all backers and followers
+      try {
+        await notifyProjectUpdate(projectId, update.title);
+      } catch (notifyError) {
+        console.error("Failed to send update notifications:", notifyError);
+        // Don't fail the request if notifications fail
+      }
+
       return NextResponse.json({ update });
     }
 
@@ -158,6 +168,16 @@ export async function POST(req: NextRequest) {
         publishedAt: validatedData.publish ? new Date() : null,
       },
     });
+
+    // If publishing immediately, send notifications to all backers and followers
+    if (validatedData.publish) {
+      try {
+        await notifyProjectUpdate(projectId, update.title);
+      } catch (notifyError) {
+        console.error("Failed to send update notifications:", notifyError);
+        // Don't fail the request if notifications fail
+      }
+    }
 
     return NextResponse.json({ update }, { status: 201 });
   } catch (error) {
@@ -212,6 +232,13 @@ export async function PATCH(req: NextRequest) {
 
     const validatedData = updateSchema.partial().parse(updateData);
 
+    // Get current update status to check if we're newly publishing
+    const existingUpdate = await db.update.findUnique({
+      where: { id: updateId },
+      select: { status: true },
+    });
+    const wasPublished = existingUpdate?.status === "PUBLISHED";
+
     const update = await db.update.update({
       where: { id: updateId },
       data: {
@@ -226,6 +253,16 @@ export async function PATCH(req: NextRequest) {
         }),
       },
     });
+
+    // Send notifications only when newly publishing (DRAFT -> PUBLISHED)
+    if (validatedData.publish && !wasPublished) {
+      try {
+        await notifyProjectUpdate(projectId, update.title);
+      } catch (notifyError) {
+        console.error("Failed to send update notifications:", notifyError);
+        // Don't fail the request if notifications fail
+      }
+    }
 
     return NextResponse.json({ update });
   } catch (error) {
