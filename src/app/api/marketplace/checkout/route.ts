@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
-import { getStripeInstance, getSecureAppUrl } from "@/lib/payments/stripe";
+import { getStripeInstance, getSecureAppUrl, checkAndUpdateStripeOnboarding } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +69,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!book.creator.stripeConfig.isOnboarded) {
+    // Check onboarding status - query Stripe directly if DB shows not onboarded (webhook might be delayed)
+    const isOnboarded = await checkAndUpdateStripeOnboarding(
+      book.creator.stripeConfig.id,
+      book.creator.stripeConfig.stripeAccountId,
+      book.creator.stripeConfig.isOnboarded
+    );
+
+    if (!isOnboarded) {
       return NextResponse.json(
         { error: "Creator's Stripe account is not fully set up. Please try again later." },
         { status: 400 }

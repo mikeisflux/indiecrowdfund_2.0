@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { createStripePayment } from "@/lib/payments/stripe";
+import { createStripePayment, checkAndUpdateStripeOnboarding } from "@/lib/payments/stripe";
 import { cookies } from "next/headers";
 
 // Cookie name for campaign attribution (must match click tracking)
@@ -208,9 +208,23 @@ export async function POST(req: NextRequest) {
 
     // For Stripe projects, verify creator has Stripe configured
     const stripeConfig = project.creator.stripeConfig;
-    if (!stripeConfig?.isOnboarded) {
+    if (!stripeConfig?.stripeAccountId) {
       return NextResponse.json(
         { error: "Creator payment not configured" },
+        { status: 400 }
+      );
+    }
+
+    // Check onboarding status - query Stripe directly if DB shows not onboarded (webhook might be delayed)
+    const isOnboarded = await checkAndUpdateStripeOnboarding(
+      stripeConfig.id,
+      stripeConfig.stripeAccountId,
+      stripeConfig.isOnboarded
+    );
+
+    if (!isOnboarded) {
+      return NextResponse.json(
+        { error: "Creator payment not fully configured" },
         { status: 400 }
       );
     }

@@ -184,6 +184,40 @@ const stripe = new Proxy({} as Stripe, {
 
 export { getStripeInstance };
 
+/**
+ * Check if a creator's Stripe account is onboarded, querying Stripe directly if needed.
+ * This handles cases where the webhook might be delayed and updates the DB accordingly.
+ */
+export async function checkAndUpdateStripeOnboarding(stripeConfigId: string, stripeAccountId: string, currentOnboardedStatus: boolean): Promise<boolean> {
+  // If already onboarded in DB, return true
+  if (currentOnboardedStatus) {
+    return true;
+  }
+
+  // Query Stripe directly to check current status
+  try {
+    const stripeClient = await getStripeInstance();
+    const account = await stripeClient.accounts.retrieve(stripeAccountId);
+
+    const isOnboarded = account.charges_enabled && account.payouts_enabled;
+
+    if (isOnboarded) {
+      // Update database since webhook might have been delayed
+      await db.stripeConfig.update({
+        where: { id: stripeConfigId },
+        data: { isOnboarded: true },
+      });
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error("Error checking Stripe account status:", error);
+    // Return DB value if Stripe check fails
+    return currentOnboardedStatus;
+  }
+}
+
 // Export safe cancellation functions for use in API routes
 export { safeCancelSetupIntent, safeCancelPaymentIntent };
 
