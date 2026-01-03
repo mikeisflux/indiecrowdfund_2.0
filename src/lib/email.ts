@@ -1,5 +1,6 @@
 import sgMail from "@sendgrid/mail";
 import Mailgun from "mailgun.js";
+import type { MailgunMessageData } from "mailgun.js/definitions";
 import formData from "form-data";
 import crypto from "crypto";
 import { db } from "@/lib/db";
@@ -197,15 +198,16 @@ async function sendViaMailgun(
     });
 
     // Build message with List-Unsubscribe headers for one-click unsubscribe (RFC 8058)
-    const messageData: Record<string, unknown> = {
+    const messageData: MailgunMessageData = {
       from: `${fromName} <${fromEmail}>`,
       to: [to],
-      "h:Reply-To": replyTo || fromEmail,
       subject,
       text,
       html,
+      "h:Reply-To": replyTo || fromEmail,
     };
 
+    // Add List-Unsubscribe headers for one-click unsubscribe support
     if (unsubscribeUrl) {
       messageData["h:List-Unsubscribe"] = `<${unsubscribeUrl}>`;
       messageData["h:List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
