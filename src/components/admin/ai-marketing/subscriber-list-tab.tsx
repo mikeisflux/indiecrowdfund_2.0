@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Users,
-  UserCheck,
   Layers,
   Mail,
   Search,
@@ -36,6 +35,9 @@ import {
   Pencil,
   Copy,
   Loader2,
+  Store,
+  Target,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -62,10 +64,11 @@ interface Subscriber {
 
 interface SubscriberCounts {
   newsletter: number;
-  verified: number;
   backers: number;
   creators: number;
   retailers: number;
+  backerPool: number;
+  poolHitRate: number;
   total: number;
 }
 
@@ -80,12 +83,6 @@ const categoryInfo = {
     icon: Mail,
     color: "bg-blue-100 text-blue-700",
   },
-  verified: {
-    label: "Verified Users",
-    description: "Registered users with verified emails",
-    icon: UserCheck,
-    color: "bg-emerald-100 text-emerald-700",
-  },
   backers: {
     label: "Backers",
     description: "Users who have backed projects",
@@ -99,9 +96,9 @@ const categoryInfo = {
     color: "bg-amber-100 text-amber-700",
   },
   retailers: {
-    label: "Retailers",
+    label: "Retailer Users",
     description: "Retail partners and stockists",
-    icon: Users,
+    icon: Store,
     color: "bg-orange-100 text-orange-700",
   },
 };
@@ -307,7 +304,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
   return (
     <div className="mt-6 space-y-6">
       {/* Category Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         {Object.entries(categoryInfo).map(([key, info]) => {
           const Icon = info.icon;
           const count = counts?.[key as keyof SubscriberCounts] || 0;
@@ -331,13 +328,41 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">{info.label}</p>
-                    <p className="text-2xl font-bold">{count.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{typeof count === 'number' ? count.toLocaleString() : count}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           );
         })}
+        {/* Backer Pool Card */}
+        <Card className="hover:border-zinc-400 transition-all">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full p-2 bg-emerald-100 text-emerald-700">
+                <Target className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Backer Pool</p>
+                <p className="text-2xl font-bold">{(counts?.backerPool || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        {/* Pool Hit Rate Card */}
+        <Card className="hover:border-zinc-400 transition-all">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full p-2 bg-teal-100 text-teal-700">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Pool Hit Rate</p>
+                <p className="text-2xl font-bold">{counts?.poolHitRate || 0}%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* All Subscribers Card */}

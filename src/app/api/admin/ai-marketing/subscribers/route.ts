@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
 
     const [
       newsletterCount,
-      verifiedUsersCount,
+      totalUsersCount,
       backersCount,
       creatorsCount,
       retailersCount,
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
           NOT: retailerFilter,
         },
       }),
-      db.user.count({ where: { emailVerified: { not: null } } }),
+      db.user.count(), // Total registered users (backer pool)
       db.pledge.findMany({
         where: { status: "COMPLETED" },
         select: { userId: true },
@@ -90,6 +90,9 @@ export async function GET(req: NextRequest) {
       db.user.count({ where: { createdProjects: { some: {} } } }),
       db.newsletterSubscriber.count({ where: { isActive: true, source: { contains: "retailer", mode: "insensitive" } } }),
     ]);
+
+    // Calculate pool hit rate (percentage of users who have backed)
+    const poolHitRate = totalUsersCount > 0 ? (backersCount / totalUsersCount) * 100 : 0;
 
     // Build the response based on category
     let subscribers: Array<{
@@ -327,7 +330,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (category === "all") {
-      total = newsletterCount + verifiedUsersCount + retailersCount; // Rough estimate for all
+      total = newsletterCount + retailersCount; // Rough estimate for all
     }
 
     return NextResponse.json({
@@ -340,11 +343,12 @@ export async function GET(req: NextRequest) {
       },
       counts: {
         newsletter: newsletterCount,
-        verified: verifiedUsersCount,
         backers: backersCount,
         creators: creatorsCount,
         retailers: retailersCount,
-        total: newsletterCount + verifiedUsersCount + retailersCount, // Dedupe would be ideal but this is estimate
+        backerPool: totalUsersCount,
+        poolHitRate: Math.round(poolHitRate * 10) / 10, // Round to 1 decimal place
+        total: newsletterCount + retailersCount, // Dedupe would be ideal but this is estimate
       },
     });
   } catch (error) {
