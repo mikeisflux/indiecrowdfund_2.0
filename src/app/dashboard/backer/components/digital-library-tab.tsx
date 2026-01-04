@@ -468,37 +468,43 @@ export function DigitalLibraryTab() {
     try {
       setLoading(true);
 
-      // Fetch crowdfunding digital files
-      const filesRes = await fetch("/api/backer/digital-files", { headers: getCSRFHeaders() });
-      if (!filesRes.ok) throw new Error("Failed to fetch files");
-      const filesData = await filesRes.json();
+      // Fetch unified digital library (crowdfunding + marketplace purchases including discount code redemptions)
+      const libraryRes = await fetch("/api/backer/digital-library", { headers: getCSRFHeaders() });
+      if (!libraryRes.ok) throw new Error("Failed to fetch library");
+      const libraryData = await libraryRes.json();
 
-      // Filter for PDFs
-      const pdfFiles: DigitalFile[] = (filesData.files || []).filter(
-        (f: DigitalFile) => f.mimeType === "application/pdf" || f.fileName?.toLowerCase().endsWith(".pdf")
-      );
-
-      // Transform to LibraryItem format
-      const crowdfundingItems: LibraryItem[] = pdfFiles.map((file) => ({
-        id: `cf_${file.id}`,
-        title: file.name,
-        subtitle: file.project.title,
-        fileSize: file.fileSize,
-        coverImageUrl: file.coverImageUrl || null,
-        totalPages: file.totalPages || null,
-        source: "crowdfunding" as const,
-        sourceId: file.id,
-        createdAt: file.createdAt || new Date().toISOString(),
-        originalData: file,
+      // Transform API response to LibraryItem format with originalData
+      const apiItems: LibraryItem[] = (libraryData.items || []).map((item: {
+        id: string;
+        title: string;
+        subtitle: string;
+        fileSize: number;
+        coverImageUrl: string | null;
+        totalPages: number | null;
+        source: "crowdfunding" | "marketplace";
+        sourceId: string;
+        createdAt: string;
+        mimeType: string | null;
+      }) => ({
+        id: item.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        fileSize: item.fileSize,
+        coverImageUrl: item.coverImageUrl,
+        totalPages: item.totalPages,
+        source: item.source,
+        sourceId: item.sourceId,
+        createdAt: item.createdAt,
+        originalData: item,
       }));
 
-      // Trigger cover extraction for PDFs without covers (in background)
-      const filesNeedingCovers = pdfFiles.filter(
-        (f: DigitalFile) => !f.coverImageUrl && f.mimeType === "application/pdf"
+      // For crowdfunding items, trigger cover extraction for PDFs without covers
+      const crowdfundingItemsNeedingCovers = apiItems.filter(
+        (item) => item.source === "crowdfunding" && !item.coverImageUrl
       );
-      if (filesNeedingCovers.length > 0) {
+      if (crowdfundingItemsNeedingCovers.length > 0) {
         // Extract covers in background without blocking UI
-        extractCoversInBackground(filesNeedingCovers);
+        extractCoversInBackgroundForItems(crowdfundingItemsNeedingCovers);
       }
 
       // Fetch local books from IndexedDB
@@ -527,11 +533,7 @@ export function DigitalLibraryTab() {
         }
       }
 
-      // TODO: Fetch marketplace purchases when API is ready
-      // const purchasesRes = await fetch("/api/backer/marketplace-purchases", { headers: getCSRFHeaders() });
-      // const marketplaceItems = ...
-
-      const allItems = [...crowdfundingItems, ...localItems];
+      const allItems = [...apiItems, ...localItems];
       setLibraryItems(allItems);
 
       // Load reading progress for all items
@@ -553,14 +555,17 @@ export function DigitalLibraryTab() {
     fetchLibraryData();
   }, [fetchLibraryData]);
 
-  // Extract covers for PDFs in background
-  const extractCoversInBackground = async (files: DigitalFile[]) => {
-    for (const file of files) {
+  // Extract covers for crowdfunding PDFs in background
+  const extractCoversInBackgroundForItems = async (items: LibraryItem[]) => {
+    for (const item of items) {
+      // Only extract covers for crowdfunding items (they use file IDs)
+      if (item.source !== "crowdfunding") continue;
+
       try {
         const res = await fetch("/api/backer/digital-files/extract-cover", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-          body: JSON.stringify({ fileId: file.id }),
+          body: JSON.stringify({ fileId: item.sourceId }),
         });
 
         if (res.ok) {
@@ -568,16 +573,16 @@ export function DigitalLibraryTab() {
           if (data.success && data.coverUrl) {
             // Update the library item with the new cover
             setLibraryItems((prev) =>
-              prev.map((item) =>
-                item.sourceId === file.id
-                  ? { ...item, coverImageUrl: data.coverUrl, totalPages: data.totalPages }
-                  : item
+              prev.map((libItem) =>
+                libItem.sourceId === item.sourceId
+                  ? { ...libItem, coverImageUrl: data.coverUrl, totalPages: data.totalPages }
+                  : libItem
               )
             );
           }
         }
       } catch (err) {
-        console.error(`Failed to extract cover for ${file.name}:`, err);
+        console.error(`Failed to extract cover for ${item.title}:`, err);
       }
     }
   };
