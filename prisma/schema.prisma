@@ -2913,6 +2913,7 @@ model MarketplaceBook {
   purchases         MarketplacePurchase[]
   reviews           MarketplaceBookReview[]
   codeRedemptions   MarketplaceCodeRedemption[]
+  discountCodes     MarketplaceDiscountCode[] @relation("MarketplaceDiscountBook")
   companyId         String?
   company           CompanyProfile? @relation(fields: [companyId], references: [id])
 
@@ -3077,6 +3078,10 @@ model MarketplaceDiscountCode {
   creatorId         String
   creator           User     @relation("MarketplaceDiscountCreator", fields: [creatorId], references: [id])
 
+  // Specific book this code applies to
+  bookId            String?
+  book              MarketplaceBook? @relation("MarketplaceDiscountBook", fields: [bookId], references: [id])
+
   // Code details
   code              String   @unique
   type              MarketplaceDiscountType @default(FREE_BOOK)
@@ -3086,7 +3091,7 @@ model MarketplaceDiscountCode {
   validUntil        DateTime
 
   // Usage limits
-  maxRedemptions    Int      @default(1)  // Max times this code can be used total
+  maxRedemptions    Int      @default(0)  // Max times this code can be used (0 = unlimited)
   maxPerCustomer    Int      @default(1)  // Max times per customer
   usageCount        Int      @default(0)  // Current usage count
 
@@ -3101,6 +3106,7 @@ model MarketplaceDiscountCode {
   redemptions       MarketplaceCodeRedemption[]
 
   @@index([creatorId])
+  @@index([bookId])
   @@index([code])
   @@index([validFrom, validUntil])
   @@index([isActive])

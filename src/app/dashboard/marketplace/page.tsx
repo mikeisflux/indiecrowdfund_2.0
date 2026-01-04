@@ -120,7 +120,22 @@ interface DiscountCode {
   usageCount: number;
   isActive: boolean;
   createdAt: string;
+  bookId: string | null;
+  book: {
+    id: string;
+    title: string;
+    slug: string;
+    coverImageUrl: string | null;
+  } | null;
   redemptions: DiscountCodeRedemption[];
+}
+
+interface LiveBook {
+  id: string;
+  title: string;
+  slug: string;
+  coverImageUrl: string | null;
+  price: number;
 }
 
 function StatusBadge({ status }: { status: MarketplaceBook["status"] }) {
@@ -330,7 +345,11 @@ export default function CreatorMarketplaceDashboard() {
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>([]);
   const [currentMonthCode, setCurrentMonthCode] = useState<DiscountCode | null>(null);
   const [hasLiveBooks, setHasLiveBooks] = useState(false);
+  const [liveBooksList, setLiveBooksList] = useState<LiveBook[]>([]);
+  const [selectedBookId, setSelectedBookId] = useState<string>("");
   const [creatingCode, setCreatingCode] = useState(false);
+  const [editingCodeId, setEditingCodeId] = useState<string | null>(null);
+  const [deletingCodeId, setDeletingCodeId] = useState<string | null>(null);
 
   const fetchDiscountCodes = useCallback(async () => {
     try {
@@ -340,6 +359,7 @@ export default function CreatorMarketplaceDashboard() {
         setDiscountCodes(data.discountCodes || []);
         setCurrentMonthCode(data.currentMonthCode || null);
         setHasLiveBooks(data.hasLiveBooks || false);
+        setLiveBooksList(data.liveBooks || []);
       }
     } catch (error) {
       console.error("Error fetching discount codes:", error);
@@ -347,11 +367,19 @@ export default function CreatorMarketplaceDashboard() {
   }, []);
 
   const handleCreateCode = async () => {
+    if (!selectedBookId) {
+      toast.error("Please select a book for the promo code");
+      return;
+    }
     setCreatingCode(true);
     try {
       const res = await fetch("/api/creator/marketplace/discount-codes", {
         method: "POST",
-        headers: getCSRFHeaders(),
+        headers: {
+          ...getCSRFHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ bookId: selectedBookId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -359,12 +387,68 @@ export default function CreatorMarketplaceDashboard() {
         return;
       }
       toast.success("Promo code created successfully!");
+      setSelectedBookId("");
       fetchDiscountCodes();
     } catch (error) {
       console.error("Error creating promo code:", error);
       toast.error("Failed to create promo code");
     } finally {
       setCreatingCode(false);
+    }
+  };
+
+  const handleUpdateCode = async (codeId: string, bookId: string) => {
+    setEditingCodeId(codeId);
+    try {
+      const res = await fetch("/api/creator/marketplace/discount-codes", {
+        method: "PUT",
+        headers: {
+          ...getCSRFHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ codeId, bookId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update promo code");
+        return;
+      }
+      toast.success("Promo code updated successfully!");
+      fetchDiscountCodes();
+    } catch (error) {
+      console.error("Error updating promo code:", error);
+      toast.error("Failed to update promo code");
+    } finally {
+      setEditingCodeId(null);
+    }
+  };
+
+  const handleDeleteCode = async (codeId: string) => {
+    if (!confirm("Are you sure you want to delete this promo code?")) {
+      return;
+    }
+    setDeletingCodeId(codeId);
+    try {
+      const res = await fetch(`/api/creator/marketplace/discount-codes?codeId=${codeId}`, {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete promo code");
+        return;
+      }
+      if (data.deactivated) {
+        toast.success("Promo code deactivated (has existing redemptions)");
+      } else {
+        toast.success("Promo code deleted successfully!");
+      }
+      fetchDiscountCodes();
+    } catch (error) {
+      console.error("Error deleting promo code:", error);
+      toast.error("Failed to delete promo code");
+    } finally {
+      setDeletingCodeId(null);
     }
   };
 
@@ -827,11 +911,55 @@ export default function CreatorMarketplaceDashboard() {
                     <div className="p-6 rounded-xl bg-primary/10 border border-primary/20">
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-sm text-muted-foreground">Your promo code for this month:</span>
-                        <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Active
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Active
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDeleteCode(currentMonthCode.id)}
+                            disabled={deletingCodeId === currentMonthCode.id}
+                          >
+                            {deletingCodeId === currentMonthCode.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
+
+                      {/* Book Info */}
+                      {currentMonthCode.book && (
+                        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-muted">
+                          <BookOpen className="h-5 w-5 text-primary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {currentMonthCode.book.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Valid for this book only</p>
+                          </div>
+                          {editingCodeId === currentMonthCode.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          ) : (
+                            <select
+                              value={currentMonthCode.bookId || ""}
+                              onChange={(e) => handleUpdateCode(currentMonthCode.id, e.target.value)}
+                              className="text-sm px-2 py-1 bg-background border border-border rounded text-foreground"
+                            >
+                              {liveBooksList.map((book) => (
+                                <option key={book.id} value={book.id}>
+                                  {book.title}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-3 mb-4">
                         <code className="text-2xl font-bold tracking-wider text-foreground bg-muted px-4 py-2 rounded-lg">
                           {currentMonthCode.code}
@@ -881,31 +1009,54 @@ export default function CreatorMarketplaceDashboard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="py-8 text-center">
-                    <Ticket className="h-12 w-12 mx-auto mb-4 text-primary/50" />
-                    <p className="text-muted-foreground mb-2">
-                      Generate your monthly promo code to offer a free PDF to customers.
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-6">
-                      Each code is valid for one book per customer. Share with as many customers as you want!
-                    </p>
-                    <Button
-                      onClick={handleCreateCode}
-                      disabled={creatingCode}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      {creatingCode ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Generate Promo Code
-                        </>
-                      )}
-                    </Button>
+                  <div className="py-6">
+                    <div className="text-center mb-6">
+                      <Ticket className="h-12 w-12 mx-auto mb-4 text-primary/50" />
+                      <p className="text-muted-foreground mb-2">
+                        Create a promo code for a specific book from your library.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Each code is valid for one book per customer. Share with as many customers as you want!
+                      </p>
+                    </div>
+
+                    <div className="max-w-md mx-auto space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Select a book for this promo code
+                        </label>
+                        <select
+                          value={selectedBookId}
+                          onChange={(e) => setSelectedBookId(e.target.value)}
+                          className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        >
+                          <option value="">Choose a book...</option>
+                          {liveBooksList.map((book) => (
+                            <option key={book.id} value={book.id}>
+                              {book.title} (${book.price.toFixed(2)})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <Button
+                        onClick={handleCreateCode}
+                        disabled={creatingCode || !selectedBookId}
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                      >
+                        {creatingCode ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Generate Promo Code
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -987,13 +1138,18 @@ export default function CreatorMarketplaceDashboard() {
                           key={code.id}
                           className="flex items-center justify-between p-3 rounded-lg bg-muted"
                         >
-                          <div className="flex items-center gap-3">
-                            <code className="text-sm font-mono bg-muted-foreground/20 px-2 py-1 rounded">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <code className="text-sm font-mono bg-muted-foreground/20 px-2 py-1 rounded shrink-0">
                               {code.code}
                             </code>
+                            {code.book && (
+                              <span className="text-sm text-muted-foreground truncate">
+                                for &quot;{code.book.title}&quot;
+                              </span>
+                            )}
                             <Badge
                               className={cn(
-                                "border",
+                                "border shrink-0",
                                 code.isActive && new Date(code.validUntil) > new Date()
                                   ? "bg-emerald-500/20 text-emerald-600 border-emerald-500/30"
                                   : "bg-gray-500/20 text-gray-600 border-gray-500/30"
@@ -1002,8 +1158,23 @@ export default function CreatorMarketplaceDashboard() {
                               {code.isActive && new Date(code.validUntil) > new Date() ? "Active" : "Expired"}
                             </Badge>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {code.usageCount}{code.maxRedemptions > 0 ? `/${code.maxRedemptions}` : ""} used • {new Date(code.validFrom).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="text-sm text-muted-foreground text-right">
+                              {code.usageCount}{code.maxRedemptions > 0 ? `/${code.maxRedemptions}` : ""} used • {new Date(code.validFrom).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeleteCode(code.id)}
+                              disabled={deletingCodeId === code.id}
+                            >
+                              {deletingCodeId === code.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
                           </div>
                         </div>
                       ))}

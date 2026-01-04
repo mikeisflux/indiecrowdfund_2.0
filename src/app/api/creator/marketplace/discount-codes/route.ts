@@ -19,7 +19,7 @@ function getCurrentMonthRange(): { start: Date; end: Date } {
   return { start, end };
 }
 
-// GET: Fetch creator's discount codes
+// GET: Fetch creator's discount codes and available books
 export async function GET() {
   try {
     const session = await auth();
@@ -36,6 +36,14 @@ export async function GET() {
         creatorId: userId,
       },
       include: {
+        book: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            coverImageUrl: true,
+          },
+        },
         redemptions: {
           include: {
             customer: {
@@ -66,19 +74,28 @@ export async function GET() {
         code.type === "FREE_BOOK"
     );
 
-    // Check if creator has any live books (required to have a promo code)
-    const liveBooks = await db.marketplaceBook.count({
+    // Get creator's live books for the dropdown
+    const liveBooks = await db.marketplaceBook.findMany({
       where: {
         creatorId: userId,
         status: "LIVE",
         deletedAt: null,
       },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        coverImageUrl: true,
+        price: true,
+      },
+      orderBy: { title: "asc" },
     });
 
     return NextResponse.json({
       discountCodes,
       currentMonthCode,
-      hasLiveBooks: liveBooks > 0,
+      liveBooks,
+      hasLiveBooks: liveBooks.length > 0,
       monthRange: {
         start: monthStart.toISOString(),
         end: monthEnd.toISOString(),
@@ -93,7 +110,7 @@ export async function GET() {
   }
 }
 
-// POST: Generate a new monthly free book code
+// POST: Create a new discount code for a specific book
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -104,26 +121,38 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
     const { start: monthStart, end: monthEnd } = getCurrentMonthRange();
 
-    // Check if creator has any live books
-    const liveBooks = await db.marketplaceBook.count({
+    const body = await request.json();
+    const { bookId } = body;
+
+    if (!bookId) {
+      return NextResponse.json(
+        { error: "Please select a book for the promo code" },
+        { status: 400 }
+      );
+    }
+
+    // Verify the book exists and belongs to this creator
+    const book = await db.marketplaceBook.findFirst({
       where: {
+        id: bookId,
         creatorId: userId,
         status: "LIVE",
         deletedAt: null,
       },
     });
 
-    if (liveBooks === 0) {
+    if (!book) {
       return NextResponse.json(
-        { error: "You need at least one live book to create a promo code" },
+        { error: "Book not found or not available" },
         { status: 400 }
       );
     }
 
-    // Check if a code already exists for this month
+    // Check if a code already exists for this book this month
     const existingCode = await db.marketplaceDiscountCode.findFirst({
       where: {
         creatorId: userId,
+        bookId: bookId,
         type: "FREE_BOOK",
         validFrom: { gte: monthStart },
         validUntil: { lte: monthEnd },
@@ -132,7 +161,7 @@ export async function POST(request: NextRequest) {
 
     if (existingCode) {
       return NextResponse.json(
-        { error: "You already have a promo code for this month", code: existingCode },
+        { error: "You already have a promo code for this book this month" },
         { status: 400 }
       );
     }
@@ -162,29 +191,28 @@ export async function POST(request: NextRequest) {
       attempts++;
     }
 
-    // Parse optional body for custom settings
-    // maxRedemptions = 0 means unlimited
-    let maxRedemptions = 0;
-    try {
-      const body = await request.json();
-      if (body.maxRedemptions && typeof body.maxRedemptions === "number") {
-        maxRedemptions = Math.max(0, body.maxRedemptions); // 0 = unlimited, any positive number = that limit
-      }
-    } catch {
-      // No body or invalid JSON, use defaults (unlimited)
-    }
-
     // Create the discount code
     const discountCode = await db.marketplaceDiscountCode.create({
       data: {
         creatorId: userId,
+        bookId: bookId,
         code,
         type: "FREE_BOOK",
         validFrom: monthStart,
         validUntil: monthEnd,
-        maxRedemptions,
+        maxRedemptions: 0, // Unlimited
         maxPerCustomer: 1,
         isActive: true,
+      },
+      include: {
+        book: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            coverImageUrl: true,
+          },
+        },
       },
     });
 
@@ -196,6 +224,168 @@ export async function POST(request: NextRequest) {
     console.error("Error creating discount code:", error);
     return NextResponse.json(
       { error: "Failed to create discount code" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT: Update an existing discount code (change book)
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const body = await request.json();
+    const { codeId, bookId, isActive } = body;
+
+    if (!codeId) {
+      return NextResponse.json(
+        { error: "Code ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify the code exists and belongs to this creator
+    const existingCode = await db.marketplaceDiscountCode.findFirst({
+      where: {
+        id: codeId,
+        creatorId: userId,
+      },
+    });
+
+    if (!existingCode) {
+      return NextResponse.json(
+        { error: "Discount code not found" },
+        { status: 404 }
+      );
+    }
+
+    // Build update data
+    const updateData: { bookId?: string; isActive?: boolean } = {};
+
+    // If updating bookId, verify the new book exists
+    if (bookId !== undefined) {
+      if (bookId) {
+        const book = await db.marketplaceBook.findFirst({
+          where: {
+            id: bookId,
+            creatorId: userId,
+            status: "LIVE",
+            deletedAt: null,
+          },
+        });
+
+        if (!book) {
+          return NextResponse.json(
+            { error: "Book not found or not available" },
+            { status: 400 }
+          );
+        }
+      }
+      updateData.bookId = bookId || undefined;
+    }
+
+    // Update isActive if provided
+    if (isActive !== undefined) {
+      updateData.isActive = isActive;
+    }
+
+    const updatedCode = await db.marketplaceDiscountCode.update({
+      where: { id: codeId },
+      data: updateData,
+      include: {
+        book: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            coverImageUrl: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      discountCode: updatedCode,
+    });
+  } catch (error) {
+    console.error("Error updating discount code:", error);
+    return NextResponse.json(
+      { error: "Failed to update discount code" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE: Delete a discount code
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const { searchParams } = new URL(request.url);
+    const codeId = searchParams.get("codeId");
+
+    if (!codeId) {
+      return NextResponse.json(
+        { error: "Code ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify the code exists and belongs to this creator
+    const existingCode = await db.marketplaceDiscountCode.findFirst({
+      where: {
+        id: codeId,
+        creatorId: userId,
+      },
+      include: {
+        redemptions: true,
+      },
+    });
+
+    if (!existingCode) {
+      return NextResponse.json(
+        { error: "Discount code not found" },
+        { status: 404 }
+      );
+    }
+
+    // If code has redemptions, just deactivate instead of deleting
+    if (existingCode.redemptions.length > 0) {
+      await db.marketplaceDiscountCode.update({
+        where: { id: codeId },
+        data: { isActive: false },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Discount code deactivated (has existing redemptions)",
+        deactivated: true,
+      });
+    }
+
+    // Delete the code if no redemptions
+    await db.marketplaceDiscountCode.delete({
+      where: { id: codeId },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Discount code deleted",
+      deleted: true,
+    });
+  } catch (error) {
+    console.error("Error deleting discount code:", error);
+    return NextResponse.json(
+      { error: "Failed to delete discount code" },
       { status: 500 }
     );
   }

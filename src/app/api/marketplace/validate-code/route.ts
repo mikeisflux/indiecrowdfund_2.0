@@ -34,6 +34,12 @@ export async function POST(request: NextRequest) {
             name: true,
           },
         },
+        book: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
         redemptions: {
           where: { customerId: userId },
         },
@@ -94,8 +100,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This book is not available for purchase" }, { status: 400 });
     }
 
-    // Verify the code belongs to the book's creator
-    if (book.creatorId !== discountCode.creatorId) {
+    // Verify the code is valid for this book
+    // If the code has a specific bookId, it must match
+    // If the code has no bookId (legacy codes), check creator ownership
+    if (discountCode.bookId) {
+      if (discountCode.bookId !== bookId) {
+        return NextResponse.json({ error: "This promo code is not valid for this book" }, { status: 400 });
+      }
+    } else if (book.creatorId !== discountCode.creatorId) {
       return NextResponse.json({ error: "This promo code is not valid for this book" }, { status: 400 });
     }
 
