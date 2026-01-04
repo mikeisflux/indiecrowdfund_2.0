@@ -103,26 +103,15 @@ export async function POST(request: NextRequest) {
     // Verify the code is valid for this book
     // If the code has a specific bookId, it must match
     // If the code has no bookId (legacy codes), check creator ownership
-    console.log("[validate-code] Checking code validity:", {
-      codeBookId: discountCode.bookId,
-      requestedBookId: bookId,
-      codeBookTitle: discountCode.book?.title,
-      requestedBookTitle: book.title,
-      codeCreatorId: discountCode.creatorId,
-      bookCreatorId: book.creatorId,
-    });
-
     if (discountCode.bookId) {
       if (discountCode.bookId !== bookId) {
         const codeBookTitle = discountCode.book?.title || "another book";
-        console.log("[validate-code] Book mismatch - code bookId:", discountCode.bookId, "requested bookId:", bookId);
         return NextResponse.json({
           error: `This promo code is for "${codeBookTitle}", not this book`,
           validForBook: discountCode.book ? { id: discountCode.book.id, title: discountCode.book.title } : null,
         }, { status: 400 });
       }
     } else if (book.creatorId !== discountCode.creatorId) {
-      console.log("[validate-code] Creator mismatch - code creatorId:", discountCode.creatorId, "book creatorId:", book.creatorId);
       return NextResponse.json({ error: "This promo code is not valid for this book" }, { status: 400 });
     }
 
