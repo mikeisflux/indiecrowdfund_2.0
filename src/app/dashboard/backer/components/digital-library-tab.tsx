@@ -43,6 +43,7 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
+import { PdfThumbnail } from "@/components/PdfThumbnail";
 import {
   Tooltip,
   TooltipContent,
@@ -235,6 +236,14 @@ function LibraryCard({
               fill
               className="object-cover"
             />
+          ) : item.source !== "local" ? (
+            <PdfThumbnail
+              fileId={item.sourceId}
+              source={item.source}
+              className="absolute inset-0"
+              iconClassName={iconColor}
+              fallbackGradient={gradientColors}
+            />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
               <FileText className={cn("h-8 w-8", iconColor)} />
@@ -324,6 +333,14 @@ function LibraryCard({
             alt={item.title}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : item.source !== "local" ? (
+          <PdfThumbnail
+            fileId={item.sourceId}
+            source={item.source}
+            className="absolute inset-0 group-hover:scale-105 transition-transform duration-300"
+            iconClassName={iconColor}
+            fallbackGradient={gradientColors}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
