@@ -124,6 +124,12 @@ export function BookReaderTab() {
   const [uploading, setUploading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [supportsLocalBooks, setSupportsLocalBooks] = useState(false);
+
+  // Check IndexedDB support on client side only
+  useEffect(() => {
+    setSupportsLocalBooks(isLocalBooksSupported());
+  }, []);
 
   // Page dimensions based on device - match PDF aspect ratio (roughly 1:1.53)
   const pageWidth = isMobile ? 280 : 380;
@@ -258,6 +264,7 @@ export function BookReaderTab() {
 
   const openBook = async (file: DigitalFile) => {
     setSelectedFile(file);
+    setIsLocalBook(false); // Reset - this is a backed project book
     setPdfUrl(null);
     setNumPages(0);
     setBookmarks(getBookmarks(file.id));
@@ -511,7 +518,7 @@ export function BookReaderTab() {
             <Library className="h-12 w-12 mx-auto mb-4 text-amber-400" />
             <h3 className="text-xl font-semibold mb-2">No books available</h3>
             <p className="text-muted-foreground mb-6">Books from your backed projects will appear here</p>
-            {isLocalBooksSupported() && (
+            {supportsLocalBooks && (
               <div>
                 <input
                   ref={fileInputRef}
@@ -556,7 +563,7 @@ export function BookReaderTab() {
             <p className="text-sm text-muted-foreground">{totalBooks} book{totalBooks !== 1 ? 's' : ''} available</p>
           </div>
         </div>
-        {isLocalBooksSupported() && (
+        {supportsLocalBooks && (
           <div>
             <input
               ref={fileInputRef}
