@@ -1067,10 +1067,26 @@ export default function CreatorMarketplaceDashboard() {
             {discountCodes.length > 0 && (
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Users className="h-5 w-5 text-primary" />
-                    Redemption History
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                      <Users className="h-5 w-5 text-primary" />
+                      Redemption History
+                    </CardTitle>
+                    {discountCodes.flatMap(code => code.redemptions).length > 0 && (
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="text-muted-foreground">
+                          <span className="font-semibold text-foreground">
+                            {discountCodes.flatMap(code => code.redemptions).length}
+                          </span> total redemptions
+                        </div>
+                        <div className="text-muted-foreground">
+                          <span className="font-semibold text-emerald-500">
+                            ${discountCodes.flatMap(code => code.redemptions).reduce((sum, r) => sum + Number(r.discountAmount), 0).toFixed(2)}
+                          </span> given away
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {discountCodes.flatMap(code => code.redemptions).length === 0 ? (
@@ -1087,6 +1103,7 @@ export default function CreatorMarketplaceDashboard() {
                         code.redemptions.map(redemption => ({
                           ...redemption,
                           codeValue: code.code,
+                          bookTitle: code.book?.title || redemption.book.title,
                         }))
                       ).sort((a, b) => new Date(b.redeemedAt).getTime() - new Date(a.redeemedAt).getTime())
                         .map((redemption) => (
