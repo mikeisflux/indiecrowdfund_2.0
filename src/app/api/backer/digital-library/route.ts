@@ -135,6 +135,7 @@ export async function GET(request: Request) {
               select: {
                 id: true,
                 title: true,
+                coverImageUrl: true,
                 pdfFileUrl: true,
                 pdfCoverImageUrl: true,
                 pdfFileName: true,
@@ -154,7 +155,7 @@ export async function GET(request: Request) {
             title: purchase.book.title,
             subtitle: "Marketplace Purchase",
             fileSize: purchase.book.pdfFileSize || 0,
-            coverImageUrl: purchase.book.pdfCoverImageUrl,
+            coverImageUrl: purchase.book.pdfCoverImageUrl || purchase.book.coverImageUrl,
             totalPages: purchase.book.pdfTotalPages,
             source: "marketplace",
             sourceId: purchase.id,
