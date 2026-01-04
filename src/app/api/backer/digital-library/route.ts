@@ -45,16 +45,31 @@ export async function GET(request: Request) {
 
     // Fetch crowdfunding digital files
     if (!source || source === "crowdfunding") {
+      // First, get user's pledges with their rewardIds
+      const userPledges = await prisma.pledge.findMany({
+        where: {
+          userId: session.user.id,
+          status: { in: ["PENDING", "COMPLETED"] },
+        },
+        select: {
+          id: true,
+          projectId: true,
+          rewardId: true,
+        },
+      });
+
+      // Create a map of projectId -> rewardId for quick lookup
+      const pledgesByProject = new Map<string, string | null>();
+      for (const pledge of userPledges) {
+        pledgesByProject.set(pledge.projectId, pledge.rewardId);
+      }
+
+      const projectIds = userPledges.map(p => p.projectId);
+
+      // Fetch all digital files from projects user has backed
       const digitalFiles = await prisma.digitalFile.findMany({
         where: {
-          project: {
-            pledges: {
-              some: {
-                userId: session.user.id,
-                status: { in: ["PENDING", "COMPLETED"] },
-              },
-            },
-          },
+          projectId: { in: projectIds },
           ...(fileType === "pdf"
             ? {
                 OR: [
@@ -77,20 +92,32 @@ export async function GET(request: Request) {
         },
       });
 
+      // Filter files based on rewardIds restriction
       for (const file of digitalFiles) {
-        libraryItems.push({
-          id: `cf_${file.id}`,
-          title: file.name,
-          subtitle: file.project.title,
-          fileSize: file.fileSize,
-          coverImageUrl: file.coverImageUrl,
-          totalPages: file.totalPages,
-          source: "crowdfunding",
-          sourceId: file.id,
-          sourceName: file.project.title,
-          createdAt: file.createdAt.toISOString(),
-          mimeType: file.mimeType,
-        });
+        const userRewardId = pledgesByProject.get(file.projectId);
+        const fileRewardIds = (file.rewardIds as string[]) || [];
+
+        // Show file if:
+        // 1. rewardIds is empty (available to all backers), OR
+        // 2. User's rewardId is in the file's rewardIds array
+        const hasAccess = fileRewardIds.length === 0 ||
+          (userRewardId && fileRewardIds.includes(userRewardId));
+
+        if (hasAccess) {
+          libraryItems.push({
+            id: `cf_${file.id}`,
+            title: file.name,
+            subtitle: file.project.title,
+            fileSize: file.fileSize,
+            coverImageUrl: file.coverImageUrl,
+            totalPages: file.totalPages,
+            source: "crowdfunding",
+            sourceId: file.id,
+            sourceName: file.project.title,
+            createdAt: file.createdAt.toISOString(),
+            mimeType: file.mimeType,
+          });
+        }
       }
     }
 
