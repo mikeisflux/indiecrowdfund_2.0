@@ -24,7 +24,6 @@ import {
   ZoomOut,
   RotateCcw,
   AlertCircle,
-  FileText,
   Bookmark,
   BookmarkPlus,
   Library,
@@ -465,11 +464,7 @@ export function DigitalLibraryTab() {
   }, []);
 
   // Fetch library data
-  useEffect(() => {
-    fetchLibraryData();
-  }, []);
-
-  const fetchLibraryData = async () => {
+  const fetchLibraryData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -548,7 +543,12 @@ export function DigitalLibraryTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchLibraryData();
+  }, [fetchLibraryData]);
 
   // Extract covers for PDFs in background
   const extractCoversInBackground = async (files: DigitalFile[]) => {

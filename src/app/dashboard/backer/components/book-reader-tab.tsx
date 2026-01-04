@@ -142,12 +142,7 @@ export function BookReaderTab() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  useEffect(() => {
-    fetchPdfFiles();
-    fetchLocalBooks();
-  }, []);
-
-  const fetchLocalBooks = async () => {
+  const fetchLocalBooks = useCallback(async () => {
     if (!isLocalBooksSupported()) return;
     try {
       const books = await getAllLocalBooksMeta();
@@ -162,7 +157,13 @@ export function BookReaderTab() {
     } catch (err) {
       console.error("Error loading local books:", err);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch local books on mount
+  useEffect(() => {
+    fetchLocalBooks();
+  }, [fetchLocalBooks]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -240,7 +241,7 @@ export function BookReaderTab() {
     }
   };
 
-  const fetchPdfFiles = async () => {
+  const fetchPdfFiles = useCallback(async () => {
     try {
       const res = await fetch("/api/backer/digital-files", { headers: getCSRFHeaders() });
       if (!res.ok) throw new Error("Failed to fetch files");
@@ -260,7 +261,12 @@ export function BookReaderTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Fetch PDF files on mount
+  useEffect(() => {
+    fetchPdfFiles();
+  }, [fetchPdfFiles]);
 
   const openBook = async (file: DigitalFile) => {
     setSelectedFile(file);
