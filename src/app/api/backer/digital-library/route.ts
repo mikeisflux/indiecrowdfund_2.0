@@ -51,7 +51,7 @@ export async function GET(request: Request) {
             pledges: {
               some: {
                 userId: session.user.id,
-                status: { in: ["ACTIVE", "PROCESSING", "COLLECTED"] },
+                status: { in: ["PENDING", "COMPLETED"] },
               },
             },
           },
