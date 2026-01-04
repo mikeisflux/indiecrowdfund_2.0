@@ -932,33 +932,34 @@ export default function CreatorMarketplaceDashboard() {
                         </div>
                       </div>
 
-                      {/* Book Info */}
-                      {currentMonthCode.book && (
-                        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-muted">
-                          <BookOpen className="h-5 w-5 text-primary shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {currentMonthCode.book.title}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Valid for this book only</p>
-                          </div>
-                          {editingCodeId === currentMonthCode.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          ) : (
-                            <select
-                              value={currentMonthCode.bookId || ""}
-                              onChange={(e) => handleUpdateCode(currentMonthCode.id, e.target.value)}
-                              className="text-sm px-2 py-1 bg-background border border-border rounded text-foreground"
-                            >
-                              {liveBooksList.map((book) => (
-                                <option key={book.id} value={book.id}>
-                                  {book.title}
-                                </option>
-                              ))}
-                            </select>
-                          )}
+                      {/* Book Info / Selection */}
+                      <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-muted">
+                        <BookOpen className="h-5 w-5 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {currentMonthCode.book ? currentMonthCode.book.title : "No book selected"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {currentMonthCode.book ? "Valid for this book only" : "Select a book for this code"}
+                          </p>
                         </div>
-                      )}
+                        {editingCodeId === currentMonthCode.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : (
+                          <select
+                            value={currentMonthCode.bookId || ""}
+                            onChange={(e) => handleUpdateCode(currentMonthCode.id, e.target.value)}
+                            className="text-sm px-2 py-1 bg-background border border-border rounded text-foreground"
+                          >
+                            <option value="">Select a book...</option>
+                            {liveBooksList.map((book) => (
+                              <option key={book.id} value={book.id}>
+                                {book.title}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
 
                       <div className="flex items-center gap-3 mb-4">
                         <code className="text-2xl font-bold tracking-wider text-foreground bg-muted px-4 py-2 rounded-lg">
