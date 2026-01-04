@@ -5,6 +5,7 @@ import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCSRFHeaders } from "@/lib/csrf";
+import { getLocalBookUrl } from "@/lib/local-books-db";
 
 // Use local worker for reliability
 pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
@@ -83,7 +84,7 @@ export function PdfThumbnail({
         let pdfUrl = directPdfUrl;
 
         if (!pdfUrl && fileId) {
-          // Fetch signed URL from API
+          // Fetch URL based on source
           if (source === "crowdfunding") {
             const res = await fetch("/api/backer/digital-files", {
               method: "POST",
@@ -100,6 +101,11 @@ export function PdfThumbnail({
             if (!res.ok) throw new Error("Failed to get PDF URL");
             const { downloadUrl } = await res.json();
             pdfUrl = downloadUrl;
+          } else if (source === "local") {
+            // Get blob URL from IndexedDB
+            const localUrl = await getLocalBookUrl(fileId);
+            if (!localUrl) throw new Error("Failed to get local book URL");
+            pdfUrl = localUrl;
           }
         }
 

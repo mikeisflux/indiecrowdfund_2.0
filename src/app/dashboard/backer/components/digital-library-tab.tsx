@@ -236,7 +236,7 @@ function LibraryCard({
               fill
               className="object-cover"
             />
-          ) : item.source !== "local" ? (
+          ) : (
             <PdfThumbnail
               fileId={item.sourceId}
               source={item.source}
@@ -244,10 +244,6 @@ function LibraryCard({
               iconClassName={iconColor}
               fallbackGradient={gradientColors}
             />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <FileText className={cn("h-8 w-8", iconColor)} />
-            </div>
           )}
         </div>
 
@@ -334,7 +330,7 @@ function LibraryCard({
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
-        ) : item.source !== "local" ? (
+        ) : (
           <PdfThumbnail
             fileId={item.sourceId}
             source={item.source}
@@ -342,10 +338,6 @@ function LibraryCard({
             iconClassName={iconColor}
             fallbackGradient={gradientColors}
           />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <FileText className={cn("h-16 w-16", iconColor)} />
-          </div>
         )}
 
         {/* Progress Overlay */}
