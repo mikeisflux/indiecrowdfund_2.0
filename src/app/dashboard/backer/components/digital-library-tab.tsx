@@ -488,6 +488,15 @@ export function DigitalLibraryTab() {
         originalData: file,
       }));
 
+      // Trigger cover extraction for PDFs without covers (in background)
+      const filesNeedingCovers = pdfFiles.filter(
+        (f: DigitalFile) => !f.coverImageUrl && f.mimeType === "application/pdf"
+      );
+      if (filesNeedingCovers.length > 0) {
+        // Extract covers in background without blocking UI
+        extractCoversInBackground(filesNeedingCovers);
+      }
+
       // Fetch local books from IndexedDB
       let localItems: LibraryItem[] = [];
       if (isLocalBooksSupported()) {
@@ -529,6 +538,35 @@ export function DigitalLibraryTab() {
       setError(err instanceof Error ? err.message : "Error loading library");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Extract covers for PDFs in background
+  const extractCoversInBackground = async (files: DigitalFile[]) => {
+    for (const file of files) {
+      try {
+        const res = await fetch("/api/backer/digital-files/extract-cover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({ fileId: file.id }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.coverUrl) {
+            // Update the library item with the new cover
+            setLibraryItems((prev) =>
+              prev.map((item) =>
+                item.sourceId === file.id
+                  ? { ...item, coverImageUrl: data.coverUrl, totalPages: data.totalPages }
+                  : item
+              )
+            );
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to extract cover for ${file.name}:`, err);
+      }
     }
   };
 

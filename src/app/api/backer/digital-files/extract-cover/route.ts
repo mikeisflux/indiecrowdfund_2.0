@@ -33,7 +33,7 @@ export async function POST(request: Request) {
           pledges: {
             some: {
               userId: session.user.id,
-              status: { in: ["ACTIVE", "PROCESSING", "COLLECTED"] },
+              status: "COMPLETED",
             },
           },
         },
@@ -125,7 +125,7 @@ export async function GET() {
           pledges: {
             some: {
               userId: session.user.id,
-              status: { in: ["ACTIVE", "PROCESSING", "COLLECTED"] },
+              status: "COMPLETED",
             },
           },
         },
