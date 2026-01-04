@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +38,9 @@ import {
   BookOpen,
   Store,
   Gift,
+  Upload,
+  Trash2,
+  FolderOpen,
 } from "lucide-react";
 import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
 import {
@@ -46,6 +49,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  getAllLocalBooksMeta,
+  addLocalBook,
+  getLocalBookUrl,
+  deleteLocalBook,
+  isLocalBooksSupported,
+  LocalBookMeta,
+} from "@/lib/local-books-db";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // Types
 interface DigitalFile {
@@ -81,10 +93,11 @@ interface LibraryItem {
   fileSize: number;
   coverImageUrl: string | null;
   totalPages: number | null;
-  source: "crowdfunding" | "marketplace";
+  source: "crowdfunding" | "marketplace" | "local";
   sourceId: string;
   createdAt: string;
-  originalData: DigitalFile | MarketplacePurchase;
+  originalData: DigitalFile | MarketplacePurchase | LocalBookMeta;
+  coverColor?: string;
 }
 
 interface ReadingProgress {
@@ -101,7 +114,7 @@ interface BookmarkItem {
 
 // Sort and filter types
 type SortOption = "date-desc" | "date-asc" | "title-asc" | "title-desc" | "progress-desc" | "progress-asc" | "size-desc" | "size-asc";
-type SourceFilter = "all" | "crowdfunding" | "marketplace";
+type SourceFilter = "all" | "crowdfunding" | "marketplace" | "local";
 type StatusFilter = "all" | "unread" | "in-progress" | "completed";
 type ViewMode = "grid" | "list";
 
@@ -189,14 +202,23 @@ function LibraryCard({
   progress,
   onClick,
   viewMode,
+  onDelete,
 }: {
   item: LibraryItem;
   progress: ReadingProgress | null;
   onClick: () => void;
   viewMode: ViewMode;
+  onDelete?: () => void;
 }) {
   const progressPercent = progress ? Math.round((progress.currentPage / progress.totalPages) * 100) : 0;
   const status = getReadingStatus(progress);
+
+  // Determine colors based on source
+  const isLocal = item.source === "local";
+  const gradientColors = isLocal
+    ? (item.coverColor || "from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30")
+    : "from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30";
+  const iconColor = isLocal ? "text-purple-600/50" : "text-amber-600/50";
 
   if (viewMode === "list") {
     return (
@@ -205,7 +227,7 @@ function LibraryCard({
         className="group flex items-center gap-4 p-4 rounded-xl bg-card/50 backdrop-blur border border-border/50 hover:border-amber-400/30 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 cursor-pointer"
       >
         {/* Thumbnail */}
-        <div className="relative w-16 h-20 rounded-lg overflow-hidden bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex-shrink-0">
+        <div className={cn("relative w-16 h-20 rounded-lg overflow-hidden bg-gradient-to-br flex-shrink-0", gradientColors)}>
           {item.coverImageUrl ? (
             <Image
               src={item.coverImageUrl}
@@ -215,7 +237,7 @@ function LibraryCard({
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <FileText className="h-8 w-8 text-amber-600/50" />
+              <FileText className={cn("h-8 w-8", iconColor)} />
             </div>
           )}
         </div>
@@ -233,6 +255,11 @@ function LibraryCard({
                   <Store className="w-3 h-3 mr-1" />
                   Purchased
                 </>
+              ) : item.source === "local" ? (
+                <>
+                  <FolderOpen className="w-3 h-3 mr-1" />
+                  My Upload
+                </>
               ) : (
                 <>
                   <Gift className="w-3 h-3 mr-1" />
@@ -244,8 +271,8 @@ function LibraryCard({
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="flex flex-col items-end gap-2">
+        {/* Progress and Delete */}
+        <div className="flex items-center gap-2">
           {status === "completed" ? (
             <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">
               <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -261,19 +288,36 @@ function LibraryCard({
               Unread
             </Badge>
           )}
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="p-1.5 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
   // Grid view card
+  const progressBarColor = isLocal
+    ? "bg-gradient-to-r from-purple-400 to-indigo-500"
+    : "bg-gradient-to-r from-amber-400 to-orange-500";
+  const hoverTextColor = isLocal ? "group-hover:text-purple-400" : "group-hover:text-amber-400";
+  const progressTextColor = isLocal ? "text-purple-400" : "text-amber-400";
+
   return (
     <Card
       onClick={onClick}
       className="group cursor-pointer overflow-hidden bg-gradient-to-br from-zinc-800/80 to-zinc-900/80 backdrop-blur-md border border-white/10 hover:border-amber-400/30 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300"
     >
       {/* Cover Image - Aspect ratio 3:4 for book covers */}
-      <div className="relative aspect-[3/4] bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 overflow-hidden">
+      <div className={cn("relative aspect-[3/4] bg-gradient-to-br overflow-hidden", gradientColors)}>
         {item.coverImageUrl ? (
           <Image
             src={item.coverImageUrl}
@@ -283,7 +327,7 @@ function LibraryCard({
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <FileText className="h-16 w-16 text-amber-600/50" />
+            <FileText className={cn("h-16 w-16", iconColor)} />
           </div>
         )}
 
@@ -291,7 +335,7 @@ function LibraryCard({
         {progress && (
           <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-black/50">
             <div
-              className="h-full bg-gradient-to-r from-amber-400 to-orange-500"
+              className={cn("h-full", progressBarColor)}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -304,33 +348,45 @@ function LibraryCard({
               "text-[10px] backdrop-blur-sm",
               item.source === "marketplace"
                 ? "bg-purple-500/80 text-white"
+                : item.source === "local"
+                ? "bg-indigo-500/80 text-white"
                 : "bg-emerald-500/80 text-white"
             )}
           >
-            {item.source === "marketplace" ? "Purchased" : "Reward"}
+            {item.source === "marketplace" ? "Purchased" : item.source === "local" ? "My Upload" : "Reward"}
           </Badge>
         </div>
 
-        {/* Status indicator */}
-        {status === "completed" && (
-          <div className="absolute top-2 right-2">
+        {/* Status indicator or Delete button */}
+        <div className="absolute top-2 right-2">
+          {onDelete ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="w-6 h-6 rounded-full bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          ) : status === "completed" ? (
             <div className="w-6 h-6 rounded-full bg-emerald-500/90 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4 text-white" />
             </div>
-          </div>
-        )}
+          ) : null}
+        </div>
       </div>
 
       {/* Content */}
       <CardContent className="p-3 space-y-1">
-        <h3 className="font-medium text-white line-clamp-2 group-hover:text-amber-400 transition-colors">
+        <h3 className={cn("font-medium text-white line-clamp-2 transition-colors", hoverTextColor)}>
           {item.title}
         </h3>
         <p className="text-xs text-zinc-400 line-clamp-1">{item.subtitle}</p>
         <div className="flex items-center justify-between pt-1">
           <span className="text-xs text-zinc-500">{formatFileSize(item.fileSize)}</span>
           {progress && (
-            <span className="text-xs text-amber-400">{progressPercent}% read</span>
+            <span className={cn("text-xs", progressTextColor)}>{progressPercent}% read</span>
           )}
         </div>
       </CardContent>
@@ -364,6 +420,12 @@ export function DigitalLibraryTab() {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
   const [showBookmarks, setShowBookmarks] = useState(false);
 
+  // State for local book uploads
+  const [uploading, setUploading] = useState(false);
+  const [supportsLocalBooks, setSupportsLocalBooks] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Page dimensions based on device
   const pageWidth = isMobile ? 280 : 380;
   const pageHeight = isMobile ? 430 : 580;
@@ -386,6 +448,11 @@ export function DigitalLibraryTab() {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Check local books support on client side
+  useEffect(() => {
+    setSupportsLocalBooks(isLocalBooksSupported());
   }, []);
 
   // Fetch library data
@@ -421,11 +488,34 @@ export function DigitalLibraryTab() {
         originalData: file,
       }));
 
+      // Fetch local books from IndexedDB
+      let localItems: LibraryItem[] = [];
+      if (isLocalBooksSupported()) {
+        try {
+          const localBooks = await getAllLocalBooksMeta();
+          localItems = localBooks.map((book) => ({
+            id: `local_${book.id}`,
+            title: book.name,
+            subtitle: "My Uploads",
+            fileSize: book.fileSize,
+            coverImageUrl: null,
+            totalPages: null,
+            source: "local" as const,
+            sourceId: book.id,
+            createdAt: book.addedAt,
+            originalData: book,
+            coverColor: book.coverColor,
+          }));
+        } catch (err) {
+          console.error("Error loading local books:", err);
+        }
+      }
+
       // TODO: Fetch marketplace purchases when API is ready
       // const purchasesRes = await fetch("/api/backer/marketplace-purchases", { headers: getCSRFHeaders() });
       // const marketplaceItems = ...
 
-      const allItems = [...crowdfundingItems];
+      const allItems = [...crowdfundingItems, ...localItems];
       setLibraryItems(allItems);
 
       // Load reading progress for all items
@@ -440,6 +530,57 @@ export function DigitalLibraryTab() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle local book upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setError("Please select a PDF file");
+      return;
+    }
+
+    // Max size 200MB
+    if (file.size > 200 * 1024 * 1024) {
+      setError("File size must be less than 200MB");
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      await addLocalBook(file);
+      await fetchLibraryData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add book");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  // Handle local book deletion
+  const handleDeleteLocalBook = async () => {
+    const { id } = deleteConfirm;
+    // Extract the actual ID (remove "local_" prefix if present)
+    const actualId = id.startsWith("local_") ? id.substring(6) : id;
+    try {
+      await deleteLocalBook(actualId);
+      setLibraryItems(prev => prev.filter(item => item.id !== `local_${actualId}` && item.sourceId !== actualId));
+      setProgressMap(prev => {
+        const updated = { ...prev };
+        delete updated[actualId];
+        return updated;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete book");
+    }
+    setDeleteConfirm({ open: false, id: "", name: "" });
   };
 
   // Filter and sort items
@@ -522,6 +663,14 @@ export function DigitalLibraryTab() {
         if (!res.ok) throw new Error("Failed to get PDF URL");
         const { downloadUrl } = await res.json();
         setPdfUrl(downloadUrl);
+      } else if (item.source === "local") {
+        // Local book from IndexedDB
+        const url = await getLocalBookUrl(item.sourceId);
+        if (url) {
+          setPdfUrl(url);
+        } else {
+          throw new Error("Failed to load local book");
+        }
       } else {
         // Marketplace purchase
         const res = await fetch(`/api/backer/marketplace-purchases/${item.sourceId}/download`, {
@@ -554,6 +703,10 @@ export function DigitalLibraryTab() {
         [selectedItem.sourceId]: newProgress,
       }));
     }
+    // Revoke blob URL for local books to free memory
+    if (selectedItem?.source === "local" && pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+    }
     setSelectedItem(null);
     setPdfUrl(null);
     setNumPages(0);
@@ -561,7 +714,7 @@ export function DigitalLibraryTab() {
     setScale(1);
     setIsFullscreen(false);
     setShowBookmarks(false);
-  }, [selectedItem, numPages, currentPage, bookmarks]);
+  }, [selectedItem, numPages, currentPage, bookmarks, pdfUrl]);
 
   // Handle page change
   const handlePageChange = useCallback((pageIndex: number, totalPages: number) => {
@@ -841,16 +994,44 @@ export function DigitalLibraryTab() {
   // Empty library state
   if (libraryItems.length === 0) {
     return (
-      <Card className="glass-card">
-        <CardContent className="py-16 text-center">
-          <Library className="h-12 w-12 mx-auto mb-4 text-amber-400" />
-          <h3 className="text-xl font-semibold mb-2">Your Digital Library is Empty</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Books from your backed projects and marketplace purchases will appear here.
-            Start backing projects with digital rewards or browse the marketplace!
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card className="glass-card">
+          <CardContent className="py-16 text-center">
+            <Library className="h-12 w-12 mx-auto mb-4 text-amber-400" />
+            <h3 className="text-xl font-semibold mb-2">Your Digital Library is Empty</h3>
+            <p className="text-muted-foreground max-w-md mx-auto mb-6">
+              Books from your backed projects and marketplace purchases will appear here.
+              Start backing projects with digital rewards or browse the marketplace!
+            </p>
+            {supportsLocalBooks && (
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600"
+                >
+                  {uploading ? (
+                    <>Uploading...</>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Add Your Own Book
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">PDF files up to 200MB</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -858,16 +1039,43 @@ export function DigitalLibraryTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20">
-          <Library className="h-6 w-6 text-amber-400" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20">
+            <Library className="h-6 w-6 text-amber-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Digital Library</h2>
+            <p className="text-sm text-muted-foreground">
+              {libraryItems.length} item{libraryItems.length !== 1 ? "s" : ""} in your collection
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-xl font-bold">Digital Library</h2>
-          <p className="text-sm text-muted-foreground">
-            {libraryItems.length} item{libraryItems.length !== 1 ? "s" : ""} in your collection
-          </p>
-        </div>
+        {supportsLocalBooks && (
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <>Uploading...</>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Add Book
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Filters and Search */}
@@ -893,6 +1101,7 @@ export function DigitalLibraryTab() {
             <SelectItem value="all">All Sources</SelectItem>
             <SelectItem value="crowdfunding">Crowdfunding Rewards</SelectItem>
             <SelectItem value="marketplace">Marketplace Purchases</SelectItem>
+            <SelectItem value="local">My Uploads</SelectItem>
           </SelectContent>
         </Select>
 
@@ -984,6 +1193,7 @@ export function DigitalLibraryTab() {
               progress={progressMap[item.sourceId]}
               onClick={() => openBook(item)}
               viewMode="grid"
+              onDelete={item.source === "local" ? () => setDeleteConfirm({ open: true, id: item.sourceId, name: item.title }) : undefined}
             />
           ))}
         </div>
@@ -996,10 +1206,22 @@ export function DigitalLibraryTab() {
               progress={progressMap[item.sourceId]}
               onClick={() => openBook(item)}
               viewMode="list"
+              onDelete={item.source === "local" ? () => setDeleteConfirm({ open: true, id: item.sourceId, name: item.title }) : undefined}
             />
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ ...deleteConfirm, open })}
+        title="Delete Book?"
+        description={`Are you sure you want to remove "${deleteConfirm.name}" from your library? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleDeleteLocalBook}
+      />
     </div>
   );
 }
