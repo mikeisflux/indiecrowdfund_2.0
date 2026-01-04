@@ -167,9 +167,9 @@ export function BookReaderTab() {
       return;
     }
 
-    // Max size 100MB
-    if (file.size > 100 * 1024 * 1024) {
-      setError("File size must be less than 100MB");
+    // Max size 200MB
+    if (file.size > 200 * 1024 * 1024) {
+      setError("File size must be less than 200MB");
       return;
     }
 
@@ -534,7 +534,7 @@ export function BookReaderTab() {
                     </>
                   )}
                 </Button>
-                <p className="text-xs text-muted-foreground mt-2">PDF files up to 100MB</p>
+                <p className="text-xs text-muted-foreground mt-2">PDF files up to 200MB</p>
               </div>
             )}
           </CardContent>
