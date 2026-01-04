@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       where.isPublished = false;
     }
 
-    const [entries, total] = await Promise.all([
+    const [entries, total, publishedCount, draftCount, bugfixCount] = await Promise.all([
       db.changelogEntry.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -65,6 +65,9 @@ export async function GET(request: NextRequest) {
         },
       }),
       db.changelogEntry.count({ where }),
+      db.changelogEntry.count({ where: { isPublished: true } }),
+      db.changelogEntry.count({ where: { isPublished: false } }),
+      db.changelogEntry.count({ where: { category: "BUGFIX" } }),
     ]);
 
     return NextResponse.json({
@@ -74,6 +77,12 @@ export async function GET(request: NextRequest) {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+      stats: {
+        total,
+        published: publishedCount,
+        drafts: draftCount,
+        bugfixes: bugfixCount,
       },
     });
   } catch (error) {

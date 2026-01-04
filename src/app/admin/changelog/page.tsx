@@ -82,8 +82,16 @@ const CATEGORIES = [
   { value: "OTHER", label: "Other", icon: Package, color: "text-slate-500" },
 ];
 
+interface ChangelogStats {
+  total: number;
+  published: number;
+  drafts: number;
+  bugfixes: number;
+}
+
 export default function AdminChangelogPage() {
   const [entries, setEntries] = useState<ChangelogEntry[]>([]);
+  const [stats, setStats] = useState<ChangelogStats>({ total: 0, published: 0, drafts: 0, bugfixes: 0 });
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<ChangelogEntry | null>(null);
@@ -102,10 +110,13 @@ export default function AdminChangelogPage() {
 
   const fetchEntries = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/changelog");
+      const response = await fetch("/api/admin/changelog?limit=100");
       if (response.ok) {
         const data = await response.json();
         setEntries(data.entries || []);
+        if (data.stats) {
+          setStats(data.stats);
+        }
       }
     } catch (error) {
       console.error("Error fetching changelog:", error);
@@ -310,14 +321,14 @@ export default function AdminChangelogPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{entries.length}</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
             <p className="text-xs text-muted-foreground">Total Entries</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold text-emerald-500">
-              {entries.filter(e => e.isPublished).length}
+              {stats.published}
             </div>
             <p className="text-xs text-muted-foreground">Published</p>
           </CardContent>
@@ -325,7 +336,7 @@ export default function AdminChangelogPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold text-amber-500">
-              {entries.filter(e => !e.isPublished).length}
+              {stats.drafts}
             </div>
             <p className="text-xs text-muted-foreground">Drafts</p>
           </CardContent>
@@ -333,7 +344,7 @@ export default function AdminChangelogPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold text-red-500">
-              {entries.filter(e => e.category === "BUGFIX").length}
+              {stats.bugfixes}
             </div>
             <p className="text-xs text-muted-foreground">Bug Fixes</p>
           </CardContent>
