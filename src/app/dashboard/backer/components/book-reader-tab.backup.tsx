@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,9 +21,6 @@ import {
   BookmarkPlus,
   Library,
   List,
-  Upload,
-  Trash2,
-  FolderOpen,
 } from "lucide-react";
 import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
 import {
@@ -32,15 +29,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  getAllLocalBooksMeta,
-  addLocalBook,
-  getLocalBookUrl,
-  deleteLocalBook,
-  isLocalBooksSupported,
-  LocalBookMeta,
-} from "@/lib/local-books-db";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface DigitalFile {
   id: string;
@@ -118,13 +106,6 @@ export function BookReaderTab() {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
   const [showBookmarks, setShowBookmarks] = useState(false);
 
-  // Local books state
-  const [localBooks, setLocalBooks] = useState<LocalBookMeta[]>([]);
-  const [isLocalBook, setIsLocalBook] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" });
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   // Page dimensions based on device - match PDF aspect ratio (roughly 1:1.53)
   const pageWidth = isMobile ? 280 : 380;
   const pageHeight = isMobile ? 430 : 580;
@@ -138,101 +119,7 @@ export function BookReaderTab() {
 
   useEffect(() => {
     fetchPdfFiles();
-    fetchLocalBooks();
   }, []);
-
-  const fetchLocalBooks = async () => {
-    if (!isLocalBooksSupported()) return;
-    try {
-      const books = await getAllLocalBooksMeta();
-      setLocalBooks(books);
-      // Load progress for local books too
-      const progress: Record<string, ReadingProgress> = { ...progressMap };
-      books.forEach((book) => {
-        const p = getReadingProgress(book.id);
-        if (p) progress[book.id] = p;
-      });
-      setProgressMap(progress);
-    } catch (err) {
-      console.error("Error loading local books:", err);
-    }
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setError("Please select a PDF file");
-      return;
-    }
-
-    // Max size 100MB
-    if (file.size > 100 * 1024 * 1024) {
-      setError("File size must be less than 100MB");
-      return;
-    }
-
-    setUploading(true);
-    setError(null);
-
-    try {
-      await addLocalBook(file);
-      await fetchLocalBooks();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add book");
-    } finally {
-      setUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  const handleDeleteLocalBook = async () => {
-    const { id } = deleteConfirm;
-    try {
-      await deleteLocalBook(id);
-      setLocalBooks(prev => prev.filter(b => b.id !== id));
-      // Clear progress for deleted book
-      setProgressMap(prev => {
-        const updated = { ...prev };
-        delete updated[id];
-        return updated;
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete book");
-    }
-  };
-
-  const openLocalBook = async (book: LocalBookMeta) => {
-    setSelectedFile({
-      id: book.id,
-      name: book.name,
-      fileName: book.fileName,
-      fileSize: book.fileSize,
-      project: { id: "local", title: "My Uploads" },
-    });
-    setIsLocalBook(true);
-    setPdfUrl(null);
-    setNumPages(0);
-    setBookmarks(getBookmarks(book.id));
-
-    const saved = getReadingProgress(book.id);
-    setCurrentPage(saved?.currentPage ?? 1);
-
-    try {
-      const url = await getLocalBookUrl(book.id);
-      if (url) {
-        setPdfUrl(url);
-      } else {
-        setError("Failed to load book");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load book");
-    }
-  };
 
   const fetchPdfFiles = async () => {
     try {
@@ -290,10 +177,6 @@ export function BookReaderTab() {
       });
       saveBookmarks(selectedFile.id, bookmarks);
     }
-    // Revoke blob URL for local books to free memory
-    if (isLocalBook && pdfUrl) {
-      URL.revokeObjectURL(pdfUrl);
-    }
     setSelectedFile(null);
     setPdfUrl(null);
     setNumPages(0);
@@ -301,8 +184,7 @@ export function BookReaderTab() {
     setScale(1);
     setIsFullscreen(false);
     setShowBookmarks(false);
-    setIsLocalBook(false);
-  }, [selectedFile, numPages, currentPage, bookmarks, isLocalBook, pdfUrl]);
+  }, [selectedFile, numPages, currentPage, bookmarks]);
 
   // pageIndex is 0-based from the flip component
   const handlePageChange = useCallback((pageIndex: number, totalPages: number) => {
@@ -500,202 +382,66 @@ export function BookReaderTab() {
     );
   }
 
-  const totalBooks = pdfFiles.length + localBooks.length;
-
   // Library view
-  if (totalBooks === 0) {
+  if (pdfFiles.length === 0) {
     return (
-      <div className="space-y-6 p-4">
-        <Card className="glass-card">
-          <CardContent className="py-16 text-center">
-            <Library className="h-12 w-12 mx-auto mb-4 text-amber-400" />
-            <h3 className="text-xl font-semibold mb-2">No books available</h3>
-            <p className="text-muted-foreground mb-6">Books from your backed projects will appear here</p>
-            {isLocalBooksSupported() && (
-              <div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600"
-                >
-                  {uploading ? (
-                    <>Uploading...</>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Add Your Own Book
-                    </>
-                  )}
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2">PDF files up to 100MB</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="glass-card">
+        <CardContent className="py-16 text-center">
+          <Library className="h-12 w-12 mx-auto mb-4 text-amber-400" />
+          <h3 className="text-xl font-semibold mb-2">No books available</h3>
+          <p className="text-muted-foreground">Books from your backed projects will appear here</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6 p-4">
-      {/* Header with upload button */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20">
-            <BookOpen className="h-6 w-6 text-amber-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold">My Library</h2>
-            <p className="text-sm text-muted-foreground">{totalBooks} book{totalBooks !== 1 ? 's' : ''} available</p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20">
+          <BookOpen className="h-6 w-6 text-amber-400" />
         </div>
-        {isLocalBooksSupported() && (
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,application/pdf"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-            >
-              {uploading ? (
-                <>Uploading...</>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Add Book
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+        <div>
+          <h2 className="text-xl font-bold">My Library</h2>
+          <p className="text-sm text-muted-foreground">{pdfFiles.length} book{pdfFiles.length !== 1 ? 's' : ''} available</p>
+        </div>
       </div>
 
-      {/* Backed Projects Books */}
-      {pdfFiles.length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-            <BookOpen className="h-4 w-4" />
-            From Backed Projects
-          </h3>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {pdfFiles.map((file) => {
-              const progress = progressMap[file.id];
-              const progressPercent = progress ? Math.round((progress.currentPage / progress.totalPages) * 100) : 0;
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {pdfFiles.map((file) => {
+          const progress = progressMap[file.id];
+          const progressPercent = progress ? Math.round((progress.currentPage / progress.totalPages) * 100) : 0;
 
-              return (
-                <Card
-                  key={file.id}
-                  className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-[1.02] overflow-hidden"
-                  onClick={() => openBook(file)}
-                >
-                  <div className="relative h-40 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex items-center justify-center">
-                    <FileText className="h-16 w-16 text-amber-600/50" />
-                    {progress && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30">
-                        <div className="h-full bg-amber-500" style={{ width: `${progressPercent}%` }} />
-                      </div>
-                    )}
+          return (
+            <Card
+              key={file.id}
+              className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-[1.02] overflow-hidden"
+              onClick={() => openBook(file)}
+            >
+              <div className="relative h-40 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex items-center justify-center">
+                <FileText className="h-16 w-16 text-amber-600/50" />
+                {progress && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30">
+                    <div className="h-full bg-amber-500" style={{ width: `${progressPercent}%` }} />
                   </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold line-clamp-1 group-hover:text-amber-600 transition-colors">{file.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1">{file.project.title}</p>
-                    <div className="flex items-center justify-between mt-3">
-                      <Badge variant="secondary" className="text-xs">{formatFileSize(file.fileSize)}</Badge>
-                      {progress && (
-                        <span className="text-xs text-muted-foreground">
-                          {progressPercent}% read
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Local/Uploaded Books */}
-      {localBooks.length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-            <FolderOpen className="h-4 w-4" />
-            My Uploads
-          </h3>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {localBooks.map((book) => {
-              const progress = progressMap[book.id];
-              const progressPercent = progress ? Math.round((progress.currentPage / progress.totalPages) * 100) : 0;
-
-              return (
-                <Card
-                  key={book.id}
-                  className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-[1.02] overflow-hidden relative"
-                  onClick={() => openLocalBook(book)}
-                >
-                  <div className={cn(
-                    "relative h-40 bg-gradient-to-br flex items-center justify-center",
-                    book.coverColor || "from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30"
-                  )}>
-                    <FileText className="h-16 w-16 text-purple-600/50" />
-                    {progress && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30">
-                        <div className="h-full bg-purple-500" style={{ width: `${progressPercent}%` }} />
-                      </div>
-                    )}
-                    {/* Delete button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirm({ open: true, id: book.id, name: book.name });
-                      }}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold line-clamp-1 group-hover:text-purple-600 transition-colors">{book.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1">My Uploads</p>
-                    <div className="flex items-center justify-between mt-3">
-                      <Badge variant="secondary" className="text-xs">{formatFileSize(book.fileSize)}</Badge>
-                      {progress && (
-                        <span className="text-xs text-muted-foreground">
-                          {progressPercent}% read
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={deleteConfirm.open}
-        onOpenChange={(open) => setDeleteConfirm({ ...deleteConfirm, open })}
-        title="Delete Book?"
-        description={`Are you sure you want to remove "${deleteConfirm.name}" from your library? This action cannot be undone.`}
-        confirmText="Delete"
-        variant="destructive"
-        onConfirm={handleDeleteLocalBook}
-      />
+                )}
+              </div>
+              <CardContent className="p-4">
+                <h3 className="font-semibold line-clamp-1 group-hover:text-amber-600 transition-colors">{file.name}</h3>
+                <p className="text-sm text-muted-foreground line-clamp-1">{file.project.title}</p>
+                <div className="flex items-center justify-between mt-3">
+                  <Badge variant="secondary" className="text-xs">{formatFileSize(file.fileSize)}</Badge>
+                  {progress && (
+                    <span className="text-xs text-muted-foreground">
+                      {progressPercent}% read
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
