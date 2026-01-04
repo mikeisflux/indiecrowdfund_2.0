@@ -13,6 +13,68 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 // Cache for thumbnail URLs by file ID or PDF URL
 const thumbnailCache = new Map<string, string>();
 
+/**
+ * Prefetch and cache a thumbnail for a PDF
+ * Call this proactively to ensure thumbnail is ready before rendering
+ */
+export async function prefetchThumbnail(pdfUrl: string, cacheKey: string): Promise<string | null> {
+  // Check cache first
+  const cached = thumbnailCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    // Fetch PDF
+    const response = await fetch(pdfUrl);
+    if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+    const pdfData = await response.arrayBuffer();
+
+    // Load PDF
+    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+    const pdf = await loadingTask.promise;
+
+    // Get first page
+    const page = await pdf.getPage(1);
+
+    // Scale for thumbnail
+    const scale = 0.5;
+    const viewport = page.getViewport({ scale });
+
+    // Create canvas
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) throw new Error("Failed to get canvas context");
+
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+
+    // Render page
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+
+    // Convert to blob URL
+    const blob: Blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
+        "image/jpeg",
+        0.85
+      );
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    // Cache it
+    thumbnailCache.set(cacheKey, url);
+
+    // Cleanup canvas
+    canvas.width = 0;
+    canvas.height = 0;
+
+    return url;
+  } catch (err) {
+    console.error("Prefetch thumbnail error:", err);
+    return null;
+  }
+}
+
 type Props = {
   pdfUrl?: string;
   fileId?: string;  // For crowdfunding files - will fetch signed URL

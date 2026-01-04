@@ -42,7 +42,7 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { PdfPageFlipReader } from "@/components/PdfPageFlipReader";
-import { PdfThumbnail } from "@/components/PdfThumbnail";
+import { PdfThumbnail, prefetchThumbnail } from "@/components/PdfThumbnail";
 import {
   Tooltip,
   TooltipContent,
@@ -519,6 +519,9 @@ export function DigitalLibraryTab() {
             originalData: book,
             coverColor: book.coverColor,
           }));
+
+          // Prefetch thumbnails for local books in background
+          prefetchLocalThumbnails(localBooks.map(b => b.id));
         } catch (err) {
           console.error("Error loading local books:", err);
         }
@@ -575,6 +578,22 @@ export function DigitalLibraryTab() {
         }
       } catch (err) {
         console.error(`Failed to extract cover for ${file.name}:`, err);
+      }
+    }
+  };
+
+  // Prefetch thumbnails for local books
+  const prefetchLocalThumbnails = async (bookIds: string[]) => {
+    for (const bookId of bookIds) {
+      try {
+        const blobUrl = await getLocalBookUrl(bookId);
+        if (blobUrl) {
+          await prefetchThumbnail(blobUrl, bookId);
+          // Force re-render by triggering a small state update
+          setLibraryItems(prev => [...prev]);
+        }
+      } catch (err) {
+        console.error(`Failed to prefetch thumbnail for ${bookId}:`, err);
       }
     }
   };
