@@ -848,7 +848,7 @@ export default function CreatorMarketplaceDashboard() {
                       <div className="grid grid-cols-3 gap-4 text-center">
                         <div className="p-3 rounded-lg bg-muted">
                           <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                          <p className="text-lg font-bold text-foreground">{currentMonthCode.usageCount}/{currentMonthCode.maxRedemptions}</p>
+                          <p className="text-lg font-bold text-foreground">{currentMonthCode.usageCount}{currentMonthCode.maxRedemptions > 0 ? `/${currentMonthCode.maxRedemptions}` : ""}</p>
                           <p className="text-xs text-muted-foreground">Redemptions</p>
                         </div>
                         <div className="p-3 rounded-lg bg-muted">
@@ -884,10 +884,10 @@ export default function CreatorMarketplaceDashboard() {
                   <div className="py-8 text-center">
                     <Ticket className="h-12 w-12 mx-auto mb-4 text-primary/50" />
                     <p className="text-muted-foreground mb-2">
-                      Generate your monthly promo code to offer one free PDF to a customer.
+                      Generate your monthly promo code to offer a free PDF to customers.
                     </p>
                     <p className="text-sm text-muted-foreground mb-6">
-                      Each code is valid for one redemption per customer, per month.
+                      Each code is valid for one book per customer. Share with as many customers as you want!
                     </p>
                     <Button
                       onClick={handleCreateCode}
@@ -1003,7 +1003,7 @@ export default function CreatorMarketplaceDashboard() {
                             </Badge>
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {code.usageCount}/{code.maxRedemptions} used • {new Date(code.validFrom).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                            {code.usageCount}{code.maxRedemptions > 0 ? `/${code.maxRedemptions}` : ""} used • {new Date(code.validFrom).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                           </div>
                         </div>
                       ))}

@@ -163,14 +163,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse optional body for custom settings
-    let maxRedemptions = 1;
+    // maxRedemptions = 0 means unlimited
+    let maxRedemptions = 0;
     try {
       const body = await request.json();
       if (body.maxRedemptions && typeof body.maxRedemptions === "number") {
-        maxRedemptions = Math.min(Math.max(1, body.maxRedemptions), 100); // 1-100 limit
+        maxRedemptions = Math.max(0, body.maxRedemptions); // 0 = unlimited, any positive number = that limit
       }
     } catch {
-      // No body or invalid JSON, use defaults
+      // No body or invalid JSON, use defaults (unlimited)
     }
 
     // Create the discount code

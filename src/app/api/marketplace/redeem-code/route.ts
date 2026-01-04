@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This promo code has expired" }, { status: 400 });
     }
 
-    if (discountCode.usageCount >= discountCode.maxRedemptions) {
+    // maxRedemptions = 0 means unlimited
+    if (discountCode.maxRedemptions > 0 && discountCode.usageCount >= discountCode.maxRedemptions) {
       return NextResponse.json({ error: "This promo code has reached its usage limit" }, { status: 400 });
     }
 
