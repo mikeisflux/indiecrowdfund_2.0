@@ -105,7 +105,11 @@ export async function POST(request: NextRequest) {
     // If the code has no bookId (legacy codes), check creator ownership
     if (discountCode.bookId) {
       if (discountCode.bookId !== bookId) {
-        return NextResponse.json({ error: "This promo code is not valid for this book" }, { status: 400 });
+        const codeBookTitle = discountCode.book?.title || "another book";
+        return NextResponse.json({
+          error: `This promo code is for "${codeBookTitle}", not this book`,
+          validForBook: discountCode.book ? { id: discountCode.book.id, title: discountCode.book.title } : null,
+        }, { status: 400 });
       }
     } else if (book.creatorId !== discountCode.creatorId) {
       return NextResponse.json({ error: "This promo code is not valid for this book" }, { status: 400 });
