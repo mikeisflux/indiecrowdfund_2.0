@@ -159,11 +159,15 @@ export interface DigitalFile {
 export interface EmailCampaign {
   id: string;
   title: string;
-  status: "draft" | "scheduled" | "sent";
+  status: "draft" | "scheduled" | "sending" | "sent";
   scheduledFor?: string;
   sentAt?: string;
   recipients: number;
+  sentCount?: number;
+  openCount?: number;
+  clickCount?: number;
   openRate?: number;
+  clickRate?: number;
 }
 
 export const STATUS_COLORS: Record<Backer["status"], string> = {

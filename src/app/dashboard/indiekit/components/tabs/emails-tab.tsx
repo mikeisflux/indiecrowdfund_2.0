@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MoreHorizontal, Mail, PenLine, Loader2, AlertTriangle, ChevronDown, ChevronRight, FileText } from "lucide-react";
+import { MoreHorizontal, Mail, PenLine, Loader2, AlertTriangle, ChevronDown, ChevronRight, FileText, Eye, MousePointer, Send, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -516,17 +516,68 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
         </Button>
       </div>
 
+      {/* Email Campaign Stats Summary */}
+      {emailCampaigns.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2">
+                <Send className="h-4 w-4 text-teal-600" />
+                <span className="text-sm text-muted-foreground">Total Sent</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">
+                {emailCampaigns.reduce((sum, c) => sum + (c.sentCount || 0), 0).toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-muted-foreground">Total Recipients</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">
+                {emailCampaigns.reduce((sum, c) => sum + (c.recipients || 0), 0).toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-purple-600" />
+                <span className="text-sm text-muted-foreground">Total Opens</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">
+                {emailCampaigns.reduce((sum, c) => sum + (c.openCount || 0), 0).toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2">
+                <MousePointer className="h-4 w-4 text-amber-600" />
+                <span className="text-sm text-muted-foreground">Total Clicks</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">
+                {emailCampaigns.reduce((sum, c) => sum + (c.clickCount || 0), 0).toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Email Campaign List */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">Status</TableHead>
+                <TableHead className="w-20">Status</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Sent on</TableHead>
-                <TableHead>Sent to</TableHead>
-                <TableHead>Scheduled</TableHead>
+                <TableHead className="text-center">Recipients</TableHead>
+                <TableHead className="text-center">Opens</TableHead>
+                <TableHead className="text-center">Clicks</TableHead>
+                <TableHead>Sent</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -537,6 +588,7 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
                     <Badge className={cn(
                       "text-xs uppercase",
                       campaign.status === "sent" && "bg-teal-600 text-white",
+                      campaign.status === "sending" && "bg-amber-500 text-white",
                       campaign.status === "scheduled" && "bg-blue-100 text-blue-700",
                       campaign.status === "draft" && "bg-gray-200 text-gray-700"
                     )}>
@@ -551,14 +603,35 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
                       <span className="font-medium">{campaign.title}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {campaign.sentAt || "never"}
+                  <TableCell className="text-center">
+                    <span className="font-medium">{campaign.recipients || 0}</span>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {campaign.status === "sent" ? (
+                      <div>
+                        <span className="font-medium">{campaign.openCount || 0}</span>
+                        {campaign.openRate !== undefined && (
+                          <span className="text-xs text-muted-foreground ml-1">({campaign.openRate}%)</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {campaign.status === "sent" ? (
+                      <div>
+                        <span className="font-medium">{campaign.clickCount || 0}</span>
+                        {campaign.clickRate !== undefined && (
+                          <span className="text-xs text-muted-foreground ml-1">({campaign.clickRate}%)</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {campaign.recipients} {campaign.recipients === 1 ? "member" : "members"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {campaign.scheduledFor || (campaign.status === "sent" ? "Sent" : "Not yet scheduled")}
+                    {campaign.sentAt || (campaign.scheduledFor ? `Scheduled: ${campaign.scheduledFor}` : "Not sent")}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -598,7 +671,7 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
               ))}
               {emailCampaigns.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No email campaigns yet. Create your first campaign to get started.
                   </TableCell>
                 </TableRow>

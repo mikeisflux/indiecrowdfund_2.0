@@ -697,12 +697,20 @@ export async function GET(req: NextRequest) {
       })
     );
 
-    // Format email campaigns
-    type CampaignType = { id: string; name: string; status: string; sentAt: Date | null; scheduledFor: Date | null; recipientCount: number; sentCount: number; openCount: number };
+    // Format email campaigns with full stats
+    type CampaignType = { id: string; name: string; status: string; sentAt: Date | null; scheduledFor: Date | null; recipientCount: number; sentCount: number; openCount: number; clickCount: number };
     const formattedEmailCampaigns = emailCampaignsData.map((campaign: CampaignType) => ({
-      id: campaign.id, title: campaign.name, status: campaign.status.toLowerCase(),
-      sentAt: campaign.sentAt?.toLocaleDateString(), scheduledFor: campaign.scheduledFor?.toLocaleDateString(),
-      recipients: campaign.recipientCount, openRate: campaign.sentCount > 0 ? Math.round((campaign.openCount / campaign.sentCount) * 100) : undefined,
+      id: campaign.id,
+      title: campaign.name,
+      status: campaign.status.toLowerCase(),
+      sentAt: campaign.sentAt?.toLocaleDateString(),
+      scheduledFor: campaign.scheduledFor?.toLocaleDateString(),
+      recipients: campaign.recipientCount,
+      sentCount: campaign.sentCount,
+      openCount: campaign.openCount,
+      clickCount: campaign.clickCount,
+      openRate: campaign.sentCount > 0 ? Math.round((campaign.openCount / campaign.sentCount) * 100) : undefined,
+      clickRate: campaign.sentCount > 0 ? Math.round((campaign.clickCount / campaign.sentCount) * 100) : undefined,
     }));
 
     return NextResponse.json({
