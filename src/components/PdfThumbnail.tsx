@@ -205,7 +205,7 @@ export function PdfThumbnail({
       <img
         src={thumbnailUrl}
         alt="PDF thumbnail"
-        className="object-cover w-full h-full"
+        className="object-contain w-full h-full"
       />
     </div>
   );
