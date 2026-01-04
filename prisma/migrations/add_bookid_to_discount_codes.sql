@@ -17,3 +17,8 @@ FOREIGN KEY ("bookId") REFERENCES "MarketplaceBook"("id") ON DELETE SET NULL ON 
 -- Update default maxRedemptions to 0 (unlimited)
 ALTER TABLE "MarketplaceDiscountCode"
 ALTER COLUMN "maxRedemptions" SET DEFAULT 0;
+
+-- Update ALL existing discount codes to be unlimited (maxRedemptions = 0)
+UPDATE "MarketplaceDiscountCode"
+SET "maxRedemptions" = 0
+WHERE "maxRedemptions" > 0;
