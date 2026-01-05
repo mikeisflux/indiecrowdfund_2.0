@@ -48,6 +48,10 @@ import {
   CreditCard,
   ArrowUpRight,
   ArrowDownRight,
+  HardDrive,
+  AlertCircle,
+  Pencil,
+  Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -143,6 +147,43 @@ interface TransactionStats {
   todayRevenue: number;
   todayPlatformFees: number;
   todayTransactions: number;
+}
+
+interface PdfBook {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  pdf: {
+    url: string | null;
+    fileName: string | null;
+    fileSize: number | null;
+    fileSizeFormatted: string | null;
+    coverUrl: string | null;
+    totalPages: number | null;
+    hasUrl: boolean;
+    hasSize: boolean;
+    r2Exists?: boolean | null;
+  };
+  coverImageUrl: string | null;
+  price: number;
+  purchaseCount: number;
+  createdAt: string;
+  publishedAt: string | null;
+  creator: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  issues: string[];
+}
+
+interface PdfStats {
+  total: number;
+  withPdf: number;
+  missingPdf: number;
+  missingSize: number;
+  liveWithIssues: number;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -633,6 +674,24 @@ export default function AdminMarketplacePage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [addDialogCategory, setAddDialogCategory] = useState<"featured" | "staffPick">("featured");
 
+  // PDF Management state
+  const [pdfBooks, setPdfBooks] = useState<PdfBook[]>([]);
+  const [pdfStats, setPdfStats] = useState<PdfStats>({
+    total: 0,
+    withPdf: 0,
+    missingPdf: 0,
+    missingSize: 0,
+    liveWithIssues: 0,
+  });
+  const [pdfFilter, setPdfFilter] = useState<"all" | "missing-pdf" | "has-pdf">("all");
+  const [pdfSearch, setPdfSearch] = useState("");
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [editingBookId, setEditingBookId] = useState<string | null>(null);
+  const [editPdfUrl, setEditPdfUrl] = useState("");
+  const [editPdfFileName, setEditPdfFileName] = useState("");
+  const [editPdfFileSize, setEditPdfFileSize] = useState("");
+  const [isSavingPdf, setIsSavingPdf] = useState(false);
+
   // Featured and Staff Pick books (sorted by order)
   const featuredBooks = liveBooks
     .filter((b) => b.isFeatured)
@@ -717,6 +776,77 @@ export default function AdminMarketplacePage() {
     }
   }, []);
 
+  const fetchPdfBooks = useCallback(async (filter = "all", search = "") => {
+    try {
+      setIsLoadingPdf(true);
+      const params = new URLSearchParams({
+        filter,
+        search,
+        limit: "100",
+      });
+      const response = await fetchWithRetry(`/api/admin/marketplace/pdf-management?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPdfBooks(data.books || []);
+        setPdfStats(data.stats || {
+          total: 0,
+          withPdf: 0,
+          missingPdf: 0,
+          missingSize: 0,
+          liveWithIssues: 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching PDF management data:", error);
+      toast.error("Failed to fetch PDF data");
+    } finally {
+      setIsLoadingPdf(false);
+    }
+  }, []);
+
+  const handleSavePdf = async (bookId: string) => {
+    setIsSavingPdf(true);
+    try {
+      const updateData: Record<string, string | number | null> = {};
+      if (editPdfUrl) updateData.pdfFileUrl = editPdfUrl;
+      if (editPdfFileName) updateData.pdfFileName = editPdfFileName;
+      if (editPdfFileSize) updateData.pdfFileSize = parseInt(editPdfFileSize, 10);
+
+      const response = await fetch(`/api/admin/marketplace/books/${bookId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to update book");
+      }
+
+      toast.success("PDF info updated successfully");
+      setEditingBookId(null);
+      setEditPdfUrl("");
+      setEditPdfFileName("");
+      setEditPdfFileSize("");
+      fetchPdfBooks(pdfFilter, pdfSearch);
+    } catch (error) {
+      console.error("Error updating book:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update book");
+    } finally {
+      setIsSavingPdf(false);
+    }
+  };
+
+  const startEditingPdf = (book: PdfBook) => {
+    setEditingBookId(book.id);
+    setEditPdfUrl(book.pdf.url || "");
+    setEditPdfFileName(book.pdf.fileName || "");
+    setEditPdfFileSize(book.pdf.fileSize?.toString() || "");
+  };
+
   useEffect(() => {
     fetchBooks();
     fetchHistory();
@@ -728,6 +858,13 @@ export default function AdminMarketplacePage() {
       fetchTransactions(transactionPage, transactionSearch, transactionStatusFilter);
     }
   }, [activeTab, transactionPage, transactionSearch, transactionStatusFilter, fetchTransactions]);
+
+  // Fetch PDF data when tab changes to pdf-management
+  useEffect(() => {
+    if (activeTab === "pdf-management") {
+      fetchPdfBooks(pdfFilter, pdfSearch);
+    }
+  }, [activeTab, pdfFilter, pdfSearch, fetchPdfBooks]);
 
   const handleApprove = async () => {
     if (!selectedBook) return;
@@ -1029,6 +1166,13 @@ export default function AdminMarketplacePage() {
               <TabsTrigger value="transactions" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
                 <CreditCard className="w-4 h-4 mr-2" />
                 Transactions
+              </TabsTrigger>
+              <TabsTrigger value="pdf-management" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
+                <HardDrive className="w-4 h-4 mr-2" />
+                PDF Files
+                {pdfStats.liveWithIssues > 0 && (
+                  <Badge className="ml-2 bg-rose-100 text-rose-600 border-rose-200">{pdfStats.liveWithIssues}</Badge>
+                )}
               </TabsTrigger>
             </TabsList>
 
@@ -1556,6 +1700,254 @@ export default function AdminMarketplacePage() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* PDF Management Tab */}
+          <TabsContent value="pdf-management">
+            <div className="space-y-6">
+              {/* PDF Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="p-4 rounded-xl bg-card border">
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <BookOpen className="w-4 h-4" />
+                    <span className="text-sm font-medium">Total Books</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{pdfStats.total}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-card border">
+                  <div className="flex items-center gap-2 text-emerald-600">
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">With PDF</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{pdfStats.withPdf}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-card border">
+                  <div className="flex items-center gap-2 text-rose-600">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Missing PDF</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{pdfStats.missingPdf}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-card border">
+                  <div className="flex items-center gap-2 text-amber-600">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Missing Size</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{pdfStats.missingSize}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-card border border-rose-200 bg-rose-50/50">
+                  <div className="flex items-center gap-2 text-rose-600">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-sm font-medium">LIVE with Issues</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1 text-rose-600">{pdfStats.liveWithIssues}</p>
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
+                  <Input
+                    placeholder="Search by title or ID..."
+                    value={pdfSearch}
+                    onChange={(e) => setPdfSearch(e.target.value)}
+                    className="pl-10 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/70"
+                  />
+                </div>
+                <select
+                  value={pdfFilter}
+                  onChange={(e) => setPdfFilter(e.target.value as "all" | "missing-pdf" | "has-pdf")}
+                  className="px-3 py-2 rounded-lg bg-muted/50 border border-border text-foreground"
+                >
+                  <option value="all">All Books</option>
+                  <option value="missing-pdf">Missing PDF</option>
+                  <option value="has-pdf">Has PDF</option>
+                </select>
+                <Button
+                  onClick={() => fetchPdfBooks(pdfFilter, pdfSearch)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+
+              {/* PDF Books Table */}
+              <div className="rounded-xl bg-muted/50 border border-border overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h3 className="font-medium text-foreground">PDF File Status ({pdfBooks.length} books)</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  {isLoadingPdf ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                    </div>
+                  ) : pdfBooks.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <HardDrive className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No books found</p>
+                    </div>
+                  ) : (
+                    <table className="w-full">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Book</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Creator</th>
+                          <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">Status</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">PDF URL</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">File Name</th>
+                          <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">File Size</th>
+                          <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">Issues</th>
+                          <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {pdfBooks.map((book) => (
+                          <tr key={book.id} className={cn("hover:bg-muted/30", book.issues.length > 0 && book.status === "LIVE" && "bg-rose-50/30")}>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                                  {book.coverImageUrl || book.pdf.coverUrl ? (
+                                    <Image
+                                      src={book.coverImageUrl || book.pdf.coverUrl || ""}
+                                      alt={book.title}
+                                      width={40}
+                                      height={40}
+                                      className="object-cover w-full h-full"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <BookOpen className="w-4 h-4 text-muted-foreground/50" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-medium text-foreground truncate max-w-[200px]">{book.title}</p>
+                                  <p className="text-xs text-muted-foreground font-mono">{book.id.slice(0, 12)}...</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{book.creator.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{book.creator.email}</p>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <StatusBadge status={book.status} />
+                            </td>
+                            <td className="px-4 py-3">
+                              {editingBookId === book.id ? (
+                                <Input
+                                  value={editPdfUrl}
+                                  onChange={(e) => setEditPdfUrl(e.target.value)}
+                                  placeholder="/api/r2/serve/..."
+                                  className="text-xs font-mono h-8"
+                                />
+                              ) : (
+                                <div className="max-w-[200px]">
+                                  {book.pdf.url ? (
+                                    <p className="text-xs text-muted-foreground font-mono truncate" title={book.pdf.url}>
+                                      {book.pdf.url}
+                                    </p>
+                                  ) : (
+                                    <span className="text-rose-500 text-xs">Not set</span>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {editingBookId === book.id ? (
+                                <Input
+                                  value={editPdfFileName}
+                                  onChange={(e) => setEditPdfFileName(e.target.value)}
+                                  placeholder="filename.pdf"
+                                  className="text-xs h-8"
+                                />
+                              ) : (
+                                <span className={cn("text-sm", !book.pdf.fileName && "text-rose-500")}>
+                                  {book.pdf.fileName || "Not set"}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {editingBookId === book.id ? (
+                                <Input
+                                  value={editPdfFileSize}
+                                  onChange={(e) => setEditPdfFileSize(e.target.value)}
+                                  placeholder="bytes"
+                                  type="number"
+                                  className="text-xs h-8 w-24"
+                                />
+                              ) : (
+                                <span className={cn("text-sm", !book.pdf.hasSize && "text-rose-500")}>
+                                  {book.pdf.fileSizeFormatted || "0 B"}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {book.issues.length > 0 ? (
+                                <div className="flex flex-col gap-1">
+                                  {book.issues.map((issue, idx) => (
+                                    <Badge key={idx} variant="destructive" className="text-[10px]">
+                                      {issue}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <Badge className="bg-emerald-100 text-emerald-600 border-emerald-200">OK</Badge>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {editingBookId === book.id ? (
+                                <div className="flex items-center gap-1 justify-center">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleSavePdf(book.id)}
+                                    disabled={isSavingPdf}
+                                    className="h-7 px-2"
+                                  >
+                                    {isSavingPdf ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Save className="w-3 h-3" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingBookId(null);
+                                      setEditPdfUrl("");
+                                      setEditPdfFileName("");
+                                      setEditPdfFileSize("");
+                                    }}
+                                    className="h-7 px-2"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => startEditingPdf(book)}
+                                  className="h-7 px-2"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
               </div>
             </div>
           </TabsContent>

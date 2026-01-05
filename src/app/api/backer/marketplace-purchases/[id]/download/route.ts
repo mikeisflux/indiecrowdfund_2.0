@@ -83,10 +83,14 @@ export async function GET(
 
     console.log("[Marketplace Download] PDF file URL:", purchase.book.pdfFileUrl);
 
+    // Decode URL-encoded paths (some books have %2F instead of /)
+    const decodedPdfUrl = decodeURIComponent(purchase.book.pdfFileUrl);
+    console.log("[Marketplace Download] Decoded PDF URL:", decodedPdfUrl);
+
     // Extract R2 storage key from pdfFileUrl
     // pdfFileUrl is stored as "/api/r2/serve/marketplace/userId/pdfs/file.pdf"
     // We need to extract "marketplace/userId/pdfs/file.pdf"
-    const r2KeyMatch = purchase.book.pdfFileUrl.match(/\/api\/r2\/serve\/(.+)$/);
+    const r2KeyMatch = decodedPdfUrl.match(/\/api\/r2\/serve\/(.+)$/);
     if (!r2KeyMatch) {
       // If it's not an R2 path, return the URL directly (legacy support)
       return NextResponse.json({
