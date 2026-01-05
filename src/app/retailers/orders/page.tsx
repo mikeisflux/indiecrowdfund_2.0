@@ -75,8 +75,11 @@ export default function RetailerOrdersPage() {
       case "DELIVERED":
         return <Badge className="bg-green-500">Completed</Badge>;
       case "PENDING":
-        return <Badge variant="outline">Pending</Badge>;
+        return <Badge variant="outline">Awaiting Payment</Badge>;
+      case "INVOICED":
+        return <Badge className="bg-amber-500">Invoiced</Badge>;
       case "PAID":
+        return <Badge className="bg-green-500">Paid</Badge>;
       case "PROCESSING":
         return <Badge className="bg-blue-500">Processing</Badge>;
       case "SHIPPED":

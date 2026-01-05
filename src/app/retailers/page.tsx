@@ -142,7 +142,9 @@ export default async function RetailersPage() {
       icon: Package,
     },
     {
-      value: `${retailerStats.satisfactionRate}%`,
+      value: retailerStats.satisfactionRate > 0
+        ? `${retailerStats.satisfactionRate}%`
+        : "--",
       label: "Satisfaction Rate",
       icon: Star,
     },

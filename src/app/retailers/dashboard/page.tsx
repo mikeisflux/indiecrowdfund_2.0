@@ -102,8 +102,11 @@ export default function RetailerDashboardPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "bg-yellow-100 text-yellow-700";
+        return "bg-zinc-100 text-zinc-700";
+      case "INVOICED":
+        return "bg-amber-100 text-amber-700";
       case "PAID":
+        return "bg-green-100 text-green-700";
       case "PROCESSING":
         return "bg-blue-100 text-blue-700";
       case "SHIPPED":

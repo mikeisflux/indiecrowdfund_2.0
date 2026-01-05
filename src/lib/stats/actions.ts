@@ -29,7 +29,7 @@ const DEFAULT_RETAILER_STATS: RetailerStats = {
   certifiedRetailers: 0,
   retailerOrdersTotal: 0,
   productsAvailable: 0,
-  satisfactionRate: 98,
+  satisfactionRate: 0,
 };
 
 // Note: formatCurrency and formatNumber are in ./utils.ts (not 'use server')
@@ -158,7 +158,7 @@ async function fetchRetailerStatsUncached(): Promise<RetailerStats> {
 
     // Satisfaction rate - from retailer satisfaction surveys after delivery
     // Count surveys with positive ratings (4-5 stars) vs total completed surveys
-    let satisfactionRate = 98; // Default until we have survey data
+    let satisfactionRate = 0; // Default to 0 until we have survey data
 
     try {
       // Check if RetailerSatisfactionSurvey model exists
