@@ -165,7 +165,7 @@ export default async function RetailersPage() {
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 py-16 sm:py-20 lg:py-24 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
             <Badge className="mb-4 bg-white/20 text-white hover:bg-white/30 border-0">
               <Store className="mr-1 h-3 w-3" />
@@ -179,7 +179,7 @@ export default async function RetailersPage() {
               at wholesale pricing. Stock your store with the next big thing.
             </p>
             <div
-              className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center animate-in fade-in slide-in-from-bottom-4 duration-700"
+              className="mt-10 pb-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center animate-in fade-in slide-in-from-bottom-4 duration-700"
               style={{ animationDelay: '200ms' }}
             >
               <Button asChild size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50 shadow-xl">

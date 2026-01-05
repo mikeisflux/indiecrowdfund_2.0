@@ -217,17 +217,14 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
       }).catch(() => []),
 
-      // Get email campaigns created by this user for this project only
+      // Get email campaigns created by this user
+      // Include all campaigns - those with matching projectId OR those without a projectId filter (legacy)
       db.emailCampaign.findMany({
         where: {
           createdBy: session.user.id,
-          filters: {
-            path: ["projectId"],
-            equals: selectedProjectId,
-          },
         },
         orderBy: { createdAt: "desc" },
-        take: 20,
+        take: 50,
       }),
 
       // Get email list member count for this creator (using EmailListSubscriber table)
