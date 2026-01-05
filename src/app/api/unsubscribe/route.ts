@@ -185,13 +185,11 @@ async function unsubscribeEmail(email: string): Promise<{ success: boolean; erro
       // Table might not exist or no record
     }
 
-    // 4. Update ProjectFollower (prelaunch email signups)
+    // 4. Delete ProjectFollower records (prelaunch email signups)
+    // Note: ProjectFollower doesn't have an isActive field, so we delete the records
     try {
-      await db.projectFollower.updateMany({
+      await db.projectFollower.deleteMany({
         where: { email: normalizedEmail },
-        data: {
-          isActive: false,
-        },
       });
     } catch {
       // Table might not exist or no record

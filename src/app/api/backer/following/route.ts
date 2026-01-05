@@ -31,7 +31,7 @@ export async function GET() {
             image: true,
             bio: true,
             createdAt: true,
-            projects: {
+            createdProjects: {
               where: {
                 status: { in: ["LIVE", "FUNDED"] },
               },
@@ -53,7 +53,7 @@ export async function GET() {
             },
             _count: {
               select: {
-                projects: {
+                createdProjects: {
                   where: { status: { in: ["LIVE", "FUNDED"] } },
                 },
               },
@@ -73,9 +73,9 @@ export async function GET() {
       followedAt: f.createdAt,
       notifyNewProjects: f.notifyNewProjects,
       notifyUpdates: f.notifyUpdates,
-      totalProjects: f.creator._count.projects,
+      totalProjects: f.creator._count.createdProjects,
       memberSince: f.creator.createdAt,
-      recentProjects: f.creator.projects.map((p: typeof f.creator.projects[0]) => ({
+      recentProjects: f.creator.createdProjects.map((p: typeof f.creator.createdProjects[0]) => ({
         id: p.id,
         title: p.title,
         slug: p.slug,
@@ -95,7 +95,7 @@ export async function GET() {
 
     // Build activity feed from recent projects across all followed creators
     const allRecentProjects = following.flatMap((f: typeof following[0]) =>
-      f.creator.projects.map((p: typeof f.creator.projects[0]) => ({
+      f.creator.createdProjects.map((p: typeof f.creator.createdProjects[0]) => ({
         id: p.id,
         type: "new_project" as const,
         title: p.title,
