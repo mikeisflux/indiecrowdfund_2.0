@@ -91,10 +91,16 @@ export async function GET() {
       orderBy: { title: "asc" },
     });
 
+    // Convert Decimal prices to numbers for frontend
+    const formattedLiveBooks = liveBooks.map(book => ({
+      ...book,
+      price: Number(book.price),
+    }));
+
     return NextResponse.json({
       discountCodes,
       currentMonthCode,
-      liveBooks,
+      liveBooks: formattedLiveBooks,
       hasLiveBooks: liveBooks.length > 0,
       monthRange: {
         start: monthStart.toISOString(),

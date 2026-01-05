@@ -52,7 +52,7 @@ export function CategoryBookItem({
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>{book.creator.name}</span>
           <span>•</span>
-          <span className="text-emerald-600">${book.price.toFixed(2)}</span>
+          <span className="text-emerald-600">${Number(book.price).toFixed(2)}</span>
         </div>
       </div>
 

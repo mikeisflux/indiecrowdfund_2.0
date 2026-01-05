@@ -1034,7 +1034,7 @@ export default function CreatorMarketplaceDashboard() {
                           <option value="">Choose a book...</option>
                           {liveBooksList.map((book) => (
                             <option key={book.id} value={book.id}>
-                              {book.title} (${book.price.toFixed(2)})
+                              {book.title} (${Number(book.price).toFixed(2)})
                             </option>
                           ))}
                         </select>

@@ -43,7 +43,7 @@ function BookTile({ book }: { book: Book }) {
           <h3 className="text-white font-semibold text-sm line-clamp-2 group-hover:text-amber-200 transition-colors">{book.title}</h3>
           <p className="text-white/70 text-xs mt-0.5 truncate">{book.company?.name || book.creator.name}</p>
           <div className="flex items-center justify-between mt-1.5">
-            <span className="text-emerald-400 font-bold text-sm">${book.price.toFixed(2)}</span>
+            <span className="text-emerald-400 font-bold text-sm">${Number(book.price).toFixed(2)}</span>
             {book.stats.purchases > 0 && <span className="text-white/50 text-xs">{book.stats.purchases} sold</span>}
           </div>
         </div>

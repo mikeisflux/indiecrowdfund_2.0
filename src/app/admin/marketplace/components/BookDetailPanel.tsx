@@ -89,7 +89,7 @@ export function BookDetailPanel({
             Price
           </div>
           <p className="text-lg font-bold text-foreground mt-1">
-            ${book.price.toFixed(2)} {book.currency}
+            ${Number(book.price).toFixed(2)} {book.currency}
           </p>
         </div>
         <div className="p-4 rounded-xl bg-muted/50 border border-border">

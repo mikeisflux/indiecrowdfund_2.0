@@ -52,7 +52,7 @@ export function BookListItem({ book, isSelected, onClick }: BookListItemProps) {
         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
           <span>{book.creator.name}</span>
           <span>•</span>
-          <span className="text-emerald-600">${book.price.toFixed(2)}</span>
+          <span className="text-emerald-600">${Number(book.price).toFixed(2)}</span>
         </div>
         {book.submittedAt && (
           <p className="text-xs text-muted-foreground/70 mt-1">

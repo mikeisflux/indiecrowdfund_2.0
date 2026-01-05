@@ -94,7 +94,7 @@ function BookTile({ book }: { book: Book }) {
           </p>
           <div className="flex items-center justify-between mt-1.5">
             <span className="text-emerald-400 font-bold text-sm">
-              ${book.price.toFixed(2)}
+              ${Number(book.price).toFixed(2)}
             </span>
             {book.stats.purchases > 0 && (
               <span className="text-white/50 text-xs">
