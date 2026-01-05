@@ -474,7 +474,7 @@ export function DigitalLibraryTab() {
 
     container.addEventListener("wheel", handleWheel, { passive: false });
     return () => container.removeEventListener("wheel", handleWheel);
-  }, [selectedFile]);
+  }, [selectedItem]);
 
   // Check local books support on client side
   useEffect(() => {
