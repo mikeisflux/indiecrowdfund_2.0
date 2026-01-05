@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getR2Storage, generateMarketplaceFileKey } from "@/lib/r2";
+import { createHash } from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +10,20 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60; // 60 seconds timeout
 
 /**
+ * Calculate SHA-256 hash of file content for duplicate detection
+ */
+async function calculateFileHash(buffer: Buffer): Promise<string> {
+  const hash = createHash("sha256");
+  hash.update(buffer);
+  return hash.digest("hex");
+}
+
+/**
  * POST /api/creator/marketplace/files/upload
  *
  * Server-side proxy upload for marketplace PDFs
  * This bypasses CORS issues by having the server upload to R2
+ * Includes duplicate detection - returns existing file if same content already uploaded
  */
 export async function POST(request: NextRequest) {
   console.log("[Marketplace Upload] POST request received");
@@ -85,16 +96,63 @@ export async function POST(request: NextRequest) {
     const storageKey = generateMarketplaceFileKey(session.user.id, fileName, fileId);
     console.log("[Marketplace Upload] Storage key:", storageKey);
 
-    // Convert file to buffer and upload to R2
+    // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    // Calculate file hash for duplicate detection
+    const fileHash = await calculateFileHash(buffer);
+    console.log("[Marketplace Upload] File hash:", fileHash);
+
+    // Check if this exact file already exists in user's uploads
+    // First filter by size (fast), then check hash in metadata
+    const prefix = `marketplace/${session.user.id}/pdfs/`;
+    const existingFiles = await r2.listFiles(prefix);
+
+    // Look for files with same size (potential duplicates)
+    const sameSizeFiles = existingFiles.filter(f => f.size === fileSize);
+
+    for (const existingFile of sameSizeFiles) {
+      try {
+        // Check metadata for stored hash
+        const metadata = await r2.getFileMetadata(existingFile.key);
+        const storedHash = metadata?.metadata?.filehash || metadata?.metadata?.fileHash;
+
+        if (storedHash === fileHash) {
+          console.log("[Marketplace Upload] Duplicate file detected via hash:", existingFile.key);
+
+          // Extract original filename from key
+          const keyParts = existingFile.key.split("/");
+          const fullFilename = keyParts[keyParts.length - 1];
+          const fileIdAndName = fullFilename.split("_");
+          const existingFileId = fileIdAndName[0];
+          const existingFileName = fileIdAndName.slice(1).join("_");
+
+          // Return the existing file info instead of uploading duplicate
+          return NextResponse.json({
+            success: true,
+            fileId: existingFileId,
+            storageKey: existingFile.key,
+            publicUrl: `/api/r2/serve/${existingFile.key}`,
+            fileName: existingFileName,
+            fileSize: existingFile.size,
+            isDuplicate: true,
+            message: "This file was already uploaded. Using existing copy.",
+          });
+        }
+      } catch (checkError) {
+        // Skip files we can't check, continue with upload
+        console.log("[Marketplace Upload] Could not check existing file metadata:", existingFile.key, checkError);
+      }
+    }
 
     console.log("[Marketplace Upload] Uploading to R2...");
     await r2.uploadFile(storageKey, buffer, {
       contentType: "application/pdf",
       metadata: {
-        uploaderId: session.user.id,
-        originalName: fileName,
+        uploaderid: session.user.id,
+        originalname: fileName,
+        filehash: fileHash, // lowercase for R2/S3 metadata compatibility
       },
     });
     console.log("[Marketplace Upload] Upload successful");

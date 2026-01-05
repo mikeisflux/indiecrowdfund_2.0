@@ -245,11 +245,19 @@ function PDFFilePicker({
 
       setUploadProgress(90);
 
-      const { publicUrl, storageKey } = result;
+      const { publicUrl, storageKey, fileName: returnedFileName, isDuplicate } = result;
 
       setUploadProgress(100);
-      onSelect(publicUrl, file.name, storageKey);
-      toast.success("PDF uploaded successfully!");
+
+      // Use returned filename (handles duplicates with different original names)
+      onSelect(publicUrl, returnedFileName || file.name, storageKey);
+
+      if (isDuplicate) {
+        toast.info("This file was already uploaded. Using existing copy.");
+      } else {
+        toast.success("PDF uploaded successfully!");
+      }
+
       await fetchExistingFiles();
       setMode("select");
     } catch (error) {
@@ -302,15 +310,25 @@ function PDFFilePicker({
   if (currentUrl) {
     return (
       <div className="space-y-3">
-        <Label>PDF File *</Label>
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 relative">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/20">
-              <FileText className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
+        <div className="flex items-center gap-2">
+          <Label>PDF File</Label>
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full">
+            Linked
+          </span>
+        </div>
+        <div className="p-4 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/30 relative">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-emerald-500/20">
+              <FileText className="w-8 h-8 text-emerald-500 dark:text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-foreground font-medium truncate">{currentFileName || "Selected PDF"}</p>
-              <p className="text-emerald-500 dark:text-emerald-400 text-sm">File selected</p>
+              <p className="text-foreground font-semibold text-lg">
+                {currentFileName || "PDF File"}
+              </p>
+              <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium flex items-center gap-1 mt-1">
+                <Check className="w-4 h-4" />
+                File linked and ready
+              </p>
             </div>
           </div>
           {/* Delete button */}
@@ -330,7 +348,12 @@ function PDFFilePicker({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Label>PDF File *</Label>
+        <div className="flex items-center gap-2">
+          <Label>PDF File</Label>
+          <span className="text-xs font-medium text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">
+            Required
+          </span>
+        </div>
         <div className="flex gap-2">
           <Button
             type="button"
@@ -606,6 +629,26 @@ export default function EditBookPage() {
         const data = await res.json();
         const book: BookData = data.book;
 
+        // Extract filename from pdfFileUrl
+        // URL format: /api/r2/serve/marketplace/{userId}/pdfs/{uuid}_{filename}.pdf
+        let extractedFileName = "";
+        let extractedStorageKey = "";
+        if (book.pdfFileUrl) {
+          const r2Match = book.pdfFileUrl.match(/\/api\/r2\/serve\/(.+)$/);
+          if (r2Match) {
+            extractedStorageKey = decodeURIComponent(r2Match[1]);
+            // Extract filename from key (format: uuid_filename.pdf)
+            const keyParts = extractedStorageKey.split("/");
+            const fullFilename = keyParts[keyParts.length - 1];
+            const underscoreIndex = fullFilename.indexOf("_");
+            if (underscoreIndex > 0) {
+              extractedFileName = fullFilename.substring(underscoreIndex + 1);
+            } else {
+              extractedFileName = fullFilename;
+            }
+          }
+        }
+
         setFormData({
           title: book.title,
           description: book.description,
@@ -616,8 +659,8 @@ export default function EditBookPage() {
           promoImageUrl: book.coverImage || "",
           promoVideoUrl: book.promoVideoUrl || "",
           pdfFileUrl: book.pdfFileUrl,
-          pdfFileName: "",
-          pdfStorageKey: "",
+          pdfFileName: extractedFileName,
+          pdfStorageKey: extractedStorageKey,
           isNsfw: book.isNsfw,
           tags: book.tags || [],
         });

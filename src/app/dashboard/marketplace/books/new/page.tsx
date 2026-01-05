@@ -226,13 +226,18 @@ function PDFFilePicker({
 
       setUploadProgress(90);
 
-      const { publicUrl, storageKey } = result;
+      const { publicUrl, storageKey, fileName: returnedFileName, isDuplicate } = result;
 
       setUploadProgress(100);
 
-      onSelect(publicUrl, file.name, storageKey);
+      // Use returned filename (handles duplicates with different original names)
+      onSelect(publicUrl, returnedFileName || file.name, storageKey);
 
-      toast.success("PDF uploaded successfully!");
+      if (isDuplicate) {
+        toast.info("This file was already uploaded. Using existing copy.");
+      } else {
+        toast.success("PDF uploaded successfully!");
+      }
 
       // Refresh file list
       await fetchExistingFiles();
@@ -294,15 +299,25 @@ function PDFFilePicker({
   if (currentUrl) {
     return (
       <div className="space-y-3">
-        <Label>PDF File *</Label>
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 relative">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/20">
-              <FileText className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
+        <div className="flex items-center gap-2">
+          <Label>PDF File</Label>
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full">
+            Linked
+          </span>
+        </div>
+        <div className="p-4 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/30 relative">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-emerald-500/20">
+              <FileText className="w-8 h-8 text-emerald-500 dark:text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-foreground font-medium truncate">{currentFileName || "Selected PDF"}</p>
-              <p className="text-emerald-500 dark:text-emerald-400 text-sm">File selected</p>
+              <p className="text-foreground font-semibold text-lg">
+                {currentFileName || "PDF File"}
+              </p>
+              <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium flex items-center gap-1 mt-1">
+                <Check className="w-4 h-4" />
+                File linked and ready for upload
+              </p>
             </div>
           </div>
           {/* Delete button */}
@@ -322,7 +337,12 @@ function PDFFilePicker({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Label>PDF File *</Label>
+        <div className="flex items-center gap-2">
+          <Label>PDF File</Label>
+          <span className="text-xs font-medium text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">
+            Required
+          </span>
+        </div>
         <div className="flex gap-2">
           <Button
             type="button"
