@@ -5,251 +5,24 @@
  * and legacy URLs (/projects/[slug]/pledge via middleware rewrite to /projects/_/[slug]/pledge)
  */
 
-import { getCSRFHeaders } from "@/lib/csrf";
-
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  CheckCircle,
-  ChevronRight,
-  AlertTriangle,
-  Loader2,
-  Info,
-  Plus,
-  Minus,
-  Coins,
-} from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
-import { SHIPPING_COUNTRIES } from "@/types";
-import {
-  Elements,
-  PaymentElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js";
-
-// Types for project and reward data
-interface ProjectData {
-  id: string;
-  title: string;
-  slug: string;
-  imageUrl: string;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN";
-  hasAdultContent: boolean;
-  hasControversialContent?: boolean;
-  estimatedDelivery: string;
-  currentAmount: number;
-  goalAmount: number;
-  endDate: string | null;
-  creator: { id: string; name: string; location: string; image: string };
-}
-
-interface RewardData {
-  id: string;
-  title: string;
-  description: string;
-  amount: number;
-  shippingCost: Record<string, number> | number;
-  shippingType: "NO_SHIPPING" | "WORLDWIDE" | "SELECTED_COUNTRIES";
-  shippingCountries: string[];
-  estimatedDelivery: string;
-  quantityClaimed: number;
-  imageUrl: string;
-  items: { title: string; quantity: number }[];
-}
-
-interface AddonData {
-  id: string;
-  title: string;
-  description: string;
-  amount: number;
-  shippingCost: Record<string, number> | number;
-  shippingType: "NO_SHIPPING" | "WORLDWIDE" | "SELECTED_COUNTRIES";
-  shippingCountries: string[];
-  imageUrl: string | null;
-  estimatedDelivery: string;
-  limitedQuantity: number | null;
-  quantityClaimed: number;
-  includes: string[];
-}
-
-// Map timezone to country code for auto-detection
-const TIMEZONE_TO_COUNTRY: Record<string, string> = {
-  "America/New_York": "US", "America/Los_Angeles": "US", "America/Chicago": "US", "America/Denver": "US",
-  "America/Toronto": "CA", "America/Vancouver": "CA", "America/Montreal": "CA",
-  "Europe/London": "GB", "Europe/Berlin": "DE", "Europe/Paris": "FR", "Europe/Rome": "IT", "Europe/Madrid": "ES",
-  "Europe/Amsterdam": "NL", "Europe/Brussels": "BE", "Europe/Zurich": "CH", "Europe/Vienna": "AT",
-  "Europe/Stockholm": "SE", "Europe/Oslo": "NO", "Europe/Copenhagen": "DK", "Europe/Helsinki": "FI",
-  "Europe/Dublin": "IE", "Europe/Warsaw": "PL", "Europe/Prague": "CZ", "Europe/Lisbon": "PT",
-  "Europe/Athens": "GR", "Europe/Bucharest": "RO", "Europe/Budapest": "HU",
-  "Australia/Sydney": "AU", "Australia/Melbourne": "AU", "Australia/Perth": "AU",
-  "Pacific/Auckland": "NZ", "Asia/Tokyo": "JP", "Asia/Singapore": "SG", "Asia/Hong_Kong": "HK",
-  "Asia/Seoul": "KR", "America/Mexico_City": "MX", "America/Sao_Paulo": "BR", "America/Buenos_Aires": "AR",
-  "America/Santiago": "CL", "America/Bogota": "CO", "Asia/Bangkok": "TH", "Asia/Kuala_Lumpur": "MY",
-  "Asia/Manila": "PH", "Asia/Jakarta": "ID", "Asia/Kolkata": "IN", "Africa/Johannesburg": "ZA",
-  "Asia/Dubai": "AE", "Asia/Jerusalem": "IL", "Asia/Taipei": "TW", "Asia/Shanghai": "CN", "Europe/Moscow": "RU",
-};
-
-// Detect user's country from timezone
-function detectUserCountry(): string {
-  try {
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const detectedCountry = TIMEZONE_TO_COUNTRY[timezone];
-    // Only return if it's a country we support for shipping
-    if (detectedCountry && SHIPPING_COUNTRIES.some(c => c.code === detectedCountry)) {
-      return detectedCountry;
-    }
-  } catch {
-    // Ignore errors
-  }
-  return "US"; // Default fallback
-}
-
-const getFaqItems = (isFunded: boolean) => [
-  {
-    question: "How do I pledge?",
-    answer: "Select your reward tier, add any optional add-ons, enter your shipping information, and complete your payment. You'll receive a confirmation email once your pledge is processed.",
-  },
-  {
-    question: "When is my card charged?",
-    answer: isFunded
-      ? "Your card is charged immediately when you complete your pledge. This project has already reached its funding goal, so payments are processed right away."
-      : "Your card is only charged when the campaign reaches its funding goal. If you pledge before the goal is met, your payment is held and will only be processed once the campaign successfully funds. If the campaign doesn't reach its goal, you won't be charged at all.",
-  },
-  ...(isFunded
-    ? []
-    : [
-        {
-          question: "So I'm only charged if funding succeeds?",
-          answer: "Exactly! Your payment is held until the campaign reaches its funding goal. If the project doesn't reach its goal by the deadline, your payment method is never charged.",
-        },
-      ]),
-  {
-    question: "What can others see about my pledge?",
-    answer: "Creators can see your name, email, and pledge amount. Other backers can only see your public profile name. Your payment details are never shared with creators.",
-  },
-  {
-    question: "What if I want to change my pledge?",
-    answer: "You can modify or cancel your pledge at any time before the campaign ends. After the campaign successfully funds, you may be able to update your reward selection or shipping address through the pledge manager.",
-  },
-  {
-    question: "If this project is funded, how do I get my reward?",
-    answer: "After successful funding, the creator will begin production. Estimated delivery dates are shown for each reward. You'll receive updates from the creator and they'll reach out when it's time to confirm your shipping details.",
-  },
-  {
-    question: "Will I be charged more later?",
-    answer: "You may be charged shipping costs later if they weren't included in your pledge amount. The creator will notify you of any additional charges through the pledge manager before shipping.",
-  },
-];
-
-type Step = "rewards" | "addons" | "payment" | "success";
-
-// Stripe Payment Form Component
-function StripePaymentForm({
-  onSuccess,
-  onError,
-  agreedToTerms,
-  isProcessing,
-  setIsProcessing,
-  total,
-  intentType,
-  pledgeId,
-  projectPath,
-}: {
-  onSuccess: () => void;
-  onError: (message: string) => void;
-  agreedToTerms: boolean;
-  isProcessing: boolean;
-  setIsProcessing: (val: boolean) => void;
-  total: number;
-  intentType: "payment_intent" | "setup_intent";
-  pledgeId: string | null;
-  projectPath: string;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-
-  const handleSubmit = async () => {
-    if (!stripe || !elements || !agreedToTerms) return;
-
-    setIsProcessing(true);
-
-    try {
-      // Include pledgeId in return URL so confirmation can happen after 3D Secure redirect
-      const return_url = `${window.location.origin}${projectPath}/pledge?success=true${pledgeId ? `&pledgeId=${pledgeId}` : ""}`;
-
-      // Use the correct confirmation method based on intent type
-      // SetupIntent is used for campaigns that haven't reached their goal yet (card is saved but not charged)
-      // PaymentIntent is used when the campaign is already funded (card is charged immediately)
-      let error;
-
-      if (intentType === "setup_intent") {
-        const result = await stripe.confirmSetup({
-          elements,
-          confirmParams: {
-            return_url,
-          },
-          redirect: "if_required",
-        });
-        error = result.error;
-      } else {
-        const result = await stripe.confirmPayment({
-          elements,
-          confirmParams: {
-            return_url,
-          },
-          redirect: "if_required",
-        });
-        error = result.error;
-      }
-
-      if (error) {
-        onError(error.message || "Payment failed");
-        setIsProcessing(false);
-      } else {
-        onSuccess();
-      }
-    } catch {
-      onError("An unexpected error occurred");
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <PaymentElement />
-      <Button
-        className="w-full bg-zinc-300 hover:bg-[#028858] text-zinc-600 hover:text-white font-medium disabled:bg-zinc-300 disabled:text-zinc-500"
-        size="lg"
-        onClick={handleSubmit}
-        disabled={!stripe || !elements || !agreedToTerms || isProcessing}
-      >
-        {isProcessing ? "Processing..." : `Pledge $${total}`}
-      </Button>
-    </div>
-  );
-}
+import { ProjectData, RewardData, AddonData, Step } from "./types";
+import { detectUserCountry } from "./constants";
+import { getShippingCost, createAdditionalItemsPurchase as createAdditionalItemsAPI, createPledgeForPayment as createPledgeAPI, confirmPayment } from "./utils";
+import { Breadcrumb } from "./components/Breadcrumb";
+import { RewardSelector } from "./components/RewardSelector";
+import { AddonSelector } from "./components/AddonSelector";
+import { PaymentStep } from "./components/PaymentStep";
+import { OrderSummary } from "./components/OrderSummary";
+import { FAQSection } from "./components/FAQSection";
+import { SuccessPage } from "./components/SuccessPage";
 
 export default function PledgePage() {
   const params = useParams();
@@ -270,19 +43,18 @@ export default function PledgePage() {
   const rewardId = searchParams?.get("reward") ?? null;
   const amountParam = searchParams?.get("amount") ?? null;
   const successParam = searchParams?.get("success") ?? null;
-  const addItemsParam = searchParams?.get("addItems") ?? null; // For adding items to existing completed pledge
-  const pledgeIdParam = searchParams?.get("pledgeId") ?? null; // For confirmation after 3D Secure redirect
+  const addItemsParam = searchParams?.get("addItems") ?? null;
+  const pledgeIdParam = searchParams?.get("pledgeId") ?? null;
 
   // Redirect to login if not authenticated
   useEffect(() => {
     if (authStatus === "unauthenticated") {
-      // Store the intended destination
       const returnUrl = encodeURIComponent(`${projectPath}/pledge${rewardId ? `?reward=${rewardId}` : ""}`);
       router.push(`/login?redirect=${returnUrl}`);
     }
   }, [authStatus, router, projectPath, rewardId]);
 
-  // Data state - loaded from API
+  // Data state
   const [project, setProject] = useState<ProjectData | null>(null);
   const [allRewards, setAllRewards] = useState<RewardData[]>([]);
   const [selectedReward, setSelectedReward] = useState<RewardData | null>(null);
@@ -297,7 +69,6 @@ export default function PledgePage() {
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
   const [bonusSupport, setBonusSupport] = useState<number>(0);
   const [shippingCountry, setShippingCountry] = useState(() => {
-    // Try to detect on initial render (client-side only)
     if (typeof window !== "undefined") {
       return detectUserCountry();
     }
@@ -323,8 +94,6 @@ export default function PledgePage() {
   useEffect(() => {
     async function handleSuccessRedirect() {
       if (successParam === "true") {
-        // If we have a pledgeId from the URL, call the confirmation endpoint
-        // This handles the case where user was redirected for 3D Secure authentication
         if (pledgeIdParam) {
           try {
             const res = await fetch(`/api/pledges/${pledgeIdParam}/confirm`, {
@@ -360,30 +129,6 @@ export default function PledgePage() {
     initStripe();
   }, []);
 
-  // Helper function to get shipping cost for a country
-  const getShippingCost = (
-    shippingCost: Record<string, number> | number,
-    shippingType: string,
-    country: string
-  ): number => {
-    // Debug logging
-    console.log("[Shipping Debug]", { shippingCost, shippingType, country });
-    if (shippingType === "NO_SHIPPING") return 0;
-    if (typeof shippingCost === "number") return shippingCost;
-    if (!shippingCost) return 0;
-    if (shippingType === "WORLDWIDE") {
-      return shippingCost["WORLDWIDE"] || 0;
-    }
-    // For SELECTED_COUNTRIES: check specific country first, then fallback to Worldwide (WW)
-    if (shippingCost[country] !== undefined) {
-      return shippingCost[country];
-    }
-    // If Worldwide (WW) is selected, use that rate for any country
-    if (shippingCost["WW"] !== undefined) {
-      return shippingCost["WW"];
-    }
-    return 0;
-  };
 
   // Calculate totals
   const rewardAmount = pledgeWithoutReward ? customPledgeAmount : (selectedReward?.amount || 0);
@@ -406,64 +151,33 @@ export default function PledgePage() {
   const subtotal = rewardAmount + addonsTotal + bonusSupport;
   const totalShipping = rewardShipping + addonsShipping;
   const total = subtotal + totalShipping;
-
-  // For add items mode - only addons and shipping
   const addItemsTotal = addonsTotal + addonsShipping;
 
-  // Auto-create pledge when entering payment step to load Stripe form
+  // Auto-create pledge when entering payment step
   useEffect(() => {
-    // For add items mode, we need selected addons
     if (isAddItemsMode) {
       if (step === "payment" && !clientSecret && !isProcessing && !paymentError && project && Object.keys(selectedAddons).length > 0) {
         createAdditionalItemsPurchase();
       }
     } else {
-      // Normal flow - need reward or pledge without reward
-      // Check both clientSecret (for Stripe) and currentPledgeId (for DivinityCoin) to prevent duplicate pledges
       if (step === "payment" && !clientSecret && !currentPledgeId && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) {
         createPledgeForPayment();
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, currentPledgeId, isProcessing, paymentError, isAddItemsMode, selectedAddons]);
 
-  // Create additional items purchase for existing pledge
   const createAdditionalItemsPurchase = async () => {
     if (!project || !existingPledgeId || Object.keys(selectedAddons).length === 0) return;
-    if (clientSecret) return; // Already have a client secret
+    if (clientSecret) return;
 
     setIsProcessing(true);
     setPaymentError(null);
 
     try {
-      // Send addons with quantities
-      const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
-        id,
-        quantity,
-      }));
-
-      const response = await fetch(`/api/pledges/${existingPledgeId}/add-items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          addons: addonsWithQuantity,
-          amount: addItemsTotal,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create additional items purchase");
-      }
-
-      if (!data.clientSecret) {
-        throw new Error("Invalid payment response - missing client secret");
-      }
-
-      setClientSecret(data.clientSecret);
-      setIntentType(data.type || "payment_intent"); // Additional items are charged immediately
-      setCurrentPledgeId(existingPledgeId);
+      const result = await createAdditionalItemsAPI(existingPledgeId, selectedAddons, addItemsTotal);
+      setClientSecret(result.clientSecret);
+      setIntentType(result.type as "payment_intent" | "setup_intent");
+      setCurrentPledgeId(result.pledgeId);
       setIsProcessing(false);
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create additional items purchase");
@@ -471,58 +185,37 @@ export default function PledgePage() {
     }
   };
 
-  // Create pledge and get Stripe client secret (called automatically when entering payment step)
   const createPledgeForPayment = async () => {
     if (!project || (!selectedReward && !pledgeWithoutReward)) return;
-    if (clientSecret) return; // Already have a client secret (Stripe)
-    if (currentPledgeId) return; // Already have a pledge (DivinityCoin)
+    if (clientSecret) return;
+    if (currentPledgeId) return;
 
     setIsProcessing(true);
     setPaymentError(null);
 
     try {
-      // Send addons with quantities
-      const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
-        id,
-        quantity,
-      }));
+      const result = await createPledgeAPI(
+        project.id,
+        selectedReward?.id || null,
+        selectedAddons,
+        total,
+        totalShipping,
+        shippingCountry
+      );
 
-      const response = await fetch("/api/pledges", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId: project.id,
-          rewardId: selectedReward?.id || null,
-          addons: addonsWithQuantity,
-          amount: total,
-          shippingAmount: totalShipping,
-          shippingCountry: shippingCountry,
-        }),
-      });
+      setCurrentPledgeId(result.pledgeId);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create pledge");
-      }
-
-      // Store pledgeId for payment processing
-      setCurrentPledgeId(data.pledgeId);
-
-      // For DivinityCoin, we don't need Stripe elements
-      if (data.paymentMethod === "DIVINITYCOIN") {
+      if (result.paymentMethod === "DIVINITYCOIN") {
         setIsProcessing(false);
         return;
       }
 
-      // For Stripe, validate response has required fields
-      if (!data.clientSecret) {
+      if (!result.clientSecret) {
         throw new Error("Invalid payment response - missing client secret");
       }
 
-      // Set the client secret and intent type to show Stripe Elements
-      setClientSecret(data.clientSecret);
-      setIntentType(data.type || "setup_intent");
+      setClientSecret(result.clientSecret);
+      setIntentType((result.type || "setup_intent") as "payment_intent" | "setup_intent");
       setIsProcessing(false);
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create pledge");
@@ -538,7 +231,6 @@ export default function PledgePage() {
     setError(null);
 
     try {
-      // Use slug-only API for legacy URLs, vanity API for new URLs
       const apiUrl = isLegacyUrl
         ? `/api/projects/slug/${slug}`
         : `/api/projects/vanity/${vanityname}/${slug}`;
@@ -569,7 +261,6 @@ export default function PledgePage() {
         },
       };
 
-      // Check if project has ended
       if (formattedProject.endDate && new Date(formattedProject.endDate) < new Date()) {
         setError("This campaign has ended and is no longer accepting pledges.");
         setIsLoading(false);
@@ -581,7 +272,6 @@ export default function PledgePage() {
       const rewards = responseData.rewards || [];
       const addonsFromApi = responseData.addons || [];
 
-      // Get tier rewards
       const tierRewards = rewards.filter((r: { type?: string }) => r.type === "TIER" || !r.type);
       const formattedTiers: RewardData[] = tierRewards.map((reward: {
         id: string;
@@ -615,7 +305,6 @@ export default function PledgePage() {
       }));
       setAllRewards(formattedTiers);
 
-      // Find the selected reward if rewardId is provided
       if (rewardId) {
         const reward = rewards.find((r: { id: string }) => r.id === rewardId);
         if (reward) {
@@ -641,7 +330,6 @@ export default function PledgePage() {
         }
       }
 
-      // Get addons
       const formattedAddons: AddonData[] = addonsFromApi.map((addon: {
         id: string;
         title: string;
@@ -684,7 +372,6 @@ export default function PledgePage() {
     fetchData();
   }, [fetchData]);
 
-  // Fetch DivinityCoin balance when project uses DivinityCoin
   useEffect(() => {
     const fetchDivinityCoinBalance = async () => {
       if (project?.paymentProcessor === "DIVINITYCOIN") {
@@ -707,7 +394,6 @@ export default function PledgePage() {
   const handleAddonToggle = (addonId: string) => {
     setSelectedAddons((prev) => {
       if (prev[addonId]) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [addonId]: _removed, ...rest } = prev;
         return rest;
       }
@@ -721,17 +407,15 @@ export default function PledgePage() {
       const newQty = Math.max(0, currentQty + delta);
 
       if (newQty === 0) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [addonId]: _removed, ...rest } = prev;
         return rest;
       }
 
-      // Check limited quantity if applicable
       const addon = addons.find(a => a.id === addonId);
       if (addon?.limitedQuantity !== null && addon?.limitedQuantity !== undefined) {
         const availableQty = addon.limitedQuantity - addon.quantityClaimed;
         if (newQty > availableQty) {
-          return prev; // Don't exceed available quantity
+          return prev;
         }
       }
 
@@ -748,83 +432,30 @@ export default function PledgePage() {
   const handlePledgeWithoutReward = () => {
     setPledgeWithoutReward(true);
     setSelectedReward(null);
-    setSelectedAddons({}); // Clear any previously selected addons
-    setStep("payment"); // Skip addons step - go directly to payment
+    setSelectedAddons({});
+    setStep("payment");
   };
 
-  // Called when payment is successful
   const handlePaymentSuccess = async () => {
     if (currentPledgeId) {
       try {
-        if (isAddItemsMode) {
-          // Confirm additional items purchase
-          await fetch(`/api/pledges/${currentPledgeId}/confirm-add-items`, {
-            method: "POST",
-          });
-        } else {
-          // Send confirmation email directly (don't rely on webhooks)
-          await fetch(`/api/pledges/${currentPledgeId}/confirm`, {
-            method: "POST",
-          });
-        }
+        await confirmPayment(currentPledgeId, isAddItemsMode);
       } catch (err) {
         console.error("Failed to confirm payment:", err);
-        // Don't block success page - can be retried later
       }
     }
     setStep("success");
     setIsProcessing(false);
   };
 
-  // Called when payment fails
   const handlePaymentError = (message: string) => {
     setPaymentError(message);
   };
 
-  const currentCountry = SHIPPING_COUNTRIES.find((c) => c.code === shippingCountry);
-
-  // Breadcrumb navigation
-  const Breadcrumb = () => (
-    <div className="flex items-center gap-2 text-sm">
-      {/* In add items mode, skip rewards step */}
-      {!isAddItemsMode && (
-        <>
-          <button
-            onClick={() => setStep("rewards")}
-            className={step === "rewards" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}
-          >
-            Rewards
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </>
-      )}
-      {/* Show Add-ons step when there's a selected reward or in add items mode */}
-      {(selectedReward || isAddItemsMode) && (
-        <>
-          <button
-            onClick={() => setStep("addons")}
-            className={step === "addons" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}
-          >
-            {isAddItemsMode ? "Select Items" : "Add-ons"}
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </>
-      )}
-      <button
-        onClick={() => (selectedReward || pledgeWithoutReward || (isAddItemsMode && Object.keys(selectedAddons).length > 0)) && setStep("payment")}
-        className={step === "payment" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"}
-        disabled={!selectedReward && !pledgeWithoutReward && !(isAddItemsMode && Object.keys(selectedAddons).length > 0)}
-      >
-        Payment
-      </button>
-    </div>
-  );
-
-  // Auth loading state - wait for auth check before showing content
+  // Auth loading state
   if (authStatus === "loading" || authStatus === "unauthenticated") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center relative">
-        {/* Background Effects */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
           <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
@@ -846,7 +477,6 @@ export default function PledgePage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center relative">
-        {/* Background Effects */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
           <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-cyan-500/10" style={{ animationDelay: '-5s' }} />
@@ -866,7 +496,6 @@ export default function PledgePage() {
   if (error || !project) {
     return (
       <div className="min-h-screen bg-background relative">
-        {/* Background Effects */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-red-500/10" />
           <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-orange-500/10" style={{ animationDelay: '-5s' }} />
@@ -900,210 +529,21 @@ export default function PledgePage() {
 
   if (step === "success") {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-background dark:from-green-950/20 dark:to-background overflow-hidden relative">
-        {/* Confetti Animation */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          {[...Array(50)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute animate-confetti"
-              style={{
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${3 + Math.random() * 2}s`,
-              }}
-            >
-              <div
-                className="w-3 h-3 rotate-45"
-                style={{
-                  backgroundColor: ['#05ce78', '#ffc439', '#e85b46', '#1da1f2', '#9333ea', '#f97316'][Math.floor(Math.random() * 6)],
-                  transform: `rotate(${Math.random() * 360}deg)`,
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Firework bursts */}
-        <div className="fixed inset-0 pointer-events-none">
-          <div className="absolute top-20 left-1/4 animate-ping">
-            <div className="w-4 h-4 rounded-full bg-yellow-400 opacity-75" />
-          </div>
-          <div className="absolute top-32 right-1/4 animate-ping" style={{ animationDelay: '0.5s' }}>
-            <div className="w-3 h-3 rounded-full bg-green-400 opacity-75" />
-          </div>
-          <div className="absolute top-16 right-1/3 animate-ping" style={{ animationDelay: '1s' }}>
-            <div className="w-5 h-5 rounded-full bg-purple-400 opacity-75" />
-          </div>
-        </div>
-
-        <style jsx>{`
-          @keyframes confetti {
-            0% {
-              transform: translateY(-100vh) rotate(0deg);
-              opacity: 1;
-            }
-            100% {
-              transform: translateY(100vh) rotate(720deg);
-              opacity: 0;
-            }
-          }
-          .animate-confetti {
-            animation: confetti 5s linear infinite;
-          }
-        `}</style>
-
-        <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-          <div className="container flex h-14 items-center">
-            <Link href="/" className="text-xl font-bold text-primary">
-              IndieCrowdfund
-            </Link>
-          </div>
-        </header>
-
-        <div className="container py-16 relative z-10">
-          <div className="mx-auto max-w-lg text-center">
-            {/* Animated checkmark with glow */}
-            <div className="mx-auto mb-8 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-green-600 shadow-lg shadow-green-500/30 animate-bounce">
-              <CheckCircle className="h-14 w-14 text-white" />
-            </div>
-
-            {/* Main message */}
-            <h1 className="mb-3 text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
-              {isAddItemsMode
-                ? "Additional items added successfully!"
-                : "Thank you for making this project come to life!"}
-            </h1>
-
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-green-100 dark:bg-green-900/50 px-4 py-2 text-green-700 dark:text-green-300">
-              <CheckCircle className="h-5 w-5" />
-              <span className="font-medium">
-                {isAddItemsMode ? "Your purchase has been completed!" : "Your payment has been accepted!"}
-              </span>
-            </div>
-
-            <p className="mb-10 text-lg text-muted-foreground">
-              {isAddItemsMode ? (
-                <>Your additional items have been added to your pledge. You&apos;ll receive a confirmation email shortly.</>
-              ) : (
-                <>Your support means the world to <span className="font-semibold text-foreground">{project?.creator?.name || 'the creator'}</span>.
-                You&apos;ll receive a confirmation email shortly with all the details.</>
-              )}
-            </p>
-
-            {/* Action buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/dashboard/backer">
-                <Button size="lg" className="w-full sm:w-auto bg-[#05ce78] hover:bg-[#04b56a] text-white font-semibold px-8">
-                  Backer Dashboard
-                </Button>
-              </Link>
-              <Link href="/discover">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto px-8">
-                  Keep Exploring
-                </Button>
-              </Link>
-            </div>
-
-            {/* Pledge Summary Card */}
-            {project && (
-              <div className="mt-12 p-6 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border text-left max-w-md mx-auto">
-                {/* Project Header */}
-                <div className="flex items-center gap-4 pb-4 border-b">
-                  {project.imageUrl && (
-                    <Image
-                      src={project.imageUrl}
-                      alt={project.title}
-                      width={80}
-                      height={60}
-                      className="rounded-lg object-cover"
-                    />
-                  )}
-                  <div>
-                    <h3 className="font-semibold">{project.title}</h3>
-                    <p className="text-sm text-muted-foreground">by {project.creator?.name}</p>
-                  </div>
-                </div>
-
-                {/* Itemized Breakdown */}
-                <div className="py-4 space-y-3">
-                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pledge Breakdown</h4>
-
-                  {/* Reward Tier */}
-                  {isAddItemsMode ? (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Adding items to existing pledge</span>
-                    </div>
-                  ) : pledgeWithoutReward ? (
-                    <div className="flex justify-between text-sm">
-                      <span>Pledge (no reward)</span>
-                      <span className="font-medium">${customPledgeAmount.toFixed(2)}</span>
-                    </div>
-                  ) : selectedReward && (
-                    <div className="flex justify-between text-sm">
-                      <span>{selectedReward.title}</span>
-                      <span className="font-medium">${selectedReward.amount.toFixed(2)}</span>
-                    </div>
-                  )}
-
-                  {/* Add-ons */}
-                  {Object.keys(selectedAddons).length > 0 && (
-                    <>
-                      <div className="pt-2 border-t">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Add-ons</p>
-                        {Object.entries(selectedAddons).map(([id, qty]) => {
-                          const addon = addons.find(a => a.id === id);
-                          if (!addon) return null;
-                          return (
-                            <div key={id} className="flex justify-between text-sm py-0.5">
-                              <span>{addon.title} × {qty}</span>
-                              <span className="font-medium">${(addon.amount * qty).toFixed(2)}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Bonus Support */}
-                  {!isAddItemsMode && bonusSupport > 0 && (
-                    <div className="flex justify-between text-sm pt-2 border-t">
-                      <span>Bonus support</span>
-                      <span className="font-medium">${bonusSupport.toFixed(2)}</span>
-                    </div>
-                  )}
-
-                  {/* Shipping */}
-                  {(isAddItemsMode ? addonsShipping : totalShipping) > 0 && (
-                    <div className="flex justify-between text-sm pt-2 border-t">
-                      <span>Shipping to {currentCountry?.name}</span>
-                      <span className="font-medium">${(isAddItemsMode ? addonsShipping : totalShipping).toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Total */}
-                <div className="pt-4 border-t">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">Total Charged</span>
-                    <span className="text-xl font-bold text-green-600">${(isAddItemsMode ? addItemsTotal : total).toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* Estimated Delivery */}
-                {!isAddItemsMode && selectedReward?.estimatedDelivery && (
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Estimated Delivery</span>
-                      <span className="font-medium">{selectedReward.estimatedDelivery}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <SuccessPage
+        project={project}
+        isAddItemsMode={isAddItemsMode}
+        pledgeWithoutReward={pledgeWithoutReward}
+        selectedReward={selectedReward}
+        customPledgeAmount={customPledgeAmount}
+        selectedAddons={selectedAddons}
+        addons={addons}
+        bonusSupport={bonusSupport}
+        shippingCountry={shippingCountry}
+        totalShipping={totalShipping}
+        addonsShipping={addonsShipping}
+        total={total}
+        addItemsTotal={addItemsTotal}
+      />
     );
   }
 
@@ -1119,7 +559,6 @@ export default function PledgePage() {
       {/* Header */}
       <header className="border-b border-border/50 glass-card relative z-10">
         <div className="container py-6">
-          {/* Project title and creator - centered */}
           <div className="text-center mb-4">
             <h1 className="text-2xl md:text-3xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80">{project.title}</h1>
             <div className="flex items-center justify-center gap-2">
@@ -1139,933 +578,97 @@ export default function PledgePage() {
               <span className="text-sm text-muted-foreground">by <span className="font-medium text-foreground/80">{project.creator.name}</span></span>
             </div>
           </div>
-          {/* Breadcrumb - centered */}
           <div className="flex justify-center">
-            <Breadcrumb />
+            <Breadcrumb
+              step={step}
+              setStep={setStep}
+              selectedReward={selectedReward}
+              pledgeWithoutReward={pledgeWithoutReward}
+              isAddItemsMode={isAddItemsMode}
+              selectedAddons={selectedAddons}
+            />
           </div>
         </div>
       </header>
 
       <div className="container py-8">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-3">
-          {/* Main Content - 2 columns */}
+          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {step === "rewards" && (
-              <>
-                {/* Page heading */}
-                <div>
-                  <h2 className="text-xl font-semibold mb-1">Select your reward</h2>
-                  <p className="text-muted-foreground text-sm">
-                    Pick which reward you&apos;d like to pledge for
-                  </p>
-                </div>
-
-                {/* Pledge without reward */}
-                <Card className="glass-card glass-card-hover rounded-2xl border-border/50">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold mb-1">Pledge without a reward</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Support the project for no reward, just because it speaks to you.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center border border-border/50 rounded-lg glass-card">
-                          <span className="px-3 text-muted-foreground">$</span>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={customPledgeAmount}
-                            onChange={(e) => setCustomPledgeAmount(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-20 border-0 focus-visible:ring-0 bg-transparent"
-                          />
-                        </div>
-                        <Button
-                          onClick={handlePledgeWithoutReward}
-                          className="bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white whitespace-nowrap shadow-lg shadow-[#028858]/20"
-                        >
-                          Pledge ${customPledgeAmount}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Available rewards header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <h3 className="font-semibold">Available rewards</h3>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Your shipping location:</span>
-                    <Select value={shippingCountry} onValueChange={setShippingCountry}>
-                      <SelectTrigger className="w-52 h-8">
-                        <SelectValue>
-                          {SHIPPING_COUNTRIES.find(c => c.code === shippingCountry)?.name || shippingCountry}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {/* Filter out WW (Worldwide) - it's a creator option, not a user location */}
-                        {SHIPPING_COUNTRIES.filter(c => c.code !== "WW").map((country) => (
-                          <SelectItem key={country.code} value={country.code}>
-                            {country.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Reward cards */}
-                {allRewards.length > 0 ? (
-                  <div className="space-y-4">
-                    {allRewards.map((reward, index) => {
-                      const shipping = getShippingCost(reward.shippingCost, reward.shippingType, shippingCountry);
-
-                      return (
-                        <Card
-                          key={reward.id}
-                          className="glass-card glass-card-hover rounded-2xl border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4"
-                          style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
-                        >
-                          <CardContent className="p-0">
-                            <div className="flex flex-col md:flex-row">
-                              {/* Left side - Content */}
-                              <div className="flex-1 p-6 order-2 md:order-1">
-                                {/* Title */}
-                                <h4 className="font-semibold text-lg uppercase tracking-wide mb-1">
-                                  {reward.title}
-                                </h4>
-
-                                {/* Price and shipping */}
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="font-semibold">${reward.amount}</span>
-                                  {shipping > 0 && (
-                                    <>
-                                      <span className="text-muted-foreground text-sm">+${shipping} shipping</span>
-                                      <button className="text-muted-foreground hover:text-foreground">
-                                        <Info className="h-4 w-4" />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-
-                                {/* Backer count */}
-                                <p className="text-sm text-muted-foreground mb-3">
-                                  {reward.quantityClaimed} backer{reward.quantityClaimed !== 1 ? "s" : ""}
-                                </p>
-
-                                {/* Description */}
-                                {reward.description && (
-                                  <p className="text-sm mb-4">{reward.description}</p>
-                                )}
-
-                                {/* Shipping info */}
-                                {reward.shippingType !== "NO_SHIPPING" && (
-                                  <p className="text-sm text-muted-foreground mb-1">
-                                    Ships to {reward.shippingType === "WORLDWIDE" ? "Anywhere in the world" : currentCountry?.name}
-                                  </p>
-                                )}
-
-                                {/* Estimated delivery */}
-                                {reward.estimatedDelivery && (
-                                  <p className="text-sm text-muted-foreground mb-4">
-                                    Estimated delivery {reward.estimatedDelivery}
-                                  </p>
-                                )}
-
-                                {/* Includes */}
-                                {reward.items.length > 0 && (
-                                  <div className="border-t pt-3">
-                                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                                      Includes
-                                    </p>
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                      {reward.items.map((item, idx) => (
-                                        <div key={idx} className="flex items-center gap-2 text-sm">
-                                          <span className="w-5 h-5 rounded border border-zinc-300 flex items-center justify-center text-xs text-muted-foreground">
-                                            {item.quantity}
-                                          </span>
-                                          {item.title}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Right side - Image and button */}
-                              <div className="w-full md:w-44 flex-shrink-0 flex flex-col border-t md:border-t-0 md:border-l order-1 md:order-2">
-                                {/* Image */}
-                                <div className="relative aspect-video md:aspect-square bg-zinc-100">
-                                  {reward.imageUrl ? (
-                                    <Image
-                                      src={reward.imageUrl}
-                                      alt={reward.title}
-                                      fill
-                                      sizes="(max-width: 768px) 100vw, 176px"
-                                      className="object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      <span className="text-zinc-400 text-xs uppercase tracking-wider text-center px-2">
-                                        {reward.title.split(" ").slice(0, 2).join(" ")}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Pledge button */}
-                                <Button
-                                  onClick={() => handleSelectReward(reward)}
-                                  className="rounded-b-xl md:rounded-none h-12 bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white font-medium shadow-lg shadow-[#028858]/20"
-                                >
-                                  Pledge ${reward.amount}
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <Card className="glass-card rounded-2xl border-dashed border-border/50">
-                    <CardContent className="p-6 text-center">
-                      <p className="text-muted-foreground">No reward tiers available for this project.</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        You can still support by pledging without a reward.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
+              <RewardSelector
+                allRewards={allRewards}
+                customPledgeAmount={customPledgeAmount}
+                setCustomPledgeAmount={setCustomPledgeAmount}
+                handlePledgeWithoutReward={handlePledgeWithoutReward}
+                shippingCountry={shippingCountry}
+                setShippingCountry={setShippingCountry}
+                handleSelectReward={handleSelectReward}
+                getShippingCost={getShippingCost}
+              />
             )}
 
             {step === "addons" && (
-              <>
-                <div>
-                  <h2 className="text-xl font-semibold mb-1">
-                    {isAddItemsMode ? "Add Additional Items" : "Add-ons"}
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    {isAddItemsMode
-                      ? "Select items to add to your existing pledge. You will be charged immediately for these additions."
-                      : "Extras available to add to your pledge"
-                    }
-                  </p>
-                </div>
-
-                {addons.length > 0 ? (
-                  <div className="space-y-4">
-                    {addons.map((addon) => {
-                      const isSelected = selectedAddons[addon.id] > 0;
-                      const shipping = getShippingCost(addon.shippingCost, addon.shippingType, shippingCountry);
-
-                      return (
-                        <Card
-                          key={addon.id}
-                          className={`overflow-hidden transition-all glass-card rounded-2xl animate-in fade-in slide-in-from-bottom-4 ${
-                            isSelected ? "ring-2 ring-[#028858] border-[#028858]" : "border-border/50"
-                          }`}
-                          style={{ animationDelay: `${addons.indexOf(addon) * 100}ms`, animationFillMode: 'backwards' }}
-                        >
-                          <CardContent className="p-0">
-                            <div className="flex flex-col md:flex-row">
-                              {/* Left side - Content */}
-                              <div className="flex-1 p-5 order-2 md:order-1">
-                                <h4 className="font-semibold text-lg uppercase tracking-wide mb-1">
-                                  {addon.title}
-                                </h4>
-
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="font-semibold">${addon.amount}</span>
-                                  {shipping > 0 && (
-                                    <span className="text-muted-foreground text-sm">+${shipping} shipping</span>
-                                  )}
-                                </div>
-
-                                <p className="text-sm text-muted-foreground mb-3">
-                                  {addon.quantityClaimed} backer{addon.quantityClaimed !== 1 ? "s" : ""}
-                                </p>
-
-                                {addon.description && (
-                                  <p className="text-sm mb-4">{addon.description}</p>
-                                )}
-
-                                {addon.shippingType !== "NO_SHIPPING" && (
-                                  <p className="text-sm text-muted-foreground mb-1">
-                                    Ships to {addon.shippingType === "WORLDWIDE" ? "Anywhere in the world" : currentCountry?.name}
-                                  </p>
-                                )}
-
-                                {addon.estimatedDelivery && (
-                                  <p className="text-sm text-muted-foreground mb-4">
-                                    Estimated delivery {addon.estimatedDelivery}
-                                  </p>
-                                )}
-
-                                {addon.includes.length > 0 && (
-                                  <div className="border-t pt-3">
-                                    <p className="text-xs font-medium text-muted-foreground mb-2">Includes</p>
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                      {addon.includes.map((item, idx) => (
-                                        <div key={idx} className="flex items-center gap-2 text-sm">
-                                          <span className="w-5 h-5 rounded border border-zinc-300 flex items-center justify-center text-xs text-muted-foreground">
-                                            1
-                                          </span>
-                                          {item}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Right side - Image and button */}
-                              <div className="w-full md:w-44 flex-shrink-0 flex flex-col border-t md:border-t-0 md:border-l order-1 md:order-2">
-                                <div className="relative aspect-video md:aspect-square bg-zinc-100">
-                                  {addon.imageUrl ? (
-                                    <Image
-                                      src={addon.imageUrl}
-                                      alt={addon.title}
-                                      fill
-                                      sizes="(max-width: 768px) 100vw, 176px"
-                                      className="object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      <span className="text-zinc-400 text-xs uppercase tracking-wider text-center px-2">
-                                        {addon.title.split(" ").slice(0, 2).join(" ")}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {isSelected ? (
-                                  /* Quantity controls when addon is selected */
-                                  <div className="flex items-center h-12 bg-[#028858]">
-                                    <Button
-                                      onClick={() => handleAddonQuantityChange(addon.id, -1)}
-                                      className="h-full px-3 rounded-none bg-transparent hover:bg-[#026d47] text-white border-r border-white/20"
-                                      variant="ghost"
-                                    >
-                                      <Minus className="h-4 w-4" />
-                                    </Button>
-                                    <div className="flex-1 flex items-center justify-center text-white font-medium">
-                                      {selectedAddons[addon.id]}
-                                    </div>
-                                    <Button
-                                      onClick={() => handleAddonQuantityChange(addon.id, 1)}
-                                      className="h-full px-3 rounded-none bg-transparent hover:bg-[#026d47] text-white border-l border-white/20"
-                                      variant="ghost"
-                                      disabled={addon.limitedQuantity !== null && addon.limitedQuantity !== undefined && selectedAddons[addon.id] >= (addon.limitedQuantity - addon.quantityClaimed)}
-                                    >
-                                      <Plus className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    onClick={() => handleAddonToggle(addon.id)}
-                                    className="rounded-none h-12 font-medium bg-zinc-900 hover:bg-zinc-800 text-white w-full"
-                                  >
-                                    Add
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <Card className="border-dashed">
-                    <CardContent className="p-6 text-center">
-                      <p className="text-muted-foreground">No add-ons available for this project.</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
+              <AddonSelector
+                addons={addons}
+                selectedAddons={selectedAddons}
+                isAddItemsMode={isAddItemsMode}
+                shippingCountry={shippingCountry}
+                handleAddonToggle={handleAddonToggle}
+                handleAddonQuantityChange={handleAddonQuantityChange}
+                getShippingCost={getShippingCost}
+              />
             )}
 
             {step === "payment" && (
-              <div className="space-y-8">
-                {/* Confirm payment method heading */}
-                <div>
-                  <h2 className="text-xl font-semibold mb-3">Confirm your payment method</h2>
-                  {isAddItemsMode ? (
-                    // Add-items mode - always charged immediately
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      Your payment method will be charged immediately for these additional items.
-                      You&apos;ll receive a confirmation email when your purchase is successfully processed.
-                    </p>
-                  ) : project && Number(project.currentAmount) >= Number(project.goalAmount) ? (
-                    // Campaign already funded - charged immediately
-                    <>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        This project has already reached its funding goal! Your payment method will be charged immediately
-                        when you complete your pledge. You&apos;ll receive a confirmation email when your pledge is successfully processed.
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-                        Any shipping costs and applicable taxes will be charged separately, when the creator is ready to
-                        begin fulfillment.
-                      </p>
-                    </>
-                  ) : (
-                    // Campaign not yet funded - card saved for later
-                    <>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        We won&apos;t charge you at this time. If the project reaches its funding goal, your payment method will
-                        be charged when the campaign ends. You&apos;ll receive a confirmation email when your pledge is successfully processed.
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-                        Any shipping costs and applicable taxes will be charged separately, when the creator is ready to
-                        begin fulfillment.
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                {/* Collection plan */}
-                <Card>
-                  <CardContent className="p-0">
-                    <h3 className="font-medium px-5 pt-5 pb-3">Collection plan</h3>
-
-                    {/* Pledge in full option */}
-                    <div className="border-t px-5 py-4">
-                      <label className="flex items-start gap-3 cursor-pointer">
-                        <div className="mt-0.5">
-                          <div className="w-5 h-5 rounded-full border-2 border-foreground flex items-center justify-center">
-                            <div className="w-2.5 h-2.5 rounded-full bg-foreground" />
-                          </div>
-                        </div>
-                        <span className="font-medium">Pledge in full</span>
-                      </label>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Payment method */}
-                <Card>
-                  <CardContent className="p-5">
-                    <h3 className="font-medium mb-4">Payment</h3>
-
-                    {/* Show error if any - only for Stripe, not DivinityCoin */}
-                    {paymentError && project?.paymentProcessor !== "DIVINITYCOIN" && (
-                      <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                        <p className="text-sm text-red-600 dark:text-red-400 mb-2">{paymentError}</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setPaymentError(null);
-                            setClientSecret(null);
-                            setIsProcessing(false);
-                            // This will trigger the useEffect to create a new pledge
-                          }}
-                        >
-                          Try Again
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Payment Form - DivinityCoin or Stripe */}
-                    {project?.paymentProcessor === "DIVINITYCOIN" ? (
-                      /* DivinityCoin Payment */
-                      divinityCoinReady ? (
-                        <div className="space-y-4">
-                          {/* DivinityCoin Balance Card */}
-                          <div className="rounded-xl border-2 border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 via-white to-[#0066FF]/10 dark:from-[#0066FF]/10 dark:via-zinc-900 dark:to-[#0066FF]/5 p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-[#0066FF] flex items-center justify-center">
-                                  <span className="text-white font-bold text-sm">D</span>
-                                </div>
-                                <span className="font-semibold text-[#0066FF]">DivinityCoin</span>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Your Balance</span>
-                                <span className="font-semibold">${divinityCoinBalance.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Pledge Amount</span>
-                                <span className="font-semibold">${total.toFixed(2)}</span>
-                              </div>
-                              <div className="border-t pt-2 mt-2">
-                                <div className="flex justify-between">
-                                  <span className={divinityCoinBalance >= total ? "text-emerald-600" : "text-red-500"}>
-                                    {divinityCoinBalance >= total ? "Remaining Balance" : "Additional Needed"}
-                                  </span>
-                                  <span className={`font-bold ${divinityCoinBalance >= total ? "text-emerald-600" : "text-red-500"}`}>
-                                    ${Math.abs(divinityCoinBalance - total).toFixed(2)}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {divinityCoinBalance < total && (
-                            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 space-y-3">
-                              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                                You need ${(total - divinityCoinBalance).toFixed(2)} more in credits to complete this pledge.
-                              </p>
-                              <div className="text-sm text-amber-700 dark:text-amber-300 space-y-2">
-                                <p className="flex items-start gap-2">
-                                  <span className="font-semibold">1.</span>
-                                  <span>
-                                    <a
-                                      href="https://divinitycoin.com"
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="font-semibold underline"
-                                    >
-                                      Purchase DivinityCoin credits
-                                    </a>{" "}
-                                    - you&apos;ll receive a voucher code
-                                  </span>
-                                </p>
-                                <p className="flex items-start gap-2">
-                                  <span className="font-semibold">2.</span>
-                                  <span>
-                                    <a
-                                      href="/dashboard/backer?tab=wallet"
-                                      className="font-semibold underline"
-                                    >
-                                      Redeem your code in your wallet
-                                    </a>{" "}
-                                    to add credits to your balance
-                                  </span>
-                                </p>
-                                <p className="flex items-start gap-2">
-                                  <span className="font-semibold">3.</span>
-                                  <span>Return here to complete your pledge</span>
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          <Button
-                            className="w-full bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium disabled:opacity-50"
-                            size="lg"
-                            onClick={async () => {
-                              if (!agreedToTerms || divinityCoinBalance < total) return;
-                              setIsProcessing(true);
-                              try {
-                                // Process DivinityCoin payment
-                                const response = await fetch("/api/divinitycoin/pay", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-                                  body: JSON.stringify({
-                                    pledgeId: currentPledgeId,
-                                    amount: total,
-                                  }),
-                                });
-                                const result = await response.json();
-                                if (!response.ok) {
-                                  throw new Error(result.error || "Payment failed");
-                                }
-                                setDivinityCoinBalance(result.newBalance);
-                                handlePaymentSuccess();
-                              } catch (err) {
-                                handlePaymentError(err instanceof Error ? err.message : "Payment failed");
-                              } finally {
-                                setIsProcessing(false);
-                              }
-                            }}
-                            disabled={!agreedToTerms || divinityCoinBalance < total || isProcessing}
-                          >
-                            {isProcessing ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Processing...
-                              </>
-                            ) : (
-                              <>
-                                <Coins className="w-4 h-4 mr-2" />
-                                Pay ${total.toFixed(2)} with DivinityCoin
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="flex flex-col items-center justify-center py-8">
-                            <Loader2 className="h-8 w-8 animate-spin text-[#0066FF] mb-3" />
-                            <p className="text-sm text-muted-foreground">Loading DivinityCoin...</p>
-                          </div>
-                        </div>
-                      )
-                    ) : (
-                      /* Stripe Payment */
-                      clientSecret && stripePromise ? (
-                        <Elements
-                          stripe={stripePromise}
-                          options={{
-                            clientSecret,
-                            appearance: {
-                              theme: "stripe",
-                              variables: {
-                                colorPrimary: "#028858",
-                              },
-                            },
-                          }}
-                        >
-                          <StripePaymentForm
-                            onSuccess={handlePaymentSuccess}
-                            onError={handlePaymentError}
-                            agreedToTerms={agreedToTerms}
-                            isProcessing={isProcessing}
-                            setIsProcessing={setIsProcessing}
-                            total={total}
-                            intentType={intentType}
-                            pledgeId={currentPledgeId}
-                            projectPath={projectPath}
-                          />
-                        </Elements>
-                      ) : (
-                        /* Loading state while creating pledge and loading Stripe */
-                        <div className="space-y-4">
-                          <div className="flex flex-col items-center justify-center py-8">
-                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                            <p className="text-sm text-muted-foreground">Loading payment form...</p>
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+              <PaymentStep
+                project={project}
+                isAddItemsMode={isAddItemsMode}
+                paymentError={paymentError}
+                setPaymentError={setPaymentError}
+                setClientSecret={setClientSecret}
+                setIsProcessing={setIsProcessing}
+                divinityCoinReady={divinityCoinReady}
+                divinityCoinBalance={divinityCoinBalance}
+                total={total}
+                agreedToTerms={agreedToTerms}
+                currentPledgeId={currentPledgeId}
+                handlePaymentSuccess={handlePaymentSuccess}
+                handlePaymentError={handlePaymentError}
+                isProcessing={isProcessing}
+                setDivinityCoinBalance={setDivinityCoinBalance}
+                clientSecret={clientSecret}
+                stripePromise={stripePromise}
+                intentType={intentType}
+                projectPath={projectPath}
+              />
             )}
           </div>
 
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-6 space-y-6">
-              {/* Order Summary for Add-ons step - Add Items Mode */}
-              {step === "addons" && isAddItemsMode && (
-                <Card className="glass-card rounded-2xl border-border/50">
-                  <CardContent className="p-6">
-                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Additional Items</p>
-
-                    {/* Selected Add-ons */}
-                    {Object.keys(selectedAddons).length > 0 ? (
-                      <div className="pb-4 border-b">
-                        {Object.entries(selectedAddons).map(([id, qty]) => {
-                          const addon = addons.find(a => a.id === id);
-                          if (!addon) return null;
-                          return (
-                            <div key={id} className="flex justify-between text-sm py-1">
-                              <span>{addon.title} x{qty}</span>
-                              <span>${Number(addon.amount) * qty}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground pb-4 border-b">
-                        Select items to add to your pledge
-                      </p>
-                    )}
-
-                    {/* Shipping */}
-                    {addonsShipping > 0 && (
-                      <div className="py-4 border-b">
-                        <div className="flex justify-between text-sm">
-                          <span>Shipping to {currentCountry?.name}</span>
-                          <span>${addonsShipping}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Total */}
-                    <div className="pt-4">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Total</span>
-                        <span className="text-xl font-bold">${addItemsTotal}</span>
-                      </div>
-                    </div>
-
-                    {/* Continue button */}
-                    <div className="mt-4">
-                      <Button
-                        className="w-full bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white font-medium shadow-lg shadow-[#028858]/20"
-                        size="lg"
-                        onClick={() => setStep("payment")}
-                        disabled={Object.keys(selectedAddons).length === 0}
-                      >
-                        Continue to Payment
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Order Summary for Add-ons step - Normal Mode */}
-              {step === "addons" && !isAddItemsMode && (selectedReward || pledgeWithoutReward) && (
-                <Card className="glass-card rounded-2xl border-border/50">
-                  <CardContent className="p-5">
-                    {/* Selected reward */}
-                    <div className="pb-4 border-b">
-                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Your pledge</p>
-                      {pledgeWithoutReward ? (
-                        <div className="flex justify-between">
-                          <span className="font-medium">No reward</span>
-                          <span className="font-semibold">${customPledgeAmount}</span>
-                        </div>
-                      ) : selectedReward && (
-                        <div className="flex justify-between">
-                          <span className="font-medium">{selectedReward.title}</span>
-                          <span className="font-semibold">${selectedReward.amount}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Add-ons */}
-                    {Object.keys(selectedAddons).length > 0 && (
-                      <div className="py-4 border-b">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Add-ons</p>
-                        {Object.entries(selectedAddons).map(([id, qty]) => {
-                          const addon = addons.find(a => a.id === id);
-                          if (!addon) return null;
-                          return (
-                            <div key={id} className="flex justify-between text-sm">
-                              <span>{addon.title} x{qty}</span>
-                              <span>${Number(addon.amount) * qty}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Bonus support */}
-                    <div className="py-4 border-b">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium">Bonus support</p>
-                        <button className="text-muted-foreground hover:text-foreground">
-                          <Info className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <div className="flex items-center border rounded-md">
-                        <span className="px-3 text-muted-foreground">$</span>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={bonusSupport || ""}
-                          onChange={(e) => setBonusSupport(Number(e.target.value) || 0)}
-                          className="border-0 focus-visible:ring-0"
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Shipping */}
-                    {totalShipping > 0 && (
-                      <div className="py-4 border-b">
-                        <div className="flex justify-between text-sm">
-                          <span>Shipping to {currentCountry?.name}</span>
-                          <span>${totalShipping}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Total */}
-                    <div className="pt-4">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Total</span>
-                        <span className="text-xl font-bold">${total}</span>
-                      </div>
-                    </div>
-
-                    {/* Continue button */}
-                    <div className="mt-4">
-                      <Button
-                        className="w-full bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white font-medium shadow-lg shadow-[#028858]/20"
-                        size="lg"
-                        onClick={() => setStep("payment")}
-                      >
-                        Continue
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Payment step sidebar - Add Items Mode */}
-              {step === "payment" && isAddItemsMode && Object.keys(selectedAddons).length > 0 && (
-                <Card className="glass-card rounded-2xl border-border/50">
-                  <CardContent className="p-5">
-                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Additional Items</p>
-
-                    {/* Selected Add-ons */}
-                    <div className="pb-4 border-b">
-                      {Object.entries(selectedAddons).map(([id, qty]) => {
-                        const addon = addons.find(a => a.id === id);
-                        if (!addon) return null;
-                        return (
-                          <div key={id} className="flex justify-between text-sm py-1">
-                            <span>{addon.title} x{qty}</span>
-                            <span>${Number(addon.amount) * qty}.00</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Shipping */}
-                    {addonsShipping > 0 && (
-                      <div className="py-4 border-b">
-                        <div className="flex justify-between text-sm">
-                          <span>Shipping to {currentCountry?.name}</span>
-                          <span>${addonsShipping}.00</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Total amount */}
-                    <div className="py-4 border-b">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Total amount</span>
-                        <span className="text-xl font-bold">${addItemsTotal}.00</span>
-                      </div>
-                    </div>
-
-                    {/* Disclaimer */}
-                    <div className="py-4">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        This purchase will be charged immediately to your payment method.
-                      </p>
-
-                      <div className="flex items-start gap-3 mb-4">
-                        <Checkbox
-                          id="terms-add-items"
-                          checked={agreedToTerms}
-                          onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
-                        />
-                        <Label htmlFor="terms-add-items" className="text-xs leading-relaxed text-muted-foreground">
-                          I understand that rewards or reimbursements aren&apos;t guaranteed by either IndieCrowdfund or the creator.
-                        </Label>
-                      </div>
-
-                      {/* Status message */}
-                      {!clientSecret ? (
-                        <div className="flex items-center justify-center gap-2 py-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Setting up payment...</span>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-center text-muted-foreground">
-                          Enter your card details above to complete your purchase.
-                        </p>
-                      )}
-
-                      <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
-                        By submitting, you agree to IndieCrowdfund&apos;s{" "}
-                        <Link href="/terms" className="underline">Terms of Use</Link>
-                        , and{" "}
-                        <Link href="/privacy" className="underline">Privacy Policy</Link>
-                        , and for our payment processor, Stripe, to charge your payment method.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Payment step sidebar - Normal Mode */}
-              {step === "payment" && !isAddItemsMode && (selectedReward || pledgeWithoutReward) && (
-                <Card className="glass-card rounded-2xl border-border/50">
-                  <CardContent className="p-5">
-                    {/* Reward */}
-                    <div className="pb-4 border-b">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Reward</p>
-                      <div className="flex justify-between">
-                        <span className="font-medium uppercase text-sm">
-                          {pledgeWithoutReward ? "No reward" : selectedReward?.title}
-                        </span>
-                        <span className="font-semibold">${pledgeWithoutReward ? customPledgeAmount : selectedReward?.amount}.00</span>
-                      </div>
-                    </div>
-
-                    {/* Add-ons on payment page */}
-                    {Object.keys(selectedAddons).length > 0 && (
-                      <div className="py-4 border-b">
-                        {Object.entries(selectedAddons).map(([id, qty]) => {
-                          const addon = addons.find(a => a.id === id);
-                          if (!addon) return null;
-                          return (
-                            <div key={id} className="flex justify-between text-sm">
-                              <span>{addon.title} x{qty}</span>
-                              <span>${Number(addon.amount) * qty}.00</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Shipping */}
-                    <div className="py-4 border-b">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Shipping</p>
-                      <div className="flex justify-between text-sm">
-                        <span>{currentCountry?.name}</span>
-                        <span>${totalShipping}.00</span>
-                      </div>
-                    </div>
-
-                    {/* Total amount */}
-                    <div className="py-4 border-b">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Total amount</span>
-                        <span className="text-xl font-bold">${total}.00</span>
-                      </div>
-                    </div>
-
-                    {/* Disclaimer */}
-                    <div className="py-4">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Backing means supporting a creative project, regardless of the outcome.
-                      </p>
-
-                      <div className="flex items-start gap-3 mb-4">
-                        <Checkbox
-                          id="terms"
-                          checked={agreedToTerms}
-                          onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
-                        />
-                        <Label htmlFor="terms" className="text-xs leading-relaxed text-muted-foreground">
-                          I understand that rewards or reimbursements aren&apos;t guaranteed by either IndieCrowdfund or the creator.
-                        </Label>
-                      </div>
-
-                      {/* Status message - different for DivinityCoin vs Stripe */}
-                      {project?.paymentProcessor === "DIVINITYCOIN" ? (
-                        <p className="text-xs text-center text-muted-foreground py-2">
-                          Use DivinityCoin to complete your pledge.
-                        </p>
-                      ) : !clientSecret ? (
-                        <div className="flex items-center justify-center gap-2 py-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Setting up payment...</span>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-center text-muted-foreground">
-                          Enter your card details above to complete your pledge.
-                        </p>
-                      )}
-
-                      <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
-                        By submitting your pledge, you agree to IndieCrowdfund&apos;s{" "}
-                        <Link href="/terms" className="underline">Terms of Use</Link>
-                        , and{" "}
-                        <Link href="/privacy" className="underline">Privacy Policy</Link>
-                        {project?.paymentProcessor === "DIVINITYCOIN"
-                          ? ", and for DivinityCoin to process your payment."
-                          : ", and for our payment processor, Stripe, to charge your payment method."
-                        }
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              <OrderSummary
+                step={step}
+                isAddItemsMode={isAddItemsMode}
+                selectedReward={selectedReward}
+                pledgeWithoutReward={pledgeWithoutReward}
+                customPledgeAmount={customPledgeAmount}
+                selectedAddons={selectedAddons}
+                addons={addons}
+                bonusSupport={bonusSupport}
+                setBonusSupport={setBonusSupport}
+                shippingCountry={shippingCountry}
+                totalShipping={totalShipping}
+                addonsShipping={addonsShipping}
+                total={total}
+                addItemsTotal={addItemsTotal}
+                setStep={setStep}
+                agreedToTerms={agreedToTerms}
+                setAgreedToTerms={setAgreedToTerms}
+                clientSecret={clientSecret}
+                project={project}
+              />
 
               {/* Rewards Warning */}
               <div className="flex gap-3 text-sm">
@@ -2084,22 +687,7 @@ export default function PledgePage() {
                 </div>
               </div>
 
-              {/* FAQ */}
-              <div>
-                <h3 className="font-medium mb-3">Frequently Asked Questions</h3>
-                <Accordion type="single" collapsible>
-                  {getFaqItems(Boolean(project && Number(project.currentAmount) >= Number(project.goalAmount))).map((item, idx) => (
-                    <AccordionItem key={idx} value={`faq-${idx}`} className="border-b">
-                      <AccordionTrigger className="py-3 text-sm hover:no-underline text-left">
-                        {item.question}
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm text-muted-foreground pb-3">
-                        {item.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </div>
+              <FAQSection project={project} />
             </div>
           </div>
         </div>
