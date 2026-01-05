@@ -2,8 +2,35 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getR2Storage } from "@/lib/r2";
+import { Decimal } from "@prisma/client/runtime/library";
 
 export const dynamic = "force-dynamic";
+
+// Type for book returned from the Prisma query
+interface PdfBookRecord {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  pdfFileUrl: string | null;
+  pdfFileName: string | null;
+  pdfFileSize: number | null;
+  pdfCoverImageUrl: string | null;
+  pdfTotalPages: number | null;
+  coverImageUrl: string | null;
+  price: Decimal;
+  purchaseCount: number;
+  createdAt: Date;
+  publishedAt: Date | null;
+  creator: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+  _count: {
+    purchases: number;
+  };
+}
 
 /**
  * GET /api/admin/marketplace/pdf-management
@@ -113,9 +140,9 @@ export async function GET(request: NextRequest) {
         const r2 = await getR2Storage();
         if (r2) {
           const checks = await Promise.all(
-            books
-              .filter((b) => b.pdfFileUrl)
-              .map(async (book) => {
+            (books as PdfBookRecord[])
+              .filter((b: PdfBookRecord) => b.pdfFileUrl)
+              .map(async (book: PdfBookRecord) => {
                 const match = book.pdfFileUrl?.match(/\/api\/r2\/serve\/(.+)$/);
                 if (match) {
                   const exists = await r2.fileExists(match[1]);
@@ -132,7 +159,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform for response
-    const transformedBooks = books.map((book) => ({
+    const transformedBooks = (books as PdfBookRecord[]).map((book: PdfBookRecord) => ({
       id: book.id,
       title: book.title,
       slug: book.slug,
