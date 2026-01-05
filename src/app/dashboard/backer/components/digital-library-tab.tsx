@@ -716,6 +716,13 @@ export function DigitalLibraryTab() {
 
   // Open book for reading
   const openBook = async (item: LibraryItem) => {
+    console.log("[openBook] Starting to open book:", {
+      id: item.id,
+      title: item.title,
+      source: item.source,
+      sourceId: item.sourceId,
+    });
+
     setSelectedItem(item);
     setPdfUrl(null);
     setNumPages(0);
@@ -726,32 +733,47 @@ export function DigitalLibraryTab() {
 
     try {
       if (item.source === "crowdfunding") {
+        console.log("[openBook] Fetching crowdfunding file:", item.sourceId);
         const res = await fetch("/api/backer/digital-files", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
           body: JSON.stringify({ fileId: item.sourceId }),
         });
+        console.log("[openBook] Crowdfunding response status:", res.status);
         if (!res.ok) throw new Error("Failed to get PDF URL");
         const { downloadUrl } = await res.json();
+        console.log("[openBook] Got crowdfunding download URL");
         setPdfUrl(downloadUrl);
       } else if (item.source === "local") {
         // Local book from IndexedDB
+        console.log("[openBook] Loading local book:", item.sourceId);
         const url = await getLocalBookUrl(item.sourceId);
         if (url) {
+          console.log("[openBook] Got local book URL");
           setPdfUrl(url);
         } else {
           throw new Error("Failed to load local book");
         }
       } else {
         // Marketplace purchase
-        const res = await fetch(`/api/backer/marketplace-purchases/${item.sourceId}/download`, {
+        console.log("[openBook] Fetching marketplace purchase:", item.sourceId);
+        const apiUrl = `/api/backer/marketplace-purchases/${item.sourceId}/download`;
+        console.log("[openBook] API URL:", apiUrl);
+        const res = await fetch(apiUrl, {
           headers: getCSRFHeaders(),
         });
-        if (!res.ok) throw new Error("Failed to get PDF URL");
-        const { downloadUrl } = await res.json();
-        setPdfUrl(downloadUrl);
+        console.log("[openBook] Marketplace response status:", res.status);
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("[openBook] Marketplace error response:", errorText);
+          throw new Error(`Failed to get PDF URL: ${res.status}`);
+        }
+        const data = await res.json();
+        console.log("[openBook] Got marketplace download URL:", data.downloadUrl ? "yes" : "no");
+        setPdfUrl(data.downloadUrl);
       }
     } catch (err) {
+      console.error("[openBook] Error:", err);
       setError(err instanceof Error ? err.message : "Failed to load PDF");
     }
   };

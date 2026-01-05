@@ -149,7 +149,13 @@ export async function GET(request: Request) {
           },
         });
 
+        console.log("[Digital Library] Found marketplace purchases:", marketplacePurchases.length);
         for (const purchase of marketplacePurchases) {
+          console.log("[Digital Library] Adding marketplace item:", {
+            purchaseId: purchase.id,
+            bookTitle: purchase.book.title,
+            hasPdfUrl: !!purchase.book.pdfFileUrl,
+          });
           libraryItems.push({
             id: `mp_${purchase.id}`,
             title: purchase.book.title,

@@ -18,10 +18,12 @@ export async function GET(
   try {
     const session = await auth();
     if (!session?.user?.id) {
+      console.log("[Marketplace Download] Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
+    console.log("[Marketplace Download] Request for purchase:", id, "by user:", session.user.id);
 
     // Find the purchase and verify ownership
     const purchase = await prisma.marketplacePurchase.findFirst({
@@ -43,6 +45,27 @@ export async function GET(
       },
     });
 
+    console.log("[Marketplace Download] Purchase found:", purchase ? "yes" : "no");
+    if (purchase) {
+      console.log("[Marketplace Download] Purchase details:", {
+        purchaseId: purchase.id,
+        bookId: purchase.book.id,
+        bookTitle: purchase.book.title,
+        hasPdfUrl: !!purchase.book.pdfFileUrl,
+      });
+    } else {
+      // Try to find the purchase without the buyerId filter to debug
+      const anyPurchase = await prisma.marketplacePurchase.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          buyerId: true,
+          status: true,
+        },
+      });
+      console.log("[Marketplace Download] Debug - purchase exists but not matching:", anyPurchase);
+    }
+
     if (!purchase) {
       return NextResponse.json(
         { error: "Purchase not found" },
@@ -51,11 +74,14 @@ export async function GET(
     }
 
     if (!purchase.book.pdfFileUrl) {
+      console.log("[Marketplace Download] No PDF file URL for book");
       return NextResponse.json(
         { error: "PDF file not available" },
         { status: 404 }
       );
     }
+
+    console.log("[Marketplace Download] PDF file URL:", purchase.book.pdfFileUrl);
 
     // Extract R2 storage key from pdfFileUrl
     // pdfFileUrl is stored as "/api/r2/serve/marketplace/userId/pdfs/file.pdf"
