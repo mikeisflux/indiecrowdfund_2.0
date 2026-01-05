@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
       deletedAt: null,
       OR: [
         { prelaunchActive: true },
-        { prelaunchStatus: { not: "DRAFT" } },
+        { prelaunchStatus: { in: ["SUBMITTED", "APPROVED", "REJECTED"] } },
         { prelaunchDescription: { not: null } },
       ],
     };
