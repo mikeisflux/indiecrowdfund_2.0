@@ -45,6 +45,7 @@ interface PlatformSettings {
   stripePublishableKey: string | null;
   stripeSecretKey: string | null;
   stripeWebhookSecret: string | null;
+  stripeConnectWebhookSecret: string | null;
   divinityCoinEnabled: boolean;
   divinityCoinApiKey: string | null;
   divinityCoinWebhookSecret: string | null;
@@ -177,6 +178,7 @@ export default function SettingsPage() {
     stripePublicKey: "",
     stripeSecretKey: "",
     stripeWebhookSecret: "",
+    stripeConnectWebhookSecret: "",
     divinityCoinEnabled: false,
     divinityCoinApiKey: "",
     divinityCoinWebhookSecret: "",
@@ -351,6 +353,7 @@ export default function SettingsPage() {
         stripePublicKey: settings.stripePublishableKey || "",
         stripeSecretKey: settings.stripeSecretKey || "",
         stripeWebhookSecret: settings.stripeWebhookSecret || "",
+        stripeConnectWebhookSecret: settings.stripeConnectWebhookSecret || "",
         divinityCoinEnabled: settings.divinityCoinEnabled || false,
         divinityCoinApiKey: settings.divinityCoinApiKey || "",
         divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret || "",
@@ -610,6 +613,7 @@ export default function SettingsPage() {
             stripePublishableKey: currentPaymentSettings.stripePublicKey,
             stripeSecretKey: currentPaymentSettings.stripeSecretKey,
             stripeWebhookSecret: currentPaymentSettings.stripeWebhookSecret,
+            stripeConnectWebhookSecret: currentPaymentSettings.stripeConnectWebhookSecret,
             divinityCoinEnabled: currentPaymentSettings.divinityCoinEnabled,
             divinityCoinApiKey: currentPaymentSettings.divinityCoinApiKey,
             divinityCoinWebhookSecret: currentPaymentSettings.divinityCoinWebhookSecret,
