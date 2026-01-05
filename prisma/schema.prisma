@@ -3188,3 +3188,40 @@ enum ChangelogCategory {
   DOCUMENTATION
   OTHER
 }
+
+// ==================== EMAIL BLOCKLIST ====================
+
+model EmailBlocklist {
+  id            String              @id @default(cuid())
+
+  // What to block
+  type          EmailBlocklistType
+  value         String              // email address, domain, or IP
+
+  // Metadata
+  reason        String?             @db.Text
+  source        String?             // How it was added (manual, auto-spam, bounce, etc.)
+
+  // Stats
+  blockedCount  Int                 @default(0)  // How many emails were blocked
+  lastBlockedAt DateTime?
+
+  // Status
+  isActive      Boolean             @default(true)
+  expiresAt     DateTime?           // Optional expiration for temporary blocks
+
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([type, value])
+  @@index([type])
+  @@index([isActive])
+  @@index([value])
+}
+
+enum EmailBlocklistType {
+  EMAIL       // Specific email address
+  DOMAIN      // Entire domain (e.g., spam.com)
+  IP          // IP address
+  PATTERN     // Regex pattern (e.g., *@tempmail.*)
+}

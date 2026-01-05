@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Share2,
   Cloud,
+  MessageSquare,
 } from "lucide-react";
 import {
   GeneralSettings,
@@ -30,6 +31,7 @@ import {
   ApiSettings,
   DatabaseSettings,
   StorageSettings,
+  CommunicationSettings,
 } from "@/components/admin/settings";
 
 interface PlatformSettings {
@@ -803,7 +805,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-6 lg:grid-cols-11 lg:w-auto lg:inline-grid">
           <TabsTrigger value="general">
             <Settings className="mr-2 h-4 w-4" />
             General
@@ -815,6 +817,10 @@ export default function SettingsPage() {
           <TabsTrigger value="email">
             <Mail className="mr-2 h-4 w-4" />
             Email
+          </TabsTrigger>
+          <TabsTrigger value="communication">
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Mailboxes
           </TabsTrigger>
           <TabsTrigger value="social">
             <Share2 className="mr-2 h-4 w-4" />
@@ -864,6 +870,8 @@ export default function SettingsPage() {
           onSettingsChange={setEmailSettings}
           onSave={handleSave}
         />
+
+        <CommunicationSettings />
 
         <SocialSettings
           settings={socialSettings}

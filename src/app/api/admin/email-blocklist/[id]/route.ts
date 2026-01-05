@@ -1,0 +1,165 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
+
+// Require admin access
+async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return null;
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
+  if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+    return null;
+  }
+
+  return session.user;
+}
+
+// GET - Get a single blocklist entry
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = await requireAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+    const entry = await db.emailBlocklist.findUnique({
+      where: { id },
+    });
+
+    if (!entry) {
+      return NextResponse.json(
+        { error: "Entry not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ entry });
+  } catch (error) {
+    console.error("Error fetching blocklist entry:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch blocklist entry" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update a blocklist entry
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = await requireAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { type, value, reason, isActive, expiresAt } = body;
+
+    // Check if entry exists
+    const existing = await db.emailBlocklist.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Entry not found" },
+        { status: 404 }
+      );
+    }
+
+    // If changing type or value, check for duplicates
+    if ((type && type !== existing.type) || (value && value !== existing.value)) {
+      const duplicate = await db.emailBlocklist.findUnique({
+        where: {
+          type_value: {
+            type: type || existing.type,
+            value: value ? value.toLowerCase().trim() : existing.value,
+          },
+        },
+      });
+
+      if (duplicate && duplicate.id !== id) {
+        return NextResponse.json(
+          { error: "An entry with this type and value already exists" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const entry = await db.emailBlocklist.update({
+      where: { id },
+      data: {
+        ...(type !== undefined && { type }),
+        ...(value !== undefined && { value: value.toLowerCase().trim() }),
+        ...(reason !== undefined && { reason }),
+        ...(isActive !== undefined && { isActive }),
+        ...(expiresAt !== undefined && {
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+        }),
+      },
+    });
+
+    return NextResponse.json({ entry });
+  } catch (error) {
+    console.error("Error updating blocklist entry:", error);
+    return NextResponse.json(
+      { error: "Failed to update blocklist entry" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Delete a blocklist entry
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = await requireAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+
+    // Check if entry exists
+    const existing = await db.emailBlocklist.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Entry not found" },
+        { status: 404 }
+      );
+    }
+
+    await db.emailBlocklist.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting blocklist entry:", error);
+    return NextResponse.json(
+      { error: "Failed to delete blocklist entry" },
+      { status: 500 }
+    );
+  }
+}
