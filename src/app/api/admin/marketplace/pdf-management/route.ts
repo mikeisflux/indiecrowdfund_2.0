@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
 
     // Check R2 file existence for books with PDF URLs (optional, can be slow)
     const checkR2 = searchParams.get("checkR2") === "true";
-    let r2Status: Record<string, boolean> = {};
+    let r2Status: Record<string, boolean | null> = {};
 
     if (checkR2) {
       try {
