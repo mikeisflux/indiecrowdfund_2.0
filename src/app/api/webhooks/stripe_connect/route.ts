@@ -105,25 +105,56 @@ export async function POST(req: NextRequest) {
 async function handleAccountUpdate(account: Stripe.Account) {
   console.log(`[Connect Webhook] Handling account.updated for ${account.id}`);
 
-  // Find the user with this Stripe account
+  const isOnboarded = account.charges_enabled && account.payouts_enabled;
+
+  // First, try to find in StripeConfig (user-level)
   const config = await db.stripeConfig.findFirst({
     where: { stripeAccountId: account.id },
   });
 
-  if (!config) {
-    console.log(`[Connect Webhook] No config found for account ${account.id}`);
+  if (config) {
+    await db.stripeConfig.update({
+      where: { id: config.id },
+      data: { isOnboarded },
+    });
+    console.log(`[Connect Webhook] Updated StripeConfig onboarding status for account ${account.id}: ${isOnboarded}`);
     return;
   }
 
-  // Update onboarding status
-  const isOnboarded = account.charges_enabled && account.payouts_enabled;
-
-  await db.stripeConfig.update({
-    where: { id: config.id },
-    data: { isOnboarded },
+  // Fallback: Check if this account is linked to a project directly
+  const project = await db.project.findFirst({
+    where: { stripeAccountId: account.id },
+    select: { id: true, title: true, creatorId: true },
   });
 
-  console.log(`[Connect Webhook] Updated onboarding status for account ${account.id}: ${isOnboarded}`);
+  if (project) {
+    console.log(`[Connect Webhook] Account ${account.id} found on project "${project.title}" (${project.id})`);
+
+    // Try to create/update StripeConfig for the project's creator
+    const existingConfig = await db.stripeConfig.findUnique({
+      where: { userId: project.creatorId },
+    });
+
+    if (existingConfig) {
+      await db.stripeConfig.update({
+        where: { id: existingConfig.id },
+        data: { stripeAccountId: account.id, isOnboarded },
+      });
+      console.log(`[Connect Webhook] Updated existing StripeConfig for creator ${project.creatorId}`);
+    } else {
+      await db.stripeConfig.create({
+        data: {
+          userId: project.creatorId,
+          stripeAccountId: account.id,
+          isOnboarded,
+        },
+      });
+      console.log(`[Connect Webhook] Created StripeConfig for creator ${project.creatorId}`);
+    }
+    return;
+  }
+
+  console.log(`[Connect Webhook] No config or project found for account ${account.id}`);
 }
 
 /**
