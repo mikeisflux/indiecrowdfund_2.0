@@ -92,7 +92,8 @@ export async function GET() {
     });
 
     // Convert Decimal prices to numbers for frontend
-    const formattedLiveBooks = liveBooks.map(book => ({
+    type LiveBookType = typeof liveBooks[number];
+    const formattedLiveBooks = liveBooks.map((book: LiveBookType) => ({
       ...book,
       price: Number(book.price),
     }));
