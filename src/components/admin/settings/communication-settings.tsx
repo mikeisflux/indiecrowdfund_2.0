@@ -637,7 +637,7 @@ export function CommunicationSettings() {
       toast.success("Mailbox deleted");
       setDeletingMailbox(null);
       fetchMailboxes();
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete mailbox");
     }
   };
@@ -657,7 +657,7 @@ export function CommunicationSettings() {
       toast.success("Entry removed from blocklist");
       setDeletingEntry(null);
       fetchBlocklist();
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete entry");
     }
   };
