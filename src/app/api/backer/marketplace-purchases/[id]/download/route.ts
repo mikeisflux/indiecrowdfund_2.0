@@ -112,10 +112,27 @@ export async function GET(
       );
     }
 
-    // Check if file exists
+    // Check if file exists - try decoded path first, then original (URL-encoded) path
     console.log("[Marketplace Download] Checking if file exists in R2...");
-    const exists = await r2.fileExists(r2Key);
-    console.log("[Marketplace Download] File exists:", exists);
+    let exists = await r2.fileExists(r2Key);
+    console.log("[Marketplace Download] File exists (decoded path):", exists);
+
+    // If not found with decoded path, try the original URL-encoded path
+    // (in case the file was uploaded with %2F as literal characters in the key)
+    let actualKey = r2Key;
+    if (!exists) {
+      const originalR2KeyMatch = purchase.book.pdfFileUrl.match(/\/api\/r2\/serve\/(.+)$/);
+      if (originalR2KeyMatch) {
+        const encodedKey = originalR2KeyMatch[1];
+        console.log("[Marketplace Download] Trying original encoded key:", encodedKey);
+        exists = await r2.fileExists(encodedKey);
+        console.log("[Marketplace Download] File exists (encoded path):", exists);
+        if (exists) {
+          actualKey = encodedKey;
+        }
+      }
+    }
+
     if (!exists) {
       // Try to list files in the directory to see what's there
       try {
@@ -132,6 +149,9 @@ export async function GET(
       );
     }
 
+    // Use the key that worked
+    const r2KeyToUse = actualKey;
+
     // Get signed URL expiration from settings (like crowdfunding does)
     const settings = await prisma.platformSettings.findFirst({
       select: { signedUrlExpirationMinutes: true },
@@ -139,7 +159,7 @@ export async function GET(
     const expiresIn = (settings?.signedUrlExpirationMinutes || 60) * 60;
 
     // Generate presigned download URL
-    const downloadUrl = await r2.getDownloadUrl(r2Key, { expiresIn });
+    const downloadUrl = await r2.getDownloadUrl(r2KeyToUse, { expiresIn });
 
     return NextResponse.json({
       downloadUrl,
