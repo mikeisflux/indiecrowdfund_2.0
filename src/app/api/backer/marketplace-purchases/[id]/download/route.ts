@@ -100,10 +100,12 @@ export async function GET(
     }
 
     const r2Key = r2KeyMatch[1];
+    console.log("[Marketplace Download] R2 key:", r2Key);
 
     // Get R2 storage and generate presigned URL
     const r2 = await getR2Storage();
     if (!r2) {
+      console.log("[Marketplace Download] R2 storage not configured");
       return NextResponse.json(
         { error: "Storage not configured" },
         { status: 500 }
@@ -111,8 +113,19 @@ export async function GET(
     }
 
     // Check if file exists
+    console.log("[Marketplace Download] Checking if file exists in R2...");
     const exists = await r2.fileExists(r2Key);
+    console.log("[Marketplace Download] File exists:", exists);
     if (!exists) {
+      // Try to list files in the directory to see what's there
+      try {
+        const dirPath = r2Key.substring(0, r2Key.lastIndexOf('/'));
+        console.log("[Marketplace Download] Listing files in directory:", dirPath);
+        const files = await r2.listFiles(dirPath);
+        console.log("[Marketplace Download] Files in directory:", files?.slice(0, 10));
+      } catch (listErr) {
+        console.log("[Marketplace Download] Could not list directory:", listErr);
+      }
       return NextResponse.json(
         { error: "PDF file not found in storage" },
         { status: 404 }
