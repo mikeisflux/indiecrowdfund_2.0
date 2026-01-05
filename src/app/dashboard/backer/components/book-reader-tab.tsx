@@ -124,6 +124,7 @@ export function BookReaderTab() {
   const [uploading, setUploading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const readerContainerRef = useRef<HTMLDivElement>(null);
   const [supportsLocalBooks, setSupportsLocalBooks] = useState(false);
 
   // Check IndexedDB support on client side only
@@ -141,6 +142,23 @@ export function BookReaderTab() {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  // Ctrl+wheel zoom handler
+  useEffect(() => {
+    const container = readerContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        setScale(s => Math.min(4, Math.max(0.5, s + delta)));
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, [selectedFile]);
 
   const fetchLocalBooks = useCallback(async () => {
     if (!isLocalBooksSupported()) return;
@@ -364,7 +382,7 @@ export function BookReaderTab() {
 
     return (
       <TooltipProvider delayDuration={300}>
-        <div className={cn("flex flex-col h-[100dvh] bg-neutral-200", isFullscreen && "fixed inset-0 z-50")}>
+        <div ref={readerContainerRef} className={cn("flex flex-col h-[100dvh] bg-neutral-200", isFullscreen && "fixed inset-0 z-50")}>
           {/* Header */}
           <div className="flex items-center justify-between p-3 bg-black/60 backdrop-blur-sm border-b border-white/10">
             <div className="flex items-center gap-3">
@@ -418,6 +436,7 @@ export function BookReaderTab() {
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <p>Current zoom level</p>
+                  <p className="text-xs text-muted-foreground">Ctrl + scroll to zoom</p>
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
