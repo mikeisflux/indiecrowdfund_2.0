@@ -5,6 +5,7 @@ import { fetchWithRetry } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -632,7 +633,9 @@ function BookDetailPanel({
 }
 
 export default function AdminMarketplacePage() {
-  const [activeTab, setActiveTab] = useState("pending");
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "pending");
   const [pendingBooks, setPendingBooks] = useState<MarketplaceBook[]>([]);
   const [liveBooks, setLiveBooks] = useState<MarketplaceBook[]>([]);
   const [allBooks, setAllBooks] = useState<MarketplaceBook[]>([]);

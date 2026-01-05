@@ -48,6 +48,7 @@ import {
   Link2,
   BookOpen,
   Rocket,
+  HardDrive,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -98,6 +99,7 @@ const navigation: NavSection[] = [
       { name: "Projects", href: "/admin/projects", icon: FolderKanban, badgeKey: "projects" },
       { name: "Prelaunch", href: "/admin/prelaunch", icon: Rocket, badgeKey: "prelaunch" },
       { name: "Marketplace", href: "/admin/marketplace", icon: BookOpen },
+      { name: "PDF File Manager", href: "/admin/marketplace?tab=pdf-management", icon: HardDrive },
       { name: "Payouts", href: "/admin/payouts", icon: DollarSign, badgeKey: "payouts" },
       { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "moderation" },
       { name: "Bug Reports", href: "/admin/bug-reports", icon: Bug, badgeKey: "bugReports" },
