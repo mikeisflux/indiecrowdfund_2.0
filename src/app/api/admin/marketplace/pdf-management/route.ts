@@ -67,14 +67,14 @@ export async function GET(request: NextRequest) {
     };
 
     if (filter === "missing-pdf") {
+      // pdfFileUrl is a required String, so check for empty string, not null
       where.OR = [
-        { pdfFileUrl: null },
         { pdfFileUrl: "" },
         { pdfFileSize: null },
         { pdfFileSize: 0 },
       ];
     } else if (filter === "has-pdf") {
-      where.pdfFileUrl = { not: null };
+      // pdfFileUrl is required, so just check it's not empty
       where.NOT = { pdfFileUrl: "" };
     }
 
@@ -191,25 +191,24 @@ export async function GET(request: NextRequest) {
     }));
 
     // Get summary stats
+    // Note: pdfFileUrl is a required String field, so we check for empty string, not null
     const stats = {
       total,
       withPdf: await prisma.marketplaceBook.count({
         where: {
           deletedAt: null,
-          pdfFileUrl: { not: null },
           NOT: { pdfFileUrl: "" },
         },
       }),
       missingPdf: await prisma.marketplaceBook.count({
         where: {
           deletedAt: null,
-          OR: [{ pdfFileUrl: null }, { pdfFileUrl: "" }],
+          pdfFileUrl: "",
         },
       }),
       missingSize: await prisma.marketplaceBook.count({
         where: {
           deletedAt: null,
-          pdfFileUrl: { not: null },
           NOT: { pdfFileUrl: "" },
           OR: [{ pdfFileSize: null }, { pdfFileSize: 0 }],
         },
@@ -219,7 +218,6 @@ export async function GET(request: NextRequest) {
           deletedAt: null,
           status: "LIVE",
           OR: [
-            { pdfFileUrl: null },
             { pdfFileUrl: "" },
             { pdfFileSize: null },
             { pdfFileSize: 0 },
