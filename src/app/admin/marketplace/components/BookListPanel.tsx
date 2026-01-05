@@ -1,4 +1,4 @@
-import { Loader2, CheckCircle, Eye, BookOpen } from "lucide-react";
+import { Loader2, CheckCircle, Eye } from "lucide-react";
 import { BookListItem } from "./BookListItem";
 import { BookDetailPanel } from "./BookDetailPanel";
 import { MarketplaceBook } from "../types";

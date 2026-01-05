@@ -164,6 +164,7 @@ export default function PledgePage() {
         createPledgeForPayment();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, currentPledgeId, isProcessing, paymentError, isAddItemsMode, selectedAddons]);
 
   const createAdditionalItemsPurchase = async () => {
@@ -394,7 +395,8 @@ export default function PledgePage() {
   const handleAddonToggle = (addonId: string) => {
     setSelectedAddons((prev) => {
       if (prev[addonId]) {
-        const { [addonId]: _removed, ...rest } = prev;
+        const { [addonId]: _, ...rest } = prev;
+        void _; // Indicate intentionally unused
         return rest;
       }
       return { ...prev, [addonId]: 1 };
@@ -407,7 +409,8 @@ export default function PledgePage() {
       const newQty = Math.max(0, currentQty + delta);
 
       if (newQty === 0) {
-        const { [addonId]: _removed, ...rest } = prev;
+        const { [addonId]: _, ...rest } = prev;
+        void _; // Indicate intentionally unused
         return rest;
       }
 

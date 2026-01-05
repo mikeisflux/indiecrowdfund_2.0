@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
-import { cn } from "@/lib/utils";
 
 // Import types
 import type { DashboardData } from "./types";
