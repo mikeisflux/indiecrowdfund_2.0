@@ -442,19 +442,51 @@ export function ApiSettings() {
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary">payment_intent.succeeded</Badge>
                 <Badge variant="secondary">payment_intent.payment_failed</Badge>
-                <Badge variant="secondary">account.updated</Badge>
+                <Badge variant="secondary">setup_intent.succeeded</Badge>
+                <Badge variant="secondary">checkout.session.completed</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Configure this webhook in your{" "}
-                <a
-                  href="https://dashboard.stripe.com/webhooks"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#635BFF] hover:underline"
-                >
-                  Stripe Dashboard → Webhooks
-                </a>
-                . Select &quot;Connected and v2 accounts&quot; for Stripe Connect.
+                For payment events. Use the signing secret in &quot;Webhook Secret&quot; field above.
+              </p>
+            </div>
+
+            {/* Stripe Connect Webhook */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <Webhook className="h-5 w-5 text-[#635BFF]" />
+                <div>
+                  <p className="font-medium">Stripe Connect Webhook</p>
+                  <p className="text-sm text-muted-foreground">Receives connected account events</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Endpoint URL</Label>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={`${typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}/api/webhooks/stripe_connect`}
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe_connect`);
+                      }
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">account.updated</Badge>
+                <Badge variant="secondary">account.application.deauthorized</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                For Connect events. Select &quot;Listen to events on Connected accounts&quot; in Stripe.
+                Use the signing secret in &quot;Connect Webhook Secret&quot; field above.
               </p>
             </div>
 
