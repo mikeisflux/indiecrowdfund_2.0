@@ -149,9 +149,10 @@ async function getPrelaunchProjects() {
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: [
+        { launchDate: "asc" }, // Soonest launch date first
+        { createdAt: "desc" }, // Fallback for projects without launch date
+      ],
       take: 6,
     });
 
