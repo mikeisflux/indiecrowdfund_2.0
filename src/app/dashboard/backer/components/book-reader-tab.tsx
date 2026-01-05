@@ -422,12 +422,12 @@ export function BookReaderTab() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(s => Math.min(2, s + 0.1))} disabled={scale >= 2}>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-white/10" onClick={() => setScale(s => Math.min(4, s + 0.1))} disabled={scale >= 4}>
                     <ZoomIn className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p>Zoom in (max 200%)</p>
+                  <p>Zoom in (max 400%)</p>
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
