@@ -86,15 +86,29 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Webhook Secret</Label>
-            <SecureKeyInput
-              value={settings.stripeWebhookSecret}
-              onChange={(value) => onSettingsChange({ ...settings, stripeWebhookSecret: value })}
-              onSave={onSave}
-              hasExistingValue={settings.stripeWebhookSecret === "••••••••"}
-              placeholder="whsec_..."
-            />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Webhook Secret</Label>
+              <SecureKeyInput
+                value={settings.stripeWebhookSecret}
+                onChange={(value) => onSettingsChange({ ...settings, stripeWebhookSecret: value })}
+                onSave={onSave}
+                hasExistingValue={settings.stripeWebhookSecret === "••••••••"}
+                placeholder="whsec_..."
+              />
+              <p className="text-xs text-zinc-500">For regular Stripe events (payments, etc.)</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Connect Webhook Secret</Label>
+              <SecureKeyInput
+                value={settings.stripeConnectWebhookSecret}
+                onChange={(value) => onSettingsChange({ ...settings, stripeConnectWebhookSecret: value })}
+                onSave={onSave}
+                hasExistingValue={settings.stripeConnectWebhookSecret === "••••••••"}
+                placeholder="whsec_..."
+              />
+              <p className="text-xs text-zinc-500">For Connect events (account updates, etc.)</p>
+            </div>
           </div>
         </CardContent>
       </Card>
