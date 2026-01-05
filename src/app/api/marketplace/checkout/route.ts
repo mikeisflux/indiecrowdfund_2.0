@@ -120,6 +120,12 @@ export async function POST(request: Request) {
     const amountInCents = Math.round(bookPrice * 100);
     const platformFee = Math.round(amountInCents * 0.03); // 3% platform fee
 
+    // Ensure image URL is absolute (Stripe requires absolute URLs)
+    let imageUrl: string | null = book.coverImageUrl || book.pdfCoverImageUrl || null;
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+    }
+
     // Create Stripe Checkout Session
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -131,7 +137,7 @@ export async function POST(request: Request) {
             product_data: {
               name: book.title,
               description: book.shortDescription || `Digital book by ${book.creator.name || "Creator"}`,
-              images: book.coverImageUrl ? [book.coverImageUrl] : book.pdfCoverImageUrl ? [book.pdfCoverImageUrl] : [],
+              images: imageUrl ? [imageUrl] : [],
             },
             unit_amount: amountInCents,
           },
