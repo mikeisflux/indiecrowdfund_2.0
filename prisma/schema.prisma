@@ -1566,6 +1566,7 @@ model PlatformSettings {
   stripeSecretKey       String?  @db.Text
   stripePublishableKey  String?
   stripeWebhookSecret   String?
+  stripeConnectWebhookSecret String?  // Separate webhook secret for Stripe Connect events
 
   // DivinityCoin Settings - Universal credit redemption payment solution
   divinityCoinEnabled   Boolean  @default(false)

@@ -12,8 +12,27 @@ import { db } from "@/lib/db";
  * 1. Go to Developers > Webhooks
  * 2. Add endpoint: https://yourdomain.com/api/webhooks/stripe/connect
  * 3. Select "Connect applications" events
- * 4. Add the webhook signing secret as STRIPE_CONNECT_WEBHOOK_SECRET env var
+ * 4. Add the webhook signing secret in Admin Settings > Payments
  */
+
+// Get Connect webhook secret from database settings or fall back to env var
+async function getStripeConnectWebhookSecret(): Promise<string | null> {
+  try {
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { stripeConnectWebhookSecret: true, stripeEnabled: true },
+    });
+
+    if (settings?.stripeConnectWebhookSecret && settings.stripeEnabled) {
+      return settings.stripeConnectWebhookSecret;
+    }
+  } catch (error) {
+    console.warn("Could not fetch Stripe Connect settings from database:", error);
+  }
+
+  return process.env.STRIPE_CONNECT_WEBHOOK_SECRET || null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text();
@@ -26,10 +45,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get Connect webhook secret from environment variable
-    const webhookSecret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
+    // Get Connect webhook secret from database settings or env var
+    const webhookSecret = await getStripeConnectWebhookSecret();
     if (!webhookSecret) {
-      console.error("STRIPE_CONNECT_WEBHOOK_SECRET not configured");
+      console.error("Stripe Connect webhook secret not configured");
       return NextResponse.json(
         { error: "Connect webhook secret not configured" },
         { status: 500 }

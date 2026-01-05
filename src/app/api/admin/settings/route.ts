@@ -79,6 +79,7 @@ export async function GET() {
       stripePublishableKey: settings.stripePublishableKey ? "••••••••" : null,
       stripeSecretKey: settings.stripeSecretKey ? "••••••••" : null,
       stripeWebhookSecret: settings.stripeWebhookSecret ? "••••••••" : null,
+      stripeConnectWebhookSecret: settings.stripeConnectWebhookSecret ? "••••••••" : null,
       divinityCoinApiKey: settings.divinityCoinApiKey ? "••••••••" : null,
       divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
@@ -155,7 +156,7 @@ export async function PATCH(req: NextRequest) {
 
     // Filter out masked values and empty strings for secret fields (don't update if user hasn't changed them)
     const secretFields = [
-      'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret',
+      'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret', 'stripeConnectWebhookSecret',
       'divinityCoinApiKey', 'divinityCoinWebhookSecret',
       'smtpPassword', 'sendgridApiKey', 'sendgridWebhookVerificationKey', 'mailgunApiKey',
       'openaiApiKey', 'anthropicApiKey', 'googlePlacesApiKey',
@@ -186,6 +187,7 @@ export async function PATCH(req: NextRequest) {
       ],
       payments: [
         "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret",
+        "stripeConnectWebhookSecret",
         "divinityCoinEnabled", "divinityCoinApiKey", "divinityCoinWebhookSecret",
         "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "autoPayouts"
       ],
@@ -285,6 +287,7 @@ export async function PATCH(req: NextRequest) {
       stripePublishableKey: settings.stripePublishableKey ? "••••••••" : null,
       stripeSecretKey: settings.stripeSecretKey ? "••••••••" : null,
       stripeWebhookSecret: settings.stripeWebhookSecret ? "••••••••" : null,
+      stripeConnectWebhookSecret: settings.stripeConnectWebhookSecret ? "••••••••" : null,
       divinityCoinApiKey: settings.divinityCoinApiKey ? "••••••••" : null,
       divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
