@@ -19,6 +19,7 @@ interface PaymentSettingsProps {
     stripePublicKey: string;
     stripeSecretKey: string;
     stripeWebhookSecret: string;
+    stripeConnectWebhookSecret: string;
     // DivinityCoin - Credit redemption payment solution
     divinityCoinEnabled: boolean;
     divinityCoinApiKey: string;
