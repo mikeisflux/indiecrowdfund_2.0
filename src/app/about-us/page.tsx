@@ -44,6 +44,7 @@ import {
   Megaphone,
   Lightbulb,
   ArrowRight,
+  ArrowLeft,
   ClipboardList,
   Download,
   ShoppingCart,
@@ -631,6 +632,17 @@ export default function AboutUsPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      {/* Back Link */}
+      <div className="container mx-auto px-4 pt-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
+      </div>
+
       {/* Floating orbs background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="floating-orb absolute -top-40 -right-40 w-[600px] h-[600px] bg-indigo-500/15" />

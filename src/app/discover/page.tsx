@@ -45,6 +45,7 @@ import {
   Loader2,
   Bell,
   CalendarClock,
+  ArrowLeft,
 } from "lucide-react";
 import { PROJECT_CATEGORIES } from "@/types";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
@@ -343,6 +344,14 @@ function DiscoverContent() {
         }} />
 
         <div className="container relative">
+          {/* Back Link */}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Link>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-card border border-primary/20 mb-4">
             <Search className="h-3.5 w-3.5 text-primary" />
             <span className="text-sm font-medium text-primary">Explore & Discover</span>

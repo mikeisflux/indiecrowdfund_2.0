@@ -15,7 +15,9 @@ import {
   Upload,
   DollarSign,
   Building2,
+  ArrowLeft,
 } from 'lucide-react';
+import Link from 'next/link';
 import { Footer } from "@/components/footer";
 
 const tabs = [
@@ -487,6 +489,17 @@ export default function CreatorHandbookPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-purple-500/5 relative overflow-hidden">
+      {/* Back Link */}
+      <div className="container mx-auto px-4 pt-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
+      </div>
+
       {/* Floating Orbs */}
       <div className="floating-orb w-96 h-96 bg-purple-500/10 -top-48 -right-48" style={{ animationDelay: "0s" }} />
       <div className="floating-orb w-80 h-80 bg-pink-500/10 top-1/3 -left-40" style={{ animationDelay: "2s" }} />

@@ -8,6 +8,7 @@ import {
   Users,
   DollarSign,
   ArrowRight,
+  ArrowLeft,
   Quote,
   Star,
   Sparkles,
@@ -98,6 +99,17 @@ export default async function SuccessStoriesPage() {
 
   return (
     <div className="min-h-screen bg-background dark:bg-zinc-950 relative overflow-hidden">
+      {/* Back Link */}
+      <div className="container mx-auto px-4 pt-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
+      </div>
+
       {/* Floating Orbs */}
       <div className="floating-orb w-96 h-96 bg-orange-500/10 -top-48 -right-48" style={{ animationDelay: "0s" }} />
       <div className="floating-orb w-80 h-80 bg-rose-500/10 top-1/3 -left-40" style={{ animationDelay: "2s" }} />

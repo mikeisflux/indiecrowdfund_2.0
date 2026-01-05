@@ -14,6 +14,7 @@ import {
   Loader2,
   CheckCircle,
   ArrowRight,
+  ArrowLeft,
   ExternalLink,
   HelpCircle,
 } from "lucide-react";
@@ -125,6 +126,17 @@ export default function RedeemPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Back Link */}
+      <div className="container mx-auto px-4 pt-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
+      </div>
+
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#0066FF]/10 rounded-full blur-3xl" />

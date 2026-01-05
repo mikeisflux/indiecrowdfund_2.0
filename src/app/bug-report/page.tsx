@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Bug, CheckCircle2, Heart, Loader2, Send, ShieldCheck } from "lucide-react";
+import { Bug, CheckCircle2, Heart, Loader2, Send, ShieldCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 const bugCategories = [
@@ -182,6 +182,15 @@ export default function BugReportPage() {
       </div>
 
       <div className="container max-w-2xl mx-auto px-4 relative">
+        {/* Back Link */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
+
         {/* Header Section */}
         <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-purple-500 shadow-lg mb-4">
