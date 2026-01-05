@@ -823,21 +823,3 @@ export async function analyzeABTestResults(test: ABTest): Promise<{
       : `Continue testing. Need ${Math.ceil((0.95 - confidence) * 1000)} more samples for statistical significance.`,
   };
 }
-
-/**
- * Auto-select winner and apply to campaign
- */
-export async function autoSelectWinner(testId: string): Promise<{
-  success: boolean;
-  winnerId?: string;
-  message: string;
-}> {
-  // TODO: Implement fetching test from DB, analyze results, and update the campaign
-  console.debug("Auto-selecting winner for test:", testId);
-
-  return {
-    success: true,
-    winnerId: "variant-0",
-    message: "Winner automatically selected based on performance data",
-  };
-}

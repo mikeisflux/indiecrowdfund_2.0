@@ -3,7 +3,6 @@
 export {
   autoTagProject,
   generateMarketingCopy,
-  generateRecommendationReason,
   improveDescription,
   generateCampaignContent,
   PROJECT_CATEGORIES,
@@ -42,7 +41,6 @@ export {
   // A/B Testing
   createABTest,
   analyzeABTestResults,
-  autoSelectWinner,
   type ABTest,
 } from "./marketing-services";
 

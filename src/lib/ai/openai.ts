@@ -179,46 +179,6 @@ Respond in JSON format:
 }
 
 /**
- * Generate personalized project recommendations description
- */
-export async function generateRecommendationReason(
-  project: ProjectDetails,
-  userInterests: string[]
-): Promise<string> {
-  const prompt = `Given a user interested in: ${userInterests.join(", ")}
-
-And this project:
-Title: ${project.title}
-Description: ${project.description.substring(0, 500)}
-
-Write a brief, personalized 1-sentence explanation of why this project might interest them. Be specific and genuine.`;
-
-  try {
-    const response = await getOpenAI().chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You write brief, personalized recommendation explanations for crowdfunding projects. Be genuine and specific.",
-        },
-        { role: "user", content: prompt },
-      ],
-      max_tokens: 100,
-      temperature: 0.6,
-    });
-
-    return (
-      response.choices[0].message.content ||
-      "Based on your interests, you might like this project."
-    );
-  } catch (error) {
-    console.error("OpenAI recommendation reason error:", error);
-    return "Recommended for you based on your activity.";
-  }
-}
-
-/**
  * Improve project description with AI suggestions
  */
 export async function improveDescription(
