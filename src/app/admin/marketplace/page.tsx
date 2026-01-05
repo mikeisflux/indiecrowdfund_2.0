@@ -634,7 +634,7 @@ function BookDetailPanel({
 
 export default function AdminMarketplacePage() {
   const searchParams = useSearchParams();
-  const tabFromUrl = searchParams.get("tab");
+  const tabFromUrl = searchParams?.get("tab");
   const [activeTab, setActiveTab] = useState(tabFromUrl || "pending");
   const [pendingBooks, setPendingBooks] = useState<MarketplaceBook[]>([]);
   const [liveBooks, setLiveBooks] = useState<MarketplaceBook[]>([]);
