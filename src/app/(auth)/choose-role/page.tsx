@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Rocket, ArrowRight, Sparkles, Heart, TrendingUp } from "lucide-react";
+import { Search, Rocket, ArrowRight, Sparkles, Heart, TrendingUp, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default function ChooseRolePage() {
   const handleChoice = (role: "backer" | "creator") => {
@@ -14,6 +15,15 @@ export default function ChooseRolePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+      {/* Back Button */}
+      <Link
+        href="/"
+        className="absolute top-4 left-4 z-20 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span className="hidden sm:inline">Back to Home</span>
+      </Link>
+
       {/* Background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl animate-pulse" />

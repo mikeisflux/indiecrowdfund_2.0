@@ -40,7 +40,9 @@ import {
   Eye,
   RefreshCw,
   AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Reward {
@@ -357,6 +359,21 @@ export default function SurveyBuilderPage() {
 
   return (
     <div className="space-y-6">
+      {/* Back Button */}
+      <div>
+        <Link href="/dashboard/indiekit" className="hidden sm:inline-block">
+          <Button variant="ghost" className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to IndieKit
+          </Button>
+        </Link>
+        <Link href="/dashboard/indiekit" className="sm:hidden">
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

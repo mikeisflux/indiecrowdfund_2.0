@@ -30,7 +30,9 @@ import {
   ChevronRight,
   ChevronLeft,
   Lock,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 
 interface SurveyData {
   survey: {
@@ -249,6 +251,21 @@ export default function BackerSurveyPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* Back Button */}
+      <div>
+        <Link href="/dashboard/backer" className="hidden sm:inline-block">
+          <Button variant="ghost" className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </Link>
+        <Link href="/dashboard/backer" className="sm:hidden">
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+
       {/* Header */}
       <Card>
         <CardContent className="py-4">

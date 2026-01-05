@@ -22,6 +22,7 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -154,6 +155,21 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Back Button */}
+      <div>
+        <Link href="/dashboard/backer" className="hidden sm:inline-block">
+          <Button variant="ghost" className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </Link>
+        <Link href="/dashboard/backer" className="sm:hidden">
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
