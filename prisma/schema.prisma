@@ -97,6 +97,7 @@ model User {
   lockedAt          DateTime?  // When account was locked
   lockedReason      String?    @db.Text  // Admin notes on why account was locked
   lockedById        String?    // Admin who locked the account
+  lastKnownIP       String?    // Last known IP address for ban enforcement
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -107,6 +108,21 @@ model User {
   @@index([creatorEmailHandle])
   @@index([deletedAt])  // For soft delete filtering
   @@index([lockedAt])   // For locked account filtering
+}
+
+// IP Blocklist for banned users
+model IPBlocklist {
+  id          String    @id @default(cuid())
+  ipAddress   String
+  userId      String?   // User who triggered the ban (if any)
+  reason      String?   @db.Text
+  bannedById  String?   // Admin who added the block
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime? // Optional expiration for temporary bans
+
+  @@unique([ipAddress])
+  @@index([ipAddress])
+  @@index([expiresAt])
 }
 
 enum UserRole {

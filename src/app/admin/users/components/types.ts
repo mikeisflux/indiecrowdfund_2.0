@@ -10,6 +10,8 @@ export interface User {
   emailVerified: string | null;
   projectCount: number;
   pledgeCount: number;
+  lockedAt: string | null;
+  lockedReason: string | null;
 }
 
 export interface UserStats {

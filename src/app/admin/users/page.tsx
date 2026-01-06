@@ -436,6 +436,68 @@ export default function UsersPage() {
     setShowDeleteDialog(true);
   };
 
+  const handleBanUser = async (user: User) => {
+    if (!confirm(`Are you sure you want to ban ${user.name || user.email}? This will:\n\n• Lock their account immediately\n• Block their IP address from creating new accounts\n• Log them out of all sessions\n\nThis action can be reversed.`)) {
+      return;
+    }
+
+    try {
+      const reason = prompt("Enter a reason for banning this user (optional):");
+
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          userId: user.id,
+          action: "BAN_USER",
+          data: { reason: reason || "Banned by administrator" },
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        toast.success(`${user.name || user.email} has been banned`);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to ban user");
+      }
+    } catch (error) {
+      console.error("Error banning user:", error);
+      toast.error("Failed to ban user");
+    }
+  };
+
+  const handleUnbanUser = async (user: User) => {
+    if (!confirm(`Are you sure you want to unban ${user.name || user.email}?`)) {
+      return;
+    }
+
+    try {
+      const removeIPBlock = confirm("Also remove the IP block so they can create new accounts?");
+
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          userId: user.id,
+          action: "UNBAN_USER",
+          data: { removeIPBlock },
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        toast.success(`${user.name || user.email} has been unbanned`);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to unban user");
+      }
+    } catch (error) {
+      console.error("Error unbanning user:", error);
+      toast.error("Failed to unban user");
+    }
+  };
+
   const submitEditUser = async () => {
     if (!selectedUser) return;
     setIsUpdating(true);
@@ -795,6 +857,8 @@ export default function UsersPage() {
             onSendResetEmail={handleSendResetEmail}
             onSetPassword={handleSetPassword}
             onDeleteUser={handleDeleteUser}
+            onBanUser={handleBanUser}
+            onUnbanUser={handleUnbanUser}
           />
         </TabsContent>
 

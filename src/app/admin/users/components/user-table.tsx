@@ -21,6 +21,8 @@ import {
   Trash2,
   Store,
   RefreshCw,
+  Ban,
+  UserCheck,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { User, Pagination } from "./types";
@@ -41,6 +43,8 @@ interface UserTableProps {
   onSendResetEmail: (user: User) => void;
   onSetPassword: (user: User) => void;
   onDeleteUser: (user: User) => void;
+  onBanUser: (user: User) => void;
+  onUnbanUser: (user: User) => void;
 }
 
 export function UserTable({
@@ -58,6 +62,8 @@ export function UserTable({
   onSendResetEmail,
   onSetPassword,
   onDeleteUser,
+  onBanUser,
+  onUnbanUser,
 }: UserTableProps) {
   return (
     <>
@@ -87,10 +93,10 @@ export function UserTable({
                 </thead>
                 <tbody>
                   {users.map((user) => (
-                    <tr key={user.id} className="border-b hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                    <tr key={user.id} className={`border-b hover:bg-zinc-50 dark:hover:bg-zinc-800 ${user.lockedAt ? "bg-red-50 dark:bg-red-950/30" : ""}`}>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-200 font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-full font-medium ${user.lockedAt ? "bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-300" : "bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300"}`}>
                             {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -98,6 +104,12 @@ export function UserTable({
                               <p className="font-medium">{user.name || "No name"}</p>
                               {user.emailVerified && (
                                 <CheckCircle className="h-4 w-4 text-blue-500" />
+                              )}
+                              {user.lockedAt && (
+                                <Badge variant="destructive" className="text-xs">
+                                  <Ban className="h-3 w-3 mr-1" />
+                                  Banned
+                                </Badge>
                               )}
                             </div>
                             <p className="text-sm text-zinc-500">{user.email}</p>
@@ -162,6 +174,23 @@ export function UserTable({
                               Set Password
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
+                            {user.lockedAt ? (
+                              <DropdownMenuItem
+                                className="text-green-600"
+                                onClick={() => onUnbanUser(user)}
+                              >
+                                <UserCheck className="mr-2 h-4 w-4" />
+                                Unban User
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                className="text-orange-600"
+                                onClick={() => onBanUser(user)}
+                              >
+                                <Ban className="mr-2 h-4 w-4" />
+                                Ban User & Block IP
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               className="text-red-600"
                               onClick={() => onDeleteUser(user)}

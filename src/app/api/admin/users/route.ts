@@ -112,7 +112,9 @@ export async function GET(req: NextRequest) {
       createdAt: user.createdAt,
       emailVerified: user.emailVerified,
       projectCount: user._count.createdProjects,
-      pledgeCount: user._count.pledges
+      pledgeCount: user._count.pledges,
+      lockedAt: user.lockedAt,
+      lockedReason: user.lockedReason,
     }));
 
     // roleCounts: [USER, COOL_KIDS, ADMIN, SUPER_ADMIN]
@@ -161,7 +163,14 @@ export async function PATCH(req: NextRequest) {
     }
 
     const user = await db.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        lastKnownIP: true,
+        lockedAt: true,
+      },
     });
 
     if (!user) {
@@ -335,6 +344,91 @@ export async function PATCH(req: NextRequest) {
         updateData.lockedAt = null;
         updateData.lockedReason = null;
         updateData.lockedById = null;
+        break;
+
+      case "BAN_USER":
+        // Only SUPER_ADMIN can ban users
+        if (authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Only super admins can ban users" },
+            { status: 403 }
+          );
+        }
+        // Can't ban yourself
+        if (userId === authResult.user.id) {
+          return NextResponse.json(
+            { error: "Cannot ban your own account" },
+            { status: 400 }
+          );
+        }
+        // Can't ban other super admins
+        if (user.role === "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Cannot ban a super admin account" },
+            { status: 400 }
+          );
+        }
+
+        // Lock the account
+        updateData.lockedAt = new Date();
+        updateData.lockedReason = data?.reason || "Account banned by administrator";
+        updateData.lockedById = authResult.user.id;
+
+        // If user has a known IP, add it to blocklist
+        if (user.lastKnownIP) {
+          try {
+            await db.iPBlocklist.upsert({
+              where: { ipAddress: user.lastKnownIP },
+              update: {
+                reason: data?.reason || "IP blocked due to user ban",
+                bannedById: authResult.user.id,
+                userId: userId,
+              },
+              create: {
+                ipAddress: user.lastKnownIP,
+                reason: data?.reason || "IP blocked due to user ban",
+                bannedById: authResult.user.id,
+                userId: userId,
+              },
+            });
+          } catch (ipError) {
+            console.error("Error adding IP to blocklist:", ipError);
+            // Continue with user ban even if IP block fails
+          }
+        }
+
+        // Delete all active sessions for this user
+        try {
+          await db.session.deleteMany({
+            where: { userId: userId },
+          });
+        } catch (sessionError) {
+          console.error("Error deleting user sessions:", sessionError);
+        }
+        break;
+
+      case "UNBAN_USER":
+        // Only SUPER_ADMIN can unban users
+        if (authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Only super admins can unban users" },
+            { status: 403 }
+          );
+        }
+        updateData.lockedAt = null;
+        updateData.lockedReason = null;
+        updateData.lockedById = null;
+
+        // Optionally remove IP from blocklist if requested
+        if (data?.removeIPBlock && user.lastKnownIP) {
+          try {
+            await db.iPBlocklist.deleteMany({
+              where: { ipAddress: user.lastKnownIP },
+            });
+          } catch (ipError) {
+            console.error("Error removing IP from blocklist:", ipError);
+          }
+        }
         break;
 
       default:
