@@ -63,7 +63,10 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 12);
 
-  // Create user
+  // Get client IP for registration tracking
+  const clientIP = await getClientIP();
+
+  // Create user with registration IP
   let user;
   try {
     user = await db.user.create({
@@ -71,6 +74,9 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
         name,
         email,
         password: hashedPassword,
+        registrationIp: clientIP,
+        lastLoginIp: clientIP,
+        lastLoginAt: new Date(),
       },
     });
   } catch {
@@ -175,6 +181,17 @@ export async function login(formData: FormData, callbackUrl?: string) {
 
   // Record successful login (clears rate limit)
   await recordLoginAttempt(clientIP, email, true);
+
+  // Update last login IP and timestamp
+  if (clientIP) {
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginIp: clientIP,
+        lastLoginAt: new Date(),
+      },
+    });
+  }
 
   // Create session
   await createSession(user.id);

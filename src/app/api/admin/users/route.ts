@@ -84,6 +84,8 @@ export async function GET(req: NextRequest) {
           emailVerified: true,
           lockedAt: true,
           lockedReason: true,
+          lastLoginIp: true,
+          registrationIp: true,
           _count: {
             select: {
               createdProjects: true,
@@ -111,6 +113,10 @@ export async function GET(req: NextRequest) {
       retailerAccess: user.retailerAccess,
       createdAt: user.createdAt,
       emailVerified: user.emailVerified,
+      lockedAt: user.lockedAt,
+      lockedReason: user.lockedReason,
+      lastLoginIp: user.lastLoginIp,
+      registrationIp: user.registrationIp,
       projectCount: user._count.createdProjects,
       pledgeCount: user._count.pledges
     }));
@@ -335,6 +341,109 @@ export async function PATCH(req: NextRequest) {
         updateData.lockedAt = null;
         updateData.lockedReason = null;
         updateData.lockedById = null;
+        break;
+
+      case "BAN_AND_BLOCK_IP":
+        // Only SUPER_ADMIN can ban users
+        if (authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Only super admins can ban users" },
+            { status: 403 }
+          );
+        }
+        // Can't ban your own account
+        if (userId === authResult.user.id) {
+          return NextResponse.json(
+            { error: "Cannot ban your own account" },
+            { status: 400 }
+          );
+        }
+
+        // Get the user's IP addresses
+        const userToBlock = await db.user.findUnique({
+          where: { id: userId },
+          select: {
+            email: true,
+            lastLoginIp: true,
+            registrationIp: true,
+          },
+        });
+
+        if (!userToBlock) {
+          return NextResponse.json(
+            { error: "User not found" },
+            { status: 404 }
+          );
+        }
+
+        // Lock the account
+        updateData.lockedAt = new Date();
+        updateData.lockedReason = data?.reason || "Account banned by administrator";
+        updateData.lockedById = authResult.user.id;
+
+        // Block IPs and email
+        const blockPromises: Promise<unknown>[] = [];
+
+        // Block email
+        blockPromises.push(
+          db.emailBlocklist.upsert({
+            where: { type_value: { type: "EMAIL", value: userToBlock.email.toLowerCase() } },
+            create: {
+              type: "EMAIL",
+              value: userToBlock.email.toLowerCase(),
+              reason: `Banned user: ${data?.reason || "Account banned by administrator"}`,
+              source: "user-ban",
+              isActive: true,
+            },
+            update: {
+              reason: `Banned user: ${data?.reason || "Account banned by administrator"}`,
+              isActive: true,
+            },
+          })
+        );
+
+        // Block last login IP
+        if (userToBlock.lastLoginIp) {
+          blockPromises.push(
+            db.emailBlocklist.upsert({
+              where: { type_value: { type: "IP", value: userToBlock.lastLoginIp } },
+              create: {
+                type: "IP",
+                value: userToBlock.lastLoginIp,
+                reason: `Banned user IP (last login): ${data?.reason || "Account banned"}`,
+                source: "user-ban",
+                isActive: true,
+              },
+              update: {
+                reason: `Banned user IP (last login): ${data?.reason || "Account banned"}`,
+                isActive: true,
+              },
+            })
+          );
+        }
+
+        // Block registration IP if different
+        if (userToBlock.registrationIp && userToBlock.registrationIp !== userToBlock.lastLoginIp) {
+          blockPromises.push(
+            db.emailBlocklist.upsert({
+              where: { type_value: { type: "IP", value: userToBlock.registrationIp } },
+              create: {
+                type: "IP",
+                value: userToBlock.registrationIp,
+                reason: `Banned user IP (registration): ${data?.reason || "Account banned"}`,
+                source: "user-ban",
+                isActive: true,
+              },
+              update: {
+                reason: `Banned user IP (registration): ${data?.reason || "Account banned"}`,
+                isActive: true,
+              },
+            })
+          );
+        }
+
+        // Execute all block operations
+        await Promise.all(blockPromises);
         break;
 
       default:

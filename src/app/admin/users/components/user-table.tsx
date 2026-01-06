@@ -21,6 +21,9 @@ import {
   Trash2,
   Store,
   RefreshCw,
+  Lock,
+  Unlock,
+  Ban,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { User, Pagination } from "./types";
@@ -40,6 +43,9 @@ interface UserTableProps {
   onToggleRetailerAccess: (user: User) => void;
   onSendResetEmail: (user: User) => void;
   onSetPassword: (user: User) => void;
+  onLockAccount: (user: User) => void;
+  onUnlockAccount: (user: User) => void;
+  onBanAndBlockIP: (user: User) => void;
   onDeleteUser: (user: User) => void;
 }
 
@@ -57,6 +63,9 @@ export function UserTable({
   onToggleRetailerAccess,
   onSendResetEmail,
   onSetPassword,
+  onLockAccount,
+  onUnlockAccount,
+  onBanAndBlockIP,
   onDeleteUser,
 }: UserTableProps) {
   return (
@@ -105,10 +114,13 @@ export function UserTable({
                         </div>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {getRoleBadge(user.role)}
                           {user.retailerAccess && (
                             <Badge className="bg-emerald-100 text-emerald-700"><Store className="h-3 w-3 mr-1" /> Retailer</Badge>
+                          )}
+                          {user.lockedAt && (
+                            <Badge className="bg-red-100 text-red-700"><Lock className="h-3 w-3 mr-1" /> Locked</Badge>
                           )}
                         </div>
                       </td>
@@ -160,6 +172,25 @@ export function UserTable({
                             <DropdownMenuItem onClick={() => onSetPassword(user)}>
                               <Shield className="mr-2 h-4 w-4" />
                               Set Password
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {user.lockedAt ? (
+                              <DropdownMenuItem onClick={() => onUnlockAccount(user)}>
+                                <Unlock className="mr-2 h-4 w-4" />
+                                Unlock Account
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => onLockAccount(user)}>
+                                <Lock className="mr-2 h-4 w-4" />
+                                Lock Account
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              className="text-orange-600"
+                              onClick={() => onBanAndBlockIP(user)}
+                            >
+                              <Ban className="mr-2 h-4 w-4" />
+                              Ban &amp; Block IP
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem

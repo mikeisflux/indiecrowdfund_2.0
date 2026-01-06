@@ -98,6 +98,11 @@ model User {
   lockedReason      String?    @db.Text  // Admin notes on why account was locked
   lockedById        String?    // Admin who locked the account
 
+  // IP tracking for security
+  lastLoginIp       String?    // Last known IP address
+  lastLoginAt       DateTime?  // Last login timestamp
+  registrationIp    String?    // IP used at registration
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?  // Soft delete timestamp
@@ -107,6 +112,7 @@ model User {
   @@index([creatorEmailHandle])
   @@index([deletedAt])  // For soft delete filtering
   @@index([lockedAt])   // For locked account filtering
+  @@index([lastLoginIp]) // For IP-based queries
 }
 
 enum UserRole {

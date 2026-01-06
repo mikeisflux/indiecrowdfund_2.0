@@ -2,7 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Users, Store, RefreshCw, Download, UserPlus } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -89,6 +99,21 @@ export default function UsersPage() {
   const [resendReceiptConfirm, setResendReceiptConfirm] = useState<{ open: boolean; pledgeId: string }>({
     open: false,
     pledgeId: "",
+  });
+
+  // Account lock/ban confirmation dialogs
+  const [lockAccountConfirm, setLockAccountConfirm] = useState<{ open: boolean; user: User | null }>({
+    open: false,
+    user: null,
+  });
+  const [unlockAccountConfirm, setUnlockAccountConfirm] = useState<{ open: boolean; user: User | null }>({
+    open: false,
+    user: null,
+  });
+  const [banUserConfirm, setBanUserConfirm] = useState<{ open: boolean; user: User | null; reason: string }>({
+    open: false,
+    user: null,
+    reason: "",
   });
 
   // API data state
@@ -631,6 +656,113 @@ export default function UsersPage() {
     }
   };
 
+  const handleLockAccount = (user: User) => {
+    setLockAccountConfirm({ open: true, user });
+  };
+
+  const handleUnlockAccount = (user: User) => {
+    setUnlockAccountConfirm({ open: true, user });
+  };
+
+  const handleBanAndBlockIP = (user: User) => {
+    setBanUserConfirm({ open: true, user, reason: "" });
+  };
+
+  const submitLockAccount = async () => {
+    const user = lockAccountConfirm.user;
+    if (!user) return;
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          userId: user.id,
+          action: "LOCK_ACCOUNT",
+          data: { reason: "Account locked by administrator" },
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        setLockAccountConfirm({ open: false, user: null });
+        toast.success("Account locked successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to lock account");
+      }
+    } catch (error) {
+      console.error("Error locking account:", error);
+      toast.error("Failed to lock account");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const submitUnlockAccount = async () => {
+    const user = unlockAccountConfirm.user;
+    if (!user) return;
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          userId: user.id,
+          action: "UNLOCK_ACCOUNT",
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        setUnlockAccountConfirm({ open: false, user: null });
+        toast.success("Account unlocked successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to unlock account");
+      }
+    } catch (error) {
+      console.error("Error unlocking account:", error);
+      toast.error("Failed to unlock account");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const submitBanAndBlockIP = async () => {
+    const user = banUserConfirm.user;
+    if (!user) return;
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          userId: user.id,
+          action: "BAN_AND_BLOCK_IP",
+          data: { reason: banUserConfirm.reason || "Account banned by administrator" },
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        setBanUserConfirm({ open: false, user: null, reason: "" });
+        toast.success("User banned and IP blocked successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to ban user");
+      }
+    } catch (error) {
+      console.error("Error banning user:", error);
+      toast.error("Failed to ban user");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const submitCreateUser = async () => {
     if (!newUserData.email) {
       toast.error("Email is required");
@@ -794,6 +926,9 @@ export default function UsersPage() {
             onToggleRetailerAccess={handleToggleRetailerAccess}
             onSendResetEmail={handleSendResetEmail}
             onSetPassword={handleSetPassword}
+            onLockAccount={handleLockAccount}
+            onUnlockAccount={handleUnlockAccount}
+            onBanAndBlockIP={handleBanAndBlockIP}
             onDeleteUser={handleDeleteUser}
           />
         </TabsContent>
@@ -967,6 +1102,86 @@ export default function UsersPage() {
         onConfirm={handleResendReceipt}
         loading={resendingReceipt === resendReceiptConfirm.pledgeId}
       />
+
+      {/* Account Lock/Unlock/Ban Dialogs */}
+      <ConfirmDialog
+        open={lockAccountConfirm.open}
+        onOpenChange={(open) => setLockAccountConfirm({ ...lockAccountConfirm, open })}
+        title="Lock Account?"
+        description={`Are you sure you want to lock the account for ${lockAccountConfirm.user?.email}? They will not be able to log in until the account is unlocked.`}
+        confirmText="Lock Account"
+        variant="destructive"
+        onConfirm={submitLockAccount}
+        loading={isUpdating}
+      />
+
+      <ConfirmDialog
+        open={unlockAccountConfirm.open}
+        onOpenChange={(open) => setUnlockAccountConfirm({ ...unlockAccountConfirm, open })}
+        title="Unlock Account?"
+        description={`Are you sure you want to unlock the account for ${unlockAccountConfirm.user?.email}? They will be able to log in again.`}
+        confirmText="Unlock Account"
+        onConfirm={submitUnlockAccount}
+        loading={isUpdating}
+      />
+
+      {/* Ban & Block IP Dialog */}
+      <Dialog
+        open={banUserConfirm.open}
+        onOpenChange={(open) => {
+          if (!open) setBanUserConfirm({ open: false, user: null, reason: "" });
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ban User &amp; Block IP</DialogTitle>
+            <DialogDescription>
+              This will permanently ban {banUserConfirm.user?.email} and block their IP address(es) from creating new accounts.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {banUserConfirm.user?.lastLoginIp && (
+              <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                <span className="font-medium">Last Login IP:</span> {banUserConfirm.user.lastLoginIp}
+              </div>
+            )}
+            {banUserConfirm.user?.registrationIp && banUserConfirm.user.registrationIp !== banUserConfirm.user.lastLoginIp && (
+              <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                <span className="font-medium">Registration IP:</span> {banUserConfirm.user.registrationIp}
+              </div>
+            )}
+            {!banUserConfirm.user?.lastLoginIp && !banUserConfirm.user?.registrationIp && (
+              <div className="text-sm text-amber-600 dark:text-amber-400">
+                No IP addresses recorded for this user. Their email will still be blocked.
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="ban-reason">Reason (optional)</Label>
+              <Input
+                id="ban-reason"
+                value={banUserConfirm.reason}
+                onChange={(e) => setBanUserConfirm({ ...banUserConfirm, reason: e.target.value })}
+                placeholder="e.g., Spam, fraud, TOS violation"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBanUserConfirm({ open: false, user: null, reason: "" })}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={submitBanAndBlockIP}
+              disabled={isUpdating}
+            >
+              {isUpdating ? "Banning..." : "Ban & Block IP"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

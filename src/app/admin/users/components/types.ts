@@ -8,6 +8,10 @@ export interface User {
   retailerAccess: boolean;
   createdAt: string;
   emailVerified: string | null;
+  lockedAt: string | null;
+  lockedReason: string | null;
+  lastLoginIp: string | null;
+  registrationIp: string | null;
   projectCount: number;
   pledgeCount: number;
 }
