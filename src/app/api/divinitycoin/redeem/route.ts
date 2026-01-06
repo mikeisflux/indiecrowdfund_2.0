@@ -183,6 +183,7 @@ export async function POST(req: NextRequest) {
       select: {
         divinityCoinEnabled: true,
         divinityCoinApiKey: true,
+        divinityCoinPartnerId: true,
       },
     });
 
@@ -200,6 +201,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!settings.divinityCoinPartnerId) {
+      console.error("[DivinityCoin Redeem] Partner ID not configured in platform settings");
+      return NextResponse.json(
+        { error: "DivinityCoin is not properly configured" },
+        { status: 500 }
+      );
+    }
+
     // Call DivinityCoin API to validate and redeem the code
     let divinityResult;
     try {
@@ -208,10 +217,12 @@ export async function POST(req: NextRequest) {
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${settings.divinityCoinApiKey}`,
+          "X-Partner-ID": settings.divinityCoinPartnerId || "",
         },
         body: JSON.stringify({
           code: cleanCode,
           platformUserId: userId,
+          partnerId: settings.divinityCoinPartnerId || "", // Always use site's partner ID
           requestId, // Include for cross-system audit trail
         }),
       });
