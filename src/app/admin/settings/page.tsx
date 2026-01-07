@@ -53,6 +53,10 @@ interface PlatformSettings {
   divinityCoinWebhookSecret: string | null;
   divinityCoinPartnerId: string | null;
   divinityCoinSettlementFrequency: string;
+  // Shopify OAuth
+  shopifyEnabled: boolean;
+  shopifyApiKey: string | null;
+  shopifyApiSecret: string | null;
   emailProvider: string;
   smtpHost: string | null;
   smtpPort: number;
@@ -186,6 +190,10 @@ export default function SettingsPage() {
     divinityCoinWebhookSecret: "",
     divinityCoinPartnerId: "",
     divinityCoinSettlementFrequency: "weekly",
+    // Shopify OAuth
+    shopifyEnabled: false,
+    shopifyApiKey: "",
+    shopifyApiSecret: "",
     // Local UI settings (not in DB yet)
     autoPayouts: true,
     payoutThreshold: "100",
@@ -361,6 +369,9 @@ export default function SettingsPage() {
         divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret || "",
         divinityCoinPartnerId: settings.divinityCoinPartnerId || "",
         divinityCoinSettlementFrequency: settings.divinityCoinSettlementFrequency || "weekly",
+        shopifyEnabled: settings.shopifyEnabled || false,
+        shopifyApiKey: settings.shopifyApiKey || "",
+        shopifyApiSecret: settings.shopifyApiSecret || "",
         autoPayouts: settings.autoPayouts || false,
       }));
 
@@ -621,6 +632,9 @@ export default function SettingsPage() {
             divinityCoinWebhookSecret: currentPaymentSettings.divinityCoinWebhookSecret,
             divinityCoinPartnerId: currentPaymentSettings.divinityCoinPartnerId,
             divinityCoinSettlementFrequency: currentPaymentSettings.divinityCoinSettlementFrequency,
+            shopifyEnabled: currentPaymentSettings.shopifyEnabled,
+            shopifyApiKey: currentPaymentSettings.shopifyApiKey,
+            shopifyApiSecret: currentPaymentSettings.shopifyApiSecret,
             autoPayouts: currentPaymentSettings.autoPayouts,
           };
           break;

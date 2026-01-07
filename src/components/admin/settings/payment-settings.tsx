@@ -26,6 +26,10 @@ interface PaymentSettingsProps {
     divinityCoinWebhookSecret: string;
     divinityCoinPartnerId: string;
     divinityCoinSettlementFrequency: string;
+    // Shopify - E-commerce/fulfillment integration
+    shopifyEnabled: boolean;
+    shopifyApiKey: string;
+    shopifyApiSecret: string;
     autoPayouts: boolean;
     payoutThreshold: string;
     payoutSchedule: string;
@@ -200,6 +204,68 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
             <a href="https://divinitycoin.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               Learn more about DivinityCoin →
             </a>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Shopify Integration</CardTitle>
+              <CardDescription>OAuth credentials for IndieKit fulfillment integration</CardDescription>
+            </div>
+            <Badge variant={settings.shopifyEnabled ? "default" : "secondary"}>
+              {settings.shopifyEnabled ? "Enabled" : "Disabled"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label>Enable Shopify Integration</Label>
+              <p className="text-sm text-zinc-500">Allow creators to connect their Shopify stores for fulfillment</p>
+            </div>
+            <Switch
+              checked={settings.shopifyEnabled}
+              onCheckedChange={(checked) =>
+                onSettingsChange({ ...settings, shopifyEnabled: checked })
+              }
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>API Key (Client ID)</Label>
+              <SecureKeyInput
+                value={settings.shopifyApiKey}
+                onChange={(value) => onSettingsChange({ ...settings, shopifyApiKey: value })}
+                onSave={onSave}
+                hasExistingValue={settings.shopifyApiKey === "••••••••"}
+                placeholder="Your Shopify API key..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>API Secret (Client Secret)</Label>
+              <SecureKeyInput
+                value={settings.shopifyApiSecret}
+                onChange={(value) => onSettingsChange({ ...settings, shopifyApiSecret: value })}
+                onSave={onSave}
+                hasExistingValue={settings.shopifyApiSecret === "••••••••"}
+                placeholder="Your Shopify API secret..."
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+            <p className="font-medium">Setup Instructions:</p>
+            <ol className="list-decimal list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
+              <li>Create an app in your Shopify Partners dashboard</li>
+              <li>Set App URL to: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded">{typeof window !== "undefined" ? window.location.origin : ""}/dashboard/indiekit</code></li>
+              <li>Set Redirect URL to: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded">{typeof window !== "undefined" ? window.location.origin : ""}/api/creator/indiekit/shopify/oauth/callback</code></li>
+              <li>Copy the API key and API secret here</li>
+            </ol>
+            <p className="text-zinc-500 mt-2">Each creator connects their own Shopify store - credentials are isolated per project.</p>
           </div>
         </CardContent>
       </Card>

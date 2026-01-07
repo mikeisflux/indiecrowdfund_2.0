@@ -144,9 +144,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Exchange code for access token
-    const shopifyApiKey = process.env.SHOPIFY_API_KEY;
-    const shopifyApiSecret = process.env.SHOPIFY_API_SECRET;
+    // Exchange code for access token - get credentials from database or environment
+    const platformSettings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { shopifyApiKey: true, shopifyApiSecret: true },
+    });
+
+    const shopifyApiKey = platformSettings?.shopifyApiKey || process.env.SHOPIFY_API_KEY;
+    const shopifyApiSecret = platformSettings?.shopifyApiSecret || process.env.SHOPIFY_API_SECRET;
 
     if (!shopifyApiKey || !shopifyApiSecret) {
       console.error("Missing Shopify API credentials");

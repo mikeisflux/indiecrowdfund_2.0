@@ -57,8 +57,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Get Shopify API credentials from environment
-    const shopifyApiKey = process.env.SHOPIFY_API_KEY;
+    // Get Shopify API credentials from database or environment
+    const platformSettings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { shopifyEnabled: true, shopifyApiKey: true },
+    });
+
+    const shopifyApiKey = platformSettings?.shopifyApiKey || process.env.SHOPIFY_API_KEY;
+
+    if (!platformSettings?.shopifyEnabled && !process.env.SHOPIFY_API_KEY) {
+      return NextResponse.json({ error: "Shopify integration is not enabled" }, { status: 400 });
+    }
+
     if (!shopifyApiKey) {
       return NextResponse.json({ error: "Shopify integration not configured" }, { status: 500 });
     }
