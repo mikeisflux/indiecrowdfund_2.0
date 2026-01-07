@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getR2Storage, generateEmailAttachmentKey } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,13 @@ interface EmailEnvelope {
   from: string;
 }
 
+interface AttachmentFile {
+  filename: string;
+  contentType: string;
+  size: number;
+  data: Buffer;
+}
+
 interface ParsedEmail {
   to: string;
   toName?: string;
@@ -20,7 +28,8 @@ interface ParsedEmail {
   text?: string;
   html?: string;
   cc?: string;
-  attachments?: number;
+  attachmentCount?: number;
+  attachmentFiles?: AttachmentFile[];
   envelope?: EmailEnvelope;
 }
 
@@ -156,6 +165,34 @@ export async function POST(request: NextRequest) {
       const attachmentCount = (formData.get("attachment-count") as string) ||
                               (formData.get("attachments") as string) || "0";
 
+      // Extract actual attachment files
+      const attachmentFiles: AttachmentFile[] = [];
+      const attachmentCountNum = parseInt(attachmentCount, 10);
+
+      // Mailgun sends attachments as attachment-1, attachment-2, etc.
+      // SendGrid sends them as attachment1, attachment2, etc. or just numbered
+      for (let i = 1; i <= Math.max(attachmentCountNum, 10); i++) {
+        // Try different naming conventions
+        const attachment = (formData.get(`attachment-${i}`) as File) ||
+                          (formData.get(`attachment${i}`) as File) ||
+                          (formData.get(`${i}`) as File);
+
+        if (attachment && attachment instanceof File && attachment.size > 0) {
+          try {
+            const arrayBuffer = await attachment.arrayBuffer();
+            attachmentFiles.push({
+              filename: attachment.name || `attachment-${i}`,
+              contentType: attachment.type || "application/octet-stream",
+              size: attachment.size,
+              data: Buffer.from(arrayBuffer),
+            });
+            console.log(`[Inbound Email] Found attachment: ${attachment.name} (${attachment.size} bytes)`);
+          } catch (err) {
+            console.error(`[Inbound Email] Failed to read attachment ${i}:`, err);
+          }
+        }
+      }
+
       emailData = {
         to: toRaw,
         from: fromRaw,
@@ -163,7 +200,8 @@ export async function POST(request: NextRequest) {
         text: textBody || undefined,
         html: htmlBody || undefined,
         cc: (formData.get("cc") as string) || (formData.get("Cc") as string) || undefined,
-        attachments: parseInt(attachmentCount, 10),
+        attachmentCount: attachmentCountNum,
+        attachmentFiles: attachmentFiles.length > 0 ? attachmentFiles : undefined,
         envelope,
       };
     } else if (contentType.includes("application/json")) {
@@ -254,9 +292,63 @@ export async function POST(request: NextRequest) {
       .toLowerCase();
     const threadId = `thread_${Buffer.from(subjectForThread).toString("base64").slice(0, 32)}`;
 
+    // Generate email ID first so we can use it for attachment paths
+    const emailId = crypto.randomUUID().replace(/-/g, "").substring(0, 25);
+
+    // Upload attachments to R2 if we have any
+    interface StoredAttachment {
+      id: string;
+      filename: string;
+      contentType: string;
+      size: number;
+      r2Key: string;
+    }
+    const storedAttachments: StoredAttachment[] = [];
+
+    if (emailData.attachmentFiles && emailData.attachmentFiles.length > 0) {
+      const r2Storage = await getR2Storage();
+      if (r2Storage) {
+        for (const attachment of emailData.attachmentFiles) {
+          try {
+            const attachmentId = crypto.randomUUID();
+            const r2Key = generateEmailAttachmentKey(
+              mailbox.id,
+              emailId,
+              attachment.filename,
+              attachmentId
+            );
+
+            await r2Storage.uploadFile(r2Key, attachment.data, {
+              contentType: attachment.contentType,
+              metadata: {
+                originalFilename: attachment.filename,
+                emailId: emailId,
+                mailboxId: mailbox.id,
+              },
+            });
+
+            storedAttachments.push({
+              id: attachmentId,
+              filename: attachment.filename,
+              contentType: attachment.contentType,
+              size: attachment.size,
+              r2Key: r2Key,
+            });
+
+            console.log(`[Inbound Email] Uploaded attachment to R2: ${attachment.filename}`);
+          } catch (err) {
+            console.error(`[Inbound Email] Failed to upload attachment ${attachment.filename}:`, err);
+          }
+        }
+      } else {
+        console.warn("[Inbound Email] R2 storage not configured, skipping attachments");
+      }
+    }
+
     // Store the email in admin mailbox
     const email = await db.adminEmail.create({
       data: {
+        id: emailId,
         mailboxId: mailbox.id,
         fromEmail: fromParsed.email,
         fromName: fromParsed.name || null,
@@ -273,7 +365,9 @@ export async function POST(request: NextRequest) {
         isStarred: false,
         receivedAt: new Date(),
         threadId,
-        attachments: emailData.attachments ? { count: emailData.attachments } : null,
+        attachments: storedAttachments.length > 0
+          ? { count: storedAttachments.length, files: storedAttachments }
+          : (emailData.attachmentCount ? { count: emailData.attachmentCount } : null),
       },
     });
 

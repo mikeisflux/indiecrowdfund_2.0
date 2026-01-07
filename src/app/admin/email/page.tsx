@@ -57,6 +57,13 @@ import {
   Reply,
   Forward,
   ReplyAll,
+  Paperclip,
+  Download,
+  FileIcon,
+  ImageIcon,
+  FileText as FileTextIcon,
+  FileAudio,
+  FileVideo,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -72,6 +79,14 @@ interface Mailbox {
   unreadCount: number;
   totalEmails: number;
   folders?: Record<string, number>;
+}
+
+interface EmailAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  r2Key: string;
 }
 
 interface Email {
@@ -90,6 +105,10 @@ interface Email {
   sentAt?: string;
   receivedAt?: string;
   createdAt: string;
+  attachments?: {
+    count: number;
+    files?: EmailAttachment[];
+  };
 }
 
 interface EmailSettings {
@@ -114,6 +133,25 @@ const FOLDER_LABELS: Record<string, string> = {
   TRASH: "Trash",
   ARCHIVE: "Archive",
 };
+
+// Get icon for file type
+function getFileIcon(contentType: string) {
+  if (contentType.startsWith("image/")) return ImageIcon;
+  if (contentType.startsWith("audio/")) return FileAudio;
+  if (contentType.startsWith("video/")) return FileVideo;
+  if (contentType.includes("pdf") || contentType.includes("document") || contentType.includes("text"))
+    return FileTextIcon;
+  return FileIcon;
+}
+
+// Format file size
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+}
 
 export default function EmailPage() {
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
@@ -147,6 +185,9 @@ export default function EmailPage() {
   const [deleteEmailConfirm, setDeleteEmailConfirm] = useState(false);
   const [isDeletingMailbox, setIsDeletingMailbox] = useState(false);
   const [isDeletingEmail, setIsDeletingEmail] = useState(false);
+
+  // Image lightbox state
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -725,10 +766,71 @@ export default function EmailPage() {
                 </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-auto">
+                {/* Attachments Section */}
+                {selectedEmail.attachments && selectedEmail.attachments.count > 0 && (
+                  <div className="mb-4 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Paperclip className="h-4 w-4 text-zinc-500" />
+                      <span className="text-sm font-medium">
+                        {selectedEmail.attachments.count} Attachment{selectedEmail.attachments.count !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    {selectedEmail.attachments.files && selectedEmail.attachments.files.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedEmail.attachments.files.map((attachment) => {
+                          const Icon = getFileIcon(attachment.contentType);
+                          const isImage = attachment.contentType.startsWith("image/");
+                          return (
+                            <a
+                              key={attachment.id}
+                              href={`/api/admin/mailboxes/${selectedMailbox?.id}/emails/${selectedEmail.id}/attachments/${attachment.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-zinc-700 rounded-md border hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors group"
+                              onClick={(e) => {
+                                // For images, show in lightbox instead of downloading
+                                if (isImage) {
+                                  e.preventDefault();
+                                  setExpandedImage(`/api/admin/mailboxes/${selectedMailbox?.id}/emails/${selectedEmail.id}/attachments/${attachment.id}`);
+                                }
+                              }}
+                            >
+                              <Icon className="h-4 w-4 text-zinc-500 group-hover:text-emerald-600" />
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-sm truncate max-w-[150px]" title={attachment.filename}>
+                                  {attachment.filename}
+                                </span>
+                                <span className="text-xs text-zinc-400">
+                                  {formatFileSize(attachment.size)}
+                                </span>
+                              </div>
+                              <Download className="h-3 w-3 text-zinc-400 group-hover:text-emerald-600 ml-1" />
+                            </a>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-500">
+                        Attachment files not available for download
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Email Body */}
                 {selectedEmail.bodyHtml ? (
                   <div
-                    className="prose prose-sm dark:prose-invert max-w-none"
+                    className="prose prose-sm dark:prose-invert max-w-none [&_img]:cursor-zoom-in [&_img]:transition-opacity [&_img]:hover:opacity-80"
                     dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedEmail.bodyHtml) }}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.tagName === "IMG") {
+                        const src = target.getAttribute("src");
+                        if (src) {
+                          setExpandedImage(src);
+                        }
+                      }
+                    }}
                   />
                 ) : selectedEmail.bodyText ? (
                   <p className="text-sm whitespace-pre-wrap">{selectedEmail.bodyText}</p>
@@ -803,6 +905,34 @@ export default function EmailPage() {
         onConfirm={handleDeleteSelectedEmail}
         loading={isDeletingEmail}
       />
+
+      {/* Image Lightbox */}
+      <Dialog open={!!expandedImage} onOpenChange={() => setExpandedImage(null)}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-black/95">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Image Preview</DialogTitle>
+            <DialogDescription>Expanded view of email image</DialogDescription>
+          </DialogHeader>
+          <div className="relative flex items-center justify-center min-h-[300px] p-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 text-white hover:bg-white/20 z-10"
+              onClick={() => setExpandedImage(null)}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            {expandedImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={expandedImage}
+                alt="Expanded email image"
+                className="max-w-full max-h-[80vh] object-contain"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

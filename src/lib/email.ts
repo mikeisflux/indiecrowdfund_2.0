@@ -103,6 +103,34 @@ export async function isEmailUnsubscribed(email: string): Promise<boolean> {
   }
 }
 
+// Add whitelist banner to the top of HTML email
+function addWhitelistBanner(html: string, fromEmail: string): string {
+  const whitelistGuideUrl = `${APP_URL}/help/whitelist`;
+  const banner = `
+    <div style="background: linear-gradient(90deg, #f0fdf4 0%, #ecfdf5 100%); border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #166534;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td style="vertical-align: middle;">
+            <strong style="color: #15803d;">Ensure delivery:</strong> Add <span style="font-family: monospace; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${fromEmail}</span> to your contacts or safe sender list.
+            <a href="${whitelistGuideUrl}" style="color: #16a34a; text-decoration: underline; margin-left: 8px;">How to whitelist</a>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+
+  // Insert after opening <body...> tag if it exists
+  const bodyTagMatch = html.match(/<body[^>]*>/i);
+  if (bodyTagMatch) {
+    const bodyTag = bodyTagMatch[0];
+    const insertPosition = html.indexOf(bodyTag) + bodyTag.length;
+    return html.slice(0, insertPosition) + banner + html.slice(insertPosition);
+  }
+
+  // Otherwise prepend
+  return banner + html;
+}
+
 // Add unsubscribe footer to HTML email
 function addUnsubscribeFooter(html: string, email: string): string {
   const unsubscribeUrl = getUnsubscribeUrl(email);
@@ -127,6 +155,12 @@ function addUnsubscribeFooter(html: string, email: string): string {
 function addUnsubscribeText(text: string, email: string): string {
   const unsubscribeUrl = getUnsubscribeUrl(email);
   return `${text}\n\n---\nTo unsubscribe from all emails: ${unsubscribeUrl}`;
+}
+
+// Add whitelist notice to plain text email
+function addWhitelistText(text: string, fromEmail: string): string {
+  const whitelistGuideUrl = `${APP_URL}/help/whitelist`;
+  return `[Ensure delivery: Add ${fromEmail} to your contacts or safe sender list. Learn how: ${whitelistGuideUrl}]\n\n${text}`;
 }
 
 // Send email via SendGrid
@@ -250,11 +284,18 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
   const fromEmail = customFromEmail || settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
   const fromName = customFromName || settings?.smtpFromName || APP_NAME;
 
-  // Add unsubscribe footer to emails (unless it's a transactional email that should skip)
-  const finalHtml = skipUnsubscribeCheck ? html : addUnsubscribeFooter(html, to);
-  const plainText = text
-    ? (skipUnsubscribeCheck ? text : addUnsubscribeText(text, to))
-    : finalHtml.replace(/<[^>]*>/g, "");
+  // Add whitelist banner and unsubscribe footer to emails (unless it's a transactional email that should skip)
+  let finalHtml = html;
+  let plainText: string;
+  if (!skipUnsubscribeCheck) {
+    finalHtml = addWhitelistBanner(finalHtml, fromEmail);
+    finalHtml = addUnsubscribeFooter(finalHtml, to);
+    // Build plain text with whitelist + unsubscribe notices
+    const baseText = text || html.replace(/<[^>]*>/g, "");
+    plainText = addWhitelistText(addUnsubscribeText(baseText, to), fromEmail);
+  } else {
+    plainText = text || html.replace(/<[^>]*>/g, "");
+  }
 
   // Generate unsubscribe URL for List-Unsubscribe header (unless transactional email)
   const unsubscribeUrl = skipUnsubscribeCheck ? undefined : getUnsubscribeUrl(to);

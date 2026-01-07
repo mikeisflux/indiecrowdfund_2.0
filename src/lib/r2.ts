@@ -420,6 +420,23 @@ export function parseMarketplaceFileKey(key: string): {
 }
 
 /**
+ * Generate a unique file key for email attachments
+ * Organized by: email-attachments/{mailboxId}/{emailId}/{fileId}_{sanitizedName}
+ */
+export function generateEmailAttachmentKey(
+  mailboxId: string,
+  emailId: string,
+  originalFilename: string,
+  fileId?: string
+): string {
+  const id = fileId || crypto.randomUUID();
+  const sanitizedName = originalFilename
+    .replace(/[^a-zA-Z0-9.-]/g, "_")
+    .substring(0, 100);
+  return `email-attachments/${mailboxId}/${emailId}/${id}_${sanitizedName}`;
+}
+
+/**
  * Parse file key to extract components
  */
 export function parseFileKey(key: string): {
