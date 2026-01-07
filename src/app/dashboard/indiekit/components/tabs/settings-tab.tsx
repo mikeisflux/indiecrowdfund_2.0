@@ -313,6 +313,8 @@ export function SettingsTab({
 
   // Handle OAuth callback messages
   useEffect(() => {
+    if (!searchParams) return;
+
     const shopifyResult = searchParams.get("shopify");
     const shopName = searchParams.get("shop");
     const errorMsg = searchParams.get("error");
