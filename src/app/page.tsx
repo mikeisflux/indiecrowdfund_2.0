@@ -45,6 +45,7 @@ import { Footer } from "@/components/footer";
 import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
+import { VersionCheck } from "@/components/version-check";
 import { formatTimeRemaining } from "@/lib/utils";
 import { auth } from "@/lib/auth";
 
@@ -274,6 +275,9 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen relative">
+      {/* Version check - forces refresh after deployments */}
+      <VersionCheck />
+
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/20" />

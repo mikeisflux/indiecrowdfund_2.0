@@ -1,7 +1,16 @@
+// Generate a unique build ID at build time
+const buildId = Date.now().toString();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Allow custom build output directory for zero-downtime deployments
   distDir: process.env.NEXT_BUILD_OUTPUT || '.next',
+  // Use consistent build ID
+  generateBuildId: async () => buildId,
+  // Expose build ID to client for version checking
+  env: {
+    NEXT_PUBLIC_BUILD_ID: buildId,
+  },
   // Increase body size limit for server actions (default is 1MB)
   experimental: {
     serverActions: {
