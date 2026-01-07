@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 // Types and constants
 import type {
@@ -144,6 +145,83 @@ export default function IndieKitPage() {
   const [isDistributionDialogOpen, setIsDistributionDialogOpen] = useState(false);
   const [isNPSDialogOpen, setIsNPSDialogOpen] = useState(false);
   const [packageGroupFilter, setPackageGroupFilter] = useState<string>("all");
+  const [workflowActionLoading, setWorkflowActionLoading] = useState<string | null>(null);
+
+  // Workflow action handlers
+  const handleWorkflowAction = async (stepId: string) => {
+    if (!selectedProjectId || workflowActionLoading) return;
+
+    // Map step ID to API action
+    const actionMap: Record<string, { action: string; successMsg: string; errorMsg: string }> = {
+      lock_orders: {
+        action: "lock_orders",
+        successMsg: "Orders locked successfully",
+        errorMsg: "Failed to lock orders",
+      },
+      charge_cards: {
+        action: "charge_cards",
+        successMsg: "Card charges initiated",
+        errorMsg: "Failed to charge cards",
+      },
+      lock_addresses: {
+        action: "lock_addresses",
+        successMsg: "Addresses locked successfully",
+        errorMsg: "Failed to lock addresses",
+      },
+      start_shipping: {
+        action: "push_to_fulfillment",
+        successMsg: "Orders pushed to fulfillment",
+        errorMsg: "Failed to push orders",
+      },
+      shipped: {
+        action: "mark_shipped",
+        successMsg: "Orders marked as shipped",
+        errorMsg: "Failed to mark orders as shipped",
+      },
+    };
+
+    const actionConfig = actionMap[stepId];
+    if (!actionConfig) {
+      // For surveys step, just navigate to emails tab
+      if (stepId === "surveys") {
+        setActiveTab("emails");
+      }
+      return;
+    }
+
+    // Get all backer IDs for the action
+    const pledgeIds = backers.map(b => b.id);
+    if (pledgeIds.length === 0) {
+      toast.info("No backers to process");
+      return;
+    }
+
+    setWorkflowActionLoading(stepId);
+    try {
+      const res = await fetch("/api/creator/indiekit/backers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          action: actionConfig.action,
+          pledgeIds,
+          projectId: selectedProjectId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || actionConfig.errorMsg);
+      }
+
+      toast.success(`${actionConfig.successMsg} (${data.results?.success || pledgeIds.length} backers)`);
+      fetchData(); // Refresh data
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : actionConfig.errorMsg);
+    } finally {
+      setWorkflowActionLoading(null);
+    }
+  };
 
   // Fetch IndieKit data
   const fetchData = useCallback(async () => {
@@ -336,17 +414,17 @@ export default function IndieKitPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {workflowSteps.map((step) => {
-                  // Calculate action counts based on step type
-                  const getActionCount = () => {
+                  // Use actionCount from workflow state if available, otherwise calculate
+                  const actionCount = step.actionCount ?? (() => {
                     switch (step.id) {
                       case "surveys":
                         return stats?.surveysPending || 0;
                       case "lock_orders":
-                        return backers.filter(b => !b.surveyCompleted).length;
+                        return backers.filter(b => b.surveyCompleted && b.status === "not_pushed").length;
                       case "charge_cards":
                         return stats?.chargeStats?.notCharged || 0;
                       case "lock_addresses":
-                        return backers.filter(b => !b.addressComplete).length;
+                        return backers.filter(b => b.addressComplete).length;
                       case "start_shipping":
                         return backers.filter(b => b.status === "not_pushed").length;
                       case "shipped":
@@ -354,65 +432,95 @@ export default function IndieKitPage() {
                       default:
                         return 0;
                     }
-                  };
-                  const actionCount = getActionCount();
-                  const isClickable = step.status !== "locked" && step.targetTab;
+                  })();
+                  const isClickable = step.status !== "locked";
+                  const isLoading = workflowActionLoading === step.id;
+                  const hasAction = ["lock_orders", "charge_cards", "lock_addresses", "start_shipping", "shipped"].includes(step.id);
 
                   return (
-                    <button
-                      key={step.id}
-                      onClick={() => {
-                        if (isClickable && step.targetTab) {
-                          setActiveTab(step.targetTab);
-                        }
-                      }}
-                      disabled={step.status === "locked"}
-                      className={cn(
-                        "w-full flex items-center gap-3 rounded-lg p-3 transition-colors text-left",
-                        step.status === "in_progress" && "bg-teal-50 border border-teal-200",
-                        step.status === "completed" && "bg-green-50",
-                        step.status === "pending" && "bg-muted/50 hover:bg-muted",
-                        step.status === "locked" && "opacity-50 cursor-not-allowed",
-                        isClickable && "cursor-pointer hover:ring-2 hover:ring-teal-200"
-                      )}
-                    >
-                      <div className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-full",
-                        step.status === "completed" && "bg-green-500 text-white",
-                        step.status === "in_progress" && "bg-teal-500 text-white",
-                        step.status === "pending" && "bg-gray-200 text-gray-600",
-                        step.status === "locked" && "bg-gray-100 text-gray-400"
-                      )}>
-                        {step.status === "completed" ? (
-                          <Check className="h-4 w-4" />
-                        ) : step.status === "locked" ? (
-                          <Lock className="h-4 w-4" />
-                        ) : (
-                          <step.icon className="h-4 w-4" />
+                    <div key={step.id} className="space-y-1">
+                      <button
+                        onClick={() => {
+                          if (isClickable && step.targetTab) {
+                            setActiveTab(step.targetTab);
+                          }
+                        }}
+                        disabled={step.status === "locked"}
+                        className={cn(
+                          "w-full flex items-center gap-3 rounded-lg p-3 transition-colors text-left",
+                          step.status === "in_progress" && "bg-teal-50 border border-teal-200",
+                          step.status === "completed" && "bg-green-50",
+                          step.status === "pending" && "bg-muted/50 hover:bg-muted",
+                          step.status === "locked" && "opacity-50 cursor-not-allowed",
+                          isClickable && "cursor-pointer hover:ring-2 hover:ring-teal-200"
                         )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn(
-                          "text-sm font-medium truncate",
-                          step.status === "locked" && "text-muted-foreground"
+                      >
+                        <div className={cn(
+                          "flex h-8 w-8 items-center justify-center rounded-full",
+                          step.status === "completed" && "bg-green-500 text-white",
+                          step.status === "in_progress" && "bg-teal-500 text-white",
+                          step.status === "pending" && "bg-gray-200 text-gray-600",
+                          step.status === "locked" && "bg-gray-100 text-gray-400"
                         )}>
-                          {step.label}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">{step.description}</p>
-                      </div>
-                      {actionCount > 0 && step.status !== "completed" && (
-                        <Badge variant="secondary" className={cn(
-                          "text-xs",
-                          step.status === "in_progress" && "bg-teal-100 text-teal-700",
-                          step.status === "pending" && "bg-amber-100 text-amber-700"
-                        )}>
-                          {actionCount}
-                        </Badge>
+                          {step.status === "completed" ? (
+                            <Check className="h-4 w-4" />
+                          ) : step.status === "locked" ? (
+                            <Lock className="h-4 w-4" />
+                          ) : (
+                            <step.icon className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            "text-sm font-medium truncate",
+                            step.status === "locked" && "text-muted-foreground"
+                          )}>
+                            {step.label}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">{step.description}</p>
+                        </div>
+                        {actionCount > 0 && step.status !== "completed" && (
+                          <Badge variant="secondary" className={cn(
+                            "text-xs",
+                            step.status === "in_progress" && "bg-teal-100 text-teal-700",
+                            step.status === "pending" && "bg-amber-100 text-amber-700"
+                          )}>
+                            {actionCount}
+                          </Badge>
+                        )}
+                        {step.status === "in_progress" && (
+                          <ChevronRight className="h-4 w-4 text-teal-600" />
+                        )}
+                      </button>
+                      {/* Action button for actionable steps */}
+                      {hasAction && step.status !== "locked" && step.status !== "completed" && actionCount > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full text-xs h-7 border-teal-200 text-teal-700 hover:bg-teal-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleWorkflowAction(step.id);
+                          }}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              {step.id === "lock_orders" && `Lock ${actionCount} Orders`}
+                              {step.id === "charge_cards" && `Charge ${actionCount} Cards`}
+                              {step.id === "lock_addresses" && `Lock ${actionCount} Addresses`}
+                              {step.id === "start_shipping" && `Push ${actionCount} to Fulfillment`}
+                              {step.id === "shipped" && `Mark ${actionCount} Shipped`}
+                            </>
+                          )}
+                        </Button>
                       )}
-                      {step.status === "in_progress" && (
-                        <ChevronRight className="h-4 w-4 text-teal-600" />
-                      )}
-                    </button>
+                    </div>
                   );
                 })}
               </CardContent>

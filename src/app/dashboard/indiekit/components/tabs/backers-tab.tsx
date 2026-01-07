@@ -236,6 +236,16 @@ export function BackersTab({
     await performBulkAction("push_to_fulfillment", "Pushed {count} orders to fulfillment");
   };
 
+  // Handle mark shipped
+  const handleMarkShipped = async () => {
+    const pushedOrders = selectedBackerData.filter(b => b.status === "pushed").length;
+    if (pushedOrders === 0) {
+      toast.info("No pushed orders selected to mark as shipped");
+      return;
+    }
+    await performBulkAction("mark_shipped", "Marked {count} orders as shipped");
+  };
+
   // Handle export
   const handleExport = async () => {
     if (!projectId) {
@@ -328,6 +338,10 @@ export function BackersTab({
                   <DropdownMenuItem onClick={handlePushToFulfillment} disabled={isProcessing}>
                     <Send className="h-4 w-4 mr-2" />
                     Push to Fulfillment
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleMarkShipped} disabled={isProcessing}>
+                    <Check className="h-4 w-4 mr-2" />
+                    Mark as Shipped
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -547,6 +561,34 @@ export function BackersTab({
                         }}>
                           <Send className="h-4 w-4 mr-2" />
                           Push to Fulfillment
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={async () => {
+                          if (!projectId) {
+                            toast.error("No project selected");
+                            return;
+                          }
+                          try {
+                            const res = await fetch("/api/creator/indiekit/backers", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                              body: JSON.stringify({
+                                action: "mark_shipped",
+                                pledgeIds: [backer.id],
+                                projectId,
+                              }),
+                            });
+                            if (!res.ok) {
+                              const data = await res.json();
+                              throw new Error(data.error || "Failed to mark as shipped");
+                            }
+                            toast.success(`Marked order for ${backer.name} as shipped`);
+                            onRefresh?.();
+                          } catch (error) {
+                            toast.error(error instanceof Error ? error.message : "Failed to mark as shipped");
+                          }
+                        }}>
+                          <Check className="h-4 w-4 mr-2" />
+                          Mark as Shipped
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

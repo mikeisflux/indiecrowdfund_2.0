@@ -340,6 +340,14 @@ export async function GET(req: NextRequest) {
     // Pre-order count
     const preOrderBackers = pledges.filter(p => p.isPreOrder).length;
 
+    // Calculate charge stats for workflow
+    const statsChargeStats = {
+      notCharged: pledges.filter(p => !p.chargeStatus || p.chargeStatus === "NOT_CHARGED").length,
+      errored: pledges.filter(p => p.chargeStatus === "FAILED").length,
+      charged: pledges.filter(p => p.chargeStatus === "CHARGED" || p.status === "COMPLETED").length,
+      paypalCollected: pledges.filter(p => p.paymentProcessor === "PAYPAL").length,
+    };
+
     const stats = {
       totalBackers,
       fulfilledBackers,
@@ -350,6 +358,7 @@ export async function GET(req: NextRequest) {
       digitalDownloads,
       packagesShipped,
       preOrderBackers,
+      chargeStats: statsChargeStats,
       pledgeLevelBreakdown,
       surveyStatusBreakdown,
       shippingRegionBreakdown,
@@ -486,8 +495,23 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // Calculate workflow context data
+    const addressesComplete = surveyResponses.filter(sr => {
+      const addr = sr.shippingAddress as { line1?: string; city?: string; country?: string } | null;
+      return addr?.line1 && addr?.city && addr?.country;
+    }).length;
+    const addressesLocked = surveyResponses.filter(sr => sr.addressLocked).length;
+
     // Determine workflow state based on project/survey state
-    const workflowState = getWorkflowState(survey, surveyResponses.length, surveysCompleted, pledges);
+    const workflowState = getWorkflowState({
+      survey,
+      totalBackers,
+      completedSurveys: surveysCompleted,
+      addressesLocked,
+      addressesComplete,
+      pledges,
+      chargeStats: statsChargeStats,
+    });
 
     // Format segments for frontend
     const formattedSegments = segments.map((segment: { id: string; name: string; type: string; criteria: unknown; backerCount: number; createdAt: Date }) => ({
@@ -768,57 +792,110 @@ function formatFileSize(bytes: number): string {
 // Helper to determine workflow state
 type WorkflowStatus = "completed" | "in_progress" | "pending" | "locked";
 
-function getWorkflowState(
-  survey: { status: string } | null,
-  totalResponses: number,
-  completedResponses: number,
-  pledges: { fulfillmentStatus: string }[]
-) {
-  const steps: { id: string; label: string; description: string; icon: string; status: WorkflowStatus }[] = [
-    { id: "surveys", label: "Send & Remind", description: "Collect backer surveys", icon: "Mail", status: "pending" },
-    { id: "lock_orders", label: "Lock Orders", description: "Finalize backer selections", icon: "Lock", status: "locked" },
-    { id: "charge_cards", label: "Charge Cards", description: "Process additional payments", icon: "CreditCard", status: "locked" },
-    { id: "lock_addresses", label: "Lock Addresses", description: "Confirm shipping details", icon: "MapPin", status: "locked" },
-    { id: "start_shipping", label: "Start Shipping", description: "Push orders to fulfillment", icon: "Truck", status: "locked" },
-    { id: "shipped", label: "Shipped", description: "Mark orders as complete", icon: "CheckCircle2", status: "locked" },
+interface WorkflowContext {
+  survey: { status: string; lockedAt?: Date | null } | null;
+  totalBackers: number;
+  completedSurveys: number;
+  addressesLocked: number;
+  addressesComplete: number;
+  pledges: { fulfillmentStatus: string | null; chargeStatus?: string }[];
+  chargeStats: { notCharged: number; errored: number; charged: number };
+}
+
+function getWorkflowState(ctx: WorkflowContext) {
+  const steps: { id: string; label: string; description: string; icon: string; status: WorkflowStatus; actionCount?: number }[] = [
+    { id: "surveys", label: "Send & Remind", description: "Collect backer surveys", icon: "Mail", status: "pending", actionCount: 0 },
+    { id: "lock_orders", label: "Lock Orders", description: "Finalize backer selections", icon: "Lock", status: "locked", actionCount: 0 },
+    { id: "charge_cards", label: "Charge Cards", description: "Process additional payments", icon: "CreditCard", status: "locked", actionCount: 0 },
+    { id: "lock_addresses", label: "Lock Addresses", description: "Confirm shipping details", icon: "MapPin", status: "locked", actionCount: 0 },
+    { id: "start_shipping", label: "Start Shipping", description: "Push orders to fulfillment", icon: "Truck", status: "locked", actionCount: 0 },
+    { id: "shipped", label: "Shipped", description: "Mark orders as complete", icon: "CheckCircle2", status: "locked", actionCount: 0 },
   ];
 
-  // Determine current step based on state
+  const { survey, totalBackers, completedSurveys, addressesLocked, addressesComplete, pledges, chargeStats } = ctx;
+
+  // Calculate fulfillment counts
+  const notPushedCount = pledges.filter(p => !p.fulfillmentStatus || p.fulfillmentStatus === "PENDING").length;
+  const inProgressCount = pledges.filter(p => p.fulfillmentStatus === "IN_PROGRESS").length;
+  const shippedCount = pledges.filter(p => p.fulfillmentStatus === "SHIPPED" || p.fulfillmentStatus === "DELIVERED").length;
+  const pendingSurveys = totalBackers - completedSurveys;
+
+  // STEP 1: Surveys
+  // Always available - show pending surveys count
+  steps[0].actionCount = pendingSurveys;
   if (!survey || survey.status === "DRAFT") {
     steps[0].status = "pending";
   } else if (survey.status === "SENT") {
-    if (completedResponses < totalResponses * 0.9) {
-      steps[0].status = "in_progress";
-    } else {
+    steps[0].status = completedSurveys > 0 ? "in_progress" : "pending";
+    if (completedSurveys >= totalBackers * 0.9) {
       steps[0].status = "completed";
-      steps[1].status = "pending";
     }
   } else if (survey.status === "LOCKED") {
     steps[0].status = "completed";
-    steps[1].status = "completed";
-    steps[2].status = "pending";
   }
 
-  // Check fulfillment progress
-  const shippedCount = pledges.filter(
-    p => p.fulfillmentStatus === "SHIPPED" || p.fulfillmentStatus === "DELIVERED"
-  ).length;
-  const inProgressCount = pledges.filter(p => p.fulfillmentStatus === "IN_PROGRESS").length;
+  // STEP 2: Lock Orders
+  // Available once survey has responses (some surveys completed)
+  const unlockedOrders = totalBackers - (survey?.status === "LOCKED" ? totalBackers : 0);
+  steps[1].actionCount = completedSurveys > 0 ? unlockedOrders : 0;
+  if (completedSurveys > 0) {
+    if (survey?.status === "LOCKED") {
+      steps[1].status = "completed";
+    } else {
+      steps[1].status = "pending";
+    }
+  }
 
-  if (shippedCount > 0 || inProgressCount > 0) {
-    steps[0].status = "completed";
-    steps[1].status = "completed";
-    steps[2].status = "completed";
-    steps[3].status = "completed";
+  // STEP 3: Charge Cards
+  // Available once orders are locked OR if we have completed surveys
+  steps[2].actionCount = chargeStats.notCharged;
+  if (survey?.status === "LOCKED" || completedSurveys > 0) {
+    if (chargeStats.notCharged === 0 && chargeStats.charged > 0) {
+      steps[2].status = "completed";
+    } else if (chargeStats.charged > 0) {
+      steps[2].status = "in_progress";
+    } else {
+      steps[2].status = "pending";
+    }
+  }
 
-    if (shippedCount === pledges.length) {
+  // STEP 4: Lock Addresses
+  // Available once we have addresses to lock
+  const unlockedAddresses = addressesComplete - addressesLocked;
+  steps[3].actionCount = unlockedAddresses > 0 ? unlockedAddresses : addressesComplete;
+  if (addressesComplete > 0) {
+    if (addressesLocked >= addressesComplete && addressesComplete > 0) {
+      steps[3].status = "completed";
+    } else if (addressesLocked > 0) {
+      steps[3].status = "in_progress";
+    } else {
+      steps[3].status = "pending";
+    }
+  }
+
+  // STEP 5: Start Shipping
+  // Available once addresses are complete
+  steps[4].actionCount = notPushedCount;
+  if (addressesComplete > 0) {
+    if (notPushedCount === 0 && (inProgressCount > 0 || shippedCount > 0)) {
       steps[4].status = "completed";
+    } else if (inProgressCount > 0 || shippedCount > 0) {
+      steps[4].status = "in_progress";
+    } else {
+      steps[4].status = "pending";
+    }
+  }
+
+  // STEP 6: Shipped
+  // Available once some orders are pushed
+  steps[5].actionCount = inProgressCount;
+  if (inProgressCount > 0 || shippedCount > 0) {
+    if (shippedCount === totalBackers && totalBackers > 0) {
       steps[5].status = "completed";
     } else if (shippedCount > 0) {
-      steps[4].status = "in_progress";
-      steps[5].status = "pending";
+      steps[5].status = "in_progress";
     } else {
-      steps[4].status = "in_progress";
+      steps[5].status = "pending";
     }
   }
 
