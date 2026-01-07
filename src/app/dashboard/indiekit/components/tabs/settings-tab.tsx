@@ -763,21 +763,32 @@ export function SettingsTab({
   };
 
   const handleSaveShopifyCredentials = async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
 
-    // Skip validation if values are masked (already saved)
-    const isNewApiKey = shopifyApiCredentials.apiKey && !shopifyApiCredentials.apiKey.includes("••••");
-    const isNewApiSecret = shopifyApiCredentials.apiSecret && !shopifyApiCredentials.apiSecret.includes("••••");
+    const apiKey = shopifyApiCredentials.apiKey.trim();
+    const apiSecret = shopifyApiCredentials.apiSecret.trim();
+
+    // Check if values are new (not masked placeholders)
+    const isNewApiKey = apiKey && !apiKey.includes("••••");
+    const isNewApiSecret = apiSecret && !apiSecret.includes("••••");
 
     if (!shopifyCredsStatus.saved) {
-      if (!shopifyApiCredentials.apiKey.trim() || !shopifyApiCredentials.apiSecret.trim()) {
+      // First time saving - both fields required
+      if (!apiKey || !apiSecret) {
         toast.error("Please enter both API Key and API Secret");
         return;
       }
+      if (!isNewApiKey || !isNewApiSecret) {
+        toast.error("Please enter valid API Key and API Secret");
+        return;
+      }
     } else {
-      // If updating, at least one field must have a new value
+      // Updating - at least one field must have a new value
       if (!isNewApiKey && !isNewApiSecret) {
-        toast.info("No changes to save");
+        toast.info("No changes to save. Click in a field to enter new values.");
         return;
       }
     }
@@ -785,8 +796,8 @@ export function SettingsTab({
     setIsSavingShopifyCreds(true);
     try {
       const payload: { projectId: string; apiKey?: string; apiSecret?: string } = { projectId };
-      if (isNewApiKey) payload.apiKey = shopifyApiCredentials.apiKey.trim();
-      if (isNewApiSecret) payload.apiSecret = shopifyApiCredentials.apiSecret.trim();
+      if (isNewApiKey) payload.apiKey = apiKey;
+      if (isNewApiSecret) payload.apiSecret = apiSecret;
 
       const res = await fetch("/api/creator/indiekit/shopify/credentials", {
         method: "POST",
@@ -1999,11 +2010,23 @@ export function SettingsTab({
                         <Label htmlFor="shopify-api-key">API Key (Client ID)</Label>
                         <Input
                           id="shopify-api-key"
+                          name="shopify-api-key"
+                          type="text"
                           placeholder="Your Shopify API key..."
                           value={shopifyApiCredentials.apiKey}
                           onChange={(e) => setShopifyApiCredentials(prev => ({ ...prev, apiKey: e.target.value }))}
+                          onFocus={() => {
+                            // Clear masked value when user focuses to enter new value
+                            if (shopifyApiCredentials.apiKey.includes("••••")) {
+                              setShopifyApiCredentials(prev => ({ ...prev, apiKey: "" }));
+                            }
+                          }}
                           autoComplete="off"
-                          data-1p-ignore
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          data-form-type="other"
+                          data-1p-ignore="true"
                           data-lpignore="true"
                         />
                       </div>
@@ -2011,12 +2034,23 @@ export function SettingsTab({
                         <Label htmlFor="shopify-api-secret">API Secret (Client Secret)</Label>
                         <Input
                           id="shopify-api-secret"
-                          type="password"
+                          name="shopify-api-secret"
+                          type="text"
                           placeholder="Your Shopify API secret..."
                           value={shopifyApiCredentials.apiSecret}
                           onChange={(e) => setShopifyApiCredentials(prev => ({ ...prev, apiSecret: e.target.value }))}
-                          autoComplete="new-password"
-                          data-1p-ignore
+                          onFocus={() => {
+                            // Clear masked value when user focuses to enter new value
+                            if (shopifyApiCredentials.apiSecret.includes("••••")) {
+                              setShopifyApiCredentials(prev => ({ ...prev, apiSecret: "" }));
+                            }
+                          }}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          data-form-type="other"
+                          data-1p-ignore="true"
                           data-lpignore="true"
                         />
                       </div>
@@ -2024,6 +2058,7 @@ export function SettingsTab({
 
                     <div className="flex items-center gap-3">
                       <Button
+                        type="button"
                         onClick={handleSaveShopifyCredentials}
                         disabled={isSavingShopifyCreds}
                         className="bg-[#95BF47] hover:bg-[#7a9e3a]"
@@ -2043,6 +2078,7 @@ export function SettingsTab({
 
                       {shopifyCredsStatus.saved && (
                         <Button
+                          type="button"
                           variant="outline"
                           onClick={handleClearShopifyCredentials}
                           disabled={isSavingShopifyCreds}
