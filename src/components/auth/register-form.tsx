@@ -36,11 +36,18 @@ export function RegisterForm() {
         if (typeof result.error === "object") {
           const firstError = Object.values(result.error).flat()[0];
           setError(firstError as string);
+        } else {
+          setError("Something went wrong. Please try again.");
         }
+      } else if (!result?.success) {
+        // No result or unexpected response
+        setError("Something went wrong. Please refresh the page and try again.");
       }
-    } catch {
-      // Server action redirected - this is success
-      return;
+    } catch (err) {
+      // Log the error for debugging
+      console.error("Registration error:", err);
+      // Show user-friendly error - likely a stale page/server action issue
+      setError("Something went wrong. Please refresh the page (Ctrl+Shift+R) and try again.");
     } finally {
       setIsLoading(false);
     }

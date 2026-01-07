@@ -54,10 +54,15 @@ export function LoginForm() {
         } else {
           setError("Invalid email or password");
         }
+      } else if (!result?.success) {
+        // No result or unexpected response
+        setError("Something went wrong. Please refresh the page and try again.");
       }
-    } catch {
-      // Unexpected error
-      setError("An error occurred. Please try again.");
+    } catch (err) {
+      // Log error for debugging
+      console.error("Login error:", err);
+      // Likely a stale page/server action issue
+      setError("Something went wrong. Please refresh the page (Ctrl+Shift+R) and try again.");
     } finally {
       setIsLoading(false);
     }
