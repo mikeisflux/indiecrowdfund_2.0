@@ -88,9 +88,10 @@ export function PackagesTab({
   const [searchGroupId, setSearchGroupId] = useState("");
   const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleString());
   const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<string>("shipstation");
+  const [selectedService, setSelectedService] = useState<string>("shopify");
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
+  const [shopDomain, setShopDomain] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
   const [fulfillmentMethod, setFulfillmentMethod] = useState("shipstation");
@@ -110,22 +111,43 @@ export function PackagesTab({
   const [isSavingCustoms, setIsSavingCustoms] = useState(false);
 
   const handleConnect = async () => {
-    if (!apiKey.trim() || !apiSecret.trim()) {
-      toast.error("Please enter both API key and secret");
-      return;
+    if (selectedService === "shopify") {
+      if (!shopDomain.trim() || !apiKey.trim()) {
+        toast.error("Please enter your Shopify store domain and access token");
+        return;
+      }
+    } else {
+      if (!apiKey.trim() || !apiSecret.trim()) {
+        toast.error("Please enter both API key and secret");
+        return;
+      }
     }
 
     setIsConnecting(true);
     try {
-      const res = await fetch("/api/creator/indiekit/integrations", {
+      // Use Shopify-specific endpoint for Shopify connections
+      const endpoint = selectedService === "shopify"
+        ? "/api/creator/indiekit/shopify"
+        : "/api/creator/indiekit/integrations";
+
+      const bodyData = selectedService === "shopify"
+        ? {
+            projectId,
+            action: "connect",
+            shopDomain: shopDomain.trim(),
+            accessToken: apiKey.trim(),
+          }
+        : {
+            projectId,
+            service: selectedService,
+            apiKey,
+            apiSecret,
+          };
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          service: selectedService,
-          apiKey,
-          apiSecret,
-        }),
+        body: JSON.stringify(bodyData),
       });
 
       if (!res.ok) {
@@ -133,10 +155,13 @@ export function PackagesTab({
         throw new Error(data.error || "Failed to connect");
       }
 
-      toast.success(`Connected to ${selectedService.charAt(0).toUpperCase() + selectedService.slice(1)}`);
+      const data = await res.json();
+      toast.success(data.message || `Connected to ${selectedService.charAt(0).toUpperCase() + selectedService.slice(1)}`);
       setIsConnectDialogOpen(false);
       setApiKey("");
       setApiSecret("");
+      setShopDomain("");
+      setFulfillmentMethod(selectedService);
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Connection failed");
@@ -153,14 +178,26 @@ export function PackagesTab({
 
     setIsPushing(true);
     try {
-      const res = await fetch("/api/creator/indiekit/fulfillment", {
+      // Use Shopify endpoint if Shopify is selected
+      const endpoint = fulfillmentMethod === "shopify"
+        ? "/api/creator/indiekit/shopify"
+        : "/api/creator/indiekit/fulfillment";
+
+      const bodyData = fulfillmentMethod === "shopify"
+        ? {
+            projectId,
+            action: "push_orders",
+          }
+        : {
+            projectId,
+            action: "push_orders",
+            groupId,
+          };
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          action: "push_orders",
-          groupId,
-        }),
+        body: JSON.stringify(bodyData),
       });
 
       if (!res.ok) {
@@ -169,7 +206,8 @@ export function PackagesTab({
       }
 
       const data = await res.json();
-      toast.success(`Pushed ${data.count || 0} orders to fulfillment`);
+      const serviceName = fulfillmentMethod === "shopify" ? "Shopify" : "fulfillment";
+      toast.success(`Pushed ${data.pushed || data.count || 0} orders to ${serviceName}`);
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Push failed");
@@ -228,7 +266,12 @@ export function PackagesTab({
 
     setIsSyncingStatus(true);
     try {
-      const res = await fetch("/api/creator/indiekit/fulfillment", {
+      // Use Shopify endpoint if Shopify is selected
+      const endpoint = fulfillmentMethod === "shopify"
+        ? "/api/creator/indiekit/shopify"
+        : "/api/creator/indiekit/fulfillment";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
@@ -243,7 +286,8 @@ export function PackagesTab({
       }
 
       const data = await res.json();
-      toast.success(`Synced ${data.updated || 0} orders from ${fulfillmentMethod}`);
+      const serviceName = fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod;
+      toast.success(data.message || `Synced ${data.updated || 0} orders from ${serviceName}`);
       setLastRefreshed(new Date().toLocaleString());
       onRefresh?.();
     } catch (error) {
@@ -312,14 +356,26 @@ export function PackagesTab({
 
     setIsPushing(true);
     try {
-      const res = await fetch("/api/creator/indiekit/fulfillment", {
+      // Use Shopify endpoint if Shopify is selected
+      const endpoint = fulfillmentMethod === "shopify"
+        ? "/api/creator/indiekit/shopify"
+        : "/api/creator/indiekit/fulfillment";
+
+      const bodyData = fulfillmentMethod === "shopify"
+        ? {
+            projectId,
+            action: "push_orders",
+          }
+        : {
+            projectId,
+            action: "push_all",
+            segment: segmentFilter,
+          };
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          action: "push_all",
-          segment: segmentFilter,
-        }),
+        body: JSON.stringify(bodyData),
       });
 
       if (!res.ok) {
@@ -328,7 +384,8 @@ export function PackagesTab({
       }
 
       const data = await res.json();
-      toast.success(`Pushed ${data.count || 0} orders to ${fulfillmentMethod}`);
+      const serviceName = fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod;
+      toast.success(`Pushed ${data.pushed || data.count || 0} orders to ${serviceName}`);
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Push failed");
@@ -517,6 +574,7 @@ export function PackagesTab({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => { setFulfillmentMethod("shopify"); toast.success("Switched to Shopify"); }}>Shopify</DropdownMenuItem>
               <DropdownMenuItem onClick={() => { setFulfillmentMethod("shipstation"); toast.success("Switched to ShipStation"); }}>ShipStation</DropdownMenuItem>
               <DropdownMenuItem onClick={() => { setFulfillmentMethod("csv"); toast.success("Switched to CSV Export"); }}>CSV Export</DropdownMenuItem>
               <DropdownMenuItem onClick={() => { setFulfillmentMethod("manual"); toast.success("Switched to Manual Fulfillment"); }}>Manual Fulfillment</DropdownMenuItem>
@@ -710,8 +768,8 @@ export function PackagesTab({
             <Card>
               <CardContent className="pt-6">
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
-                <p className="font-semibold">ShipStation</p>
-                <p className="text-sm text-muted-foreground">(NDM Express)</p>
+                <p className="font-semibold">{fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod === "shipstation" ? "ShipStation" : fulfillmentMethod.charAt(0).toUpperCase() + fulfillmentMethod.slice(1)}</p>
+                <p className="text-sm text-muted-foreground">{fulfillmentMethod === "shopify" ? "(Fulfillment Orders)" : fulfillmentMethod === "shipstation" ? "(NDM Express)" : ""}</p>
                 <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={handleSyncOrderStatus} disabled={isSyncingStatus}>
                   {isSyncingStatus ? "Syncing..." : "Update Order Status"}
                   {!isSyncingStatus && <ArrowRight className="h-3 w-3 ml-1" />}
@@ -855,8 +913,8 @@ export function PackagesTab({
             <Card>
               <CardContent className="pt-6">
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
-                <p className="font-semibold">ShipStation</p>
-                <p className="text-sm text-muted-foreground">(NDM Express)</p>
+                <p className="font-semibold">{fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod === "shipstation" ? "ShipStation" : fulfillmentMethod.charAt(0).toUpperCase() + fulfillmentMethod.slice(1)}</p>
+                <p className="text-sm text-muted-foreground">{fulfillmentMethod === "shopify" ? "(Fulfillment Orders)" : fulfillmentMethod === "shipstation" ? "(NDM Express)" : ""}</p>
                 <Button variant="link" className="text-teal-600 p-0 h-auto mt-2" onClick={handleSyncOrderStatus} disabled={isSyncingStatus}>
                   {isSyncingStatus ? "Syncing..." : "Update Order Status"}
                   {!isSyncingStatus && <ArrowRight className="h-3 w-3 ml-1" />}
@@ -1017,7 +1075,7 @@ export function PackagesTab({
                       onClick={() => handlePushOrders(group.id)}
                     >
                       {isPushing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                      {isPushing ? "Sending..." : `Send ${group.statusCounts.notPushed} to ShipStation`}
+                      {isPushing ? "Sending..." : `Send ${group.statusCounts.notPushed} to ${fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod === "shipstation" ? "ShipStation" : "Fulfillment"}`}
                     </Button>
                   </div>
 
@@ -1114,35 +1172,74 @@ export function PackagesTab({
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="shopify">Shopify</SelectItem>
                   <SelectItem value="shipstation">ShipStation</SelectItem>
                   <SelectItem value="easyship">Easyship</SelectItem>
                   <SelectItem value="shippo">Shippo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="Enter your API key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="apiSecret">API Secret</Label>
-              <Input
-                id="apiSecret"
-                type="password"
-                placeholder="Enter your API secret"
-                value={apiSecret}
-                onChange={(e) => setApiSecret(e.target.value)}
-              />
-            </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-              <p>You can find your API credentials in your {selectedService.charAt(0).toUpperCase() + selectedService.slice(1)} account settings.</p>
-            </div>
+            {selectedService === "shopify" ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="shopDomain">Shopify Store Domain</Label>
+                  <Input
+                    id="shopDomain"
+                    placeholder="your-store.myshopify.com"
+                    value={shopDomain}
+                    onChange={(e) => setShopDomain(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Your store&apos;s myshopify.com domain (e.g., your-store.myshopify.com)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">Access Token</Label>
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    placeholder="Enter your Shopify access token"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                </div>
+                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground space-y-2">
+                  <p className="font-medium">To get your Shopify access token:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-xs">
+                    <li>Go to your Shopify Admin &rarr; Settings &rarr; Apps and sales channels</li>
+                    <li>Click &quot;Develop apps&quot; &rarr; Create an app</li>
+                    <li>Configure Admin API scopes: <code className="bg-muted px-1 rounded">write_orders, read_orders, write_fulfillments, read_fulfillments</code></li>
+                    <li>Install the app and copy the Admin API access token</li>
+                  </ol>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">API Key</Label>
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    placeholder="Enter your API key"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="apiSecret">API Secret</Label>
+                  <Input
+                    id="apiSecret"
+                    type="password"
+                    placeholder="Enter your API secret"
+                    value={apiSecret}
+                    onChange={(e) => setApiSecret(e.target.value)}
+                  />
+                </div>
+                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                  <p>You can find your API credentials in your {selectedService.charAt(0).toUpperCase() + selectedService.slice(1)} account settings.</p>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsConnectDialogOpen(false)}>
@@ -1294,7 +1391,7 @@ export function PackagesTab({
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Send to ShipStation
+                  Send to {fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod === "shipstation" ? "ShipStation" : "Fulfillment"}
                 </>
               )}
             </Button>

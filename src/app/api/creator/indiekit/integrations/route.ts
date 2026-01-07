@@ -23,6 +23,13 @@ export async function GET(req: NextRequest) {
 
     // Get project-specific integrations if projectId provided
     let projectIntegrations = null;
+    let fulfillmentIntegrations = {
+      shopify: { connected: false, status: null as string | null },
+      shipstation: { connected: false, status: null as string | null },
+      shippo: { connected: false, status: null as string | null },
+      easypost: { connected: false, status: null as string | null },
+    };
+
     if (projectId) {
       const project = await db.project.findFirst({
         where: {
@@ -35,9 +42,23 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           stripeProductId: true,
+          fulfillmentIntegrations: true,
         },
       });
       projectIntegrations = project;
+
+      // Check for connected fulfillment integrations
+      if (project?.fulfillmentIntegrations) {
+        for (const integration of project.fulfillmentIntegrations) {
+          const provider = integration.provider.toLowerCase() as keyof typeof fulfillmentIntegrations;
+          if (provider in fulfillmentIntegrations) {
+            fulfillmentIntegrations[provider] = {
+              connected: integration.status === "CONNECTED",
+              status: integration.status,
+            };
+          }
+        }
+      }
     }
 
     return NextResponse.json({
@@ -45,11 +66,7 @@ export async function GET(req: NextRequest) {
         connected: !!user?.stripeAccountId,
         status: user?.stripeAccountStatus || "not_connected",
       },
-      fulfillment: {
-        shipstation: { connected: false },
-        shippo: { connected: false },
-        easypost: { connected: false },
-      },
+      fulfillment: fulfillmentIntegrations,
       project: projectIntegrations,
     });
   } catch (error) {

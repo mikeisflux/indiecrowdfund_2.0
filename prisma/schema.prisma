@@ -275,6 +275,7 @@ model Project {
   digitalFiles          DigitalFile[]
   collectionItems       ProjectCollectionItem[]
   notificationPrefs     ProjectNotificationPreference[]
+  fulfillmentIntegrations FulfillmentIntegration[]
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
@@ -3240,4 +3241,103 @@ enum EmailBlocklistType {
   DOMAIN      // Entire domain (e.g., spam.com)
   IP          // IP address
   PATTERN     // Regex pattern (e.g., *@tempmail.*)
+}
+
+// ============================================
+// FULFILLMENT INTEGRATIONS
+// ============================================
+
+model FulfillmentIntegration {
+  id              String                    @id @default(cuid())
+  projectId       String
+  project         Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Integration type
+  provider        FulfillmentProvider
+
+  // Credentials (encrypted)
+  credentials     Json                      // { apiKey, apiSecret, shopDomain, accessToken, etc. }
+
+  // Connection status
+  status          FulfillmentIntegrationStatus @default(PENDING)
+  lastSyncAt      DateTime?
+  lastSyncError   String?
+
+  // Stats
+  ordersPushed    Int                       @default(0)
+  ordersShipped   Int                       @default(0)
+  ordersFailed    Int                       @default(0)
+
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  @@unique([projectId, provider])
+  @@index([projectId])
+  @@index([provider])
+  @@index([status])
+}
+
+enum FulfillmentProvider {
+  SHOPIFY
+  SHIPSTATION
+  SHIPPO
+  EASYPOST
+  MANUAL
+}
+
+enum FulfillmentIntegrationStatus {
+  PENDING
+  CONNECTED
+  ERROR
+  DISCONNECTED
+}
+
+// Shopify fulfillment order tracking
+model ShopifyFulfillmentOrder {
+  id                  String    @id @default(cuid())
+  projectId           String
+  pledgeId            String
+
+  // Shopify IDs
+  shopifyOrderId      String    // Shopify order ID
+  shopifyFulfillmentId String?  // Shopify fulfillment ID (once fulfilled)
+
+  // Order details
+  orderNumber         String?
+  status              ShopifyOrderStatus @default(PENDING)
+
+  // Tracking
+  trackingNumber      String?
+  trackingCompany     String?
+  trackingUrl         String?
+
+  // Timestamps
+  pushedAt            DateTime?
+  fulfilledAt         DateTime?
+  shippedAt           DateTime?
+  deliveredAt         DateTime?
+
+  // Error handling
+  lastError           String?   @db.Text
+  errorCount          Int       @default(0)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([projectId, pledgeId])
+  @@unique([shopifyOrderId])
+  @@index([projectId])
+  @@index([pledgeId])
+  @@index([status])
+}
+
+enum ShopifyOrderStatus {
+  PENDING           // Not yet pushed to Shopify
+  PUSHED            // Order created in Shopify
+  PROCESSING        // Being processed by Shopify
+  FULFILLED         // Fulfilled but not shipped
+  SHIPPED           // Shipped with tracking
+  DELIVERED         // Delivered to customer
+  FAILED            // Push failed
+  CANCELLED         // Order cancelled
 }
