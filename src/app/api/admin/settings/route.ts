@@ -189,7 +189,8 @@ export async function PATCH(req: NextRequest) {
         "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret",
         "stripeConnectWebhookSecret",
         "divinityCoinEnabled", "divinityCoinApiKey", "divinityCoinWebhookSecret",
-        "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "autoPayouts"
+        "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "autoPayouts",
+        "shopifyEnabled", "shopifyApiKey", "shopifyApiSecret"
       ],
       email: [
         "emailProvider", "smtpHost", "smtpPort", "smtpUser", "smtpPassword",
@@ -225,6 +226,9 @@ export async function PATCH(req: NextRequest) {
       security: [
         "twoFactorRequired", "sessionTimeout", "maxLoginAttempts",
         "passwordMinLength", "requireSpecialChars",
+        "globalRateLimitEnabled", "globalRateLimitRequests", "globalRateLimitWindow",
+        "loginRateLimitEnabled", "loginRateLimitRequests", "loginRateLimitWindow",
+        "passwordResetRateLimitRequests", "passwordResetRateLimitWindow",
         "ipRateLimitEnabled", "ipRateLimitRequests", "ipRateLimitWindow",
         "csrfProtection", "contentSecurityPolicy"
       ],
