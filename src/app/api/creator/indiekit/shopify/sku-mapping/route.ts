@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
     // Check rewards (both tiers and addons)
     for (const reward of project.rewards) {
       const isMapped = mappings.some(
-        (m) => m.sourceType === "REWARD" && m.sourceId === reward.id
+        (m: { sourceType: string; sourceId: string }) => m.sourceType === "REWARD" && m.sourceId === reward.id
       );
       if (!isMapped) {
         unmappedItems.push({
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
     // Check project items
     for (const item of project.projectItems) {
       const isMapped = mappings.some(
-        (m) => m.sourceType === "PROJECT_ITEM" && m.sourceId === item.id
+        (m: { sourceType: string; sourceId: string }) => m.sourceType === "PROJECT_ITEM" && m.sourceId === item.id
       );
       if (!isMapped) {
         unmappedItems.push({
