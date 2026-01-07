@@ -120,13 +120,21 @@ interface BankAccountDetails {
   verifiedAt: string | null;
 }
 
-// Creator balance interface for marketplace/indiekit earnings
+// Creator balance interface for creators with projects
 interface CreatorBalance {
   id: string;
   name: string | null;
   email: string;
   image: string | null;
   balance: number;
+  projectCount: number;
+  projectEarnings: number;
+  projects: {
+    id: string;
+    title: string;
+    status: string;
+    amount: number;
+  }[];
   marketplaceSales: {
     totalAmount: number;
     creatorEarnings: number;
@@ -672,10 +680,10 @@ export default function PayoutsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Creator</TableHead>
+                    <TableHead>Projects</TableHead>
                     <TableHead>Bank Status</TableHead>
+                    <TableHead className="text-right">Project Earnings</TableHead>
                     <TableHead className="text-right">Balance</TableHead>
-                    <TableHead className="text-right">Marketplace Sales</TableHead>
-                    <TableHead className="text-right">Creator Earnings</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -694,6 +702,25 @@ export default function PayoutsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <div className="text-sm">
+                          {creator.projectCount > 0 ? (
+                            <div>
+                              <p className="font-medium">{creator.projectCount} project{creator.projectCount !== 1 ? 's' : ''}</p>
+                              {creator.projects.slice(0, 2).map((p) => (
+                                <p key={p.id} className="text-xs text-zinc-500 truncate max-w-[200px]">
+                                  {p.title} ({p.status})
+                                </p>
+                              ))}
+                              {creator.projects.length > 2 && (
+                                <p className="text-xs text-zinc-400">+{creator.projects.length - 2} more</p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-zinc-400">No projects</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         {creator.hasBank ? (
                           <div className="flex items-center gap-2">
                             <Building className="w-4 h-4 text-emerald-600" />
@@ -706,14 +733,11 @@ export default function PayoutsPage() {
                           <Badge variant="destructive" className="text-xs">No Bank</Badge>
                         )}
                       </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {formatCurrency(creator.projectEarnings)}
+                      </TableCell>
                       <TableCell className="text-right font-bold text-teal-600">
                         {formatCurrency(creator.balance)}
-                      </TableCell>
-                      <TableCell className="text-right text-sm text-zinc-500">
-                        {creator.marketplaceSales.count} sales
-                      </TableCell>
-                      <TableCell className="text-right text-sm">
-                        {formatCurrency(creator.marketplaceSales.creatorEarnings)}
                       </TableCell>
                       <TableCell>
                         <Button

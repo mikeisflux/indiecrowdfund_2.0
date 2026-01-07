@@ -194,10 +194,17 @@ export async function GET(request: NextRequest) {
       projectsWithoutBank: filteredProjects.filter((p) => !p.hasBank).length,
     };
 
-    // Fetch creators with DivinityCoin balances (from marketplace sales, IndieKit, etc.)
+    // Fetch ONLY actual creators (users who have projects) with DivinityCoin balances
+    // This excludes regular backers who might have balance for other reasons
     const creatorsWithBalances = await db.user.findMany({
       where: {
         divinityCoinBalance: { gt: 0 },
+        // Must have at least one project (funded or otherwise) to be considered a creator
+        projects: {
+          some: {
+            status: { in: ["FUNDED", "LIVE", "FAILED", "DRAFT", "SUBMITTED", "APPROVED"] },
+          },
+        },
       },
       select: {
         id: true,
@@ -212,6 +219,17 @@ export async function GET(request: NextRequest) {
             accountLastFour: true,
             accountType: true,
             isVerified: true,
+          },
+        },
+        projects: {
+          where: {
+            status: { in: ["FUNDED", "LIVE", "FAILED"] },
+          },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            currentAmount: true,
           },
         },
       },
@@ -247,12 +265,26 @@ export async function GET(request: NextRequest) {
           })
         : [];
 
+      // Calculate total earnings from their projects
+      const projectEarnings = creator.projects.reduce(
+        (sum: number, p: { currentAmount: unknown }) => sum + Number(p.currentAmount || 0),
+        0
+      );
+
       return {
         id: creator.id,
         name: creator.name,
         email: creator.email,
         image: creator.image,
         balance: Number(creator.divinityCoinBalance),
+        projectCount: creator.projects.length,
+        projectEarnings,
+        projects: creator.projects.map((p: { id: string; title: string; status: string; currentAmount: unknown }) => ({
+          id: p.id,
+          title: p.title,
+          status: p.status,
+          amount: Number(p.currentAmount || 0),
+        })),
         marketplaceSales: {
           totalAmount: Number(sales._sum.amount || 0),
           creatorEarnings: Number(sales._sum.creatorPayout || 0),
