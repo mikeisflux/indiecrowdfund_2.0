@@ -67,7 +67,7 @@ const personalizationTags = [
 export default function EmailCampaignEditPage() {
   const router = useRouter();
   const params = useParams();
-  const campaignId = params.id as string;
+  const campaignId = params?.id as string;
 
   const [campaign, setCampaign] = useState<EmailCampaign | null>(null);
   const [isLoading, setIsLoading] = useState(true);
