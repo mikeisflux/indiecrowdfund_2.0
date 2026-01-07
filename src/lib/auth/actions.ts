@@ -39,86 +39,111 @@ const loginSchema = z.object({
 });
 
 export async function register(formData: FormData, callbackUrl?: string | null) {
-  const validatedFields = registerSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
-
-  if (!validatedFields.success) {
-    return { error: validatedFields.error.flatten().fieldErrors };
-  }
-
-  const { name, email, password } = validatedFields.data;
-
-  // Check if user already exists
-  const existingUser = await db.user.findUnique({
-    where: { email },
-  });
-
-  if (existingUser) {
-    return { error: { email: ["Email already registered"] } };
-  }
-
-  // Hash password
-  const hashedPassword = await bcrypt.hash(password, 12);
-
-  // Create user
-  let user;
   try {
-    user = await db.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-      },
+    const validatedFields = registerSchema.safeParse({
+      name: formData.get("name"),
+      email: formData.get("email"),
+      password: formData.get("password"),
     });
-  } catch {
-    return { error: { _form: ["Something went wrong. Please try again."] } };
-  }
 
-  // Send welcome email if enabled
-  try {
-    const { sendWelcomeEmail, isEmailTypeEnabled, sendVerificationEmail, isEmailVerificationRequired } = await import("@/lib/email");
-
-    // Check if welcome email is enabled and send it
-    const welcomeEnabled = await isEmailTypeEnabled("welcome");
-    if (welcomeEnabled) {
-      await sendWelcomeEmail(email, name);
+    if (!validatedFields.success) {
+      return { error: validatedFields.error.flatten().fieldErrors };
     }
 
-    // Check if email verification is required and send verification email
-    const verificationRequired = await isEmailVerificationRequired();
-    if (verificationRequired) {
-      // Generate verification token
-      const verificationToken = crypto.randomUUID();
-      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const { name, email, password } = validatedFields.data;
 
-      // Store the verification token
-      await db.verificationToken.create({
+    // Check if user already exists
+    let existingUser;
+    try {
+      existingUser = await db.user.findUnique({
+        where: { email },
+      });
+    } catch (dbError) {
+      console.error("[Register] Database error checking existing user:", dbError);
+      return { error: { _form: ["Unable to connect to database. Please try again."] } };
+    }
+
+    if (existingUser) {
+      return { error: { email: ["Email already registered"] } };
+    }
+
+    // Hash password
+    let hashedPassword;
+    try {
+      hashedPassword = await bcrypt.hash(password, 12);
+    } catch (hashError) {
+      console.error("[Register] Password hashing error:", hashError);
+      return { error: { _form: ["Something went wrong. Please try again."] } };
+    }
+
+    // Create user
+    let user;
+    try {
+      user = await db.user.create({
         data: {
-          identifier: email,
-          token: verificationToken,
-          expires,
+          name,
+          email,
+          password: hashedPassword,
         },
       });
-
-      await sendVerificationEmail(email, name, verificationToken);
+    } catch (createError) {
+      console.error("[Register] Error creating user:", createError);
+      return { error: { _form: ["Something went wrong. Please try again."] } };
     }
-  } catch (emailError) {
-    // Don't fail registration if email fails
-    console.error("Failed to send welcome/verification email:", emailError);
+
+    // Send welcome email if enabled
+    try {
+      const { sendWelcomeEmail, isEmailTypeEnabled, sendVerificationEmail, isEmailVerificationRequired } = await import("@/lib/email");
+
+      // Check if welcome email is enabled and send it
+      const welcomeEnabled = await isEmailTypeEnabled("welcome");
+      if (welcomeEnabled) {
+        await sendWelcomeEmail(email, name);
+      }
+
+      // Check if email verification is required and send verification email
+      const verificationRequired = await isEmailVerificationRequired();
+      if (verificationRequired) {
+        // Generate verification token
+        const verificationToken = crypto.randomUUID();
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        // Store the verification token
+        await db.verificationToken.create({
+          data: {
+            identifier: email,
+            token: verificationToken,
+            expires,
+          },
+        });
+
+        await sendVerificationEmail(email, name, verificationToken);
+      }
+    } catch (emailError) {
+      // Don't fail registration if email fails
+      console.error("[Register] Failed to send welcome/verification email:", emailError);
+    }
+
+    // Create session
+    try {
+      await createSession(user.id);
+    } catch (sessionError) {
+      console.error("[Register] Error creating session:", sessionError);
+      return { error: { _form: ["Account created but failed to sign in. Please try logging in."] } };
+    }
+
+    // Determine redirect destination - go back to where they came from
+    const redirectTo = callbackUrl || "/dashboard";
+
+    // Return success with redirect URL - let client handle navigation
+    // This ensures the Set-Cookie header is properly sent before redirect
+    console.log("[Register] Success for email:", email);
+    return { success: true, redirectTo };
+  } catch (error) {
+    // Catch-all for any unexpected errors
+    console.error("[Register] Unexpected error:", error);
+    return { error: { _form: ["Something went wrong. Please try again."] } };
   }
-
-  // Create session
-  await createSession(user.id);
-
-  // Determine redirect destination - go back to where they came from
-  const redirectTo = callbackUrl || "/dashboard";
-
-  // Return success with redirect URL - let client handle navigation
-  // This ensures the Set-Cookie header is properly sent before redirect
-  return { success: true, redirectTo };
 }
 
 export async function login(formData: FormData, callbackUrl?: string) {
