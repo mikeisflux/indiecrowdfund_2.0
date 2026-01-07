@@ -104,11 +104,12 @@ export async function GET(req: NextRequest) {
       projectRewards,
       projectAddons,
     ] = await Promise.all([
-      // Get all pledges for the project with user info
+      // Get all COMPLETED pledges for the project with user info
+      // Only show completed pledges - pending ones are incomplete transactions
       db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
-          status: { in: ["COMPLETED", "PENDING"] },
+          status: "COMPLETED",
         },
         include: {
           user: {
@@ -327,20 +328,12 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10); // Top 10 regions
 
-    // Calculate payment status breakdown
-    const paymentCounts = {
-      completed: pledges.filter(p => p.status === "COMPLETED").length,
-      pending: pledges.filter(p => p.status === "PENDING").length,
-      failed: pledges.filter(p => p.status === "FAILED").length,
-      refunded: pledges.filter(p => p.status === "REFUNDED").length,
-    };
+    // Payment status breakdown - we only fetch COMPLETED pledges now
+    // so all pledges shown are successful payments
     const totalPledges = pledges.length;
     const paymentStatusBreakdown = [
-      { label: "Completed", count: paymentCounts.completed, percentage: totalPledges > 0 ? Math.round((paymentCounts.completed / totalPledges) * 100) : 0, color: "bg-green-500" },
-      { label: "Pending", count: paymentCounts.pending, percentage: totalPledges > 0 ? Math.round((paymentCounts.pending / totalPledges) * 100) : 0, color: "bg-yellow-500" },
-      { label: "Failed", count: paymentCounts.failed, percentage: totalPledges > 0 ? Math.round((paymentCounts.failed / totalPledges) * 100) : 0, color: "bg-red-500" },
-      { label: "Refunded", count: paymentCounts.refunded, percentage: totalPledges > 0 ? Math.round((paymentCounts.refunded / totalPledges) * 100) : 0, color: "bg-gray-500" },
-    ].filter(item => item.count > 0);
+      { label: "Completed", count: totalPledges, percentage: 100, color: "bg-green-500" },
+    ];
 
     // Pre-order count
     const preOrderBackers = pledges.filter(p => p.isPreOrder).length;
@@ -361,8 +354,16 @@ export async function GET(req: NextRequest) {
       paymentStatusBreakdown,
     };
 
+    // Deduplicate pledges by ID (in case of data issues)
+    const seenPledgeIds = new Set<string>();
+    const uniquePledges = pledges.filter(pledge => {
+      if (seenPledgeIds.has(pledge.id)) return false;
+      seenPledgeIds.add(pledge.id);
+      return true;
+    });
+
     // Process backers for display
-    const processedBackers = pledges.map(pledge => {
+    const processedBackers = uniquePledges.map(pledge => {
       const surveyResponse = surveyResponseMap.get(pledge.id);
       const shippingAddress = surveyResponse?.shippingAddress as {
         name?: string;
