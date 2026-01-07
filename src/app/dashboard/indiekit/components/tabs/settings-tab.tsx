@@ -45,6 +45,7 @@ import {
   Lock,
   Building2,
   AlertTriangle,
+  Store,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
@@ -91,6 +92,7 @@ export function SettingsTab({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isConnectingShipStation, setIsConnectingShipStation] = useState(false);
   const [isConnectingEasyship, setIsConnectingEasyship] = useState(false);
+  const [isConnectingShopify, setIsConnectingShopify] = useState(false);
 
   // Stripe Connect state
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
@@ -126,6 +128,15 @@ export function SettingsTab({
   const [shipStationKey, setShipStationKey] = useState("");
   const [shipStationSecret, setShipStationSecret] = useState("");
   const [easyshipToken, setEasyshipToken] = useState("");
+  const [shopifyDomain, setShopifyDomain] = useState("");
+  const [shopifyAccessToken, setShopifyAccessToken] = useState("");
+
+  // Shopify status
+  const [shopifyStatus, setShopifyStatus] = useState<{
+    connected: boolean;
+    loading: boolean;
+    shopName: string | null;
+  }>({ connected: false, loading: true, shopName: null });
 
   // Switch states
   const [surveySettings, setSurveySettings] = useState({
@@ -219,6 +230,32 @@ export function SettingsTab({
     }
     checkBankAccountStatus();
   }, []);
+
+  // Check Shopify connection status on mount
+  useEffect(() => {
+    async function checkShopifyStatus() {
+      if (!projectId) {
+        setShopifyStatus({ connected: false, loading: false, shopName: null });
+        return;
+      }
+      try {
+        const response = await fetch(`/api/creator/indiekit/shopify?projectId=${projectId}&action=status`);
+        if (response.ok) {
+          const data = await response.json();
+          setShopifyStatus({
+            connected: data.connected || false,
+            loading: false,
+            shopName: data.shop?.name || null,
+          });
+        } else {
+          setShopifyStatus({ connected: false, loading: false, shopName: null });
+        }
+      } catch {
+        setShopifyStatus({ connected: false, loading: false, shopName: null });
+      }
+    }
+    checkShopifyStatus();
+  }, [projectId]);
 
   // Stripe Connect handlers
   const handleConnectStripe = async () => {
@@ -564,6 +601,80 @@ export function SettingsTab({
       toast.error(error instanceof Error ? error.message : "Failed to connect Easyship");
     } finally {
       setIsConnectingEasyship(false);
+    }
+  };
+
+  const handleConnectShopify = async () => {
+    if (!projectId || !shopifyDomain.trim() || !shopifyAccessToken.trim()) {
+      toast.error("Please enter both shop domain and access token");
+      return;
+    }
+
+    setIsConnectingShopify(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/shopify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "connect",
+          shopDomain: shopifyDomain,
+          accessToken: shopifyAccessToken,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to connect Shopify");
+      }
+
+      toast.success(`Connected to ${data.shop?.name || "Shopify"}`);
+      setShopifyStatus({
+        connected: true,
+        loading: false,
+        shopName: data.shop?.name || null,
+      });
+      setShopifyDomain("");
+      setShopifyAccessToken("");
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to connect Shopify");
+    } finally {
+      setIsConnectingShopify(false);
+    }
+  };
+
+  const handleDisconnectShopify = async () => {
+    if (!projectId) return;
+
+    setIsConnectingShopify(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/shopify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "disconnect",
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to disconnect Shopify");
+      }
+
+      toast.success("Disconnected from Shopify");
+      setShopifyStatus({
+        connected: false,
+        loading: false,
+        shopName: null,
+      });
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to disconnect Shopify");
+    } finally {
+      setIsConnectingShopify(false);
     }
   };
 
@@ -1235,6 +1346,100 @@ export function SettingsTab({
                     </div>
                   </div>
                   <Button variant="outline" className="text-green-600 border-green-600">Connected</Button>
+                </div>
+
+                {/* Shopify */}
+                <div className={`flex items-center justify-between p-4 border rounded-lg ${shopifyStatus.connected ? "border-green-500" : ""}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`h-10 w-10 rounded flex items-center justify-center ${shopifyStatus.connected ? "bg-green-100" : "bg-[#95BF47]/20"}`}>
+                      <Store className={`h-5 w-5 ${shopifyStatus.connected ? "text-green-600" : "text-[#95BF47]"}`} />
+                    </div>
+                    <div>
+                      <p className="font-medium">Shopify</p>
+                      <p className="text-sm text-muted-foreground">
+                        {shopifyStatus.loading
+                          ? "Checking connection..."
+                          : shopifyStatus.connected
+                          ? `Connected to ${shopifyStatus.shopName || "your store"}`
+                          : "E-commerce fulfillment integration"}
+                      </p>
+                    </div>
+                  </div>
+                  {shopifyStatus.loading ? (
+                    <Button variant="outline" disabled>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </Button>
+                  ) : shopifyStatus.connected ? (
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" className="text-green-600 border-green-600">
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Connected
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDisconnectShopify}
+                        disabled={isConnectingShopify}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        {isConnectingShopify ? "..." : "Disconnect"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline">Connect</Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Connect Shopify</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Connect your Shopify store to push orders for fulfillment and sync tracking information.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="shopify-domain">Shop Domain</Label>
+                            <Input
+                              id="shopify-domain"
+                              placeholder="your-store.myshopify.com"
+                              value={shopifyDomain}
+                              onChange={(e) => setShopifyDomain(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Your Shopify store domain (e.g., your-store.myshopify.com)
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="shopify-token">Access Token</Label>
+                            <Input
+                              id="shopify-token"
+                              type="password"
+                              placeholder="Enter your Shopify access token"
+                              value={shopifyAccessToken}
+                              onChange={(e) => setShopifyAccessToken(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Create a private app in Shopify Admin → Apps → Develop apps to get an access token
+                            </p>
+                          </div>
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleConnectShopify} disabled={isConnectingShopify}>
+                            {isConnectingShopify ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Connecting...
+                              </>
+                            ) : (
+                              "Connect"
+                            )}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
 
                 {/* ShipStation */}
