@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
         currentAmount: true,
         backerCount: true,
         prelaunchActive: true,
+        imageUrl: true,
       },
     });
 
@@ -57,6 +58,7 @@ export async function GET(req: NextRequest) {
             status: true,
             currentAmount: true,
             backerCount: true,
+            imageUrl: true,
           },
         },
       },
@@ -719,7 +721,16 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({
-      projects: projects.map(p => ({ id: p.id, title: p.title, slug: p.slug, status: p.status, prelaunchActive: (p as { prelaunchActive?: boolean }).prelaunchActive || false })),
+      projects: projects.map(p => ({
+        id: p.id,
+        title: p.title,
+        slug: p.slug,
+        status: p.status,
+        prelaunchActive: (p as { prelaunchActive?: boolean }).prelaunchActive || false,
+        imageUrl: (p as { imageUrl?: string }).imageUrl || null,
+        backerCount: (p as { backerCount?: number }).backerCount || 0,
+        totalRaised: Number((p as { currentAmount?: number | string }).currentAmount) || 0,
+      })),
       stats,
       backers: processedBackers,
       packageGroups,
