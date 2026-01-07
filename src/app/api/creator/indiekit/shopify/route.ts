@@ -307,7 +307,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // PUSH_ORDERS - Push backer orders to Shopify
+    // PUSH_ORDERS - Push backer orders to Shopify as draft orders
     if (action === "push_orders") {
       const integration = await db.fulfillmentIntegration.findUnique({
         where: {
@@ -329,6 +329,29 @@ export async function POST(req: NextRequest) {
         shopDomain: string;
         accessToken: string;
       };
+
+      // Get SKU mappings for this project
+      const skuMappings = await db.shopifySkuMapping.findMany({
+        where: { projectId },
+      });
+
+      // Create lookup maps for quick access
+      const rewardSkuMap = new Map<string, { sku: string; variantId?: string; quantity: number }>();
+      const addonSkuMap = new Map<string, { sku: string; variantId?: string; quantity: number }>();
+
+      for (const mapping of skuMappings) {
+        const skuData = {
+          sku: mapping.shopifySku,
+          variantId: mapping.shopifyVariantId || undefined,
+          quantity: mapping.quantity,
+        };
+
+        if (mapping.sourceType === "REWARD") {
+          rewardSkuMap.set(mapping.sourceId, skuData);
+        } else if (mapping.sourceType === "ADDON") {
+          addonSkuMap.set(mapping.sourceId, skuData);
+        }
+      }
 
       // Get backers to push (either specified or all unpushed)
       const whereClause: {
@@ -359,6 +382,7 @@ export async function POST(req: NextRequest) {
           },
           reward: {
             select: {
+              id: true,
               title: true,
             },
           },
@@ -366,6 +390,7 @@ export async function POST(req: NextRequest) {
             include: {
               addon: {
                 select: {
+                  id: true,
                   title: true,
                 },
               },
@@ -403,22 +428,34 @@ export async function POST(req: NextRequest) {
             continue; // Skip already pushed orders
           }
 
-          // Build line items from reward and addons
-          const lineItems = [];
+          // Build line items from reward and addons with SKU mappings
+          const lineItems: Array<{
+            title: string;
+            quantity: number;
+            price: string;
+            sku?: string;
+            variant_id?: number;
+          }> = [];
 
           if (pledge.reward) {
+            const rewardSku = rewardSkuMap.get(pledge.reward.id);
             lineItems.push({
               title: pledge.reward.title,
-              quantity: 1,
+              quantity: rewardSku?.quantity || 1,
               price: pledge.pledgeAmount.toString(),
+              sku: rewardSku?.sku,
+              variant_id: rewardSku?.variantId ? parseInt(rewardSku.variantId) : undefined,
             });
           }
 
           for (const addon of pledge.addons) {
+            const addonSku = addonSkuMap.get(addon.addon.id);
             lineItems.push({
               title: addon.addon.title,
-              quantity: addon.quantity,
+              quantity: addon.quantity * (addonSku?.quantity || 1),
               price: addon.unitPrice.toString(),
+              sku: addonSku?.sku,
+              variant_id: addonSku?.variantId ? parseInt(addonSku.variantId) : undefined,
             });
           }
 
@@ -434,7 +471,7 @@ export async function POST(req: NextRequest) {
             phone?: string;
           } | null;
 
-          // Create draft order in Shopify
+          // Create draft order in Shopify (kept as draft for manual review)
           const draftOrderPayload = {
             draft_order: {
               line_items: lineItems.length > 0 ? lineItems : [
@@ -460,10 +497,11 @@ export async function POST(req: NextRequest) {
                 phone: shippingAddress.phone || "",
               } : undefined,
               note: `IndieCrowdfund Pledge #${pledge.id}`,
-              tags: `indiecrowdfund,project-${projectId}`,
+              tags: `indiecrowdfund,project-${projectId},pledge-${pledge.id}`,
             },
           };
 
+          // Create draft order (kept as draft - not completed)
           const orderResponse = await shopifyFetch<{ draft_order: ShopifyOrder }>(
             credentials.shopDomain,
             credentials.accessToken,
@@ -474,16 +512,9 @@ export async function POST(req: NextRequest) {
             }
           );
 
-          // Complete the draft order
-          const completedOrder = await shopifyFetch<{ draft_order: ShopifyOrder }>(
-            credentials.shopDomain,
-            credentials.accessToken,
-            `draft_orders/${orderResponse.draft_order.id}/complete.json`,
-            {
-              method: "PUT",
-              body: JSON.stringify({ payment_pending: false }),
-            }
-          );
+          // Note: We're NOT completing the draft order here
+          // The draft order stays in draft state for the creator to review in Shopify
+          // and complete/fulfill when ready
 
           // Create or update tracking record
           await db.shopifyFulfillmentOrder.upsert({
@@ -496,14 +527,14 @@ export async function POST(req: NextRequest) {
             create: {
               projectId,
               pledgeId: pledge.id,
-              shopifyOrderId: completedOrder.draft_order.id.toString(),
-              orderNumber: completedOrder.draft_order.name,
+              shopifyOrderId: orderResponse.draft_order.id.toString(),
+              orderNumber: orderResponse.draft_order.name,
               status: "PUSHED",
               pushedAt: new Date(),
             },
             update: {
-              shopifyOrderId: completedOrder.draft_order.id.toString(),
-              orderNumber: completedOrder.draft_order.name,
+              shopifyOrderId: orderResponse.draft_order.id.toString(),
+              orderNumber: orderResponse.draft_order.name,
               status: "PUSHED",
               pushedAt: new Date(),
               lastError: null,
@@ -565,7 +596,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: `Pushed ${pushedCount} orders to Shopify`,
+        message: `Pushed ${pushedCount} draft orders to Shopify`,
         pushed: pushedCount,
         failed: failedCount,
         errors: errors.length > 0 ? errors.slice(0, 5) : undefined,

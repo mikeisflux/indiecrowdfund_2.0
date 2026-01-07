@@ -3341,3 +3341,36 @@ enum ShopifyOrderStatus {
   FAILED            // Push failed
   CANCELLED         // Order cancelled
 }
+
+// SKU mapping for Shopify fulfillment
+model ShopifySkuMapping {
+  id                String    @id @default(cuid())
+  projectId         String
+
+  // Source item (reward or addon)
+  sourceType        SkuMappingSourceType
+  sourceId          String    // Reward ID or ProjectItem ID
+  sourceName        String    // Cached name for display
+
+  // Shopify mapping
+  shopifySku        String
+  shopifyProductId  String?   // Optional Shopify product ID
+  shopifyVariantId  String?   // Optional Shopify variant ID
+  shopifyProductName String?  // Cached product name from Shopify
+
+  // Quantity mapping (e.g., 1 reward = 2 SKUs)
+  quantity          Int       @default(1)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([projectId, sourceType, sourceId])
+  @@index([projectId])
+  @@index([shopifySku])
+}
+
+enum SkuMappingSourceType {
+  REWARD            // Reward tier
+  ADDON             // Add-on item
+  PROJECT_ITEM      // Individual project item
+}
