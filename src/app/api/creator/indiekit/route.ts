@@ -341,21 +341,26 @@ export async function GET(req: NextRequest) {
     const preOrderBackers = pledges.filter(p => p.isPreOrder).length;
 
     // Calculate charge stats for workflow
-    // "Charge Cards" is for ADDITIONAL charges (add-ons, shipping upgrades, etc.)
+    // "Charge Cards" is for ADDITIONAL charges (add-ons added via survey, shipping upgrades, etc.)
     // NOT for initial pledge payments - those are already collected when status is COMPLETED
-    // Only count as "notCharged" if they have add-ons that haven't been charged
-    const pledgesWithUnchargedAddons = pledges.filter(p => {
-      // If pledge is completed, initial payment is done
-      // Check if they have add-ons that need charging
-      const hasAddons = p.addons && p.addons.length > 0;
-      const needsAdditionalCharge = hasAddons && (!p.chargeStatus || p.chargeStatus === "NOT_CHARGED");
-      return needsAdditionalCharge;
+    //
+    // When a pledge is COMPLETED, the full amount (pledge + addons + shipping) was already charged.
+    // Add-ons in pledge.addons are from checkout and are ALREADY PAID in pledge.amount.
+    //
+    // We only need to charge if:
+    // 1. There's an explicit "additionalChargeAmount" field (not yet implemented)
+    // 2. The chargeStatus indicates a failed additional charge attempt
+    //
+    // For now, completed pledges don't need additional charges unless there's a FAILED status
+    const pledgesNeedingCharge = pledges.filter(p => {
+      // Only count pledges that have a failed additional charge attempt
+      return p.chargeStatus === "FAILED" || p.chargeStatus === "PENDING_RETRY";
     });
 
     const statsChargeStats = {
-      notCharged: pledgesWithUnchargedAddons.length,
+      notCharged: pledgesNeedingCharge.length, // Only count those with failed charges
       errored: pledges.filter(p => p.chargeStatus === "FAILED").length,
-      charged: pledges.filter(p => p.status === "COMPLETED").length, // All completed pledges are charged
+      charged: pledges.filter(p => p.status === "COMPLETED").length, // All completed pledges have initial payment
       paypalCollected: pledges.filter(p => p.paymentProcessor === "PAYPAL").length,
     };
 
