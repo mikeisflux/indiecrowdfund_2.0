@@ -189,8 +189,7 @@ export async function PATCH(req: NextRequest) {
         "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret",
         "stripeConnectWebhookSecret",
         "divinityCoinEnabled", "divinityCoinApiKey", "divinityCoinWebhookSecret",
-        "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "autoPayouts",
-        "shopifyEnabled", "shopifyApiKey", "shopifyApiSecret"
+        "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "autoPayouts"
       ],
       email: [
         "emailProvider", "smtpHost", "smtpPort", "smtpUser", "smtpPassword",

@@ -1592,11 +1592,6 @@ model PlatformSettings {
   divinityCoinPartnerId String?
   divinityCoinSettlementFrequency String @default("weekly")
 
-  // Shopify OAuth Settings - For IndieKit fulfillment integration
-  shopifyEnabled        Boolean  @default(false)
-  shopifyApiKey         String?
-  shopifyApiSecret      String?
-
   // Payout Settings
   autoPayouts           Boolean  @default(false)
 

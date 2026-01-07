@@ -51,12 +51,13 @@ import {
   Package,
   Trash2,
   Save,
+  Key,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-type SettingsSection = "general" | "survey" | "shipping" | "payments" | "notifications" | "integrations" | "team";
+type SettingsSection = "general" | "survey" | "shipping" | "payments" | "notifications" | "integrations" | "shopify" | "team";
 
 interface SettingsTabProps {
   projectName?: string;
@@ -73,6 +74,7 @@ const settingsNav = [
   { id: "payments", label: "Payments", icon: CreditCard },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "integrations", label: "Integrations", icon: Plug },
+  { id: "shopify", label: "Shopify API Key", icon: Key },
   { id: "team", label: "Team", icon: Users },
 ] as const;
 
@@ -142,6 +144,17 @@ export function SettingsTab({
     loading: boolean;
     shopName: string | null;
   }>({ connected: false, loading: true, shopName: null });
+
+  // Shopify API credentials (per-project)
+  const [shopifyApiCredentials, setShopifyApiCredentials] = useState({
+    apiKey: "",
+    apiSecret: "",
+  });
+  const [shopifyCredsStatus, setShopifyCredsStatus] = useState<{
+    saved: boolean;
+    loading: boolean;
+  }>({ saved: false, loading: true });
+  const [isSavingShopifyCreds, setIsSavingShopifyCreds] = useState(false);
 
   // SKU Mapping state
   interface SkuMapping {
@@ -283,6 +296,37 @@ export function SettingsTab({
       }
     }
     checkShopifyStatus();
+  }, [projectId]);
+
+  // Load Shopify API credentials on mount
+  useEffect(() => {
+    async function loadShopifyCredentials() {
+      if (!projectId) {
+        setShopifyCredsStatus({ saved: false, loading: false });
+        return;
+      }
+      try {
+        const response = await fetch(`/api/creator/indiekit/shopify/credentials?projectId=${projectId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setShopifyCredsStatus({
+            saved: data.hasCredentials || false,
+            loading: false,
+          });
+          if (data.hasCredentials && data.apiKeyPreview) {
+            setShopifyApiCredentials({
+              apiKey: data.apiKeyPreview,
+              apiSecret: "••••••••",
+            });
+          }
+        } else {
+          setShopifyCredsStatus({ saved: false, loading: false });
+        }
+      } catch {
+        setShopifyCredsStatus({ saved: false, loading: false });
+      }
+    }
+    loadShopifyCredentials();
   }, [projectId]);
 
   // Fetch SKU mappings when Shopify is connected
@@ -715,6 +759,83 @@ export function SettingsTab({
       toast.error(error instanceof Error ? error.message : "Failed to disconnect Shopify");
     } finally {
       setIsConnectingShopify(false);
+    }
+  };
+
+  const handleSaveShopifyCredentials = async () => {
+    if (!projectId) return;
+
+    // Skip validation if values are masked (already saved)
+    const isNewApiKey = shopifyApiCredentials.apiKey && !shopifyApiCredentials.apiKey.includes("••••");
+    const isNewApiSecret = shopifyApiCredentials.apiSecret && !shopifyApiCredentials.apiSecret.includes("••••");
+
+    if (!shopifyCredsStatus.saved) {
+      if (!shopifyApiCredentials.apiKey.trim() || !shopifyApiCredentials.apiSecret.trim()) {
+        toast.error("Please enter both API Key and API Secret");
+        return;
+      }
+    } else {
+      // If updating, at least one field must have a new value
+      if (!isNewApiKey && !isNewApiSecret) {
+        toast.info("No changes to save");
+        return;
+      }
+    }
+
+    setIsSavingShopifyCreds(true);
+    try {
+      const payload: { projectId: string; apiKey?: string; apiSecret?: string } = { projectId };
+      if (isNewApiKey) payload.apiKey = shopifyApiCredentials.apiKey.trim();
+      if (isNewApiSecret) payload.apiSecret = shopifyApiCredentials.apiSecret.trim();
+
+      const res = await fetch("/api/creator/indiekit/shopify/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save credentials");
+      }
+
+      const data = await res.json();
+      setShopifyCredsStatus({ saved: true, loading: false });
+      setShopifyApiCredentials({
+        apiKey: data.apiKeyPreview || "••••••••",
+        apiSecret: "••••••••",
+      });
+      toast.success("Shopify API credentials saved!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save credentials");
+    } finally {
+      setIsSavingShopifyCreds(false);
+    }
+  };
+
+  const handleClearShopifyCredentials = async () => {
+    if (!projectId) return;
+
+    setIsSavingShopifyCreds(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/shopify/credentials", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ projectId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to clear credentials");
+      }
+
+      setShopifyCredsStatus({ saved: false, loading: false });
+      setShopifyApiCredentials({ apiKey: "", apiSecret: "" });
+      toast.success("Shopify API credentials cleared");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to clear credentials");
+    } finally {
+      setIsSavingShopifyCreds(false);
     }
   };
 
@@ -1829,6 +1950,111 @@ export function SettingsTab({
                     </AlertDialogContent>
                   </AlertDialog>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeSection === "shopify" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Store className="h-5 w-5 text-[#95BF47]" />
+                  Shopify API Credentials
+                </CardTitle>
+                <CardDescription>
+                  Enter your Shopify app API credentials to enable OAuth connection for your store.
+                  Each project needs its own Shopify app credentials.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {shopifyCredsStatus.loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                      <Store className="h-4 w-4" />
+                      <AlertTitle>Setup Instructions</AlertTitle>
+                      <AlertDescription className="space-y-2">
+                        <p>To connect Shopify, you need to create your own app in the Shopify Partners dashboard:</p>
+                        <ol className="list-decimal list-inside space-y-1 text-sm">
+                          <li>Go to <a href="https://partners.shopify.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">partners.shopify.com</a> and create an app</li>
+                          <li>Set <strong>App URL</strong> to: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded text-xs">{typeof window !== "undefined" ? window.location.origin : ""}/dashboard/indiekit</code></li>
+                          <li>Set <strong>Redirect URL</strong> to: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded text-xs">{typeof window !== "undefined" ? window.location.origin : ""}/api/creator/indiekit/shopify/oauth/callback</code></li>
+                          <li>Copy the Client ID (API Key) and Client Secret below</li>
+                        </ol>
+                      </AlertDescription>
+                    </Alert>
+
+                    {shopifyCredsStatus.saved && (
+                      <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-green-700 dark:text-green-400">
+                        <CheckCircle className="h-4 w-4" />
+                        <span className="text-sm">API credentials saved. You can now connect your Shopify store in the Integrations section.</span>
+                      </div>
+                    )}
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="shopify-api-key">API Key (Client ID)</Label>
+                        <Input
+                          id="shopify-api-key"
+                          placeholder="Your Shopify API key..."
+                          value={shopifyApiCredentials.apiKey}
+                          onChange={(e) => setShopifyApiCredentials(prev => ({ ...prev, apiKey: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="shopify-api-secret">API Secret (Client Secret)</Label>
+                        <Input
+                          id="shopify-api-secret"
+                          type="password"
+                          placeholder="Your Shopify API secret..."
+                          value={shopifyApiCredentials.apiSecret}
+                          onChange={(e) => setShopifyApiCredentials(prev => ({ ...prev, apiSecret: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Button
+                        onClick={handleSaveShopifyCredentials}
+                        disabled={isSavingShopifyCreds}
+                        className="bg-[#95BF47] hover:bg-[#7a9e3a]"
+                      >
+                        {isSavingShopifyCreds ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Key className="h-4 w-4 mr-2" />
+                            {shopifyCredsStatus.saved ? "Update Credentials" : "Save Credentials"}
+                          </>
+                        )}
+                      </Button>
+
+                      {shopifyCredsStatus.saved && (
+                        <Button
+                          variant="outline"
+                          onClick={handleClearShopifyCredentials}
+                          disabled={isSavingShopifyCreds}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Clear Credentials
+                        </Button>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <p className="font-medium">Required Shopify Scopes:</p>
+                      <p>Your app needs these permissions: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded text-xs">read_products, write_draft_orders, read_orders, write_orders, read_fulfillments, write_fulfillments</code></p>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}

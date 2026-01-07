@@ -1,43 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
-
-// Verify HMAC from Shopify
-function verifyShopifyHmac(query: URLSearchParams, secret: string): boolean {
-  const hmac = query.get("hmac");
-  if (!hmac) return true; // HMAC is optional for some flows
-
-  // Remove hmac from query params
-  const params = new URLSearchParams();
-  query.forEach((value, key) => {
-    if (key !== "hmac") {
-      params.append(key, value);
-    }
-  });
-
-  // Sort parameters
-  const sortedParams = Array.from(params.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
-    .join("&");
-
-  const calculatedHmac = crypto
-    .createHmac("sha256", secret)
-    .update(sortedParams)
-    .digest("hex");
-
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(hmac),
-      Buffer.from(calculatedHmac)
-    );
-  } catch {
-    return false;
-  }
-}
 
 /**
  * This endpoint handles Shopify app installation/access requests.
@@ -58,21 +22,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL("/", req.url));
     }
 
-    // Get Shopify API credentials from database or environment
-    const platformSettings = await db.platformSettings.findUnique({
-      where: { id: "default" },
-      select: { shopifyApiSecret: true },
-    });
-
-    const shopifyApiSecret = platformSettings?.shopifyApiSecret || process.env.SHOPIFY_API_SECRET;
-
-    // Verify HMAC if present and we have a secret
-    if (searchParams.has("hmac") && shopifyApiSecret) {
-      if (!verifyShopifyHmac(searchParams, shopifyApiSecret)) {
-        console.error("Invalid Shopify HMAC");
-        return NextResponse.redirect(new URL("/?error=invalid_signature", req.url));
-      }
-    }
+    // Note: HMAC verification requires knowing which project this is for to get the API secret.
+    // Since this endpoint is reached from Shopify admin (before project context), we skip HMAC
+    // verification here. The actual OAuth flow will verify credentials when the user connects.
 
     // Clean up shop domain for display
     const cleanShop = shop

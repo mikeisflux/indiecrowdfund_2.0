@@ -57,20 +57,27 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Get Shopify API credentials from database or environment
-    const platformSettings = await db.platformSettings.findUnique({
-      where: { id: "default" },
-      select: { shopifyEnabled: true, shopifyApiKey: true },
+    // Get Shopify API credentials from project's FulfillmentIntegration
+    const integration = await db.fulfillmentIntegration.findUnique({
+      where: {
+        projectId_provider: {
+          projectId,
+          provider: "SHOPIFY",
+        },
+      },
     });
 
-    const shopifyApiKey = platformSettings?.shopifyApiKey || process.env.SHOPIFY_API_KEY;
+    const credentials = integration?.credentials as {
+      apiKey?: string;
+      apiSecret?: string;
+    } | null;
 
-    if (!platformSettings?.shopifyEnabled && !process.env.SHOPIFY_API_KEY) {
-      return NextResponse.json({ error: "Shopify integration is not enabled" }, { status: 400 });
-    }
+    const shopifyApiKey = credentials?.apiKey;
 
     if (!shopifyApiKey) {
-      return NextResponse.json({ error: "Shopify integration not configured" }, { status: 500 });
+      return NextResponse.json({
+        error: "Shopify API credentials not configured. Please add your API Key in the Shopify API Key settings section."
+      }, { status: 400 });
     }
 
     // Clean up shop domain

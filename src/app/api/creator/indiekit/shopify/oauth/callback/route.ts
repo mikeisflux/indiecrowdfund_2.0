@@ -144,19 +144,28 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Exchange code for access token - get credentials from database or environment
-    const platformSettings = await db.platformSettings.findUnique({
-      where: { id: "default" },
-      select: { shopifyApiKey: true, shopifyApiSecret: true },
+    // Exchange code for access token - get credentials from project's FulfillmentIntegration
+    const integration = await db.fulfillmentIntegration.findUnique({
+      where: {
+        projectId_provider: {
+          projectId,
+          provider: "SHOPIFY",
+        },
+      },
     });
 
-    const shopifyApiKey = platformSettings?.shopifyApiKey || process.env.SHOPIFY_API_KEY;
-    const shopifyApiSecret = platformSettings?.shopifyApiSecret || process.env.SHOPIFY_API_SECRET;
+    const credentials = integration?.credentials as {
+      apiKey?: string;
+      apiSecret?: string;
+    } | null;
+
+    const shopifyApiKey = credentials?.apiKey;
+    const shopifyApiSecret = credentials?.apiSecret;
 
     if (!shopifyApiKey || !shopifyApiSecret) {
-      console.error("Missing Shopify API credentials");
+      console.error("Missing Shopify API credentials for project:", projectId);
       return NextResponse.redirect(
-        new URL("/dashboard/indiekit?error=Shopify integration not configured", req.url)
+        new URL("/dashboard/indiekit?error=Shopify API credentials not configured. Please add them in the Shopify API Key settings.", req.url)
       );
     }
 
