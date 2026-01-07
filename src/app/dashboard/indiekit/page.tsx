@@ -15,6 +15,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Settings,
   Bell,
   ChevronLeft,
@@ -45,6 +61,8 @@ import {
   BoxIcon,
   UserCircle,
   Inbox,
+  CreditCard,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -146,10 +164,17 @@ export default function IndieKitPage() {
   const [isNPSDialogOpen, setIsNPSDialogOpen] = useState(false);
   const [packageGroupFilter, setPackageGroupFilter] = useState<string>("all");
   const [workflowActionLoading, setWorkflowActionLoading] = useState<string | null>(null);
+  const [isChargePreviewOpen, setIsChargePreviewOpen] = useState(false);
 
   // Workflow action handlers
   const handleWorkflowAction = async (stepId: string) => {
     if (!selectedProjectId || workflowActionLoading) return;
+
+    // For charge_cards, show preview dialog instead of charging directly
+    if (stepId === "charge_cards") {
+      setIsChargePreviewOpen(true);
+      return;
+    }
 
     // Map step ID to API action
     const actionMap: Record<string, { action: string; successMsg: string; errorMsg: string }> = {
@@ -157,11 +182,6 @@ export default function IndieKitPage() {
         action: "lock_orders",
         successMsg: "Orders locked successfully",
         errorMsg: "Failed to lock orders",
-      },
-      charge_cards: {
-        action: "charge_cards",
-        successMsg: "Card charges initiated",
-        errorMsg: "Failed to charge cards",
       },
       lock_addresses: {
         action: "lock_addresses",
@@ -948,6 +968,179 @@ export default function IndieKitPage() {
           toast.success("Thank you for your feedback!");
         }}
       />
+
+      {/* Charge Cards Preview Dialog */}
+      <Dialog open={isChargePreviewOpen} onOpenChange={setIsChargePreviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-teal-600" />
+              Charge Cards Preview
+            </DialogTitle>
+            <DialogDescription>
+              Review additional charges before processing. These are for add-ons and extras purchased through the survey, not the original pledge amounts.
+            </DialogDescription>
+          </DialogHeader>
+
+          {(() => {
+            // Calculate backers with add-ons that need charging
+            const backersToCharge = backers.filter(b =>
+              b.addons && b.addons.length > 0 && b.chargeStatus !== "charged"
+            );
+            const totalAddonsAmount = backersToCharge.reduce((sum, b) =>
+              sum + (b.addons?.reduce((s, a) => s + (a.amount * a.quantity), 0) || 0), 0
+            );
+
+            if (backersToCharge.length === 0) {
+              return (
+                <div className="py-8 text-center">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                    <Check className="h-6 w-6 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold mb-2">No Additional Charges Needed</h3>
+                  <p className="text-sm text-muted-foreground">
+                    All backers have been charged for their add-ons, or no add-ons were purchased.
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                {/* Summary */}
+                <div className="rounded-lg border p-4 bg-muted/30">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold">{backersToCharge.length}</p>
+                      <p className="text-xs text-muted-foreground">Backers to Charge</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{backersToCharge.reduce((sum, b) => sum + (b.addons?.length || 0), 0)}</p>
+                      <p className="text-xs text-muted-foreground">Total Add-ons</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-teal-600">${totalAddonsAmount.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">Total to Charge</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info box */}
+                <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                  <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                  <div className="text-blue-800">
+                    <p className="font-medium">What gets charged?</p>
+                    <p className="mt-1">Only add-ons purchased through the survey. The original pledge amount was already collected when they backed the project.</p>
+                  </div>
+                </div>
+
+                {/* Breakdown by backer */}
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Backer</TableHead>
+                        <TableHead>Add-ons</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {backersToCharge.slice(0, 10).map((backer) => {
+                        const addonTotal = backer.addons?.reduce((s, a) => s + (a.amount * a.quantity), 0) || 0;
+                        return (
+                          <TableRow key={backer.id}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{backer.name}</p>
+                                <p className="text-xs text-muted-foreground">{backer.email}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                {backer.addons?.map((addon, idx) => (
+                                  <div key={idx} className="text-muted-foreground">
+                                    {addon.quantity}x {addon.name}
+                                  </div>
+                                ))}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              ${addonTotal.toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                  {backersToCharge.length > 10 && (
+                    <div className="p-3 text-center text-sm text-muted-foreground border-t">
+                      And {backersToCharge.length - 10} more backers...
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsChargePreviewOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={async () => {
+                const backersToCharge = backers.filter(b =>
+                  b.addons && b.addons.length > 0 && b.chargeStatus !== "charged"
+                );
+                if (backersToCharge.length === 0) {
+                  setIsChargePreviewOpen(false);
+                  return;
+                }
+
+                setWorkflowActionLoading("charge_cards");
+                try {
+                  const res = await fetch("/api/creator/indiekit/backers", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                    body: JSON.stringify({
+                      action: "charge_cards",
+                      pledgeIds: backersToCharge.map(b => b.id),
+                      projectId: selectedProjectId,
+                    }),
+                  });
+
+                  const data = await res.json();
+
+                  if (!res.ok) {
+                    throw new Error(data.error || "Failed to charge cards");
+                  }
+
+                  toast.success(`Successfully charged ${data.results?.success || backersToCharge.length} backers`);
+                  fetchData();
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Failed to charge cards");
+                } finally {
+                  setWorkflowActionLoading(null);
+                  setIsChargePreviewOpen(false);
+                }
+              }}
+              disabled={workflowActionLoading === "charge_cards" || backers.filter(b => b.addons && b.addons.length > 0 && b.chargeStatus !== "charged").length === 0}
+            >
+              {workflowActionLoading === "charge_cards" ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Confirm & Charge
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
