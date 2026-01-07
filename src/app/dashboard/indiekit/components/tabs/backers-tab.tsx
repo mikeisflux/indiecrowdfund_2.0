@@ -122,10 +122,10 @@ export function BackersTab({
 
   // Extract unique values for filter options
   const filterOptions = useMemo(() => {
-    const rewards = [...new Set(backers.map(b => b.reward).filter(Boolean))].sort();
-    const addons = [...new Set(backers.flatMap(b => b.addons?.map(a => a.name) || []))].sort();
-    const skus = [...new Set(backers.flatMap(b => b.items?.map(i => i.sku).filter(Boolean) as string[] || []))].sort();
-    const locations = [...new Set(backers.map(b => b.shippingAddress?.country).filter(Boolean) as string[])].sort();
+    const rewards = Array.from(new Set(backers.map(b => b.reward).filter(Boolean))).sort();
+    const addons = Array.from(new Set(backers.flatMap(b => b.addons?.map(a => a.name) || []))).sort();
+    const skus = Array.from(new Set(backers.flatMap(b => b.items?.map(i => i.sku).filter(Boolean) as string[] || []))).sort();
+    const locations = Array.from(new Set(backers.map(b => b.shippingAddress?.country).filter(Boolean) as string[])).sort();
     return { rewards, addons, skus, locations };
   }, [backers]);
 
