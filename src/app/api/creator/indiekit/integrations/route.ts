@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     // Get project-specific integrations if projectId provided
     let projectIntegrations = null;
-    let fulfillmentIntegrations = {
+    const fulfillmentIntegrations = {
       shopify: { connected: false, status: null as string | null },
       shipstation: { connected: false, status: null as string | null },
       shippo: { connected: false, status: null as string | null },
