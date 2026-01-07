@@ -152,13 +152,16 @@ export async function GET(req: NextRequest) {
     });
 
     // Redirect back to IndieKit settings with success
+    // Use NEXT_PUBLIC_APP_URL to ensure we redirect to the correct domain
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.url;
     return NextResponse.redirect(
-      new URL(`/dashboard/indiekit?shopify=connected&shop=${encodeURIComponent(shopInfo.name)}`, req.url)
+      new URL(`/dashboard/indiekit?shopify=connected&shop=${encodeURIComponent(shopInfo.name)}`, appUrl)
     );
   } catch (error) {
     console.error("Shopify OAuth callback error:", error);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.url;
     return NextResponse.redirect(
-      new URL("/dashboard/indiekit?error=Failed to complete Shopify authorization", req.url)
+      new URL("/dashboard/indiekit?error=Failed to complete Shopify authorization", appUrl)
     );
   }
 }
