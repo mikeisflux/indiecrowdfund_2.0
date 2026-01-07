@@ -341,10 +341,21 @@ export async function GET(req: NextRequest) {
     const preOrderBackers = pledges.filter(p => p.isPreOrder).length;
 
     // Calculate charge stats for workflow
+    // "Charge Cards" is for ADDITIONAL charges (add-ons, shipping upgrades, etc.)
+    // NOT for initial pledge payments - those are already collected when status is COMPLETED
+    // Only count as "notCharged" if they have add-ons that haven't been charged
+    const pledgesWithUnchargedAddons = pledges.filter(p => {
+      // If pledge is completed, initial payment is done
+      // Check if they have add-ons that need charging
+      const hasAddons = p.addons && p.addons.length > 0;
+      const needsAdditionalCharge = hasAddons && (!p.chargeStatus || p.chargeStatus === "NOT_CHARGED");
+      return needsAdditionalCharge;
+    });
+
     const statsChargeStats = {
-      notCharged: pledges.filter(p => !p.chargeStatus || p.chargeStatus === "NOT_CHARGED").length,
+      notCharged: pledgesWithUnchargedAddons.length,
       errored: pledges.filter(p => p.chargeStatus === "FAILED").length,
-      charged: pledges.filter(p => p.chargeStatus === "CHARGED" || p.status === "COMPLETED").length,
+      charged: pledges.filter(p => p.status === "COMPLETED").length, // All completed pledges are charged
       paypalCollected: pledges.filter(p => p.paymentProcessor === "PAYPAL").length,
     };
 
