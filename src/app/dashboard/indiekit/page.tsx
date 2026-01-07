@@ -63,6 +63,7 @@ import {
   Inbox,
   CreditCard,
   AlertCircle,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -116,6 +117,7 @@ import {
   AccountSettingsTab,
   UpdatesTab,
   InboxTab,
+  SkuMappingTab,
 } from "./components/tabs";
 import { WhatsNextBanner } from "./components/whats-next-banner";
 
@@ -722,6 +724,10 @@ export default function IndieKitPage() {
                   <FileDown className="h-4 w-4 mr-2" />
                   Export
                 </TabsTrigger>
+                <TabsTrigger value="sku-mapping">
+                  <Link2 className="h-4 w-4 mr-2" />
+                  SKU Mapping
+                </TabsTrigger>
                 <TabsTrigger value="survey-builder">
                   <FormInput className="h-4 w-4 mr-2" />
                   Survey Builder
@@ -847,6 +853,10 @@ export default function IndieKitPage() {
 
               <TabsContent value="export">
                 <ExportTab projectId={selectedProjectId} />
+              </TabsContent>
+
+              <TabsContent value="sku-mapping">
+                <SkuMappingTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="timeline">

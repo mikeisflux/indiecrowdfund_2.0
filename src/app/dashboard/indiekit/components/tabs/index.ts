@@ -21,3 +21,4 @@ export { ProductsTab } from "./products-tab";
 export { AccountSettingsTab } from "./account-settings-tab";
 export { UpdatesTab } from "./updates-tab";
 export { InboxTab } from "./inbox-tab";
+export { SkuMappingTab } from "./sku-mapping-tab";

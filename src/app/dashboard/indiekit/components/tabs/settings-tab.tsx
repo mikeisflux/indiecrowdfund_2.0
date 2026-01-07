@@ -47,10 +47,6 @@ import {
   Building2,
   AlertTriangle,
   Store,
-  Link2,
-  Package,
-  Trash2,
-  Save,
   Key,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -155,29 +151,6 @@ export function SettingsTab({
     loading: boolean;
   }>({ saved: false, loading: true });
   const [isSavingShopifyCreds, setIsSavingShopifyCreds] = useState(false);
-
-  // SKU Mapping state
-  interface SkuMapping {
-    id: string;
-    sourceType: string;
-    sourceId: string;
-    sourceName: string;
-    shopifySku: string;
-    shopifyProductName?: string;
-    quantity: number;
-  }
-  interface UnmappedItem {
-    sourceType: string;
-    sourceId: string;
-    sourceName: string;
-    amount?: number;
-    quantityClaimed?: number;
-  }
-  const [skuMappings, setSkuMappings] = useState<SkuMapping[]>([]);
-  const [unmappedItems, setUnmappedItems] = useState<UnmappedItem[]>([]);
-  const [isLoadingSkuMappings, setIsLoadingSkuMappings] = useState(false);
-  const [isSavingSkuMapping, setIsSavingSkuMapping] = useState<string | null>(null);
-  const [skuInputs, setSkuInputs] = useState<Record<string, string>>({});
 
   // Switch states
   const [surveySettings, setSurveySettings] = useState({
@@ -332,32 +305,6 @@ export function SettingsTab({
     }
     loadShopifyCredentials();
   }, []);
-
-  // Fetch SKU mappings when Shopify is connected
-  useEffect(() => {
-    async function fetchSkuMappings() {
-      if (!projectId || !shopifyStatus.connected) {
-        setSkuMappings([]);
-        setUnmappedItems([]);
-        return;
-      }
-
-      setIsLoadingSkuMappings(true);
-      try {
-        const response = await fetch(`/api/creator/indiekit/shopify/sku-mapping?projectId=${projectId}`);
-        if (response.ok) {
-          const data = await response.json();
-          setSkuMappings(data.mappings || []);
-          setUnmappedItems(data.unmappedItems || []);
-        }
-      } catch (error) {
-        console.error("Failed to fetch SKU mappings:", error);
-      } finally {
-        setIsLoadingSkuMappings(false);
-      }
-    }
-    fetchSkuMappings();
-  }, [projectId, shopifyStatus.connected]);
 
   // Handle OAuth callback messages
   useEffect(() => {
@@ -845,83 +792,6 @@ export function SettingsTab({
       toast.error(error instanceof Error ? error.message : "Failed to clear credentials");
     } finally {
       setIsSavingShopifyCreds(false);
-    }
-  };
-
-  const handleSaveSkuMapping = async (item: UnmappedItem) => {
-    const sku = skuInputs[`${item.sourceType}-${item.sourceId}`];
-    if (!sku?.trim()) {
-      toast.error("Please enter a Shopify SKU");
-      return;
-    }
-
-    setIsSavingSkuMapping(`${item.sourceType}-${item.sourceId}`);
-    try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          action: "save",
-          sourceType: item.sourceType,
-          sourceId: item.sourceId,
-          sourceName: item.sourceName,
-          shopifySku: sku.trim(),
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save mapping");
-      }
-
-      const data = await res.json();
-      setSkuMappings(prev => [...prev, data.mapping]);
-      setUnmappedItems(prev => prev.filter(i =>
-        !(i.sourceType === item.sourceType && i.sourceId === item.sourceId)
-      ));
-      setSkuInputs(prev => {
-        const next = { ...prev };
-        delete next[`${item.sourceType}-${item.sourceId}`];
-        return next;
-      });
-      toast.success(`Mapped "${item.sourceName}" to SKU: ${sku.trim()}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save mapping");
-    } finally {
-      setIsSavingSkuMapping(null);
-    }
-  };
-
-  const handleDeleteSkuMapping = async (mapping: SkuMapping) => {
-    setIsSavingSkuMapping(mapping.id);
-    try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          action: "delete",
-          mappingId: mapping.id,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete mapping");
-      }
-
-      setSkuMappings(prev => prev.filter(m => m.id !== mapping.id));
-      setUnmappedItems(prev => [...prev, {
-        sourceType: mapping.sourceType,
-        sourceId: mapping.sourceId,
-        sourceName: mapping.sourceName,
-      }]);
-      toast.success(`Removed mapping for "${mapping.sourceName}"`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete mapping");
-    } finally {
-      setIsSavingSkuMapping(null);
     }
   };
 
@@ -1680,151 +1550,6 @@ export function SettingsTab({
                     </AlertDialog>
                   )}
                 </div>
-
-                {/* SKU Mapping - Only shows when Shopify is connected */}
-                {shopifyStatus.connected && (
-                  <Card className="border-[#95BF47]/30">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Link2 className="h-5 w-5 text-[#95BF47]" />
-                          <CardTitle className="text-base">Shopify SKU Mapping</CardTitle>
-                        </div>
-                        {isLoadingSkuMappings && (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        )}
-                      </div>
-                      <CardDescription>
-                        Map your rewards, add-ons, and items to Shopify SKUs for fulfillment
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {isLoadingSkuMappings ? (
-                        <div className="flex items-center justify-center py-8">
-                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                        </div>
-                      ) : (
-                        <>
-                          {/* Existing Mappings */}
-                          {skuMappings.length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-muted-foreground">Mapped Items</p>
-                              <div className="space-y-2">
-                                {skuMappings.map((mapping) => (
-                                  <div
-                                    key={mapping.id}
-                                    className="flex items-center justify-between p-3 border rounded-lg bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <Package className="h-4 w-4 text-green-600" />
-                                      <div>
-                                        <p className="text-sm font-medium">{mapping.sourceName}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                          <Badge variant="outline" className="text-xs mr-2">
-                                            {mapping.sourceType === "ADDON" ? "Add-on" :
-                                             mapping.sourceType === "REWARD" ? "Reward" : "Item"}
-                                          </Badge>
-                                          SKU: <span className="font-mono">{mapping.shopifySku}</span>
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleDeleteSkuMapping(mapping)}
-                                      disabled={isSavingSkuMapping === mapping.id}
-                                      className="text-muted-foreground hover:text-destructive"
-                                    >
-                                      {isSavingSkuMapping === mapping.id ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <Trash2 className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Unmapped Items */}
-                          {unmappedItems.length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-muted-foreground">
-                                Unmapped Items ({unmappedItems.length})
-                              </p>
-                              <div className="space-y-2">
-                                {unmappedItems.map((item) => {
-                                  const key = `${item.sourceType}-${item.sourceId}`;
-                                  return (
-                                    <div
-                                      key={key}
-                                      className="flex items-center gap-3 p-3 border rounded-lg"
-                                    >
-                                      <Package className="h-4 w-4 text-muted-foreground shrink-0" />
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">{item.sourceName}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                          <Badge variant="outline" className="text-xs">
-                                            {item.sourceType === "ADDON" ? "Add-on" :
-                                             item.sourceType === "REWARD" ? "Reward" : "Item"}
-                                          </Badge>
-                                          {item.amount !== undefined && (
-                                            <span className="ml-2">${(item.amount / 100).toFixed(2)}</span>
-                                          )}
-                                        </p>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <Input
-                                          placeholder="Shopify SKU"
-                                          className="w-32 h-8 text-sm"
-                                          value={skuInputs[key] || ""}
-                                          onChange={(e) => setSkuInputs(prev => ({
-                                            ...prev,
-                                            [key]: e.target.value
-                                          }))}
-                                        />
-                                        <Button
-                                          size="sm"
-                                          onClick={() => handleSaveSkuMapping(item)}
-                                          disabled={isSavingSkuMapping === key || !skuInputs[key]?.trim()}
-                                          className="h-8"
-                                        >
-                                          {isSavingSkuMapping === key ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                          ) : (
-                                            <Save className="h-4 w-4" />
-                                          )}
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Empty state */}
-                          {skuMappings.length === 0 && unmappedItems.length === 0 && (
-                            <div className="text-center py-6 text-muted-foreground">
-                              <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                              <p className="text-sm">No rewards, add-ons, or items to map</p>
-                              <p className="text-xs">Items will appear here once you have rewards set up</p>
-                            </div>
-                          )}
-
-                          {/* All mapped success state */}
-                          {skuMappings.length > 0 && unmappedItems.length === 0 && (
-                            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-green-700 dark:text-green-400">
-                              <CheckCircle className="h-4 w-4" />
-                              <span className="text-sm">All items have been mapped to Shopify SKUs</span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
 
                 {/* ShipStation */}
                 <div className="flex items-center justify-between p-4 border rounded-lg">
