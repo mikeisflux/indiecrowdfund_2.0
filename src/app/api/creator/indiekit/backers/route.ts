@@ -157,26 +157,73 @@ export async function POST(req: NextRequest) {
       }
 
       case "push_to_fulfillment": {
-        // Update fulfillment status
-        await db.pledge.updateMany({
+        // Check if Shopify is connected
+        const shopifyIntegration = await db.fulfillmentIntegration.findUnique({
           where: {
-            id: { in: pledgeIds },
-            projectId,
+            projectId_provider: {
+              projectId,
+              provider: "SHOPIFY",
+            },
           },
-          data: { fulfillmentStatus: "IN_PROGRESS" },
         });
+
+        if (shopifyIntegration && shopifyIntegration.status === "CONNECTED") {
+          // Push to Shopify
+          const shopifyResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/shopify`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Cookie": req.headers.get("cookie") || "",
+            },
+            body: JSON.stringify({
+              projectId,
+              action: "push_orders",
+              backerIds: pledgeIds,
+            }),
+          });
+
+          const shopifyResult = await shopifyResponse.json();
+
+          if (shopifyResponse.ok) {
+            results.success = shopifyResult.pushed || 0;
+            results.failed = shopifyResult.failed || 0;
+            if (shopifyResult.errors) {
+              results.errors = shopifyResult.errors;
+            }
+          } else {
+            // Fallback to local status update if Shopify fails
+            await db.pledge.updateMany({
+              where: {
+                id: { in: pledgeIds },
+                projectId,
+              },
+              data: { fulfillmentStatus: "IN_PROGRESS" },
+            });
+            results.success = pledgeIds.length;
+            results.errors = [shopifyResult.error || "Shopify push failed, updated local status only"];
+          }
+        } else {
+          // No Shopify - just update local fulfillment status
+          await db.pledge.updateMany({
+            where: {
+              id: { in: pledgeIds },
+              projectId,
+            },
+            data: { fulfillmentStatus: "IN_PROGRESS" },
+          });
+          results.success = pledgeIds.length;
+        }
 
         // Log activity
         await db.fulfillmentActivity.create({
           data: {
             projectId,
             type: "ORDERS_PUSHED",
-            title: `${pledgeIds.length} orders pushed to fulfillment`,
-            affectedCount: pledgeIds.length,
+            title: `${results.success} orders pushed to fulfillment`,
+            affectedCount: results.success,
           },
         });
 
-        results.success = pledgeIds.length;
         break;
       }
 
