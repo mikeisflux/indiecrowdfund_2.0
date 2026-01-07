@@ -2002,6 +2002,9 @@ export function SettingsTab({
                           placeholder="Your Shopify API key..."
                           value={shopifyApiCredentials.apiKey}
                           onChange={(e) => setShopifyApiCredentials(prev => ({ ...prev, apiKey: e.target.value }))}
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
                         />
                       </div>
                       <div className="space-y-2">
@@ -2012,6 +2015,9 @@ export function SettingsTab({
                           placeholder="Your Shopify API secret..."
                           value={shopifyApiCredentials.apiSecret}
                           onChange={(e) => setShopifyApiCredentials(prev => ({ ...prev, apiSecret: e.target.value }))}
+                          autoComplete="new-password"
+                          data-1p-ignore
+                          data-lpignore="true"
                         />
                       </div>
                     </div>
