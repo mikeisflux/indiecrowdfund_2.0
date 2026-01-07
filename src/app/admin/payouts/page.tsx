@@ -18,6 +18,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -39,79 +40,159 @@ import {
   Download,
   AlertCircle,
   Loader2,
-  Banknote,
   User,
-  Calendar,
   DollarSign,
   ChevronRight,
   ArrowLeft,
   Send,
-  FileText,
-  Coins,
+  Building,
+  Eye,
+  Banknote,
 } from "lucide-react";
-import Link from "next/link";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
-// Payout interface matching API response
-interface Payout {
+// Creator project payout interface
+interface CreatorProject {
   id: string;
-  payoutId: string | null;
-  projectId: string;
-  grossAmount: number;
-  amount: number;
-  platformFees: number;
-  processorFees: number;
-  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
-  type: "CAMPAIGN" | "LATE_PLEDGE" | "PLEDGE_MANAGER";
-  sentAt: string | null;
-  bankAccountLast4: string | null;
-  createdAt: string;
-  project: {
+  title: string;
+  slug: string;
+  imageUrl: string | null;
+  status: string;
+  fundedAt: string | null;
+  totalRaised: number;
+  platformFee: number;
+  amountOwed: number;
+  amountSettled: number;
+  remainingAmount: number;
+  backerCount: number;
+  hasBank: boolean;
+  bankVerified: boolean;
+  hasPendingSettlement: boolean;
+  settlementStatus: "pending" | "processing" | "settled";
+  creator: {
     id: string;
-    title: string;
-    slug: string;
-    imageUrl: string | null;
-    goalAmount: number;
-    currentAmount: number;
-    creator: {
+    name: string | null;
+    email: string;
+    image: string | null;
+    bankAccount: {
       id: string;
-      name: string | null;
-      email: string;
-    };
+      bankName: string | null;
+      accountLastFour: string | null;
+      accountType: string;
+      isVerified: boolean;
+    } | null;
   };
+  settlements: {
+    id: string;
+    amount: number;
+    status: string;
+    processedAt: string | null;
+    completedAt: string | null;
+  }[];
 }
 
 interface PayoutStats {
-  pending: number;
-  processing: number;
-  completed: number;
-  failed: number;
-  pendingAmount: number;
-  completedAmount: number;
+  totalProjects: number;
+  pendingPayouts: number;
+  processingPayouts: number;
+  settledPayouts: number;
+  totalAmountOwed: number;
+  totalAmountSettled: number;
+  totalRemaining: number;
+  projectsWithoutBank: number;
+}
+
+interface BankAccountDetails {
+  id: string;
+  userId: string;
+  user: { id: string; name: string | null; email: string };
+  bankName: string;
+  bankNameDisplay: string | null;
+  accountHolder: string;
+  accountNumber: string;
+  accountLastFour: string | null;
+  routingNumber: string;
+  accountType: string;
+  isVerified: boolean;
+  verifiedAt: string | null;
+}
+
+// Creator balance interface for marketplace/indiekit earnings
+interface CreatorBalance {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  balance: number;
+  marketplaceSales: {
+    totalAmount: number;
+    creatorEarnings: number;
+    count: number;
+  };
+  hasBank: boolean;
+  bankVerified: boolean;
+  bankAccount: {
+    id: string;
+    bankName: string | null;
+    accountLastFour: string | null;
+    accountType: string;
+    isVerified: boolean;
+  } | null;
+  settlements: {
+    id: string;
+    amount: number;
+    status: string;
+    processedAt: string | null;
+    completedAt: string | null;
+  }[];
+}
+
+interface BalanceStats {
+  totalCreatorsWithBalance: number;
+  totalBalance: number;
+  creatorsWithoutBank: number;
 }
 
 export default function PayoutsPage() {
-  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [projects, setProjects] = useState<CreatorProject[]>([]);
   const [stats, setStats] = useState<PayoutStats>({
-    pending: 0,
-    processing: 0,
-    completed: 0,
-    failed: 0,
-    pendingAmount: 0,
-    completedAmount: 0,
+    totalProjects: 0,
+    pendingPayouts: 0,
+    processingPayouts: 0,
+    settledPayouts: 0,
+    totalAmountOwed: 0,
+    totalAmountSettled: 0,
+    totalRemaining: 0,
+    projectsWithoutBank: 0,
   });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedPayout, setSelectedPayout] = useState<Payout | null>(null);
-  const [processing, setProcessing] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<CreatorProject | null>(null);
+  const [showBankDetails, setShowBankDetails] = useState(false);
+  const [bankDetails, setBankDetails] = useState<BankAccountDetails | null>(null);
+  const [loadingBankDetails, setLoadingBankDetails] = useState(false);
+  const [showCreateSettlement, setShowCreateSettlement] = useState(false);
+  const [settlementAmount, setSettlementAmount] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
+  const [processing, setProcessing] = useState(false);
 
-  // Fetch payouts from API
-  const fetchPayouts = useCallback(async () => {
+  // Creator balances state (for marketplace/indiekit earnings)
+  const [creatorBalances, setCreatorBalances] = useState<CreatorBalance[]>([]);
+  const [balanceStats, setBalanceStats] = useState<BalanceStats>({
+    totalCreatorsWithBalance: 0,
+    totalBalance: 0,
+    creatorsWithoutBank: 0,
+  });
+  const [selectedCreator, setSelectedCreator] = useState<CreatorBalance | null>(null);
+  const [showCreatorBalanceDialog, setShowCreatorBalanceDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState<"projects" | "balances">("projects");
+
+  // Fetch projects that need payouts
+  const fetchProjects = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -121,34 +202,42 @@ export default function PayoutsPage() {
       if (searchQuery) {
         params.set("search", searchQuery);
       }
-      params.set("limit", "100");
 
-      const response = await fetch(`/api/admin/payouts?${params.toString()}`);
+      const response = await fetch(`/api/admin/payouts/divinitycoin?${params.toString()}`);
       if (!response.ok) {
-        throw new Error("Failed to fetch payouts");
+        throw new Error("Failed to fetch creator payouts");
       }
 
       const data = await response.json();
-      setPayouts(data.payouts || []);
+      setProjects(data.projects || []);
       setStats(data.stats || {
-        pending: 0,
-        processing: 0,
-        completed: 0,
-        failed: 0,
-        pendingAmount: 0,
-        completedAmount: 0,
+        totalProjects: 0,
+        pendingPayouts: 0,
+        processingPayouts: 0,
+        settledPayouts: 0,
+        totalAmountOwed: 0,
+        totalAmountSettled: 0,
+        totalRemaining: 0,
+        projectsWithoutBank: 0,
+      });
+      // Set creator balances from marketplace/indiekit earnings
+      setCreatorBalances(data.creatorBalances || []);
+      setBalanceStats(data.balanceStats || {
+        totalCreatorsWithBalance: 0,
+        totalBalance: 0,
+        creatorsWithoutBank: 0,
       });
     } catch (error) {
-      console.error("Error fetching payouts:", error);
-      toast.error("Failed to load payouts");
+      console.error("Error fetching creator payouts:", error);
+      toast.error("Failed to load creator payouts");
     } finally {
       setLoading(false);
     }
   }, [statusFilter, searchQuery]);
 
   useEffect(() => {
-    fetchPayouts();
-  }, [fetchPayouts]);
+    fetchProjects();
+  }, [fetchProjects]);
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -158,35 +247,28 @@ export default function PayoutsPage() {
     }).format(amount);
   };
 
-  // Get status badge
-  const getStatusBadge = (status: string) => {
+  // Get settlement status badge
+  const getSettlementBadge = (status: string) => {
     switch (status) {
-      case "PENDING":
+      case "pending":
         return (
           <Badge variant="outline" className="text-yellow-600 border-yellow-600">
             <Clock className="w-3 h-3 mr-1" />
-            Pending
+            Pending Payout
           </Badge>
         );
-      case "PROCESSING":
+      case "processing":
         return (
           <Badge variant="outline" className="text-blue-600 border-blue-600">
             <Loader2 className="w-3 h-3 mr-1 animate-spin" />
             Processing
           </Badge>
         );
-      case "COMPLETED":
+      case "settled":
         return (
           <Badge variant="outline" className="text-emerald-600 border-emerald-600">
             <CheckCircle className="w-3 h-3 mr-1" />
-            Completed
-          </Badge>
-        );
-      case "FAILED":
-        return (
-          <Badge variant="destructive">
-            <XCircle className="w-3 h-3 mr-1" />
-            Failed
+            Settled
           </Badge>
         );
       default:
@@ -194,35 +276,97 @@ export default function PayoutsPage() {
     }
   };
 
-  // Handle payout action
-  const handleAction = async (action: string) => {
-    if (!selectedPayout) return;
-    setProcessing(true);
-
+  // View bank account details
+  const viewBankDetails = async (bankAccountId: string) => {
+    setLoadingBankDetails(true);
+    setShowBankDetails(true);
     try {
-      const response = await fetch("/api/admin/payouts", {
-        method: "PATCH",
+      const response = await fetch(`/api/admin/bank-accounts/${bankAccountId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch bank account details");
+      }
+      const data = await response.json();
+      setBankDetails(data);
+    } catch (error) {
+      console.error("Error fetching bank account:", error);
+      toast.error("Failed to load bank account details");
+      setShowBankDetails(false);
+    } finally {
+      setLoadingBankDetails(false);
+    }
+  };
+
+  // Create settlement
+  const createSettlement = async () => {
+    if (!selectedProject || !settlementAmount) return;
+
+    setProcessing(true);
+    try {
+      const response = await fetch("/api/admin/payouts/divinitycoin", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...getCSRFHeaders(),
         },
         body: JSON.stringify({
-          payoutId: selectedPayout.id,
-          action: action,
+          projectId: selectedProject.id,
+          amount: parseFloat(settlementAmount),
+          adminNotes,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to update payout");
+        throw new Error(error.error || "Failed to create settlement");
       }
 
-      toast.success(`Payout ${action.toLowerCase()}ed successfully`);
-      setSelectedPayout(null);
-      fetchPayouts();
+      toast.success("Settlement created successfully");
+      setShowCreateSettlement(false);
+      setSettlementAmount("");
+      setAdminNotes("");
+      fetchProjects();
     } catch (error) {
-      console.error("Error updating payout:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update payout");
+      console.error("Error creating settlement:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create settlement");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Create balance payout for marketplace/indiekit earnings
+  const createBalancePayout = async () => {
+    if (!selectedCreator || !settlementAmount) return;
+
+    setProcessing(true);
+    try {
+      const response = await fetch("/api/admin/payouts/divinitycoin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify({
+          creatorId: selectedCreator.id,
+          amount: parseFloat(settlementAmount),
+          adminNotes,
+          type: "BALANCE_PAYOUT",
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create balance payout");
+      }
+
+      toast.success("Balance payout created successfully");
+      setShowCreatorBalanceDialog(false);
+      setSettlementAmount("");
+      setAdminNotes("");
+      setSelectedCreator(null);
+      fetchProjects();
+    } catch (error) {
+      console.error("Error creating balance payout:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create balance payout");
     } finally {
       setProcessing(false);
     }
@@ -231,19 +375,19 @@ export default function PayoutsPage() {
   // Export as CSV
   const exportCSV = () => {
     const csv = [
-      ["Payout ID", "Project", "Creator", "Email", "Gross Amount", "Net Amount", "Status", "Type", "Created", "Sent"].join(","),
-      ...payouts.map((p) =>
+      ["Project", "Creator", "Email", "Total Raised", "Platform Fee", "Amount Owed", "Amount Settled", "Remaining", "Has Bank", "Status"].join(","),
+      ...projects.map((p) =>
         [
-          p.payoutId || p.id,
-          `"${p.project.title}"`,
-          `"${p.project.creator.name || "Unknown"}"`,
-          p.project.creator.email,
-          p.grossAmount,
-          p.amount,
-          p.status,
-          p.type,
-          format(new Date(p.createdAt), "yyyy-MM-dd"),
-          p.sentAt ? format(new Date(p.sentAt), "yyyy-MM-dd") : "",
+          `"${p.title}"`,
+          `"${p.creator.name || "Unknown"}"`,
+          p.creator.email,
+          p.totalRaised,
+          p.platformFee,
+          p.amountOwed,
+          p.amountSettled,
+          p.remainingAmount,
+          p.hasBank ? "Yes" : "No",
+          p.settlementStatus,
         ].join(",")
       ),
     ].join("\n");
@@ -252,7 +396,7 @@ export default function PayoutsPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `payouts-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = `creator-payouts-${format(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
   };
 
@@ -268,21 +412,15 @@ export default function PayoutsPage() {
             Creator Payouts
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400 mt-1">
-            Manage creator payouts for funded campaigns
+            Manage payouts to creators for funded campaigns
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/admin/payouts/divinitycoin">
-            <Button variant="outline" className="flex-1 sm:flex-none bg-purple-50 border-purple-200 hover:bg-purple-100 hover:border-purple-300">
-              <Coins className="w-4 h-4 sm:mr-2 text-purple-600" />
-              <span className="hidden sm:inline text-purple-700">DivinityCoin</span>
-            </Button>
-          </Link>
-          <Button variant="outline" onClick={fetchPayouts} disabled={loading} className="flex-1 sm:flex-none">
+          <Button variant="outline" onClick={fetchProjects} disabled={loading} className="flex-1 sm:flex-none">
             <RefreshCw className={`w-4 h-4 sm:mr-2 ${loading ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button variant="outline" onClick={exportCSV} disabled={payouts.length === 0} className="flex-1 sm:flex-none">
+          <Button variant="outline" onClick={exportCSV} disabled={projects.length === 0} className="flex-1 sm:flex-none">
             <Download className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Export</span>
           </Button>
@@ -297,8 +435,8 @@ export default function PayoutsPage() {
             <Clock className="w-4 h-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.pending}</div>
-            <p className="text-xs text-zinc-500 mt-1">{formatCurrency(stats.pendingAmount)}</p>
+            <div className="text-2xl font-bold">{stats.pendingPayouts}</div>
+            <p className="text-xs text-zinc-500 mt-1">{formatCurrency(stats.totalRemaining)}</p>
           </CardContent>
         </Card>
 
@@ -308,171 +446,392 @@ export default function PayoutsPage() {
             <Send className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.processing}</div>
+            <div className="text-2xl font-bold">{stats.processingPayouts}</div>
             <p className="text-xs text-zinc-500 mt-1">In progress</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-600">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-600">Settled</CardTitle>
             <CheckCircle className="w-4 h-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.completed}</div>
-            <p className="text-xs text-zinc-500 mt-1">{formatCurrency(stats.completedAmount)}</p>
+            <div className="text-2xl font-bold">{stats.settledPayouts}</div>
+            <p className="text-xs text-zinc-500 mt-1">{formatCurrency(stats.totalAmountSettled)}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-600">Failed</CardTitle>
-            <XCircle className="w-4 h-4 text-red-600" />
+            <CardTitle className="text-sm font-medium text-zinc-600">No Bank</CardTitle>
+            <AlertCircle className="w-4 h-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.projectsWithoutBank}</div>
             <p className="text-xs text-zinc-500 mt-1">Need attention</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-4 h-4" />
-              <Input
-                placeholder="Search by project title or creator..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="PROCESSING">Processing</SelectItem>
-                <SelectItem value="COMPLETED">Completed</SelectItem>
-                <SelectItem value="FAILED">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Creator Balances Alert (from Marketplace/IndieKit) */}
+      {balanceStats.totalCreatorsWithBalance > 0 && (
+        <Alert className="border-teal-200 bg-teal-50">
+          <DollarSign className="h-4 w-4 text-teal-600" />
+          <AlertTitle className="text-teal-800">Creator Balances Available</AlertTitle>
+          <AlertDescription className="text-teal-700">
+            {balanceStats.totalCreatorsWithBalance} creator(s) have balances totaling {formatCurrency(balanceStats.totalBalance)} from Marketplace and IndieKit sales.
+            {balanceStats.creatorsWithoutBank > 0 && (
+              <span className="font-medium"> ({balanceStats.creatorsWithoutBank} need bank setup)</span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
-      {/* Payouts Table */}
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-            </div>
-          ) : payouts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
-              <Banknote className="w-12 h-12 mb-4 text-zinc-300" />
-              <p className="text-lg font-medium">No payouts found</p>
-              <p className="text-sm">Payouts will appear here when campaigns are funded</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Creator</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Gross Amount</TableHead>
-                  <TableHead className="text-right">Net Payout</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payouts.map((payout) => (
-                  <TableRow
-                    key={payout.id}
-                    className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                    onClick={() => {
-                      setSelectedPayout(payout);
-                      setAdminNotes("");
-                    }}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {payout.project.imageUrl ? (
-                          <Image
-                            src={payout.project.imageUrl}
-                            alt={payout.project.title}
-                            width={48}
-                            height={36}
-                            className="w-12 h-9 rounded object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-9 rounded bg-zinc-100 flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-zinc-400" />
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-zinc-200">
+        <button
+          onClick={() => setActiveTab("projects")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "projects"
+              ? "border-teal-600 text-teal-600"
+              : "border-transparent text-zinc-500 hover:text-zinc-700"
+          }`}
+        >
+          Campaign Payouts ({stats.totalProjects})
+        </button>
+        <button
+          onClick={() => setActiveTab("balances")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "balances"
+              ? "border-teal-600 text-teal-600"
+              : "border-transparent text-zinc-500 hover:text-zinc-700"
+          }`}
+        >
+          Creator Balances ({balanceStats.totalCreatorsWithBalance})
+        </button>
+      </div>
+
+      {/* Projects Tab Content */}
+      {activeTab === "projects" && (
+        <>
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search by project title or creator..."
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="pending">Pending Payout</SelectItem>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="settled">Settled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Projects Table */}
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+                </div>
+              ) : projects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+                  <Banknote className="w-12 h-12 mb-4 text-zinc-300" />
+                  <p className="text-lg font-medium">No payouts found</p>
+                  <p className="text-sm">Projects that have raised money will appear here</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Project</TableHead>
+                      <TableHead>Creator</TableHead>
+                      <TableHead>Bank Status</TableHead>
+                      <TableHead className="text-right">Total Raised</TableHead>
+                      <TableHead className="text-right">Amount Owed</TableHead>
+                      <TableHead className="text-right">Remaining</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projects.map((project) => (
+                      <TableRow
+                        key={project.id}
+                        className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                        onClick={() => setSelectedProject(project)}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {project.imageUrl ? (
+                              <Image
+                                src={project.imageUrl}
+                                alt={project.title}
+                                width={48}
+                                height={36}
+                                className="w-12 h-9 rounded object-cover"
+                              />
+                            ) : (
+                              <div className="w-12 h-9 rounded bg-zinc-100 flex items-center justify-center">
+                                <Banknote className="w-5 h-5 text-zinc-400" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium truncate max-w-[200px]">{project.title}</p>
+                              <p className="text-xs text-zinc-500">
+                                {project.backerCount} backers
+                              </p>
+                            </div>
                           </div>
-                        )}
-                        <div>
-                          <p className="font-medium truncate max-w-[200px]">{payout.project.title}</p>
-                          <p className="text-xs text-zinc-500">
-                            {formatCurrency(Number(payout.project.currentAmount))} raised
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center">
-                          <User className="w-4 h-4 text-zinc-400" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{payout.project.creator.name || "Unknown"}</p>
-                          <p className="text-xs text-zinc-500">{payout.project.creator.email}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {payout.type.toLowerCase().replace("_", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(payout.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <span className="text-zinc-600">
-                        {formatCurrency(Number(payout.grossAmount))}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className="font-bold text-emerald-600">
-                        {formatCurrency(Number(payout.amount))}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-zinc-400" />
-                        <span className="text-sm">{format(new Date(payout.createdAt), "MMM d")}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <ChevronRight className="w-4 h-4 text-zinc-400" />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center">
+                              <User className="w-4 h-4 text-zinc-400" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{project.creator.name || "Unknown"}</p>
+                              <p className="text-xs text-zinc-500">{project.creator.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {project.hasBank ? (
+                            <Badge variant="outline" className={project.bankVerified ? "text-emerald-600 border-emerald-600" : "text-yellow-600 border-yellow-600"}>
+                              <Building className="w-3 h-3 mr-1" />
+                              {project.bankVerified ? "Verified" : "Unverified"}
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive">
+                              <XCircle className="w-3 h-3 mr-1" />
+                              No Bank
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="text-zinc-600">
+                            {formatCurrency(project.totalRaised)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-medium">
+                            {formatCurrency(project.amountOwed)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={`font-bold ${project.remainingAmount > 0 ? "text-yellow-600" : "text-emerald-600"}`}>
+                            {formatCurrency(project.remainingAmount)}
+                          </span>
+                        </TableCell>
+                        <TableCell>{getSettlementBadge(project.settlementStatus)}</TableCell>
+                        <TableCell>
+                          <ChevronRight className="w-4 h-4 text-zinc-400" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
 
-      {/* Payout Detail Dialog */}
-      <Dialog open={!!selectedPayout} onOpenChange={() => setSelectedPayout(null)}>
+      {/* Creator Balances Tab Content */}
+      {activeTab === "balances" && (
+        <Card>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+              </div>
+            ) : creatorBalances.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+                <DollarSign className="w-12 h-12 mb-4 text-zinc-300" />
+                <p className="text-lg font-medium">No Creator Balances</p>
+                <p className="text-sm">Creators with earnings from Marketplace or IndieKit will appear here</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Creator</TableHead>
+                    <TableHead>Bank Status</TableHead>
+                    <TableHead className="text-right">Balance</TableHead>
+                    <TableHead className="text-right">Marketplace Sales</TableHead>
+                    <TableHead className="text-right">Creator Earnings</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {creatorBalances.map((creator) => (
+                    <TableRow key={creator.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center">
+                            <User className="w-4 h-4 text-zinc-400" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{creator.name || "Unknown"}</p>
+                            <p className="text-xs text-zinc-500">{creator.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {creator.hasBank ? (
+                          <div className="flex items-center gap-2">
+                            <Building className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm">
+                              {creator.bankAccount?.bankName} ****{creator.bankAccount?.accountLastFour}
+                            </span>
+                            {creator.bankVerified && <CheckCircle className="w-3 h-3 text-emerald-600" />}
+                          </div>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs">No Bank</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-teal-600">
+                        {formatCurrency(creator.balance)}
+                      </TableCell>
+                      <TableCell className="text-right text-sm text-zinc-500">
+                        {creator.marketplaceSales.count} sales
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {formatCurrency(creator.marketplaceSales.creatorEarnings)}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!creator.hasBank || creator.balance <= 0}
+                          onClick={() => {
+                            setSelectedCreator(creator);
+                            setSettlementAmount(creator.balance.toFixed(2));
+                            setShowCreatorBalanceDialog(true);
+                          }}
+                        >
+                          <Send className="w-3 h-3 mr-1" />
+                          Payout
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Creator Balance Payout Dialog */}
+      <Dialog open={showCreatorBalanceDialog} onOpenChange={setShowCreatorBalanceDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Balance Payout</DialogTitle>
+            <DialogDescription>
+              Pay out balance to creator&apos;s bank account
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCreator && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-zinc-50">
+                <p className="text-sm text-zinc-500">Creator</p>
+                <p className="font-medium">{selectedCreator.name || selectedCreator.email}</p>
+                <p className="text-xs text-zinc-500">{selectedCreator.email}</p>
+              </div>
+
+              <div className="p-4 rounded-lg bg-teal-50 border border-teal-200">
+                <p className="text-sm text-teal-600">Available Balance</p>
+                <p className="text-2xl font-bold text-teal-700">{formatCurrency(selectedCreator.balance)}</p>
+                <p className="text-xs text-teal-500 mt-1">
+                  From {selectedCreator.marketplaceSales.count} marketplace sales
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Payout Amount</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={settlementAmount}
+                  onChange={(e) => setSettlementAmount(e.target.value)}
+                  max={selectedCreator.balance}
+                />
+                <p className="text-xs text-zinc-500">
+                  Max: {formatCurrency(selectedCreator.balance)}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Admin Notes (optional)</Label>
+                <Textarea
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Internal notes about this payout..."
+                  rows={3}
+                />
+              </div>
+
+              {selectedCreator.bankAccount && (
+                <div className="p-4 rounded-lg bg-zinc-50 border">
+                  <p className="text-sm text-zinc-500 mb-2">Bank Account</p>
+                  <div className="flex items-center gap-2">
+                    <Building className="w-4 h-4 text-zinc-500" />
+                    <span className="font-medium">{selectedCreator.bankAccount.bankName}</span>
+                    <span className="text-zinc-500">****{selectedCreator.bankAccount.accountLastFour}</span>
+                    {selectedCreator.bankAccount.isVerified && (
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreatorBalanceDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={createBalancePayout}
+              disabled={processing || !settlementAmount || parseFloat(settlementAmount) <= 0}
+              className="bg-teal-600 hover:bg-teal-700"
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Create Payout
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Detail Dialog */}
+      <Dialog open={!!selectedProject} onOpenChange={() => setSelectedProject(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {selectedPayout && (
+          {selectedProject && (
             <>
               <DialogHeader>
                 <div className="flex items-center gap-2 text-zinc-500 text-sm mb-2">
@@ -480,26 +839,26 @@ export default function PayoutsPage() {
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2"
-                    onClick={() => setSelectedPayout(null)}
+                    onClick={() => setSelectedProject(null)}
                   >
                     <ArrowLeft className="w-3 h-3 mr-1" />
                     Back
                   </Button>
                 </div>
                 <DialogTitle className="flex items-center gap-3">
-                  {selectedPayout.project.imageUrl && (
+                  {selectedProject.imageUrl && (
                     <Image
-                      src={selectedPayout.project.imageUrl}
-                      alt={selectedPayout.project.title}
+                      src={selectedProject.imageUrl}
+                      alt={selectedProject.title}
                       width={64}
                       height={48}
                       className="w-16 h-12 rounded object-cover"
                     />
                   )}
                   <div>
-                    <span className="block">{selectedPayout.project.title}</span>
+                    <span className="block">{selectedProject.title}</span>
                     <span className="text-sm font-normal text-zinc-500">
-                      by {selectedPayout.project.creator.name || "Unknown"}
+                      by {selectedProject.creator.name || "Unknown"}
                     </span>
                   </div>
                 </DialogTitle>
@@ -510,200 +869,313 @@ export default function PayoutsPage() {
                 <div className="flex items-center justify-between p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800">
                   <div>
                     <p className="text-sm text-zinc-500">Payout Status</p>
-                    <div className="mt-1">{getStatusBadge(selectedPayout.status)}</div>
+                    <div className="mt-1">{getSettlementBadge(selectedProject.settlementStatus)}</div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-zinc-500">Net Payout</p>
-                    <p className="text-2xl font-bold text-emerald-600">
-                      {formatCurrency(Number(selectedPayout.amount))}
+                    <p className="text-sm text-zinc-500">Remaining to Pay</p>
+                    <p className={`text-2xl font-bold ${selectedProject.remainingAmount > 0 ? "text-yellow-600" : "text-emerald-600"}`}>
+                      {formatCurrency(selectedProject.remainingAmount)}
                     </p>
                   </div>
                 </div>
 
-                {/* Failed Alert */}
-                {selectedPayout.status === "FAILED" && (
+                {/* No Bank Warning */}
+                {!selectedProject.hasBank && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Payout Failed</AlertTitle>
+                    <AlertTitle>No Bank Account</AlertTitle>
                     <AlertDescription>
-                      This payout failed to process. Please verify the creator&apos;s bank details and retry.
+                      This creator has not added a bank account. Contact them to add their bank details before processing payout.
                     </AlertDescription>
                   </Alert>
                 )}
 
                 {/* Fee Breakdown */}
                 <div>
-                  <h4 className="font-medium mb-3">Fee Breakdown</h4>
+                  <h4 className="font-medium mb-3">Financial Summary</h4>
                   <div className="space-y-2 text-sm bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
                     <div className="flex justify-between">
-                      <span>Gross Amount</span>
-                      <span className="font-medium">{formatCurrency(Number(selectedPayout.grossAmount))}</span>
+                      <span>Total Raised</span>
+                      <span className="font-medium">{formatCurrency(selectedProject.totalRaised)}</span>
                     </div>
                     <div className="flex justify-between text-zinc-500">
-                      <span>Platform Fee (3%)</span>
-                      <span className="text-red-500">-{formatCurrency(Number(selectedPayout.platformFees))}</span>
-                    </div>
-                    <div className="flex justify-between text-zinc-500">
-                      <span>Processor Fee</span>
-                      <span className="text-red-500">-{formatCurrency(Number(selectedPayout.processorFees))}</span>
+                      <span>Platform Fee (5%)</span>
+                      <span className="text-red-500">-{formatCurrency(selectedProject.platformFee)}</span>
                     </div>
                     <div className="border-t pt-2 flex justify-between font-bold">
-                      <span>Creator Payout</span>
-                      <span className="text-emerald-600">{formatCurrency(Number(selectedPayout.amount))}</span>
+                      <span>Amount Owed to Creator</span>
+                      <span>{formatCurrency(selectedProject.amountOwed)}</span>
+                    </div>
+                    <div className="flex justify-between text-emerald-600">
+                      <span>Already Settled</span>
+                      <span>-{formatCurrency(selectedProject.amountSettled)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-bold text-lg">
+                      <span>Remaining</span>
+                      <span className={selectedProject.remainingAmount > 0 ? "text-yellow-600" : "text-emerald-600"}>
+                        {formatCurrency(selectedProject.remainingAmount)}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Timeline */}
-                <div>
-                  <h4 className="font-medium mb-3">Payout Timeline</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-zinc-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">Payout Created</p>
-                        <p className="text-xs text-zinc-500">{format(new Date(selectedPayout.createdAt), "PPP")}</p>
-                      </div>
-                    </div>
-                    {selectedPayout.sentAt && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                          <DollarSign className="w-4 h-4 text-emerald-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">Payout Sent</p>
-                          <p className="text-xs text-zinc-500">
-                            {format(new Date(selectedPayout.sentAt), "PPP")}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {selectedPayout.status === "PENDING" && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
-                          <Clock className="w-4 h-4 text-yellow-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">Awaiting Processing</p>
-                          <p className="text-xs text-zinc-500">
-                            Created {formatDistanceToNow(new Date(selectedPayout.createdAt), { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Creator Info */}
+                {/* Creator & Bank Info */}
                 <div>
                   <h4 className="font-medium mb-3">Creator Information</h4>
-                  <div className="flex items-center gap-4 p-4 rounded-lg border">
-                    <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center">
-                      <User className="w-6 h-6 text-zinc-400" />
+                  <div className="flex items-center justify-between p-4 rounded-lg border">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center">
+                        <User className="w-6 h-6 text-zinc-400" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{selectedProject.creator.name || "Unknown"}</p>
+                        <p className="text-sm text-zinc-500">{selectedProject.creator.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{selectedPayout.project.creator.name || "Unknown"}</p>
-                      <p className="text-sm text-zinc-500">{selectedPayout.project.creator.email}</p>
-                    </div>
+                    {selectedProject.creator.bankAccount && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viewBankDetails(selectedProject.creator.bankAccount!.id)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Bank Details
+                      </Button>
+                    )}
                   </div>
                 </div>
 
-                {/* Bank Account */}
-                {selectedPayout.bankAccountLast4 && (
+                {/* Bank Account Preview */}
+                {selectedProject.creator.bankAccount && (
                   <div>
                     <h4 className="font-medium mb-3">Bank Account</h4>
                     <div className="p-4 rounded-lg border">
-                      <p className="text-sm text-zinc-500">Account ending in</p>
-                      <p className="font-mono text-lg">****{selectedPayout.bankAccountLast4}</p>
+                      <div className="flex items-center gap-3">
+                        <Building className="w-5 h-5 text-zinc-400" />
+                        <div>
+                          <p className="font-medium">{selectedProject.creator.bankAccount.bankName || "Bank Account"}</p>
+                          <p className="text-sm text-zinc-500">
+                            {selectedProject.creator.bankAccount.accountType} ending in ****{selectedProject.creator.bankAccount.accountLastFour}
+                          </p>
+                        </div>
+                        {selectedProject.creator.bankAccount.isVerified ? (
+                          <Badge className="ml-auto bg-emerald-100 text-emerald-700">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Verified
+                          </Badge>
+                        ) : (
+                          <Badge className="ml-auto bg-yellow-100 text-yellow-700">
+                            <Clock className="w-3 h-3 mr-1" />
+                            Unverified
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Admin Notes */}
-                <div>
-                  <Label htmlFor="admin-notes">Admin Notes</Label>
-                  <Textarea
-                    id="admin-notes"
-                    placeholder="Add notes about this payout..."
-                    value={adminNotes}
-                    onChange={(e) => setAdminNotes(e.target.value)}
-                    className="mt-2"
-                  />
-                </div>
+                {/* Settlement History */}
+                {selectedProject.settlements.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-3">Settlement History</h4>
+                    <div className="space-y-2">
+                      {selectedProject.settlements.map((settlement) => (
+                        <div key={settlement.id} className="flex items-center justify-between p-3 rounded-lg border">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              settlement.status === "COMPLETED" ? "bg-emerald-100" :
+                              settlement.status === "PROCESSING" ? "bg-blue-100" :
+                              settlement.status === "FAILED" ? "bg-red-100" : "bg-yellow-100"
+                            }`}>
+                              {settlement.status === "COMPLETED" ? (
+                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              ) : settlement.status === "PROCESSING" ? (
+                                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                              ) : settlement.status === "FAILED" ? (
+                                <XCircle className="w-4 h-4 text-red-600" />
+                              ) : (
+                                <Clock className="w-4 h-4 text-yellow-600" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium">{formatCurrency(settlement.amount)}</p>
+                              <p className="text-xs text-zinc-500">
+                                {settlement.completedAt
+                                  ? `Completed ${format(new Date(settlement.completedAt), "MMM d, yyyy")}`
+                                  : settlement.processedAt
+                                  ? `Processing since ${format(new Date(settlement.processedAt), "MMM d, yyyy")}`
+                                  : "Pending"
+                                }
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="outline">
+                            {settlement.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <DialogFooter className="mt-6">
-                {selectedPayout.status === "PENDING" && (
+                {selectedProject.hasBank && selectedProject.remainingAmount > 0 && (
                   <Button
-                    onClick={() => handleAction("PROCESS")}
-                    disabled={processing}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      setSettlementAmount(selectedProject.remainingAmount.toFixed(2));
+                      setShowCreateSettlement(true);
+                    }}
+                    className="bg-teal-600 hover:bg-teal-700"
                   >
-                    {processing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 mr-2" />
-                        Start Processing
-                      </>
-                    )}
-                  </Button>
-                )}
-                {selectedPayout.status === "PROCESSING" && (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleAction("FAIL")}
-                      disabled={processing}
-                      variant="destructive"
-                    >
-                      {processing ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <XCircle className="w-4 h-4 mr-2" />
-                      )}
-                      Mark Failed
-                    </Button>
-                    <Button
-                      onClick={() => handleAction("COMPLETE")}
-                      disabled={processing}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      {processing ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                      )}
-                      Mark Completed
-                    </Button>
-                  </div>
-                )}
-                {selectedPayout.status === "FAILED" && (
-                  <Button
-                    onClick={() => handleAction("RETRY")}
-                    disabled={processing}
-                    variant="outline"
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Retry Payout
-                      </>
-                    )}
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Create Settlement
                   </Button>
                 )}
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bank Details Dialog */}
+      <Dialog open={showBankDetails} onOpenChange={setShowBankDetails}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building className="w-5 h-5" />
+              Bank Account Details
+            </DialogTitle>
+            <DialogDescription>
+              Secure bank account information for wire transfer
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingBankDetails ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+            </div>
+          ) : bankDetails ? (
+            <div className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Sensitive Information</AlertTitle>
+                <AlertDescription>
+                  This information is encrypted and should only be used for processing payouts.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
+                <div>
+                  <Label className="text-xs text-zinc-500">Account Holder</Label>
+                  <p className="font-medium">{bankDetails.accountHolder}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-zinc-500">Bank Name</Label>
+                  <p className="font-medium">{bankDetails.bankName}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-zinc-500">Routing Number</Label>
+                  <p className="font-mono font-medium">{bankDetails.routingNumber}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-zinc-500">Account Number</Label>
+                  <p className="font-mono font-medium">{bankDetails.accountNumber}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-zinc-500">Account Type</Label>
+                  <p className="font-medium capitalize">{bankDetails.accountType}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-zinc-500">Verification Status</Label>
+                  <p className="font-medium">{bankDetails.isVerified ? "Verified" : "Unverified"}</p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t">
+                <p className="text-xs text-zinc-500">
+                  Creator: {bankDetails.user.name || "Unknown"} ({bankDetails.user.email})
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-zinc-500">
+              Failed to load bank account details
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBankDetails(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Settlement Dialog */}
+      <Dialog open={showCreateSettlement} onOpenChange={setShowCreateSettlement}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Settlement</DialogTitle>
+            <DialogDescription>
+              Create a wire transfer settlement for {selectedProject?.title}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="amount">Settlement Amount</Label>
+              <div className="relative mt-1">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-4 h-4" />
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  value={settlementAmount}
+                  onChange={(e) => setSettlementAmount(e.target.value)}
+                  className="pl-10"
+                  placeholder="0.00"
+                />
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">
+                Max: {formatCurrency(selectedProject?.remainingAmount || 0)}
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="notes">Admin Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                placeholder="Add notes about this settlement..."
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateSettlement(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={createSettlement}
+              disabled={processing || !settlementAmount || parseFloat(settlementAmount) <= 0}
+              className="bg-teal-600 hover:bg-teal-700"
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Create Settlement
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
