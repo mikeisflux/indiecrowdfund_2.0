@@ -138,6 +138,7 @@ export default function IndieKitPage() {
   const [selectedBacker, setSelectedBacker] = useState<Backer | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [emailTemplate, setEmailTemplate] = useState<{ subject?: string; body?: string; name?: string } | null>(null);
   const [isAddonDialogOpen, setIsAddonDialogOpen] = useState(false);
   const [editingAddon, setEditingAddon] = useState<SurveyAddon | null>(null);
   const [isDistributionDialogOpen, setIsDistributionDialogOpen] = useState(false);
@@ -683,7 +684,10 @@ export default function IndieKitPage() {
               <TabsContent value="emails">
                 <EmailsTab
                   emailCampaigns={emailCampaigns}
-                  onOpenEmailDialog={() => setIsEmailDialogOpen(true)}
+                  onOpenEmailDialog={(template) => {
+                    setEmailTemplate(template || null);
+                    setIsEmailDialogOpen(true);
+                  }}
                   projectId={selectedProjectId}
                   onRefresh={fetchData}
                 />
@@ -791,12 +795,16 @@ export default function IndieKitPage() {
 
       <EmailDialog
         open={isEmailDialogOpen}
-        onOpenChange={setIsEmailDialogOpen}
+        onOpenChange={(open) => {
+          setIsEmailDialogOpen(open);
+          if (!open) setEmailTemplate(null);
+        }}
         projects={projects}
         selectedProjectId={selectedProjectId}
         memberCount={emailMemberCount}
         userEmail={userEmail}
         onImportComplete={() => fetchData()}
+        initialTemplate={emailTemplate}
       />
 
       <AddonDialog

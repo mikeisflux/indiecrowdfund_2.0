@@ -32,9 +32,15 @@ import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
 import type { EmailCampaign } from "../../types";
 
+interface TemplateData {
+  subject?: string;
+  body?: string;
+  name?: string;
+}
+
 interface EmailsTabProps {
   emailCampaigns: EmailCampaign[];
-  onOpenEmailDialog: () => void;
+  onOpenEmailDialog: (template?: TemplateData | null) => void;
   projectId?: string;
   onRefresh?: () => void;
 }
@@ -358,7 +364,6 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
   const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
   const [confirmSendDialog, setConfirmSendDialog] = useState<EmailCampaign | null>(null);
   const [confirmDeleteDialog, setConfirmDeleteDialog] = useState<EmailCampaign | null>(null);
-  const [isStartingDraft, setIsStartingDraft] = useState<string | null>(null);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
 
   const handleEditCampaign = (campaign: EmailCampaign) => {
@@ -459,43 +464,17 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
     }
   };
 
-  const handleStartDraft = async (stageId: string, stageTitle: string, template?: EmailTemplate) => {
-    if (!projectId) {
-      toast.error("No project selected");
-      return;
-    }
-
-    setIsStartingDraft(template?.id || stageId);
-    try {
-      const res = await fetch("/api/creator/indiekit/campaigns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          action: "create_draft",
-          stageId,
-          title: template?.name || stageTitle,
-          subject: template?.subject || "",
-          body: template?.body || "",
-        }),
+  const handleStartDraft = (stageId: string, stageTitle: string, template?: EmailTemplate) => {
+    // Open the email dialog with the template pre-filled
+    if (template) {
+      onOpenEmailDialog({
+        subject: template.subject,
+        body: template.body,
+        name: template.name,
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create draft");
-      }
-
-      toast.success(`Created draft: "${template?.name || stageTitle}"`);
-      // Navigate to the new campaign editor
-      if (data.campaignId) {
-        window.location.href = `/dashboard/indiekit/emails/${data.campaignId}/edit`;
-      } else {
-        onRefresh?.();
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create draft");
-    } finally {
-      setIsStartingDraft(null);
+    } else {
+      // Blank draft - open dialog without template
+      onOpenEmailDialog(null);
     }
   };
 
@@ -510,7 +489,7 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
           <h3 className="text-lg font-semibold">Email Campaigns</h3>
           <p className="text-sm text-muted-foreground">Communicate with your backers</p>
         </div>
-        <Button onClick={onOpenEmailDialog} variant="outline">
+        <Button onClick={() => onOpenEmailDialog()} variant="outline">
           <PenLine className="h-4 w-4 mr-2" />
           Draft Your Next Email
         </Button>
@@ -750,19 +729,9 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
                                 size="sm"
                                 className="shrink-0 bg-teal-600 hover:bg-teal-700"
                                 onClick={() => handleStartDraft(stage.id, stage.title, template)}
-                                disabled={isStartingDraft === template.id}
                               >
-                                {isStartingDraft === template.id ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Creating...
-                                  </>
-                                ) : (
-                                  <>
-                                    <PenLine className="h-4 w-4 mr-2" />
-                                    Use Template
-                                  </>
-                                )}
+                                <PenLine className="h-4 w-4 mr-2" />
+                                Use Template
                               </Button>
                             </div>
                           </div>
@@ -785,16 +754,8 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
                               size="sm"
                               className="shrink-0"
                               onClick={() => handleStartDraft(stage.id, stage.title)}
-                              disabled={isStartingDraft === stage.id}
                             >
-                              {isStartingDraft === stage.id ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Creating...
-                                </>
-                              ) : (
-                                "Blank Draft"
-                              )}
+                              Blank Draft
                             </Button>
                           </div>
                         </div>

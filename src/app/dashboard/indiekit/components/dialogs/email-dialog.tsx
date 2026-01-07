@@ -48,6 +48,12 @@ interface Project {
   status: string;
 }
 
+interface EmailTemplate {
+  subject?: string;
+  body?: string;
+  name?: string;
+}
+
 interface EmailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -57,6 +63,7 @@ interface EmailDialogProps {
   memberCount?: number;
   userEmail?: string;
   onImportComplete?: () => void;
+  initialTemplate?: EmailTemplate | null;
 }
 
 type EditorStep = "campaign" | "customize" | "send" | "results";
@@ -70,15 +77,16 @@ export function EmailDialog({
   memberCount = 0,
   userEmail = "",
   onImportComplete,
+  initialTemplate,
 }: EmailDialogProps) {
   const [activeStep, setActiveStep] = useState<EditorStep>("campaign");
   const [currentProjectId, setCurrentProjectId] = useState(selectedProjectId);
   const currentProject = projects.find(p => p.id === currentProjectId) || projects[0];
   const projectTitle = currentProject?.title || "Select a project";
 
-  const [emailTitle, setEmailTitle] = useState(`Special Early Access: ${projectTitle}`);
+  const [emailTitle, setEmailTitle] = useState(initialTemplate?.subject || `Special Early Access: ${projectTitle}`);
   const [senderName, setSenderName] = useState("");
-  const [emailBody, setEmailBody] = useState("");
+  const [emailBody, setEmailBody] = useState(initialTemplate?.body || "");
 
   // Send step state
   const [testEmail, setTestEmail] = useState(userEmail);
@@ -89,16 +97,26 @@ export function EmailDialog({
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
 
-  // Initialize/update form when project changes
+  // Initialize/update form when project changes or template is provided
   useEffect(() => {
-    if (currentProject) {
+    if (initialTemplate) {
+      // If a template is provided, use it
+      if (initialTemplate.subject) {
+        setEmailTitle(initialTemplate.subject.replace(/{{PROJECT_NAME}}/g, currentProject?.title || "Your Project"));
+      }
+      if (initialTemplate.body) {
+        setEmailBody(initialTemplate.body.replace(/{{PROJECT_NAME}}/g, currentProject?.title || "Your Project"));
+      }
+      // Start on customize step when using a template
+      setActiveStep("customize");
+    } else if (currentProject) {
       setEmailTitle(`Special Early Access: ${currentProject.title}`);
       setEmailBody(`<p>Hi!</p>
 <p>We're excited to launch our next project: <strong>${currentProject.title}</strong>.</p>
 <p>As a fan of ours, we want to ask for your commitment to pledge on day ONE so that we can have the strongest launch possible.</p>
 <p>Click here to see the project and back us today!</p>`);
     }
-  }, [currentProject]);
+  }, [currentProject, initialTemplate]);
 
   // Sync with parent's selected project when dialog opens
   useEffect(() => {
