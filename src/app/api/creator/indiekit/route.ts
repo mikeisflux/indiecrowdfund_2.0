@@ -217,11 +217,18 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
       }).catch(() => []),
 
-      // Get email campaigns created by this user
-      // Include all campaigns - those with matching projectId OR those without a projectId filter (legacy)
+      // Get email campaigns - either created by this user OR associated with the selected project
       db.emailCampaign.findMany({
         where: {
-          createdBy: session.user.id,
+          OR: [
+            { createdBy: session.user.id },
+            {
+              filters: {
+                path: ["projectId"],
+                equals: selectedProjectId,
+              },
+            },
+          ],
         },
         orderBy: { createdAt: "desc" },
         take: 50,

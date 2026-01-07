@@ -123,6 +123,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Create EmailCampaign record to track this campaign
+    const campaign = await db.emailCampaign.create({
+      data: {
+        name: subject.trim(),
+        subject: subject.trim(),
+        htmlContent: content.trim(),
+        status: "SENT",
+        sentAt: new Date(),
+        recipientCount: uniqueEmails.length,
+        sentCount: queuedCount,
+        openCount: 0,
+        clickCount: 0,
+        createdBy: session.user.id,
+        filters: projectId ? { projectId } : undefined,
+      },
+    });
+
     // Log activity if project is provided
     if (projectId) {
       try {
@@ -130,8 +147,8 @@ export async function POST(request: NextRequest) {
           data: {
             projectId,
             type: "SURVEY_SENT",
-            title: `Email campaign queued for ${queuedCount} subscribers`,
-            description: `"${subject.trim()}" queued by ${fromName}`,
+            title: `Email campaign sent to ${queuedCount} subscribers`,
+            description: `"${subject.trim()}" sent by ${fromName}`,
           },
         });
       } catch (activityError) {
@@ -141,14 +158,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       campaign: {
+        id: campaign.id,
         subject: subject.trim(),
-        status: "queued",
+        status: "sent",
         recipientCount: uniqueEmails.length,
-        queuedCount,
+        sentCount: queuedCount,
         errorCount: errors.length,
-        queuedAt: new Date().toISOString(),
+        sentAt: new Date().toISOString(),
       },
-      message: `${queuedCount} emails queued for delivery. They will be sent at a rate of 1 per second.`,
+      message: `Campaign sent to ${queuedCount} subscribers!`,
       errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
     });
   } catch (error) {
