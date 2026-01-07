@@ -663,6 +663,10 @@ export default function IndieKitPage() {
                   <HeadphonesIcon className="h-4 w-4 mr-2" />
                   Support
                 </TabsTrigger>
+                <TabsTrigger value="sku-mapping">
+                  <Link2 className="h-4 w-4 mr-2" />
+                  SKU Mapping
+                </TabsTrigger>
               </TabsList>
               {/* Row 2: Fulfillment & Products */}
               <TabsList className="mb-1 h-auto gap-1 p-2 bg-muted/50 justify-center">
@@ -723,10 +727,6 @@ export default function IndieKitPage() {
                 <TabsTrigger value="export">
                   <FileDown className="h-4 w-4 mr-2" />
                   Export
-                </TabsTrigger>
-                <TabsTrigger value="sku-mapping">
-                  <Link2 className="h-4 w-4 mr-2" />
-                  SKU Mapping
                 </TabsTrigger>
                 <TabsTrigger value="survey-builder">
                   <FormInput className="h-4 w-4 mr-2" />
