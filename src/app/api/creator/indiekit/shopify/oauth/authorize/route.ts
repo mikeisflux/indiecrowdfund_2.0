@@ -52,16 +52,30 @@ export async function GET(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Clean up shop domain
-    const cleanShop = shopDomain
-      .replace(/^https?:\/\//, "")
-      .replace(/\/$/, "")
+    // Clean up shop domain - handle various input formats
+    let cleanShop = shopDomain
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")  // Remove protocol
+      .replace(/\/$/, "")            // Remove trailing slash
+      .replace(/\/.*$/, "")          // Remove any path
       .trim();
 
-    // Ensure it has .myshopify.com suffix
-    const shopHost = cleanShop.includes(".myshopify.com")
-      ? cleanShop
-      : `${cleanShop}.myshopify.com`;
+    // Extract just the store name by removing common domain suffixes
+    // Handle formats like: "storename", "storename.myshopify.com", "storename.my-shopify.com", etc.
+    cleanShop = cleanShop
+      .replace(/\.myshopify\.com$/, "")
+      .replace(/\.my-shopify\.com$/, "")
+      .replace(/\.shopify\.com$/, "");
+
+    // Validate store name - should only contain alphanumeric and hyphens
+    if (!/^[a-z0-9-]+$/.test(cleanShop)) {
+      return NextResponse.json({
+        error: "Invalid shop name. Please enter just your store name (e.g., 'my-store' or 'my-store.myshopify.com')"
+      }, { status: 400 });
+    }
+
+    // Build the correct Shopify domain
+    const shopHost = `${cleanShop}.myshopify.com`;
 
     // Generate signed state parameter for CSRF protection
     const state = createSignedState({
