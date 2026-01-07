@@ -31,50 +31,22 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const projectId = searchParams.get("projectId");
     const shopDomain = searchParams.get("shop");
-
-    if (!projectId) {
-      return NextResponse.json({ error: "Project ID required" }, { status: 400 });
-    }
 
     if (!shopDomain) {
       return NextResponse.json({ error: "Shop domain required" }, { status: 400 });
     }
 
-    // Verify user has access to this project
-    const project = await db.project.findFirst({
-      where: {
-        id: projectId,
-        OR: [
-          { creatorId: session.user.id },
-          { collaborators: { some: { userId: session.user.id } } },
-        ],
+    // Get Shopify API credentials from user's account
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        shopifyApiKey: true,
+        shopifyApiSecret: true,
       },
     });
 
-    if (!project) {
-      return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
-    }
-
-    // Get Shopify API credentials from project's FulfillmentIntegration
-    const integration = await db.fulfillmentIntegration.findUnique({
-      where: {
-        projectId_provider: {
-          projectId,
-          provider: "SHOPIFY",
-        },
-      },
-    });
-
-    const credentials = integration?.credentials as {
-      apiKey?: string;
-      apiSecret?: string;
-    } | null;
-
-    const shopifyApiKey = credentials?.apiKey;
-
-    if (!shopifyApiKey) {
+    if (!user?.shopifyApiKey) {
       return NextResponse.json({
         error: "Shopify API credentials not configured. Please add your API Key in the Shopify API Key settings section."
       }, { status: 400 });
@@ -93,7 +65,6 @@ export async function GET(req: NextRequest) {
 
     // Generate signed state parameter for CSRF protection
     const state = createSignedState({
-      projectId,
       userId: session.user.id,
       shopDomain: shopHost,
       timestamp: Date.now(),
@@ -103,7 +74,7 @@ export async function GET(req: NextRequest) {
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/creator/indiekit/shopify/oauth/callback`;
 
     const authUrl = new URL(`https://${shopHost}/admin/oauth/authorize`);
-    authUrl.searchParams.set("client_id", shopifyApiKey);
+    authUrl.searchParams.set("client_id", user.shopifyApiKey);
     authUrl.searchParams.set("scope", SHOPIFY_SCOPES);
     authUrl.searchParams.set("redirect_uri", redirectUri);
     authUrl.searchParams.set("state", state);

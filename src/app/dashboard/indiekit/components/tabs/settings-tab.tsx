@@ -298,15 +298,11 @@ export function SettingsTab({
     checkShopifyStatus();
   }, [projectId]);
 
-  // Load Shopify API credentials on mount
+  // Load Shopify API credentials on mount (user-level, not project-level)
   useEffect(() => {
     async function loadShopifyCredentials() {
-      if (!projectId) {
-        setShopifyCredsStatus({ saved: false, loading: false });
-        return;
-      }
       try {
-        const response = await fetch(`/api/creator/indiekit/shopify/credentials?projectId=${projectId}`);
+        const response = await fetch("/api/creator/indiekit/shopify/credentials");
         if (response.ok) {
           const data = await response.json();
           setShopifyCredsStatus({
@@ -319,6 +315,14 @@ export function SettingsTab({
               apiSecret: "••••••••",
             });
           }
+          // Also update shop connection status from user-level data
+          if (data.hasConnectedStore && data.shopDomain) {
+            setShopifyStatus({
+              connected: true,
+              loading: false,
+              shopName: data.shopDomain,
+            });
+          }
         } else {
           setShopifyCredsStatus({ saved: false, loading: false });
         }
@@ -327,7 +331,7 @@ export function SettingsTab({
       }
     }
     loadShopifyCredentials();
-  }, [projectId]);
+  }, []);
 
   // Fetch SKU mappings when Shopify is connected
   useEffect(() => {
@@ -763,11 +767,6 @@ export function SettingsTab({
   };
 
   const handleSaveShopifyCredentials = async () => {
-    if (!projectId) {
-      toast.error("No project selected");
-      return;
-    }
-
     const apiKey = shopifyApiCredentials.apiKey.trim();
     const apiSecret = shopifyApiCredentials.apiSecret.trim();
 
@@ -795,7 +794,7 @@ export function SettingsTab({
 
     setIsSavingShopifyCreds(true);
     try {
-      const payload: { projectId: string; apiKey?: string; apiSecret?: string } = { projectId };
+      const payload: { apiKey?: string; apiSecret?: string } = {};
       if (isNewApiKey) payload.apiKey = apiKey;
       if (isNewApiSecret) payload.apiSecret = apiSecret;
 
@@ -825,14 +824,11 @@ export function SettingsTab({
   };
 
   const handleClearShopifyCredentials = async () => {
-    if (!projectId) return;
-
     setIsSavingShopifyCreds(true);
     try {
       const res = await fetch("/api/creator/indiekit/shopify/credentials", {
         method: "DELETE",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({ projectId }),
       });
 
       if (!res.ok) {
@@ -842,6 +838,8 @@ export function SettingsTab({
 
       setShopifyCredsStatus({ saved: false, loading: false });
       setShopifyApiCredentials({ apiKey: "", apiSecret: "" });
+      // Also reset shop connection status since credentials are cleared
+      setShopifyStatus({ connected: false, loading: false, shopName: null });
       toast.success("Shopify API credentials cleared");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to clear credentials");
@@ -1670,7 +1668,7 @@ export function SettingsTab({
                                 return;
                               }
                               // Redirect to OAuth authorization
-                              window.location.href = `/api/creator/indiekit/shopify/oauth/authorize?projectId=${projectId}&shop=${encodeURIComponent(shopifyDomain.trim())}`;
+                              window.location.href = `/api/creator/indiekit/shopify/oauth/authorize?shop=${encodeURIComponent(shopifyDomain.trim())}`;
                             }}
                             disabled={!shopifyDomain.trim()}
                           >
@@ -1974,7 +1972,7 @@ export function SettingsTab({
                 </CardTitle>
                 <CardDescription>
                   Enter your Shopify app API credentials to enable OAuth connection for your store.
-                  Each project needs its own Shopify app credentials.
+                  These credentials are saved to your account and work across all your projects.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">

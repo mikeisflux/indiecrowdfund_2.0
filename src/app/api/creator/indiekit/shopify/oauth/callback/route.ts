@@ -6,7 +6,7 @@ import crypto from "crypto";
 export const dynamic = "force-dynamic";
 
 // Verify signed state parameter
-function verifySignedState(state: string): { valid: boolean; data?: { projectId: string; userId: string; shopDomain: string; timestamp: number } } {
+function verifySignedState(state: string): { valid: boolean; data?: { userId: string; shopDomain: string; timestamp: number } } {
   try {
     const secret = process.env.NEXTAUTH_SECRET || "fallback-secret";
     const decoded = JSON.parse(Buffer.from(state, "base64url").toString());
@@ -29,39 +29,6 @@ function verifySignedState(state: string): { valid: boolean; data?: { projectId:
   } catch {
     return { valid: false };
   }
-}
-
-// Verify HMAC from Shopify
-function verifyShopifyHmac(query: URLSearchParams): boolean {
-  const secret = process.env.SHOPIFY_API_SECRET;
-  if (!secret) return false;
-
-  const hmac = query.get("hmac");
-  if (!hmac) return false;
-
-  // Remove hmac from query params
-  const params = new URLSearchParams();
-  query.forEach((value, key) => {
-    if (key !== "hmac") {
-      params.append(key, value);
-    }
-  });
-
-  // Sort parameters
-  const sortedParams = Array.from(params.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
-    .join("&");
-
-  const calculatedHmac = crypto
-    .createHmac("sha256", secret)
-    .update(sortedParams)
-    .digest("hex");
-
-  return crypto.timingSafeEqual(
-    Buffer.from(hmac),
-    Buffer.from(calculatedHmac)
-  );
 }
 
 export async function GET(req: NextRequest) {
@@ -92,14 +59,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Verify HMAC from Shopify (if present)
-    if (searchParams.has("hmac") && !verifyShopifyHmac(searchParams)) {
-      console.error("Invalid Shopify HMAC");
-      return NextResponse.redirect(
-        new URL("/dashboard/indiekit?error=Invalid request signature", req.url)
-      );
-    }
-
     // Verify state parameter
     const stateResult = verifySignedState(state);
     if (!stateResult.valid || !stateResult.data) {
@@ -109,7 +68,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const { projectId, userId, shopDomain } = stateResult.data;
+    const { userId, shopDomain } = stateResult.data;
 
     // Verify user matches
     if (userId !== session.user.id) {
@@ -127,56 +86,31 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Verify user has access to this project
-    const project = await db.project.findFirst({
-      where: {
-        id: projectId,
-        OR: [
-          { creatorId: session.user.id },
-          { collaborators: { some: { userId: session.user.id } } },
-        ],
+    // Get user's Shopify API credentials
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        shopifyApiKey: true,
+        shopifyApiSecret: true,
       },
     });
 
-    if (!project) {
-      return NextResponse.redirect(
-        new URL("/dashboard/indiekit?error=Project not found", req.url)
-      );
-    }
-
-    // Exchange code for access token - get credentials from project's FulfillmentIntegration
-    const integration = await db.fulfillmentIntegration.findUnique({
-      where: {
-        projectId_provider: {
-          projectId,
-          provider: "SHOPIFY",
-        },
-      },
-    });
-
-    const credentials = integration?.credentials as {
-      apiKey?: string;
-      apiSecret?: string;
-    } | null;
-
-    const shopifyApiKey = credentials?.apiKey;
-    const shopifyApiSecret = credentials?.apiSecret;
-
-    if (!shopifyApiKey || !shopifyApiSecret) {
-      console.error("Missing Shopify API credentials for project:", projectId);
+    if (!user?.shopifyApiKey || !user?.shopifyApiSecret) {
+      console.error("Missing Shopify API credentials for user:", session.user.id);
       return NextResponse.redirect(
         new URL("/dashboard/indiekit?error=Shopify API credentials not configured. Please add them in the Shopify API Key settings.", req.url)
       );
     }
 
+    // Exchange code for access token
     const tokenResponse = await fetch(`https://${shop}/admin/oauth/access_token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        client_id: shopifyApiKey,
-        client_secret: shopifyApiSecret,
+        client_id: user.shopifyApiKey,
+        client_secret: user.shopifyApiSecret,
         code,
       }),
     });
@@ -191,7 +125,6 @@ export async function GET(req: NextRequest) {
 
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
-    const scope = tokenData.scope;
 
     // Fetch shop info
     const shopResponse = await fetch(`https://${shop}/admin/api/2024-01/shop.json`, {
@@ -209,44 +142,18 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    // Save integration to database
-    await db.fulfillmentIntegration.upsert({
-      where: {
-        projectId_provider: {
-          projectId,
-          provider: "SHOPIFY",
-        },
-      },
-      create: {
-        projectId,
-        provider: "SHOPIFY",
-        status: "CONNECTED",
-        credentials: {
-          shopDomain: shop,
-          accessToken,
-          shopName: shopInfo.name,
-          shopEmail: shopInfo.email,
-          scope,
-          connectedVia: "oauth",
-        },
-      },
-      update: {
-        status: "CONNECTED",
-        credentials: {
-          shopDomain: shop,
-          accessToken,
-          shopName: shopInfo.name,
-          shopEmail: shopInfo.email,
-          scope,
-          connectedVia: "oauth",
-        },
-        lastSyncError: null,
+    // Save access token and shop domain to user's account
+    await db.user.update({
+      where: { id: session.user.id },
+      data: {
+        shopifyAccessToken: accessToken,
+        shopifyShopDomain: shop,
       },
     });
 
     // Redirect back to IndieKit settings with success
     return NextResponse.redirect(
-      new URL(`/dashboard/indiekit?projectId=${projectId}&shopify=connected&shop=${encodeURIComponent(shopInfo.name)}`, req.url)
+      new URL(`/dashboard/indiekit?shopify=connected&shop=${encodeURIComponent(shopInfo.name)}`, req.url)
     );
   } catch (error) {
     console.error("Shopify OAuth callback error:", error);

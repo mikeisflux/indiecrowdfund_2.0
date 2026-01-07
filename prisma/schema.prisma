@@ -33,6 +33,12 @@ model User {
   creatorEmailHandle String?  @unique
   stripeCustomerId  String?   @unique  // Stripe Customer ID for payment methods
 
+  // Shopify Integration (per-creator, not per-project)
+  shopifyApiKey     String?   // Shopify app Client ID
+  shopifyApiSecret  String?   // Shopify app Client Secret
+  shopifyAccessToken String?  // OAuth access token for connected store
+  shopifyShopDomain String?   // Connected store domain (e.g., "my-store.myshopify.com")
+
   // Email preferences
   emailUnsubscribedAt DateTime?  // Global email unsubscribe timestamp
 
