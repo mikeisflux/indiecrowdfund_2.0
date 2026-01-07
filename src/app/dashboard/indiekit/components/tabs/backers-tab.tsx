@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Table,
   TableBody,
   TableCell,
@@ -38,9 +43,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Search,
-  Filter,
   Download,
   Send,
   MoreHorizontal,
@@ -54,6 +59,13 @@ import {
   ChevronDown,
   AlertCircle,
   Loader2,
+  X,
+  Calendar,
+  DollarSign,
+  Gift,
+  Package,
+  Globe,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -96,6 +108,51 @@ export function BackersTab({
   const [isCharging, setIsCharging] = useState(false);
   const [chargeProgress, setChargeProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Filter states
+  const [rewardFilter, setRewardFilter] = useState<string[]>([]);
+  const [addonFilter, setAddonFilter] = useState<string[]>([]);
+  const [skuFilter, setSkuFilter] = useState<string[]>([]);
+  const [locationFilter, setLocationFilter] = useState<string[]>([]);
+  const [pledgeAmountMin, setPledgeAmountMin] = useState<string>("");
+  const [pledgeAmountMax, setPledgeAmountMax] = useState<string>("");
+  const [pledgeDateFrom, setPledgeDateFrom] = useState<string>("");
+  const [pledgeDateTo, setPledgeDateTo] = useState<string>("");
+  const [surveyFilter, setSurveyFilter] = useState<string>("all");
+
+  // Extract unique values for filter options
+  const filterOptions = useMemo(() => {
+    const rewards = [...new Set(backers.map(b => b.reward).filter(Boolean))].sort();
+    const addons = [...new Set(backers.flatMap(b => b.addons?.map(a => a.name) || []))].sort();
+    const skus = [...new Set(backers.flatMap(b => b.items?.map(i => i.sku).filter(Boolean) as string[] || []))].sort();
+    const locations = [...new Set(backers.map(b => b.shippingAddress?.country).filter(Boolean) as string[])].sort();
+    return { rewards, addons, skus, locations };
+  }, [backers]);
+
+  // Count active filters
+  const activeFilterCount = [
+    rewardFilter.length > 0,
+    addonFilter.length > 0,
+    skuFilter.length > 0,
+    locationFilter.length > 0,
+    pledgeAmountMin !== "" || pledgeAmountMax !== "",
+    pledgeDateFrom !== "" || pledgeDateTo !== "",
+    surveyFilter !== "all",
+  ].filter(Boolean).length;
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setRewardFilter([]);
+    setAddonFilter([]);
+    setSkuFilter([]);
+    setLocationFilter([]);
+    setPledgeAmountMin("");
+    setPledgeAmountMax("");
+    setPledgeDateFrom("");
+    setPledgeDateTo("");
+    setSurveyFilter("all");
+    onStatusFilterChange("all");
+  };
 
   // Helper function for bulk actions
   const performBulkAction = async (action: string, successMessage: string) => {
@@ -150,10 +207,59 @@ export function BackersTab({
 
   const filteredBackers = backers
     .filter((backer) => {
+      // Search filter
       const matchesSearch = backer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         backer.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Status filter
       const matchesStatus = statusFilter === "all" || backer.status === statusFilter;
-      return matchesSearch && matchesStatus;
+
+      // Reward filter
+      const matchesReward = rewardFilter.length === 0 || rewardFilter.includes(backer.reward);
+
+      // Add-on filter
+      const matchesAddon = addonFilter.length === 0 ||
+        backer.addons?.some(a => addonFilter.includes(a.name));
+
+      // SKU filter
+      const matchesSku = skuFilter.length === 0 ||
+        backer.items?.some(i => i.sku && skuFilter.includes(i.sku));
+
+      // Location filter
+      const matchesLocation = locationFilter.length === 0 ||
+        (backer.shippingAddress?.country && locationFilter.includes(backer.shippingAddress.country));
+
+      // Pledge amount range filter
+      let matchesPledgeAmount = true;
+      const amount = backer.pledgeAmount;
+      const minAmount = pledgeAmountMin ? parseFloat(pledgeAmountMin) : null;
+      const maxAmount = pledgeAmountMax ? parseFloat(pledgeAmountMax) : null;
+      if (minAmount !== null && amount < minAmount) matchesPledgeAmount = false;
+      if (maxAmount !== null && amount > maxAmount) matchesPledgeAmount = false;
+
+      // Pledge date range filter
+      let matchesPledgeDate = true;
+      if (backer.pledgeDate && (pledgeDateFrom || pledgeDateTo)) {
+        const pledgeDate = new Date(backer.pledgeDate);
+        if (pledgeDateFrom) {
+          const fromDate = new Date(pledgeDateFrom);
+          if (pledgeDate < fromDate) matchesPledgeDate = false;
+        }
+        if (pledgeDateTo) {
+          const toDate = new Date(pledgeDateTo);
+          toDate.setHours(23, 59, 59, 999); // Include the entire day
+          if (pledgeDate > toDate) matchesPledgeDate = false;
+        }
+      }
+
+      // Survey filter
+      let matchesSurvey = true;
+      if (surveyFilter !== "all") {
+        matchesSurvey = surveyFilter === "completed" ? backer.surveyCompleted : !backer.surveyCompleted;
+      }
+
+      return matchesSearch && matchesStatus && matchesReward && matchesAddon &&
+             matchesSku && matchesLocation && matchesPledgeAmount && matchesPledgeDate && matchesSurvey;
     })
     .sort((a, b) => {
       // Sort by backer number, backers without numbers go to the end
@@ -277,33 +383,86 @@ export function BackersTab({
     }
   };
 
+  // Helper component for multi-select filter popover
+  const FilterPopover = ({
+    label,
+    icon: Icon,
+    options,
+    selected,
+    onToggle,
+  }: {
+    label: string;
+    icon: React.ElementType;
+    options: string[];
+    selected: string[];
+    onToggle: (value: string) => void;
+  }) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className={`h-9 ${selected.length > 0 ? "border-teal-500 bg-teal-50" : ""}`}>
+          <Icon className="h-4 w-4 mr-2" />
+          {label}
+          {selected.length > 0 && (
+            <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-teal-100 text-teal-700">
+              {selected.length}
+            </Badge>
+          )}
+          <ChevronDown className="h-4 w-4 ml-2" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-0" align="start">
+        <div className="p-2 border-b">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{label}</span>
+            {selected.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => selected.forEach(v => onToggle(v))}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+        <ScrollArea className="h-[200px]">
+          <div className="p-2 space-y-1">
+            {options.length === 0 ? (
+              <p className="text-sm text-muted-foreground p-2">No options available</p>
+            ) : (
+              options.map((option) => (
+                <div
+                  key={option}
+                  className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                  onClick={() => onToggle(option)}
+                >
+                  <Checkbox
+                    checked={selected.includes(option)}
+                    onCheckedChange={() => onToggle(option)}
+                  />
+                  <span className="text-sm truncate">{option}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+
   return (
     <div className="space-y-4">
-      {/* Filters and Actions */}
+      {/* Header with search and actions */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-1 gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:flex-initial sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search backers..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-            <SelectTrigger className="w-[140px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="not_pushed">Not Pushed</SelectItem>
-              <SelectItem value="push_errored">Push Errored</SelectItem>
-              <SelectItem value="pushed">Pushed</SelectItem>
-              <SelectItem value="shipped">Shipped</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="relative flex-1 sm:flex-initial sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by backer name or email"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-9"
+          />
         </div>
         <div className="flex flex-wrap gap-2">
           {selectedBackers.length > 0 && (
@@ -364,6 +523,230 @@ export function BackersTab({
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
+        </div>
+      </div>
+
+      {/* Filter Row */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {/* Rewards Filter */}
+        <FilterPopover
+          label="Rewards"
+          icon={Gift}
+          options={filterOptions.rewards}
+          selected={rewardFilter}
+          onToggle={(value) => setRewardFilter(prev =>
+            prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+          )}
+        />
+
+        {/* Add-ons Filter */}
+        <FilterPopover
+          label="Add-ons"
+          icon={Package}
+          options={filterOptions.addons}
+          selected={addonFilter}
+          onToggle={(value) => setAddonFilter(prev =>
+            prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+          )}
+        />
+
+        {/* Items/SKUs Filter */}
+        <FilterPopover
+          label="Items and SKUs"
+          icon={Tag}
+          options={filterOptions.skus}
+          selected={skuFilter}
+          onToggle={(value) => setSkuFilter(prev =>
+            prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+          )}
+        />
+
+        {/* Status Filter */}
+        <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+          <SelectTrigger className={`w-[130px] h-9 ${statusFilter !== "all" ? "border-teal-500 bg-teal-50" : ""}`}>
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="not_pushed">Not Pushed</SelectItem>
+            <SelectItem value="push_errored">Push Errored</SelectItem>
+            <SelectItem value="pushed">Pushed</SelectItem>
+            <SelectItem value="shipped">Shipped</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Location Filter */}
+        <FilterPopover
+          label="Location"
+          icon={Globe}
+          options={filterOptions.locations}
+          selected={locationFilter}
+          onToggle={(value) => setLocationFilter(prev =>
+            prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+          )}
+        />
+
+        {/* Pledge Amount Range Filter */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-9 ${(pledgeAmountMin || pledgeAmountMax) ? "border-teal-500 bg-teal-50" : ""}`}
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Pledge amount
+              {(pledgeAmountMin || pledgeAmountMax) && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-teal-100 text-teal-700">
+                  {pledgeAmountMin && pledgeAmountMax
+                    ? `$${pledgeAmountMin}-$${pledgeAmountMax}`
+                    : pledgeAmountMin
+                    ? `≥$${pledgeAmountMin}`
+                    : `≤$${pledgeAmountMax}`}
+                </Badge>
+              )}
+              <ChevronDown className="h-4 w-4 ml-2" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-4" align="start">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Pledge amount</span>
+                {(pledgeAmountMin || pledgeAmountMax) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => {
+                      setPledgeAmountMin("");
+                      setPledgeAmountMax("");
+                    }}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">Min</label>
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={pledgeAmountMin}
+                      onChange={(e) => setPledgeAmountMin(e.target.value)}
+                      className="pl-6 h-8"
+                    />
+                  </div>
+                </div>
+                <span className="text-muted-foreground mt-4">—</span>
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">Max</label>
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      placeholder="∞"
+                      value={pledgeAmountMax}
+                      onChange={(e) => setPledgeAmountMax(e.target.value)}
+                      className="pl-6 h-8"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Pledge Date Range Filter */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-9 ${(pledgeDateFrom || pledgeDateTo) ? "border-teal-500 bg-teal-50" : ""}`}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Pledge date
+              {(pledgeDateFrom || pledgeDateTo) && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-teal-100 text-teal-700">
+                  {pledgeDateFrom && pledgeDateTo
+                    ? `${new Date(pledgeDateFrom).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${new Date(pledgeDateTo).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                    : pledgeDateFrom
+                    ? `From ${new Date(pledgeDateFrom).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                    : `Until ${new Date(pledgeDateTo).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                </Badge>
+              )}
+              <ChevronDown className="h-4 w-4 ml-2" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-4" align="start">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Pledge date range</span>
+                {(pledgeDateFrom || pledgeDateTo) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => {
+                      setPledgeDateFrom("");
+                      setPledgeDateTo("");
+                    }}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">From</label>
+                  <Input
+                    type="date"
+                    value={pledgeDateFrom}
+                    onChange={(e) => setPledgeDateFrom(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+                <span className="text-muted-foreground mt-4">—</span>
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">To</label>
+                  <Input
+                    type="date"
+                    value={pledgeDateTo}
+                    onChange={(e) => setPledgeDateTo(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Survey Filter */}
+        <Select value={surveyFilter} onValueChange={setSurveyFilter}>
+          <SelectTrigger className={`w-[130px] h-9 ${surveyFilter !== "all" ? "border-teal-500 bg-teal-50" : ""}`}>
+            <SelectValue placeholder="Survey" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All surveys</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Clear filters button */}
+        {(activeFilterCount > 0 || statusFilter !== "all") && (
+          <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={clearAllFilters}>
+            <X className="h-4 w-4 mr-1" />
+            Clear filters
+          </Button>
+        )}
+
+        {/* Results count */}
+        <div className="ml-auto text-sm text-muted-foreground">
+          Showing {filteredBackers.length} of {backers.length} backers
         </div>
       </div>
 

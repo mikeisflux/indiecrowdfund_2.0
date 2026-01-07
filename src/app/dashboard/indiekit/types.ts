@@ -66,6 +66,7 @@ export interface Backer {
   paymentProcessor?: "STRIPE" | "DIVINITYCOIN";
   surveyCompleted: boolean;
   addressComplete: boolean;
+  pledgeDate?: string;
   shippingAddress?: {
     name?: string;
     line1: string;

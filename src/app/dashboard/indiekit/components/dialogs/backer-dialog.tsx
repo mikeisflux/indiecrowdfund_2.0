@@ -42,6 +42,7 @@ import {
   MessageSquare,
   Printer,
   Undo2,
+  ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Backer } from "../../types";
@@ -145,7 +146,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
         <DialogHeader className="flex flex-row items-center justify-between">
           <div>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
-              Pledge #{backer.id}
+              {backer.backerNumber ? `Backer #${backer.backerNumber}` : "Backer"} — {backer.name}
               <Button variant="outline" size="sm" className="ml-2" onClick={handleViewAsBacker}>
                 <Eye className="h-3 w-3 mr-1" />
                 View as Backer
@@ -291,6 +292,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full justify-start flex-wrap">
               <TabsTrigger value="order">Order</TabsTrigger>
+              <TabsTrigger value="survey">Survey</TabsTrigger>
               <TabsTrigger value="digital">Digital Downloads</TabsTrigger>
               <TabsTrigger value="shipping">Shipping</TabsTrigger>
               <TabsTrigger value="packages">Packages</TabsTrigger>
@@ -414,6 +416,51 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                     </div>
                   </div>
                 </div>
+              </div>
+            </TabsContent>
+
+            {/* Survey Tab */}
+            <TabsContent value="survey" className="space-y-4">
+              <div className="rounded-lg border p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5 text-teal-600" />
+                    Survey Responses
+                  </h4>
+                  <Badge variant={backer.surveyCompleted ? "default" : "secondary"}>
+                    {backer.surveyCompleted ? "Completed" : "Pending"}
+                  </Badge>
+                </div>
+                {backer.surveyCompleted ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      This backer has completed their survey. View their responses below.
+                    </p>
+                    {/* Survey responses would be loaded here from an API call */}
+                    <div className="space-y-3 pt-2 border-t">
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        <p className="text-xs text-muted-foreground font-medium mb-1">Survey responses</p>
+                        <p className="text-sm">No detailed survey questions configured for this project.</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleViewAsBacker}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Full Survey
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+                    <p className="font-medium text-sm mb-1">Survey Not Completed</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      This backer has not yet completed their survey.
+                    </p>
+                    <Button variant="outline" size="sm" onClick={handleResendSurvey}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Send Survey Reminder
+                    </Button>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
