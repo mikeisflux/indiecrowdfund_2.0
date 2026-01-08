@@ -16,6 +16,7 @@ import {
   Store,
   XCircle,
   Info,
+  Plus,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
@@ -64,8 +65,11 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   const [unmappedItems, setUnmappedItems] = useState<UnmappedItem[]>([]);
   const [isLoadingSkuMappings, setIsLoadingSkuMappings] = useState(false);
   const [isSavingSkuMapping, setIsSavingSkuMapping] = useState<string | null>(null);
+  // SKU inputs: key is "sourceType-sourceId-index" for multiple SKUs per item
   const [skuInputs, setSkuInputs] = useState<Record<string, string>>({});
   const [skuValidation, setSkuValidation] = useState<Record<string, SkuValidationState>>({});
+  // Track how many additional SKU input fields each item has
+  const [additionalSkuCount, setAdditionalSkuCount] = useState<Record<string, number>>({});
 
   // Track which values we've already validated to prevent infinite loops
   const validatedValuesRef = useRef<Record<string, string>>({});
@@ -223,9 +227,40 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     };
   }, [skuInputs, validateSku, shopifyStatus.connected]);
 
-  const handleSaveSkuMapping = async (item: UnmappedItem) => {
-    const key = `${item.sourceType}-${item.sourceId}`;
-    const sku = skuInputs[key];
+  // Add an additional SKU field for an item
+  const addSkuField = (sourceType: string, sourceId: string) => {
+    const baseKey = `${sourceType}-${sourceId}`;
+    setAdditionalSkuCount(prev => ({
+      ...prev,
+      [baseKey]: (prev[baseKey] || 0) + 1,
+    }));
+  };
+
+  // Remove an additional SKU field
+  const removeSkuField = (sourceType: string, sourceId: string, index: number) => {
+    const baseKey = `${sourceType}-${sourceId}`;
+    const inputKey = `${baseKey}-${index}`;
+
+    // Remove the input value
+    setSkuInputs(prev => {
+      const next = { ...prev };
+      delete next[inputKey];
+      return next;
+    });
+
+    // Remove validation state
+    setSkuValidation(prev => {
+      const next = { ...prev };
+      delete next[inputKey];
+      return next;
+    });
+
+    // Clear validated values ref
+    delete validatedValuesRef.current[inputKey];
+  };
+
+  const handleSaveSkuMapping = async (item: UnmappedItem, inputKey: string) => {
+    const sku = skuInputs[inputKey];
 
     if (!sku?.trim()) {
       toast.error("Please enter a SKU");
@@ -234,14 +269,14 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
 
     // Only check validation when Shopify is connected
     if (shopifyStatus.connected) {
-      const validation = skuValidation[key];
+      const validation = skuValidation[inputKey];
       if (validation?.status === "invalid") {
         toast.error(validation.error || "Please enter a valid SKU");
         return;
       }
     }
 
-    setIsSavingSkuMapping(key);
+    setIsSavingSkuMapping(inputKey);
     try {
       const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
@@ -264,19 +299,19 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
 
       const data = await res.json();
       setSkuMappings(prev => [...prev, data.mapping]);
-      setUnmappedItems(prev => prev.filter(i =>
-        !(i.sourceType === item.sourceType && i.sourceId === item.sourceId)
-      ));
+      // Don't remove from unmappedItems - item can have multiple SKUs
+      // Just clear this input field
       setSkuInputs(prev => {
         const next = { ...prev };
-        delete next[key];
+        delete next[inputKey];
         return next;
       });
       setSkuValidation(prev => {
         const next = { ...prev };
-        delete next[key];
+        delete next[inputKey];
         return next;
       });
+      delete validatedValuesRef.current[inputKey];
       toast.success(data.message || `Mapped "${item.sourceName}" to SKU: ${sku.trim()}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save mapping");
@@ -304,17 +339,43 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
       }
 
       setSkuMappings(prev => prev.filter(m => m.id !== mapping.id));
-      setUnmappedItems(prev => [...prev, {
-        sourceType: mapping.sourceType,
-        sourceId: mapping.sourceId,
-        sourceName: mapping.sourceName,
-      }]);
-      toast.success(`Removed mapping for "${mapping.sourceName}"`);
+      // Don't add to unmappedItems - items are shown based on ordered rewards/addons
+      toast.success(`Removed SKU mapping: ${mapping.shopifySku}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete mapping");
     } finally {
       setIsSavingSkuMapping(null);
     }
+  };
+
+  // Group mappings by source item
+  const getMappingsForItem = (sourceType: string, sourceId: string) => {
+    return skuMappings.filter(m => m.sourceType === sourceType && m.sourceId === sourceId);
+  };
+
+  // Get all unique source items that have at least one mapping or are in unmapped list
+  const getAllSourceItems = () => {
+    const itemMap = new Map<string, UnmappedItem>();
+
+    // Add all unmapped items
+    for (const item of unmappedItems) {
+      const key = `${item.sourceType}-${item.sourceId}`;
+      itemMap.set(key, item);
+    }
+
+    // Add items from mappings that might not be in unmapped list
+    for (const mapping of skuMappings) {
+      const key = `${mapping.sourceType}-${mapping.sourceId}`;
+      if (!itemMap.has(key)) {
+        itemMap.set(key, {
+          sourceType: mapping.sourceType,
+          sourceId: mapping.sourceId,
+          sourceName: mapping.sourceName,
+        });
+      }
+    }
+
+    return Array.from(itemMap.values());
   };
 
   const getInputClassName = (key: string) => {
@@ -437,172 +498,298 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
             </div>
           ) : (
             <>
-              {/* Existing Mappings */}
-              {skuMappings.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Mapped Items ({skuMappings.length})</h4>
-                  <div className="space-y-2">
-                    {skuMappings.map((mapping) => (
-                      <div
-                        key={mapping.id}
-                        className="flex items-center justify-between p-4 border rounded-lg bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                            <Package className="h-5 w-5 text-green-600" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{mapping.sourceName}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {mapping.sourceType === "ADDON" ? "Add-on" :
-                                 mapping.sourceType === "REWARD" ? "Reward" : "Item"}
-                              </Badge>
-                              <span className="text-sm text-muted-foreground">
-                                SKU: <span className="font-mono font-medium">{mapping.shopifySku}</span>
-                              </span>
-                              {mapping.shopifyProductName && (
-                                <span className="text-sm text-green-600">
-                                  → {mapping.shopifyProductName}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteSkuMapping(mapping)}
-                          disabled={isSavingSkuMapping === mapping.id}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          {isSavingSkuMapping === mapping.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Unmapped Items */}
-              {unmappedItems.length > 0 && (
-                <div className="space-y-3">
+              {/* All Items with SKU Mappings */}
+              {getAllSourceItems().length > 0 && (
+                <div className="space-y-4">
                   <h4 className="text-sm font-medium text-muted-foreground">
-                    Unmapped Items ({unmappedItems.length})
+                    Items ({getAllSourceItems().length}) • SKUs ({skuMappings.length})
                   </h4>
-                  <div className="space-y-2">
-                    {unmappedItems.map((item) => {
-                      const key = `${item.sourceType}-${item.sourceId}`;
-                      const validation = skuValidation[key];
-                      const inputValue = skuInputs[key] || "";
+                  <div className="space-y-4">
+                    {getAllSourceItems().map((item) => {
+                      const baseKey = `${item.sourceType}-${item.sourceId}`;
+                      const itemMappings = getMappingsForItem(item.sourceType, item.sourceId);
+                      const additionalCount = additionalSkuCount[baseKey] || 0;
+                      const hasMappings = itemMappings.length > 0;
 
                       return (
                         <div
-                          key={key}
-                          className="flex items-center gap-4 p-4 border rounded-lg"
+                          key={baseKey}
+                          className={cn(
+                            "p-4 border rounded-lg",
+                            hasMappings
+                              ? "bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
+                              : "border-border"
+                          )}
                         >
-                          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                            <Package className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{item.sourceName}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {item.sourceType === "ADDON" ? "Add-on" :
-                                 item.sourceType === "REWARD" ? "Reward" : "Item"}
-                              </Badge>
-                              {item.amount !== undefined && (
-                                <span className="text-sm text-muted-foreground">
-                                  ${(item.amount / 100).toFixed(2)}
-                                </span>
-                              )}
+                          {/* Item Header */}
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className={cn(
+                              "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+                              hasMappings
+                                ? "bg-green-100 dark:bg-green-900/30"
+                                : "bg-muted"
+                            )}>
+                              <Package className={cn(
+                                "h-5 w-5",
+                                hasMappings ? "text-green-600" : "text-muted-foreground"
+                              )} />
                             </div>
-                          </div>
-                          <div className="flex flex-col gap-1 shrink-0">
-                            <div className="flex items-center gap-2">
-                              <div className="relative">
-                                <Input
-                                  placeholder={shopifyStatus.connected ? "Shopify SKU" : "SKU"}
-                                  className={cn(
-                                    "w-44 h-9",
-                                    shopifyStatus.connected && "pr-8",
-                                    getInputClassName(key)
-                                  )}
-                                  value={inputValue}
-                                  onChange={(e) => {
-                                    const newValue = e.target.value;
-                                    setSkuInputs(prev => ({
-                                      ...prev,
-                                      [key]: newValue
-                                    }));
-                                    // Reset validation when typing (only if Shopify connected)
-                                    if (shopifyStatus.connected && skuValidation[key]?.status !== "idle") {
-                                      setSkuValidation(prev => ({
-                                        ...prev,
-                                        [key]: { status: "idle" }
-                                      }));
-                                      // Clear the validated value so it can be re-validated
-                                      delete validatedValuesRef.current[key];
-                                    }
-                                  }}
-                                  onBlur={() => {
-                                    if (shopifyStatus.connected && inputValue?.trim()) {
-                                      validateSku(key, inputValue);
-                                    }
-                                  }}
-                                />
-                                {/* Validation indicator inside input (only when Shopify connected) */}
-                                {shopifyStatus.connected && (
-                                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                    {validation?.status === "validating" && (
-                                      <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
-                                    )}
-                                    {validation?.status === "valid" && (
-                                      <CheckCircle className="h-4 w-4 text-green-500" />
-                                    )}
-                                    {validation?.status === "invalid" && (
-                                      <XCircle className="h-4 w-4 text-red-500" />
-                                    )}
-                                  </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{item.sourceName}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {item.sourceType === "ADDON" ? "Add-on" :
+                                   item.sourceType === "REWARD" ? "Reward" : "Item"}
+                                </Badge>
+                                {item.amount !== undefined && (
+                                  <span className="text-sm text-muted-foreground">
+                                    ${(item.amount / 100).toFixed(2)}
+                                  </span>
+                                )}
+                                {hasMappings && (
+                                  <span className="text-sm text-green-600">
+                                    {itemMappings.length} SKU{itemMappings.length !== 1 ? "s" : ""} mapped
+                                  </span>
                                 )}
                               </div>
-                              <Button
-                                size="sm"
-                                onClick={() => handleSaveSkuMapping(item)}
-                                disabled={
-                                  isSavingSkuMapping === key ||
-                                  !canSave(key, inputValue) ||
-                                  (shopifyStatus.connected && validation?.status === "validating")
-                                }
-                                className={cn(
-                                  "h-9",
-                                  shopifyStatus.connected && validation?.status === "valid"
-                                    ? "bg-green-600 hover:bg-green-700"
-                                    : "bg-[#95BF47] hover:bg-[#7a9e3a]"
-                                )}
-                              >
-                                {isSavingSkuMapping === key ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Save className="h-4 w-4" />
-                                )}
-                              </Button>
                             </div>
-                            {/* Validation message (only when Shopify connected) */}
-                            {shopifyStatus.connected && validation?.status === "valid" && validation.productName && (
-                              <p className="text-xs text-green-600 truncate max-w-[200px]">
-                                → {validation.productName}
-                              </p>
-                            )}
-                            {shopifyStatus.connected && validation?.status === "invalid" && (
-                              <p className="text-xs text-red-600">
-                                {validation.error || "SKU not found"}
-                              </p>
-                            )}
+                          </div>
+
+                          {/* Existing SKU Mappings */}
+                          {itemMappings.length > 0 && (
+                            <div className="space-y-2 mb-3 ml-13 pl-3 border-l-2 border-green-200 dark:border-green-800">
+                              {itemMappings.map((mapping) => (
+                                <div
+                                  key={mapping.id}
+                                  className="flex items-center justify-between py-2"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                                    <span className="font-mono text-sm">{mapping.shopifySku}</span>
+                                    {mapping.shopifyProductName && (
+                                      <span className="text-sm text-muted-foreground">
+                                        → {mapping.shopifyProductName}
+                                      </span>
+                                    )}
+                                    {mapping.quantity > 1 && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        ×{mapping.quantity}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteSkuMapping(mapping)}
+                                    disabled={isSavingSkuMapping === mapping.id}
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                  >
+                                    {isSavingSkuMapping === mapping.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* New SKU Input Fields */}
+                          <div className="space-y-2 ml-13">
+                            {/* Primary input (always shown if no mappings, or as additional) */}
+                            {(() => {
+                              const inputKey = `${baseKey}-0`;
+                              const validation = skuValidation[inputKey];
+                              const inputValue = skuInputs[inputKey] || "";
+
+                              return (
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <div className="relative flex-1 max-w-[200px]">
+                                      <Input
+                                        placeholder={shopifyStatus.connected ? "Add SKU" : "Add SKU"}
+                                        className={cn(
+                                          "h-9",
+                                          shopifyStatus.connected && "pr-8",
+                                          getInputClassName(inputKey)
+                                        )}
+                                        value={inputValue}
+                                        onChange={(e) => {
+                                          const newValue = e.target.value;
+                                          setSkuInputs(prev => ({
+                                            ...prev,
+                                            [inputKey]: newValue
+                                          }));
+                                          if (shopifyStatus.connected && skuValidation[inputKey]?.status !== "idle") {
+                                            setSkuValidation(prev => ({
+                                              ...prev,
+                                              [inputKey]: { status: "idle" }
+                                            }));
+                                            delete validatedValuesRef.current[inputKey];
+                                          }
+                                        }}
+                                        onBlur={() => {
+                                          if (shopifyStatus.connected && inputValue?.trim()) {
+                                            validateSku(inputKey, inputValue);
+                                          }
+                                        }}
+                                      />
+                                      {shopifyStatus.connected && (
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                          {validation?.status === "validating" && (
+                                            <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
+                                          )}
+                                          {validation?.status === "valid" && (
+                                            <CheckCircle className="h-4 w-4 text-green-500" />
+                                          )}
+                                          {validation?.status === "invalid" && (
+                                            <XCircle className="h-4 w-4 text-red-500" />
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleSaveSkuMapping(item, inputKey)}
+                                      disabled={
+                                        isSavingSkuMapping === inputKey ||
+                                        !canSave(inputKey, inputValue) ||
+                                        (shopifyStatus.connected && validation?.status === "validating")
+                                      }
+                                      className={cn(
+                                        "h-9",
+                                        shopifyStatus.connected && validation?.status === "valid"
+                                          ? "bg-green-600 hover:bg-green-700"
+                                          : "bg-[#95BF47] hover:bg-[#7a9e3a]"
+                                      )}
+                                    >
+                                      {isSavingSkuMapping === inputKey ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Save className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => addSkuField(item.sourceType, item.sourceId)}
+                                      className="h-9"
+                                      title="Add another SKU"
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  {shopifyStatus.connected && validation?.status === "valid" && validation.productName && (
+                                    <p className="text-xs text-green-600 truncate">
+                                      → {validation.productName}
+                                    </p>
+                                  )}
+                                  {shopifyStatus.connected && validation?.status === "invalid" && (
+                                    <p className="text-xs text-red-600">
+                                      {validation.error || "SKU not found"}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
+                            {/* Additional input fields */}
+                            {Array.from({ length: additionalCount }).map((_, idx) => {
+                              const inputKey = `${baseKey}-${idx + 1}`;
+                              const validation = skuValidation[inputKey];
+                              const inputValue = skuInputs[inputKey] || "";
+
+                              return (
+                                <div key={inputKey} className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <div className="relative flex-1 max-w-[200px]">
+                                      <Input
+                                        placeholder={shopifyStatus.connected ? "Add SKU" : "Add SKU"}
+                                        className={cn(
+                                          "h-9",
+                                          shopifyStatus.connected && "pr-8",
+                                          getInputClassName(inputKey)
+                                        )}
+                                        value={inputValue}
+                                        onChange={(e) => {
+                                          const newValue = e.target.value;
+                                          setSkuInputs(prev => ({
+                                            ...prev,
+                                            [inputKey]: newValue
+                                          }));
+                                          if (shopifyStatus.connected && skuValidation[inputKey]?.status !== "idle") {
+                                            setSkuValidation(prev => ({
+                                              ...prev,
+                                              [inputKey]: { status: "idle" }
+                                            }));
+                                            delete validatedValuesRef.current[inputKey];
+                                          }
+                                        }}
+                                        onBlur={() => {
+                                          if (shopifyStatus.connected && inputValue?.trim()) {
+                                            validateSku(inputKey, inputValue);
+                                          }
+                                        }}
+                                      />
+                                      {shopifyStatus.connected && (
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                          {validation?.status === "validating" && (
+                                            <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
+                                          )}
+                                          {validation?.status === "valid" && (
+                                            <CheckCircle className="h-4 w-4 text-green-500" />
+                                          )}
+                                          {validation?.status === "invalid" && (
+                                            <XCircle className="h-4 w-4 text-red-500" />
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleSaveSkuMapping(item, inputKey)}
+                                      disabled={
+                                        isSavingSkuMapping === inputKey ||
+                                        !canSave(inputKey, inputValue) ||
+                                        (shopifyStatus.connected && validation?.status === "validating")
+                                      }
+                                      className={cn(
+                                        "h-9",
+                                        shopifyStatus.connected && validation?.status === "valid"
+                                          ? "bg-green-600 hover:bg-green-700"
+                                          : "bg-[#95BF47] hover:bg-[#7a9e3a]"
+                                      )}
+                                    >
+                                      {isSavingSkuMapping === inputKey ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Save className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeSkuField(item.sourceType, item.sourceId, idx + 1)}
+                                      className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
+                                      title="Remove this field"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  {shopifyStatus.connected && validation?.status === "valid" && validation.productName && (
+                                    <p className="text-xs text-green-600 truncate">
+                                      → {validation.productName}
+                                    </p>
+                                  )}
+                                  {shopifyStatus.connected && validation?.status === "invalid" && (
+                                    <p className="text-xs text-red-600">
+                                      {validation.error || "SKU not found"}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       );

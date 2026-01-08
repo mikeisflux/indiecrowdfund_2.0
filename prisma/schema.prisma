@@ -3364,7 +3364,7 @@ enum ShopifyOrderStatus {
   CANCELLED         // Order cancelled
 }
 
-// SKU mapping for Shopify fulfillment
+// SKU mapping for fulfillment (Shopify, manual, or other systems)
 model ShopifySkuMapping {
   id                String    @id @default(cuid())
   projectId         String
@@ -3374,21 +3374,23 @@ model ShopifySkuMapping {
   sourceId          String    // Reward ID or ProjectItem ID
   sourceName        String    // Cached name for display
 
-  // Shopify mapping
+  // SKU mapping (can have multiple SKUs per source item)
   shopifySku        String
   shopifyProductId  String?   // Optional Shopify product ID
   shopifyVariantId  String?   // Optional Shopify variant ID
   shopifyProductName String?  // Cached product name from Shopify
 
-  // Quantity mapping (e.g., 1 reward = 2 SKUs)
+  // Quantity mapping (e.g., 1 reward = 2 of this SKU)
   quantity          Int       @default(1)
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  @@unique([projectId, sourceType, sourceId])
+  // Allow multiple SKUs per source item, but prevent duplicate SKU mappings
+  @@unique([projectId, sourceType, sourceId, shopifySku])
   @@index([projectId])
   @@index([shopifySku])
+  @@index([projectId, sourceType, sourceId])
 }
 
 enum SkuMappingSourceType {

@@ -313,12 +313,15 @@ export async function POST(req: NextRequest) {
           : skuResult.productName || null;
       }
 
+      // Use upsert with the new composite unique key that includes shopifySku
+      // This allows multiple SKUs per source item
       const mapping = await db.shopifySkuMapping.upsert({
         where: {
-          projectId_sourceType_sourceId: {
+          projectId_sourceType_sourceId_shopifySku: {
             projectId,
             sourceType,
             sourceId,
+            shopifySku: shopifySku.trim(),
           },
         },
         create: {
@@ -334,7 +337,6 @@ export async function POST(req: NextRequest) {
         },
         update: {
           sourceName,
-          shopifySku: shopifySku.trim(),
           shopifyProductId,
           shopifyVariantId,
           shopifyProductName,
@@ -447,10 +449,11 @@ export async function POST(req: NextRequest) {
 
           const mapping = await db.shopifySkuMapping.upsert({
             where: {
-              projectId_sourceType_sourceId: {
+              projectId_sourceType_sourceId_shopifySku: {
                 projectId,
                 sourceType: m.sourceType,
                 sourceId: m.sourceId,
+                shopifySku: m.shopifySku.trim(),
               },
             },
             create: {
@@ -466,7 +469,6 @@ export async function POST(req: NextRequest) {
             },
             update: {
               sourceName: m.sourceName,
-              shopifySku: m.shopifySku.trim(),
               shopifyProductId,
               shopifyVariantId,
               shopifyProductName,
