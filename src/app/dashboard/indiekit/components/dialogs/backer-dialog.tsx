@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +44,7 @@ import {
   Printer,
   Undo2,
   ClipboardList,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Backer } from "../../types";
@@ -63,6 +65,39 @@ interface BackerDialogProps {
   backer: Backer | null;
 }
 
+interface SurveyData {
+  survey: {
+    id: string;
+    introTitle?: string;
+    introMessage?: string;
+    collectAddresses: boolean;
+    status: string;
+    addressesLocked: boolean;
+  } | null;
+  questions: {
+    itemQuestions: {
+      id: string;
+      itemName: string;
+      itemDescription?: string;
+      variants: { id: string; variantType: string; options: string[] }[];
+      customQuestions: { id: string; question: string; questionType: string; options: string[] }[];
+    }[];
+    backerQuestions: {
+      id: string;
+      question: string;
+      questionType: string;
+      options: string[];
+    }[];
+  };
+  response: {
+    itemResponses?: Record<string, { variants?: Record<string, string>; customAnswers?: Record<string, string | string[]> }>;
+    backerResponses?: Record<string, string | string[]>;
+    shippingAddress?: Record<string, string>;
+    isComplete: boolean;
+    completedAt?: string;
+  } | null;
+}
+
 export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) {
   const [activeTab, setActiveTab] = useState("order");
   const [showAddressValidation, setShowAddressValidation] = useState(false);
@@ -75,11 +110,53 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
   const [showCancelOrder, setShowCancelOrder] = useState(false);
   const [showPackingSlip, setShowPackingSlip] = useState(false);
 
+  // Survey data state
+  const [surveyData, setSurveyData] = useState<SurveyData | null>(null);
+  const [surveyLoading, setSurveyLoading] = useState(false);
+  const [surveyError, setSurveyError] = useState<string | null>(null);
+
+  // Fetch survey data when switching to survey tab
+  const fetchSurveyData = useCallback(async () => {
+    if (!backer) return;
+
+    setSurveyLoading(true);
+    setSurveyError(null);
+
+    try {
+      const res = await fetchWithRetry(`/api/creator/indiekit/surveys/${backer.id}`);
+      if (!res.ok) {
+        throw new Error("Failed to load survey data");
+      }
+      const data = await res.json();
+      setSurveyData(data);
+    } catch (error) {
+      console.error("Error fetching survey data:", error);
+      setSurveyError("Failed to load survey responses");
+    } finally {
+      setSurveyLoading(false);
+    }
+  }, [backer]);
+
+  // Fetch survey data when tab changes to survey
+  useEffect(() => {
+    if (activeTab === "survey" && backer && !surveyData) {
+      fetchSurveyData();
+    }
+  }, [activeTab, backer, surveyData, fetchSurveyData]);
+
+  // Reset survey data when dialog closes or backer changes
+  useEffect(() => {
+    if (!open) {
+      setSurveyData(null);
+      setSurveyError(null);
+    }
+  }, [open]);
+
   if (!backer) return null;
 
   const handleViewAsBacker = () => {
     // Open backer survey view in new tab
-    window.open(`/survey/${backer.id}`, '_blank');
+    window.open(`/dashboard/pledges/${backer.id}/survey`, '_blank');
   };
 
   const handleCancelOrder = async () => {
@@ -431,18 +508,101 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                     {backer.surveyCompleted ? "Completed" : "Pending"}
                   </Badge>
                 </div>
-                {backer.surveyCompleted ? (
+
+                {surveyLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : surveyError ? (
+                  <div className="text-center py-6">
+                    <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-sm text-red-600">{surveyError}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={fetchSurveyData}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry
+                    </Button>
+                  </div>
+                ) : backer.surveyCompleted ? (
                   <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
                       This backer has completed their survey. View their responses below.
                     </p>
-                    {/* Survey responses would be loaded here from an API call */}
+
+                    {/* Display actual survey responses */}
                     <div className="space-y-3 pt-2 border-t">
-                      <div className="bg-muted/50 rounded-lg p-4">
-                        <p className="text-xs text-muted-foreground font-medium mb-1">Survey responses</p>
-                        <p className="text-sm">No detailed survey questions configured for this project.</p>
-                      </div>
+                      {/* Item Questions & Responses */}
+                      {surveyData?.questions?.itemQuestions?.map((item) => {
+                        const itemResponse = surveyData?.response?.itemResponses?.[item.id];
+                        return (
+                          <div key={item.id} className="bg-muted/50 rounded-lg p-4">
+                            <p className="text-sm font-medium mb-2">{item.itemName}</p>
+                            {item.itemDescription && (
+                              <p className="text-xs text-muted-foreground mb-2">{item.itemDescription}</p>
+                            )}
+
+                            {/* Variant selections */}
+                            {item.variants.map((variant) => {
+                              const selection = itemResponse?.variants?.[variant.id];
+                              return (
+                                <div key={variant.id} className="flex justify-between text-sm py-1 border-b last:border-0">
+                                  <span className="text-muted-foreground">{variant.variantType}:</span>
+                                  <span className="font-medium">{selection || <span className="text-amber-600 italic">Not selected</span>}</span>
+                                </div>
+                              );
+                            })}
+
+                            {/* Custom question answers */}
+                            {item.customQuestions.map((q) => {
+                              const answer = itemResponse?.customAnswers?.[q.id];
+                              return (
+                                <div key={q.id} className="mt-2">
+                                  <p className="text-xs text-muted-foreground">{q.question}</p>
+                                  <p className="text-sm">
+                                    {answer
+                                      ? Array.isArray(answer)
+                                        ? answer.join(", ")
+                                        : answer
+                                      : <span className="text-amber-600 italic">No answer</span>}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+
+                      {/* Backer Questions & Responses */}
+                      {surveyData?.questions?.backerQuestions?.map((q) => {
+                        const answer = surveyData?.response?.backerResponses?.[q.id];
+                        return (
+                          <div key={q.id} className="bg-muted/50 rounded-lg p-4">
+                            <p className="text-xs text-muted-foreground font-medium mb-1">{q.question}</p>
+                            <p className="text-sm">
+                              {answer
+                                ? Array.isArray(answer)
+                                  ? answer.join(", ")
+                                  : answer
+                                : <span className="text-amber-600 italic">No answer</span>}
+                            </p>
+                          </div>
+                        );
+                      })}
+
+                      {/* No questions configured message */}
+                      {(!surveyData?.questions?.itemQuestions?.length &&
+                        !surveyData?.questions?.backerQuestions?.length) && (
+                        <div className="bg-muted/50 rounded-lg p-4">
+                          <p className="text-xs text-muted-foreground font-medium mb-1">Survey responses</p>
+                          <p className="text-sm">No detailed survey questions configured for this project.</p>
+                        </div>
+                      )}
                     </div>
+
                     <Button variant="outline" size="sm" onClick={handleViewAsBacker}>
                       <Eye className="h-4 w-4 mr-2" />
                       View Full Survey
