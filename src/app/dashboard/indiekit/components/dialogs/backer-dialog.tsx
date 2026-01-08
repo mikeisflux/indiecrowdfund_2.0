@@ -527,98 +527,111 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                       Retry
                     </Button>
                   </div>
-                ) : backer.surveyCompleted ? (
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      This backer has completed their survey. View their responses below.
-                    </p>
-
-                    {/* Display actual survey responses */}
-                    <div className="space-y-3 pt-2 border-t">
-                      {/* Item Questions & Responses */}
-                      {surveyData?.questions?.itemQuestions?.map((item) => {
-                        const itemResponse = surveyData?.response?.itemResponses?.[item.id];
-                        return (
-                          <div key={item.id} className="bg-muted/50 rounded-lg p-4">
-                            <p className="text-sm font-medium mb-2">{item.itemName}</p>
-                            {item.itemDescription && (
-                              <p className="text-xs text-muted-foreground mb-2">{item.itemDescription}</p>
-                            )}
-
-                            {/* Variant selections */}
-                            {item.variants.map((variant) => {
-                              const selection = itemResponse?.variants?.[variant.id];
-                              return (
-                                <div key={variant.id} className="flex justify-between text-sm py-1 border-b last:border-0">
-                                  <span className="text-muted-foreground">{variant.variantType}:</span>
-                                  <span className="font-medium">{selection || <span className="text-amber-600 italic">Not selected</span>}</span>
-                                </div>
-                              );
-                            })}
-
-                            {/* Custom question answers */}
-                            {item.customQuestions.map((q) => {
-                              const answer = itemResponse?.customAnswers?.[q.id];
-                              return (
-                                <div key={q.id} className="mt-2">
-                                  <p className="text-xs text-muted-foreground">{q.question}</p>
-                                  <p className="text-sm">
-                                    {answer
-                                      ? Array.isArray(answer)
-                                        ? answer.join(", ")
-                                        : answer
-                                      : <span className="text-amber-600 italic">No answer</span>}
-                                  </p>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-
-                      {/* Backer Questions & Responses */}
-                      {surveyData?.questions?.backerQuestions?.map((q) => {
-                        const answer = surveyData?.response?.backerResponses?.[q.id];
-                        return (
-                          <div key={q.id} className="bg-muted/50 rounded-lg p-4">
-                            <p className="text-xs text-muted-foreground font-medium mb-1">{q.question}</p>
-                            <p className="text-sm">
-                              {answer
-                                ? Array.isArray(answer)
-                                  ? answer.join(", ")
-                                  : answer
-                                : <span className="text-amber-600 italic">No answer</span>}
-                            </p>
-                          </div>
-                        );
-                      })}
-
-                      {/* No questions configured message */}
-                      {(!surveyData?.questions?.itemQuestions?.length &&
-                        !surveyData?.questions?.backerQuestions?.length) && (
-                        <div className="bg-muted/50 rounded-lg p-4">
-                          <p className="text-xs text-muted-foreground font-medium mb-1">Survey responses</p>
-                          <p className="text-sm">No detailed survey questions configured for this project.</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <Button variant="outline" size="sm" onClick={handleViewAsBacker}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Full Survey
-                    </Button>
-                  </div>
                 ) : (
-                  <div className="text-center py-6">
-                    <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-                    <p className="font-medium text-sm mb-1">Survey Not Completed</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      This backer has not yet completed their survey.
-                    </p>
-                    <Button variant="outline" size="sm" onClick={handleResendSurvey}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Send Survey Reminder
-                    </Button>
+                  <div className="space-y-4">
+                    {/* Status message */}
+                    {backer.surveyCompleted ? (
+                      <p className="text-sm text-muted-foreground">
+                        This backer has completed their survey. View their responses below.
+                      </p>
+                    ) : (
+                      <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <p className="text-sm text-amber-800">
+                            This backer has not yet completed their survey.
+                          </p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={handleResendSurvey}>
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                          Remind
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Survey not configured/sent yet */}
+                    {!surveyData?.survey ? (
+                      <div className="bg-muted/50 rounded-lg p-4 text-center">
+                        <p className="text-sm text-muted-foreground">No survey has been configured or sent for this project yet.</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Display survey questions and responses */}
+                        <div className="space-y-3 pt-2 border-t">
+                          {/* Item Questions & Responses */}
+                          {surveyData?.questions?.itemQuestions?.map((item) => {
+                            const itemResponse = surveyData?.response?.itemResponses?.[item.id];
+                            return (
+                              <div key={item.id} className="bg-muted/50 rounded-lg p-4">
+                                <p className="text-sm font-medium mb-2">{item.itemName}</p>
+                                {item.itemDescription && (
+                                  <p className="text-xs text-muted-foreground mb-2">{item.itemDescription}</p>
+                                )}
+
+                                {/* Variant selections */}
+                                {item.variants.map((variant) => {
+                                  const selection = itemResponse?.variants?.[variant.id];
+                                  return (
+                                    <div key={variant.id} className="flex justify-between text-sm py-1 border-b last:border-0">
+                                      <span className="text-muted-foreground">{variant.variantType}:</span>
+                                      <span className="font-medium">{selection || <span className="text-amber-600 italic">Not selected</span>}</span>
+                                    </div>
+                                  );
+                                })}
+
+                                {/* Custom question answers */}
+                                {item.customQuestions.map((q) => {
+                                  const answer = itemResponse?.customAnswers?.[q.id];
+                                  return (
+                                    <div key={q.id} className="mt-2">
+                                      <p className="text-xs text-muted-foreground">{q.question}</p>
+                                      <p className="text-sm">
+                                        {answer
+                                          ? Array.isArray(answer)
+                                            ? answer.join(", ")
+                                            : answer
+                                          : <span className="text-amber-600 italic">No answer</span>}
+                                      </p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+
+                          {/* Backer Questions & Responses */}
+                          {surveyData?.questions?.backerQuestions?.map((q) => {
+                            const answer = surveyData?.response?.backerResponses?.[q.id];
+                            return (
+                              <div key={q.id} className="bg-muted/50 rounded-lg p-4">
+                                <p className="text-xs text-muted-foreground font-medium mb-1">{q.question}</p>
+                                <p className="text-sm">
+                                  {answer
+                                    ? Array.isArray(answer)
+                                      ? answer.join(", ")
+                                      : answer
+                                    : <span className="text-amber-600 italic">No answer</span>}
+                                </p>
+                              </div>
+                            );
+                          })}
+
+                          {/* No questions configured message */}
+                          {(!surveyData?.questions?.itemQuestions?.length &&
+                            !surveyData?.questions?.backerQuestions?.length) && (
+                            <div className="bg-muted/50 rounded-lg p-4">
+                              <p className="text-xs text-muted-foreground font-medium mb-1">Survey questions</p>
+                              <p className="text-sm">No detailed survey questions configured for this backer&apos;s reward tier.</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <Button variant="outline" size="sm" onClick={handleViewAsBacker}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Full Survey
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
