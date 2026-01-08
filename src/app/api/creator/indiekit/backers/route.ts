@@ -157,53 +157,81 @@ export async function POST(req: NextRequest) {
       }
 
       case "push_to_fulfillment": {
-        // Check if Shopify is connected
-        const shopifyIntegration = await db.fulfillmentIntegration.findUnique({
+        // Get ALL connected fulfillment integrations for this project
+        const connectedIntegrations = await db.fulfillmentIntegration.findMany({
           where: {
-            projectId_provider: {
-              projectId,
-              provider: "SHOPIFY",
-            },
+            projectId,
+            status: "CONNECTED",
           },
         });
 
-        if (shopifyIntegration && shopifyIntegration.status === "CONNECTED") {
-          // Push to Shopify
-          const shopifyResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/shopify`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Cookie": req.headers.get("cookie") || "",
-            },
-            body: JSON.stringify({
-              projectId,
-              action: "push_orders",
-              backerIds: pledgeIds,
-            }),
-          });
+        const pushedProviders: string[] = [];
+        let totalPushed = 0;
+        let totalFailed = 0;
+        const allErrors: string[] = [];
 
-          const shopifyResult = await shopifyResponse.json();
-
-          if (shopifyResponse.ok) {
-            results.success = shopifyResult.pushed || 0;
-            results.failed = shopifyResult.failed || 0;
-            if (shopifyResult.errors) {
-              results.errors = shopifyResult.errors;
-            }
-          } else {
-            // Fallback to local status update if Shopify fails
-            await db.pledge.updateMany({
-              where: {
-                id: { in: pledgeIds },
-                projectId,
+        // Push to each connected provider
+        for (const integration of connectedIntegrations) {
+          if (integration.provider === "SHOPIFY") {
+            // Push to Shopify
+            const shopifyResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/shopify`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Cookie": req.headers.get("cookie") || "",
               },
-              data: { fulfillmentStatus: "IN_PROGRESS" },
+              body: JSON.stringify({
+                projectId,
+                action: "push_orders",
+                backerIds: pledgeIds,
+              }),
             });
-            results.success = pledgeIds.length;
-            results.errors = [shopifyResult.error || "Shopify push failed, updated local status only"];
+
+            const shopifyResult = await shopifyResponse.json();
+
+            if (shopifyResponse.ok) {
+              totalPushed += shopifyResult.pushed || 0;
+              totalFailed += shopifyResult.failed || 0;
+              if (shopifyResult.errors) {
+                allErrors.push(...shopifyResult.errors.map((e: string) => `Shopify: ${e}`));
+              }
+              pushedProviders.push("Shopify");
+            } else {
+              allErrors.push(`Shopify: ${shopifyResult.error || "Push failed"}`);
+            }
+          } else if (integration.provider === "SHIPSTATION") {
+            // Push to ShipStation
+            const shipstationResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/shipstation`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Cookie": req.headers.get("cookie") || "",
+              },
+              body: JSON.stringify({
+                projectId,
+                action: "push_orders",
+                backerIds: pledgeIds,
+              }),
+            });
+
+            if (shipstationResponse.ok) {
+              const shipstationResult = await shipstationResponse.json();
+              totalPushed += shipstationResult.pushed || 0;
+              totalFailed += shipstationResult.failed || 0;
+              if (shipstationResult.errors) {
+                allErrors.push(...shipstationResult.errors.map((e: string) => `ShipStation: ${e}`));
+              }
+              pushedProviders.push("ShipStation");
+            } else {
+              const errorResult = await shipstationResponse.json().catch(() => ({}));
+              allErrors.push(`ShipStation: ${errorResult.error || "Push failed"}`);
+            }
           }
-        } else {
-          // No Shopify - just update local fulfillment status
+          // Add more providers here as needed (SHIPPO, EASYPOST, etc.)
+        }
+
+        // If no integrations connected, just update local status
+        if (connectedIntegrations.length === 0) {
           await db.pledge.updateMany({
             where: {
               id: { in: pledgeIds },
@@ -212,14 +240,21 @@ export async function POST(req: NextRequest) {
             data: { fulfillmentStatus: "IN_PROGRESS" },
           });
           results.success = pledgeIds.length;
+        } else {
+          results.success = totalPushed > 0 ? totalPushed : pledgeIds.length;
+          results.failed = totalFailed;
+          if (allErrors.length > 0) {
+            results.errors = allErrors.slice(0, 10); // Limit to 10 errors
+          }
         }
 
         // Log activity
+        const providerList = pushedProviders.length > 0 ? ` to ${pushedProviders.join(", ")}` : "";
         await db.fulfillmentActivity.create({
           data: {
             projectId,
             type: "ORDERS_PUSHED",
-            title: `${results.success} orders pushed to fulfillment`,
+            title: `${results.success} orders pushed${providerList}`,
             affectedCount: results.success,
           },
         });
