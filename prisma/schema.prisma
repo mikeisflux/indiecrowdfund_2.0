@@ -39,6 +39,21 @@ model User {
   shopifyAccessToken String?  // OAuth access token for connected store
   shopifyShopDomain String?   // Connected store domain (e.g., "my-store.myshopify.com")
 
+  // ShipStation Integration (per-creator, not per-project)
+  shipstationApiKey    String?   // ShipStation API Key
+  shipstationApiSecret String?   // ShipStation API Secret
+
+  // Shippo Integration (per-creator, not per-project)
+  shippoApiToken       String?   // Shippo API Token (single token auth)
+
+  // EasyPost Integration (per-creator, not per-project)
+  easypostApiKey       String?   // EasyPost API Key
+
+  // Stamps.com Integration (per-creator, not per-project)
+  stampsIntegrationId  String?   // Stamps.com Integration ID
+  stampsUsername       String?   // Stamps.com Username
+  stampsPassword       String?   // Stamps.com Password (encrypted)
+
   // Email preferences
   emailUnsubscribedAt DateTime?  // Global email unsubscribe timestamp
 
@@ -3288,6 +3303,7 @@ enum FulfillmentProvider {
   SHIPSTATION
   SHIPPO
   EASYPOST
+  STAMPS_COM
   MANUAL
 }
 

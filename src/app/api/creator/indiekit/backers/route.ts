@@ -226,8 +226,88 @@ export async function POST(req: NextRequest) {
               const errorResult = await shipstationResponse.json().catch(() => ({}));
               allErrors.push(`ShipStation: ${errorResult.error || "Push failed"}`);
             }
+          } else if (integration.provider === "SHIPPO") {
+            // Push to Shippo
+            const shippoResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/shippo`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Cookie": req.headers.get("cookie") || "",
+              },
+              body: JSON.stringify({
+                projectId,
+                action: "push_orders",
+                backerIds: pledgeIds,
+              }),
+            });
+
+            if (shippoResponse.ok) {
+              const shippoResult = await shippoResponse.json();
+              totalPushed += shippoResult.pushed || 0;
+              totalFailed += shippoResult.failed || 0;
+              if (shippoResult.errors) {
+                allErrors.push(...shippoResult.errors.map((e: string) => `Shippo: ${e}`));
+              }
+              pushedProviders.push("Shippo");
+            } else {
+              const errorResult = await shippoResponse.json().catch(() => ({}));
+              allErrors.push(`Shippo: ${errorResult.error || "Push failed"}`);
+            }
+          } else if (integration.provider === "EASYPOST") {
+            // Push to EasyPost
+            const easypostResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/easypost`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Cookie": req.headers.get("cookie") || "",
+              },
+              body: JSON.stringify({
+                projectId,
+                action: "push_orders",
+                backerIds: pledgeIds,
+              }),
+            });
+
+            if (easypostResponse.ok) {
+              const easypostResult = await easypostResponse.json();
+              totalPushed += easypostResult.pushed || 0;
+              totalFailed += easypostResult.failed || 0;
+              if (easypostResult.errors) {
+                allErrors.push(...easypostResult.errors.map((e: string) => `EasyPost: ${e}`));
+              }
+              pushedProviders.push("EasyPost");
+            } else {
+              const errorResult = await easypostResponse.json().catch(() => ({}));
+              allErrors.push(`EasyPost: ${errorResult.error || "Push failed"}`);
+            }
+          } else if (integration.provider === "STAMPS_COM") {
+            // Push to Stamps.com
+            const stampsResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/stamps`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Cookie": req.headers.get("cookie") || "",
+              },
+              body: JSON.stringify({
+                projectId,
+                action: "push_orders",
+                backerIds: pledgeIds,
+              }),
+            });
+
+            if (stampsResponse.ok) {
+              const stampsResult = await stampsResponse.json();
+              totalPushed += stampsResult.pushed || 0;
+              totalFailed += stampsResult.failed || 0;
+              if (stampsResult.errors) {
+                allErrors.push(...stampsResult.errors.map((e: string) => `Stamps.com: ${e}`));
+              }
+              pushedProviders.push("Stamps.com");
+            } else {
+              const errorResult = await stampsResponse.json().catch(() => ({}));
+              allErrors.push(`Stamps.com: ${errorResult.error || "Push failed"}`);
+            }
           }
-          // Add more providers here as needed (SHIPPO, EASYPOST, etc.)
         }
 
         // If no integrations connected, just update local status
