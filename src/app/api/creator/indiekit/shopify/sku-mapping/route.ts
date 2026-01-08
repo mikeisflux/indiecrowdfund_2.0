@@ -254,15 +254,20 @@ export async function POST(req: NextRequest) {
           { collaborators: { some: { userId: session.user.id } } },
         ],
       },
+      select: {
+        id: true,
+        creatorId: true,
+      },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Get user's Shopify credentials for validation
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    // Get PROJECT CREATOR's Shopify credentials for validation
+    // Collaborators use the creator's connection, not their own
+    const creator = await db.user.findUnique({
+      where: { id: project.creatorId },
       select: {
         shopifyAccessToken: true,
         shopifyShopDomain: true,
@@ -283,10 +288,10 @@ export async function POST(req: NextRequest) {
       let shopifyVariantId: string | null = null;
       let shopifyProductName: string | null = null;
 
-      if (!skipValidation && user?.shopifyAccessToken && user?.shopifyShopDomain) {
+      if (!skipValidation && creator?.shopifyAccessToken && creator?.shopifyShopDomain) {
         const skuResult = await findSkuInShopify(
-          user.shopifyShopDomain,
-          user.shopifyAccessToken,
+          creator.shopifyShopDomain,
+          creator.shopifyAccessToken,
           shopifySku.trim()
         );
 
@@ -368,16 +373,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "shopifySku required" }, { status: 400 });
       }
 
-      if (!user?.shopifyAccessToken || !user?.shopifyShopDomain) {
+      if (!creator?.shopifyAccessToken || !creator?.shopifyShopDomain) {
         return NextResponse.json(
-          { error: "Shopify not connected. Please connect your store first." },
+          { error: "Shopify not connected. The project creator must connect their Shopify store first." },
           { status: 400 }
         );
       }
 
       const skuResult = await findSkuInShopify(
-        user.shopifyShopDomain,
-        user.shopifyAccessToken,
+        creator.shopifyShopDomain,
+        creator.shopifyAccessToken,
         shopifySku.trim()
       );
 
@@ -417,10 +422,10 @@ export async function POST(req: NextRequest) {
           let shopifyVariantId: string | null = null;
           let shopifyProductName: string | null = null;
 
-          if (!skipValidation && user?.shopifyAccessToken && user?.shopifyShopDomain) {
+          if (!skipValidation && creator?.shopifyAccessToken && creator?.shopifyShopDomain) {
             const skuResult = await findSkuInShopify(
-              user.shopifyShopDomain,
-              user.shopifyAccessToken,
+              creator.shopifyShopDomain,
+              creator.shopifyAccessToken,
               m.shopifySku.trim()
             );
 

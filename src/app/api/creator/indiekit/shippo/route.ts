@@ -26,21 +26,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { projectId, action, backerIds } = actionSchema.parse(body);
 
-    // Get user's Shippo credentials
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        shippoApiToken: true,
-      },
-    });
-
-    if (!user?.shippoApiToken) {
-      return NextResponse.json(
-        { error: "Shippo credentials not configured. Please add your API Token in Settings." },
-        { status: 400 }
-      );
-    }
-
     // Verify user has access to this project
     const project = await db.project.findFirst({
       where: {
@@ -57,14 +42,35 @@ export async function POST(req: NextRequest) {
           },
         ],
       },
+      select: {
+        id: true,
+        title: true,
+        creatorId: true,
+      },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
     }
 
+    // Get PROJECT CREATOR's Shippo credentials
+    // Collaborators use the creator's connection, not their own
+    const creator = await db.user.findUnique({
+      where: { id: project.creatorId },
+      select: {
+        shippoApiToken: true,
+      },
+    });
+
+    if (!creator?.shippoApiToken) {
+      return NextResponse.json(
+        { error: "Shippo credentials not configured. The project creator must add their API Token in Settings." },
+        { status: 400 }
+      );
+    }
+
     const shippoHeaders = {
-      "Authorization": `ShippoToken ${user.shippoApiToken}`,
+      "Authorization": `ShippoToken ${creator.shippoApiToken}`,
       "Content-Type": "application/json",
     };
 

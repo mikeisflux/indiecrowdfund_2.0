@@ -202,14 +202,28 @@ export async function POST(req: NextRequest) {
           { collaborators: { some: { userId: session.user.id } } },
         ],
       },
+      select: {
+        id: true,
+        title: true,
+        creatorId: true,
+      },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // CONNECT - Link Shopify store
+    // Check if user is the creator (needed for connect/disconnect actions)
+    const isCreator = project.creatorId === session.user.id;
+
+    // CONNECT - Link Shopify store (creator only)
     if (action === "connect") {
+      if (!isCreator) {
+        return NextResponse.json(
+          { error: "Only the project creator can connect integrations" },
+          { status: 403 }
+        );
+      }
       if (!shopDomain || !accessToken) {
         return NextResponse.json(
           { error: "Shop domain and access token are required" },
@@ -287,8 +301,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // DISCONNECT - Remove Shopify integration
+    // DISCONNECT - Remove Shopify integration (creator only)
     if (action === "disconnect") {
+      if (!isCreator) {
+        return NextResponse.json(
+          { error: "Only the project creator can disconnect integrations" },
+          { status: 403 }
+        );
+      }
+
       await db.fulfillmentIntegration.update({
         where: {
           projectId_provider: {

@@ -26,21 +26,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { projectId, action, backerIds } = actionSchema.parse(body);
 
-    // Get user's EasyPost credentials
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        easypostApiKey: true,
-      },
-    });
-
-    if (!user?.easypostApiKey) {
-      return NextResponse.json(
-        { error: "EasyPost credentials not configured. Please add your API Key in Settings." },
-        { status: 400 }
-      );
-    }
-
     // Verify user has access to this project
     const project = await db.project.findFirst({
       where: {
@@ -57,13 +42,34 @@ export async function POST(req: NextRequest) {
           },
         ],
       },
+      select: {
+        id: true,
+        title: true,
+        creatorId: true,
+      },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
     }
 
-    const easypostAuth = Buffer.from(`${user.easypostApiKey}:`).toString("base64");
+    // Get PROJECT CREATOR's EasyPost credentials
+    // Collaborators use the creator's connection, not their own
+    const creator = await db.user.findUnique({
+      where: { id: project.creatorId },
+      select: {
+        easypostApiKey: true,
+      },
+    });
+
+    if (!creator?.easypostApiKey) {
+      return NextResponse.json(
+        { error: "EasyPost credentials not configured. The project creator must add their API Key in Settings." },
+        { status: 400 }
+      );
+    }
+
+    const easypostAuth = Buffer.from(`${creator.easypostApiKey}:`).toString("base64");
     const easypostHeaders = {
       "Authorization": `Basic ${easypostAuth}`,
       "Content-Type": "application/json",

@@ -32,22 +32,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { projectId, action, backerIds } = actionSchema.parse(body);
 
-    // Get user's ShipStation credentials
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        shipstationApiKey: true,
-        shipstationApiSecret: true,
-      },
-    });
-
-    if (!user?.shipstationApiKey || !user?.shipstationApiSecret) {
-      return NextResponse.json(
-        { error: "ShipStation credentials not configured. Please add your API Key and Secret in Settings." },
-        { status: 400 }
-      );
-    }
-
     // Verify user has access to this project
     const project = await db.project.findFirst({
       where: {
@@ -64,13 +48,35 @@ export async function POST(req: NextRequest) {
           },
         ],
       },
+      select: {
+        id: true,
+        title: true,
+        creatorId: true,
+      },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
     }
 
-    const authHeader = getShipStationAuthHeader(user.shipstationApiKey, user.shipstationApiSecret);
+    // Get PROJECT CREATOR's ShipStation credentials
+    // Collaborators use the creator's connection, not their own
+    const creator = await db.user.findUnique({
+      where: { id: project.creatorId },
+      select: {
+        shipstationApiKey: true,
+        shipstationApiSecret: true,
+      },
+    });
+
+    if (!creator?.shipstationApiKey || !creator?.shipstationApiSecret) {
+      return NextResponse.json(
+        { error: "ShipStation credentials not configured. The project creator must add their API Key and Secret in Settings." },
+        { status: 400 }
+      );
+    }
+
+    const authHeader = getShipStationAuthHeader(creator.shipstationApiKey, creator.shipstationApiSecret);
 
     switch (action) {
       case "push_orders": {

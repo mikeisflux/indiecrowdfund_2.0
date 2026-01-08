@@ -30,23 +30,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { projectId, action, backerIds } = actionSchema.parse(body);
 
-    // Get user's Stamps.com credentials
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        stampsIntegrationId: true,
-        stampsUsername: true,
-        stampsPassword: true,
-      },
-    });
-
-    if (!user?.stampsIntegrationId || !user?.stampsUsername || !user?.stampsPassword) {
-      return NextResponse.json(
-        { error: "Stamps.com credentials not configured. Please add your Integration ID, Username, and Password in Settings." },
-        { status: 400 }
-      );
-    }
-
     // Verify user has access to this project
     const project = await db.project.findFirst({
       where: {
@@ -63,10 +46,33 @@ export async function POST(req: NextRequest) {
           },
         ],
       },
+      select: {
+        id: true,
+        title: true,
+        creatorId: true,
+      },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+    }
+
+    // Get PROJECT CREATOR's Stamps.com credentials
+    // Collaborators use the creator's connection, not their own
+    const creator = await db.user.findUnique({
+      where: { id: project.creatorId },
+      select: {
+        stampsIntegrationId: true,
+        stampsUsername: true,
+        stampsPassword: true,
+      },
+    });
+
+    if (!creator?.stampsIntegrationId || !creator?.stampsUsername || !creator?.stampsPassword) {
+      return NextResponse.json(
+        { error: "Stamps.com credentials not configured. The project creator must add their Integration ID, Username, and Password in Settings." },
+        { status: 400 }
+      );
     }
 
     switch (action) {
