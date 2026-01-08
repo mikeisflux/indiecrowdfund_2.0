@@ -1,32 +1,18 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   UserCircle,
-  Camera,
-  Key,
+  Settings,
+  User,
   Bell,
-  CreditCard,
-  Shield,
   ExternalLink,
-  Loader2,
+  ArrowRight,
 } from "lucide-react";
-import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface AccountSettingsTabProps {
   userName?: string;
@@ -39,174 +25,13 @@ export function AccountSettingsTab({
   userEmail = "",
   userAvatar = "",
 }: AccountSettingsTabProps) {
-  const [name, setName] = useState(userName || "");
-  const [email, setEmail] = useState(userEmail || "");
-
-  // Update state when props change
-  useEffect(() => {
-    if (userName) setName(userName);
-    if (userEmail) setEmail(userEmail);
-  }, [userName, userEmail]);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [notifications, setNotifications] = useState({
-    surveyCompleted: true,
-    dailySummary: true,
-    eachOrder: false,
-    paymentFailed: true,
-    productUpdates: true,
-  });
-  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Loading states
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
-
-  // Load notification preferences from API on mount
-  const loadPreferences = useCallback(async () => {
-    try {
-      const res = await fetch("/api/creator/account/preferences");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.preferences?.notifications) {
-          setNotifications(data.preferences.notifications);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load preferences:", error);
-    } finally {
-      setIsLoadingPreferences(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadPreferences();
-  }, [loadPreferences]);
-
-  const handleChangePhoto = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingPhoto(true);
-    try {
-      const formData = new FormData();
-      formData.append("avatar", file);
-
-      const res = await fetch("/api/creator/account/avatar", {
-        method: "POST",
-        headers: getCSRFHeaders(),
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to upload photo");
-      }
-
-      toast.success("Profile photo updated!");
-      window.location.reload();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload photo");
-    } finally {
-      setIsUploadingPhoto(false);
-    }
-  };
-
-  const handleSaveProfile = async () => {
-    if (!name.trim()) {
-      toast.error("Please enter your name");
-      return;
-    }
-
-    setIsSavingProfile(true);
-    try {
-      const res = await fetch("/api/creator/account/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({ name, email }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to update profile");
-      }
-
-      toast.success("Profile saved!");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update profile");
-    } finally {
-      setIsSavingProfile(false);
-    }
-  };
-
-  const handleUpdatePassword = async () => {
-    if (!currentPassword) {
-      toast.error("Please enter your current password");
-      return;
-    }
-    if (newPassword.length < 8) {
-      toast.error("New password must be at least 8 characters");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords don't match");
-      return;
-    }
-
-    setIsUpdatingPassword(true);
-    try {
-      const res = await fetch("/api/creator/account/password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to update password");
-      }
-
-      toast.success("Password updated!");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update password");
-    } finally {
-      setIsUpdatingPassword(false);
-    }
-  };
-
-  const handleSavePreferences = async () => {
-    setIsSavingPreferences(true);
-    try {
-      const res = await fetch("/api/creator/account/preferences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({ notifications }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to save preferences");
-      }
-
-      toast.success("Preferences saved!");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save preferences");
-    } finally {
-      setIsSavingPreferences(false);
-    }
-  };
+  const initials = userName
+    ? userName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+    : userEmail?.charAt(0).toUpperCase() || "U";
 
   return (
     <div className="space-y-6">
@@ -223,320 +48,101 @@ export function AccountSettingsTab({
         </div>
       </div>
 
-      {/* Profile Section */}
+      {/* Current User Info */}
       <Card>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Your personal information</CardDescription>
+          <CardTitle>Your Account</CardTitle>
+          <CardDescription>Quick overview of your account</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Profile Picture */}
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={userAvatar} alt={name} />
-              <AvatarFallback className="text-2xl bg-teal-100 text-teal-600">
-                {name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()}
+        <CardContent>
+          <div className="flex items-center gap-4 mb-6">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={userAvatar} alt={userName} />
+              <AvatarFallback className="text-xl bg-teal-100 text-teal-600">
+                {initials}
               </AvatarFallback>
             </Avatar>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handlePhotoSelected}
-            />
-            <Button variant="outline" onClick={handleChangePhoto} disabled={isUploadingPhoto}>
-              {isUploadingPhoto ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Camera className="h-4 w-4 mr-2" />
-                  Change Photo
-                </>
-              )}
-            </Button>
+            <div>
+              <p className="font-semibold text-lg">{userName || "Your Name"}</p>
+              <p className="text-sm text-muted-foreground">{userEmail}</p>
+            </div>
           </div>
 
-          {/* Name */}
-          <div className="space-y-2">
-            <Label>Name *</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-            />
-          </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <Label>Email *</Label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-            />
-          </div>
-
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSaveProfile} disabled={isSavingProfile}>
-            {isSavingProfile ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Profile"
-            )}
-          </Button>
+          <p className="text-sm text-muted-foreground mb-4">
+            Your account settings are managed from your main creator dashboard profile.
+            Use the links below to update your profile, notification preferences, and security settings.
+          </p>
         </CardContent>
       </Card>
 
-      {/* Password Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-teal-600" />
-            Password
-          </CardTitle>
-          <CardDescription>Update your password</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Current Password</Label>
-            <Input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Enter current password"
-            />
-          </div>
+      {/* Links to Main Settings */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="hover:border-teal-300 transition-colors">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <User className="h-5 w-5 text-teal-600" />
+              Edit Profile
+            </CardTitle>
+            <CardDescription>
+              Update your name, bio, profile photo, social links, and more
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/profile">
+              <Button className="w-full bg-teal-600 hover:bg-teal-700">
+                Go to Profile
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
 
-          <div className="space-y-2">
-            <Label>New Password</Label>
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter new password"
-            />
-          </div>
+        <Card className="hover:border-teal-300 transition-colors">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Settings className="h-5 w-5 text-teal-600" />
+              Account Settings
+            </CardTitle>
+            <CardDescription>
+              Manage email, password, privacy, and security settings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/settings">
+              <Button className="w-full bg-teal-600 hover:bg-teal-700">
+                Go to Settings
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="space-y-2">
-            <Label>Confirm New Password</Label>
-            <Input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
-            />
-          </div>
-
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleUpdatePassword} disabled={isUpdatingPassword}>
-            {isUpdatingPassword ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Updating...
-              </>
-            ) : (
-              "Update Password"
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Notification Preferences */}
+      {/* Notification Preferences Info */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-teal-600" />
             Notification Preferences
           </CardTitle>
-          <CardDescription>Choose what emails you receive</CardDescription>
+          <CardDescription>
+            Email notifications for your projects and backers
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {isLoadingPreferences ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="surveyCompleted"
-                  checked={notifications.surveyCompleted}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, surveyCompleted: checked as boolean })
-                  }
-                />
-                <Label htmlFor="surveyCompleted">
-                  Email me when a backer completes their survey
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="dailySummary"
-                  checked={notifications.dailySummary}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, dailySummary: checked as boolean })
-                  }
-                />
-                <Label htmlFor="dailySummary">
-                  Email me daily summary of new orders
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="eachOrder"
-                  checked={notifications.eachOrder}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, eachOrder: checked as boolean })
-                  }
-                />
-                <Label htmlFor="eachOrder">
-                  Email me for each new order
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="paymentFailed"
-                  checked={notifications.paymentFailed}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, paymentFailed: checked as boolean })
-                  }
-                />
-                <Label htmlFor="paymentFailed">
-                  Email me when a payment fails
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="productUpdates"
-                  checked={notifications.productUpdates}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, productUpdates: checked as boolean })
-                  }
-                />
-                <Label htmlFor="productUpdates">
-                  Email me product updates and tips
-                </Label>
-              </div>
-
-              <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSavePreferences} disabled={isSavingPreferences}>
-                {isSavingPreferences ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Preferences"
-                )}
-              </Button>
-            </>
-          )}
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Control which email notifications you receive, including updates about survey completions,
+            daily order summaries, payment failures, and more.
+          </p>
+          <Link href="/dashboard/settings">
+            <Button variant="outline" className="w-full">
+              <Bell className="h-4 w-4 mr-2" />
+              Manage Email Preferences
+              <ExternalLink className="h-4 w-4 ml-2" />
+            </Button>
+          </Link>
         </CardContent>
       </Card>
-
-      {/* Billing & Security */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-teal-600" />
-              Billing
-            </CardTitle>
-            <CardDescription>Manage your payment methods</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 border rounded-lg text-center">
-                <CreditCard className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-3">
-                  Payment methods are securely managed through Stripe
-                </p>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setShowAddPaymentDialog(true)}
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Manage in Stripe Portal
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-teal-600" />
-              Security
-            </CardTitle>
-            <CardDescription>Keep your account secure</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">Two-Factor Authentication</p>
-                  <p className="text-xs text-muted-foreground">Coming soon</p>
-                </div>
-                <Button variant="outline" size="sm" disabled>Enable</Button>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">Active Sessions</p>
-                  <p className="text-xs text-muted-foreground">Coming soon</p>
-                </div>
-                <Button variant="outline" size="sm" disabled>
-                  Manage
-                  <ExternalLink className="h-3 w-3 ml-1" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Add Payment Method Dialog */}
-      <Dialog open={showAddPaymentDialog} onOpenChange={setShowAddPaymentDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Payment Method</DialogTitle>
-            <DialogDescription>
-              Add a new payment method for receiving payouts
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 text-center text-muted-foreground">
-            <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Payment method management is handled through Stripe.</p>
-            <p className="text-sm mt-2">You will be redirected to Stripe&apos;s secure portal.</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddPaymentDialog(false)}>
-              Cancel
-            </Button>
-            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => {
-              window.open("/api/creator/stripe/portal", "_blank");
-              setShowAddPaymentDialog(false);
-            }}>
-              Open Stripe Portal
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
     </div>
   );
 }
