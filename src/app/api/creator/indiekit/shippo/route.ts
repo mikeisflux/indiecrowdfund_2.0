@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getSession } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
@@ -18,7 +18,7 @@ const actionSchema = z.object({
 // POST - Perform Shippo actions
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
