@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -65,12 +65,21 @@ import {
   Gift,
   Package,
   Globe,
-  Tag,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
 import type { Backer } from "../../types";
 import { STATUS_COLORS, STATUS_LABELS } from "../../types";
+
+interface SkuMapping {
+  id: string;
+  sourceType: string;
+  sourceId: string;
+  sourceName: string;
+  shopifySku: string;
+  shopifyProductName?: string;
+}
 
 interface BackersTabProps {
   backers: Backer[];
@@ -109,6 +118,10 @@ export function BackersTab({
   const [chargeProgress, setChargeProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // SKU Mappings state
+  const [skuMappings, setSkuMappings] = useState<SkuMapping[]>([]);
+  const [isLoadingSkuMappings, setIsLoadingSkuMappings] = useState(false);
+
   // Filter states
   const [rewardFilter, setRewardFilter] = useState<string[]>([]);
   const [addonFilter, setAddonFilter] = useState<string[]>([]);
@@ -120,14 +133,68 @@ export function BackersTab({
   const [pledgeDateTo, setPledgeDateTo] = useState<string>("");
   const [surveyFilter, setSurveyFilter] = useState<string>("all");
 
+  // Fetch SKU mappings when projectId changes
+  useEffect(() => {
+    async function fetchSkuMappings() {
+      if (!projectId) {
+        setSkuMappings([]);
+        return;
+      }
+
+      setIsLoadingSkuMappings(true);
+      try {
+        const response = await fetch(`/api/creator/indiekit/shopify/sku-mapping?projectId=${projectId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSkuMappings(data.mappings || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch SKU mappings:", error);
+      } finally {
+        setIsLoadingSkuMappings(false);
+      }
+    }
+    fetchSkuMappings();
+  }, [projectId]);
+
   // Extract unique values for filter options
   const filterOptions = useMemo(() => {
     const rewards = Array.from(new Set(backers.map(b => b.reward).filter(Boolean))).sort();
     const addons = Array.from(new Set(backers.flatMap(b => b.addons?.map(a => a.name) || []))).sort();
-    const skus = Array.from(new Set(backers.flatMap(b => b.items?.map(i => i.sku).filter(Boolean) as string[] || []))).sort();
     const locations = Array.from(new Set(backers.map(b => b.shippingAddress?.country).filter(Boolean) as string[])).sort();
-    return { rewards, addons, skus, locations };
+    return { rewards, addons, locations };
   }, [backers]);
+
+  // Build SKU filter options from mappings
+  const skuFilterOptions = useMemo(() => {
+    return skuMappings.map(m => ({
+      id: m.id,
+      label: `${m.sourceName} → ${m.shopifySku}`,
+      sku: m.shopifySku,
+      sourceType: m.sourceType,
+      sourceId: m.sourceId,
+      sourceName: m.sourceName,
+    }));
+  }, [skuMappings]);
+
+  // Helper to check if a backer has a specific SKU mapping
+  const backerHasSkuMapping = (backer: Backer, mapping: SkuMapping): boolean => {
+    // Check if backer's reward matches the mapping
+    if (mapping.sourceType === "REWARD" || mapping.sourceType === "TIER") {
+      // Match by reward name (sourceName)
+      if (backer.reward === mapping.sourceName) return true;
+    }
+
+    // Check if backer's addons match the mapping
+    if (mapping.sourceType === "ADDON") {
+      if (backer.addons?.some(a => a.name === mapping.sourceName)) return true;
+    }
+
+    // Check if backer's items match by SKU
+    if (backer.items?.some(i => i.sku === mapping.shopifySku)) return true;
+
+    return false;
+  };
 
   // Count active filters
   const activeFilterCount = [
@@ -221,9 +288,12 @@ export function BackersTab({
       const matchesAddon = addonFilter.length === 0 ||
         backer.addons?.some(a => addonFilter.includes(a.name));
 
-      // SKU filter
-      const matchesSku = skuFilter.length === 0 ||
-        backer.items?.some(i => i.sku && skuFilter.includes(i.sku));
+      // SKU filter - now uses mapped SKUs
+      let matchesSku = true;
+      if (skuFilter.length > 0) {
+        const selectedMappings = skuMappings.filter(m => skuFilter.includes(m.id));
+        matchesSku = selectedMappings.some(mapping => backerHasSkuMapping(backer, mapping));
+      }
 
       // Location filter
       const matchesLocation = locationFilter.length === 0 ||
@@ -550,16 +620,82 @@ export function BackersTab({
           )}
         />
 
-        {/* Items/SKUs Filter */}
-        <FilterPopover
-          label="Items and SKUs"
-          icon={Tag}
-          options={filterOptions.skus}
-          selected={skuFilter}
-          onToggle={(value) => setSkuFilter(prev =>
-            prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
-          )}
-        />
+        {/* SKU Mapping Filter */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={`h-9 ${skuFilter.length > 0 ? "border-teal-500 bg-teal-50" : ""}`}>
+              <Link2 className="h-4 w-4 mr-2" />
+              SKU Mapping
+              {skuFilter.length > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-teal-100 text-teal-700">
+                  {skuFilter.length}
+                </Badge>
+              )}
+              <ChevronDown className="h-4 w-4 ml-2" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-0" align="start">
+            <div className="p-2 border-b">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">SKU Mapping</span>
+                {skuFilter.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setSkuFilter([])}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+            <ScrollArea className="h-[200px]">
+              <div className="p-2 space-y-1">
+                {isLoadingSkuMappings ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : skuFilterOptions.length === 0 ? (
+                  <div className="text-center py-4 px-2">
+                    <Link2 className="h-8 w-8 mx-auto text-muted-foreground opacity-50 mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No SKUs mapped yet
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Please map SKUs through the SKU Mapping tab first
+                    </p>
+                  </div>
+                ) : (
+                  skuFilterOptions.map((option) => (
+                    <div
+                      key={option.id}
+                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                      onClick={() => setSkuFilter(prev =>
+                        prev.includes(option.id) ? prev.filter(v => v !== option.id) : [...prev, option.id]
+                      )}
+                    >
+                      <Checkbox
+                        checked={skuFilter.includes(option.id)}
+                        onCheckedChange={() => setSkuFilter(prev =>
+                          prev.includes(option.id) ? prev.filter(v => v !== option.id) : [...prev, option.id]
+                        )}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">{option.sourceName}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{option.sku}</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {option.sourceType === "ADDON" ? "Add-on" :
+                         option.sourceType === "REWARD" ? "Reward" : "Item"}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
 
         {/* Status Filter */}
         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
@@ -681,7 +817,7 @@ export function BackersTab({
               <ChevronDown className="h-4 w-4 ml-2" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-72 p-4" align="start">
+          <PopoverContent className="w-80 p-4" align="start">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Pledge date range</span>
