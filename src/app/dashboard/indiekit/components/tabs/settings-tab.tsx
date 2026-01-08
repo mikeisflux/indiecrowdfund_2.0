@@ -1710,13 +1710,25 @@ export function SettingsTab({
                     <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                       <Store className="h-4 w-4" />
                       <AlertTitle>Setup Instructions</AlertTitle>
-                      <AlertDescription className="space-y-2">
-                        <p>To connect Shopify, you need to create your own app in the Shopify Partners dashboard:</p>
-                        <ol className="list-decimal list-inside space-y-1 text-sm">
-                          <li>Go to <a href="https://partners.shopify.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">partners.shopify.com</a> and create an app</li>
-                          <li>Set <strong>App URL</strong> to: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded text-xs">{typeof window !== "undefined" ? window.location.origin : ""}/dashboard/indiekit</code></li>
-                          <li>Set <strong>Redirect URL</strong> to: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded text-xs">{typeof window !== "undefined" ? window.location.origin : ""}/api/creator/indiekit/shopify/oauth/callback</code></li>
-                          <li>Copy the Client ID (API Key) and Client Secret below</li>
+                      <AlertDescription className="space-y-3">
+                        <p>To connect Shopify, create a custom app in the Shopify Partners dashboard:</p>
+                        <ol className="list-decimal list-inside space-y-2 text-sm">
+                          <li>Go to <a href="https://partners.shopify.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">partners.shopify.com</a> → Apps → Create app</li>
+                          <li>Under <strong>Access</strong> → <strong>Scopes</strong>, enter:
+                            <code className="block bg-zinc-200 dark:bg-zinc-800 px-2 py-1 rounded text-xs mt-1 break-all">write_draft_orders,read_fulfillments,write_fulfillments,read_orders,write_orders,read_products</code>
+                          </li>
+                          <li>Set <strong>Redirect URL</strong> to:
+                            <code className="block bg-zinc-200 dark:bg-zinc-800 px-2 py-1 rounded text-xs mt-1 break-all">{typeof window !== "undefined" ? window.location.origin : ""}/api/creator/indiekit/shopify/oauth/callback</code>
+                          </li>
+                          <li>Under <strong>URLs</strong> section:
+                            <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                              <li>Set <strong>App URL</strong> to: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded text-xs">{typeof window !== "undefined" ? window.location.origin : ""}/dashboard/indiekit/shopify/app</code></li>
+                              <li><strong>Uncheck</strong> &quot;Embed app in Shopify admin&quot;</li>
+                            </ul>
+                          </li>
+                          <li>Set <strong>Webhooks API Version</strong> to: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded text-xs">2026-01</code></li>
+                          <li>Click <strong>Release</strong> to create a new version, then <strong>Install app</strong> on your store</li>
+                          <li>Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> from the app overview below</li>
                         </ol>
                       </AlertDescription>
                     </Alert>
