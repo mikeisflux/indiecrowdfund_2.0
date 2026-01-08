@@ -1906,7 +1906,7 @@ export function SettingsTab({
                               <li><strong>Uncheck</strong> &quot;Embed app in Shopify admin&quot;</li>
                             </ul>
                           </li>
-                          <li>Set <strong>Webhooks API Version</strong> to: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded text-xs">2026-01</code></li>
+                          <li>Set <strong>Webhooks API Version</strong> to: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded text-xs">2024-10</code></li>
                           <li>Click <strong>Release</strong> to create a new version, then <strong>Install app</strong> on your store</li>
                           <li>Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> from the app overview below</li>
                         </ol>
