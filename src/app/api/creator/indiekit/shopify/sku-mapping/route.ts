@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
     const pledgesWithOrders = await db.pledge.findMany({
       where: {
         projectId,
-        status: { in: ["SUCCESSFUL", "PENDING"] }, // Only count successful/pending pledges
+        status: { in: ["COMPLETED", "PENDING"] }, // Only count completed/pending pledges
       },
       select: {
         rewardId: true,
