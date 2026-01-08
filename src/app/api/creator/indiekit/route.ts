@@ -420,6 +420,14 @@ export async function GET(req: NextRequest) {
         ...pledge.addons.map((a: { addon: { title: string }; quantity: number }) => ({ name: a.addon.title, quantity: a.quantity })),
       ];
 
+      // Build addons list with proper structure
+      const addons = pledge.addons.map((a: { addon: { id: string; title: string; amount: unknown }; quantity: number }) => ({
+        id: a.addon.id,
+        name: a.addon.title,
+        quantity: a.quantity,
+        amount: Number(a.addon.amount),
+      }));
+
       return {
         id: pledge.id,
         backerNumber: pledge.backerNumber || 0,
@@ -428,6 +436,8 @@ export async function GET(req: NextRequest) {
         avatar: pledge.user.image || undefined,
         pledgeAmount: Number(pledge.amount),
         reward: pledge.reward?.title || "No Reward",
+        rewardId: pledge.reward?.id,
+        rewardAmount: pledge.reward ? Number(pledge.reward.amount) : 0,
         status,
         surveyCompleted: surveyResponse?.isComplete || false,
         shippingAddress: shippingAddress ? {
@@ -437,6 +447,7 @@ export async function GET(req: NextRequest) {
           postalCode: shippingAddress.postalCode || "",
         } : undefined,
         items,
+        addons,
         digitalDownloads: [], // Would be populated from digital file distribution records
       };
     });

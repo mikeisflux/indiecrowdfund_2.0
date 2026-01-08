@@ -179,15 +179,16 @@ export function BackersTab({
 
   // Helper to check if a backer has a specific SKU mapping
   const backerHasSkuMapping = (backer: Backer, mapping: SkuMapping): boolean => {
-    // Check if backer's reward matches the mapping
+    // Check if backer's reward matches the mapping (by ID or name)
     if (mapping.sourceType === "REWARD" || mapping.sourceType === "TIER") {
-      // Match by reward name (sourceName)
+      // Match by reward ID if available, otherwise by name
+      if (backer.rewardId && backer.rewardId === mapping.sourceId) return true;
       if (backer.reward === mapping.sourceName) return true;
     }
 
-    // Check if backer's addons match the mapping
+    // Check if backer's addons match the mapping (by ID or name)
     if (mapping.sourceType === "ADDON") {
-      if (backer.addons?.some(a => a.name === mapping.sourceName)) return true;
+      if (backer.addons?.some(a => a.id === mapping.sourceId || a.name === mapping.sourceName)) return true;
     }
 
     // Check if backer's items match by SKU

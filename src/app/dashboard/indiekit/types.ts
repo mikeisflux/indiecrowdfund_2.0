@@ -60,6 +60,7 @@ export interface Backer {
   avatar?: string;
   pledgeAmount: number;
   reward: string;
+  rewardId?: string;
   rewardAmount: number;
   status: "not_pushed" | "push_errored" | "pushed" | "shipped";
   chargeStatus: "not_charged" | "errored" | "charged" | "paypal_collected";
