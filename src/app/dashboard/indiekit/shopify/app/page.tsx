@@ -2,39 +2,43 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
 
 /**
  * This page handles Shopify app access from within the Shopify admin iframe.
- *
- * When Shopify loads the app, this page will:
- * 1. If shop parameter exists - redirect to install flow (breaking out of iframe)
- * 2. If no shop parameter - redirect user out of iframe to IndieKit dashboard
+ * It displays a simple message and redirects users to the IndieKit dashboard.
  *
  * The App URL in Shopify Partners should be set to:
- * https://yourdomain.com/dashboard/indiekit/shopify/app
+ * https://indiecrowdfund.com/dashboard/indiekit/shopify/app
+ *
+ * IMPORTANT: If you don't want this embedded, uncheck "Embed app in Shopify admin"
+ * in Shopify Partners dashboard.
  */
 function ShopifyAppContent() {
   const searchParams = useSearchParams();
   const [message, setMessage] = useState("Loading IndieKit...");
+  const [showManualLink, setShowManualLink] = useState(false);
 
   useEffect(() => {
     const shop = searchParams?.get("shop");
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
 
-    // Helper function to redirect, breaking out of iframe if needed
+    // Show manual link after a delay in case redirect doesn't work
+    const linkTimer = setTimeout(() => {
+      setShowManualLink(true);
+    }, 2000);
+
+    // Helper function to redirect
     const redirectTo = (url: string) => {
       try {
-        // Check if we're in an iframe
-        if (window.top !== window.self) {
-          // Try to break out of iframe
-          window.top!.location.href = url;
+        // Try to redirect the top window (break out of iframe)
+        if (window.top && window.top !== window.self) {
+          window.top.location.href = url;
         } else {
           window.location.href = url;
         }
       } catch {
-        // Cross-origin iframe - use window.open as fallback
-        window.open(url, "_top");
+        // Cross-origin iframe - can't access top, show manual link
+        setShowManualLink(true);
       }
     };
 
@@ -42,35 +46,89 @@ function ShopifyAppContent() {
       // Installation request - redirect to install flow
       setMessage("Starting Shopify installation...");
       const installUrl = `${appUrl}/dashboard/indiekit/shopify/install?shop=${encodeURIComponent(shop)}`;
-
-      // Small delay to show the message
-      setTimeout(() => {
-        redirectTo(installUrl);
-      }, 500);
+      setTimeout(() => redirectTo(installUrl), 500);
     } else {
-      // App already installed or accessed directly - redirect to IndieKit dashboard
+      // App accessed - redirect to IndieKit dashboard
       setMessage("Opening IndieKit fulfillment dashboard...");
       const dashboardUrl = `${appUrl}/dashboard/indiekit`;
-
-      // Small delay to show the message
-      setTimeout(() => {
-        redirectTo(dashboardUrl);
-      }, 500);
+      setTimeout(() => redirectTo(dashboardUrl), 500);
     }
+
+    return () => clearTimeout(linkTimer);
   }, [searchParams]);
 
+  const dashboardUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com") + "/dashboard/indiekit";
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-purple-50 to-white">
-      <div className="text-center p-8">
-        <div className="mb-6">
-          <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-2xl font-bold">IK</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">IndieKit</h1>
-          <p className="text-sm text-gray-500">Fulfillment Dashboard</p>
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#faf5ff",
+      fontFamily: "system-ui, -apple-system, sans-serif"
+    }}>
+      <div style={{ textAlign: "center", padding: "32px" }}>
+        <div style={{
+          width: "64px",
+          height: "64px",
+          backgroundColor: "#9333ea",
+          borderRadius: "16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          margin: "0 auto 16px"
+        }}>
+          <span style={{ color: "white", fontSize: "24px", fontWeight: "bold" }}>IK</span>
         </div>
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
-        <p className="text-gray-600">{message}</p>
+        <h1 style={{ fontSize: "24px", fontWeight: "bold", color: "#111827", marginBottom: "8px" }}>
+          IndieKit
+        </h1>
+        <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
+          Fulfillment Dashboard
+        </p>
+
+        {/* Simple CSS spinner */}
+        <div style={{
+          width: "32px",
+          height: "32px",
+          border: "3px solid #e9d5ff",
+          borderTopColor: "#9333ea",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite",
+          margin: "0 auto 16px"
+        }} />
+
+        <p style={{ color: "#4b5563" }}>{message}</p>
+
+        {showManualLink && (
+          <div style={{ marginTop: "24px" }}>
+            <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "12px" }}>
+              If you&apos;re not redirected automatically:
+            </p>
+            <a
+              href={dashboardUrl}
+              target="_top"
+              style={{
+                display: "inline-block",
+                padding: "12px 24px",
+                backgroundColor: "#9333ea",
+                color: "white",
+                borderRadius: "8px",
+                textDecoration: "none",
+                fontWeight: "500"
+              }}
+            >
+              Open IndieKit Dashboard
+            </a>
+          </div>
+        )}
+
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     </div>
   );
@@ -80,11 +138,14 @@ export default function ShopifyAppPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-purple-50 to-white">
-          <div className="text-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
-            <p className="text-gray-600">Loading...</p>
-          </div>
+        <div style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#faf5ff"
+        }}>
+          <p style={{ color: "#4b5563" }}>Loading...</p>
         </div>
       }
     >
