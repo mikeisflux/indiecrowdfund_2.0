@@ -28,6 +28,12 @@ const csrfExemptRoutes = [
   "/api/admin/ai-marketing/campaigns/fix-images", // One-time fix script
 ];
 
+// Routes that allow Shopify iframe embedding
+const shopifyIframeRoutes = [
+  "/dashboard/indiekit/shopify/",
+  "/api/creator/indiekit/shopify/install",
+];
+
 // Generate a CSRF token
 function generateCSRFToken(): string {
   const array = new Uint8Array(32);
@@ -45,7 +51,7 @@ function getSecuritySettings() {
 }
 
 // Generate CSP header value
-function getCSPHeader(): string {
+function getCSPHeader(allowShopifyIframe: boolean = false): string {
   const isDev = process.env.NODE_ENV === "development";
 
   // Script sources - only allow unsafe-eval in development (needed for hot reload)
@@ -54,6 +60,11 @@ function getCSPHeader(): string {
   const scriptSrc = isDev
     ? "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com"
     : "'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com";
+
+  // For Shopify iframe routes, allow embedding from Shopify domains
+  const frameAncestors = allowShopifyIframe
+    ? "https://*.myshopify.com https://admin.shopify.com https://*.shopify.com"
+    : "'self'";
 
   const directives = [
     "default-src 'self'",
@@ -69,7 +80,7 @@ function getCSPHeader(): string {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'self'",
+    `frame-ancestors ${frameAncestors}`,
     "upgrade-insecure-requests",
   ];
 
@@ -165,9 +176,11 @@ export function middleware(req: NextRequest) {
     pathname.startsWith(route)
   );
   const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
+  // Shopify routes handle their own auth flow (redirect to login from client-side)
+  const isShopifyRoute = pathname.startsWith("/dashboard/indiekit/shopify/");
 
-  // Check for session cookie on protected/admin routes
-  if (isProtectedRoute || isAdminRoute) {
+  // Check for session cookie on protected/admin routes (except Shopify routes which handle auth client-side)
+  if ((isProtectedRoute || isAdminRoute) && !isShopifyRoute) {
     const sessionToken = req.cookies.get(SESSION_COOKIE_NAME)?.value;
 
     // Check if user has a session token (full validation happens in routes)
@@ -185,14 +198,24 @@ export function middleware(req: NextRequest) {
   // Create response with security headers (applies to all routes)
   const response = NextResponse.next();
 
+  // Check if this is a Shopify iframe route
+  const isShopifyIframeRoute = shopifyIframeRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
   // Add Content Security Policy header if enabled
   if (securitySettings.contentSecurityPolicy) {
-    response.headers.set("Content-Security-Policy", getCSPHeader());
+    response.headers.set("Content-Security-Policy", getCSPHeader(isShopifyIframeRoute));
   }
 
   // Add other security headers
   response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  // Allow Shopify iframe embedding for specific routes
+  if (isShopifyIframeRoute) {
+    response.headers.set("X-Frame-Options", "ALLOWALL");
+  } else {
+    response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  }
   response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
