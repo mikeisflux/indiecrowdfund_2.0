@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,11 @@ import {
   Save,
   Store,
   AlertCircle,
+  XCircle,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface SkuMapping {
   id: string;
@@ -36,6 +38,12 @@ interface UnmappedItem {
   sourceName: string;
   amount?: number;
   quantityClaimed?: number;
+}
+
+interface SkuValidationState {
+  status: "idle" | "validating" | "valid" | "invalid";
+  productName?: string;
+  error?: string;
 }
 
 interface SkuMappingTabProps {
@@ -58,6 +66,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   const [isLoadingSkuMappings, setIsLoadingSkuMappings] = useState(false);
   const [isSavingSkuMapping, setIsSavingSkuMapping] = useState<string | null>(null);
   const [skuInputs, setSkuInputs] = useState<Record<string, string>>({});
+  const [skuValidation, setSkuValidation] = useState<Record<string, SkuValidationState>>({});
 
   // Check Shopify connection status on mount
   useEffect(() => {
@@ -123,14 +132,98 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     fetchSkuMappings();
   }, [projectId, shopifyStatus.connected]);
 
+  // Validate SKU against Shopify
+  const validateSku = useCallback(async (key: string, sku: string) => {
+    if (!sku?.trim()) {
+      setSkuValidation(prev => ({
+        ...prev,
+        [key]: { status: "idle" }
+      }));
+      return;
+    }
+
+    setSkuValidation(prev => ({
+      ...prev,
+      [key]: { status: "validating" }
+    }));
+
+    try {
+      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "validate",
+          shopifySku: sku.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.valid) {
+        setSkuValidation(prev => ({
+          ...prev,
+          [key]: {
+            status: "valid",
+            productName: data.variantTitle
+              ? `${data.productName} - ${data.variantTitle}`
+              : data.productName,
+          }
+        }));
+      } else {
+        setSkuValidation(prev => ({
+          ...prev,
+          [key]: {
+            status: "invalid",
+            error: data.error || "SKU not found in Shopify",
+          }
+        }));
+      }
+    } catch {
+      setSkuValidation(prev => ({
+        ...prev,
+        [key]: {
+          status: "invalid",
+          error: "Failed to validate SKU",
+        }
+      }));
+    }
+  }, [projectId]);
+
+  // Debounced validation on input change
+  useEffect(() => {
+    const timers: Record<string, NodeJS.Timeout> = {};
+
+    Object.entries(skuInputs).forEach(([key, value]) => {
+      if (value?.trim() && skuValidation[key]?.status !== "validating") {
+        timers[key] = setTimeout(() => {
+          validateSku(key, value);
+        }, 500); // 500ms debounce
+      }
+    });
+
+    return () => {
+      Object.values(timers).forEach(timer => clearTimeout(timer));
+    };
+  }, [skuInputs, validateSku, skuValidation]);
+
   const handleSaveSkuMapping = async (item: UnmappedItem) => {
-    const sku = skuInputs[`${item.sourceType}-${item.sourceId}`];
+    const key = `${item.sourceType}-${item.sourceId}`;
+    const sku = skuInputs[key];
+
     if (!sku?.trim()) {
       toast.error("Please enter a Shopify SKU");
       return;
     }
 
-    setIsSavingSkuMapping(`${item.sourceType}-${item.sourceId}`);
+    // Check if SKU is valid before saving
+    const validation = skuValidation[key];
+    if (validation?.status === "invalid") {
+      toast.error(validation.error || "Please enter a valid SKU");
+      return;
+    }
+
+    setIsSavingSkuMapping(key);
     try {
       const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
@@ -157,10 +250,15 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
       ));
       setSkuInputs(prev => {
         const next = { ...prev };
-        delete next[`${item.sourceType}-${item.sourceId}`];
+        delete next[key];
         return next;
       });
-      toast.success(`Mapped "${item.sourceName}" to SKU: ${sku.trim()}`);
+      setSkuValidation(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      toast.success(data.message || `Mapped "${item.sourceName}" to SKU: ${sku.trim()}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save mapping");
     } finally {
@@ -198,6 +296,23 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     } finally {
       setIsSavingSkuMapping(null);
     }
+  };
+
+  const getInputClassName = (key: string) => {
+    const validation = skuValidation[key];
+    if (!validation || validation.status === "idle") {
+      return "";
+    }
+    if (validation.status === "validating") {
+      return "border-yellow-400 focus:ring-yellow-400";
+    }
+    if (validation.status === "valid") {
+      return "border-green-500 focus:ring-green-500 bg-green-50 dark:bg-green-900/20";
+    }
+    if (validation.status === "invalid") {
+      return "border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-900/20";
+    }
+    return "";
   };
 
   return (
@@ -262,7 +377,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
               )}
             </div>
             <CardDescription>
-              Map your rewards, add-ons, and items to Shopify product SKUs
+              Map your rewards, add-ons, and items to Shopify product SKUs. SKUs are validated against your Shopify store.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -296,6 +411,11 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                                 <span className="text-sm text-muted-foreground">
                                   SKU: <span className="font-mono font-medium">{mapping.shopifySku}</span>
                                 </span>
+                                {mapping.shopifyProductName && (
+                                  <span className="text-sm text-green-600">
+                                    → {mapping.shopifyProductName}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -327,6 +447,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                     <div className="space-y-2">
                       {unmappedItems.map((item) => {
                         const key = `${item.sourceType}-${item.sourceId}`;
+                        const validation = skuValidation[key];
+                        const inputValue = skuInputs[key] || "";
+
                         return (
                           <div
                             key={key}
@@ -349,28 +472,82 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <Input
-                                placeholder="Shopify SKU"
-                                className="w-40 h-9"
-                                value={skuInputs[key] || ""}
-                                onChange={(e) => setSkuInputs(prev => ({
-                                  ...prev,
-                                  [key]: e.target.value
-                                }))}
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => handleSaveSkuMapping(item)}
-                                disabled={isSavingSkuMapping === key || !skuInputs[key]?.trim()}
-                                className="h-9 bg-[#95BF47] hover:bg-[#7a9e3a]"
-                              >
-                                {isSavingSkuMapping === key ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Save className="h-4 w-4" />
-                                )}
-                              </Button>
+                            <div className="flex flex-col gap-1 shrink-0">
+                              <div className="flex items-center gap-2">
+                                <div className="relative">
+                                  <Input
+                                    placeholder="Shopify SKU"
+                                    className={cn(
+                                      "w-44 h-9 pr-8",
+                                      getInputClassName(key)
+                                    )}
+                                    value={inputValue}
+                                    onChange={(e) => {
+                                      setSkuInputs(prev => ({
+                                        ...prev,
+                                        [key]: e.target.value
+                                      }));
+                                      // Reset validation when typing
+                                      if (skuValidation[key]?.status !== "idle") {
+                                        setSkuValidation(prev => ({
+                                          ...prev,
+                                          [key]: { status: "idle" }
+                                        }));
+                                      }
+                                    }}
+                                    onBlur={() => {
+                                      if (inputValue?.trim()) {
+                                        validateSku(key, inputValue);
+                                      }
+                                    }}
+                                  />
+                                  {/* Validation indicator inside input */}
+                                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                    {validation?.status === "validating" && (
+                                      <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
+                                    )}
+                                    {validation?.status === "valid" && (
+                                      <CheckCircle className="h-4 w-4 text-green-500" />
+                                    )}
+                                    {validation?.status === "invalid" && (
+                                      <XCircle className="h-4 w-4 text-red-500" />
+                                    )}
+                                  </div>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveSkuMapping(item)}
+                                  disabled={
+                                    isSavingSkuMapping === key ||
+                                    !inputValue?.trim() ||
+                                    validation?.status === "invalid" ||
+                                    validation?.status === "validating"
+                                  }
+                                  className={cn(
+                                    "h-9",
+                                    validation?.status === "valid"
+                                      ? "bg-green-600 hover:bg-green-700"
+                                      : "bg-[#95BF47] hover:bg-[#7a9e3a]"
+                                  )}
+                                >
+                                  {isSavingSkuMapping === key ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Save className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                              {/* Validation message */}
+                              {validation?.status === "valid" && validation.productName && (
+                                <p className="text-xs text-green-600 truncate max-w-[200px]">
+                                  → {validation.productName}
+                                </p>
+                              )}
+                              {validation?.status === "invalid" && (
+                                <p className="text-xs text-red-600">
+                                  {validation.error || "SKU not found"}
+                                </p>
+                              )}
                             </div>
                           </div>
                         );

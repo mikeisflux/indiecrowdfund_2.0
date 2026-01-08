@@ -4,6 +4,83 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// Helper to search for a SKU in Shopify
+async function findSkuInShopify(
+  shopDomain: string,
+  accessToken: string,
+  sku: string
+): Promise<{
+  found: boolean;
+  productId?: string;
+  variantId?: string;
+  productName?: string;
+  variantTitle?: string;
+}> {
+  // Use Shopify GraphQL API to search for products by SKU
+  const query = `
+    query searchBySku($query: String!) {
+      productVariants(first: 10, query: $query) {
+        edges {
+          node {
+            id
+            sku
+            title
+            product {
+              id
+              title
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetch(`https://${shopDomain}/admin/api/2024-01/graphql.json`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": accessToken,
+      },
+      body: JSON.stringify({
+        query,
+        variables: { query: `sku:${sku}` },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Shopify API error:", response.status, await response.text());
+      return { found: false };
+    }
+
+    const data = await response.json();
+    const variants = data.data?.productVariants?.edges || [];
+
+    // Look for exact SKU match
+    for (const edge of variants) {
+      const variant = edge.node;
+      if (variant.sku?.toLowerCase() === sku.toLowerCase()) {
+        // Extract numeric IDs from GraphQL global IDs
+        const productId = variant.product.id.replace("gid://shopify/Product/", "");
+        const variantId = variant.id.replace("gid://shopify/ProductVariant/", "");
+
+        return {
+          found: true,
+          productId,
+          variantId,
+          productName: variant.product.title,
+          variantTitle: variant.title !== "Default Title" ? variant.title : undefined,
+        };
+      }
+    }
+
+    return { found: false };
+  } catch (error) {
+    console.error("Error searching Shopify SKU:", error);
+    return { found: false };
+  }
+}
+
 // GET - Get SKU mappings and unmapped items for a project
 export async function GET(req: NextRequest) {
   try {
@@ -124,11 +201,9 @@ export async function POST(req: NextRequest) {
       sourceId,
       sourceName,
       shopifySku,
-      shopifyProductId,
-      shopifyVariantId,
-      shopifyProductName,
       quantity,
       mappingId,
+      skipValidation, // Allow skipping validation for testing
     } = body;
 
     if (!projectId) {
@@ -150,6 +225,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
+    // Get user's Shopify credentials for validation
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        shopifyAccessToken: true,
+        shopifyShopDomain: true,
+      },
+    });
+
     // CREATE or UPDATE mapping
     if (action === "save" || action === "create" || action === "update") {
       if (!sourceType || !sourceId || !sourceName || !shopifySku) {
@@ -157,6 +241,36 @@ export async function POST(req: NextRequest) {
           { error: "sourceType, sourceId, sourceName, and shopifySku are required" },
           { status: 400 }
         );
+      }
+
+      // Validate SKU exists in Shopify (unless skipped)
+      let shopifyProductId: string | null = null;
+      let shopifyVariantId: string | null = null;
+      let shopifyProductName: string | null = null;
+
+      if (!skipValidation && user?.shopifyAccessToken && user?.shopifyShopDomain) {
+        const skuResult = await findSkuInShopify(
+          user.shopifyShopDomain,
+          user.shopifyAccessToken,
+          shopifySku.trim()
+        );
+
+        if (!skuResult.found) {
+          return NextResponse.json(
+            {
+              error: `SKU "${shopifySku}" not found in Shopify. Please check the SKU and try again.`,
+              code: "SKU_NOT_FOUND"
+            },
+            { status: 400 }
+          );
+        }
+
+        // Use the Shopify product info from the search
+        shopifyProductId = skuResult.productId || null;
+        shopifyVariantId = skuResult.variantId || null;
+        shopifyProductName = skuResult.variantTitle
+          ? `${skuResult.productName} - ${skuResult.variantTitle}`
+          : skuResult.productName || null;
       }
 
       const mapping = await db.shopifySkuMapping.upsert({
@@ -172,25 +286,27 @@ export async function POST(req: NextRequest) {
           sourceType,
           sourceId,
           sourceName,
-          shopifySku,
-          shopifyProductId: shopifyProductId || null,
-          shopifyVariantId: shopifyVariantId || null,
-          shopifyProductName: shopifyProductName || null,
+          shopifySku: shopifySku.trim(),
+          shopifyProductId,
+          shopifyVariantId,
+          shopifyProductName,
           quantity: quantity || 1,
         },
         update: {
           sourceName,
-          shopifySku,
-          shopifyProductId: shopifyProductId || null,
-          shopifyVariantId: shopifyVariantId || null,
-          shopifyProductName: shopifyProductName || null,
+          shopifySku: shopifySku.trim(),
+          shopifyProductId,
+          shopifyVariantId,
+          shopifyProductName,
           quantity: quantity || 1,
         },
       });
 
       return NextResponse.json({
         success: true,
-        message: "SKU mapping saved",
+        message: shopifyProductName
+          ? `SKU mapped to "${shopifyProductName}"`
+          : "SKU mapping saved",
         mapping,
       });
     }
@@ -211,6 +327,44 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // VALIDATE SKU (just check if it exists, don't save)
+    if (action === "validate") {
+      if (!shopifySku) {
+        return NextResponse.json({ error: "shopifySku required" }, { status: 400 });
+      }
+
+      if (!user?.shopifyAccessToken || !user?.shopifyShopDomain) {
+        return NextResponse.json(
+          { error: "Shopify not connected. Please connect your store first." },
+          { status: 400 }
+        );
+      }
+
+      const skuResult = await findSkuInShopify(
+        user.shopifyShopDomain,
+        user.shopifyAccessToken,
+        shopifySku.trim()
+      );
+
+      if (!skuResult.found) {
+        return NextResponse.json(
+          {
+            valid: false,
+            error: `SKU "${shopifySku}" not found in Shopify`
+          },
+          { status: 200 }
+        );
+      }
+
+      return NextResponse.json({
+        valid: true,
+        productId: skuResult.productId,
+        variantId: skuResult.variantId,
+        productName: skuResult.productName,
+        variantTitle: skuResult.variantTitle,
+      });
+    }
+
     // BULK SAVE mappings
     if (action === "bulk_save") {
       const { mappings } = body;
@@ -219,8 +373,38 @@ export async function POST(req: NextRequest) {
       }
 
       const results = [];
+      const errors = [];
+
       for (const m of mappings) {
         if (m.sourceType && m.sourceId && m.sourceName && m.shopifySku) {
+          // Validate each SKU
+          let shopifyProductId: string | null = null;
+          let shopifyVariantId: string | null = null;
+          let shopifyProductName: string | null = null;
+
+          if (!skipValidation && user?.shopifyAccessToken && user?.shopifyShopDomain) {
+            const skuResult = await findSkuInShopify(
+              user.shopifyShopDomain,
+              user.shopifyAccessToken,
+              m.shopifySku.trim()
+            );
+
+            if (!skuResult.found) {
+              errors.push({
+                sourceName: m.sourceName,
+                sku: m.shopifySku,
+                error: "SKU not found in Shopify",
+              });
+              continue;
+            }
+
+            shopifyProductId = skuResult.productId || null;
+            shopifyVariantId = skuResult.variantId || null;
+            shopifyProductName = skuResult.variantTitle
+              ? `${skuResult.productName} - ${skuResult.variantTitle}`
+              : skuResult.productName || null;
+          }
+
           const mapping = await db.shopifySkuMapping.upsert({
             where: {
               projectId_sourceType_sourceId: {
@@ -234,18 +418,18 @@ export async function POST(req: NextRequest) {
               sourceType: m.sourceType,
               sourceId: m.sourceId,
               sourceName: m.sourceName,
-              shopifySku: m.shopifySku,
-              shopifyProductId: m.shopifyProductId || null,
-              shopifyVariantId: m.shopifyVariantId || null,
-              shopifyProductName: m.shopifyProductName || null,
+              shopifySku: m.shopifySku.trim(),
+              shopifyProductId,
+              shopifyVariantId,
+              shopifyProductName,
               quantity: m.quantity || 1,
             },
             update: {
               sourceName: m.sourceName,
-              shopifySku: m.shopifySku,
-              shopifyProductId: m.shopifyProductId || null,
-              shopifyVariantId: m.shopifyVariantId || null,
-              shopifyProductName: m.shopifyProductName || null,
+              shopifySku: m.shopifySku.trim(),
+              shopifyProductId,
+              shopifyVariantId,
+              shopifyProductName,
               quantity: m.quantity || 1,
             },
           });
@@ -254,9 +438,12 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({
-        success: true,
-        message: `Saved ${results.length} SKU mappings`,
+        success: errors.length === 0,
+        message: errors.length > 0
+          ? `Saved ${results.length} mappings, ${errors.length} failed`
+          : `Saved ${results.length} SKU mappings`,
         mappings: results,
+        errors: errors.length > 0 ? errors : undefined,
       });
     }
 
