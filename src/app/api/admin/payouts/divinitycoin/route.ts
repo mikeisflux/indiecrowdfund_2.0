@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
       where: {
         divinityCoinBalance: { gt: 0 },
         // Must have at least one project (funded or otherwise) to be considered a creator
-        projects: {
+        createdProjects: {
           some: {
             status: { in: ["FUNDED", "LIVE", "FAILED", "DRAFT", "SUBMITTED", "APPROVED"] },
           },
@@ -221,7 +221,7 @@ export async function GET(request: NextRequest) {
             isVerified: true,
           },
         },
-        projects: {
+        createdProjects: {
           where: {
             status: { in: ["FUNDED", "LIVE", "FAILED"] },
           },
@@ -266,7 +266,7 @@ export async function GET(request: NextRequest) {
         : [];
 
       // Calculate total earnings from their projects
-      const projectEarnings = creator.projects.reduce(
+      const projectEarnings = creator.createdProjects.reduce(
         (sum: number, p: { currentAmount: unknown }) => sum + Number(p.currentAmount || 0),
         0
       );
@@ -277,9 +277,9 @@ export async function GET(request: NextRequest) {
         email: creator.email,
         image: creator.image,
         balance: Number(creator.divinityCoinBalance),
-        projectCount: creator.projects.length,
+        projectCount: creator.createdProjects.length,
         projectEarnings,
-        projects: creator.projects.map((p: { id: string; title: string; status: string; currentAmount: unknown }) => ({
+        projects: creator.createdProjects.map((p: { id: string; title: string; status: string; currentAmount: unknown }) => ({
           id: p.id,
           title: p.title,
           status: p.status,
