@@ -8,7 +8,7 @@ interface ProjectData {
   id: string;
   title: string;
   slug: string;
-  tagline: string | null;
+  subtitle: string | null;
   imageUrl: string | null;
   status: string;
   fundingGoal: number;
@@ -68,7 +68,7 @@ export async function GET(
             id: true,
             title: true,
             slug: true,
-            tagline: true,
+            subtitle: true,
             imageUrl: true,
             status: true,
             fundingGoal: true,
@@ -98,7 +98,7 @@ export async function GET(
                 id: true,
                 title: true,
                 slug: true,
-                tagline: true,
+                subtitle: true,
                 imageUrl: true,
                 status: true,
                 fundingGoal: true,
@@ -129,7 +129,7 @@ export async function GET(
       id: project.id,
       title: project.title,
       slug: project.slug,
-      tagline: project.tagline,
+      subtitle: project.subtitle,
       imageUrl: project.imageUrl,
       status: project.status,
       fundingGoal: project.fundingGoal,
@@ -148,7 +148,7 @@ export async function GET(
           id: pledge.project.id,
           title: pledge.project.title,
           slug: pledge.project.slug,
-          tagline: pledge.project.tagline,
+          subtitle: pledge.project.subtitle,
           imageUrl: pledge.project.imageUrl,
           status: pledge.project.status,
           fundingGoal: pledge.project.fundingGoal,

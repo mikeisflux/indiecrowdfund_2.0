@@ -140,7 +140,8 @@ export async function GET(request: Request) {
           title: true,
           priority: true,
           createdAt: true,
-          reporter: { select: { name: true } },
+          name: true,
+          user: { select: { name: true } },
         },
       }),
     ]);
@@ -250,7 +251,7 @@ export async function GET(request: Request) {
           id: notifId,
           type: "message",
           title: report.priority === "HIGH" || report.priority === "CRITICAL" ? "Urgent Support Request" : "Support Request",
-          message: `${report.title} - from ${report.reporter?.name || "Unknown"}`,
+          message: `${report.title} - from ${report.user?.name || report.name || "Unknown"}`,
           read: readNotifications.has(notifId),
           createdAt: report.createdAt,
           actionUrl: `/admin/bug-reports/${report.id}`,
