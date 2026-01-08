@@ -155,8 +155,10 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
   if (!backer) return null;
 
   const handleViewAsBacker = () => {
-    // Open backer survey view in new tab
-    window.open(`/dashboard/pledges/${backer.id}/survey`, '_blank');
+    // Copy the backer's survey link to clipboard - creators can share this with backers
+    const surveyLink = `${window.location.origin}/dashboard/pledges/${backer.id}/survey`;
+    navigator.clipboard.writeText(surveyLink);
+    toast.success("Survey link copied to clipboard");
   };
 
   const handleCancelOrder = async () => {
@@ -627,8 +629,8 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                         </div>
 
                         <Button variant="outline" size="sm" onClick={handleViewAsBacker}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Full Survey
+                          <Link2 className="h-4 w-4 mr-2" />
+                          Copy Survey Link
                         </Button>
                       </>
                     )}
