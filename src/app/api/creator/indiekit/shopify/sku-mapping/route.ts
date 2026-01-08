@@ -36,7 +36,7 @@ async function findSkuInShopify(
   `;
 
   try {
-    const response = await fetch(`https://${shopDomain}/admin/api/2026-01/graphql.json`, {
+    const response = await fetch(`https://${shopDomain}/admin/api/2024-10/graphql.json`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
