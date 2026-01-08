@@ -19,7 +19,7 @@ function ShopifyAppContent() {
   const [message, setMessage] = useState("Loading IndieKit...");
 
   useEffect(() => {
-    const shop = searchParams.get("shop");
+    const shop = searchParams?.get("shop");
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
 
     // Helper function to redirect, breaking out of iframe if needed
