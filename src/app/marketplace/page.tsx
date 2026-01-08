@@ -11,6 +11,7 @@ import {
   BookOpen,
   Building2,
   ArrowRight,
+  ArrowLeft,
   Star,
   Sparkles,
   TrendingUp,
@@ -322,6 +323,11 @@ export default function MarketplacePage() {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
             <Link
               href="/"
               className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"

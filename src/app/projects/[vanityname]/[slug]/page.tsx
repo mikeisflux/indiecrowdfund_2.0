@@ -24,6 +24,7 @@ import {
   Info,
   Loader2,
   Menu,
+  ArrowLeft,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import {
@@ -445,14 +446,21 @@ export default function ProjectPage() {
       {/* Main Navigation */}
       <header className="border-b border-border/50 glass-card relative z-10">
         <div className="container flex h-14 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-shadow">
-              <Heart className="h-3.5 w-3.5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
-              IndieCrowdfund
-            </span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-shadow">
+                <Heart className="h-3.5 w-3.5 text-white" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
+                IndieCrowdfund
+              </span>
+            </Link>
+          </div>
           <nav className="hidden md:flex items-center gap-4 text-sm">
             {['Art', 'Comics', 'Crafts', 'Design', 'Film', 'Games', 'Music', 'Publishing', 'Technology'].map((cat) => (
               <Link

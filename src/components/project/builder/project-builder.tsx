@@ -25,7 +25,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Check, ChevronLeft, ChevronRight, Loader2, Save, Rocket, AlertTriangle } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2, Save, Rocket, AlertTriangle, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 export function ProjectBuilder() {
@@ -496,6 +497,11 @@ export function ProjectBuilder() {
         <div className="container py-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
+              <Link href="/dashboard">
+                <Button variant="ghost" size="icon">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </Link>
               <h1 className="text-lg sm:text-xl font-semibold">
                 {projectId ? "Edit Project" : "Create Your Project"}
               </h1>
