@@ -65,7 +65,7 @@ const overviewSteps: Step[] = [
   {
     title: 'How Payments Work',
     description: 'When a customer purchases your book, they pay immediately through Stripe. After the platform fee is deducted, your earnings are available in your creator dashboard. Payouts are processed according to your payout schedule settings.',
-    example: 'Customer pays $9.99 → Platform takes 3% ($0.30) → You receive $9.69',
+    example: 'Customer pays $9.99 → Stripe takes 2.9% + $0.30 ($0.59) → Platform takes 3% ($0.30) → You receive $9.10',
   },
 ];
 
@@ -144,11 +144,11 @@ const pricingSteps: Step[] = [
   {
     title: 'Understanding Platform Fees',
     description: 'IndieCrowdfund charges a 3% platform fee on marketplace sales. This is significantly lower than many other platforms and helps keep more money in creators\' pockets.',
-    example: '$9.99 book → 3% fee ($0.30) → You receive $9.69',
+    example: '$9.99 book → 3% platform fee ($0.30) + Stripe processing ($0.59) → You receive $9.10',
   },
   {
     title: 'Payment Processing',
-    description: 'Standard content uses Stripe for payment processing, which adds standard card processing fees. NSFW content uses DivinityCoin, which has different fee structures. Your net earnings appear in your dashboard.',
+    description: 'Standard content uses Stripe for payment processing, which charges 2.9% + $0.30 per transaction. NSFW content uses DivinityCoin, which has different fee structures. Your net earnings appear in your dashboard.',
     tip: 'Factor in all fees when setting your price. Use the fee calculator in the book creation form to see your exact earnings.',
   },
   {
@@ -513,10 +513,14 @@ export default function MarketplaceCreatorHandbookPage() {
                   <BarChart3 className="h-5 w-5 text-primary" />
                   Example Earnings Calculator
                 </h4>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <div className="p-4 rounded-lg bg-muted">
                     <p className="text-sm text-muted-foreground">Your Price</p>
                     <p className="text-2xl font-bold text-foreground">$9.99</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted">
+                    <p className="text-sm text-muted-foreground">Stripe (2.9% + $0.30)</p>
+                    <p className="text-2xl font-bold text-destructive">-$0.59</p>
                   </div>
                   <div className="p-4 rounded-lg bg-muted">
                     <p className="text-sm text-muted-foreground">Platform Fee (3%)</p>
@@ -524,7 +528,7 @@ export default function MarketplaceCreatorHandbookPage() {
                   </div>
                   <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
                     <p className="text-sm text-primary">You Receive</p>
-                    <p className="text-2xl font-bold text-primary">$9.69</p>
+                    <p className="text-2xl font-bold text-primary">$9.10</p>
                   </div>
                 </div>
               </div>
