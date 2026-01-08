@@ -128,13 +128,42 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
+    // Get pledges with actual orders to find which rewards/addons have been ordered
+    const pledgesWithOrders = await db.pledge.findMany({
+      where: {
+        projectId,
+        status: { in: ["SUCCESSFUL", "PENDING"] }, // Only count successful/pending pledges
+      },
+      select: {
+        rewardId: true,
+        addons: {
+          select: {
+            addonId: true,
+          },
+        },
+      },
+    });
+
+    // Build sets of ordered reward IDs and addon IDs
+    const orderedRewardIds = new Set<string>();
+    const orderedAddonIds = new Set<string>();
+
+    for (const pledge of pledgesWithOrders) {
+      if (pledge.rewardId) {
+        orderedRewardIds.add(pledge.rewardId);
+      }
+      for (const addon of pledge.addons) {
+        orderedAddonIds.add(addon.addonId);
+      }
+    }
+
     // Get existing SKU mappings
     const mappings = await db.shopifySkuMapping.findMany({
       where: { projectId },
       orderBy: { createdAt: "desc" },
     });
 
-    // Build list of items that need mapping
+    // Build list of items that need mapping - ONLY items that have been ordered
     const unmappedItems: Array<{
       sourceType: string;
       sourceId: string;
@@ -143,10 +172,20 @@ export async function GET(req: NextRequest) {
       quantityClaimed?: number;
     }> = [];
 
-    // Check rewards (both tiers and addons)
+    // Check rewards (tiers) - only if someone ordered them
     for (const reward of project.rewards) {
+      if (reward.type !== "ADDON" && !orderedRewardIds.has(reward.id)) {
+        // This reward tier hasn't been ordered by anyone, skip it
+        continue;
+      }
+      if (reward.type === "ADDON" && !orderedAddonIds.has(reward.id)) {
+        // This addon hasn't been ordered by anyone, skip it
+        continue;
+      }
+
       const isMapped = mappings.some(
-        (m: { sourceType: string; sourceId: string }) => m.sourceType === "REWARD" && m.sourceId === reward.id
+        (m: { sourceType: string; sourceId: string }) =>
+          (m.sourceType === "REWARD" || m.sourceType === "ADDON") && m.sourceId === reward.id
       );
       if (!isMapped) {
         unmappedItems.push({
@@ -159,25 +198,21 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Check project items
-    for (const item of project.projectItems) {
-      const isMapped = mappings.some(
-        (m: { sourceType: string; sourceId: string }) => m.sourceType === "PROJECT_ITEM" && m.sourceId === item.id
-      );
-      if (!isMapped) {
-        unmappedItems.push({
-          sourceType: "PROJECT_ITEM",
-          sourceId: item.id,
-          sourceName: item.title,
-        });
-      }
-    }
+    // Note: projectItems are not included since they're not directly ordered
+    // If you need to include project items, you'd need to track which items
+    // are included in which rewards/pledges
 
     return NextResponse.json({
       mappings,
       unmappedItems,
       rewards: project.rewards,
       projectItems: project.projectItems,
+      // Include stats for debugging
+      stats: {
+        orderedRewards: orderedRewardIds.size,
+        orderedAddons: orderedAddonIds.size,
+        totalPledges: pledgesWithOrders.length,
+      },
     });
   } catch (error) {
     console.error("SKU mapping GET error:", error);

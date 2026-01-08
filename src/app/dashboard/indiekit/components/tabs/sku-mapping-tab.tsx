@@ -601,7 +601,8 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                   </div>
                   <h3 className="font-semibold mb-2">No Items to Map</h3>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    Items will appear here once you have rewards and add-ons set up for your project.
+                    Only rewards and add-ons that backers have ordered will appear here.
+                    Once backers make pledges, their selected items will be available for SKU mapping.
                   </p>
                 </div>
               )}
