@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Link2,
   Loader2,
@@ -15,8 +14,8 @@ import {
   Trash2,
   Save,
   Store,
-  AlertCircle,
   XCircle,
+  Info,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
@@ -106,10 +105,10 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     }
   }, [searchParams]);
 
-  // Fetch SKU mappings when Shopify is connected
+  // Fetch SKU mappings (works regardless of Shopify connection)
   useEffect(() => {
     async function fetchSkuMappings() {
-      if (!projectId || !shopifyStatus.connected) {
+      if (!projectId) {
         setSkuMappings([]);
         setUnmappedItems([]);
         return;
@@ -130,11 +129,11 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
       }
     }
     fetchSkuMappings();
-  }, [projectId, shopifyStatus.connected]);
+  }, [projectId]);
 
-  // Validate SKU against Shopify
+  // Validate SKU against Shopify (only when Shopify is connected)
   const validateSku = useCallback(async (key: string, sku: string) => {
-    if (!sku?.trim()) {
+    if (!sku?.trim() || !shopifyStatus.connected) {
       setSkuValidation(prev => ({
         ...prev,
         [key]: { status: "idle" }
@@ -188,10 +187,12 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
         }
       }));
     }
-  }, [projectId]);
+  }, [projectId, shopifyStatus.connected]);
 
-  // Debounced validation on input change
+  // Debounced validation on input change (only when Shopify is connected)
   useEffect(() => {
+    if (!shopifyStatus.connected) return;
+
     const timers: Record<string, NodeJS.Timeout> = {};
 
     Object.entries(skuInputs).forEach(([key, value]) => {
@@ -205,22 +206,24 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     return () => {
       Object.values(timers).forEach(timer => clearTimeout(timer));
     };
-  }, [skuInputs, validateSku, skuValidation]);
+  }, [skuInputs, validateSku, skuValidation, shopifyStatus.connected]);
 
   const handleSaveSkuMapping = async (item: UnmappedItem) => {
     const key = `${item.sourceType}-${item.sourceId}`;
     const sku = skuInputs[key];
 
     if (!sku?.trim()) {
-      toast.error("Please enter a Shopify SKU");
+      toast.error("Please enter a SKU");
       return;
     }
 
-    // Check if SKU is valid before saving
-    const validation = skuValidation[key];
-    if (validation?.status === "invalid") {
-      toast.error(validation.error || "Please enter a valid SKU");
-      return;
+    // Only check validation when Shopify is connected
+    if (shopifyStatus.connected) {
+      const validation = skuValidation[key];
+      if (validation?.status === "invalid") {
+        toast.error(validation.error || "Please enter a valid SKU");
+        return;
+      }
     }
 
     setIsSavingSkuMapping(key);
@@ -235,6 +238,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
           sourceId: item.sourceId,
           sourceName: item.sourceName,
           shopifySku: sku.trim(),
+          skipValidation: !shopifyStatus.connected, // Skip validation when Shopify not connected
         }),
       });
 
@@ -299,6 +303,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   };
 
   const getInputClassName = (key: string) => {
+    // No validation styling when Shopify is not connected
+    if (!shopifyStatus.connected) return "";
+
     const validation = skuValidation[key];
     if (!validation || validation.status === "idle") {
       return "";
@@ -315,6 +322,43 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     return "";
   };
 
+  const canSave = (key: string, inputValue: string) => {
+    if (!inputValue?.trim()) return false;
+
+    // When Shopify is connected, require validation
+    if (shopifyStatus.connected) {
+      const validation = skuValidation[key];
+      return validation?.status === "valid";
+    }
+
+    // When Shopify not connected, allow save as long as there's input
+    return true;
+  };
+
+  // Show loading state
+  if (shopifyStatus.loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Link2 className="h-6 w-6 text-[#95BF47]" />
+            <div>
+              <h3 className="text-lg font-semibold">SKU Mapping</h3>
+              <p className="text-sm text-muted-foreground">
+                Map your rewards and add-ons to SKUs for fulfillment
+              </p>
+            </div>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -324,184 +368,177 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
           <div>
             <h3 className="text-lg font-semibold">SKU Mapping</h3>
             <p className="text-sm text-muted-foreground">
-              Map your rewards and add-ons to Shopify SKUs for fulfillment
+              Map your rewards and add-ons to SKUs for fulfillment
             </p>
           </div>
         </div>
       </div>
 
-      {shopifyStatus.loading ? (
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </CardContent>
-        </Card>
-      ) : !shopifyStatus.connected ? (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                <Store className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">Connect Shopify First</h3>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
-                  To map your rewards and add-ons to Shopify SKUs, you need to connect your Shopify store first.
-                </p>
-              </div>
-              <Alert className="max-w-lg mx-auto">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>How to Connect</AlertTitle>
-                <AlertDescription>
-                  <ol className="list-decimal list-inside space-y-1 text-sm mt-2">
-                    <li>Go to <strong>Settings</strong> tab in the navigation</li>
-                    <li>Click <strong>Shopify API Key</strong> in the left menu</li>
-                    <li>Enter your Shopify app credentials</li>
-                    <li>Then go to <strong>Integrations</strong> to connect your store</li>
-                  </ol>
-                </AlertDescription>
-              </Alert>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Store className="h-5 w-5 text-[#95BF47]" />
-                <CardTitle className="text-base">Connected to {shopifyStatus.shopName}</CardTitle>
-              </div>
-              {isLoadingSkuMappings && (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {shopifyStatus.connected ? (
+                <>
+                  <Store className="h-5 w-5 text-[#95BF47]" />
+                  <CardTitle className="text-base">Connected to {shopifyStatus.shopName}</CardTitle>
+                </>
+              ) : (
+                <>
+                  <Package className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle className="text-base">Manual SKU Mapping</CardTitle>
+                </>
               )}
             </div>
-            <CardDescription>
-              Map your rewards, add-ons, and items to Shopify product SKUs. SKUs are validated against your Shopify store.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isLoadingSkuMappings ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            {isLoadingSkuMappings && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          <CardDescription>
+            {shopifyStatus.connected
+              ? "Map your rewards, add-ons, and items to Shopify product SKUs. SKUs are validated against your Shopify store."
+              : "Map your rewards, add-ons, and items to SKUs for your fulfillment system. Connect Shopify in Settings to enable SKU validation."
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Info banner for manual mode */}
+          {!shopifyStatus.connected && (
+            <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+              <Info className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Manual Mode</p>
+                <p className="text-sm opacity-80">
+                  SKUs are saved without validation. To enable automatic validation against your Shopify inventory,
+                  go to Settings → Shopify API Key to connect your store.
+                </p>
               </div>
-            ) : (
-              <>
-                {/* Existing Mappings */}
-                {skuMappings.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground">Mapped Items ({skuMappings.length})</h4>
-                    <div className="space-y-2">
-                      {skuMappings.map((mapping) => (
-                        <div
-                          key={mapping.id}
-                          className="flex items-center justify-between p-4 border rounded-lg bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                              <Package className="h-5 w-5 text-green-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium">{mapping.sourceName}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">
-                                  {mapping.sourceType === "ADDON" ? "Add-on" :
-                                   mapping.sourceType === "REWARD" ? "Reward" : "Item"}
-                                </Badge>
-                                <span className="text-sm text-muted-foreground">
-                                  SKU: <span className="font-mono font-medium">{mapping.shopifySku}</span>
+            </div>
+          )}
+
+          {isLoadingSkuMappings ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {/* Existing Mappings */}
+              {skuMappings.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Mapped Items ({skuMappings.length})</h4>
+                  <div className="space-y-2">
+                    {skuMappings.map((mapping) => (
+                      <div
+                        key={mapping.id}
+                        className="flex items-center justify-between p-4 border rounded-lg bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                            <Package className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{mapping.sourceName}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-xs">
+                                {mapping.sourceType === "ADDON" ? "Add-on" :
+                                 mapping.sourceType === "REWARD" ? "Reward" : "Item"}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                SKU: <span className="font-mono font-medium">{mapping.shopifySku}</span>
+                              </span>
+                              {mapping.shopifyProductName && (
+                                <span className="text-sm text-green-600">
+                                  → {mapping.shopifyProductName}
                                 </span>
-                                {mapping.shopifyProductName && (
-                                  <span className="text-sm text-green-600">
-                                    → {mapping.shopifyProductName}
-                                  </span>
-                                )}
-                              </div>
+                              )}
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteSkuMapping(mapping)}
-                            disabled={isSavingSkuMapping === mapping.id}
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            {isSavingSkuMapping === mapping.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
                         </div>
-                      ))}
-                    </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteSkuMapping(mapping)}
+                          disabled={isSavingSkuMapping === mapping.id}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          {isSavingSkuMapping === mapping.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Unmapped Items */}
-                {unmappedItems.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground">
-                      Unmapped Items ({unmappedItems.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {unmappedItems.map((item) => {
-                        const key = `${item.sourceType}-${item.sourceId}`;
-                        const validation = skuValidation[key];
-                        const inputValue = skuInputs[key] || "";
+              {/* Unmapped Items */}
+              {unmappedItems.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    Unmapped Items ({unmappedItems.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {unmappedItems.map((item) => {
+                      const key = `${item.sourceType}-${item.sourceId}`;
+                      const validation = skuValidation[key];
+                      const inputValue = skuInputs[key] || "";
 
-                        return (
-                          <div
-                            key={key}
-                            className="flex items-center gap-4 p-4 border rounded-lg"
-                          >
-                            <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                              <Package className="h-5 w-5 text-muted-foreground" />
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center gap-4 p-4 border rounded-lg"
+                        >
+                          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                            <Package className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{item.sourceName}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-xs">
+                                {item.sourceType === "ADDON" ? "Add-on" :
+                                 item.sourceType === "REWARD" ? "Reward" : "Item"}
+                              </Badge>
+                              {item.amount !== undefined && (
+                                <span className="text-sm text-muted-foreground">
+                                  ${(item.amount / 100).toFixed(2)}
+                                </span>
+                              )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{item.sourceName}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">
-                                  {item.sourceType === "ADDON" ? "Add-on" :
-                                   item.sourceType === "REWARD" ? "Reward" : "Item"}
-                                </Badge>
-                                {item.amount !== undefined && (
-                                  <span className="text-sm text-muted-foreground">
-                                    ${(item.amount / 100).toFixed(2)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-1 shrink-0">
-                              <div className="flex items-center gap-2">
-                                <div className="relative">
-                                  <Input
-                                    placeholder="Shopify SKU"
-                                    className={cn(
-                                      "w-44 h-9 pr-8",
-                                      getInputClassName(key)
-                                    )}
-                                    value={inputValue}
-                                    onChange={(e) => {
-                                      setSkuInputs(prev => ({
+                          </div>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <div className="flex items-center gap-2">
+                              <div className="relative">
+                                <Input
+                                  placeholder={shopifyStatus.connected ? "Shopify SKU" : "SKU"}
+                                  className={cn(
+                                    "w-44 h-9",
+                                    shopifyStatus.connected && "pr-8",
+                                    getInputClassName(key)
+                                  )}
+                                  value={inputValue}
+                                  onChange={(e) => {
+                                    setSkuInputs(prev => ({
+                                      ...prev,
+                                      [key]: e.target.value
+                                    }));
+                                    // Reset validation when typing (only if Shopify connected)
+                                    if (shopifyStatus.connected && skuValidation[key]?.status !== "idle") {
+                                      setSkuValidation(prev => ({
                                         ...prev,
-                                        [key]: e.target.value
+                                        [key]: { status: "idle" }
                                       }));
-                                      // Reset validation when typing
-                                      if (skuValidation[key]?.status !== "idle") {
-                                        setSkuValidation(prev => ({
-                                          ...prev,
-                                          [key]: { status: "idle" }
-                                        }));
-                                      }
-                                    }}
-                                    onBlur={() => {
-                                      if (inputValue?.trim()) {
-                                        validateSku(key, inputValue);
-                                      }
-                                    }}
-                                  />
-                                  {/* Validation indicator inside input */}
+                                    }
+                                  }}
+                                  onBlur={() => {
+                                    if (shopifyStatus.connected && inputValue?.trim()) {
+                                      validateSku(key, inputValue);
+                                    }
+                                  }}
+                                />
+                                {/* Validation indicator inside input (only when Shopify connected) */}
+                                {shopifyStatus.connected && (
                                   <div className="absolute right-2 top-1/2 -translate-y-1/2">
                                     {validation?.status === "validating" && (
                                       <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
@@ -513,77 +550,76 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                                       <XCircle className="h-4 w-4 text-red-500" />
                                     )}
                                   </div>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSaveSkuMapping(item)}
-                                  disabled={
-                                    isSavingSkuMapping === key ||
-                                    !inputValue?.trim() ||
-                                    validation?.status === "invalid" ||
-                                    validation?.status === "validating"
-                                  }
-                                  className={cn(
-                                    "h-9",
-                                    validation?.status === "valid"
-                                      ? "bg-green-600 hover:bg-green-700"
-                                      : "bg-[#95BF47] hover:bg-[#7a9e3a]"
-                                  )}
-                                >
-                                  {isSavingSkuMapping === key ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Save className="h-4 w-4" />
-                                  )}
-                                </Button>
+                                )}
                               </div>
-                              {/* Validation message */}
-                              {validation?.status === "valid" && validation.productName && (
-                                <p className="text-xs text-green-600 truncate max-w-[200px]">
-                                  → {validation.productName}
-                                </p>
-                              )}
-                              {validation?.status === "invalid" && (
-                                <p className="text-xs text-red-600">
-                                  {validation.error || "SKU not found"}
-                                </p>
-                              )}
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveSkuMapping(item)}
+                                disabled={
+                                  isSavingSkuMapping === key ||
+                                  !canSave(key, inputValue) ||
+                                  (shopifyStatus.connected && validation?.status === "validating")
+                                }
+                                className={cn(
+                                  "h-9",
+                                  shopifyStatus.connected && validation?.status === "valid"
+                                    ? "bg-green-600 hover:bg-green-700"
+                                    : "bg-[#95BF47] hover:bg-[#7a9e3a]"
+                                )}
+                              >
+                                {isSavingSkuMapping === key ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Save className="h-4 w-4" />
+                                )}
+                              </Button>
                             </div>
+                            {/* Validation message (only when Shopify connected) */}
+                            {shopifyStatus.connected && validation?.status === "valid" && validation.productName && (
+                              <p className="text-xs text-green-600 truncate max-w-[200px]">
+                                → {validation.productName}
+                              </p>
+                            )}
+                            {shopifyStatus.connected && validation?.status === "invalid" && (
+                              <p className="text-xs text-red-600">
+                                {validation.error || "SKU not found"}
+                              </p>
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Empty state */}
-                {skuMappings.length === 0 && unmappedItems.length === 0 && (
-                  <div className="text-center py-12">
-                    <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                      <Package className="h-8 w-8 text-muted-foreground opacity-50" />
-                    </div>
-                    <h3 className="font-semibold mb-2">No Items to Map</h3>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      Items will appear here once you have rewards and add-ons set up for your project.
-                    </p>
+              {/* Empty state */}
+              {skuMappings.length === 0 && unmappedItems.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <Package className="h-8 w-8 text-muted-foreground opacity-50" />
                   </div>
-                )}
+                  <h3 className="font-semibold mb-2">No Items to Map</h3>
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                    Items will appear here once you have rewards and add-ons set up for your project.
+                  </p>
+                </div>
+              )}
 
-                {/* All mapped success state */}
-                {skuMappings.length > 0 && unmappedItems.length === 0 && (
-                  <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
-                    <CheckCircle className="h-5 w-5 shrink-0" />
-                    <div>
-                      <p className="font-medium">All Items Mapped</p>
-                      <p className="text-sm opacity-80">All your rewards and add-ons have been mapped to Shopify SKUs.</p>
-                    </div>
+              {/* All mapped success state */}
+              {skuMappings.length > 0 && unmappedItems.length === 0 && (
+                <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
+                  <CheckCircle className="h-5 w-5 shrink-0" />
+                  <div>
+                    <p className="font-medium">All Items Mapped</p>
+                    <p className="text-sm opacity-80">All your rewards and add-ons have been mapped to SKUs.</p>
                   </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
