@@ -93,23 +93,23 @@ export async function GET(
 
     // Filter item questions to only show those relevant to this backer's reward
     const relevantItemQuestions = survey.itemQuestions.filter(
-      (iq) => iq.rewardId === pledge.rewardId
+      (iq: { rewardId: string }) => iq.rewardId === pledge.rewardId
     );
 
     // Also include item questions for any addons
-    const addonIds = pledge.addons.map((a) => a.addonId);
+    const addonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
     const addonItemQuestions = survey.itemQuestions.filter(
-      (iq) => addonIds.includes(iq.rewardId)
+      (iq: { rewardId: string }) => addonIds.includes(iq.rewardId)
     );
 
     // Filter backer questions based on targeting
     const relevantBackerQuestions = survey.backerQuestions.filter(
-      (bq) => {
+      (bq: { targetType: string; targetRewardIds: string[] }) => {
         if (bq.targetType === "ALL_BACKERS") return true;
         if (bq.targetType === "SPECIFIC_REWARDS") {
           return (
-            bq.targetRewardIds.includes(pledge.rewardId) ||
-            bq.targetRewardIds.some((id) => addonIds.includes(id))
+            bq.targetRewardIds.includes(pledge.rewardId as string) ||
+            bq.targetRewardIds.some((id: string) => addonIds.includes(id))
           );
         }
         return false;
@@ -130,7 +130,7 @@ export async function GET(
         rewardTitle: pledge.reward?.title || "No Reward",
         backerName: pledge.user?.name,
         backerEmail: pledge.user?.email,
-        addons: pledge.addons.map((a) => ({
+        addons: pledge.addons.map((a: { addon: { id: string; title: string } }) => ({
           id: a.addon.id,
           title: a.addon.title,
         })),
