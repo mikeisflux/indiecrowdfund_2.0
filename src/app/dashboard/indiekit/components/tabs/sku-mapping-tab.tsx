@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   const [isSavingSkuMapping, setIsSavingSkuMapping] = useState<string | null>(null);
   const [skuInputs, setSkuInputs] = useState<Record<string, string>>({});
   const [skuValidation, setSkuValidation] = useState<Record<string, SkuValidationState>>({});
+
+  // Track which values we've already validated to prevent infinite loops
+  const validatedValuesRef = useRef<Record<string, string>>({});
 
   // Check Shopify connection status on mount
   useEffect(() => {
@@ -133,11 +136,18 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
 
   // Validate SKU against Shopify (only when Shopify is connected)
   const validateSku = useCallback(async (key: string, sku: string) => {
-    if (!sku?.trim() || !shopifyStatus.connected) {
+    const trimmedSku = sku?.trim();
+
+    if (!trimmedSku || !shopifyStatus.connected) {
       setSkuValidation(prev => ({
         ...prev,
         [key]: { status: "idle" }
       }));
+      return;
+    }
+
+    // Skip if we've already validated this exact value
+    if (validatedValuesRef.current[key] === trimmedSku) {
       return;
     }
 
@@ -153,11 +163,14 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
         body: JSON.stringify({
           projectId,
           action: "validate",
-          shopifySku: sku.trim(),
+          shopifySku: trimmedSku,
         }),
       });
 
       const data = await res.json();
+
+      // Mark this value as validated
+      validatedValuesRef.current[key] = trimmedSku;
 
       if (data.valid) {
         setSkuValidation(prev => ({
@@ -196,7 +209,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     const timers: Record<string, NodeJS.Timeout> = {};
 
     Object.entries(skuInputs).forEach(([key, value]) => {
-      if (value?.trim() && skuValidation[key]?.status !== "validating") {
+      const trimmedValue = value?.trim();
+      // Only validate if value exists and hasn't been validated yet
+      if (trimmedValue && validatedValuesRef.current[key] !== trimmedValue) {
         timers[key] = setTimeout(() => {
           validateSku(key, value);
         }, 500); // 500ms debounce
@@ -206,7 +221,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     return () => {
       Object.values(timers).forEach(timer => clearTimeout(timer));
     };
-  }, [skuInputs, validateSku, skuValidation, shopifyStatus.connected]);
+  }, [skuInputs, validateSku, shopifyStatus.connected]);
 
   const handleSaveSkuMapping = async (item: UnmappedItem) => {
     const key = `${item.sourceType}-${item.sourceId}`;
@@ -519,9 +534,10 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                                   )}
                                   value={inputValue}
                                   onChange={(e) => {
+                                    const newValue = e.target.value;
                                     setSkuInputs(prev => ({
                                       ...prev,
-                                      [key]: e.target.value
+                                      [key]: newValue
                                     }));
                                     // Reset validation when typing (only if Shopify connected)
                                     if (shopifyStatus.connected && skuValidation[key]?.status !== "idle") {
@@ -529,6 +545,8 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                                         ...prev,
                                         [key]: { status: "idle" }
                                       }));
+                                      // Clear the validated value so it can be re-validated
+                                      delete validatedValuesRef.current[key];
                                     }
                                   }}
                                   onBlur={() => {
