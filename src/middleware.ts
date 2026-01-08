@@ -62,8 +62,9 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
     : "'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com";
 
   // For Shopify iframe routes, allow embedding from Shopify domains
+  // Include 'self' and all Shopify admin domains
   const frameAncestors = allowShopifyIframe
-    ? "https://*.myshopify.com https://admin.shopify.com https://*.shopify.com"
+    ? "'self' https://*.myshopify.com https://admin.shopify.com https://*.shopify.com https://partners.shopify.com"
     : "'self'";
 
   const directives = [
@@ -210,10 +211,9 @@ export function middleware(req: NextRequest) {
 
   // Add other security headers
   response.headers.set("X-Content-Type-Options", "nosniff");
-  // Allow Shopify iframe embedding for specific routes
-  if (isShopifyIframeRoute) {
-    response.headers.set("X-Frame-Options", "ALLOWALL");
-  } else {
+  // For Shopify iframe routes, don't set X-Frame-Options (CSP frame-ancestors handles it)
+  // X-Frame-Options ALLOWALL is not valid, and ALLOW-FROM is deprecated
+  if (!isShopifyIframeRoute) {
     response.headers.set("X-Frame-Options", "SAMEORIGIN");
   }
   response.headers.set("X-XSS-Protection", "1; mode=block");

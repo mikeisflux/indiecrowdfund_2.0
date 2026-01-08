@@ -5,39 +5,7 @@ const buildId = Date.now().toString();
 const nextConfig = {
   // Allow custom build output directory for zero-downtime deployments
   distDir: process.env.NEXT_BUILD_OUTPUT || '.next',
-  // Custom headers for Shopify iframe embedding
-  async headers() {
-    return [
-      {
-        // Allow Shopify to embed install/app pages in iframe
-        source: '/dashboard/indiekit/shopify/:path*',
-        headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: "frame-ancestors https://*.myshopify.com https://admin.shopify.com https://*.shopify.com;",
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'ALLOWALL',
-          },
-        ],
-      },
-      {
-        // Also allow the API install route
-        source: '/api/creator/indiekit/shopify/install',
-        headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: "frame-ancestors https://*.myshopify.com https://admin.shopify.com https://*.shopify.com;",
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'ALLOWALL',
-          },
-        ],
-      },
-    ];
-  },
+  // Note: Shopify iframe headers are handled by middleware.ts for proper CSP frame-ancestors support
   // Use consistent build ID
   generateBuildId: async () => buildId,
   // Expose build ID to client for version checking
