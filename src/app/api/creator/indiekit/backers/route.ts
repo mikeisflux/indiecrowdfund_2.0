@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
         });
 
         // Check if project has Shopify integration yet
-        const hasShopifyIntegration = connectedIntegrations.some(i => i.provider === "SHOPIFY");
+        const hasShopifyIntegration = connectedIntegrations.some((i: { provider: string }) => i.provider === "SHOPIFY");
         if (!hasShopifyIntegration) {
           // Get the project creator's Shopify credentials (collaborators use creator's connection)
           const projectWithCreator = await db.project.findUnique({
