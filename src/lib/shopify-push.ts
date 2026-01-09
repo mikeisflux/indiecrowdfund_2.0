@@ -425,8 +425,9 @@ export async function pushOrdersToShopify(
       }
 
       for (const addon of pledge.addons) {
-        // Skip modifier addons that have been assigned to a reward (already included in reward line item)
-        if (addon.addon.isModifier && assignedModifierAddonIds.has(addon.addon.id)) {
+        // Skip modifier addons entirely - they should only be included via modifier assignments
+        // If a modifier isn't assigned to a reward, it shouldn't be a separate line item
+        if (addon.addon.isModifier) {
           continue;
         }
 
