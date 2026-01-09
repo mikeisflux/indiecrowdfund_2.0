@@ -113,6 +113,7 @@ export async function GET(req: NextRequest) {
             type: true,
             amount: true,
             quantityClaimed: true,
+            isModifier: true,
           },
         },
         projectItems: {
@@ -185,6 +186,11 @@ export async function GET(req: NextRequest) {
       }
       if (reward.type === "ADDON" && !orderedAddonIds.has(reward.id)) {
         // This addon hasn't been ordered by anyone, skip it
+        continue;
+      }
+
+      // Skip modifier addons - they're handled separately in the Modifier SKU Combinations section
+      if (reward.type === "ADDON" && reward.isModifier) {
         continue;
       }
 
