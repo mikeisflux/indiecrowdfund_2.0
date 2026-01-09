@@ -346,20 +346,6 @@ export async function pushOrdersToShopify(
 
   for (const pledge of pledges) {
     try {
-      // Check if already pushed
-      const existing = await db.shopifyFulfillmentOrder.findUnique({
-        where: {
-          projectId_pledgeId: {
-            projectId,
-            pledgeId: pledge.id,
-          },
-        },
-      });
-
-      if (existing && existing.status !== "FAILED") {
-        console.log("[pushOrdersToShopify] Skipping already pushed pledge:", pledge.id);
-        continue; // Skip already pushed orders
-      }
 
       // Build line items from reward and addons with SKU mappings
       // If we have variant_id, that's all Shopify needs - it gets title/price from the product
