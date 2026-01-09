@@ -423,11 +423,8 @@ export async function GET(req: NextRequest) {
         status = "not_pushed"; // Ready to push
       }
 
-      // Build items list
-      const items = [
-        ...(pledge.reward ? [{ name: pledge.reward.title, quantity: 1 }] : []),
-        ...pledge.addons.map((a: { addon: { title: string }; quantity: number }) => ({ name: a.addon.title, quantity: a.quantity })),
-      ];
+      // Build items list - only the main reward, addons are separate
+      const items = pledge.reward ? [{ name: pledge.reward.title, quantity: 1 }] : [];
 
       // Build addons list with proper structure
       const addons = pledge.addons.map((a: { addon: { id: string; title: string; amount: unknown; isModifier?: boolean }; quantity: number }) => ({

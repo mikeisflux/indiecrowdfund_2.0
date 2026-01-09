@@ -492,22 +492,22 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                 {/* Items Card */}
                 <div className="rounded-lg border p-4">
                   <div className="flex justify-between items-center mb-3">
-                    <h4 className="font-medium">Items ({backer.items?.length || 0})</h4>
+                    <h4 className="font-medium">Items ({(backer.items?.length || 0) + (backer.addons?.length || 0)})</h4>
                     <Button variant="ghost" size="sm" onClick={() => setShowPackingSlip(true)}>Pack List</Button>
                   </div>
                   <div className="space-y-3">
                     <div>
                       <p className="text-xs text-muted-foreground font-medium mb-2 flex justify-between">
-                        <span>Pledge Items ({backer.items?.length || 0})</span>
+                        <span>Main Reward</span>
                         <span>QTY</span>
                       </p>
                       <div className="space-y-1">
-                        {backer.items?.map((item, idx) => (
+                        {backer.items?.length ? backer.items.map((item, idx) => (
                           <div key={idx} className="flex justify-between text-sm">
                             <span>{item.name}</span>
                             <span>{item.quantity}</span>
                           </div>
-                        )) || <p className="text-sm text-muted-foreground">No items</p>}
+                        )) : <p className="text-sm text-muted-foreground italic">No reward selected</p>}
                       </div>
                     </div>
                     {backer.addons && backer.addons.length > 0 && (
