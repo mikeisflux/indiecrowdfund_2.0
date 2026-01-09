@@ -11,6 +11,69 @@ interface ShopifyOrder {
 // Cache for SKU to variant ID lookups
 const skuToVariantCache = new Map<string, number>();
 
+// Find or create customer in Shopify by email
+async function findOrCreateCustomer(
+  shopDomain: string,
+  accessToken: string,
+  email: string,
+  firstName: string,
+  lastName: string,
+  phone?: string
+): Promise<number | null> {
+  try {
+    // Search for existing customer by email
+    const searchUrl = `https://${shopDomain}/admin/api/2026-01/customers/search.json?query=email:${encodeURIComponent(email)}`;
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        "X-Shopify-Access-Token": accessToken,
+      },
+    });
+
+    if (searchResponse.ok) {
+      const searchResult = await searchResponse.json();
+      if (searchResult.customers && searchResult.customers.length > 0) {
+        const customerId = searchResult.customers[0].id;
+        console.log(`[findOrCreateCustomer] Found existing customer ${customerId} for email ${email}`);
+        return customerId;
+      }
+    }
+
+    // Customer not found, create new one
+    const createUrl = `https://${shopDomain}/admin/api/2026-01/customers.json`;
+    const createResponse = await fetch(createUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": accessToken,
+      },
+      body: JSON.stringify({
+        customer: {
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone || undefined,
+          verified_email: true,
+          send_email_welcome: false,
+        },
+      }),
+    });
+
+    if (createResponse.ok) {
+      const createResult = await createResponse.json();
+      const customerId = createResult.customer?.id;
+      console.log(`[findOrCreateCustomer] Created new customer ${customerId} for email ${email}`);
+      return customerId;
+    } else {
+      const errorText = await createResponse.text();
+      console.error(`[findOrCreateCustomer] Failed to create customer: ${errorText}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`[findOrCreateCustomer] Error:`, error);
+    return null;
+  }
+}
+
 // Look up variant ID by SKU in Shopify using GraphQL
 async function lookupVariantBySku(
   shopDomain: string,
@@ -440,15 +503,31 @@ export async function pushOrdersToShopify(
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
+      const phone = shippingAddress?.phone || "";
+
       console.log("[pushOrdersToShopify] Customer data for pledge", pledge.id, ":", {
         email: customerEmail,
         name: customerName,
         firstName,
         lastName,
+        phone,
         hasShippingAddress: !!shippingAddress,
         shippingAddressSource: surveyAddress ? "survey" : (pledgeAddress ? "pledge" : "none"),
         shippingAddress,
       });
+
+      // Find or create customer in Shopify first
+      let customerId: number | null = null;
+      if (customerEmail) {
+        customerId = await findOrCreateCustomer(
+          credentials.shopDomain,
+          credentials.accessToken,
+          customerEmail,
+          firstName,
+          lastName,
+          phone
+        );
+      }
 
       // Create draft order in Shopify (kept as draft for manual review)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -461,17 +540,17 @@ export async function pushOrdersToShopify(
               price: (pledge.pledgeAmount ?? 0).toString(),
             },
           ],
+          email: customerEmail || undefined,
+          phone: phone || undefined,
           note: `IndieCrowdfund Pledge #${pledge.id}`,
           tags: `indiecrowdfund,project-${projectId},pledge-${pledge.id}`,
         },
       };
 
-      // Add customer info if we have an email
-      if (customerEmail) {
+      // Add customer by ID if we have one (this links to existing/new customer)
+      if (customerId) {
         draftOrderPayload.draft_order.customer = {
-          email: customerEmail,
-          first_name: firstName,
-          last_name: lastName,
+          id: customerId,
         };
       }
 
@@ -486,7 +565,7 @@ export async function pushOrdersToShopify(
           province: shippingAddress.state || "",
           country: shippingAddress.country || "",
           zip: shippingAddress.postalCode || "",
-          phone: shippingAddress.phone || "",
+          phone: phone || "",
         };
         // Also add billing address (same as shipping for now)
         draftOrderPayload.draft_order.billing_address = draftOrderPayload.draft_order.shipping_address;
