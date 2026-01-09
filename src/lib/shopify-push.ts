@@ -8,6 +8,61 @@ interface ShopifyOrder {
   fulfillment_status: string | null;
 }
 
+interface ShopifyVariant {
+  id: number;
+  sku: string;
+  title: string;
+  product_id: number;
+}
+
+interface ShopifyProduct {
+  id: number;
+  title: string;
+  variants: ShopifyVariant[];
+}
+
+// Cache for SKU to variant ID lookups
+const skuToVariantCache = new Map<string, number>();
+
+// Look up variant ID by SKU in Shopify
+async function lookupVariantBySku(
+  shopDomain: string,
+  accessToken: string,
+  sku: string
+): Promise<number | null> {
+  // Check cache first
+  const cacheKey = `${shopDomain}:${sku}`;
+  if (skuToVariantCache.has(cacheKey)) {
+    return skuToVariantCache.get(cacheKey) || null;
+  }
+
+  try {
+    // Search for products with this SKU
+    const response = await shopifyFetch<{ products: ShopifyProduct[] }>(
+      shopDomain,
+      accessToken,
+      `products.json?fields=id,title,variants`
+    );
+
+    // Find the variant with matching SKU
+    for (const product of response.products) {
+      for (const variant of product.variants) {
+        if (variant.sku === sku) {
+          skuToVariantCache.set(cacheKey, variant.id);
+          console.log(`[lookupVariantBySku] Found variant ${variant.id} for SKU ${sku}`);
+          return variant.id;
+        }
+      }
+    }
+
+    console.log(`[lookupVariantBySku] No variant found for SKU ${sku}`);
+    return null;
+  } catch (error) {
+    console.error(`[lookupVariantBySku] Error looking up SKU ${sku}:`, error);
+    return null;
+  }
+}
+
 // Helper to make Shopify API requests
 async function shopifyFetch<T>(
   shopDomain: string,
@@ -251,7 +306,7 @@ export async function pushOrdersToShopify(
         );
 
         let sku: string | undefined;
-        let variantId: string | undefined;
+        let variantId: number | undefined;
         let title = pledge.reward.title;
 
         if (modifierAssignment) {
@@ -261,7 +316,7 @@ export async function pushOrdersToShopify(
 
           if (modifierSku) {
             sku = modifierSku.sku;
-            variantId = modifierSku.variantId;
+            variantId = modifierSku.variantId ? parseInt(modifierSku.variantId) : undefined;
             // Find the modifier addon name for the title
             const modifierAddon = pledge.addons.find(
               (a: { addon: { id: string } }) => a.addon.id === modifierAssignment.modifierAddonId
@@ -273,13 +328,18 @@ export async function pushOrdersToShopify(
             // Fallback to base reward SKU if no modifier mapping exists
             const rewardSku = rewardSkuMap.get(pledge.reward.id);
             sku = rewardSku?.sku;
-            variantId = rewardSku?.variantId;
+            variantId = rewardSku?.variantId ? parseInt(rewardSku.variantId) : undefined;
           }
         } else {
           // No modifier - use base reward SKU
           const rewardSku = rewardSkuMap.get(pledge.reward.id);
           sku = rewardSku?.sku;
-          variantId = rewardSku?.variantId;
+          variantId = rewardSku?.variantId ? parseInt(rewardSku.variantId) : undefined;
+        }
+
+        // If we have a SKU but no variant_id, look it up in Shopify
+        if (sku && !variantId) {
+          variantId = await lookupVariantBySku(credentials.shopDomain, credentials.accessToken, sku) || undefined;
         }
 
         const rewardSkuData = rewardSkuMap.get(pledge.reward.id);
@@ -288,7 +348,7 @@ export async function pushOrdersToShopify(
           quantity: rewardSkuData?.quantity || 1,
           price: (pledge.pledgeAmount ?? 0).toString(),
           sku,
-          variant_id: variantId ? parseInt(variantId) : undefined,
+          variant_id: variantId,
         });
       }
 
@@ -299,12 +359,19 @@ export async function pushOrdersToShopify(
         }
 
         const addonSku = addonSkuMap.get(addon.addon.id);
+        let addonVariantId = addonSku?.variantId ? parseInt(addonSku.variantId) : undefined;
+
+        // If we have a SKU but no variant_id, look it up in Shopify
+        if (addonSku?.sku && !addonVariantId) {
+          addonVariantId = await lookupVariantBySku(credentials.shopDomain, credentials.accessToken, addonSku.sku) || undefined;
+        }
+
         lineItems.push({
           title: addon.addon.title,
           quantity: (addon.quantity ?? 1) * (addonSku?.quantity || 1),
           price: (addon.unitPrice ?? 0).toString(),
           sku: addonSku?.sku,
-          variant_id: addonSku?.variantId ? parseInt(addonSku.variantId) : undefined,
+          variant_id: addonVariantId,
         });
       }
 
