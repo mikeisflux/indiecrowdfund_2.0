@@ -85,3 +85,8 @@
    - Test that data survives page navigation and reloads
    - Avoid using Prisma `upsert` with composite unique constraints that may not exist - use `findFirst` + `create`/`update` pattern instead
    - Always handle and log database errors properly
+8. **TEST ALL FUNCTIONALITY** - Before marking any feature complete:
+   - Actually test the feature works end-to-end, not just that code compiles
+   - Test the full user flow: input → save → navigate away → return → verify data persists
+   - Don't assume code works just because it looks correct - verify it functions as intended
+   - If you can't test directly, clearly communicate what needs to be tested by the user

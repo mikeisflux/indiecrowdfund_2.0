@@ -76,6 +76,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   const [isLoadingSkuMappings, setIsLoadingSkuMappings] = useState(false);
   const [isSavingSkuMapping, setIsSavingSkuMapping] = useState<string | null>(null);
   const [isSkipping, setIsSkipping] = useState<string | null>(null);
+  const [isSavingAll, setIsSavingAll] = useState(false);
   // SKU inputs: key is "sourceType-sourceId-index" for multiple SKUs per item
   const [skuInputs, setSkuInputs] = useState<Record<string, string>>({});
   const [skuValidation, setSkuValidation] = useState<Record<string, SkuValidationState>>({});
@@ -332,6 +333,186 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     }
   };
 
+  // Save all entered SKUs at once
+  const handleSaveAllSkuMappings = async () => {
+    const allItems = getAllSourceItems();
+    const skusToSave: Array<{
+      sourceType: string;
+      sourceId: string;
+      sourceName: string;
+      shopifySku: string;
+      inputKey: string;
+    }> = [];
+
+    // Collect all non-empty SKU inputs
+    for (const item of allItems) {
+      const baseKey = `${item.sourceType}-${item.sourceId}`;
+      const isSkipped = isItemSkipped(item.sourceType, item.sourceId);
+      if (isSkipped) continue;
+
+      // Check primary input
+      const primaryKey = `${baseKey}-0`;
+      const primarySku = skuInputs[primaryKey]?.trim();
+      if (primarySku) {
+        // When Shopify connected, only save validated SKUs
+        if (shopifyStatus.connected) {
+          const validation = skuValidation[primaryKey];
+          if (validation?.status === "valid") {
+            skusToSave.push({
+              sourceType: item.sourceType,
+              sourceId: item.sourceId,
+              sourceName: item.sourceName,
+              shopifySku: primarySku,
+              inputKey: primaryKey,
+            });
+          }
+        } else {
+          skusToSave.push({
+            sourceType: item.sourceType,
+            sourceId: item.sourceId,
+            sourceName: item.sourceName,
+            shopifySku: primarySku,
+            inputKey: primaryKey,
+          });
+        }
+      }
+
+      // Check additional inputs
+      const additionalCount = additionalSkuCount[baseKey] || 0;
+      for (let i = 1; i <= additionalCount; i++) {
+        const inputKey = `${baseKey}-${i}`;
+        const sku = skuInputs[inputKey]?.trim();
+        if (sku) {
+          if (shopifyStatus.connected) {
+            const validation = skuValidation[inputKey];
+            if (validation?.status === "valid") {
+              skusToSave.push({
+                sourceType: item.sourceType,
+                sourceId: item.sourceId,
+                sourceName: item.sourceName,
+                shopifySku: sku,
+                inputKey,
+              });
+            }
+          } else {
+            skusToSave.push({
+              sourceType: item.sourceType,
+              sourceId: item.sourceId,
+              sourceName: item.sourceName,
+              shopifySku: sku,
+              inputKey,
+            });
+          }
+        }
+      }
+    }
+
+    if (skusToSave.length === 0) {
+      toast.error("No valid SKUs to save. Please enter SKUs in the input fields.");
+      return;
+    }
+
+    setIsSavingAll(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "bulk_save",
+          mappings: skusToSave.map(s => ({
+            sourceType: s.sourceType,
+            sourceId: s.sourceId,
+            sourceName: s.sourceName,
+            shopifySku: s.shopifySku,
+          })),
+          skipValidation: !shopifyStatus.connected,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save mappings");
+      }
+
+      const data = await res.json();
+
+      // Add new mappings to state
+      if (data.mappings && data.mappings.length > 0) {
+        setSkuMappings(prev => [...prev, ...data.mappings]);
+      }
+
+      // Clear saved inputs
+      const savedKeys = skusToSave.map(s => s.inputKey);
+      setSkuInputs(prev => {
+        const next = { ...prev };
+        for (const key of savedKeys) {
+          delete next[key];
+        }
+        return next;
+      });
+      setSkuValidation(prev => {
+        const next = { ...prev };
+        for (const key of savedKeys) {
+          delete next[key];
+        }
+        return next;
+      });
+      for (const key of savedKeys) {
+        delete validatedValuesRef.current[key];
+      }
+
+      toast.success(data.message || `Saved ${data.mappings?.length || 0} SKU mappings`);
+
+      if (data.errors && data.errors.length > 0) {
+        toast.error(`${data.errors.length} SKU(s) failed to save`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save mappings");
+    } finally {
+      setIsSavingAll(false);
+    }
+  };
+
+  // Count how many SKUs are ready to save
+  const getPendingSkuCount = () => {
+    let count = 0;
+    const allItems = getAllSourceItems();
+
+    for (const item of allItems) {
+      const baseKey = `${item.sourceType}-${item.sourceId}`;
+      const isSkipped = isItemSkipped(item.sourceType, item.sourceId);
+      if (isSkipped) continue;
+
+      // Check primary input
+      const primaryKey = `${baseKey}-0`;
+      const primarySku = skuInputs[primaryKey]?.trim();
+      if (primarySku) {
+        if (shopifyStatus.connected) {
+          if (skuValidation[primaryKey]?.status === "valid") count++;
+        } else {
+          count++;
+        }
+      }
+
+      // Check additional inputs
+      const additionalCount = additionalSkuCount[baseKey] || 0;
+      for (let i = 1; i <= additionalCount; i++) {
+        const inputKey = `${baseKey}-${i}`;
+        const sku = skuInputs[inputKey]?.trim();
+        if (sku) {
+          if (shopifyStatus.connected) {
+            if (skuValidation[inputKey]?.status === "valid") count++;
+          } else {
+            count++;
+          }
+        }
+      }
+    }
+
+    return count;
+  };
+
   const handleDeleteSkuMapping = async (mapping: SkuMapping) => {
     setIsSavingSkuMapping(mapping.id);
     try {
@@ -581,9 +762,30 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
               {/* All Items with SKU Mappings */}
               {getAllSourceItems().length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="text-sm font-medium text-muted-foreground">
-                    Items ({getAllSourceItems().length}) • SKUs ({skuMappings.length})
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-muted-foreground">
+                      Items ({getAllSourceItems().length}) • SKUs ({skuMappings.length})
+                    </h4>
+                    {getPendingSkuCount() > 0 && (
+                      <Button
+                        onClick={handleSaveAllSkuMappings}
+                        disabled={isSavingAll}
+                        className="bg-[#95BF47] hover:bg-[#7a9e3a]"
+                      >
+                        {isSavingAll ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4 mr-2" />
+                            Save All SKUs ({getPendingSkuCount()})
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                   <div className="space-y-4">
                     {getAllSourceItems().map((item) => {
                       const baseKey = `${item.sourceType}-${item.sourceId}`;
