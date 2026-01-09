@@ -339,7 +339,7 @@ export async function POST(req: NextRequest) {
         });
 
         // Check if all modifiers are now assigned
-        const modifierAddons = pledge.addons.filter((_a: { addonId: string }) => {
+        const modifierAddons = pledge.addons.filter(() => {
           // We need to check if this is a modifier addon
           // For now, just count all assignments
           return true;
