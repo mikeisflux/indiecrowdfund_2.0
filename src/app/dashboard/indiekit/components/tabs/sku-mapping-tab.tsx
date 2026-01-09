@@ -632,11 +632,6 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                                   {item.sourceType === "ADDON" ? "Add-on" :
                                    item.sourceType === "REWARD" ? "Reward" : "Item"}
                                 </Badge>
-                                {item.amount !== undefined && (
-                                  <span className="text-sm text-muted-foreground">
-                                    ${(item.amount / 100).toFixed(2)}
-                                  </span>
-                                )}
                                 {isSkipped ? (
                                   <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
                                     Skipped
