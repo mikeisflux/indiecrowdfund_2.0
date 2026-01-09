@@ -87,9 +87,19 @@ export interface Backer {
     balanceDue: number;
   };
   items: { name: string; quantity: number; sku?: string }[];
-  addons: { id: string; name: string; quantity: number; amount: number }[];
+  addons: { id: string; name: string; quantity: number; amount: number; isModifier?: boolean }[];
   digitalDownloads: { name: string; downloaded: boolean; distributedAt?: string }[];
   activity: { date: string; action: string; details?: string }[];
+  // Modifier addon assignments
+  needsModifierAssignment?: boolean;
+  modifierAssignments?: {
+    id: string;
+    rewardId: string;
+    rewardTitle?: string;
+    modifierAddonId: string;
+    modifierAddonTitle?: string;
+    isAutoAssigned: boolean;
+  }[];
 }
 
 export interface SurveyAddon {

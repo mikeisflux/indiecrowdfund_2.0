@@ -19,6 +19,8 @@ import {
   Plus,
   SkipForward,
   Undo2,
+  Layers,
+  ArrowRight,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
@@ -55,6 +57,24 @@ interface SkippedItem {
   sourceName: string;
 }
 
+interface ModifierAddon {
+  id: string;
+  title: string;
+}
+
+interface TierReward {
+  id: string;
+  title: string;
+}
+
+interface ModifierSkuMapping {
+  id: string;
+  baseRewardId: string;
+  modifierAddonId: string;
+  shopifySku: string;
+  shopifyProductName?: string;
+}
+
 interface SkuMappingTabProps {
   projectId?: string;
 }
@@ -85,6 +105,14 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
 
   // Track which values we've already validated to prevent infinite loops
   const validatedValuesRef = useRef<Record<string, string>>({});
+
+  // Modifier addon SKU mappings state
+  const [modifierAddons, setModifierAddons] = useState<ModifierAddon[]>([]);
+  const [tierRewards, setTierRewards] = useState<TierReward[]>([]);
+  const [modifierSkuMappings, setModifierSkuMappings] = useState<ModifierSkuMapping[]>([]);
+  const [modifierSkuInputs, setModifierSkuInputs] = useState<Record<string, string>>({});
+  const [isSavingModifierSku, setIsSavingModifierSku] = useState<string | null>(null);
+  const [isLoadingModifiers, setIsLoadingModifiers] = useState(false);
 
   // Check Shopify connection status on mount
   useEffect(() => {
@@ -149,6 +177,34 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
       }
     }
     fetchSkuMappings();
+  }, [projectId]);
+
+  // Fetch modifier addons and their SKU mappings
+  useEffect(() => {
+    async function fetchModifierData() {
+      if (!projectId) {
+        setModifierAddons([]);
+        setTierRewards([]);
+        setModifierSkuMappings([]);
+        return;
+      }
+
+      setIsLoadingModifiers(true);
+      try {
+        const response = await fetch(`/api/creator/indiekit/modifiers?projectId=${projectId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setModifierAddons(data.modifierAddons || []);
+          setTierRewards(data.tierRewards || []);
+          setModifierSkuMappings(data.modifierSkuMappings || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch modifier data:", error);
+      } finally {
+        setIsLoadingModifiers(false);
+      }
+    }
+    fetchModifierData();
   }, [projectId]);
 
   // Validate SKU against Shopify (only when Shopify is connected)
@@ -612,6 +668,96 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   // Group mappings by source item
   const getMappingsForItem = (sourceType: string, sourceId: string) => {
     return skuMappings.filter(m => m.sourceType === sourceType && m.sourceId === sourceId);
+  };
+
+  // Handle saving modifier SKU mapping
+  const handleSaveModifierSku = async (baseRewardId: string, modifierAddonId: string) => {
+    const key = `${baseRewardId}-${modifierAddonId}`;
+    const sku = modifierSkuInputs[key]?.trim();
+
+    if (!sku) {
+      toast.error("Please enter a SKU");
+      return;
+    }
+
+    setIsSavingModifierSku(key);
+    try {
+      const baseReward = tierRewards.find(r => r.id === baseRewardId);
+      const modifierAddon = modifierAddons.find(a => a.id === modifierAddonId);
+
+      const res = await fetch("/api/creator/indiekit/modifiers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "save_modifier_sku",
+          baseRewardId,
+          modifierAddonId,
+          shopifySku: sku,
+          shopifyProductName: `${baseReward?.title || "Unknown"} + ${modifierAddon?.title || "Unknown"}`,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save modifier SKU mapping");
+      }
+
+      const data = await res.json();
+      // Update or add the mapping
+      setModifierSkuMappings(prev => {
+        const existing = prev.findIndex(m => m.baseRewardId === baseRewardId && m.modifierAddonId === modifierAddonId);
+        if (existing >= 0) {
+          const newMappings = [...prev];
+          newMappings[existing] = data.mapping;
+          return newMappings;
+        }
+        return [...prev, data.mapping];
+      });
+      setModifierSkuInputs(prev => {
+        const newInputs = { ...prev };
+        delete newInputs[key];
+        return newInputs;
+      });
+      toast.success(`Modifier SKU mapping saved`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save modifier SKU mapping");
+    } finally {
+      setIsSavingModifierSku(null);
+    }
+  };
+
+  // Handle deleting modifier SKU mapping
+  const handleDeleteModifierSku = async (mappingId: string) => {
+    setIsSavingModifierSku(mappingId);
+    try {
+      const res = await fetch("/api/creator/indiekit/modifiers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "delete_modifier_sku",
+          mappingId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete modifier SKU mapping");
+      }
+
+      setModifierSkuMappings(prev => prev.filter(m => m.id !== mappingId));
+      toast.success("Modifier SKU mapping removed");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete modifier SKU mapping");
+    } finally {
+      setIsSavingModifierSku(null);
+    }
+  };
+
+  // Get existing modifier mapping for a combination
+  const getModifierMapping = (baseRewardId: string, modifierAddonId: string) => {
+    return modifierSkuMappings.find(m => m.baseRewardId === baseRewardId && m.modifierAddonId === modifierAddonId);
   };
 
   // Get all unique source items that have at least one mapping or are in unmapped list
@@ -1169,6 +1315,136 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Modifier Addon SKU Combinations */}
+      {modifierAddons.length > 0 && tierRewards.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Layers className="h-5 w-5 text-purple-600" />
+              <CardTitle className="text-base">Modifier SKU Combinations</CardTitle>
+            </div>
+            <CardDescription>
+              When a backer applies an upgrade addon (like &quot;Upgrade to Metal&quot;) to a base reward,
+              map the combined result to a specific SKU. This determines which product to fulfill when
+              a modifier is applied.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {isLoadingModifiers ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Group by modifier addon */}
+                {modifierAddons.map((modifier) => (
+                  <div key={modifier.id} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                        {modifier.title}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">modifier</span>
+                    </div>
+
+                    <div className="space-y-2 ml-4 border-l-2 border-purple-200 pl-4">
+                      {tierRewards.map((reward) => {
+                        const existingMapping = getModifierMapping(reward.id, modifier.id);
+                        const inputKey = `${reward.id}-${modifier.id}`;
+                        const inputValue = modifierSkuInputs[inputKey] || "";
+
+                        return (
+                          <div
+                            key={`${reward.id}-${modifier.id}`}
+                            className={cn(
+                              "p-3 rounded-lg border",
+                              existingMapping
+                                ? "bg-green-50/50 dark:bg-green-900/10 border-green-200"
+                                : "bg-muted/30"
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              {/* Base Reward */}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{reward.title}</p>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <span>Base reward</span>
+                                  <ArrowRight className="h-3 w-3" />
+                                  <span className="text-purple-600">{modifier.title}</span>
+                                </div>
+                              </div>
+
+                              {/* Existing mapping or input */}
+                              {existingMapping ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                    <span className="font-mono text-sm">{existingMapping.shopifySku}</span>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteModifierSku(existingMapping.id)}
+                                    disabled={isSavingModifierSku === existingMapping.id}
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                  >
+                                    {isSavingModifierSku === existingMapping.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    placeholder="Combined SKU"
+                                    className="h-8 w-36"
+                                    value={inputValue}
+                                    onChange={(e) => {
+                                      setModifierSkuInputs(prev => ({
+                                        ...prev,
+                                        [inputKey]: e.target.value
+                                      }));
+                                    }}
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleSaveModifierSku(reward.id, modifier.id)}
+                                    disabled={isSavingModifierSku === inputKey || !inputValue.trim()}
+                                    className="h-8 bg-purple-600 hover:bg-purple-700"
+                                  >
+                                    {isSavingModifierSku === inputKey ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Save className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Info about no modifier addons */}
+                {modifierAddons.length === 0 && (
+                  <div className="text-center py-8">
+                    <Layers className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No modifier addons configured. To set up modifier combinations,
+                      mark add-ons as &quot;modifiers&quot; in your project settings.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

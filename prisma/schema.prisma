@@ -414,6 +414,10 @@ model Reward {
   isEnded           Boolean      @default(false)
   endedAt           DateTime?
 
+  // Modifier addon settings (for ADDON type rewards that modify base rewards)
+  isModifier        Boolean      @default(false)  // True if this addon modifies a base reward instead of being standalone
+  modifiesRewardIds String[]                      // Which reward IDs this can modify (empty = all tiers in project)
+
   // Tracking if copied
   copiedFromId      String?
 
@@ -508,6 +512,9 @@ model Pledge {
   // Fulfillment
   fulfillmentStatus     FulfillmentStatus @default(NOT_STARTED)
 
+  // Modifier addon assignments
+  needsModifierAssignment Boolean     @default(false)  // True if backer has ambiguous modifier addon assignments
+
   // Email tracking
   confirmationEmailSent Boolean      @default(false)
 
@@ -520,6 +527,7 @@ model Pledge {
   project               Project      @relation(fields: [projectId], references: [id])
   reward                Reward?      @relation(fields: [rewardId], references: [id])
   addons                PledgeAddon[]
+  modifierAssignments   PledgeModifierAssignment[]
   emailLogs             EmailLog[]
   divinityCoinTransactions DivinityCoinTransaction[]
 
@@ -533,6 +541,7 @@ model Pledge {
   @@index([status, nextRetryAt])  // For retry job queries
   @@index([sourceCampaignId])
   @@index([deletedAt])  // For soft delete filtering
+  @@index([needsModifierAssignment])  // For finding backers needing modifier assignment
 }
 
 model PledgeAddon {
@@ -547,6 +556,50 @@ model PledgeAddon {
 
   @@unique([pledgeId, addonId])
   @@index([pledgeId])
+}
+
+// Tracks which modifier addon is assigned to which base reward for each pledge
+// Example: Backer has Cover A, Cover B + Upgrade to Metal, Upgrade to Foil
+// This table stores: Cover A -> Metal, Cover B -> Foil
+model PledgeModifierAssignment {
+  id              String    @id @default(cuid())
+  pledgeId        String
+  rewardId        String    // The base reward being modified (e.g., Cover A)
+  modifierAddonId String    // The modifier addon being applied (e.g., Upgrade to Metal)
+
+  // Whether this was auto-assigned (simple case) or manually assigned
+  isAutoAssigned  Boolean   @default(false)
+  assignedBy      String?   // User ID if manually assigned by creator
+
+  pledge          Pledge    @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([pledgeId, modifierAddonId])  // Each modifier can only be assigned once per pledge
+  @@index([pledgeId])
+  @@index([rewardId])
+}
+
+// Maps reward + modifier addon combinations to specific SKUs
+// Example: Cover A + Upgrade to Metal = SKU-COVER-A-METAL
+model ModifierSkuMapping {
+  id                 String    @id @default(cuid())
+  projectId          String
+  baseRewardId       String    // The base reward (e.g., Cover A tier)
+  modifierAddonId    String    // The modifier addon (e.g., Upgrade to Metal)
+
+  // The resulting SKU when this combination is fulfilled
+  shopifySku         String
+  shopifyProductId   String?
+  shopifyVariantId   String?
+  shopifyProductName String?
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([projectId, baseRewardId, modifierAddonId])
+  @@index([projectId])
 }
 
 enum PledgeStatus {

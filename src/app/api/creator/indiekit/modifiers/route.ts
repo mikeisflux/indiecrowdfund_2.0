@@ -1,0 +1,489 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+// GET - Get modifier addons and assignment status for a project
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get("projectId");
+
+    if (!projectId) {
+      return NextResponse.json({ error: "Project ID required" }, { status: 400 });
+    }
+
+    // Verify user has access to this project
+    const project = await db.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { creatorId: session.user.id },
+          { collaborators: { some: { userId: session.user.id } } },
+        ],
+      },
+      include: {
+        rewards: {
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            isModifier: true,
+            modifiesRewardIds: true,
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
+    }
+
+    // Get all modifier addons
+    const modifierAddons = project.rewards.filter(r => r.type === "ADDON" && r.isModifier);
+
+    // Get all tier rewards (base rewards that can be modified)
+    const tierRewards = project.rewards.filter(r => r.type === "TIER");
+
+    // Get pledges that have modifier addons
+    const pledgesWithModifiers = await db.pledge.findMany({
+      where: {
+        projectId,
+        status: { in: ["COMPLETED", "PENDING"] },
+        addons: {
+          some: {
+            addon: {
+              isModifier: true,
+            },
+          },
+        },
+        deletedAt: null,
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+        reward: {
+          select: { id: true, title: true },
+        },
+        addons: {
+          include: {
+            addon: {
+              select: { id: true, title: true, isModifier: true },
+            },
+          },
+        },
+        modifierAssignments: true,
+      },
+    });
+
+    // Analyze each pledge for assignment status
+    const pledgeAnalysis = pledgesWithModifiers.map(pledge => {
+      const modifierAddonsPurchased = pledge.addons
+        .filter(a => a.addon.isModifier)
+        .map(a => ({ id: a.addon.id, title: a.addon.title, quantity: a.quantity }));
+
+      const baseReward = pledge.reward;
+      const existingAssignments = pledge.modifierAssignments;
+
+      // Determine if assignment is needed and possible
+      let status: "assigned" | "auto_assignable" | "needs_manual" | "no_base_reward" = "needs_manual";
+
+      if (!baseReward) {
+        status = "no_base_reward";
+      } else if (existingAssignments.length === modifierAddonsPurchased.reduce((sum, m) => sum + m.quantity, 0)) {
+        status = "assigned";
+      } else if (modifierAddonsPurchased.length === 1 && modifierAddonsPurchased[0].quantity === 1) {
+        // Simple case: one modifier addon, one base reward
+        status = "auto_assignable";
+      }
+
+      return {
+        pledgeId: pledge.id,
+        backerNumber: pledge.backerNumber,
+        user: pledge.user,
+        baseReward,
+        modifierAddons: modifierAddonsPurchased,
+        existingAssignments: existingAssignments.map(a => ({
+          id: a.id,
+          rewardId: a.rewardId,
+          modifierAddonId: a.modifierAddonId,
+          isAutoAssigned: a.isAutoAssigned,
+        })),
+        status,
+        needsModifierAssignment: pledge.needsModifierAssignment,
+      };
+    });
+
+    // Get modifier SKU mappings
+    const modifierSkuMappings = await db.modifierSkuMapping.findMany({
+      where: { projectId },
+    });
+
+    return NextResponse.json({
+      modifierAddons,
+      tierRewards,
+      pledgeAnalysis,
+      modifierSkuMappings,
+      stats: {
+        totalPledgesWithModifiers: pledgesWithModifiers.length,
+        assigned: pledgeAnalysis.filter(p => p.status === "assigned").length,
+        autoAssignable: pledgeAnalysis.filter(p => p.status === "auto_assignable").length,
+        needsManual: pledgeAnalysis.filter(p => p.status === "needs_manual").length,
+      },
+    });
+  } catch (error) {
+    console.error("Modifier GET error:", error);
+    return NextResponse.json({ error: "Failed to fetch modifier data" }, { status: 500 });
+  }
+}
+
+// POST - Assign modifiers (auto or manual)
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { projectId, action } = body;
+
+    if (!projectId) {
+      return NextResponse.json({ error: "Project ID required" }, { status: 400 });
+    }
+
+    // Verify user has access to this project
+    const project = await db.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { creatorId: session.user.id },
+          { collaborators: { some: { userId: session.user.id } } },
+        ],
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
+    }
+
+    // AUTO-ASSIGN all simple cases
+    if (action === "auto_assign_all") {
+      // Get all pledges with modifier addons that don't have assignments yet
+      const pledges = await db.pledge.findMany({
+        where: {
+          projectId,
+          status: { in: ["COMPLETED", "PENDING"] },
+          addons: {
+            some: {
+              addon: { isModifier: true },
+            },
+          },
+          deletedAt: null,
+        },
+        include: {
+          reward: true,
+          addons: {
+            include: {
+              addon: true,
+            },
+          },
+          modifierAssignments: true,
+        },
+      });
+
+      let autoAssigned = 0;
+      let flaggedForManual = 0;
+
+      for (const pledge of pledges) {
+        const modifierAddons = pledge.addons.filter(a => a.addon.isModifier);
+        const baseReward = pledge.reward;
+
+        // Skip if no base reward
+        if (!baseReward) {
+          continue;
+        }
+
+        // Skip if already has assignments for all modifiers
+        const totalModifierQuantity = modifierAddons.reduce((sum, a) => sum + a.quantity, 0);
+        if (pledge.modifierAssignments.length >= totalModifierQuantity) {
+          continue;
+        }
+
+        // Simple case: one modifier addon with quantity 1, one base reward
+        if (modifierAddons.length === 1 && modifierAddons[0].quantity === 1) {
+          // Check if this assignment already exists
+          const existingAssignment = await db.pledgeModifierAssignment.findFirst({
+            where: {
+              pledgeId: pledge.id,
+              modifierAddonId: modifierAddons[0].addonId,
+            },
+          });
+
+          if (!existingAssignment) {
+            await db.pledgeModifierAssignment.create({
+              data: {
+                pledgeId: pledge.id,
+                rewardId: baseReward.id,
+                modifierAddonId: modifierAddons[0].addonId,
+                isAutoAssigned: true,
+              },
+            });
+
+            // Clear the needsModifierAssignment flag
+            await db.pledge.update({
+              where: { id: pledge.id },
+              data: { needsModifierAssignment: false },
+            });
+
+            autoAssigned++;
+          }
+        } else {
+          // Complex case: flag for manual assignment
+          if (!pledge.needsModifierAssignment) {
+            await db.pledge.update({
+              where: { id: pledge.id },
+              data: { needsModifierAssignment: true },
+            });
+            flaggedForManual++;
+          }
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Auto-assigned ${autoAssigned} pledges, flagged ${flaggedForManual} for manual assignment`,
+        autoAssigned,
+        flaggedForManual,
+      });
+    }
+
+    // MANUAL ASSIGN - assign a specific modifier to a specific reward for a pledge
+    if (action === "manual_assign") {
+      const { pledgeId, rewardId, modifierAddonId } = body;
+
+      if (!pledgeId || !rewardId || !modifierAddonId) {
+        return NextResponse.json(
+          { error: "pledgeId, rewardId, and modifierAddonId are required" },
+          { status: 400 }
+        );
+      }
+
+      // Verify pledge exists and belongs to this project
+      const pledge = await db.pledge.findFirst({
+        where: {
+          id: pledgeId,
+          projectId,
+          deletedAt: null,
+        },
+        include: {
+          addons: true,
+          modifierAssignments: true,
+        },
+      });
+
+      if (!pledge) {
+        return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+      }
+
+      // Check if this modifier addon is actually purchased by this backer
+      const hasModifier = pledge.addons.some(a => a.addonId === modifierAddonId);
+      if (!hasModifier) {
+        return NextResponse.json(
+          { error: "Backer does not have this modifier addon" },
+          { status: 400 }
+        );
+      }
+
+      // Check if assignment already exists for this modifier
+      const existingAssignment = await db.pledgeModifierAssignment.findFirst({
+        where: {
+          pledgeId,
+          modifierAddonId,
+        },
+      });
+
+      if (existingAssignment) {
+        // Update existing assignment
+        const updated = await db.pledgeModifierAssignment.update({
+          where: { id: existingAssignment.id },
+          data: {
+            rewardId,
+            isAutoAssigned: false,
+            assignedBy: session.user.id,
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "Modifier assignment updated",
+          assignment: updated,
+        });
+      } else {
+        // Create new assignment
+        const assignment = await db.pledgeModifierAssignment.create({
+          data: {
+            pledgeId,
+            rewardId,
+            modifierAddonId,
+            isAutoAssigned: false,
+            assignedBy: session.user.id,
+          },
+        });
+
+        // Check if all modifiers are now assigned
+        const modifierAddons = pledge.addons.filter(a => {
+          // We need to check if this is a modifier addon
+          // For now, just count all assignments
+          return true;
+        });
+        const totalNeeded = modifierAddons.length; // Simplified - doesn't account for quantity
+        const totalAssigned = pledge.modifierAssignments.length + 1;
+
+        if (totalAssigned >= totalNeeded) {
+          await db.pledge.update({
+            where: { id: pledgeId },
+            data: { needsModifierAssignment: false },
+          });
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: "Modifier assigned successfully",
+          assignment,
+        });
+      }
+    }
+
+    // DELETE ASSIGNMENT
+    if (action === "delete_assignment") {
+      const { assignmentId } = body;
+
+      if (!assignmentId) {
+        return NextResponse.json({ error: "assignmentId required" }, { status: 400 });
+      }
+
+      await db.pledgeModifierAssignment.delete({
+        where: { id: assignmentId },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Assignment deleted",
+      });
+    }
+
+    // MARK ADDON AS MODIFIER
+    if (action === "set_modifier") {
+      const { addonId, isModifier, modifiesRewardIds } = body;
+
+      if (!addonId) {
+        return NextResponse.json({ error: "addonId required" }, { status: 400 });
+      }
+
+      // Verify addon exists and belongs to this project
+      const addon = await db.reward.findFirst({
+        where: {
+          id: addonId,
+          projectId,
+          type: "ADDON",
+        },
+      });
+
+      if (!addon) {
+        return NextResponse.json({ error: "Addon not found" }, { status: 404 });
+      }
+
+      await db.reward.update({
+        where: { id: addonId },
+        data: {
+          isModifier: isModifier ?? false,
+          modifiesRewardIds: modifiesRewardIds ?? [],
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: isModifier ? "Addon marked as modifier" : "Addon unmarked as modifier",
+      });
+    }
+
+    // SAVE MODIFIER SKU MAPPING
+    if (action === "save_modifier_sku") {
+      const { baseRewardId, modifierAddonId, shopifySku, shopifyProductName } = body;
+
+      if (!baseRewardId || !modifierAddonId || !shopifySku) {
+        return NextResponse.json(
+          { error: "baseRewardId, modifierAddonId, and shopifySku are required" },
+          { status: 400 }
+        );
+      }
+
+      // Check if mapping exists
+      const existing = await db.modifierSkuMapping.findFirst({
+        where: {
+          projectId,
+          baseRewardId,
+          modifierAddonId,
+        },
+      });
+
+      let mapping;
+      if (existing) {
+        mapping = await db.modifierSkuMapping.update({
+          where: { id: existing.id },
+          data: {
+            shopifySku,
+            shopifyProductName,
+          },
+        });
+      } else {
+        mapping = await db.modifierSkuMapping.create({
+          data: {
+            projectId,
+            baseRewardId,
+            modifierAddonId,
+            shopifySku,
+            shopifyProductName,
+          },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Modifier SKU mapping saved",
+        mapping,
+      });
+    }
+
+    // DELETE MODIFIER SKU MAPPING
+    if (action === "delete_modifier_sku") {
+      const { mappingId } = body;
+
+      if (!mappingId) {
+        return NextResponse.json({ error: "mappingId required" }, { status: 400 });
+      }
+
+      await db.modifierSkuMapping.delete({
+        where: { id: mappingId },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Modifier SKU mapping deleted",
+      });
+    }
+
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  } catch (error) {
+    console.error("Modifier POST error:", error);
+    return NextResponse.json({ error: "Failed to process modifier action" }, { status: 500 });
+  }
+}

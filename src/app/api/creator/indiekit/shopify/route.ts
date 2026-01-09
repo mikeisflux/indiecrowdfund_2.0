@@ -356,9 +356,16 @@ export async function POST(req: NextRequest) {
         where: { projectId },
       });
 
+      // Get modifier SKU mappings for this project
+      const modifierSkuMappings = await db.modifierSkuMapping.findMany({
+        where: { projectId },
+      });
+
       // Create lookup maps for quick access
       const rewardSkuMap = new Map<string, { sku: string; variantId?: string; quantity: number }>();
       const addonSkuMap = new Map<string, { sku: string; variantId?: string; quantity: number }>();
+      // Map key: "baseRewardId-modifierAddonId" -> combined SKU
+      const modifierSkuMap = new Map<string, { sku: string; variantId?: string }>();
 
       for (const mapping of skuMappings) {
         const skuData = {
@@ -372,6 +379,15 @@ export async function POST(req: NextRequest) {
         } else if (mapping.sourceType === "ADDON") {
           addonSkuMap.set(mapping.sourceId, skuData);
         }
+      }
+
+      // Build modifier SKU lookup map
+      for (const mapping of modifierSkuMappings) {
+        const key = `${mapping.baseRewardId}-${mapping.modifierAddonId}`;
+        modifierSkuMap.set(key, {
+          sku: mapping.shopifySku,
+          variantId: mapping.shopifyVariantId || undefined,
+        });
       }
 
       // Get backers to push (either specified or all unpushed)
@@ -413,8 +429,15 @@ export async function POST(req: NextRequest) {
                 select: {
                   id: true,
                   title: true,
+                  isModifier: true,
                 },
               },
+            },
+          },
+          modifierAssignments: {
+            select: {
+              rewardId: true,
+              modifierAddonId: true,
             },
           },
         },
@@ -458,18 +481,65 @@ export async function POST(req: NextRequest) {
             variant_id?: number;
           }> = [];
 
+          // Track which modifier addon IDs have been assigned to rewards (don't add as separate line items)
+          const assignedModifierAddonIds = new Set(
+            pledge.modifierAssignments?.map(ma => ma.modifierAddonId) || []
+          );
+
           if (pledge.reward) {
-            const rewardSku = rewardSkuMap.get(pledge.reward.id);
+            // Check if this reward has a modifier applied
+            const modifierAssignment = pledge.modifierAssignments?.find(
+              ma => ma.rewardId === pledge.reward?.id
+            );
+
+            let sku: string | undefined;
+            let variantId: string | undefined;
+            let title = pledge.reward.title;
+
+            if (modifierAssignment) {
+              // Use modifier combination SKU
+              const modifierKey = `${pledge.reward.id}-${modifierAssignment.modifierAddonId}`;
+              const modifierSku = modifierSkuMap.get(modifierKey);
+
+              if (modifierSku) {
+                sku = modifierSku.sku;
+                variantId = modifierSku.variantId;
+                // Find the modifier addon name for the title
+                const modifierAddon = pledge.addons.find(
+                  a => a.addon.id === modifierAssignment.modifierAddonId
+                );
+                if (modifierAddon) {
+                  title = `${pledge.reward.title} + ${modifierAddon.addon.title}`;
+                }
+              } else {
+                // Fallback to base reward SKU if no modifier mapping exists
+                const rewardSku = rewardSkuMap.get(pledge.reward.id);
+                sku = rewardSku?.sku;
+                variantId = rewardSku?.variantId;
+              }
+            } else {
+              // No modifier - use base reward SKU
+              const rewardSku = rewardSkuMap.get(pledge.reward.id);
+              sku = rewardSku?.sku;
+              variantId = rewardSku?.variantId;
+            }
+
+            const rewardSkuData = rewardSkuMap.get(pledge.reward.id);
             lineItems.push({
-              title: pledge.reward.title,
-              quantity: rewardSku?.quantity || 1,
+              title,
+              quantity: rewardSkuData?.quantity || 1,
               price: pledge.pledgeAmount.toString(),
-              sku: rewardSku?.sku,
-              variant_id: rewardSku?.variantId ? parseInt(rewardSku.variantId) : undefined,
+              sku,
+              variant_id: variantId ? parseInt(variantId) : undefined,
             });
           }
 
           for (const addon of pledge.addons) {
+            // Skip modifier addons that have been assigned to a reward (already included in reward line item)
+            if (addon.addon.isModifier && assignedModifierAddonIds.has(addon.addon.id)) {
+              continue;
+            }
+
             const addonSku = addonSkuMap.get(addon.addon.id);
             lineItems.push({
               title: addon.addon.title,

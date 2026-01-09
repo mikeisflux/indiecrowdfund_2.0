@@ -45,6 +45,8 @@ import {
   Undo2,
   ClipboardList,
   Loader2,
+  Layers,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Backer } from "../../types";
@@ -58,6 +60,13 @@ import { NotesDialog } from "./notes-dialog";
 import { EmailComposerDialog } from "./email-composer-dialog";
 import { CancelOrderDialog } from "./confirm-dialog";
 import { PackingSlipDialog } from "./packing-slip-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface BackerDialogProps {
   open: boolean;
@@ -114,6 +123,10 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
   const [surveyData, setSurveyData] = useState<SurveyData | null>(null);
   const [surveyLoading, setSurveyLoading] = useState(false);
   const [surveyError, setSurveyError] = useState<string | null>(null);
+
+  // Modifier assignment state
+  const [modifierAssignmentSaving, setModifierAssignmentSaving] = useState(false);
+  const [pendingAssignments, setPendingAssignments] = useState<Record<string, string>>({});
 
   // Fetch survey data when switching to survey tab
   const fetchSurveyData = useCallback(async () => {
@@ -216,6 +229,45 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
       console.error("Push to fulfillment error:", error);
     }
   };
+
+  const handleSaveModifierAssignment = async (modifierAddonId: string, rewardId: string) => {
+    if (!backer?.projectId) return;
+
+    setModifierAssignmentSaving(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/modifiers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId: backer.projectId,
+          action: "manual_assign",
+          pledgeId: backer.id,
+          rewardId,
+          modifierAddonId,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save modifier assignment");
+      toast.success("Modifier assignment saved");
+      // Update pending assignments to show the saved value
+      setPendingAssignments(prev => ({ ...prev, [modifierAddonId]: rewardId }));
+    } catch (error) {
+      toast.error("Failed to save modifier assignment");
+      console.error("Modifier assignment error:", error);
+    } finally {
+      setModifierAssignmentSaving(false);
+    }
+  };
+
+  // Get modifier addons from the backer's addons
+  const modifierAddons = backer?.addons?.filter(addon => addon.isModifier) || [];
+  const hasModifierAddons = modifierAddons.length > 0;
+
+  // Build a list of base rewards from items (pledge level items)
+  // This is a simplified version - in production, you'd want to fetch actual tier rewards
+  const baseRewardOptions = backer?.items?.map(item => ({
+    id: item.sku || item.name,
+    name: item.name,
+  })) || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -494,6 +546,79 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
                   </div>
                 </div>
               </div>
+
+              {/* Modifier Assignment Section - only show if backer has modifier addons */}
+              {hasModifierAddons && (
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Layers className="h-5 w-5 text-purple-600" />
+                    <h4 className="font-medium">Modifier Assignments</h4>
+                    {backer.needsModifierAssignment && (
+                      <Badge className="bg-amber-100 text-amber-700">Needs Assignment</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Assign which item each upgrade/modifier addon applies to. This determines the final SKU for fulfillment.
+                  </p>
+                  <div className="space-y-3">
+                    {modifierAddons.map((addon) => {
+                      // Find existing assignment for this modifier
+                      const existingAssignment = backer.modifierAssignments?.find(
+                        (a) => a.modifierAddonId === addon.id
+                      );
+                      const currentValue = pendingAssignments[addon.id] || existingAssignment?.rewardId || "";
+
+                      return (
+                        <div key={addon.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium flex items-center gap-2">
+                              {addon.name}
+                              {addon.quantity > 1 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  x{addon.quantity}
+                                </Badge>
+                              )}
+                            </p>
+                            {existingAssignment && (
+                              <p className="text-xs text-muted-foreground">
+                                {existingAssignment.isAutoAssigned ? "Auto-assigned" : "Manually assigned"}
+                                {existingAssignment.rewardTitle && ` to: ${existingAssignment.rewardTitle}`}
+                              </p>
+                            )}
+                          </div>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <div className="w-48">
+                            <Select
+                              value={currentValue}
+                              onValueChange={(value) => {
+                                handleSaveModifierAssignment(addon.id, value);
+                              }}
+                              disabled={modifierAssignmentSaving}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Select item to modify" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {baseRewardOptions.map((item) => (
+                                  <SelectItem key={item.id} value={item.id}>
+                                    {item.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {modifierAssignmentSaving && (
+                    <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Saving assignment...
+                    </div>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             {/* Survey Tab */}

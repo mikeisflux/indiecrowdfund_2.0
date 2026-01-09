@@ -136,8 +136,17 @@ export async function GET(req: NextRequest) {
                   id: true,
                   title: true,
                   amount: true,
+                  isModifier: true,
                 },
               },
+            },
+          },
+          modifierAssignments: {
+            select: {
+              id: true,
+              rewardId: true,
+              modifierAddonId: true,
+              isAutoAssigned: true,
             },
           },
         },
@@ -421,12 +430,28 @@ export async function GET(req: NextRequest) {
       ];
 
       // Build addons list with proper structure
-      const addons = pledge.addons.map((a: { addon: { id: string; title: string; amount: unknown }; quantity: number }) => ({
+      const addons = pledge.addons.map((a: { addon: { id: string; title: string; amount: unknown; isModifier?: boolean }; quantity: number }) => ({
         id: a.addon.id,
         name: a.addon.title,
         quantity: a.quantity,
         amount: Number(a.addon.amount),
+        isModifier: a.addon.isModifier || false,
       }));
+
+      // Check if backer has modifier addons that need assignment
+      const hasModifierAddons = pledge.addons.some((a: { addon: { isModifier?: boolean } }) => a.addon.isModifier);
+      const modifierAssignments = (pledge.modifierAssignments || []).map((ma: { id: string; rewardId: string; modifierAddonId: string; isAutoAssigned: boolean }) => {
+        const modifierAddon = pledge.addons.find((a: { addon: { id: string } }) => a.addon.id === ma.modifierAddonId);
+        return {
+          id: ma.id,
+          rewardId: ma.rewardId,
+          rewardTitle: pledge.reward?.title,
+          modifierAddonId: ma.modifierAddonId,
+          modifierAddonTitle: modifierAddon?.addon?.title,
+          isAutoAssigned: ma.isAutoAssigned,
+        };
+      });
+      const needsModifierAssignment = hasModifierAddons && modifierAssignments.length < pledge.addons.filter((a: { addon: { isModifier?: boolean } }) => a.addon.isModifier).length;
 
       return {
         id: pledge.id,
@@ -449,6 +474,8 @@ export async function GET(req: NextRequest) {
         items,
         addons,
         digitalDownloads: [], // Would be populated from digital file distribution records
+        needsModifierAssignment,
+        modifierAssignments,
       };
     });
 
