@@ -26,6 +26,7 @@ interface RateLimitConfig {
 const ipAttempts = new Map<string, RateLimitEntry>();
 const accountAttempts = new Map<string, RateLimitEntry>();
 const lockoutCounts = new Map<string, { count: number; lastLockout: number }>();
+const registrationAttempts = new Map<string, RateLimitEntry>();
 
 // Cached settings from database
 let cachedSettings: {
@@ -530,13 +531,176 @@ export async function getAccountLockoutInfo(email: string): Promise<{
   };
 }
 
+// =====================
+// REGISTRATION BOT PROTECTION
+// =====================
+
+const REGISTRATION_CONFIG: RateLimitConfig = {
+  maxAttempts: 5,              // 5 registrations
+  windowMs: 60 * 60 * 1000,    // within 1 hour
+  lockoutMs: 60 * 60 * 1000,   // lockout for 1 hour
+};
+
+/**
+ * Check if a registration attempt is allowed based on IP
+ */
+export async function checkRegistrationRateLimit(
+  ip: string | null
+): Promise<RateLimitResult> {
+  if (!ip) {
+    return { allowed: true, remainingAttempts: REGISTRATION_CONFIG.maxAttempts };
+  }
+
+  const key = `register:${ip}`;
+  const check = checkRateLimit(registrationAttempts, key, REGISTRATION_CONFIG);
+
+  if (!check.allowed) {
+    return {
+      allowed: false,
+      remainingAttempts: 0,
+      retryAfter: check.retryAfter,
+      message: `Too many registration attempts. Please try again in ${formatRetryTime(check.retryAfter || 0)}.`,
+    };
+  }
+
+  return {
+    allowed: true,
+    remainingAttempts: check.remainingAttempts,
+  };
+}
+
+/**
+ * Record a registration attempt
+ */
+export async function recordRegistrationAttempt(ip: string | null): Promise<void> {
+  if (!ip) return;
+
+  const key = `register:${ip}`;
+  recordAttempt(registrationAttempts, key, REGISTRATION_CONFIG, false);
+}
+
+/**
+ * Calculate Shannon entropy of a string (measures randomness)
+ * High entropy = more random/gibberish
+ */
+function calculateEntropy(str: string): number {
+  if (!str || str.length === 0) return 0;
+
+  const len = str.length;
+  const frequencies: Record<string, number> = {};
+
+  for (const char of str.toLowerCase()) {
+    frequencies[char] = (frequencies[char] || 0) + 1;
+  }
+
+  let entropy = 0;
+  for (const char in frequencies) {
+    const probability = frequencies[char] / len;
+    entropy -= probability * Math.log2(probability);
+  }
+
+  return entropy;
+}
+
+/**
+ * Validate a name to detect bot-like gibberish
+ * Returns { valid: boolean, reason?: string }
+ */
+export function validateNameNotGibberish(name: string): { valid: boolean; reason?: string } {
+  if (!name || name.trim().length < 2) {
+    return { valid: false, reason: "Name must be at least 2 characters" };
+  }
+
+  const trimmedName = name.trim();
+
+  // Check 1: Must contain at least one space (real names usually have first + last)
+  // Exception: Allow single names that look real (lowercase, reasonable length)
+  const hasSpace = trimmedName.includes(" ");
+  const isSingleWord = !hasSpace;
+
+  if (isSingleWord) {
+    // Single word names are OK if they look like real names
+    // But reject if they're too long or look random
+    if (trimmedName.length > 15) {
+      return { valid: false, reason: "Name appears to be invalid" };
+    }
+
+    // Check for mixed case gibberish like "KntiDZfojckmvTjNGOcBK"
+    const hasRandomMixedCase = /[a-z][A-Z]|[A-Z][a-z][A-Z]/.test(trimmedName) &&
+      trimmedName.length > 8;
+    if (hasRandomMixedCase) {
+      return { valid: false, reason: "Please enter a valid name" };
+    }
+  }
+
+  // Check 2: Only alphanumeric (no spaces, punctuation) is suspicious for long strings
+  if (/^[a-zA-Z0-9]+$/.test(trimmedName) && trimmedName.length > 12) {
+    return { valid: false, reason: "Please enter a valid name" };
+  }
+
+  // Check 3: High entropy suggests random string
+  const entropy = calculateEntropy(trimmedName.replace(/\s/g, ""));
+  // Real names typically have entropy < 3.5, random strings > 4.0
+  if (entropy > 4.0 && trimmedName.length > 10) {
+    return { valid: false, reason: "Please enter a valid name" };
+  }
+
+  // Check 4: Unusual character distribution
+  // Names have vowels - pure consonant strings are suspicious
+  const letters = trimmedName.replace(/[^a-zA-Z]/g, "").toLowerCase();
+  if (letters.length > 5) {
+    const vowelCount = (letters.match(/[aeiou]/g) || []).length;
+    const vowelRatio = vowelCount / letters.length;
+    // Real names typically have 25-50% vowels
+    if (vowelRatio < 0.15 && letters.length > 8) {
+      return { valid: false, reason: "Please enter a valid name" };
+    }
+  }
+
+  // Check 5: No repeated random patterns (like "asdfasdf")
+  if (/(.{3,})\1{2,}/.test(trimmedName.toLowerCase())) {
+    return { valid: false, reason: "Please enter a valid name" };
+  }
+
+  // Check 6: Reject obvious test/fake patterns
+  const suspiciousPatterns = [
+    /^test/i,
+    /^asdf/i,
+    /^qwerty/i,
+    /^12345/i,
+    /^admin/i,
+    /^user\d+$/i,
+    /^[a-z]{20,}$/i,  // 20+ lowercase letters
+    /^[A-Za-z]{1,2}\d{5,}$/,  // Like A123456
+  ];
+
+  for (const pattern of suspiciousPatterns) {
+    if (pattern.test(trimmedName)) {
+      return { valid: false, reason: "Please enter your real name" };
+    }
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Check if honeypot field was filled (indicates bot)
+ */
+export function checkHoneypot(honeypotValue: string | null): boolean {
+  // Honeypot should be empty - bots fill it, humans don't see it
+  return !honeypotValue || honeypotValue.trim() === "";
+}
+
 // Export for testing
 export const _internal = {
   ipAttempts,
   accountAttempts,
   lockoutCounts,
+  registrationAttempts,
   cleanup,
   LOGIN_CONFIG,
   IP_CONFIG,
   PASSWORD_RESET_CONFIG,
+  REGISTRATION_CONFIG,
+  calculateEntropy,
 };

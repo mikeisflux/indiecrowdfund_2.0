@@ -11,7 +11,12 @@ import {
   recordLoginAttempt,
   checkPasswordResetRateLimit,
   recordPasswordResetAttempt,
+  checkRegistrationRateLimit,
+  recordRegistrationAttempt,
+  validateNameNotGibberish,
+  checkHoneypot,
 } from "./rate-limit";
+import { verifyRecaptcha } from "./recaptcha";
 
 /**
  * Get client IP address from request headers
@@ -40,6 +45,35 @@ const loginSchema = z.object({
 
 export async function register(formData: FormData, callbackUrl?: string | null) {
   try {
+    // Get client IP for rate limiting
+    const clientIP = await getClientIP();
+
+    // Check honeypot (bot detection) - should be empty
+    const honeypotValue = formData.get("website") as string | null;
+    if (!checkHoneypot(honeypotValue)) {
+      // Bot detected - silently reject with generic error
+      console.log("[Register] Bot detected via honeypot from IP:", clientIP);
+      return { error: { _form: ["Registration failed. Please try again."] } };
+    }
+
+    // Verify reCAPTCHA if token provided
+    const recaptchaToken = formData.get("recaptchaToken") as string | null;
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken, clientIP);
+    if (!recaptchaResult.valid) {
+      console.log("[Register] reCAPTCHA failed from IP:", clientIP);
+      return { error: { _form: [recaptchaResult.error || "CAPTCHA verification failed"] } };
+    }
+
+    // Check rate limit before processing
+    const rateLimitCheck = await checkRegistrationRateLimit(clientIP);
+    if (!rateLimitCheck.allowed) {
+      return {
+        error: {
+          _form: [rateLimitCheck.message || "Too many registration attempts. Please try again later."],
+        },
+      };
+    }
+
     const validatedFields = registerSchema.safeParse({
       name: formData.get("name"),
       email: formData.get("email"),
@@ -51,6 +85,13 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
     }
 
     const { name, email, password } = validatedFields.data;
+
+    // Validate name is not gibberish (bot detection)
+    const nameValidation = validateNameNotGibberish(name);
+    if (!nameValidation.valid) {
+      console.log("[Register] Gibberish name rejected:", name, "IP:", clientIP);
+      return { error: { name: [nameValidation.reason || "Please enter a valid name"] } };
+    }
 
     // Check if user already exists
     let existingUser;
@@ -86,6 +127,9 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
           password: hashedPassword,
         },
       });
+
+      // Record registration attempt for rate limiting
+      await recordRegistrationAttempt(clientIP);
     } catch (createError) {
       console.error("[Register] Error creating user:", createError);
       return { error: { _form: ["Something went wrong. Please try again."] } };

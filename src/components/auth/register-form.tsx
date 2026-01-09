@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { register } from "@/lib/auth/actions";
@@ -9,19 +9,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { Recaptcha, getRecaptchaSiteKey } from "./recaptcha";
 
 export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get("callbackUrl") || searchParams?.get("redirect");
 
+  const recaptchaSiteKey = getRecaptchaSiteKey();
+  const isRecaptchaEnabled = !!recaptchaSiteKey;
+
+  const handleRecaptchaVerify = useCallback((token: string) => {
+    setRecaptchaToken(token);
+  }, []);
+
+  const handleRecaptchaExpire = useCallback(() => {
+    setRecaptchaToken(null);
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // Check reCAPTCHA if enabled
+    if (isRecaptchaEnabled && !recaptchaToken) {
+      setError("Please complete the CAPTCHA");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     const formData = new FormData(e.currentTarget);
+
+    // Add reCAPTCHA token if available
+    if (recaptchaToken) {
+      formData.set("recaptchaToken", recaptchaToken);
+    }
 
     try {
       const result = await register(formData, callbackUrl);
@@ -102,7 +127,30 @@ export function RegisterForm() {
           />
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        {/* Honeypot field - hidden from users, bots will fill it */}
+        <div className="absolute -left-[9999px] opacity-0 h-0 overflow-hidden" aria-hidden="true">
+          <label htmlFor="website">Website (leave blank)</label>
+          <input
+            type="text"
+            id="website"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+          />
+        </div>
+
+        {/* reCAPTCHA - only show if enabled */}
+        {isRecaptchaEnabled && recaptchaSiteKey && (
+          <div className="flex justify-center">
+            <Recaptcha
+              siteKey={recaptchaSiteKey}
+              onVerify={handleRecaptchaVerify}
+              onExpire={handleRecaptchaExpire}
+            />
+          </div>
+        )}
+
+        <Button type="submit" className="w-full" disabled={isLoading || (isRecaptchaEnabled && !recaptchaToken)}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Create account
         </Button>
