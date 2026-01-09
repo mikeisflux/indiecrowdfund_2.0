@@ -21,6 +21,7 @@ import {
   Undo2,
   Layers,
   ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
@@ -113,6 +114,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   const [modifierSkuInputs, setModifierSkuInputs] = useState<Record<string, string>>({});
   const [isSavingModifierSku, setIsSavingModifierSku] = useState<string | null>(null);
   const [isLoadingModifiers, setIsLoadingModifiers] = useState(false);
+  const [isMarkingAsModifier, setIsMarkingAsModifier] = useState<string | null>(null);
 
   // Check Shopify connection status on mount
   useEffect(() => {
@@ -665,6 +667,47 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     }
   };
 
+  // Handle marking an addon as a modifier (moves it to Modifier SKU Combinations section)
+  const handleMarkAsModifier = async (item: UnmappedItem) => {
+    if (item.sourceType !== "ADDON") return;
+
+    const key = item.sourceId;
+    setIsMarkingAsModifier(key);
+
+    try {
+      const res = await fetch("/api/creator/indiekit/modifiers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "set_modifier",
+          addonId: item.sourceId,
+          isModifier: true,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to mark as modifier");
+      }
+
+      // Remove from unmapped items list
+      setUnmappedItems(prev => prev.filter(i => i.sourceId !== item.sourceId));
+
+      // Add to modifier addons list
+      setModifierAddons(prev => [...prev, { id: item.sourceId, title: item.sourceName }]);
+
+      // Also remove from skipped items if it was skipped
+      setSkippedItems(prev => prev.filter(s => s.sourceId !== item.sourceId));
+
+      toast.success(`"${item.sourceName}" is now a modifier addon. Map combinations below.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to mark as modifier");
+    } finally {
+      setIsMarkingAsModifier(null);
+    }
+  };
+
   // Group mappings by source item
   const getMappingsForItem = (sourceType: string, sourceId: string) => {
     return skuMappings.filter(m => m.sourceType === sourceType && m.sourceId === sourceId);
@@ -991,6 +1034,26 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                                 )}
                               </div>
                             </div>
+                            {/* Mark as Modifier Button (only for add-ons) */}
+                            {item.sourceType === "ADDON" && !isSkipped && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleMarkAsModifier(item)}
+                                disabled={isMarkingAsModifier === item.sourceId}
+                                className="shrink-0 border-purple-300 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
+                                title="This is a modifier (like 'Upgrade to Metal') - move to Modifier SKU Combinations"
+                              >
+                                {isMarkingAsModifier === item.sourceId ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-4 w-4 mr-1" />
+                                    Modifier
+                                  </>
+                                )}
+                              </Button>
+                            )}
                             {/* Skip/Unskip Button */}
                             <Button
                               variant={isSkipped ? "outline" : "ghost"}
