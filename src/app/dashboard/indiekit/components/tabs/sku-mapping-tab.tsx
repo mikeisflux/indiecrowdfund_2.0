@@ -17,6 +17,8 @@ import {
   XCircle,
   Info,
   Plus,
+  SkipForward,
+  Undo2,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
@@ -46,6 +48,13 @@ interface SkuValidationState {
   error?: string;
 }
 
+interface SkippedItem {
+  id: string;
+  sourceType: string;
+  sourceId: string;
+  sourceName: string;
+}
+
 interface SkuMappingTabProps {
   projectId?: string;
 }
@@ -63,8 +72,10 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   // SKU Mapping state
   const [skuMappings, setSkuMappings] = useState<SkuMapping[]>([]);
   const [unmappedItems, setUnmappedItems] = useState<UnmappedItem[]>([]);
+  const [skippedItems, setSkippedItems] = useState<SkippedItem[]>([]);
   const [isLoadingSkuMappings, setIsLoadingSkuMappings] = useState(false);
   const [isSavingSkuMapping, setIsSavingSkuMapping] = useState<string | null>(null);
+  const [isSkipping, setIsSkipping] = useState<string | null>(null);
   // SKU inputs: key is "sourceType-sourceId-index" for multiple SKUs per item
   const [skuInputs, setSkuInputs] = useState<Record<string, string>>({});
   const [skuValidation, setSkuValidation] = useState<Record<string, SkuValidationState>>({});
@@ -128,6 +139,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
           const data = await response.json();
           setSkuMappings(data.mappings || []);
           setUnmappedItems(data.unmappedItems || []);
+          setSkippedItems(data.skippedItems || []);
         }
       } catch (error) {
         console.error("Failed to fetch SKU mappings:", error);
@@ -348,6 +360,74 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     }
   };
 
+  // Check if an item is skipped
+  const isItemSkipped = (sourceType: string, sourceId: string) => {
+    return skippedItems.some(s => s.sourceType === sourceType && s.sourceId === sourceId);
+  };
+
+  // Handle skip/unskip item
+  const handleSkipItem = async (item: UnmappedItem) => {
+    const key = `${item.sourceType}-${item.sourceId}`;
+    setIsSkipping(key);
+
+    try {
+      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "skip",
+          sourceType: item.sourceType,
+          sourceId: item.sourceId,
+          sourceName: item.sourceName,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to skip item");
+      }
+
+      const data = await res.json();
+      setSkippedItems(prev => [...prev, data.skippedItem]);
+      toast.success(data.message || `"${item.sourceName}" skipped`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to skip item");
+    } finally {
+      setIsSkipping(null);
+    }
+  };
+
+  const handleUnskipItem = async (item: UnmappedItem | SkippedItem) => {
+    const key = `${item.sourceType}-${item.sourceId}`;
+    setIsSkipping(key);
+
+    try {
+      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "unskip",
+          sourceType: item.sourceType,
+          sourceId: item.sourceId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to restore item");
+      }
+
+      setSkippedItems(prev => prev.filter(s => !(s.sourceType === item.sourceType && s.sourceId === item.sourceId)));
+      toast.success(`"${item.sourceName}" restored for fulfillment`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to restore item");
+    } finally {
+      setIsSkipping(null);
+    }
+  };
+
   // Group mappings by source item
   const getMappingsForItem = (sourceType: string, sourceId: string) => {
     return skuMappings.filter(m => m.sourceType === sourceType && m.sourceId === sourceId);
@@ -510,33 +590,44 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                       const itemMappings = getMappingsForItem(item.sourceType, item.sourceId);
                       const additionalCount = additionalSkuCount[baseKey] || 0;
                       const hasMappings = itemMappings.length > 0;
+                      const isSkipped = isItemSkipped(item.sourceType, item.sourceId);
 
                       return (
                         <div
                           key={baseKey}
                           className={cn(
                             "p-4 border rounded-lg",
-                            hasMappings
-                              ? "bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
-                              : "border-border"
+                            isSkipped
+                              ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800"
+                              : hasMappings
+                                ? "bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
+                                : "border-border"
                           )}
                         >
                           {/* Item Header */}
                           <div className="flex items-start gap-3 mb-3">
                             <div className={cn(
                               "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-                              hasMappings
-                                ? "bg-green-100 dark:bg-green-900/30"
-                                : "bg-muted"
+                              isSkipped
+                                ? "bg-amber-100 dark:bg-amber-900/30"
+                                : hasMappings
+                                  ? "bg-green-100 dark:bg-green-900/30"
+                                  : "bg-muted"
                             )}>
-                              <Package className={cn(
-                                "h-5 w-5",
-                                hasMappings ? "text-green-600" : "text-muted-foreground"
-                              )} />
+                              {isSkipped ? (
+                                <SkipForward className="h-5 w-5 text-amber-600" />
+                              ) : (
+                                <Package className={cn(
+                                  "h-5 w-5",
+                                  hasMappings ? "text-green-600" : "text-muted-foreground"
+                                )} />
+                              )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{item.sourceName}</p>
-                              <div className="flex items-center gap-2 mt-1">
+                              <p className={cn("font-medium truncate", isSkipped && "text-amber-700 dark:text-amber-400")}>
+                                {item.sourceName}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 <Badge variant="outline" className="text-xs">
                                   {item.sourceType === "ADDON" ? "Add-on" :
                                    item.sourceType === "REWARD" ? "Reward" : "Item"}
@@ -546,17 +637,47 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                                     ${(item.amount / 100).toFixed(2)}
                                   </span>
                                 )}
-                                {hasMappings && (
+                                {isSkipped ? (
+                                  <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                                    Skipped
+                                  </Badge>
+                                ) : hasMappings && (
                                   <span className="text-sm text-green-600">
                                     {itemMappings.length} SKU{itemMappings.length !== 1 ? "s" : ""} mapped
                                   </span>
                                 )}
                               </div>
                             </div>
+                            {/* Skip/Unskip Button */}
+                            <Button
+                              variant={isSkipped ? "outline" : "ghost"}
+                              size="sm"
+                              onClick={() => isSkipped ? handleUnskipItem(item) : handleSkipItem(item)}
+                              disabled={isSkipping === baseKey}
+                              className={cn(
+                                "shrink-0",
+                                isSkipped && "border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+                              )}
+                              title={isSkipped ? "Restore for fulfillment" : "Skip from fulfillment"}
+                            >
+                              {isSkipping === baseKey ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : isSkipped ? (
+                                <>
+                                  <Undo2 className="h-4 w-4 mr-1" />
+                                  Restore
+                                </>
+                              ) : (
+                                <>
+                                  <SkipForward className="h-4 w-4 mr-1" />
+                                  Skip
+                                </>
+                              )}
+                            </Button>
                           </div>
 
-                          {/* Existing SKU Mappings */}
-                          {itemMappings.length > 0 && (
+                          {/* Existing SKU Mappings (hidden when skipped) */}
+                          {!isSkipped && itemMappings.length > 0 && (
                             <div className="space-y-2 mb-3 ml-13 pl-3 border-l-2 border-green-200 dark:border-green-800">
                               {itemMappings.map((mapping) => (
                                 <div
@@ -595,7 +716,8 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                             </div>
                           )}
 
-                          {/* New SKU Input Fields */}
+                          {/* New SKU Input Fields (hidden when skipped) */}
+                          {!isSkipped && (
                           <div className="space-y-2 ml-13">
                             {/* Primary input (always shown if no mappings, or as additional) */}
                             {(() => {
@@ -791,6 +913,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                               );
                             })}
                           </div>
+                          )}
                         </div>
                       );
                     })}
@@ -812,16 +935,39 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                 </div>
               )}
 
-              {/* All mapped success state */}
-              {skuMappings.length > 0 && unmappedItems.length === 0 && (
-                <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
-                  <CheckCircle className="h-5 w-5 shrink-0" />
-                  <div>
-                    <p className="font-medium">All Items Mapped</p>
-                    <p className="text-sm opacity-80">All your rewards and add-ons have been mapped to SKUs.</p>
+              {/* All mapped success state - show when all items are either mapped OR skipped */}
+              {(() => {
+                const allItems = getAllSourceItems();
+                if (allItems.length === 0) return null;
+
+                const allItemsReady = allItems.every(item => {
+                  const hasMappings = getMappingsForItem(item.sourceType, item.sourceId).length > 0;
+                  const isSkipped = isItemSkipped(item.sourceType, item.sourceId);
+                  return hasMappings || isSkipped;
+                });
+
+                const mappedCount = allItems.filter(item =>
+                  getMappingsForItem(item.sourceType, item.sourceId).length > 0
+                ).length;
+                const skippedCount = skippedItems.length;
+
+                if (!allItemsReady) return null;
+
+                return (
+                  <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
+                    <CheckCircle className="h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="font-medium">All Items Ready</p>
+                      <p className="text-sm opacity-80">
+                        {skippedCount > 0
+                          ? `${mappedCount} item${mappedCount !== 1 ? 's' : ''} mapped to SKUs, ${skippedCount} item${skippedCount !== 1 ? 's' : ''} skipped.`
+                          : `All your rewards and add-ons have been mapped to SKUs.`
+                        }
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </>
           )}
         </CardContent>

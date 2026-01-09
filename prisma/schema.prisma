@@ -3398,3 +3398,18 @@ enum SkuMappingSourceType {
   ADDON             // Add-on item
   PROJECT_ITEM      // Individual project item
 }
+
+// Track items that are skipped from fulfillment (not mapped to SKU)
+model FulfillmentSkippedItem {
+  id                String    @id @default(cuid())
+  projectId         String
+  sourceType        SkuMappingSourceType
+  sourceId          String    // Reward ID, Addon ID, or ProjectItem ID
+  sourceName        String    // Cached name for display
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([projectId, sourceType, sourceId])
+  @@index([projectId])
+}

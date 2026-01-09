@@ -163,6 +163,11 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
+    // Get skipped items
+    const skippedItems = await db.fulfillmentSkippedItem.findMany({
+      where: { projectId },
+    });
+
     // Build list of items that need mapping - ONLY items that have been ordered
     const unmappedItems: Array<{
       sourceType: string;
@@ -205,6 +210,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       mappings,
       unmappedItems,
+      skippedItems,
       rewards: project.rewards,
       projectItems: project.projectItems,
       // Include stats for debugging
@@ -404,6 +410,64 @@ export async function POST(req: NextRequest) {
         variantId: skuResult.variantId,
         productName: skuResult.productName,
         variantTitle: skuResult.variantTitle,
+      });
+    }
+
+    // SKIP an item (exclude from fulfillment)
+    if (action === "skip") {
+      if (!sourceType || !sourceId || !sourceName) {
+        return NextResponse.json(
+          { error: "sourceType, sourceId, and sourceName are required" },
+          { status: 400 }
+        );
+      }
+
+      const skippedItem = await db.fulfillmentSkippedItem.upsert({
+        where: {
+          projectId_sourceType_sourceId: {
+            projectId,
+            sourceType,
+            sourceId,
+          },
+        },
+        create: {
+          projectId,
+          sourceType,
+          sourceId,
+          sourceName,
+        },
+        update: {
+          sourceName,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `"${sourceName}" skipped from fulfillment`,
+        skippedItem,
+      });
+    }
+
+    // UNSKIP an item (include in fulfillment again)
+    if (action === "unskip") {
+      if (!sourceType || !sourceId) {
+        return NextResponse.json(
+          { error: "sourceType and sourceId are required" },
+          { status: 400 }
+        );
+      }
+
+      await db.fulfillmentSkippedItem.deleteMany({
+        where: {
+          projectId,
+          sourceType,
+          sourceId,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Item restored for fulfillment",
       });
     }
 
