@@ -165,20 +165,26 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // Check if user has Shopify credentials but no project integration yet
+        // Check if project has Shopify integration yet
         const hasShopifyIntegration = connectedIntegrations.some(i => i.provider === "SHOPIFY");
         if (!hasShopifyIntegration) {
-          // Check if the user has Shopify credentials on their account
-          const user = await db.user.findUnique({
-            where: { id: session.user.id },
+          // Get the project creator's Shopify credentials (collaborators use creator's connection)
+          const projectWithCreator = await db.project.findUnique({
+            where: { id: projectId },
             select: {
-              shopifyAccessToken: true,
-              shopifyShopDomain: true,
+              creatorId: true,
+              creator: {
+                select: {
+                  shopifyAccessToken: true,
+                  shopifyShopDomain: true,
+                },
+              },
             },
           });
 
-          if (user?.shopifyAccessToken && user?.shopifyShopDomain) {
-            // Auto-create FulfillmentIntegration for this project using user's credentials
+          const creator = projectWithCreator?.creator;
+          if (creator?.shopifyAccessToken && creator?.shopifyShopDomain) {
+            // Auto-create FulfillmentIntegration for this project using creator's credentials
             const integration = await db.fulfillmentIntegration.upsert({
               where: {
                 projectId_provider: {
@@ -191,15 +197,15 @@ export async function POST(req: NextRequest) {
                 provider: "SHOPIFY",
                 status: "CONNECTED",
                 credentials: {
-                  shopDomain: user.shopifyShopDomain,
-                  accessToken: user.shopifyAccessToken,
+                  shopDomain: creator.shopifyShopDomain,
+                  accessToken: creator.shopifyAccessToken,
                 },
               },
               update: {
                 status: "CONNECTED",
                 credentials: {
-                  shopDomain: user.shopifyShopDomain,
-                  accessToken: user.shopifyAccessToken,
+                  shopDomain: creator.shopifyShopDomain,
+                  accessToken: creator.shopifyAccessToken,
                 },
               },
             });
