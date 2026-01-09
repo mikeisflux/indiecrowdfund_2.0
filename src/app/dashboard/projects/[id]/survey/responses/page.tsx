@@ -110,6 +110,26 @@ interface Pagination {
   totalPages: number;
 }
 
+interface SurveyItemQuestion {
+  id: string;
+  itemName: string;
+  itemDescription?: string;
+  variants: { id: string; variantType: string; options: string[] }[];
+  customQuestions: { id: string; question: string; questionType: string; options: string[] }[];
+}
+
+interface SurveyBackerQuestion {
+  id: string;
+  question: string;
+  questionType: string;
+  options: string[];
+}
+
+interface SurveyQuestions {
+  itemQuestions: SurveyItemQuestion[];
+  backerQuestions: SurveyBackerQuestion[];
+}
+
 export default function SurveyResponsesPage() {
   const params = useParams();
   const router = useRouter();
@@ -119,6 +139,7 @@ export default function SurveyResponsesPage() {
   const [stats, setStats] = useState<Stats>({ total: 0, completed: 0, incomplete: 0, responseRate: 0 });
   const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 50, totalPages: 0 });
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [surveyQuestions, setSurveyQuestions] = useState<SurveyQuestions>({ itemQuestions: [], backerQuestions: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -169,13 +190,61 @@ export default function SurveyResponsesPage() {
     }
   }, [projectId]);
 
+  const fetchSurveyQuestions = useCallback(async () => {
+    try {
+      // Fetch item questions
+      const itemQRes = await fetch(`/api/projects/${projectId}/survey/item-questions`);
+      let itemQuestions: SurveyItemQuestion[] = [];
+      if (itemQRes.ok) {
+        const itemData = await itemQRes.json();
+        itemQuestions = itemData.itemQuestions || [];
+      }
+
+      // Fetch backer questions
+      const backerQRes = await fetch(`/api/projects/${projectId}/survey/backer-questions`);
+      let backerQuestions: SurveyBackerQuestion[] = [];
+      if (backerQRes.ok) {
+        const backerData = await backerQRes.json();
+        backerQuestions = backerData.questions || [];
+      }
+
+      setSurveyQuestions({ itemQuestions, backerQuestions });
+    } catch (error) {
+      console.error("Error fetching survey questions:", error);
+    }
+  }, [projectId]);
+
   useEffect(() => {
     fetchRewards();
-  }, [fetchRewards]);
+    fetchSurveyQuestions();
+  }, [fetchRewards, fetchSurveyQuestions]);
 
   useEffect(() => {
     fetchResponses();
   }, [fetchResponses]);
+
+  // Helper functions to look up question text by ID
+  const getItemQuestion = (itemId: string) => {
+    return surveyQuestions.itemQuestions.find(q => q.id === itemId);
+  };
+
+  const getBackerQuestion = (questionId: string) => {
+    return surveyQuestions.backerQuestions.find(q => q.id === questionId);
+  };
+
+  const getVariantType = (itemId: string, variantId: string) => {
+    const item = getItemQuestion(itemId);
+    if (!item) return variantId;
+    const variant = item.variants.find(v => v.id === variantId);
+    return variant?.variantType || variantId;
+  };
+
+  const getCustomQuestionText = (itemId: string, questionId: string) => {
+    const item = getItemQuestion(itemId);
+    if (!item) return questionId;
+    const customQ = item.customQuestions.find(q => q.id === questionId);
+    return customQ?.question || questionId;
+  };
 
   const handleExport = async (format: "csv" | "json") => {
     setIsExporting(true);
@@ -591,20 +660,28 @@ export default function SurveyResponsesPage() {
                   </h3>
                   <Card>
                     <CardContent className="py-4 space-y-4">
-                      {Object.entries(selectedResponse.itemResponses).map(([itemId, itemResponse]) => (
-                        <div key={itemId}>
-                          {itemResponse.variants && Object.entries(itemResponse.variants).map(([variantId, value]) => (
-                            <div key={variantId} className="flex items-center gap-2">
-                              <Badge variant="outline">{value}</Badge>
-                            </div>
-                          ))}
-                          {itemResponse.customAnswers && Object.entries(itemResponse.customAnswers).map(([qId, answer]) => (
-                            <div key={qId} className="text-sm">
-                              <span className="text-zinc-500">Answer:</span> {Array.isArray(answer) ? answer.join(", ") : answer}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
+                      {Object.entries(selectedResponse.itemResponses).map(([itemId, itemResponse]) => {
+                        const itemQuestion = getItemQuestion(itemId);
+                        return (
+                          <div key={itemId} className="border-b last:border-0 pb-3 last:pb-0">
+                            {itemQuestion && (
+                              <p className="font-medium mb-2">{itemQuestion.itemName}</p>
+                            )}
+                            {itemResponse.variants && Object.entries(itemResponse.variants).map(([variantId, value]) => (
+                              <div key={variantId} className="flex items-center justify-between py-1">
+                                <span className="text-sm text-zinc-500">{getVariantType(itemId, variantId)}:</span>
+                                <Badge variant="outline">{value}</Badge>
+                              </div>
+                            ))}
+                            {itemResponse.customAnswers && Object.entries(itemResponse.customAnswers).map(([qId, answer]) => (
+                              <div key={qId} className="py-1">
+                                <p className="text-sm text-zinc-500">{getCustomQuestionText(itemId, qId)}</p>
+                                <p className="font-medium">{Array.isArray(answer) ? answer.join(", ") : answer}</p>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
                     </CardContent>
                   </Card>
                 </div>
@@ -619,14 +696,17 @@ export default function SurveyResponsesPage() {
                   </h3>
                   <Card>
                     <CardContent className="py-4 space-y-3">
-                      {Object.entries(selectedResponse.backerResponses).map(([questionId, answer]) => (
-                        <div key={questionId}>
-                          <p className="text-sm text-zinc-500">Question {questionId}</p>
-                          <p className="font-medium">
-                            {Array.isArray(answer) ? answer.join(", ") : answer || "-"}
-                          </p>
-                        </div>
-                      ))}
+                      {Object.entries(selectedResponse.backerResponses).map(([questionId, answer]) => {
+                        const question = getBackerQuestion(questionId);
+                        return (
+                          <div key={questionId} className="border-b last:border-0 pb-3 last:pb-0">
+                            <p className="text-sm text-zinc-500">{question?.question || `Question ${questionId}`}</p>
+                            <p className="font-medium">
+                              {Array.isArray(answer) ? answer.join(", ") : answer || "-"}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </CardContent>
                   </Card>
                 </div>
