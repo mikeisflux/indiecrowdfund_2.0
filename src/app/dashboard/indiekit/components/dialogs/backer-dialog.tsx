@@ -1025,11 +1025,18 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
           postalCode: "",
           country: "United States",
         }}
-        items={backer.items?.map(item => ({
-          name: item.name,
-          sku: `SKU-${item.name.substring(0, 3).toUpperCase()}`,
-          quantity: item.quantity,
-        })) || []}
+        items={[
+          ...(backer.items?.map(item => ({
+            name: item.name,
+            sku: item.sku || `SKU-${item.name.substring(0, 3).toUpperCase()}`,
+            quantity: item.quantity,
+          })) || []),
+          ...(backer.addons?.map(addon => ({
+            name: addon.name,
+            sku: `ADDON-${addon.name.substring(0, 3).toUpperCase()}`,
+            quantity: addon.quantity,
+          })) || []),
+        ]}
         pledgeLevel={backer.reward}
       />
     </Dialog>
