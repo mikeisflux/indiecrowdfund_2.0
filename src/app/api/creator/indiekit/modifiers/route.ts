@@ -46,10 +46,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all modifier addons
-    const modifierAddons = project.rewards.filter(r => r.type === "ADDON" && r.isModifier);
+    const modifierAddons = project.rewards.filter((r: { type: string; isModifier: boolean | null }) => r.type === "ADDON" && r.isModifier);
 
     // Get all tier rewards (base rewards that can be modified)
-    const tierRewards = project.rewards.filter(r => r.type === "TIER");
+    const tierRewards = project.rewards.filter((r: { type: string }) => r.type === "TIER");
 
     // Get pledges that have modifier addons
     const pledgesWithModifiers = await db.pledge.findMany({
@@ -86,8 +86,8 @@ export async function GET(req: NextRequest) {
     // Analyze each pledge for assignment status
     const pledgeAnalysis = pledgesWithModifiers.map(pledge => {
       const modifierAddonsPurchased = pledge.addons
-        .filter(a => a.addon.isModifier)
-        .map(a => ({ id: a.addon.id, title: a.addon.title, quantity: a.quantity }));
+        .filter((a: { addon: { isModifier: boolean } }) => a.addon.isModifier)
+        .map((a: { addon: { id: string; title: string }; quantity: number }) => ({ id: a.addon.id, title: a.addon.title, quantity: a.quantity }));
 
       const baseReward = pledge.reward;
       const existingAssignments = pledge.modifierAssignments;
@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
 
       if (!baseReward) {
         status = "no_base_reward";
-      } else if (existingAssignments.length === modifierAddonsPurchased.reduce((sum, m) => sum + m.quantity, 0)) {
+      } else if (existingAssignments.length === modifierAddonsPurchased.reduce((sum: number, m: { quantity: number }) => sum + m.quantity, 0)) {
         status = "assigned";
       } else if (modifierAddonsPurchased.length === 1 && modifierAddonsPurchased[0].quantity === 1) {
         // Simple case: one modifier addon, one base reward
@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
         user: pledge.user,
         baseReward,
         modifierAddons: modifierAddonsPurchased,
-        existingAssignments: existingAssignments.map(a => ({
+        existingAssignments: existingAssignments.map((a: { id: string; rewardId: string; modifierAddonId: string; isAutoAssigned: boolean }) => ({
           id: a.id,
           rewardId: a.rewardId,
           modifierAddonId: a.modifierAddonId,
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
       let flaggedForManual = 0;
 
       for (const pledge of pledges) {
-        const modifierAddons = pledge.addons.filter(a => a.addon.isModifier);
+        const modifierAddons = pledge.addons.filter((a: { addon: { isModifier: boolean } }) => a.addon.isModifier);
         const baseReward = pledge.reward;
 
         // Skip if no base reward
@@ -212,7 +212,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Skip if already has assignments for all modifiers
-        const totalModifierQuantity = modifierAddons.reduce((sum, a) => sum + a.quantity, 0);
+        const totalModifierQuantity = modifierAddons.reduce((sum: number, a: { quantity: number }) => sum + a.quantity, 0);
         if (pledge.modifierAssignments.length >= totalModifierQuantity) {
           continue;
         }
@@ -294,7 +294,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Check if this modifier addon is actually purchased by this backer
-      const hasModifier = pledge.addons.some(a => a.addonId === modifierAddonId);
+      const hasModifier = pledge.addons.some((a: { addonId: string }) => a.addonId === modifierAddonId);
       if (!hasModifier) {
         return NextResponse.json(
           { error: "Backer does not have this modifier addon" },
@@ -339,7 +339,7 @@ export async function POST(req: NextRequest) {
         });
 
         // Check if all modifiers are now assigned
-        const modifierAddons = pledge.addons.filter(a => {
+        const modifierAddons = pledge.addons.filter((_a: { addonId: string }) => {
           // We need to check if this is a modifier addon
           // For now, just count all assignments
           return true;

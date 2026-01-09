@@ -483,13 +483,13 @@ export async function POST(req: NextRequest) {
 
           // Track which modifier addon IDs have been assigned to rewards (don't add as separate line items)
           const assignedModifierAddonIds = new Set(
-            pledge.modifierAssignments?.map(ma => ma.modifierAddonId) || []
+            pledge.modifierAssignments?.map((ma: { modifierAddonId: string }) => ma.modifierAddonId) || []
           );
 
           if (pledge.reward) {
             // Check if this reward has a modifier applied
             const modifierAssignment = pledge.modifierAssignments?.find(
-              ma => ma.rewardId === pledge.reward?.id
+              (ma: { rewardId: string }) => ma.rewardId === pledge.reward?.id
             );
 
             let sku: string | undefined;
@@ -506,7 +506,7 @@ export async function POST(req: NextRequest) {
                 variantId = modifierSku.variantId;
                 // Find the modifier addon name for the title
                 const modifierAddon = pledge.addons.find(
-                  a => a.addon.id === modifierAssignment.modifierAddonId
+                  (a: { addon: { id: string } }) => a.addon.id === modifierAssignment.modifierAddonId
                 );
                 if (modifierAddon) {
                   title = `${pledge.reward.title} + ${modifierAddon.addon.title}`;
