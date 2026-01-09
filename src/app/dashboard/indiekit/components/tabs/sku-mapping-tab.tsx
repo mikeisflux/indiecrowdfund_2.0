@@ -115,6 +115,8 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   const [isSavingModifierSku, setIsSavingModifierSku] = useState<string | null>(null);
   const [isLoadingModifiers, setIsLoadingModifiers] = useState(false);
   const [isMarkingAsModifier, setIsMarkingAsModifier] = useState<string | null>(null);
+  const [skippedModifierCombos, setSkippedModifierCombos] = useState<Set<string>>(new Set());
+  const [isSkippingModifier, setIsSkippingModifier] = useState<string | null>(null);
 
   // Check Shopify connection status on mount
   useEffect(() => {
@@ -171,6 +173,14 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
           setSkuMappings(data.mappings || []);
           setUnmappedItems(data.unmappedItems || []);
           setSkippedItems(data.skippedItems || []);
+          // Also populate skipped modifier combos from skipped items
+          const modifierComboSkips = new Set<string>();
+          for (const item of data.skippedItems || []) {
+            if (item.sourceType === "MODIFIER_COMBO") {
+              modifierComboSkips.add(item.sourceId);
+            }
+          }
+          setSkippedModifierCombos(modifierComboSkips);
         }
       } catch (error) {
         console.error("Failed to fetch SKU mappings:", error);
@@ -798,6 +808,73 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     }
   };
 
+  // Handle skipping a modifier combination (not all rewards can be upgraded)
+  const handleSkipModifierCombo = async (baseRewardId: string, modifierAddonId: string, rewardTitle: string, modifierTitle: string) => {
+    const comboKey = `${baseRewardId}-${modifierAddonId}`;
+    setIsSkippingModifier(comboKey);
+
+    try {
+      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "skip",
+          sourceType: "MODIFIER_COMBO",
+          sourceId: comboKey,
+          sourceName: `${rewardTitle} + ${modifierTitle}`,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to skip combination");
+      }
+
+      setSkippedModifierCombos(prev => new Set(prev).add(comboKey));
+      toast.success(`"${rewardTitle} + ${modifierTitle}" skipped`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to skip combination");
+    } finally {
+      setIsSkippingModifier(null);
+    }
+  };
+
+  // Handle unskipping a modifier combination
+  const handleUnskipModifierCombo = async (baseRewardId: string, modifierAddonId: string) => {
+    const comboKey = `${baseRewardId}-${modifierAddonId}`;
+    setIsSkippingModifier(comboKey);
+
+    try {
+      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "unskip",
+          sourceType: "MODIFIER_COMBO",
+          sourceId: comboKey,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to restore combination");
+      }
+
+      setSkippedModifierCombos(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(comboKey);
+        return newSet;
+      });
+      toast.success("Combination restored");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to restore combination");
+    } finally {
+      setIsSkippingModifier(null);
+    }
+  };
+
   // Get existing modifier mapping for a combination
   const getModifierMapping = (baseRewardId: string, modifierAddonId: string) => {
     return modifierSkuMappings.find(m => m.baseRewardId === baseRewardId && m.modifierAddonId === modifierAddonId);
@@ -1415,30 +1492,58 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                         const existingMapping = getModifierMapping(reward.id, modifier.id);
                         const inputKey = `${reward.id}-${modifier.id}`;
                         const inputValue = modifierSkuInputs[inputKey] || "";
+                        const isSkipped = skippedModifierCombos.has(inputKey);
 
                         return (
                           <div
                             key={`${reward.id}-${modifier.id}`}
                             className={cn(
                               "p-3 rounded-lg border",
-                              existingMapping
-                                ? "bg-green-50/50 dark:bg-green-900/10 border-green-200"
-                                : "bg-muted/30"
+                              isSkipped
+                                ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200"
+                                : existingMapping
+                                  ? "bg-green-50/50 dark:bg-green-900/10 border-green-200"
+                                  : "bg-muted/30"
                             )}
                           >
                             <div className="flex items-center gap-3">
                               {/* Base Reward */}
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{reward.title}</p>
+                                <p className={cn("text-sm font-medium truncate", isSkipped && "text-amber-700 dark:text-amber-400")}>
+                                  {reward.title}
+                                </p>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <span>Base reward</span>
                                   <ArrowRight className="h-3 w-3" />
-                                  <span className="text-purple-600">{modifier.title}</span>
+                                  <span className={isSkipped ? "text-amber-600" : "text-purple-600"}>{modifier.title}</span>
+                                  {isSkipped && (
+                                    <Badge variant="outline" className="ml-2 text-xs bg-amber-100 text-amber-700 border-amber-300">
+                                      Skipped
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
 
-                              {/* Existing mapping or input */}
-                              {existingMapping ? (
+                              {/* Skipped state - show restore button */}
+                              {isSkipped ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUnskipModifierCombo(reward.id, modifier.id)}
+                                  disabled={isSkippingModifier === inputKey}
+                                  className="border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+                                >
+                                  {isSkippingModifier === inputKey ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Undo2 className="h-4 w-4 mr-1" />
+                                      Restore
+                                    </>
+                                  )}
+                                </Button>
+                              ) : existingMapping ? (
+                                /* Existing mapping - show SKU and delete button */
                                 <div className="flex items-center gap-2">
                                   <div className="flex items-center gap-2">
                                     <CheckCircle className="h-4 w-4 text-green-500" />
@@ -1459,6 +1564,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                                   </Button>
                                 </div>
                               ) : (
+                                /* No mapping - show input and skip button */
                                 <div className="flex items-center gap-2">
                                   <Input
                                     placeholder="Combined SKU"
@@ -1481,6 +1587,20 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                                       <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : (
                                       <Save className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleSkipModifierCombo(reward.id, modifier.id, reward.title, modifier.title)}
+                                    disabled={isSkippingModifier === inputKey}
+                                    className="h-8"
+                                    title="Skip this combination"
+                                  >
+                                    {isSkippingModifier === inputKey ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <SkipForward className="h-4 w-4" />
                                     )}
                                   </Button>
                                 </div>
