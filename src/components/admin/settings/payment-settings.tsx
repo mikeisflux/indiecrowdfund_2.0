@@ -1,10 +1,15 @@
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import { SecureKeyInput } from "@/components/ui/secure-key-input";
+import { Eye, EyeOff } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -39,8 +44,32 @@ interface PaymentSettingsProps {
 }
 
 export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentSettingsProps) {
+  const [showAllKeys, setShowAllKeys] = useState(false);
+
   return (
     <TabsContent value="payments" className="mt-6 space-y-6">
+      {/* Show All Keys Toggle */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAllKeys(!showAllKeys)}
+          className="gap-2"
+        >
+          {showAllKeys ? (
+            <>
+              <EyeOff className="h-4 w-4" />
+              Hide All Keys
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4" />
+              Show All Keys
+            </>
+          )}
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -76,6 +105,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onSave={onSave}
                 hasExistingValue={settings.stripePublicKey === "••••••••"}
                 placeholder="pk_live_..."
+                forceShowValue={showAllKeys}
               />
             </div>
             <div className="space-y-2">
@@ -86,6 +116,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onSave={onSave}
                 hasExistingValue={settings.stripeSecretKey === "••••••••"}
                 placeholder="sk_live_..."
+                forceShowValue={showAllKeys}
               />
             </div>
           </div>
@@ -99,6 +130,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onSave={onSave}
                 hasExistingValue={settings.stripeWebhookSecret === "••••••••"}
                 placeholder="whsec_..."
+                forceShowValue={showAllKeys}
               />
               <p className="text-xs text-zinc-500">For regular Stripe events (payments, etc.)</p>
             </div>
@@ -110,6 +142,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onSave={onSave}
                 hasExistingValue={settings.stripeConnectWebhookSecret === "••••••••"}
                 placeholder="whsec_..."
+                forceShowValue={showAllKeys}
               />
               <p className="text-xs text-zinc-500">For Connect events (account updates, etc.)</p>
             </div>
@@ -152,6 +185,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onSave={onSave}
                 hasExistingValue={settings.divinityCoinApiKey === "••••••••"}
                 placeholder="Your DivinityCoin API key..."
+                forceShowValue={showAllKeys}
               />
             </div>
             <div className="space-y-2">
@@ -173,6 +207,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onSave={onSave}
                 hasExistingValue={settings.divinityCoinWebhookSecret === "••••••••"}
                 placeholder="Your webhook secret..."
+                forceShowValue={showAllKeys}
               />
             </div>
             <div className="space-y-2">
@@ -293,6 +328,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onSave={onSave}
                 hasExistingValue={settings.recaptchaSiteKey === "••••••••"}
                 placeholder="6Le..."
+                forceShowValue={showAllKeys}
               />
               <p className="text-xs text-zinc-500">Public key shown on your website</p>
             </div>
@@ -304,6 +340,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onSave={onSave}
                 hasExistingValue={settings.recaptchaSecretKey === "••••••••"}
                 placeholder="6Le..."
+                forceShowValue={showAllKeys}
               />
               <p className="text-xs text-zinc-500">Private key for server-side verification</p>
             </div>

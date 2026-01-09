@@ -11,6 +11,7 @@ interface SecureKeyInputProps {
   onSave?: () => void;  // Called when checkmark is clicked to trigger parent save
   placeholder?: string;
   hasExistingValue?: boolean;
+  forceShowValue?: boolean; // When true, shows the value without entering edit mode
 }
 
 /**
@@ -25,12 +26,16 @@ export function SecureKeyInput({
   onSave,
   placeholder = "Enter new key...",
   hasExistingValue = false,
+  forceShowValue = false,
 }: SecureKeyInputProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showValue, setShowValue] = useState(false);
 
   // Check if there's an existing value (masked from server) or new value being set
   const isConfigured = hasExistingValue || (value && value !== "" && value !== "••••••••");
+
+  // Determine if we should show the actual value (not "Configured" placeholder)
+  const shouldShowActualValue = forceShowValue && isConfigured && value && value !== "••••••••";
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -94,7 +99,9 @@ export function SecureKeyInput({
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 rounded-md border bg-muted/50 px-3 py-2 text-sm">
-        {isConfigured ? (
+        {shouldShowActualValue ? (
+          <span className="font-mono text-xs break-all">{value}</span>
+        ) : isConfigured ? (
           <span className="text-green-600 font-medium">Configured</span>
         ) : (
           <span className="text-muted-foreground">Not configured</span>
