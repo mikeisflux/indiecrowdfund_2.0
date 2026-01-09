@@ -23,6 +23,8 @@ export interface FulfillmentStats {
   totalRaised: number;
   addOnPurchases: number;
   backersWithAddons: number;
+  totalAddonItems: number;
+  addonPurchaseCount: number;
   digitalDownloads: number;
   packagesShipped: number;
   chargeStats: {

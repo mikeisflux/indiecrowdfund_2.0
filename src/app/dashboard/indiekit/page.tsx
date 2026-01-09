@@ -876,6 +876,8 @@ export default function IndieKitPage() {
                   totalBackers={stats?.totalBackers}
                   surveysDone={stats?.surveysCompleted}
                   preOrders={stats?.preOrderBackers}
+                  backersWithAddons={stats?.backersWithAddons}
+                  totalAddonItems={stats?.totalAddonItems}
                   pledgeLevelBreakdown={stats?.pledgeLevelBreakdown}
                   surveyStatusBreakdown={stats?.surveyStatusBreakdown}
                   shippingRegionBreakdown={stats?.shippingRegionBreakdown}

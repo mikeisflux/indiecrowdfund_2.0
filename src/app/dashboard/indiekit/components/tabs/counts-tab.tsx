@@ -6,6 +6,7 @@ import {
   Users,
   ClipboardCheck,
   ShoppingBag,
+  ShoppingCart,
   TrendingUp,
   Globe,
   CreditCard,
@@ -24,6 +25,8 @@ interface CountsTabProps {
   totalBackers?: number;
   surveysDone?: number;
   preOrders?: number;
+  backersWithAddons?: number;
+  totalAddonItems?: number;
   pledgeLevelBreakdown?: CountBreakdown[];
   surveyStatusBreakdown?: CountBreakdown[];
   shippingRegionBreakdown?: CountBreakdown[];
@@ -34,12 +37,15 @@ export function CountsTab({
   totalBackers = 0,
   surveysDone = 0,
   preOrders = 0,
+  backersWithAddons = 0,
+  totalAddonItems = 0,
   pledgeLevelBreakdown = [],
   surveyStatusBreakdown = [],
   shippingRegionBreakdown = [],
   paymentStatusBreakdown = [],
 }: CountsTabProps) {
-  const surveyCompletionRate = Math.round((surveysDone / totalBackers) * 100);
+  const surveyCompletionRate = totalBackers > 0 ? Math.round((surveysDone / totalBackers) * 100) : 0;
+  const addonsRate = totalBackers > 0 ? Math.round((backersWithAddons / totalBackers) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -57,7 +63,7 @@ export function CountsTab({
       </div>
 
       {/* Top Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -98,6 +104,37 @@ export function CountsTab({
               <div>
                 <p className="text-sm text-muted-foreground">Pre-orders</p>
                 <p className="text-2xl font-bold">{preOrders.toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-orange-100 flex items-center justify-center">
+                <ShoppingCart className="h-6 w-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Backers w/ Add-ons</p>
+                <p className="text-2xl font-bold">
+                  {backersWithAddons.toLocaleString()}
+                  <span className="text-sm font-normal text-muted-foreground ml-1">
+                    ({addonsRate}%)
+                  </span>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                <ShoppingBag className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Add-on Items</p>
+                <p className="text-2xl font-bold">{totalAddonItems.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>

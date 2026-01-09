@@ -179,7 +179,7 @@ export async function GET(req: NextRequest) {
         },
       }),
 
-      // Calculate add-on sales total
+      // Calculate add-on sales total and counts
       db.pledgeAddon.aggregate({
         where: {
           pledge: {
@@ -187,7 +187,8 @@ export async function GET(req: NextRequest) {
             status: "COMPLETED",
           },
         },
-        _sum: { amount: true },
+        _sum: { amount: true, quantity: true },
+        _count: true,
       }),
 
       // Get segments for this project
@@ -373,6 +374,9 @@ export async function GET(req: NextRequest) {
       paypalCollected: pledges.filter(p => p.paymentProcessor === "PAYPAL").length,
     };
 
+    // Calculate backers with addons
+    const backersWithAddons = pledges.filter(p => p.addons && p.addons.length > 0).length;
+
     const stats = {
       totalBackers,
       fulfilledBackers,
@@ -380,6 +384,9 @@ export async function GET(req: NextRequest) {
       surveysPending,
       totalRaised: Number(selectedProject.currentAmount),
       addOnPurchases: Number(addOnSales._sum.amount || 0),
+      backersWithAddons,
+      totalAddonItems: Number(addOnSales._sum.quantity || 0),
+      addonPurchaseCount: addOnSales._count || 0,
       digitalDownloads,
       packagesShipped,
       preOrderBackers,
