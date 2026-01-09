@@ -545,8 +545,8 @@ export async function pushOrdersToShopify(
           ],
           email: customerEmail || undefined,
           phone: phone || undefined,
-          note: `IndieCrowdfund Pledge #${pledge.id}`,
-          tags: `indiecrowdfund,project-${projectId},pledge-${pledge.id}`,
+          note: `IndieCrowdfund Backer #${pledge.backerNumber || pledge.id}`,
+          tags: `indiecrowdfund,project-${projectId},backer-${pledge.backerNumber || pledge.id}`,
         },
       };
 
