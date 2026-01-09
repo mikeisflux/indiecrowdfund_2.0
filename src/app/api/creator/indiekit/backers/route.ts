@@ -158,12 +158,54 @@ export async function POST(req: NextRequest) {
 
       case "push_to_fulfillment": {
         // Get ALL connected fulfillment integrations for this project
-        const connectedIntegrations = await db.fulfillmentIntegration.findMany({
+        let connectedIntegrations = await db.fulfillmentIntegration.findMany({
           where: {
             projectId,
             status: "CONNECTED",
           },
         });
+
+        // Check if user has Shopify credentials but no project integration yet
+        const hasShopifyIntegration = connectedIntegrations.some(i => i.provider === "SHOPIFY");
+        if (!hasShopifyIntegration) {
+          // Check if the user has Shopify credentials on their account
+          const user = await db.user.findUnique({
+            where: { id: session.user.id },
+            select: {
+              shopifyAccessToken: true,
+              shopifyShopDomain: true,
+            },
+          });
+
+          if (user?.shopifyAccessToken && user?.shopifyShopDomain) {
+            // Auto-create FulfillmentIntegration for this project using user's credentials
+            const integration = await db.fulfillmentIntegration.upsert({
+              where: {
+                projectId_provider: {
+                  projectId,
+                  provider: "SHOPIFY",
+                },
+              },
+              create: {
+                projectId,
+                provider: "SHOPIFY",
+                status: "CONNECTED",
+                credentials: {
+                  shopDomain: user.shopifyShopDomain,
+                  accessToken: user.shopifyAccessToken,
+                },
+              },
+              update: {
+                status: "CONNECTED",
+                credentials: {
+                  shopDomain: user.shopifyShopDomain,
+                  accessToken: user.shopifyAccessToken,
+                },
+              },
+            });
+            connectedIntegrations = [...connectedIntegrations, integration];
+          }
+        }
 
         const pushedProviders: string[] = [];
         let totalPushed = 0;
