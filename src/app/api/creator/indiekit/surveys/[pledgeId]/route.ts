@@ -91,31 +91,8 @@ export async function GET(
       where: { pledgeId },
     });
 
-    // Filter item questions to only show those relevant to this backer's reward
-    const relevantItemQuestions = survey.itemQuestions.filter(
-      (iq: { rewardId: string }) => iq.rewardId === pledge.rewardId
-    );
-
-    // Also include item questions for any addons
-    const addonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
-    const addonItemQuestions = survey.itemQuestions.filter(
-      (iq: { rewardId: string }) => addonIds.includes(iq.rewardId)
-    );
-
-    // Filter backer questions based on targeting
-    const relevantBackerQuestions = survey.backerQuestions.filter(
-      (bq: { targetType: string; targetRewardIds: string[] }) => {
-        if (bq.targetType === "ALL_BACKERS") return true;
-        if (bq.targetType === "SPECIFIC_REWARDS") {
-          return (
-            bq.targetRewardIds.includes(pledge.rewardId as string) ||
-            bq.targetRewardIds.some((id: string) => addonIds.includes(id))
-          );
-        }
-        return false;
-      }
-    );
-
+    // For creator view, return ALL survey questions (not filtered by reward)
+    // This allows creators to see the complete survey configuration
     return NextResponse.json({
       survey: {
         id: survey.id,
@@ -136,8 +113,10 @@ export async function GET(
         })),
       },
       questions: {
-        itemQuestions: [...relevantItemQuestions, ...addonItemQuestions],
-        backerQuestions: relevantBackerQuestions,
+        // Return all item questions from the survey
+        itemQuestions: survey.itemQuestions,
+        // Return all backer questions from the survey
+        backerQuestions: survey.backerQuestions,
       },
       response: response
         ? {
