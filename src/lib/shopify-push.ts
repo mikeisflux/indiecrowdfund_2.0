@@ -8,19 +8,6 @@ interface ShopifyOrder {
   fulfillment_status: string | null;
 }
 
-interface ShopifyVariant {
-  id: number;
-  sku: string;
-  title: string;
-  product_id: number;
-}
-
-interface ShopifyProduct {
-  id: number;
-  title: string;
-  variants: ShopifyVariant[];
-}
-
 // Cache for SKU to variant ID lookups
 const skuToVariantCache = new Map<string, number>();
 
