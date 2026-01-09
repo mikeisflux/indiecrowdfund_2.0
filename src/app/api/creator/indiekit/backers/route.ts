@@ -157,6 +157,8 @@ export async function POST(req: NextRequest) {
       }
 
       case "push_to_fulfillment": {
+        console.log("[push_to_fulfillment] Starting for project:", projectId, "pledges:", pledgeIds);
+
         // Get ALL connected fulfillment integrations for this project
         let connectedIntegrations = await db.fulfillmentIntegration.findMany({
           where: {
@@ -164,9 +166,12 @@ export async function POST(req: NextRequest) {
             status: "CONNECTED",
           },
         });
+        console.log("[push_to_fulfillment] Found integrations:", connectedIntegrations.length);
 
         // Check if project has Shopify integration yet
         const hasShopifyIntegration = connectedIntegrations.some((i: { provider: string }) => i.provider === "SHOPIFY");
+        console.log("[push_to_fulfillment] Has Shopify integration:", hasShopifyIntegration);
+
         if (!hasShopifyIntegration) {
           // Get the project creator's Shopify credentials (collaborators use creator's connection)
           const projectWithCreator = await db.project.findUnique({
@@ -183,6 +188,7 @@ export async function POST(req: NextRequest) {
           });
 
           const creator = projectWithCreator?.creator;
+          console.log("[push_to_fulfillment] Creator has Shopify credentials:", !!creator?.shopifyAccessToken, !!creator?.shopifyShopDomain);
           if (creator?.shopifyAccessToken && creator?.shopifyShopDomain) {
             // Auto-create FulfillmentIntegration for this project using creator's credentials
             const integration = await db.fulfillmentIntegration.upsert({
@@ -218,11 +224,17 @@ export async function POST(req: NextRequest) {
         let totalFailed = 0;
         const allErrors: string[] = [];
 
+        console.log("[push_to_fulfillment] Total integrations to process:", connectedIntegrations.length);
+
         // Push to each connected provider
         for (const integration of connectedIntegrations) {
+          console.log("[push_to_fulfillment] Processing integration:", integration.provider);
           if (integration.provider === "SHOPIFY") {
             // Push to Shopify
-            const shopifyResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/shopify`, {
+            const shopifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/shopify`;
+            console.log("[push_to_fulfillment] Calling Shopify API:", shopifyUrl);
+
+            const shopifyResponse = await fetch(shopifyUrl, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -236,6 +248,7 @@ export async function POST(req: NextRequest) {
             });
 
             const shopifyResult = await shopifyResponse.json();
+            console.log("[push_to_fulfillment] Shopify response:", shopifyResponse.status, shopifyResult);
 
             if (shopifyResponse.ok) {
               totalPushed += shopifyResult.pushed || 0;
