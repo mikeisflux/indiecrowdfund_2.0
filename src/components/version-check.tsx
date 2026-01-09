@@ -14,8 +14,13 @@ export function VersionCheck() {
     console.log("[VersionCheck] Forcing hard refresh");
     // Clear session storage
     sessionStorage.clear();
-    // Force a hard reload bypassing cache
-    window.location.href = window.location.href.split('#')[0] + '?_=' + Date.now();
+    // Use clean URL without cache-busting params, then hard reload
+    const url = new URL(window.location.href);
+    // Remove any existing cache-busting params
+    url.searchParams.delete('_');
+    window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+    // Force reload from server
+    window.location.reload();
   }, []);
 
   const checkVersion = useCallback(async () => {
