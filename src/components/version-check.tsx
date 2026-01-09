@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 
 // This is set at build time and changes with each deployment
 const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID || "development";
 
 const VERSION_KEY = "app_build_id";
-const LAST_CHECK_KEY = "app_version_last_check";
-const CHECK_INTERVAL = 30000; // Check every 30 seconds
+const CHECK_INTERVAL = 60000; // Check every 60 seconds (less aggressive)
 
 export function VersionCheck() {
   const forceRefresh = useCallback(() => {
@@ -52,13 +51,17 @@ export function VersionCheck() {
     }
   }, [forceRefresh]);
 
+  // Track if we've already refreshed to avoid loops
+  const hasRefreshed = useRef(false);
+
   useEffect(() => {
-    // Initial check on mount
+    // Initial check on mount - only once
     const storedVersion = localStorage.getItem(VERSION_KEY);
 
-    if (storedVersion && storedVersion !== BUILD_ID) {
+    if (storedVersion && storedVersion !== BUILD_ID && !hasRefreshed.current) {
       console.log(`[VersionCheck] Build version mismatch on load: ${storedVersion} -> ${BUILD_ID}`);
       localStorage.setItem(VERSION_KEY, BUILD_ID);
+      hasRefreshed.current = true;
       sessionStorage.clear();
       window.location.reload();
       return;
@@ -68,22 +71,10 @@ export function VersionCheck() {
       localStorage.setItem(VERSION_KEY, BUILD_ID);
     }
 
-    // Periodic version check
+    // Periodic version check (silent, only reloads on actual version change)
     const intervalId = setInterval(checkVersion, CHECK_INTERVAL);
 
-    // Also check on window focus (user returns to tab)
-    const handleFocus = () => {
-      const lastCheck = localStorage.getItem(LAST_CHECK_KEY);
-      const now = Date.now();
-      // Only check if last check was more than 10 seconds ago
-      if (!lastCheck || now - parseInt(lastCheck) > 10000) {
-        localStorage.setItem(LAST_CHECK_KEY, now.toString());
-        checkVersion();
-      }
-    };
-    window.addEventListener('focus', handleFocus);
-
-    // Intercept Server Action errors globally
+    // Intercept Server Action errors globally - only reload on actual errors
     const originalFetch = window.fetch;
     window.fetch = async function(...args) {
       try {
@@ -91,7 +82,7 @@ export function VersionCheck() {
         return response;
       } catch (error) {
         // Check if this looks like a Server Action version mismatch error
-        if (error instanceof Error) {
+        if (error instanceof Error && !hasRefreshed.current) {
           const errorMessage = error.message.toLowerCase();
           if (
             errorMessage.includes('server action') ||
@@ -100,6 +91,7 @@ export function VersionCheck() {
             errorMessage.includes('workers')
           ) {
             console.log("[VersionCheck] Server Action error detected, forcing refresh:", error.message);
+            hasRefreshed.current = true;
             forceRefresh();
           }
         }
@@ -109,7 +101,6 @@ export function VersionCheck() {
 
     return () => {
       clearInterval(intervalId);
-      window.removeEventListener('focus', handleFocus);
       window.fetch = originalFetch;
     };
   }, [checkVersion, forceRefresh]);
