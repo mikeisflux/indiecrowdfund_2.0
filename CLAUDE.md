@@ -80,3 +80,8 @@
 4. All useEffect/useCallback/useMemo dependencies are included
 5. Run lint check mentally before committing
 6. **VERIFY API ENDPOINTS EXIST** - Before adding frontend code that calls an API endpoint, verify the endpoint exists at `src/app/api/...`. Never create fetch calls to non-existent endpoints.
+7. **TEST DATABASE OPERATIONS** - After implementing any database save/update functionality:
+   - Verify the data is actually persisted to the database (not just local state)
+   - Test that data survives page navigation and reloads
+   - Avoid using Prisma `upsert` with composite unique constraints that may not exist - use `findFirst` + `create`/`update` pattern instead
+   - Always handle and log database errors properly

@@ -319,36 +319,45 @@ export async function POST(req: NextRequest) {
           : skuResult.productName || null;
       }
 
-      // Use upsert with the new composite unique key that includes shopifySku
-      // This allows multiple SKUs per source item
-      const mapping = await db.shopifySkuMapping.upsert({
+      // Check if mapping already exists for this item + SKU combination
+      const existingMapping = await db.shopifySkuMapping.findFirst({
         where: {
-          projectId_sourceType_sourceId_shopifySku: {
-            projectId,
-            sourceType,
-            sourceId,
-            shopifySku: shopifySku.trim(),
-          },
-        },
-        create: {
           projectId,
           sourceType,
           sourceId,
-          sourceName,
           shopifySku: shopifySku.trim(),
-          shopifyProductId,
-          shopifyVariantId,
-          shopifyProductName,
-          quantity: quantity || 1,
-        },
-        update: {
-          sourceName,
-          shopifyProductId,
-          shopifyVariantId,
-          shopifyProductName,
-          quantity: quantity || 1,
         },
       });
+
+      let mapping;
+      if (existingMapping) {
+        // Update existing mapping
+        mapping = await db.shopifySkuMapping.update({
+          where: { id: existingMapping.id },
+          data: {
+            sourceName,
+            shopifyProductId,
+            shopifyVariantId,
+            shopifyProductName,
+            quantity: quantity || 1,
+          },
+        });
+      } else {
+        // Create new mapping
+        mapping = await db.shopifySkuMapping.create({
+          data: {
+            projectId,
+            sourceType,
+            sourceId,
+            sourceName,
+            shopifySku: shopifySku.trim(),
+            shopifyProductId,
+            shopifyVariantId,
+            shopifyProductName,
+            quantity: quantity || 1,
+          },
+        });
+      }
 
       return NextResponse.json({
         success: true,
@@ -511,34 +520,43 @@ export async function POST(req: NextRequest) {
               : skuResult.productName || null;
           }
 
-          const mapping = await db.shopifySkuMapping.upsert({
+          // Check if mapping already exists
+          const existingMapping = await db.shopifySkuMapping.findFirst({
             where: {
-              projectId_sourceType_sourceId_shopifySku: {
-                projectId,
-                sourceType: m.sourceType,
-                sourceId: m.sourceId,
-                shopifySku: m.shopifySku.trim(),
-              },
-            },
-            create: {
               projectId,
               sourceType: m.sourceType,
               sourceId: m.sourceId,
-              sourceName: m.sourceName,
               shopifySku: m.shopifySku.trim(),
-              shopifyProductId,
-              shopifyVariantId,
-              shopifyProductName,
-              quantity: m.quantity || 1,
-            },
-            update: {
-              sourceName: m.sourceName,
-              shopifyProductId,
-              shopifyVariantId,
-              shopifyProductName,
-              quantity: m.quantity || 1,
             },
           });
+
+          let mapping;
+          if (existingMapping) {
+            mapping = await db.shopifySkuMapping.update({
+              where: { id: existingMapping.id },
+              data: {
+                sourceName: m.sourceName,
+                shopifyProductId,
+                shopifyVariantId,
+                shopifyProductName,
+                quantity: m.quantity || 1,
+              },
+            });
+          } else {
+            mapping = await db.shopifySkuMapping.create({
+              data: {
+                projectId,
+                sourceType: m.sourceType,
+                sourceId: m.sourceId,
+                sourceName: m.sourceName,
+                shopifySku: m.shopifySku.trim(),
+                shopifyProductId,
+                shopifyVariantId,
+                shopifyProductName,
+                quantity: m.quantity || 1,
+              },
+            });
+          }
           results.push(mapping);
         }
       }
