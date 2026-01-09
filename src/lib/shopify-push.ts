@@ -124,6 +124,11 @@ export async function pushOrdersToShopify(
     });
   }
 
+  console.log("[pushOrdersToShopify] SKU mappings loaded:");
+  console.log("  - Reward SKUs:", Array.from(rewardSkuMap.entries()));
+  console.log("  - Addon SKUs:", Array.from(addonSkuMap.entries()));
+  console.log("  - Modifier SKUs:", Array.from(modifierSkuMap.entries()));
+
   // Get backers to push (either specified or all unpushed)
   const whereClause: {
     projectId: string;
@@ -177,6 +182,21 @@ export async function pushOrdersToShopify(
     },
     take: 100, // Limit batch size
   });
+
+  // Also fetch survey responses for these pledges to get shipping addresses
+  const pledgeIds_list = pledges.map(p => p.id);
+  const surveyResponses = await db.surveyResponse.findMany({
+    where: {
+      pledgeId: { in: pledgeIds_list },
+    },
+    select: {
+      pledgeId: true,
+      shippingAddress: true,
+    },
+  });
+  const surveyResponseMap = new Map(
+    surveyResponses.map(sr => [sr.pledgeId, sr.shippingAddress])
+  );
 
   console.log("[pushOrdersToShopify] Found pledges to push:", pledges.length);
 
@@ -288,8 +308,19 @@ export async function pushOrdersToShopify(
         });
       }
 
-      // Parse shipping address
-      const shippingAddress = pledge.shippingAddress as {
+      // Get shipping address - prefer survey response, fall back to pledge
+      const surveyAddress = surveyResponseMap.get(pledge.id) as {
+        name?: string;
+        line1?: string;
+        line2?: string;
+        city?: string;
+        state?: string;
+        postalCode?: string;
+        country?: string;
+        phone?: string;
+      } | null;
+
+      const pledgeAddress = pledge.shippingAddress as {
         line1?: string;
         line2?: string;
         city?: string;
@@ -300,8 +331,29 @@ export async function pushOrdersToShopify(
         phone?: string;
       } | null;
 
+      // Use survey address if available, otherwise use pledge address
+      const shippingAddress = surveyAddress || pledgeAddress;
+
+      // Build customer info
+      const customerEmail = pledge.user?.email || (pledge as { email?: string }).email;
+      const customerName = shippingAddress?.name || pledge.user?.name || (pledge as { name?: string }).name || "";
+      const nameParts = customerName.split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      console.log("[pushOrdersToShopify] Customer data for pledge", pledge.id, ":", {
+        email: customerEmail,
+        name: customerName,
+        firstName,
+        lastName,
+        hasShippingAddress: !!shippingAddress,
+        shippingAddressSource: surveyAddress ? "survey" : (pledgeAddress ? "pledge" : "none"),
+        shippingAddress,
+      });
+
       // Create draft order in Shopify (kept as draft for manual review)
-      const draftOrderPayload = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const draftOrderPayload: { draft_order: any } = {
         draft_order: {
           line_items: lineItems.length > 0 ? lineItems : [
             {
@@ -310,27 +362,40 @@ export async function pushOrdersToShopify(
               price: (pledge.pledgeAmount ?? 0).toString(),
             },
           ],
-          customer: {
-            email: pledge.user?.email || pledge.email,
-            first_name: pledge.user?.name?.split(" ")[0] || pledge.name?.split(" ")[0] || "",
-            last_name: pledge.user?.name?.split(" ").slice(1).join(" ") || pledge.name?.split(" ").slice(1).join(" ") || "",
-          },
-          shipping_address: shippingAddress ? {
-            address1: shippingAddress.line1 || "",
-            address2: shippingAddress.line2 || "",
-            city: shippingAddress.city || "",
-            province: shippingAddress.state || "",
-            country: shippingAddress.country || "",
-            zip: shippingAddress.postalCode || "",
-            name: shippingAddress.name || pledge.user?.name || pledge.name || "",
-            phone: shippingAddress.phone || "",
-          } : undefined,
           note: `IndieCrowdfund Pledge #${pledge.id}`,
           tags: `indiecrowdfund,project-${projectId},pledge-${pledge.id}`,
         },
       };
 
+      // Add customer info if we have an email
+      if (customerEmail) {
+        draftOrderPayload.draft_order.customer = {
+          email: customerEmail,
+          first_name: firstName,
+          last_name: lastName,
+        };
+      }
+
+      // Add shipping address if available
+      if (shippingAddress && shippingAddress.line1) {
+        draftOrderPayload.draft_order.shipping_address = {
+          first_name: firstName,
+          last_name: lastName,
+          address1: shippingAddress.line1 || "",
+          address2: shippingAddress.line2 || "",
+          city: shippingAddress.city || "",
+          province: shippingAddress.state || "",
+          country: shippingAddress.country || "",
+          zip: shippingAddress.postalCode || "",
+          phone: shippingAddress.phone || "",
+        };
+        // Also add billing address (same as shipping for now)
+        draftOrderPayload.draft_order.billing_address = draftOrderPayload.draft_order.shipping_address;
+      }
+
       console.log("[pushOrdersToShopify] Creating draft order for pledge:", pledge.id);
+      console.log("[pushOrdersToShopify] Line items:", JSON.stringify(draftOrderPayload.draft_order.line_items, null, 2));
+      console.log("[pushOrdersToShopify] Full payload:", JSON.stringify(draftOrderPayload, null, 2));
 
       // Create draft order (kept as draft - not completed)
       const orderResponse = await shopifyFetch<{ draft_order: ShopifyOrder }>(
