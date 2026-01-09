@@ -24,7 +24,7 @@ interface ShopifyProduct {
 // Cache for SKU to variant ID lookups
 const skuToVariantCache = new Map<string, number>();
 
-// Look up variant ID by SKU in Shopify
+// Look up variant ID by SKU in Shopify using GraphQL
 async function lookupVariantBySku(
   shopDomain: string,
   accessToken: string,
@@ -37,22 +37,48 @@ async function lookupVariantBySku(
   }
 
   try {
-    // Search for products with this SKU
-    const response = await shopifyFetch<{ products: ShopifyProduct[] }>(
-      shopDomain,
-      accessToken,
-      `products.json?fields=id,title,variants`
-    );
-
-    // Find the variant with matching SKU
-    for (const product of response.products) {
-      for (const variant of product.variants) {
-        if (variant.sku === sku) {
-          skuToVariantCache.set(cacheKey, variant.id);
-          console.log(`[lookupVariantBySku] Found variant ${variant.id} for SKU ${sku}`);
-          return variant.id;
+    // Use GraphQL to search for variant by SKU
+    const graphqlQuery = {
+      query: `
+        query getVariantBySku($sku: String!) {
+          productVariants(first: 1, query: $sku) {
+            edges {
+              node {
+                id
+                sku
+                title
+              }
+            }
+          }
         }
-      }
+      `,
+      variables: { sku: `sku:${sku}` }
+    };
+
+    const url = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": accessToken,
+      },
+      body: JSON.stringify(graphqlQuery),
+    });
+
+    if (!response.ok) {
+      throw new Error(`GraphQL error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const edges = result.data?.productVariants?.edges;
+
+    if (edges && edges.length > 0) {
+      // Extract numeric ID from GraphQL ID (gid://shopify/ProductVariant/123)
+      const gid = edges[0].node.id;
+      const numericId = parseInt(gid.split('/').pop());
+      skuToVariantCache.set(cacheKey, numericId);
+      console.log(`[lookupVariantBySku] Found variant ${numericId} for SKU ${sku}`);
+      return numericId;
     }
 
     console.log(`[lookupVariantBySku] No variant found for SKU ${sku}`);
@@ -286,10 +312,11 @@ export async function pushOrdersToShopify(
       }
 
       // Build line items from reward and addons with SKU mappings
+      // If we have variant_id, that's all Shopify needs - it gets title/price from the product
       const lineItems: Array<{
-        title: string;
+        title?: string;
         quantity: number;
-        price: string;
+        price?: string;
         sku?: string;
         variant_id?: number;
       }> = [];
@@ -343,13 +370,22 @@ export async function pushOrdersToShopify(
         }
 
         const rewardSkuData = rewardSkuMap.get(pledge.reward.id);
-        lineItems.push({
-          title,
-          quantity: rewardSkuData?.quantity || 1,
-          price: (pledge.pledgeAmount ?? 0).toString(),
-          sku,
-          variant_id: variantId,
-        });
+        const quantity = rewardSkuData?.quantity || 1;
+
+        // If we have variant_id, just use that - Shopify gets title/price from the product
+        if (variantId) {
+          lineItems.push({
+            variant_id: variantId,
+            quantity,
+          });
+        } else {
+          // Fallback to custom line item if no product match
+          lineItems.push({
+            title,
+            quantity,
+            price: (pledge.pledgeAmount ?? 0).toString(),
+          });
+        }
       }
 
       for (const addon of pledge.addons) {
@@ -366,13 +402,22 @@ export async function pushOrdersToShopify(
           addonVariantId = await lookupVariantBySku(credentials.shopDomain, credentials.accessToken, addonSku.sku) || undefined;
         }
 
-        lineItems.push({
-          title: addon.addon.title,
-          quantity: (addon.quantity ?? 1) * (addonSku?.quantity || 1),
-          price: (addon.unitPrice ?? 0).toString(),
-          sku: addonSku?.sku,
-          variant_id: addonVariantId,
-        });
+        const addonQuantity = (addon.quantity ?? 1) * (addonSku?.quantity || 1);
+
+        // If we have variant_id, just use that - Shopify gets title/price from the product
+        if (addonVariantId) {
+          lineItems.push({
+            variant_id: addonVariantId,
+            quantity: addonQuantity,
+          });
+        } else {
+          // Fallback to custom line item if no product match
+          lineItems.push({
+            title: addon.addon.title,
+            quantity: addonQuantity,
+            price: (addon.unitPrice ?? 0).toString(),
+          });
+        }
       }
 
       // Get shipping address - prefer survey response, fall back to pledge
