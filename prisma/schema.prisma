@@ -3455,6 +3455,7 @@ enum SkuMappingSourceType {
   REWARD            // Reward tier
   ADDON             // Add-on item
   PROJECT_ITEM      // Individual project item
+  MODIFIER_COMBO    // Base reward + modifier addon combination
 }
 
 // Track items that are skipped from fulfillment (not mapped to SKU)
