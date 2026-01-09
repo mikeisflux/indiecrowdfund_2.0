@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Settings,
-  CreditCard,
   Mail,
   Shield,
   Key,
@@ -134,6 +133,10 @@ interface PlatformSettings {
   ipRateLimitEnabled: boolean;
   ipRateLimitRequests: number;
   ipRateLimitWindow: number;
+  // reCAPTCHA
+  recaptchaEnabled: boolean;
+  recaptchaSiteKey: string | null;
+  recaptchaSecretKey: string | null;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -186,6 +189,10 @@ export default function SettingsPage() {
     divinityCoinWebhookSecret: "",
     divinityCoinPartnerId: "",
     divinityCoinSettlementFrequency: "weekly",
+    // reCAPTCHA settings
+    recaptchaEnabled: false,
+    recaptchaSiteKey: "",
+    recaptchaSecretKey: "",
     // Local UI settings (not in DB yet)
     autoPayouts: true,
     payoutThreshold: "100",
@@ -362,6 +369,9 @@ export default function SettingsPage() {
         divinityCoinPartnerId: settings.divinityCoinPartnerId || "",
         divinityCoinSettlementFrequency: settings.divinityCoinSettlementFrequency || "weekly",
         autoPayouts: settings.autoPayouts || false,
+        recaptchaEnabled: settings.recaptchaEnabled || false,
+        recaptchaSiteKey: settings.recaptchaSiteKey || "",
+        recaptchaSecretKey: settings.recaptchaSecretKey || "",
       }));
 
       setEmailSettings((prev) => ({
@@ -622,6 +632,9 @@ export default function SettingsPage() {
             divinityCoinPartnerId: currentPaymentSettings.divinityCoinPartnerId,
             divinityCoinSettlementFrequency: currentPaymentSettings.divinityCoinSettlementFrequency,
             autoPayouts: currentPaymentSettings.autoPayouts,
+            recaptchaEnabled: currentPaymentSettings.recaptchaEnabled,
+            recaptchaSiteKey: currentPaymentSettings.recaptchaSiteKey,
+            recaptchaSecretKey: currentPaymentSettings.recaptchaSecretKey,
           };
           break;
         case "email":
@@ -811,8 +824,8 @@ export default function SettingsPage() {
             General
           </TabsTrigger>
           <TabsTrigger value="payments">
-            <CreditCard className="mr-2 h-4 w-4" />
-            Payments
+            <Key className="mr-2 h-4 w-4" />
+            API Keys
           </TabsTrigger>
           <TabsTrigger value="email">
             <Mail className="mr-2 h-4 w-4" />

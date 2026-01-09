@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { register } from "@/lib/auth/actions";
@@ -9,17 +9,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
-import { Recaptcha, getRecaptchaSiteKey } from "./recaptcha";
+import { Recaptcha } from "./recaptcha";
 
 export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState<string | null>(null);
+  const [isRecaptchaEnabled, setIsRecaptchaEnabled] = useState(false);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get("callbackUrl") || searchParams?.get("redirect");
 
-  const recaptchaSiteKey = getRecaptchaSiteKey();
-  const isRecaptchaEnabled = !!recaptchaSiteKey;
+  // Fetch reCAPTCHA settings from API (supports both DB and env config)
+  useEffect(() => {
+    async function fetchRecaptchaSettings() {
+      try {
+        const res = await fetch("/api/auth/recaptcha");
+        if (res.ok) {
+          const data = await res.json();
+          setIsRecaptchaEnabled(data.enabled);
+          setRecaptchaSiteKey(data.siteKey);
+        }
+      } catch (err) {
+        console.error("Failed to fetch reCAPTCHA settings:", err);
+      }
+    }
+    fetchRecaptchaSettings();
+  }, []);
 
   const handleRecaptchaVerify = useCallback((token: string) => {
     setRecaptchaToken(token);

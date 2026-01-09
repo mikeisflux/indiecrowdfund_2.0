@@ -103,6 +103,7 @@ export async function GET() {
       shuftiSecretKey: settings.shuftiSecretKey ? "••••••••" : null,
       r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
+      recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
     };
 
     return NextResponse.json({ settings: maskedSettings });
@@ -165,7 +166,8 @@ export async function PATCH(req: NextRequest) {
       'twitterApiKey', 'twitterApiSecret', 'twitterBearerToken',
       'twitterAccessToken', 'twitterAccessSecret',
       'dalleApiKey', 'stabilityApiKey', 'shuftiSecretKey',
-      'r2AccessKeyId', 'r2SecretAccessKey'
+      'r2AccessKeyId', 'r2SecretAccessKey',
+      'recaptchaSiteKey', 'recaptchaSecretKey'
     ];
 
     const filteredData = Object.fromEntries(
@@ -189,7 +191,8 @@ export async function PATCH(req: NextRequest) {
         "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret",
         "stripeConnectWebhookSecret",
         "divinityCoinEnabled", "divinityCoinApiKey", "divinityCoinWebhookSecret",
-        "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "autoPayouts"
+        "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "autoPayouts",
+        "recaptchaEnabled", "recaptchaSiteKey", "recaptchaSecretKey"
       ],
       email: [
         "emailProvider", "smtpHost", "smtpPort", "smtpUser", "smtpPassword",
@@ -314,6 +317,7 @@ export async function PATCH(req: NextRequest) {
       shuftiSecretKey: settings.shuftiSecretKey ? "••••••••" : null,
       r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
+      recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
     };
 
     return NextResponse.json({

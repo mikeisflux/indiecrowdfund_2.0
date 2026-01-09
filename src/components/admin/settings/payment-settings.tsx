@@ -26,6 +26,10 @@ interface PaymentSettingsProps {
     divinityCoinWebhookSecret: string;
     divinityCoinPartnerId: string;
     divinityCoinSettlementFrequency: string;
+    // reCAPTCHA settings
+    recaptchaEnabled: boolean;
+    recaptchaSiteKey: string;
+    recaptchaSecretKey: string;
     autoPayouts: boolean;
     payoutThreshold: string;
     payoutSchedule: string;
@@ -250,6 +254,72 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>reCAPTCHA Bot Protection</CardTitle>
+              <CardDescription>Protect registration and forms from automated bots</CardDescription>
+            </div>
+            <Badge variant={settings.recaptchaEnabled ? "default" : "secondary"}>
+              {settings.recaptchaEnabled ? "Enabled" : "Disabled"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label>Enable reCAPTCHA</Label>
+              <p className="text-sm text-zinc-500">Show CAPTCHA on registration to prevent bots</p>
+            </div>
+            <Switch
+              checked={settings.recaptchaEnabled}
+              onCheckedChange={(checked) =>
+                onSettingsChange({ ...settings, recaptchaEnabled: checked })
+              }
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Site Key</Label>
+              <SecureKeyInput
+                value={settings.recaptchaSiteKey}
+                onChange={(value) => onSettingsChange({ ...settings, recaptchaSiteKey: value })}
+                onSave={onSave}
+                hasExistingValue={settings.recaptchaSiteKey === "••••••••"}
+                placeholder="6Le..."
+              />
+              <p className="text-xs text-zinc-500">Public key shown on your website</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Secret Key</Label>
+              <SecureKeyInput
+                value={settings.recaptchaSecretKey}
+                onChange={(value) => onSettingsChange({ ...settings, recaptchaSecretKey: value })}
+                onSave={onSave}
+                hasExistingValue={settings.recaptchaSecretKey === "••••••••"}
+                placeholder="6Le..."
+              />
+              <p className="text-xs text-zinc-500">Private key for server-side verification</p>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+            <p className="font-medium">How to get reCAPTCHA keys:</p>
+            <ol className="list-decimal list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
+              <li>Go to the Google reCAPTCHA Admin Console</li>
+              <li>Register a new site with reCAPTCHA v2 &quot;I&apos;m not a robot&quot;</li>
+              <li>Add your domain(s) to the allowed list</li>
+              <li>Copy the Site Key and Secret Key here</li>
+            </ol>
+            <a href="https://www.google.com/recaptcha/admin" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Get reCAPTCHA keys →
+            </a>
           </div>
         </CardContent>
       </Card>

@@ -1793,6 +1793,11 @@ model PlatformSettings {
   csrfProtection        Boolean  @default(true)
   contentSecurityPolicy Boolean  @default(true)
 
+  // reCAPTCHA Bot Protection
+  recaptchaEnabled      Boolean  @default(false)
+  recaptchaSiteKey      String?
+  recaptchaSecretKey    String?
+
   // Theme Settings
   primaryColor          String   @default("#0066FF")
   secondaryColor        String   @default("#6366F1")
