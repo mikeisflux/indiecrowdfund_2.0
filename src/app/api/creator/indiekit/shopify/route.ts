@@ -36,7 +36,7 @@ async function shopifyFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `https://${shopDomain}/admin/api/2024-10/${endpoint}`;
+  const url = `https://${shopDomain}/admin/api/2026-01/${endpoint}`;
 
   const response = await fetch(url, {
     ...options,
