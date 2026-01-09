@@ -359,9 +359,30 @@ export async function pushOrdersToShopify(
 
       if (pledge.reward) {
         // Check if this reward has a modifier applied
-        const modifierAssignment = pledge.modifierAssignments?.find(
+        // First check explicit assignment, then auto-detect from modifier addons
+        let modifierAssignment = pledge.modifierAssignments?.find(
           (ma: { rewardId: string }) => ma.rewardId === pledge.reward?.id
         );
+
+        // If no explicit assignment, auto-detect modifier from addons
+        if (!modifierAssignment) {
+          // Find any modifier addon in this pledge's addons
+          const modifierAddon = pledge.addons.find(
+            (a: { addon: { isModifier: boolean } }) => a.addon.isModifier
+          );
+          if (modifierAddon) {
+            // Check if we have a SKU mapping for this reward + modifier combo
+            const potentialKey = `${pledge.reward.id}-${modifierAddon.addon.id}`;
+            if (modifierSkuMap.has(potentialKey)) {
+              // Auto-create the assignment for this push
+              modifierAssignment = {
+                rewardId: pledge.reward.id,
+                modifierAddonId: modifierAddon.addon.id,
+              };
+              console.log(`[pushOrdersToShopify] Auto-detected modifier: ${pledge.reward.title} + ${modifierAddon.addon.title}`);
+            }
+          }
+        }
 
         let sku: string | undefined;
         let variantId: number | undefined;
