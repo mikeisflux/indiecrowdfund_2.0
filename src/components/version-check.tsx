@@ -74,11 +74,41 @@ export function VersionCheck() {
     // Periodic version check (silent, only reloads on actual version change)
     const intervalId = setInterval(checkVersion, CHECK_INTERVAL);
 
-    // Intercept Server Action errors globally - only reload on actual errors
+    // Intercept Server Action errors globally - check both thrown errors and error responses
     const originalFetch = window.fetch;
     window.fetch = async function(...args) {
       try {
         const response = await originalFetch.apply(this, args);
+
+        // For POST requests that might be Server Actions, check for version mismatch errors
+        // Server Actions return error responses (not thrown), so we need to check the response
+        const request = args[0];
+        const isPost = (typeof request === 'string' || request instanceof URL)
+          ? args[1]?.method?.toUpperCase() === 'POST'
+          : request instanceof Request && request.method.toUpperCase() === 'POST';
+
+        if (isPost && !response.ok && !hasRefreshed.current) {
+          try {
+            // Clone to avoid consuming the response
+            const clonedResponse = response.clone();
+            const text = await clonedResponse.text();
+            const textLower = text.toLowerCase();
+
+            if (
+              textLower.includes('server action') ||
+              textLower.includes('failed to find') ||
+              textLower.includes('older or newer deployment') ||
+              textLower.includes('workers')
+            ) {
+              console.log("[VersionCheck] Server Action version mismatch in response, forcing refresh");
+              hasRefreshed.current = true;
+              forceRefresh();
+            }
+          } catch {
+            // Ignore errors reading response body
+          }
+        }
+
         return response;
       } catch (error) {
         // Check if this looks like a Server Action version mismatch error
