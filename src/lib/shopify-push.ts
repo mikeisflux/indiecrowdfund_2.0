@@ -266,7 +266,7 @@ export async function pushOrdersToShopify(
         lineItems.push({
           title,
           quantity: rewardSkuData?.quantity || 1,
-          price: pledge.pledgeAmount.toString(),
+          price: (pledge.pledgeAmount ?? 0).toString(),
           sku,
           variant_id: variantId ? parseInt(variantId) : undefined,
         });
@@ -281,8 +281,8 @@ export async function pushOrdersToShopify(
         const addonSku = addonSkuMap.get(addon.addon.id);
         lineItems.push({
           title: addon.addon.title,
-          quantity: addon.quantity * (addonSku?.quantity || 1),
-          price: addon.unitPrice.toString(),
+          quantity: (addon.quantity ?? 1) * (addonSku?.quantity || 1),
+          price: (addon.unitPrice ?? 0).toString(),
           sku: addonSku?.sku,
           variant_id: addonSku?.variantId ? parseInt(addonSku.variantId) : undefined,
         });
@@ -307,7 +307,7 @@ export async function pushOrdersToShopify(
             {
               title: `Pledge - ${project?.title || "Project"}`,
               quantity: 1,
-              price: pledge.pledgeAmount.toString(),
+              price: (pledge.pledgeAmount ?? 0).toString(),
             },
           ],
           customer: {
