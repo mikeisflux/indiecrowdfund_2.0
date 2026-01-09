@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { pushOrdersToShopify } from "@/lib/shopify-push";
 
 export const dynamic = "force-dynamic";
 
@@ -230,27 +231,13 @@ export async function POST(req: NextRequest) {
         for (const integration of connectedIntegrations) {
           console.log("[push_to_fulfillment] Processing integration:", integration.provider);
           if (integration.provider === "SHOPIFY") {
-            // Push to Shopify
-            const shopifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/creator/indiekit/shopify`;
-            console.log("[push_to_fulfillment] Calling Shopify API:", shopifyUrl);
+            // Push to Shopify - call function directly to avoid CSRF issues
+            console.log("[push_to_fulfillment] Calling Shopify push function directly");
 
-            const shopifyResponse = await fetch(shopifyUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Cookie": req.headers.get("cookie") || "",
-              },
-              body: JSON.stringify({
-                projectId,
-                action: "push_orders",
-                backerIds: pledgeIds,
-              }),
-            });
+            const shopifyResult = await pushOrdersToShopify(projectId, pledgeIds);
+            console.log("[push_to_fulfillment] Shopify result:", shopifyResult);
 
-            const shopifyResult = await shopifyResponse.json();
-            console.log("[push_to_fulfillment] Shopify response:", shopifyResponse.status, shopifyResult);
-
-            if (shopifyResponse.ok) {
+            if (shopifyResult.success) {
               totalPushed += shopifyResult.pushed || 0;
               totalFailed += shopifyResult.failed || 0;
               if (shopifyResult.errors) {
@@ -258,7 +245,7 @@ export async function POST(req: NextRequest) {
               }
               pushedProviders.push("Shopify");
             } else {
-              allErrors.push(`Shopify: ${shopifyResult.error || "Push failed"}`);
+              allErrors.push(`Shopify: ${shopifyResult.message || "Push failed"}`);
             }
           } else if (integration.provider === "SHIPSTATION") {
             // Push to ShipStation
