@@ -357,11 +357,6 @@ export async function pushOrdersToShopify(
         variant_id?: number;
       }> = [];
 
-      // Track which modifier addon IDs have been assigned to rewards (don't add as separate line items)
-      const assignedModifierAddonIds = new Set(
-        pledge.modifierAssignments?.map((ma: { modifierAddonId: string }) => ma.modifierAddonId) || []
-      );
-
       if (pledge.reward) {
         // Check if this reward has a modifier applied
         const modifierAssignment = pledge.modifierAssignments?.find(
