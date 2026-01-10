@@ -1826,6 +1826,44 @@ model PlatformSettings {
 }
 
 // ============================================
+// BOT PROTECTION & IP BLOCKING
+// ============================================
+
+model BlockedIP {
+  id            String   @id @default(cuid())
+  ipAddress     String   @unique
+  reason        String
+  violationCount Int     @default(1)
+  blockedAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  // Metadata for debugging
+  lastUserAgent String?
+  lastPath      String?
+  lastActionId  String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([ipAddress])
+  @@index([expiresAt])
+}
+
+model SuspiciousActivity {
+  id            String   @id @default(cuid())
+  ipAddress     String
+  reason        String
+  actionId      String?
+  path          String?
+  userAgent     String?
+
+  createdAt     DateTime @default(now())
+
+  @@index([ipAddress])
+  @@index([createdAt])
+}
+
+// ============================================
 // MODERATION & REPORTS
 // ============================================
 

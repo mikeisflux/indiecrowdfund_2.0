@@ -35,32 +35,22 @@ const shopifyIframeRoutes = [
 ];
 
 // ============ Bot Detection & IP Blocking ============
-// In-memory store for blocked IPs and suspicious activity tracking
-// Note: This resets on server restart. For persistence, use Redis or database.
-const blockedIPs = new Set<string>();
+// Hybrid approach: In-memory for fast middleware checks, database for persistence
+// The database is updated asynchronously to avoid slowing down requests
+import {
+  recordSuspiciousActivity,
+  isValidServerActionId,
+  getBlockedIPs,
+} from "@/lib/bot-blocker";
+
+// In-memory cache for fast middleware checks (synced with database)
+const blockedIPCache = new Map<string, { expiresAt: number }>();
 const suspiciousIPCounts = new Map<string, { count: number; firstSeen: number }>();
 
-// Block threshold: after this many invalid requests, block the IP
+// Configuration
 const BOT_BLOCK_THRESHOLD = 3;
-// Time window for counting suspicious requests (1 hour in ms)
-const SUSPICIOUS_WINDOW_MS = 60 * 60 * 1000;
-// How long to block an IP (24 hours in ms)
-const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000;
-
-// Track when IPs were blocked (for expiration)
-const blockTimestamps = new Map<string, number>();
-
-/**
- * Check if a server action ID looks valid
- * Valid Next.js action IDs are 40-character hex strings
- */
-function isValidServerActionId(actionId: string): boolean {
-  // Valid action IDs are 40-char hex hashes (e.g., "c3a7b2d9e1f4...")
-  // Invalid: "x", empty, non-hex chars, wrong length
-  if (!actionId || actionId.length < 10) return false;
-  // Must be alphanumeric (hex characters)
-  return /^[a-f0-9]+$/i.test(actionId);
-}
+const SUSPICIOUS_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Get client IP from request
@@ -75,49 +65,77 @@ function getClientIP(req: NextRequest): string {
 }
 
 /**
- * Check if an IP is currently blocked
+ * Check if an IP is blocked (fast in-memory check)
  */
-function isIPBlocked(ip: string): boolean {
-  if (!blockedIPs.has(ip)) return false;
+function isIPBlockedFast(ip: string): boolean {
+  const cached = blockedIPCache.get(ip);
+  if (!cached) return false;
 
-  // Check if block has expired
-  const blockedAt = blockTimestamps.get(ip) || 0;
-  if (Date.now() - blockedAt > BLOCK_DURATION_MS) {
-    blockedIPs.delete(ip);
-    blockTimestamps.delete(ip);
-    suspiciousIPCounts.delete(ip);
+  if (Date.now() > cached.expiresAt) {
+    blockedIPCache.delete(ip);
     return false;
   }
   return true;
 }
 
 /**
- * Record a suspicious request from an IP
- * Returns true if the IP should now be blocked
+ * Record suspicious activity and potentially block IP
+ * Updates in-memory cache immediately, database asynchronously
  */
-function recordSuspiciousRequest(ip: string, reason: string): boolean {
+function recordSuspiciousRequest(
+  ip: string,
+  reason: string,
+  metadata?: { actionId?: string; path?: string; userAgent?: string }
+): boolean {
   const now = Date.now();
   const existing = suspiciousIPCounts.get(ip);
 
+  // Update in-memory counter
   if (existing) {
-    // Reset if outside time window
     if (now - existing.firstSeen > SUSPICIOUS_WINDOW_MS) {
       suspiciousIPCounts.set(ip, { count: 1, firstSeen: now });
-      return false;
-    }
+    } else {
+      existing.count++;
+      if (existing.count >= BOT_BLOCK_THRESHOLD) {
+        // Block in memory immediately
+        blockedIPCache.set(ip, { expiresAt: now + BLOCK_DURATION_MS });
+        console.log(`[Bot Blocker] IP BLOCKED: ${ip} - Reason: ${reason} (${existing.count} violations)`);
 
-    existing.count++;
-    if (existing.count >= BOT_BLOCK_THRESHOLD) {
-      blockedIPs.add(ip);
-      blockTimestamps.set(ip, now);
-      console.log(`[Bot Blocker] IP BLOCKED: ${ip} - Reason: ${reason} (${existing.count} violations)`);
-      return true;
+        // Persist to database asynchronously
+        recordSuspiciousActivity(ip, reason, metadata).catch((err) =>
+          console.error("[Bot Blocker] DB error:", err)
+        );
+        return true;
+      }
     }
   } else {
     suspiciousIPCounts.set(ip, { count: 1, firstSeen: now });
   }
 
+  // Log to database asynchronously (don't await)
+  recordSuspiciousActivity(ip, reason, metadata).catch((err) =>
+    console.error("[Bot Blocker] DB error:", err)
+  );
+
   return false;
+}
+
+// Periodically sync blocked IPs from database (every 5 minutes)
+let lastDbSync = 0;
+async function syncBlockedIPsFromDb(): Promise<void> {
+  const now = Date.now();
+  if (now - lastDbSync < 5 * 60 * 1000) return; // Skip if synced recently
+  lastDbSync = now;
+
+  try {
+    // This runs in background, doesn't block requests
+    const blocked = await getBlockedIPs();
+    for (const ip of blocked) {
+      blockedIPCache.set(ip.ipAddress, { expiresAt: ip.expiresAt.getTime() });
+    }
+  } catch (error) {
+    console.error("[Bot Blocker] Failed to sync from database:", error);
+  }
 }
 
 // Generate a CSRF token
@@ -177,9 +195,13 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const clientIP = getClientIP(req);
+  const userAgent = req.headers.get("user-agent") || "none";
 
-  // Check if IP is blocked
-  if (isIPBlocked(clientIP)) {
+  // Trigger background sync of blocked IPs from database
+  syncBlockedIPsFromDb().catch(() => {});
+
+  // Check if IP is blocked (fast in-memory check)
+  if (isIPBlockedFast(clientIP)) {
     console.log(`[Bot Blocker] Blocked request from ${clientIP} to ${pathname}`);
     return new NextResponse("Forbidden", { status: 403 });
   }
@@ -195,7 +217,7 @@ export function middleware(req: NextRequest) {
       method: req.method,
       referer: req.headers.get("referer") || "none",
       origin: req.headers.get("origin") || "none",
-      userAgent: req.headers.get("user-agent") || "none",
+      userAgent,
       ip: clientIP,
       sessionCookie: req.cookies.get("session_token") ? "present" : "absent",
       acceptLanguage: req.headers.get("accept-language") || "none",
@@ -207,7 +229,11 @@ export function middleware(req: NextRequest) {
       console.log(`[Bot Blocker] Invalid action ID "${serverActionId}" from IP ${clientIP}`);
 
       // Record suspicious activity and potentially block
-      const shouldBlock = recordSuspiciousRequest(clientIP, `Invalid server action ID: ${serverActionId}`);
+      const shouldBlock = recordSuspiciousRequest(
+        clientIP,
+        `Invalid server action ID: ${serverActionId}`,
+        { actionId: serverActionId, path: pathname, userAgent }
+      );
 
       if (shouldBlock) {
         return new NextResponse("Forbidden", { status: 403 });
