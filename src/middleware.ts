@@ -34,6 +34,92 @@ const shopifyIframeRoutes = [
   "/api/creator/indiekit/shopify/install",
 ];
 
+// ============ Bot Detection & IP Blocking ============
+// In-memory store for blocked IPs and suspicious activity tracking
+// Note: This resets on server restart. For persistence, use Redis or database.
+const blockedIPs = new Set<string>();
+const suspiciousIPCounts = new Map<string, { count: number; firstSeen: number }>();
+
+// Block threshold: after this many invalid requests, block the IP
+const BOT_BLOCK_THRESHOLD = 3;
+// Time window for counting suspicious requests (1 hour in ms)
+const SUSPICIOUS_WINDOW_MS = 60 * 60 * 1000;
+// How long to block an IP (24 hours in ms)
+const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000;
+
+// Track when IPs were blocked (for expiration)
+const blockTimestamps = new Map<string, number>();
+
+/**
+ * Check if a server action ID looks valid
+ * Valid Next.js action IDs are 40-character hex strings
+ */
+function isValidServerActionId(actionId: string): boolean {
+  // Valid action IDs are 40-char hex hashes (e.g., "c3a7b2d9e1f4...")
+  // Invalid: "x", empty, non-hex chars, wrong length
+  if (!actionId || actionId.length < 10) return false;
+  // Must be alphanumeric (hex characters)
+  return /^[a-f0-9]+$/i.test(actionId);
+}
+
+/**
+ * Get client IP from request
+ */
+function getClientIP(req: NextRequest): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    req.headers.get("cf-connecting-ip") ||
+    "unknown"
+  );
+}
+
+/**
+ * Check if an IP is currently blocked
+ */
+function isIPBlocked(ip: string): boolean {
+  if (!blockedIPs.has(ip)) return false;
+
+  // Check if block has expired
+  const blockedAt = blockTimestamps.get(ip) || 0;
+  if (Date.now() - blockedAt > BLOCK_DURATION_MS) {
+    blockedIPs.delete(ip);
+    blockTimestamps.delete(ip);
+    suspiciousIPCounts.delete(ip);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Record a suspicious request from an IP
+ * Returns true if the IP should now be blocked
+ */
+function recordSuspiciousRequest(ip: string, reason: string): boolean {
+  const now = Date.now();
+  const existing = suspiciousIPCounts.get(ip);
+
+  if (existing) {
+    // Reset if outside time window
+    if (now - existing.firstSeen > SUSPICIOUS_WINDOW_MS) {
+      suspiciousIPCounts.set(ip, { count: 1, firstSeen: now });
+      return false;
+    }
+
+    existing.count++;
+    if (existing.count >= BOT_BLOCK_THRESHOLD) {
+      blockedIPs.add(ip);
+      blockTimestamps.set(ip, now);
+      console.log(`[Bot Blocker] IP BLOCKED: ${ip} - Reason: ${reason} (${existing.count} violations)`);
+      return true;
+    }
+  } else {
+    suspiciousIPCounts.set(ip, { count: 1, firstSeen: now });
+  }
+
+  return false;
+}
+
 // Generate a CSRF token
 function generateCSRFToken(): string {
   const array = new Uint8Array(32);
@@ -90,8 +176,15 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const clientIP = getClientIP(req);
 
-  // Log Server Action requests for debugging stale deployment issues
+  // Check if IP is blocked
+  if (isIPBlocked(clientIP)) {
+    console.log(`[Bot Blocker] Blocked request from ${clientIP} to ${pathname}`);
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+
+  // Handle Server Action requests - detect bots and log for debugging
   const serverActionId = req.headers.get("Next-Action");
   if (serverActionId) {
     const logData = {
@@ -103,11 +196,26 @@ export function middleware(req: NextRequest) {
       referer: req.headers.get("referer") || "none",
       origin: req.headers.get("origin") || "none",
       userAgent: req.headers.get("user-agent") || "none",
-      ip: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown",
+      ip: clientIP,
       sessionCookie: req.cookies.get("session_token") ? "present" : "absent",
       acceptLanguage: req.headers.get("accept-language") || "none",
     };
     console.log("[Server Action Debug]", JSON.stringify(logData));
+
+    // Check if this is an invalid/malformed action ID (bot behavior)
+    if (!isValidServerActionId(serverActionId)) {
+      console.log(`[Bot Blocker] Invalid action ID "${serverActionId}" from IP ${clientIP}`);
+
+      // Record suspicious activity and potentially block
+      const shouldBlock = recordSuspiciousRequest(clientIP, `Invalid server action ID: ${serverActionId}`);
+
+      if (shouldBlock) {
+        return new NextResponse("Forbidden", { status: 403 });
+      }
+
+      // Return 400 Bad Request for invalid action IDs
+      return new NextResponse("Bad Request - Invalid action ID", { status: 400 });
+    }
   }
 
   // Handle legacy project URLs: /projects/slug -> rewrite to /projects/_/slug
