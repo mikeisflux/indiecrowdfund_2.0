@@ -35,9 +35,8 @@ const shopifyIframeRoutes = [
 ];
 
 // ============ Bot Detection & IP Blocking ============
-// In-memory blocking - works with Edge Runtime
-// Blocks persist while PM2 process runs, reset on restart
-// Bots get re-blocked quickly after 3 violations
+// In-memory cache with database persistence via internal API
+// Survives PM2 restarts by loading from database on startup
 
 // In-memory cache for fast middleware checks
 const blockedIPCache = new Map<string, { expiresAt: number }>();
@@ -47,6 +46,67 @@ const suspiciousIPCounts = new Map<string, { count: number; firstSeen: number }>
 const BOT_BLOCK_THRESHOLD = 3;
 const SUSPICIOUS_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// Track last sync time
+let lastDbSync = 0;
+let isInitialized = false;
+
+/**
+ * Load blocked IPs from database via internal API
+ * Called on startup and periodically to stay in sync
+ */
+async function syncBlockedIPsFromDb(baseUrl: string): Promise<void> {
+  const now = Date.now();
+  // Only sync every 5 minutes (unless first time)
+  if (isInitialized && now - lastDbSync < 5 * 60 * 1000) return;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/internal/blocked-ips`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      let loaded = 0;
+      for (const item of data.blocked || []) {
+        if (item.expiresAt > now) {
+          blockedIPCache.set(item.ip, { expiresAt: item.expiresAt });
+          loaded++;
+        }
+      }
+      lastDbSync = now;
+      isInitialized = true;
+      if (loaded > 0) {
+        console.log(`[Bot Blocker] Synced ${loaded} blocked IPs from database`);
+      }
+    }
+  } catch (error) {
+    // Silently fail - will retry on next request
+    console.error("[Bot Blocker] Sync error:", error);
+  }
+}
+
+/**
+ * Persist a blocked IP to database via internal API (fire and forget)
+ */
+function persistBlockedIP(
+  baseUrl: string,
+  ip: string,
+  reason: string,
+  metadata?: { actionId?: string; path?: string; userAgent?: string }
+): void {
+  fetch(`${baseUrl}/api/internal/blocked-ips`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ip,
+      reason,
+      block: true,
+      ...metadata,
+    }),
+  }).catch((err) => console.error("[Bot Blocker] Persist error:", err));
+}
 
 /**
  * Get client IP from request
@@ -85,8 +145,10 @@ function isValidServerActionId(actionId: string): boolean {
 
 /**
  * Record suspicious activity and potentially block IP
+ * Persists to database when blocking
  */
 function recordSuspiciousRequest(
+  baseUrl: string,
   ip: string,
   reason: string,
   metadata?: { actionId?: string; path?: string; userAgent?: string }
@@ -104,6 +166,8 @@ function recordSuspiciousRequest(
         // Block in memory
         blockedIPCache.set(ip, { expiresAt: now + BLOCK_DURATION_MS });
         console.log(`[Bot Blocker] IP BLOCKED: ${ip} - Reason: ${reason} (${existing.count} violations)`);
+        // Persist to database (fire and forget)
+        persistBlockedIP(baseUrl, ip, reason, metadata);
         return true;
       }
     }
@@ -176,6 +240,15 @@ export function middleware(req: NextRequest) {
   const clientIP = getClientIP(req);
   const userAgent = req.headers.get("user-agent") || "none";
 
+  // Get base URL for internal API calls
+  const baseUrl = req.nextUrl.origin;
+
+  // Sync blocked IPs from database (background, non-blocking)
+  // Skip sync for the internal API to avoid recursion
+  if (!pathname.startsWith("/api/internal/")) {
+    syncBlockedIPsFromDb(baseUrl).catch(() => {});
+  }
+
   // Check if IP is blocked (fast in-memory check)
   if (isIPBlockedFast(clientIP)) {
     console.log(`[Bot Blocker] Blocked request from ${clientIP} to ${pathname}`);
@@ -206,6 +279,7 @@ export function middleware(req: NextRequest) {
 
       // Record suspicious activity and potentially block
       const shouldBlock = recordSuspiciousRequest(
+        baseUrl,
         clientIP,
         `Invalid server action ID: ${serverActionId}`,
         { actionId: serverActionId, path: pathname, userAgent }
