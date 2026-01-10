@@ -91,6 +91,25 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Log Server Action requests for debugging stale deployment issues
+  const serverActionId = req.headers.get("Next-Action");
+  if (serverActionId) {
+    const logData = {
+      timestamp: new Date().toISOString(),
+      type: "SERVER_ACTION_REQUEST",
+      actionId: serverActionId,
+      pathname,
+      method: req.method,
+      referer: req.headers.get("referer") || "none",
+      origin: req.headers.get("origin") || "none",
+      userAgent: req.headers.get("user-agent") || "none",
+      ip: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown",
+      sessionCookie: req.cookies.get("session_token") ? "present" : "absent",
+      acceptLanguage: req.headers.get("accept-language") || "none",
+    };
+    console.log("[Server Action Debug]", JSON.stringify(logData));
+  }
+
   // Handle legacy project URLs: /projects/slug -> rewrite to /projects/_/slug
   // This allows slug-only URLs to work alongside the new /projects/vanityname/slug format
   const legacyProjectMatch = pathname.match(/^\/projects\/([^\/]+)$/);
