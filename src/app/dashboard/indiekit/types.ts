@@ -195,5 +195,5 @@ export const STATUS_LABELS: Record<Backer["status"], string> = {
   not_pushed: "Not Pushed",
   push_errored: "Push Errored",
   pushed: "Pushed",
-  shipped: "Shipped",
+  shipped: "Complete",
 };

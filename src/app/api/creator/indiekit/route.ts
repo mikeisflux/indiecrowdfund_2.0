@@ -416,6 +416,7 @@ export async function GET(req: NextRequest) {
         state?: string;
         postalCode?: string;
         country?: string;
+        phone?: string;
       } | null;
 
       // Map fulfillment status to our display status
@@ -457,27 +458,64 @@ export async function GET(req: NextRequest) {
       });
       const needsModifierAssignment = hasModifierAddons && modifierAssignments.length < pledge.addons.filter((a: { addon: { isModifier?: boolean } }) => a.addon.isModifier).length;
 
+      // Calculate balance fields
+      const pledgeTotal = Number(pledge.amount);
+      const rewardAmt = Number(pledge.rewardAmount) || 0;
+      const addonsAmt = Number(pledge.addonsAmount) || 0;
+      const shippingAmt = Number(pledge.shippingAmount) || 0;
+      const expectedTotal = rewardAmt + addonsAmt + shippingAmt;
+      const balanceDue = Math.max(0, expectedTotal - pledgeTotal);
+
+      // Determine charge status
+      let chargeStatus: "not_charged" | "errored" | "charged" | "paypal_collected" = "not_charged";
+      if (pledge.status === "COMPLETED") {
+        chargeStatus = pledge.paymentProcessor === "DIVINITYCOIN" ? "paypal_collected" : "charged";
+      } else if (pledge.status === "FAILED") {
+        chargeStatus = "errored";
+      }
+
+      // Check if address is complete
+      const addressComplete = !!(shippingAddress?.line1 && shippingAddress?.city && shippingAddress?.country && shippingAddress?.postalCode);
+
       return {
         id: pledge.id,
+        projectId: pledge.projectId,
         backerNumber: pledge.backerNumber || 0,
         name: pledge.user.name || "Anonymous",
         email: pledge.user.email || "",
         avatar: pledge.user.image || undefined,
-        pledgeAmount: Number(pledge.amount),
+        pledgeAmount: pledgeTotal,
         reward: pledge.reward?.title || "No Reward",
         rewardId: pledge.reward?.id,
         rewardAmount: pledge.reward ? Number(pledge.reward.amount) : 0,
         status,
+        chargeStatus,
+        paymentProcessor: pledge.paymentProcessor,
         surveyCompleted: surveyResponse?.isComplete || false,
+        addressComplete,
+        pledgeDate: pledge.createdAt.toISOString(),
         shippingAddress: shippingAddress ? {
+          name: shippingAddress.name || "",
           line1: shippingAddress.line1 || "",
+          line2: shippingAddress.line2 || "",
           city: shippingAddress.city || "",
+          state: shippingAddress.state || "",
           country: shippingAddress.country || "",
           postalCode: shippingAddress.postalCode || "",
+          phone: shippingAddress.phone || "",
         } : undefined,
+        balance: {
+          pledgeAmount: pledgeTotal,
+          pledgeLevelAmount: rewardAmt,
+          addonsAmount: addonsAmt,
+          shippingAmount: shippingAmt,
+          totalCharged: pledgeTotal,
+          balanceDue,
+        },
         items,
         addons,
         digitalDownloads: [], // Would be populated from digital file distribution records
+        activity: [], // Would be populated from activity logs
         needsModifierAssignment,
         modifierAssignments,
       };

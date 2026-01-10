@@ -276,6 +276,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
           <div>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               {backer.backerNumber ? `Backer #${backer.backerNumber}` : "Backer"} — {backer.name}
+              <span className="text-sm font-normal text-muted-foreground">({backer.email})</span>
               <Button variant="outline" size="sm" className="ml-2" onClick={handleViewAsBacker}>
                 <Eye className="h-3 w-3 mr-1" />
                 View as Backer
