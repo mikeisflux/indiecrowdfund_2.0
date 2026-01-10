@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 import { ProjectUpdate } from "../types";
 import { formatDate } from "../utils";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 
 interface UpdatesTabProps {
   updates: ProjectUpdate[];
@@ -23,7 +24,7 @@ export function UpdatesTab({ updates }: UpdatesTabProps) {
             <h3 className="font-semibold mb-2">{update.title}</h3>
             <div
               className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
-              dangerouslySetInnerHTML={{ __html: update.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(update.content) }}
             />
           </CardContent>
         </Card>

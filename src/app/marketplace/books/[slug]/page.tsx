@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { getCSRFHeaders } from "@/lib/csrf";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -415,7 +416,7 @@ export default function BookDetailPage() {
                 <h2 className="text-lg font-semibold text-foreground mb-4">About this book</h2>
                 <div
                   className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: book.description }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(book.description || "") }}
                 />
               </CardContent>
             </Card>

@@ -21,6 +21,7 @@ import { Calendar, Lightbulb, Upload, Trash2, Video, Link, Check, X, Loader2 } f
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { slugify } from "@/lib/utils";
+import { toast } from "sonner";
 
 // Helper to extract video embed URL from YouTube or Vimeo links
 function getVideoEmbedUrl(url: string): string | null {
@@ -103,21 +104,21 @@ export function BasicsStep() {
   // Handle video file upload
   const handleVideoUpload = async (file: File) => {
     if (!projectId) {
-      alert("Please save the project first before uploading a video");
+      toast.error("Please save the project first before uploading a video");
       return;
     }
 
     // Validate file type
     const validTypes = ["video/mp4", "video/webm", "video/quicktime"];
     if (!validTypes.includes(file.type)) {
-      alert("Please upload an MP4, WebM, or MOV video file");
+      toast.error("Please upload an MP4, WebM, or MOV video file");
       return;
     }
 
     // Validate file size (100MB max)
     const maxSize = 100 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert("Video file must be less than 100MB");
+      toast.error("Video file must be less than 100MB");
       return;
     }
 
@@ -144,7 +145,7 @@ export function BasicsStep() {
       updateBasics({ videoUrl: result.url });
     } catch (error) {
       console.error("Video upload error:", error);
-      alert(error instanceof Error ? error.message : "Failed to upload video");
+      toast.error(error instanceof Error ? error.message : "Failed to upload video");
     } finally {
       setIsUploadingVideo(false);
     }

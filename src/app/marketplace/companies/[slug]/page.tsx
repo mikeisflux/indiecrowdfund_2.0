@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 
 interface Book {
   id: string;
@@ -260,7 +261,7 @@ export default function CompanyProfilePage() {
               <h2 className="text-lg font-semibold text-foreground mb-4">About</h2>
               <div
                 className="prose prose-sm max-w-none dark:prose-invert"
-                dangerouslySetInnerHTML={{ __html: company.about }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(company.about || "") }}
               />
             </CardContent>
           </Card>

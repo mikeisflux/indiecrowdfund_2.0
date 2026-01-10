@@ -2,6 +2,7 @@
 
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -397,7 +398,7 @@ export default function AdminPrelaunchPage() {
                   <h4 className="font-medium mb-2">Description</h4>
                   <div
                     className="prose prose-sm max-w-none dark:prose-invert bg-muted p-4 rounded-lg"
-                    dangerouslySetInnerHTML={{ __html: selectedPage.prelaunchDescription }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedPage.prelaunchDescription) }}
                   />
                 </div>
               )}
