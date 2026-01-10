@@ -8,9 +8,13 @@ import {
   recordRetailerLoginAttempt,
 } from "@/lib/auth/rate-limit";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.RETAILER_JWT_SECRET || "retailer-secret-key-change-in-production"
-);
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.RETAILER_JWT_SECRET;
+  if (!secret) {
+    throw new Error("RETAILER_JWT_SECRET environment variable is required");
+  }
+  return new TextEncoder().encode(secret);
+}
 
 /**
  * Get client IP from request headers
@@ -184,7 +188,7 @@ export async function POST(req: NextRequest) {
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("7d")
-      .sign(JWT_SECRET);
+      .sign(getJwtSecret());
 
     // Set cookie
     const cookieStore = await cookies();

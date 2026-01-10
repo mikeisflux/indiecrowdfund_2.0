@@ -6,9 +6,13 @@ import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.RETAILER_JWT_SECRET || "retailer-secret-key-change-in-production"
-);
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.RETAILER_JWT_SECRET;
+  if (!secret) {
+    throw new Error("RETAILER_JWT_SECRET environment variable is required");
+  }
+  return new TextEncoder().encode(secret);
+}
 
 // Helper to get retailer from token
 async function getRetailerFromToken() {
@@ -20,7 +24,7 @@ async function getRetailerFromToken() {
   }
 
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return payload as { retailerId: string; email: string; businessName: string };
   } catch {
     return null;

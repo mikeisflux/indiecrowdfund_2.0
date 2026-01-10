@@ -6,9 +6,13 @@ import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.RETAILER_JWT_SECRET || "retailer-secret-key-change-in-production"
-);
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.RETAILER_JWT_SECRET;
+  if (!secret) {
+    throw new Error("RETAILER_JWT_SECRET environment variable is required");
+  }
+  return new TextEncoder().encode(secret);
+}
 
 // POST - Authenticate retailer via NextAuth session
 export async function POST() {
@@ -159,7 +163,7 @@ async function authenticateRetailer(retailer: {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 
   // Set cookie
   const cookieStore = await cookies();
