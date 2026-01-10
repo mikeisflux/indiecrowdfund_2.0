@@ -35,15 +35,10 @@ const shopifyIframeRoutes = [
 ];
 
 // ============ Bot Detection & IP Blocking ============
-// Hybrid approach: In-memory for fast middleware checks, database for persistence
-// The database is updated asynchronously to avoid slowing down requests
-import {
-  recordSuspiciousActivity,
-  isValidServerActionId,
-  getBlockedIPs,
-} from "@/lib/bot-blocker";
+// In-memory only for Edge Runtime compatibility
+// Database persistence happens via API routes (not in middleware)
 
-// In-memory cache for fast middleware checks (synced with database)
+// In-memory cache for fast middleware checks
 const blockedIPCache = new Map<string, { expiresAt: number }>();
 const suspiciousIPCounts = new Map<string, { count: number; firstSeen: number }>();
 
@@ -79,8 +74,17 @@ function isIPBlockedFast(ip: string): boolean {
 }
 
 /**
+ * Validate server action ID format
+ * Valid Next.js action IDs are 40-character hex strings
+ */
+function isValidServerActionId(actionId: string): boolean {
+  if (!actionId || actionId.length < 10) return false;
+  return /^[a-f0-9]+$/i.test(actionId);
+}
+
+/**
  * Record suspicious activity and potentially block IP
- * Updates in-memory cache immediately, database asynchronously
+ * In-memory only - database logging happens via separate API call
  */
 function recordSuspiciousRequest(
   ip: string,
@@ -100,11 +104,6 @@ function recordSuspiciousRequest(
         // Block in memory immediately
         blockedIPCache.set(ip, { expiresAt: now + BLOCK_DURATION_MS });
         console.log(`[Bot Blocker] IP BLOCKED: ${ip} - Reason: ${reason} (${existing.count} violations)`);
-
-        // Persist to database asynchronously
-        recordSuspiciousActivity(ip, reason, metadata).catch((err) =>
-          console.error("[Bot Blocker] DB error:", err)
-        );
         return true;
       }
     }
@@ -112,30 +111,10 @@ function recordSuspiciousRequest(
     suspiciousIPCounts.set(ip, { count: 1, firstSeen: now });
   }
 
-  // Log to database asynchronously (don't await)
-  recordSuspiciousActivity(ip, reason, metadata).catch((err) =>
-    console.error("[Bot Blocker] DB error:", err)
-  );
+  // Log suspicious activity (will be persisted via API if needed)
+  console.log(`[Bot Blocker] Suspicious: ${ip} - ${reason} - ${JSON.stringify(metadata)}`);
 
   return false;
-}
-
-// Periodically sync blocked IPs from database (every 5 minutes)
-let lastDbSync = 0;
-async function syncBlockedIPsFromDb(): Promise<void> {
-  const now = Date.now();
-  if (now - lastDbSync < 5 * 60 * 1000) return; // Skip if synced recently
-  lastDbSync = now;
-
-  try {
-    // This runs in background, doesn't block requests
-    const blocked = await getBlockedIPs();
-    for (const ip of blocked) {
-      blockedIPCache.set(ip.ipAddress, { expiresAt: ip.expiresAt.getTime() });
-    }
-  } catch (error) {
-    console.error("[Bot Blocker] Failed to sync from database:", error);
-  }
 }
 
 // Generate a CSRF token
@@ -196,9 +175,6 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const clientIP = getClientIP(req);
   const userAgent = req.headers.get("user-agent") || "none";
-
-  // Trigger background sync of blocked IPs from database
-  syncBlockedIPsFromDb().catch(() => {});
 
   // Check if IP is blocked (fast in-memory check)
   if (isIPBlockedFast(clientIP)) {
