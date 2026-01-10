@@ -18,7 +18,7 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      blocked: blockedIPs.map((ip) => ({
+      blocked: blockedIPs.map((ip: { ipAddress: string; expiresAt: Date }) => ({
         ip: ip.ipAddress,
         expiresAt: ip.expiresAt.getTime(),
       })),
