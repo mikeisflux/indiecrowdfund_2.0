@@ -259,11 +259,11 @@ export async function cleanupExpiredData(): Promise<void> {
     }
 
     // Clear cache for expired entries
-    for (const [ip, data] of blockedIPCache.entries()) {
+    Array.from(blockedIPCache.entries()).forEach(([ip, data]) => {
       if (data.expiresAt.getTime() < now.getTime()) {
         blockedIPCache.delete(ip);
       }
-    }
+    });
   } catch (error) {
     console.error("[Bot Blocker] Error during cleanup:", error);
   }
