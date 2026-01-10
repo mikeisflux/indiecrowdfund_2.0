@@ -35,8 +35,9 @@ const shopifyIframeRoutes = [
 ];
 
 // ============ Bot Detection & IP Blocking ============
-// In-memory only for Edge Runtime compatibility
-// Database persistence happens via API routes (not in middleware)
+// In-memory blocking - works with Edge Runtime
+// Blocks persist while PM2 process runs, reset on restart
+// Bots get re-blocked quickly after 3 violations
 
 // In-memory cache for fast middleware checks
 const blockedIPCache = new Map<string, { expiresAt: number }>();
@@ -84,7 +85,6 @@ function isValidServerActionId(actionId: string): boolean {
 
 /**
  * Record suspicious activity and potentially block IP
- * In-memory only - database logging happens via separate API call
  */
 function recordSuspiciousRequest(
   ip: string,
@@ -101,7 +101,7 @@ function recordSuspiciousRequest(
     } else {
       existing.count++;
       if (existing.count >= BOT_BLOCK_THRESHOLD) {
-        // Block in memory immediately
+        // Block in memory
         blockedIPCache.set(ip, { expiresAt: now + BLOCK_DURATION_MS });
         console.log(`[Bot Blocker] IP BLOCKED: ${ip} - Reason: ${reason} (${existing.count} violations)`);
         return true;
@@ -111,7 +111,7 @@ function recordSuspiciousRequest(
     suspiciousIPCounts.set(ip, { count: 1, firstSeen: now });
   }
 
-  // Log suspicious activity (will be persisted via API if needed)
+  // Log suspicious activity
   console.log(`[Bot Blocker] Suspicious: ${ip} - ${reason} - ${JSON.stringify(metadata)}`);
 
   return false;
