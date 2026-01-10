@@ -14,7 +14,6 @@ const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hour block duration
 
 // In-memory cache to reduce database hits (refreshed periodically)
 const blockedIPCache = new Map<string, { expiresAt: Date; checkedAt: number }>();
-const CACHE_TTL_MS = 60 * 1000; // Re-check database every 60 seconds
 
 /**
  * Check if an IP is currently blocked
