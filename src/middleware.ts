@@ -204,9 +204,10 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
   // Script sources - only allow unsafe-eval in development (needed for hot reload)
   // In production, we rely on Next.js bundled scripts being from 'self'
   // Note: https://unpkg.com is needed for pdf.js worker
+  // Note: https://www.google.com and https://www.gstatic.com are needed for reCAPTCHA
   const scriptSrc = isDev
-    ? "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com"
-    : "'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com";
+    ? "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com https://www.google.com https://www.gstatic.com"
+    : "'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com https://www.google.com https://www.gstatic.com";
 
   // For Shopify iframe routes, allow embedding from Shopify domains
   // Include 'self' and all Shopify admin domains
@@ -222,7 +223,7 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https: http:",
     "connect-src 'self' blob: https://api.stripe.com https://www.google-analytics.com https://vitals.vercel-analytics.com https://*.r2.cloudflarestorage.com https://unpkg.com wss:",
-    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.youtube.com https://youtube.com https://player.vimeo.com",
+    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.youtube.com https://youtube.com https://player.vimeo.com https://www.google.com https://recaptcha.google.com",
     // Worker sources - allow blob URLs for pdf.js web worker
     "worker-src 'self' blob:",
     "object-src 'none'",

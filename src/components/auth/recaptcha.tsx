@@ -8,6 +8,7 @@ interface RecaptchaProps {
   onVerify: (token: string) => void;
   onExpire?: () => void;
   onError?: () => void;
+  onLoad?: () => void;
 }
 
 declare global {
@@ -31,7 +32,7 @@ declare global {
   }
 }
 
-export function Recaptcha({ siteKey, onVerify, onExpire, onError }: RecaptchaProps) {
+export function Recaptcha({ siteKey, onVerify, onExpire, onError, onLoad }: RecaptchaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<number | null>(null);
   const isRenderedRef = useRef(false);
@@ -55,11 +56,13 @@ export function Recaptcha({ siteKey, onVerify, onExpire, onError }: RecaptchaPro
         size: "normal",
       });
       isRenderedRef.current = true;
+      // Notify parent that reCAPTCHA loaded successfully
+      onLoad?.();
     } catch (error) {
       // Widget might already be rendered
       console.warn("[reCAPTCHA] Render error:", error);
     }
-  }, [siteKey, onVerify, onExpire, onError]);
+  }, [siteKey, onVerify, onExpire, onError, onLoad]);
 
   useEffect(() => {
     // Set up the callback for when the script loads

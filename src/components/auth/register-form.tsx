@@ -17,6 +17,8 @@ export function RegisterForm() {
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [recaptchaSiteKey, setRecaptchaSiteKey] = useState<string | null>(null);
   const [isRecaptchaEnabled, setIsRecaptchaEnabled] = useState(false);
+  const [recaptchaFailed, setRecaptchaFailed] = useState(false);
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get("callbackUrl") || searchParams?.get("redirect");
 
@@ -37,8 +39,27 @@ export function RegisterForm() {
     fetchRecaptchaSettings();
   }, []);
 
+  // Timeout for reCAPTCHA loading - if it doesn't load in 10s, allow fallback
+  useEffect(() => {
+    if (!isRecaptchaEnabled || !recaptchaSiteKey) return;
+
+    const timeout = setTimeout(() => {
+      if (!recaptchaLoaded && !recaptchaToken) {
+        console.warn("[reCAPTCHA] Failed to load - may be blocked by browser/extension");
+        setRecaptchaFailed(true);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [isRecaptchaEnabled, recaptchaSiteKey, recaptchaLoaded, recaptchaToken]);
+
   const handleRecaptchaVerify = useCallback((token: string) => {
     setRecaptchaToken(token);
+    setRecaptchaLoaded(true);
+  }, []);
+
+  const handleRecaptchaLoad = useCallback(() => {
+    setRecaptchaLoaded(true);
   }, []);
 
   const handleRecaptchaExpire = useCallback(() => {
@@ -48,8 +69,8 @@ export function RegisterForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    // Check reCAPTCHA if enabled
-    if (isRecaptchaEnabled && !recaptchaToken) {
+    // Check reCAPTCHA if enabled (but allow if reCAPTCHA failed to load - honeypot will protect)
+    if (isRecaptchaEnabled && !recaptchaToken && !recaptchaFailed) {
       setError("Please complete the CAPTCHA");
       return;
     }
@@ -155,18 +176,31 @@ export function RegisterForm() {
           />
         </div>
 
-        {/* reCAPTCHA - only show if enabled */}
-        {isRecaptchaEnabled && recaptchaSiteKey && (
+        {/* reCAPTCHA - only show if enabled and not failed */}
+        {isRecaptchaEnabled && recaptchaSiteKey && !recaptchaFailed && (
           <div className="flex justify-center">
             <Recaptcha
               siteKey={recaptchaSiteKey}
               onVerify={handleRecaptchaVerify}
               onExpire={handleRecaptchaExpire}
+              onLoad={handleRecaptchaLoad}
             />
           </div>
         )}
 
-        <Button type="submit" className="w-full" disabled={isLoading || (isRecaptchaEnabled && !recaptchaToken)}>
+        {/* Warning when reCAPTCHA failed to load */}
+        {recaptchaFailed && (
+          <p className="text-xs text-muted-foreground text-center">
+            Security verification couldn&apos;t load (may be blocked by your browser or an extension).
+            You can still create an account.
+          </p>
+        )}
+
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isLoading || (isRecaptchaEnabled && !recaptchaToken && !recaptchaFailed)}
+        >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Create account
         </Button>
