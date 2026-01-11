@@ -199,15 +199,11 @@ function getSecuritySettings() {
 
 // Generate CSP header value
 function getCSPHeader(allowShopifyIframe: boolean = false): string {
-  const isDev = process.env.NODE_ENV === "development";
-
-  // Script sources - only allow unsafe-eval in development (needed for hot reload)
-  // In production, we rely on Next.js bundled scripts being from 'self'
+  // Script sources
+  // Note: 'unsafe-eval' is required for Google reCAPTCHA to function
   // Note: https://unpkg.com is needed for pdf.js worker
   // Note: https://www.google.com and https://www.gstatic.com are needed for reCAPTCHA
-  const scriptSrc = isDev
-    ? "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com https://www.google.com https://www.gstatic.com"
-    : "'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com https://www.google.com https://www.gstatic.com";
+  const scriptSrc = "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com https://www.google.com https://www.gstatic.com";
 
   // For Shopify iframe routes, allow embedding from Shopify domains
   // Include 'self' and all Shopify admin domains
