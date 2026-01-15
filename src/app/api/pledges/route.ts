@@ -126,9 +126,56 @@ export async function POST(req: NextRequest) {
         orderBy: { createdAt: "desc" },
       });
 
-      // If there's an existing PENDING pledge, return it instead of creating a new one
+      // If there's an existing PENDING pledge, update it with the new data instead of creating a new one
       if (existingPledge?.status === "PENDING") {
-        console.log("[DivinityCoin Pledge] Returning existing PENDING pledge:", existingPledge.id);
+        console.log("[DivinityCoin Pledge] Updating existing PENDING pledge:", existingPledge.id);
+
+        // Calculate reward amount - ensure it's a valid number
+        const rewardAmountValue = reward ? Number(reward.amount) : 0;
+        const rewardAmount = isNaN(rewardAmountValue) ? 0 : rewardAmountValue;
+
+        // Calculate addons amount
+        const addonIds = addonsWithQuantity.map(a => a.id);
+        const addonRecords = addonIds.length > 0 ? await db.reward.findMany({
+          where: { id: { in: addonIds } },
+          select: { id: true, amount: true },
+        }) : [];
+        const addonAmountMap = new Map(addonRecords.map(a => [a.id, Number(a.amount)]));
+        const addonsAmountValue = addonsWithQuantity.reduce((sum, addon) => {
+          return sum + (addonAmountMap.get(addon.id) || 0) * addon.quantity;
+        }, 0);
+        const addonsAmount = isNaN(addonsAmountValue) ? 0 : addonsAmountValue;
+
+        const shippingAmount = data.shippingAmount || 0;
+
+        // Update the existing pledge with new data
+        await db.pledge.update({
+          where: { id: existingPledge.id },
+          data: {
+            rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
+            amount: data.amount,
+            rewardAmount,
+            addonsAmount,
+            shippingAmount,
+          },
+        });
+
+        // Delete old addons and create new ones
+        await db.pledgeAddon.deleteMany({
+          where: { pledgeId: existingPledge.id },
+        });
+
+        if (addonsWithQuantity.length > 0) {
+          await db.pledgeAddon.createMany({
+            data: addonsWithQuantity.map(addon => ({
+              pledgeId: existingPledge.id,
+              addonId: addon.id,
+              quantity: addon.quantity,
+              amount: (addonAmountMap.get(addon.id) || 0) * addon.quantity,
+            })),
+          });
+        }
+
         return NextResponse.json({
           paymentMethod: "DIVINITYCOIN",
           pledgeId: existingPledge.id,
