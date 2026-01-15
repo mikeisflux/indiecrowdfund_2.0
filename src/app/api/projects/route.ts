@@ -220,6 +220,12 @@ export async function POST(req: NextRequest) {
         .replace(/[\s_-]+/g, "-")
         .replace(/^-+|-+$/g, "");
 
+      // If slug is empty (title was all special characters), generate a random one
+      if (!slug || slug.length < 3) {
+        const randomSuffix = Math.random().toString(36).substring(2, 10);
+        slug = `project-${randomSuffix}`;
+      }
+
       // Check if the base slug is taken and add suffix if needed
       const existingProject = await db.project.findUnique({
         where: { slug },
@@ -229,6 +235,11 @@ export async function POST(req: NextRequest) {
       if (existingProject) {
         // Add a random suffix only if base slug is taken
         slug = generateProjectSlug(validatedData.title);
+        // If generateProjectSlug also produces empty/short slug, use random fallback
+        if (!slug || slug.length < 3) {
+          const randomSuffix = Math.random().toString(36).substring(2, 10);
+          slug = `project-${randomSuffix}`;
+        }
       }
     }
 

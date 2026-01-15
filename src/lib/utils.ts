@@ -152,6 +152,10 @@ export function slugify(text: string): string {
 export function generateProjectSlug(title: string): string {
   const baseSlug = slugify(title);
   const randomSuffix = Math.random().toString(36).substring(2, 8);
+  // If title produces empty slug, use "project" as base
+  if (!baseSlug) {
+    return `project-${randomSuffix}`;
+  }
   return `${baseSlug}-${randomSuffix}`;
 }
 
