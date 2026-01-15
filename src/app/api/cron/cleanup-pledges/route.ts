@@ -57,19 +57,36 @@ export async function POST(req: NextRequest) {
     // Calculate the cutoff time
     const cutoffTime = new Date(Date.now() - hoursOld * 60 * 60 * 1000);
 
-    // Find stale PENDING pledges
+    // Find stale PENDING pledges - includes both Stripe and DivinityCoin
+    // A pledge is stale if:
+    // 1. Status is PENDING
+    // 2. Created more than N hours ago
+    // 3. For Stripe: No payment method saved AND no confirmation sent AND no failure reason
+    // 4. For DivinityCoin: No payment ID (never completed payment)
     const stalePledges = await db.pledge.findMany({
       where: {
         status: "PENDING",
         createdAt: { lt: cutoffTime },
-        stripePaymentMethodId: null,
-        confirmationEmailSent: false,
-        lastFailureReason: null,
+        OR: [
+          // Stripe pledges: no payment method, no confirmation, no failure
+          {
+            paymentProcessor: "STRIPE",
+            stripePaymentMethodId: null,
+            confirmationEmailSent: false,
+            lastFailureReason: null,
+          },
+          // DivinityCoin pledges: never paid (no payment ID)
+          {
+            paymentProcessor: "DIVINITYCOIN",
+            divinityCoinPaymentId: null,
+          },
+        ],
       },
       select: {
         id: true,
         amount: true,
         createdAt: true,
+        paymentProcessor: true,
         project: {
           select: { title: true },
         },
@@ -98,30 +115,30 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Mark as CANCELLED
+    // Delete stale pledges (not just mark as cancelled)
     const pledgeIds = stalePledges.map((p) => p.id);
 
-    const updated = await db.pledge.updateMany({
-      where: {
-        id: { in: pledgeIds },
-      },
-      data: {
-        status: "CANCELLED",
-        lastFailureReason: `Checkout abandoned - auto-cancelled after ${hoursOld} hours by cron job`,
-      },
-    });
-
-    console.log(`[Cron] Cleaned up ${updated.count} stale pledges`);
-
-    // Log details for auditing
+    // Log details for auditing before deletion
     stalePledges.forEach((p) => {
-      console.log(`[Cron] Cancelled pledge ${p.id} ($${p.amount}) for "${p.project.title}" - user: ${p.user.email}`);
+      console.log(`[Cron] Deleting stale pledge ${p.id} ($${p.amount}) for "${p.project.title}" - user: ${p.user.email}`);
     });
+
+    // Delete associated addons first (foreign key constraint)
+    await db.pledgeAddon.deleteMany({
+      where: { pledgeId: { in: pledgeIds } },
+    });
+
+    // Delete the pledges
+    const deleted = await db.pledge.deleteMany({
+      where: { id: { in: pledgeIds } },
+    });
+
+    console.log(`[Cron] Deleted ${deleted.count} stale pledges`);
 
     return NextResponse.json({
       success: true,
-      count: updated.count,
-      message: `Marked ${updated.count} stale pledges as CANCELLED`,
+      count: deleted.count,
+      message: `Deleted ${deleted.count} stale pledges`,
       totalAmountCleared: stalePledges.reduce((sum, p) => sum + Number(p.amount), 0),
     });
   } catch (error) {
@@ -139,16 +156,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get current count of stale pledges
+  // Get current count of stale pledges (both Stripe and DivinityCoin)
   const cutoffTime = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
   const staleCount = await db.pledge.count({
     where: {
       status: "PENDING",
       createdAt: { lt: cutoffTime },
-      stripePaymentMethodId: null,
-      confirmationEmailSent: false,
-      lastFailureReason: null,
+      OR: [
+        {
+          paymentProcessor: "STRIPE",
+          stripePaymentMethodId: null,
+          confirmationEmailSent: false,
+          lastFailureReason: null,
+        },
+        {
+          paymentProcessor: "DIVINITYCOIN",
+          divinityCoinPaymentId: null,
+        },
+      ],
     },
   });
 

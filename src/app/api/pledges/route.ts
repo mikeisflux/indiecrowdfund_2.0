@@ -115,79 +115,48 @@ export async function POST(req: NextRequest) {
 
     // Check payment processor and route accordingly
     if (project.paymentProcessor === "DIVINITYCOIN") {
-      // Check for existing pledge to prevent duplicates
-      const existingPledge = await db.pledge.findFirst({
+      // Check for existing COMPLETED pledge (user already backed this project)
+      const completedPledge = await db.pledge.findFirst({
         where: {
           userId: session.user.id,
           projectId: data.projectId,
           paymentProcessor: "DIVINITYCOIN",
-          status: { in: ["PENDING", "COMPLETED"] },
+          status: "COMPLETED",
         },
-        orderBy: { createdAt: "desc" },
       });
 
-      // If there's an existing PENDING pledge, update it with the new data instead of creating a new one
-      if (existingPledge?.status === "PENDING") {
-        console.log("[DivinityCoin Pledge] Updating existing PENDING pledge:", existingPledge.id);
-
-        // Calculate reward amount - ensure it's a valid number
-        const rewardAmountValue = reward ? Number(reward.amount) : 0;
-        const rewardAmount = isNaN(rewardAmountValue) ? 0 : rewardAmountValue;
-
-        // Calculate addons amount
-        const addonIds = addonsWithQuantity.map(a => a.id);
-        const addonRecords = addonIds.length > 0 ? await db.reward.findMany({
-          where: { id: { in: addonIds } },
-          select: { id: true, amount: true },
-        }) : [];
-        const addonAmountMap = new Map(addonRecords.map(a => [a.id, Number(a.amount)]));
-        const addonsAmountValue = addonsWithQuantity.reduce((sum, addon) => {
-          return sum + (addonAmountMap.get(addon.id) || 0) * addon.quantity;
-        }, 0);
-        const addonsAmount = isNaN(addonsAmountValue) ? 0 : addonsAmountValue;
-
-        const shippingAmount = data.shippingAmount || 0;
-
-        // Update the existing pledge with new data
-        await db.pledge.update({
-          where: { id: existingPledge.id },
-          data: {
-            rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
-            amount: data.amount,
-            rewardAmount,
-            addonsAmount,
-            shippingAmount,
-          },
-        });
-
-        // Delete old addons and create new ones
-        await db.pledgeAddon.deleteMany({
-          where: { pledgeId: existingPledge.id },
-        });
-
-        if (addonsWithQuantity.length > 0) {
-          await db.pledgeAddon.createMany({
-            data: addonsWithQuantity.map(addon => ({
-              pledgeId: existingPledge.id,
-              addonId: addon.id,
-              quantity: addon.quantity,
-              amount: (addonAmountMap.get(addon.id) || 0) * addon.quantity,
-            })),
-          });
-        }
-
-        return NextResponse.json({
-          paymentMethod: "DIVINITYCOIN",
-          pledgeId: existingPledge.id,
-        });
-      }
-
-      // If there's a COMPLETED pledge, user has already backed this project
-      if (existingPledge?.status === "COMPLETED") {
+      if (completedPledge) {
         return NextResponse.json(
           { error: "You have already backed this project" },
           { status: 400 }
         );
+      }
+
+      // Delete any existing PENDING pledges for this user/project
+      // This ensures we start fresh instead of reusing stale data
+      const pendingPledges = await db.pledge.findMany({
+        where: {
+          userId: session.user.id,
+          projectId: data.projectId,
+          paymentProcessor: "DIVINITYCOIN",
+          status: "PENDING",
+        },
+        select: { id: true },
+      });
+
+      if (pendingPledges.length > 0) {
+        const pendingIds = pendingPledges.map(p => p.id);
+        console.log("[DivinityCoin Pledge] Cleaning up old PENDING pledges:", pendingIds);
+
+        // Delete addons first (foreign key constraint)
+        await db.pledgeAddon.deleteMany({
+          where: { pledgeId: { in: pendingIds } },
+        });
+
+        // Delete the pending pledges
+        await db.pledge.deleteMany({
+          where: { id: { in: pendingIds } },
+        });
       }
 
       // Calculate reward amount - ensure it's a valid number
