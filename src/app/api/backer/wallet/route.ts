@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { Decimal } from "@prisma/client/runtime/library";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -135,7 +136,7 @@ export async function GET() {
         id: "opening-balance",
         userId: session.user.id,
         pledgeId: null,
-        amount: { toNumber: () => openingBalance } as unknown as typeof sortedForBalance[0]["amount"],
+        amount: new Decimal(openingBalance),
         type: "INITIAL" as unknown as typeof sortedForBalance[0]["type"],
         description: "Opening balance",
         metadata: null,
