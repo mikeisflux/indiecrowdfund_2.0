@@ -1,6 +1,5 @@
 import { Metadata } from "next";
 import { db } from "@/lib/db";
-import { notFound, redirect } from "next/navigation";
 
 interface Props {
   params: Promise<{ vanityname: string; slug: string }>;
@@ -22,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       select: {
         title: true,
         subtitle: true,
-        description: true,
+        prelaunchDescription: true,
         imageUrl: true,
         creator: {
           select: { name: true, vanityUrl: true },
@@ -50,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       select: {
         title: true,
         subtitle: true,
-        description: true,
+        prelaunchDescription: true,
         imageUrl: true,
         creator: {
           select: { name: true, vanityUrl: true },
@@ -65,15 +64,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  // Strip HTML tags from description for meta
-  const plainDescription = project.description
-    ? project.description.replace(/<[^>]*>/g, "").slice(0, 200)
-    : project.subtitle || `Back ${project.title} on IndieCrowdfund`;
+  // Use prelaunch description if available, otherwise subtitle
+  const plainDescription = project.prelaunchDescription
+    ? project.prelaunchDescription.replace(/<[^>]*>/g, "").slice(0, 200)
+    : project.subtitle || `${project.title} is coming soon to IndieCrowdfund`;
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
   // Use creator's vanity URL for canonical URL (handles legacy URLs correctly)
   const creatorVanity = project.creator?.vanityUrl || vanityname;
-  const projectUrl = `${baseUrl}/projects/${creatorVanity}/${slug}`;
+  const projectUrl = `${baseUrl}/projects/${creatorVanity}/${slug}/prelaunch`;
 
   // Use the project image or fall back to a default
   const imageUrl = project.imageUrl
@@ -81,10 +80,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : `${baseUrl}/og-default.png`;
 
   return {
-    title: `${project.title} | IndieCrowdfund`,
+    title: `${project.title} - Coming Soon | IndieCrowdfund`,
     description: plainDescription,
     openGraph: {
-      title: project.title,
+      title: `${project.title} - Coming Soon`,
       description: plainDescription,
       url: projectUrl,
       siteName: "IndieCrowdfund",
@@ -100,51 +99,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: project.title,
+      title: `${project.title} - Coming Soon`,
       description: plainDescription,
       images: [imageUrl],
     },
   };
 }
 
-export default async function ProjectLayout({ params, children }: Props) {
-  const { vanityname, slug } = await params;
-
-  // Verify the vanityname matches the project creator
-  const creator = await db.user.findUnique({
-    where: { vanityUrl: vanityname },
-    select: { id: true },
-  });
-
-  if (!creator) {
-    notFound();
-  }
-
-  const project = await db.project.findFirst({
-    where: {
-      slug,
-      creatorId: creator.id,
-    },
-    select: { id: true },
-  });
-
-  if (!project) {
-    // Check if project exists under a different creator - redirect to correct URL
-    const projectBySlug = await db.project.findUnique({
-      where: { slug },
-      select: {
-        creator: {
-          select: { vanityUrl: true },
-        },
-      },
-    });
-
-    if (projectBySlug?.creator?.vanityUrl) {
-      redirect(`/projects/${projectBySlug.creator.vanityUrl}/${slug}`);
-    }
-
-    notFound();
-  }
-
+export default function PrelaunchLayout({ children }: Props) {
   return children;
 }
