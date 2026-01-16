@@ -187,33 +187,49 @@ export async function POST(
     }
 
     // Update project to LIVE status and clear prelaunch data
-    const updatedProject = await db.project.update({
-      where: { id: projectId },
-      data: {
-        status: "LIVE",
-        launchDate: now,
-        launchedAt: now,
-        endDate,
-        // Clear prelaunch data - no longer needed once live
-        prelaunchActive: false,
-        prelaunchDescription: null,
-        prelaunchStatus: "DRAFT", // Reset to draft for any future use
-      },
-    });
+    let updatedProject;
+    try {
+      updatedProject = await db.project.update({
+        where: { id: projectId },
+        data: {
+          status: "LIVE",
+          launchDate: now,
+          launchedAt: now,
+          endDate,
+          // Clear prelaunch data - no longer needed once live
+          prelaunchActive: false,
+          prelaunchDescription: null,
+          prelaunchStatus: "DRAFT", // Reset to draft for any future use
+        },
+      });
+    } catch (dbError) {
+      console.error("Failed to update project status:", dbError);
+      throw new Error(`Failed to update project: ${dbError instanceof Error ? dbError.message : "Unknown DB error"}`);
+    }
 
     // Create a review record for the launch
-    await db.projectReview.create({
-      data: {
-        projectId,
-        action: "APPROVED", // Technically "LAUNCHED" but we use APPROVED action
-        previousStatus: "APPROVED",
-        newStatus: "LIVE",
-        notes: "Project launched by creator",
-      },
-    });
+    try {
+      await db.projectReview.create({
+        data: {
+          projectId,
+          action: "APPROVED", // Technically "LAUNCHED" but we use APPROVED action
+          previousStatus: "APPROVED",
+          newStatus: "LIVE",
+          notes: "Project launched by creator",
+        },
+      });
+    } catch (reviewError) {
+      console.error("Failed to create review record:", reviewError);
+      // Don't throw - review record is not critical
+    }
 
     // Send launch notifications to followers and creator
-    await notifyProjectLaunched(projectId);
+    try {
+      await notifyProjectLaunched(projectId);
+    } catch (notifyError) {
+      console.error("Failed to send launch notifications:", notifyError);
+      // Don't throw - notifications are not critical
+    }
 
     // Construct the correct project URL using vanity name
     const creatorVanity = project.creator?.vanityUrl || project.creator?.username || "projects";
@@ -230,8 +246,14 @@ export async function POST(
     });
   } catch (error) {
     console.error("Error launching project:", error);
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
     return NextResponse.json(
-      { error: "Failed to launch project" },
+      { error: "Failed to launch project", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }
