@@ -11,12 +11,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { ChevronDown, Copy, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Copy, Loader2 } from "lucide-react";
 import { RewardData } from "@/types";
 import { PreviousProjectForImport } from "./constants";
 
@@ -43,14 +44,37 @@ export function ImportDialog({
   onImportFromCurrentProject,
   onImportReward,
 }: ImportDialogProps) {
-  const [expandedProject, setExpandedProject] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<string>("current");
 
   const handleOpenChange = (open: boolean) => {
     onOpenChange(open);
     if (open) {
       onFetchPreviousProjects();
+      setSelectedProject("current");
     }
   };
+
+  // Get rewards to display based on selected project
+  const getRewardsToDisplay = () => {
+    if (selectedProject === "current") {
+      return tiers.map((tier, idx) => ({
+        title: tier.title,
+        amount: tier.amount,
+        idx,
+        isCurrent: true,
+      }));
+    }
+    const project = previousProjects.find((p) => p.id === selectedProject);
+    if (!project) return [];
+    return project.rewards.map((reward, idx) => ({
+      title: reward.title,
+      amount: reward.amount,
+      idx,
+      isCurrent: false,
+    }));
+  };
+
+  const rewardsToDisplay = getRewardsToDisplay();
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -66,98 +90,63 @@ export function ImportDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 max-h-[400px] overflow-y-auto">
-          <div className="space-y-2">
-            {/* Current Project - only show when on add-ons tab */}
-            {activeTab === "addons" && (
-              <Collapsible
-                open={expandedProject === "current"}
-                onOpenChange={(open) => setExpandedProject(open ? "current" : null)}
-              >
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border rounded-lg hover:bg-muted/50">
-                  <span className="font-medium">Current Project</span>
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      expandedProject === "current" && "rotate-180"
-                    )}
-                  />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2 ml-4 space-y-2">
-                  {tiers.length > 0 ? (
-                    tiers.map((tier, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-                        onClick={() => {
-                          onImportFromCurrentProject(idx);
-                          onOpenChange(false);
-                        }}
-                      >
-                        <div>
-                          <p className="font-medium">{tier.title}</p>
-                          <p className="text-sm text-muted-foreground">${tier.amount}</p>
-                        </div>
-                        <Copy className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground p-3">
-                      No reward tiers to copy. Create reward tiers first.
-                    </p>
-                  )}
-                </CollapsibleContent>
-              </Collapsible>
-            )}
+        <div className="py-4 space-y-4">
+          {/* Project Selector Dropdown */}
+          <Select value={selectedProject} onValueChange={setSelectedProject}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a project" />
+            </SelectTrigger>
+            <SelectContent>
+              {activeTab === "addons" && (
+                <SelectItem value="current">Current Project</SelectItem>
+              )}
+              {isLoadingPreviousProjects ? (
+                <div className="flex items-center justify-center py-4 px-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
+                  <span className="text-sm text-muted-foreground">Loading projects...</span>
+                </div>
+              ) : (
+                previousProjects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.title}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
 
-            {/* Previous Projects */}
-            {isLoadingPreviousProjects ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-muted-foreground">Loading projects...</span>
-              </div>
-            ) : previousProjects.length > 0 ? (
-              previousProjects.map((project) => (
-                <Collapsible
-                  key={project.id}
-                  open={expandedProject === project.id}
-                  onOpenChange={(open) => setExpandedProject(open ? project.id : null)}
+          {/* Rewards List */}
+          <div className="max-h-[300px] overflow-y-auto space-y-2">
+            {rewardsToDisplay.length > 0 ? (
+              rewardsToDisplay.map((reward, displayIdx) => (
+                <div
+                  key={displayIdx}
+                  className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => {
+                    if (reward.isCurrent) {
+                      onImportFromCurrentProject(reward.idx);
+                    } else {
+                      onImportReward(selectedProject, reward.idx);
+                    }
+                    onOpenChange(false);
+                  }}
                 >
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border rounded-lg hover:bg-muted/50">
-                    <span className="font-medium">{project.title}</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 transition-transform",
-                        expandedProject === project.id && "rotate-180"
-                      )}
-                    />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 ml-4 space-y-2">
-                    {project.rewards.map((reward, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-                        onClick={() => {
-                          onImportReward(project.id, idx);
-                          onOpenChange(false);
-                        }}
-                      >
-                        <div>
-                          <p className="font-medium">{reward.title}</p>
-                          <p className="text-sm text-muted-foreground">${reward.amount}</p>
-                        </div>
-                        <Copy className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    ))}
-                  </CollapsibleContent>
-                </Collapsible>
+                  <div>
+                    <p className="font-medium">{reward.title}</p>
+                    <p className="text-sm text-muted-foreground">${reward.amount}</p>
+                  </div>
+                  <Copy className="h-4 w-4 text-muted-foreground" />
+                </div>
               ))
-            ) : activeTab !== "addons" ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No previous projects with rewards found.</p>
-                <p className="text-sm">Create rewards in other projects first to import them here.</p>
-              </div>
-            ) : null}
+            ) : selectedProject === "current" ? (
+              <p className="text-sm text-muted-foreground p-3 text-center">
+                No reward tiers to copy. Create reward tiers first.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground p-3 text-center">
+                No rewards found in this project.
+              </p>
+            )}
           </div>
         </div>
 

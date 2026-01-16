@@ -80,29 +80,28 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
     setIsLoadingPreviousProjects(true);
     try {
-      const response = await fetch("/api/projects?limit=20&status=any");
+      // Fetch projects user created OR collaborates on
+      const response = await fetch(`/api/creator/projects-for-import?exclude=${projectId}`);
       if (response.ok) {
         const data = await response.json();
         const formattedProjects: PreviousProjectForImport[] = await Promise.all(
-          data.projects
-            .filter((p: { id: string }) => p.id !== projectId)
-            .map(async (p: { id: string; title: string }) => {
-              const rewardsRes = await fetch(`/api/projects/${p.id}/rewards`);
-              let projectRewards: { title: string; amount: number; description: string }[] = [];
-              if (rewardsRes.ok) {
-                const rewardsData = await rewardsRes.json();
-                projectRewards = (rewardsData.rewards || []).map((r: { title: string; amount: number; description?: string }) => ({
-                  title: r.title,
-                  amount: r.amount,
-                  description: r.description || "",
-                }));
-              }
-              return {
-                id: p.id,
-                title: p.title,
-                rewards: projectRewards,
-              };
-            })
+          data.projects.map(async (p: { id: string; title: string }) => {
+            const rewardsRes = await fetch(`/api/projects/${p.id}/rewards`);
+            let projectRewards: { title: string; amount: number; description: string }[] = [];
+            if (rewardsRes.ok) {
+              const rewardsData = await rewardsRes.json();
+              projectRewards = (rewardsData.rewards || []).map((r: { title: string; amount: number; description?: string }) => ({
+                title: r.title,
+                amount: r.amount,
+                description: r.description || "",
+              }));
+            }
+            return {
+              id: p.id,
+              title: p.title,
+              rewards: projectRewards,
+            };
+          })
         );
         setPreviousProjects(formattedProjects.filter(p => p.rewards.length > 0));
       }
