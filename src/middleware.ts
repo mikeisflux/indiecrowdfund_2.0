@@ -50,6 +50,7 @@ const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 // Track last sync time
 let lastDbSync = 0;
 let isInitialized = false;
+let lastSyncErrorLogged = 0;
 
 /**
  * Load blocked IPs from database via internal API
@@ -81,9 +82,13 @@ async function syncBlockedIPsFromDb(baseUrl: string): Promise<void> {
         console.log(`[Bot Blocker] Synced ${loaded} blocked IPs from database`);
       }
     }
-  } catch (error) {
+  } catch {
     // Silently fail - will retry on next request
-    console.error("[Bot Blocker] Sync error:", error);
+    // Only log the error once per hour to avoid spamming logs
+    if (now - lastSyncErrorLogged > 60 * 60 * 1000) {
+      console.error("[Bot Blocker] Sync failed - will retry periodically");
+      lastSyncErrorLogged = now;
+    }
   }
 }
 

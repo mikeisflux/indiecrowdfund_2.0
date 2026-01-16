@@ -57,7 +57,7 @@ export async function POST(
         creator: {
           select: {
             vanityUrl: true,
-            username: true,
+            name: true,
           },
         },
       },
@@ -232,7 +232,7 @@ export async function POST(
     }
 
     // Construct the correct project URL using vanity name
-    const creatorVanity = project.creator?.vanityUrl || project.creator?.username || "projects";
+    const creatorVanity = project.creator?.vanityUrl || "projects";
     const projectUrl = `/projects/${creatorVanity}/${project.slug}`;
 
     return NextResponse.json({
