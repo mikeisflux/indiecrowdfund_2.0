@@ -106,11 +106,18 @@ export function ImportDialog({
                   <span className="text-sm text-muted-foreground">Loading projects...</span>
                 </div>
               ) : (
-                previousProjects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.title}
-                  </SelectItem>
-                ))
+                <>
+                  {previousProjects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.title}
+                    </SelectItem>
+                  ))}
+                  {previousProjects.length === 0 && (
+                    <div className="py-4 px-2 text-center text-sm text-muted-foreground">
+                      No other projects found
+                    </div>
+                  )}
+                </>
               )}
             </SelectContent>
           </Select>

@@ -76,41 +76,55 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
   // Fetch previous projects when import dialog opens
   const fetchPreviousProjects = useCallback(async () => {
-    if (previousProjects.length > 0) return;
-
+    // Always refetch to ensure fresh data
     setIsLoadingPreviousProjects(true);
     try {
       // Fetch projects user created OR collaborates on
-      const response = await fetch(`/api/creator/projects-for-import?exclude=${projectId}`);
-      if (response.ok) {
-        const data = await response.json();
-        const formattedProjects: PreviousProjectForImport[] = await Promise.all(
-          data.projects.map(async (p: { id: string; title: string }) => {
-            const rewardsRes = await fetch(`/api/projects/${p.id}/rewards`);
-            let projectRewards: { title: string; amount: number; description: string }[] = [];
-            if (rewardsRes.ok) {
-              const rewardsData = await rewardsRes.json();
-              projectRewards = (rewardsData.rewards || []).map((r: { title: string; amount: number; description?: string }) => ({
-                title: r.title,
-                amount: r.amount,
-                description: r.description || "",
-              }));
-            }
-            return {
-              id: p.id,
-              title: p.title,
-              rewards: projectRewards,
-            };
-          })
-        );
-        setPreviousProjects(formattedProjects);
+      const url = `/api/creator/projects-for-import${projectId ? `?exclude=${projectId}` : ""}`;
+      console.log("[ImportDialog] Fetching projects from:", url);
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        console.error("[ImportDialog] API error:", response.status, response.statusText);
+        return;
       }
+
+      const data = await response.json();
+      console.log("[ImportDialog] API returned projects:", data.projects?.length || 0, data.projects);
+
+      if (!data.projects || data.projects.length === 0) {
+        console.log("[ImportDialog] No projects returned from API");
+        setPreviousProjects([]);
+        return;
+      }
+
+      const formattedProjects: PreviousProjectForImport[] = await Promise.all(
+        data.projects.map(async (p: { id: string; title: string }) => {
+          const rewardsRes = await fetch(`/api/projects/${p.id}/rewards`);
+          let projectRewards: { title: string; amount: number; description: string }[] = [];
+          if (rewardsRes.ok) {
+            const rewardsData = await rewardsRes.json();
+            projectRewards = (rewardsData.rewards || []).map((r: { title: string; amount: number; description?: string }) => ({
+              title: r.title,
+              amount: r.amount,
+              description: r.description || "",
+            }));
+          }
+          return {
+            id: p.id,
+            title: p.title,
+            rewards: projectRewards,
+          };
+        })
+      );
+      console.log("[ImportDialog] Formatted projects:", formattedProjects.length);
+      setPreviousProjects(formattedProjects);
     } catch (error) {
-      console.error("Failed to fetch previous projects:", error);
+      console.error("[ImportDialog] Failed to fetch previous projects:", error);
     } finally {
       setIsLoadingPreviousProjects(false);
     }
-  }, [previousProjects.length, projectId]);
+  }, [projectId]);
 
   const tiers = rewards.filter((r) => r.type === "TIER");
   const addons = rewards.filter((r) => r.type === "ADDON");

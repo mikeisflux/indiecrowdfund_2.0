@@ -17,11 +17,14 @@ export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
+      console.log("[projects-for-import] Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const excludeProjectId = searchParams.get("exclude");
+
+    console.log("[projects-for-import] User:", session.user.id, "Exclude:", excludeProjectId);
 
     // Find projects where user is creator OR an accepted collaborator
     const projects = await db.project.findMany({
@@ -40,7 +43,9 @@ export async function GET(req: NextRequest) {
           },
         ],
         // Exclude the current project if specified
-        ...(excludeProjectId ? { id: { not: excludeProjectId } } : {}),
+        ...(excludeProjectId && excludeProjectId !== "undefined" && excludeProjectId !== "null"
+          ? { id: { not: excludeProjectId } }
+          : {}),
       },
       select: {
         id: true,
@@ -53,9 +58,11 @@ export async function GET(req: NextRequest) {
       take: 50,
     });
 
+    console.log("[projects-for-import] Found", projects.length, "projects:", projects.map(p => p.title));
+
     return NextResponse.json({ projects });
   } catch (error) {
-    console.error("Failed to fetch projects for import:", error);
+    console.error("[projects-for-import] Failed to fetch projects:", error);
     return NextResponse.json(
       { error: "Failed to fetch projects" },
       { status: 500 }
