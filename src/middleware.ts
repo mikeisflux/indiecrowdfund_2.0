@@ -50,19 +50,27 @@ const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 // Track last sync time
 let lastDbSync = 0;
 let isInitialized = false;
-let lastSyncErrorLogged = 0;
+
+/**
+ * Get internal API URL - use localhost to bypass reverse proxy SSL issues
+ */
+function getInternalApiUrl(): string {
+  const port = process.env.PORT || "3000";
+  return `http://127.0.0.1:${port}`;
+}
 
 /**
  * Load blocked IPs from database via internal API
  * Called on startup and periodically to stay in sync
  */
-async function syncBlockedIPsFromDb(baseUrl: string): Promise<void> {
+async function syncBlockedIPsFromDb(): Promise<void> {
   const now = Date.now();
   // Only sync every 5 minutes (unless first time)
   if (isInitialized && now - lastDbSync < 5 * 60 * 1000) return;
 
   try {
-    const response = await fetch(`${baseUrl}/api/internal/blocked-ips`, {
+    const internalUrl = getInternalApiUrl();
+    const response = await fetch(`${internalUrl}/api/internal/blocked-ips`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
@@ -82,13 +90,9 @@ async function syncBlockedIPsFromDb(baseUrl: string): Promise<void> {
         console.log(`[Bot Blocker] Synced ${loaded} blocked IPs from database`);
       }
     }
-  } catch {
+  } catch (error) {
     // Silently fail - will retry on next request
-    // Only log the error once per hour to avoid spamming logs
-    if (now - lastSyncErrorLogged > 60 * 60 * 1000) {
-      console.error("[Bot Blocker] Sync failed - will retry periodically");
-      lastSyncErrorLogged = now;
-    }
+    console.error("[Bot Blocker] Sync error:", error);
   }
 }
 
@@ -96,12 +100,12 @@ async function syncBlockedIPsFromDb(baseUrl: string): Promise<void> {
  * Persist a blocked IP to database via internal API (fire and forget)
  */
 function persistBlockedIP(
-  baseUrl: string,
   ip: string,
   reason: string,
   metadata?: { actionId?: string; path?: string; userAgent?: string }
 ): void {
-  fetch(`${baseUrl}/api/internal/blocked-ips`, {
+  const internalUrl = getInternalApiUrl();
+  fetch(`${internalUrl}/api/internal/blocked-ips`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -153,7 +157,6 @@ function isValidServerActionId(actionId: string): boolean {
  * Persists to database when blocking
  */
 function recordSuspiciousRequest(
-  baseUrl: string,
   ip: string,
   reason: string,
   metadata?: { actionId?: string; path?: string; userAgent?: string }
@@ -172,7 +175,7 @@ function recordSuspiciousRequest(
         blockedIPCache.set(ip, { expiresAt: now + BLOCK_DURATION_MS });
         console.log(`[Bot Blocker] IP BLOCKED: ${ip} - Reason: ${reason} (${existing.count} violations)`);
         // Persist to database (fire and forget)
-        persistBlockedIP(baseUrl, ip, reason, metadata);
+        persistBlockedIP(ip, reason, metadata);
         return true;
       }
     }
@@ -242,13 +245,10 @@ export function middleware(req: NextRequest) {
   const clientIP = getClientIP(req);
   const userAgent = req.headers.get("user-agent") || "none";
 
-  // Get base URL for internal API calls
-  const baseUrl = req.nextUrl.origin;
-
   // Sync blocked IPs from database (background, non-blocking)
   // Skip sync for the internal API to avoid recursion
   if (!pathname.startsWith("/api/internal/")) {
-    syncBlockedIPsFromDb(baseUrl).catch(() => {});
+    syncBlockedIPsFromDb().catch(() => {});
   }
 
   // Check if IP is blocked (fast in-memory check)
@@ -281,7 +281,6 @@ export function middleware(req: NextRequest) {
 
       // Record suspicious activity and potentially block
       const shouldBlock = recordSuspiciousRequest(
-        baseUrl,
         clientIP,
         `Invalid server action ID: ${serverActionId}`,
         { actionId: serverActionId, path: pathname, userAgent }
