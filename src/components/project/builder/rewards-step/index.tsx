@@ -103,7 +103,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             };
           })
         );
-        setPreviousProjects(formattedProjects.filter(p => p.rewards.length > 0));
+        setPreviousProjects(formattedProjects);
       }
     } catch (error) {
       console.error("Failed to fetch previous projects:", error);
