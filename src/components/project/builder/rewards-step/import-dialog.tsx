@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -46,13 +46,14 @@ export function ImportDialog({
 }: ImportDialogProps) {
   const [selectedProject, setSelectedProject] = useState<string>("current");
 
-  const handleOpenChange = (open: boolean) => {
-    onOpenChange(open);
-    if (open) {
+  // Fetch projects when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log("[ImportDialog] Dialog opened, fetching projects...");
       onFetchPreviousProjects();
       setSelectedProject("current");
     }
-  };
+  }, [isOpen, onFetchPreviousProjects]);
 
   // Get rewards to display based on selected project
   const getRewardsToDisplay = () => {
@@ -77,7 +78,7 @@ export function ImportDialog({
   const rewardsToDisplay = getRewardsToDisplay();
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
