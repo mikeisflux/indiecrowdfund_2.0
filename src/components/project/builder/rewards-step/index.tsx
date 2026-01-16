@@ -2,7 +2,7 @@
 
 import { getCSRFHeaders } from "@/lib/csrf";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { RewardData, RewardItemData, RewardType, ShippingType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
 
-import { defaultItem, defaultReward, MONTHS, PreviousProjectForImport } from "./constants";
+import { defaultItem, defaultReward, MONTHS } from "./constants";
 import { CSVImportScreen } from "./csv-import-screen";
 import { RewardForm } from "./reward-form";
 import { ItemDialog } from "./item-dialog";
-import { ImportDialog } from "./import-dialog";
+import { ImportRewardDialog } from "./import-reward-dialog";
+import { ImportAddonDialog } from "./import-addon-dialog";
 import { ItemsTab } from "./items-tab";
 import { TiersTab } from "./tiers-tab";
 import { AddonsTab } from "./addons-tab";
@@ -64,67 +65,12 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const [deliveryYear, setDeliveryYear] = useState<string>("");
   const [secretToken, setSecretToken] = useState<string>("");
 
-  // Import reward dialog state
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  // Import dialog states (separate for rewards and addons)
+  const [isImportRewardDialogOpen, setIsImportRewardDialogOpen] = useState(false);
+  const [isImportAddonDialogOpen, setIsImportAddonDialogOpen] = useState(false);
 
   // CSV Import state
   const [isImportScreenOpen, setIsImportScreenOpen] = useState(false);
-
-  // Previous projects for import feature (fetched from API)
-  const [previousProjects, setPreviousProjects] = useState<PreviousProjectForImport[]>([]);
-  const [isLoadingPreviousProjects, setIsLoadingPreviousProjects] = useState(false);
-
-  // Fetch previous projects when import dialog opens
-  const fetchPreviousProjects = useCallback(async () => {
-    // Always refetch to ensure fresh data
-    setIsLoadingPreviousProjects(true);
-    try {
-      // Fetch projects user created OR collaborates on
-      const url = `/api/creator/projects-for-import${projectId ? `?exclude=${projectId}` : ""}`;
-      console.log("[ImportDialog] Fetching projects from:", url);
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        console.error("[ImportDialog] API error:", response.status, response.statusText);
-        return;
-      }
-
-      const data = await response.json();
-      console.log("[ImportDialog] API returned projects:", data.projects?.length || 0, data.projects);
-
-      if (!data.projects || data.projects.length === 0) {
-        console.log("[ImportDialog] No projects returned from API");
-        setPreviousProjects([]);
-        return;
-      }
-
-      const formattedProjects: PreviousProjectForImport[] = await Promise.all(
-        data.projects.map(async (p: { id: string; title: string }) => {
-          const rewardsRes = await fetch(`/api/projects/${p.id}/rewards`);
-          let projectRewards: { title: string; amount: number; description: string }[] = [];
-          if (rewardsRes.ok) {
-            const rewardsData = await rewardsRes.json();
-            projectRewards = (rewardsData.rewards || []).map((r: { title: string; amount: number; description?: string }) => ({
-              title: r.title,
-              amount: r.amount,
-              description: r.description || "",
-            }));
-          }
-          return {
-            id: p.id,
-            title: p.title,
-            rewards: projectRewards,
-          };
-        })
-      );
-      console.log("[ImportDialog] Formatted projects:", formattedProjects.length);
-      setPreviousProjects(formattedProjects);
-    } catch (error) {
-      console.error("[ImportDialog] Failed to fetch previous projects:", error);
-    } finally {
-      setIsLoadingPreviousProjects(false);
-    }
-  }, [projectId]);
 
   const tiers = rewards.filter((r) => r.type === "TIER");
   const addons = rewards.filter((r) => r.type === "ADDON");
@@ -579,25 +525,31 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     );
   };
 
-  const handleImportReward = (sourceProjectId: string, rewardIndex: number) => {
-    const project = previousProjects.find((p) => p.id === sourceProjectId);
-    if (!project) return;
-
-    const reward = project.rewards[rewardIndex];
-    if (!reward) return;
-
+  // Handler for importing a reward from another project (for Tiers tab)
+  const handleImportRewardFromProject = (reward: { title: string; description: string; amount: number }) => {
     addReward({
       ...defaultReward,
       title: reward.title,
       description: reward.description,
       amount: reward.amount,
-      type: activeTab === "addons" ? "ADDON" : "TIER",
+      type: "TIER",
     });
-
-    setIsImportDialogOpen(false);
     toast.success("Reward imported successfully");
   };
 
+  // Handler for importing an addon from another project (for Addons tab)
+  const handleImportAddonFromProject = (addon: { title: string; description: string; amount: number }) => {
+    addReward({
+      ...defaultReward,
+      title: addon.title,
+      description: addon.description,
+      amount: addon.amount,
+      type: "ADDON",
+    });
+    toast.success("Add-on imported successfully");
+  };
+
+  // Handler for copying a tier from current project as an addon
   const handleImportFromCurrentProject = (tierIndex: number) => {
     const tier = tiers[tierIndex];
     if (!tier) return;
@@ -616,7 +568,6 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       items: itemsWithProjectItemId,
     });
 
-    setIsImportDialogOpen(false);
     toast.success("Reward copied as add-on successfully");
   };
 
@@ -845,7 +796,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             onDeleteReward={handleDeleteReward}
             onEndReward={handleEndReward}
             onRewardImageChange={handleRewardImageChange}
-            onOpenImportDialog={() => setIsImportDialogOpen(true)}
+            onOpenImportDialog={() => setIsImportRewardDialogOpen(true)}
             onReorderRewards={reorderRewards}
           />
         </TabsContent>
@@ -862,7 +813,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             onDeleteReward={handleDeleteReward}
             onEndReward={handleEndReward}
             onRewardImageChange={handleRewardImageChange}
-            onOpenImportDialog={() => setIsImportDialogOpen(true)}
+            onOpenImportDialog={() => setIsImportAddonDialogOpen(true)}
             onReorderRewards={reorderRewards}
           />
         </TabsContent>
@@ -880,17 +831,22 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
         projectId={projectId || undefined}
       />
 
-      {/* Import Reward Dialog */}
-      <ImportDialog
-        isOpen={isImportDialogOpen}
-        onOpenChange={setIsImportDialogOpen}
-        activeTab={activeTab}
-        tiers={tiers}
-        previousProjects={previousProjects}
-        isLoadingPreviousProjects={isLoadingPreviousProjects}
-        onFetchPreviousProjects={fetchPreviousProjects}
+      {/* Import Reward Dialog (for Tiers tab) */}
+      <ImportRewardDialog
+        isOpen={isImportRewardDialogOpen}
+        onOpenChange={setIsImportRewardDialogOpen}
+        projectId={projectId}
+        onImportReward={handleImportRewardFromProject}
+      />
+
+      {/* Import Addon Dialog (for Addons tab) */}
+      <ImportAddonDialog
+        isOpen={isImportAddonDialogOpen}
+        onOpenChange={setIsImportAddonDialogOpen}
+        projectId={projectId}
+        currentProjectTiers={tiers}
         onImportFromCurrentProject={handleImportFromCurrentProject}
-        onImportReward={handleImportReward}
+        onImportAddon={handleImportAddonFromProject}
       />
     </div>
   );
