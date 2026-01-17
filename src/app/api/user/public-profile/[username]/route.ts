@@ -11,8 +11,8 @@ interface ProjectData {
   subtitle: string | null;
   imageUrl: string | null;
   status: string;
-  fundingGoal: number;
-  currentFunding: number;
+  goalAmount: number;
+  currentAmount: number;
   backerCount: number;
   creator: { vanityUrl: string | null } | null;
 }
@@ -71,8 +71,8 @@ export async function GET(
             subtitle: true,
             imageUrl: true,
             status: true,
-            fundingGoal: true,
-            currentFunding: true,
+            goalAmount: true,
+            currentAmount: true,
             backerCount: true,
             creator: {
               select: {
@@ -101,8 +101,8 @@ export async function GET(
                 subtitle: true,
                 imageUrl: true,
                 status: true,
-                fundingGoal: true,
-                currentFunding: true,
+                goalAmount: true,
+                currentAmount: true,
                 backerCount: true,
                 creator: {
                   select: {
@@ -132,8 +132,8 @@ export async function GET(
       subtitle: project.subtitle,
       imageUrl: project.imageUrl,
       status: project.status,
-      fundingGoal: project.fundingGoal,
-      currentFunding: project.currentFunding,
+      fundingGoal: Number(project.goalAmount),
+      currentFunding: Number(project.currentAmount),
       backerCount: project.backerCount,
       projectUrl: project.creator?.vanityUrl
         ? `/projects/${project.creator.vanityUrl}/${project.slug}`
@@ -151,8 +151,8 @@ export async function GET(
           subtitle: pledge.project.subtitle,
           imageUrl: pledge.project.imageUrl,
           status: pledge.project.status,
-          fundingGoal: pledge.project.fundingGoal,
-          currentFunding: pledge.project.currentFunding,
+          fundingGoal: Number(pledge.project.goalAmount),
+          currentFunding: Number(pledge.project.currentAmount),
           backerCount: pledge.project.backerCount,
           projectUrl: pledge.project.creator?.vanityUrl
             ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
