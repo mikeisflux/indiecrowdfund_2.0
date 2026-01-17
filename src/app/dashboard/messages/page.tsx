@@ -17,8 +17,8 @@ import {
 export default function MessagesPage() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
-  const projectId = searchParams.get("projectId") || undefined;
-  const recipientId = searchParams.get("recipientId") || undefined;
+  const projectId = searchParams?.get("projectId") || undefined;
+  const recipientId = searchParams?.get("recipientId") || undefined;
 
   if (status === "loading") {
     return (
