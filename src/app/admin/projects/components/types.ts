@@ -30,6 +30,10 @@ export interface Project {
   risks: string | null;
   status: string;
   prelaunchActive: boolean;
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | null;
+  hasAdultContent: boolean;
+  hasRiskyContent: boolean;
+  promoContentSfw: boolean;
   createdAt: string;
   creator: Creator;
   rewards: { id: string }[];

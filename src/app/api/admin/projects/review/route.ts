@@ -305,6 +305,10 @@ export async function GET(req: NextRequest) {
           risks: true,
           status: true,
           prelaunchActive: true,
+          paymentProcessor: true,
+          hasAdultContent: true,
+          hasRiskyContent: true,
+          promoContentSfw: true,
           createdAt: true,
           creator: {
             select: {

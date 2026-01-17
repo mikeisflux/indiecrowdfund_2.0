@@ -15,6 +15,18 @@ export const getFlags = (project: Project): string[] => {
   if (!project.videoUrl) {
     flags.push("no_video");
   }
+  if (project.paymentProcessor === "DIVINITYCOIN") {
+    flags.push("divinitycoin");
+  }
+  if (project.hasAdultContent) {
+    flags.push("adult_content");
+  }
+  if (project.hasRiskyContent) {
+    flags.push("risky_content");
+  }
+  if (!project.promoContentSfw) {
+    flags.push("promo_not_sfw");
+  }
   return flags;
 };
 
@@ -24,6 +36,10 @@ export const getFlagBadge = (flag: string) => {
     unverified_creator: { label: "Unverified", variant: "destructive" },
     high_goal: { label: "High Goal", variant: "outline" },
     no_video: { label: "No Video", variant: "outline" },
+    divinitycoin: { label: "DivinityCoin", variant: "secondary" },
+    adult_content: { label: "Adult Content", variant: "destructive" },
+    risky_content: { label: "Risky Content", variant: "destructive" },
+    promo_not_sfw: { label: "Promo Not SFW", variant: "destructive" },
   };
   const config = flagConfig[flag] || { label: flag, variant: "outline" as const };
   return (
