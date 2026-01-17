@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
 import { MessagesPanel } from "@/components/messaging/messages-panel";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,9 @@ import {
 
 export default function MessagesPage() {
   const { data: session, status } = useSession();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId") || undefined;
+  const recipientId = searchParams.get("recipientId") || undefined;
 
   if (status === "loading") {
     return (
@@ -90,7 +94,11 @@ export default function MessagesPage() {
         </div>
 
         {/* Messages Panel */}
-        <MessagesPanel currentUserId={session.user.id} />
+        <MessagesPanel
+          currentUserId={session.user.id}
+          projectId={projectId}
+          recipientId={recipientId}
+        />
       </div>
     </div>
   );

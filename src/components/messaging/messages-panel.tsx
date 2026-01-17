@@ -64,6 +64,14 @@ interface Conversation {
   unreadCount: number;
 }
 
+interface NewConversationInfo {
+  recipientId: string;
+  recipientName: string | null;
+  recipientImage: string | null;
+  projectId: string;
+  projectTitle: string;
+}
+
 interface MessagesPanelProps {
   currentUserId: string;
   projectId?: string;
@@ -80,6 +88,7 @@ export function MessagesPanel({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [newConversation, setNewConversation] = useState<NewConversationInfo | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -155,20 +164,49 @@ export function MessagesPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // If recipientId is provided, open that conversation
+  // If recipientId is provided, open that conversation or prepare new conversation
   useEffect(() => {
-    if (recipientId && projectId && conversations.length > 0) {
+    if (recipientId && projectId && !loading) {
       const conv = conversations.find(
-        (c) => c.otherUser.id === recipientId && c.project.id === projectId
+        (c) => c.otherUser.id === recipientId && c.project?.id === projectId
       );
       if (conv) {
         setSelectedConversation(conv);
+        setNewConversation(null);
+      } else {
+        // No existing conversation, fetch recipient and project info
+        const fetchNewConversationInfo = async () => {
+          try {
+            // Fetch project info to get title and creator name
+            const projectRes = await fetch(`/api/projects/${projectId}`);
+            if (projectRes.ok) {
+              const projectData = await projectRes.json();
+              setNewConversation({
+                recipientId,
+                recipientName: projectData.project?.creator?.name || "Creator",
+                recipientImage: projectData.project?.creator?.image || null,
+                projectId,
+                projectTitle: projectData.project?.title || "Project",
+              });
+              setSelectedConversation(null);
+            }
+          } catch (error) {
+            console.error("Failed to fetch new conversation info:", error);
+          }
+        };
+        fetchNewConversationInfo();
       }
     }
-  }, [recipientId, projectId, conversations]);
+  }, [recipientId, projectId, conversations, loading]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return;
+    if (!newMessage.trim()) return;
+
+    // Handle sending to existing conversation or new conversation
+    const targetRecipientId = selectedConversation?.otherUser.id || newConversation?.recipientId;
+    const targetProjectId = selectedConversation?.project?.id || newConversation?.projectId;
+
+    if (!targetRecipientId || !targetProjectId) return;
 
     setSending(true);
     try {
@@ -176,8 +214,8 @@ export function MessagesPanel({
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
-          recipientId: selectedConversation.otherUser.id,
-          projectId: selectedConversation.project.id,
+          recipientId: targetRecipientId,
+          projectId: targetProjectId,
           content: newMessage.trim(),
         }),
       });
@@ -187,22 +225,50 @@ export function MessagesPanel({
         setMessages((prev) => [...prev, data.message]);
         setNewMessage("");
 
-        // Update conversation list
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === selectedConversation.id
-              ? {
-                  ...c,
-                  lastMessage: {
-                    id: data.message.id,
-                    content: data.message.content,
-                    createdAt: data.message.createdAt,
-                    senderId: currentUserId,
-                  },
-                }
-              : c
-          )
-        );
+        if (newConversation) {
+          // Convert new conversation to a proper conversation and select it
+          const newConv: Conversation = {
+            id: `${newConversation.recipientId}-${newConversation.projectId}`,
+            otherUser: {
+              id: newConversation.recipientId,
+              name: newConversation.recipientName,
+              image: newConversation.recipientImage,
+            },
+            project: {
+              id: newConversation.projectId,
+              title: newConversation.projectTitle,
+              slug: "",
+              imageUrl: null,
+            },
+            lastMessage: {
+              id: data.message.id,
+              content: data.message.content,
+              createdAt: data.message.createdAt,
+              senderId: currentUserId,
+            },
+            unreadCount: 0,
+          };
+          setConversations((prev) => [newConv, ...prev]);
+          setSelectedConversation(newConv);
+          setNewConversation(null);
+        } else if (selectedConversation) {
+          // Update existing conversation list
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === selectedConversation.id
+                ? {
+                    ...c,
+                    lastMessage: {
+                      id: data.message.id,
+                      content: data.message.content,
+                      createdAt: data.message.createdAt,
+                      senderId: currentUserId,
+                    },
+                  }
+                : c
+            )
+          );
+        }
       }
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -360,9 +426,83 @@ export function MessagesPanel({
       {/* Message Thread */}
       <div className={cn(
         "flex-1 flex flex-col",
-        !selectedConversation && !isCompact && "hidden md:flex"
+        !selectedConversation && !newConversation && !isCompact && "hidden md:flex"
       )}>
-        {selectedConversation ? (
+        {newConversation ? (
+          <>
+            {/* New Conversation Header */}
+            <div className="p-4 border-b border-border/50 flex items-center gap-3">
+              {isCompact && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setNewConversation(null)}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              )}
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={newConversation.recipientImage || undefined} />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-purple-500 text-white">
+                  {getInitials(newConversation.recipientName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">
+                  {newConversation.recipientName || "Creator"}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  Re: {newConversation.projectTitle}
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setNewConversation(null)}>
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+
+            {/* New Conversation Prompt */}
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center mb-6">
+                <MessageSquare className="h-10 w-10 text-primary/50" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Start a Conversation</h3>
+              <p className="text-sm text-muted-foreground max-w-xs mb-4">
+                Send a message to {newConversation.recipientName || "the creator"} about &quot;{newConversation.projectTitle}&quot;
+              </p>
+            </div>
+
+            {/* Message Input for New Conversation */}
+            <div className="p-4 border-t border-border/50">
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="Type your message..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  className="min-h-[44px] max-h-32 resize-none bg-background/50"
+                  rows={1}
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!newMessage.trim() || sending}
+                  className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 px-4"
+                >
+                  {sending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : selectedConversation ? (
           <>
             {/* Thread Header */}
             <div className="p-4 border-b border-border/50 flex items-center gap-3">

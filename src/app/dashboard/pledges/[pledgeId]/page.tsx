@@ -58,6 +58,8 @@ interface PledgeDetails {
     currentAmount: number;
     goalAmount: number;
     projectUrl: string;
+    creatorId: string;
+    creatorName: string | null;
   };
   reward: {
     id: string;
@@ -493,7 +495,7 @@ export default function ManagePledgePage() {
               </AlertDescription>
             </Alert>
 
-            <Link href="/dashboard/messages">
+            <Link href={`/dashboard/messages?projectId=${pledge.project.id}&recipientId=${pledge.project.creatorId}`}>
               <Button variant="outline" className="w-full">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Contact Creator
@@ -603,7 +605,7 @@ export default function ManagePledgePage() {
               </ol>
             </div>
 
-            <Link href="/dashboard/messages">
+            <Link href={`/dashboard/messages?projectId=${pledge.project.id}&recipientId=${pledge.project.creatorId}`}>
               <Button variant="outline" className="w-full">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Contact Creator About Refund

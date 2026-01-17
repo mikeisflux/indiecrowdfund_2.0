@@ -7,7 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Users, Download, XCircle, RefreshCw, Trash2 } from "lucide-react";
+import { Users, Download, XCircle, RefreshCw, Trash2, MessageSquare } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ interface BackersListProps {
   backers: Backer[];
   allRewards: RewardAddonItem[];
   allAddons: RewardAddonItem[];
+  projectId: string;
   projectSlug: string;
   onRefresh: () => Promise<void>;
 }
@@ -25,6 +27,7 @@ export function BackersList({
   backers,
   allRewards,
   allAddons,
+  projectId,
   projectSlug,
   onRefresh,
 }: BackersListProps) {
@@ -407,6 +410,16 @@ export function BackersList({
                   </div>
                   <div className="text-muted-foreground">{backer.time}</div>
                   <div className="flex gap-2">
+                    <Link href={`/dashboard/messages?projectId=${projectId}&recipientId=${backer.userId}`}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                      >
+                        <MessageSquare className="h-3 w-3 mr-1" />
+                        Message
+                      </Button>
+                    </Link>
                     {backer.status === "PENDING" && (
                       <Button
                         size="sm"

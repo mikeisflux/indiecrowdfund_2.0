@@ -356,6 +356,7 @@ export default function CreatorDashboard() {
                   backers={data.recentBackers}
                   allRewards={data.allRewards}
                   allAddons={data.allAddons}
+                  projectId={project.id}
                   projectSlug={project.slug}
                   onRefresh={fetchDashboardData}
                 />

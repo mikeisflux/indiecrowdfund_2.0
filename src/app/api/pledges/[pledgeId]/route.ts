@@ -32,8 +32,11 @@ export async function GET(
             status: true,
             currentAmount: true,
             goalAmount: true,
+            creatorId: true,
             creator: {
               select: {
+                id: true,
+                name: true,
                 vanityUrl: true,
               },
             },
@@ -86,6 +89,8 @@ export async function GET(
           currentAmount: Number(pledge.project.currentAmount),
           goalAmount: Number(pledge.project.goalAmount),
           projectUrl,
+          creatorId: pledge.project.creatorId,
+          creatorName: pledge.project.creator.name,
         },
         reward: pledge.reward ? {
           id: pledge.reward.id,
