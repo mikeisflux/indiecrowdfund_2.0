@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EmailEditor } from "@/components/ui/email-editor";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -140,6 +141,7 @@ export function EmailCampaignsTab({
   const [editMode, setEditMode] = useState(false);
   const [editName, setEditName] = useState("");
   const [editSubject, setEditSubject] = useState("");
+  const [editHtmlContent, setEditHtmlContent] = useState("");
 
   // Fetch campaign details
   const fetchCampaignDetails = async (id: string) => {
@@ -151,6 +153,7 @@ export function EmailCampaignsTab({
         setSelectedCampaign(data.campaign);
         setEditName(data.campaign.name);
         setEditSubject(data.campaign.subject);
+        setEditHtmlContent(data.campaign.htmlContent || "");
         setShowPreviewDialog(true);
       }
     } catch (error) {
@@ -298,6 +301,7 @@ export function EmailCampaignsTab({
         body: JSON.stringify({
           name: editName,
           subject: editSubject,
+          htmlContent: editHtmlContent,
         }),
       });
       if (response.ok) {
@@ -688,9 +692,10 @@ export function EmailCampaignsTab({
         if (!open) {
           setEditMode(false);
           setSelectedCampaign(null);
+          setEditHtmlContent("");
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {editMode ? (
@@ -734,6 +739,18 @@ export function EmailCampaignsTab({
                       id="edit-subject"
                       value={editSubject}
                       onChange={(e) => setEditSubject(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email Body Content</Label>
+                    <p className="text-xs text-zinc-500 mb-2">
+                      Edit your email content with rich formatting. Drag & drop or paste images directly.
+                    </p>
+                    <EmailEditor
+                      value={editHtmlContent}
+                      onChange={(value) => setEditHtmlContent(value)}
+                      placeholder="Edit your email content..."
+                      minHeight="300px"
                     />
                   </div>
                 </>
