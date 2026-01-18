@@ -29,9 +29,6 @@ import {
   AlertCircle,
   Info,
   ArrowLeft,
-  Lock,
-  CreditCard,
-  MapPin,
   Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
