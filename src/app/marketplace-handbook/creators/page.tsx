@@ -362,337 +362,346 @@ export default function MarketplaceCreatorHandbookPage() {
       </div>
 
       {/* Breadcrumb */}
-      <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
         <Link href="/creator-handbook" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" />
           Back to Creator Handbook
         </Link>
       </div>
 
-      {/* Content */}
-      <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
-        {/* Tab Navigation */}
-        <div className="mb-8 flex flex-wrap gap-2 rounded-xl bg-card/80 backdrop-blur-sm p-2 shadow-sm border border-border">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                id={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted'
-                }`}
+      {/* Content with Sidebar */}
+      <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Vertical Sidebar Navigation */}
+          <div className="lg:w-64 flex-shrink-0">
+            <div className="lg:sticky lg:top-4">
+              <nav className="flex flex-col gap-1 rounded-xl bg-card/80 backdrop-blur-sm p-3 shadow-sm border border-border">
+                <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sections</h3>
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      id={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-left ${
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            <div className="space-y-8">
+              {activeTab === 'overview' && (
+                <>
+                  <SectionHeader
+                    title="Welcome to the Digital Marketplace"
+                    description="Turn your completed works into ongoing revenue with direct digital sales."
+                  />
+                  <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
+                    <div className="flex gap-3">
+                      <Shield className="h-5 w-5 flex-shrink-0 text-primary" />
+                      <div>
+                        <h4 className="font-medium text-foreground">Sell Your Way</h4>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Keep 97% of every sale with our industry-low 3% platform fee. Your books, your pricing, your audience.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {overviewSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'setup' && (
+                <>
+                  <SectionHeader
+                    title="Getting Started"
+                    description="Set up your account and prepare to start selling."
+                  />
+                  <div className="mb-6 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-lg border border-border bg-card/80 p-4">
+                      <div className="flex gap-3">
+                        <CreditCard className="h-5 w-5 flex-shrink-0 text-primary" />
+                        <div>
+                          <h4 className="font-medium text-foreground">Payment Setup</h4>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Connect Stripe or DivinityCoin to receive earnings from sales.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-card/80 p-4">
+                      <div className="flex gap-3">
+                        <Users className="h-5 w-5 flex-shrink-0 text-primary" />
+                        <div>
+                          <h4 className="font-medium text-foreground">Creator Profile</h4>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Build trust with a complete bio and professional presence.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {setupSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'creating' && (
+                <>
+                  <SectionHeader
+                    title="Creating Your Book Listing"
+                    description="Step-by-step guide to listing your digital book for sale."
+                  />
+                  <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
+                    <div className="flex gap-3">
+                      <Upload className="h-5 w-5 flex-shrink-0 text-primary" />
+                      <div>
+                        <h4 className="font-medium text-foreground">Before You Start</h4>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Have these ready: A finalized PDF file (under 100MB), cover image (600×900px or larger, portrait orientation), and a compelling description of your book.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {creatingSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'pricing' && (
+                <>
+                  <SectionHeader
+                    title="Pricing & Fees"
+                    description="Understand how pricing works and maximize your earnings."
+                  />
+                  <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
+                    <div className="flex gap-3">
+                      <DollarSign className="h-5 w-5 flex-shrink-0 text-primary" />
+                      <div>
+                        <h4 className="font-medium text-foreground">Industry-Low Fees</h4>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          We take only 3% so you keep more of your earnings. Compare that to 30%+ on other platforms!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {pricingSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+
+                  {/* Fee Calculator Example */}
+                  <div className="mt-8 p-6 rounded-xl bg-card border border-border">
+                    <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-primary" />
+                      Example Earnings Calculator
+                    </h4>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                      <div className="p-4 rounded-lg bg-muted">
+                        <p className="text-sm text-muted-foreground">Your Price</p>
+                        <p className="text-2xl font-bold text-foreground">$9.99</p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-muted">
+                        <p className="text-sm text-muted-foreground">Stripe (2.9% + $0.30)</p>
+                        <p className="text-2xl font-bold text-destructive">-$0.59</p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-muted">
+                        <p className="text-sm text-muted-foreground">Platform Fee (3%)</p>
+                        <p className="text-2xl font-bold text-destructive">-$0.30</p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
+                        <p className="text-sm text-primary">You Receive</p>
+                        <p className="text-2xl font-bold text-primary">$9.10</p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'managing' && (
+                <>
+                  <SectionHeader
+                    title="Managing Your Books"
+                    description="Monitor sales, update listings, and track your success."
+                  />
+                  <div className="mb-6 grid gap-4 md:grid-cols-3">
+                    <div className="rounded-lg border border-border bg-card/80 p-4 text-center">
+                      <Clock className="h-8 w-8 mx-auto mb-2 text-primary" />
+                      <h4 className="font-medium text-foreground">Under Review</h4>
+                      <p className="text-sm text-muted-foreground">24-48 hours typical</p>
+                    </div>
+                    <div className="rounded-lg border border-border bg-card/80 p-4 text-center">
+                      <CheckCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
+                      <h4 className="font-medium text-foreground">Live</h4>
+                      <p className="text-sm text-muted-foreground">Available for purchase</p>
+                    </div>
+                    <div className="rounded-lg border border-border bg-card/80 p-4 text-center">
+                      <BarChart3 className="h-8 w-8 mx-auto mb-2 text-primary" />
+                      <h4 className="font-medium text-foreground">Analytics</h4>
+                      <p className="text-sm text-muted-foreground">Track your sales</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {managingSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'promotion' && (
+                <>
+                  <SectionHeader
+                    title="Promoting Your Books"
+                    description="Drive sales with discount codes, social sharing, and marketing strategies."
+                  />
+                  <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
+                    <div className="flex gap-3">
+                      <Tag className="h-5 w-5 flex-shrink-0 text-primary" />
+                      <div>
+                        <h4 className="font-medium text-foreground">Discount Codes</h4>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Create promo codes in the Discount Codes tab of your Marketplace dashboard. Offer free copies, percentage off, or fixed discounts to drive sales and reward loyal readers.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {promotionSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+
+                  {/* Promo Code Examples */}
+                  <div className="mt-8 p-6 rounded-xl bg-card border border-border">
+                    <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <Gift className="h-5 w-5 text-primary" />
+                      Example Discount Code Strategies
+                    </h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="p-4 rounded-lg bg-muted">
+                        <p className="font-medium text-foreground">Launch Discount</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Code: LAUNCH25 | 25% off | 100 uses | First week only
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-muted">
+                        <p className="font-medium text-foreground">Review Copies</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Code: REVIEWER | Free book | 20 uses | 1 per customer
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-muted">
+                        <p className="font-medium text-foreground">Newsletter Bonus</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Code: SUBSCRIBER | Free book | Unlimited uses | Subscribers only
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-muted">
+                        <p className="font-medium text-foreground">Holiday Sale</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Code: HOLIDAY50 | 50% off | Unlimited | Dec 20-26 only
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* FAQ Section */}
+            <div className="mt-16">
+              <SectionHeader
+                title="Frequently Asked Questions"
+                description="Common questions about selling on the Digital Marketplace."
+              />
+              <div className="space-y-3">
+                {faqs.map((faq) => (
+                  <FAQItem key={faq.question} faq={faq} />
+                ))}
+              </div>
+            </div>
+
+            {/* CTA Section */}
+            <div className="mt-16 rounded-2xl bg-gradient-to-r from-primary to-primary/80 p-8 text-center text-primary-foreground">
+              <h3 className="text-2xl font-bold">Ready to Start Selling?</h3>
+              <p className="mt-2 text-primary-foreground/80">Your digital books are waiting for an audience.</p>
+              <div className="mt-6 flex flex-wrap justify-center gap-4">
+                <Link
+                  href="/dashboard/marketplace"
+                  className="inline-flex items-center gap-2 rounded-lg bg-background px-6 py-3 font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  <BookOpen className="h-5 w-5" />
+                  Go to Marketplace Dashboard
+                </Link>
+                <Link
+                  href="/marketplace"
+                  className="inline-flex items-center gap-2 rounded-lg border-2 border-primary-foreground px-6 py-3 font-medium text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
+                >
+                  <Star className="h-5 w-5" />
+                  View Marketplace
+                </Link>
+              </div>
+            </div>
+
+            {/* Related Links */}
+            <div className="mt-12 grid gap-4 md:grid-cols-2">
+              <Link
+                href="/marketplace-handbook/backers"
+                className="rounded-lg border border-border bg-card/80 p-4 hover:border-primary/50 transition-colors group"
               >
-                <Icon className="h-4 w-4" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tab Content */}
-        <div className="space-y-8">
-          {activeTab === 'overview' && (
-            <>
-              <SectionHeader
-                title="Welcome to the Digital Marketplace"
-                description="Turn your completed works into ongoing revenue with direct digital sales."
-              />
-              <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
-                <div className="flex gap-3">
-                  <Shield className="h-5 w-5 flex-shrink-0 text-primary" />
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <h4 className="font-medium text-foreground">Sell Your Way</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Keep 97% of every sale with our industry-low 3% platform fee. Your books, your pricing, your audience.
-                    </p>
+                    <h4 className="font-medium text-foreground">Backer Handbook</h4>
+                    <p className="text-sm text-muted-foreground">See the buyer&apos;s perspective</p>
                   </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
-              <div className="space-y-4">
-                {overviewSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'setup' && (
-            <>
-              <SectionHeader
-                title="Getting Started"
-                description="Set up your account and prepare to start selling."
-              />
-              <div className="mb-6 grid gap-4 md:grid-cols-2">
-                <div className="rounded-lg border border-border bg-card/80 p-4">
-                  <div className="flex gap-3">
-                    <CreditCard className="h-5 w-5 flex-shrink-0 text-primary" />
-                    <div>
-                      <h4 className="font-medium text-foreground">Payment Setup</h4>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Connect Stripe or DivinityCoin to receive earnings from sales.
-                      </p>
-                    </div>
+              </Link>
+              <Link
+                href="/creator-handbook"
+                className="rounded-lg border border-border bg-card/80 p-4 hover:border-primary/50 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
+                    <Mail className="h-5 w-5 text-primary" />
                   </div>
-                </div>
-                <div className="rounded-lg border border-border bg-card/80 p-4">
-                  <div className="flex gap-3">
-                    <Users className="h-5 w-5 flex-shrink-0 text-primary" />
-                    <div>
-                      <h4 className="font-medium text-foreground">Creator Profile</h4>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Build trust with a complete bio and professional presence.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {setupSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'creating' && (
-            <>
-              <SectionHeader
-                title="Creating Your Book Listing"
-                description="Step-by-step guide to listing your digital book for sale."
-              />
-              <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
-                <div className="flex gap-3">
-                  <Upload className="h-5 w-5 flex-shrink-0 text-primary" />
                   <div>
-                    <h4 className="font-medium text-foreground">Before You Start</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Have these ready: A finalized PDF file (under 100MB), cover image (600×900px or larger, portrait orientation), and a compelling description of your book.
-                    </p>
+                    <h4 className="font-medium text-foreground">Creator Handbook</h4>
+                    <p className="text-sm text-muted-foreground">Learn about crowdfunding campaigns</p>
                   </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
-              <div className="space-y-4">
-                {creatingSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'pricing' && (
-            <>
-              <SectionHeader
-                title="Pricing & Fees"
-                description="Understand how pricing works and maximize your earnings."
-              />
-              <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
-                <div className="flex gap-3">
-                  <DollarSign className="h-5 w-5 flex-shrink-0 text-primary" />
-                  <div>
-                    <h4 className="font-medium text-foreground">Industry-Low Fees</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      We take only 3% so you keep more of your earnings. Compare that to 30%+ on other platforms!
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {pricingSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-
-              {/* Fee Calculator Example */}
-              <div className="mt-8 p-6 rounded-xl bg-card border border-border">
-                <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                  Example Earnings Calculator
-                </h4>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="p-4 rounded-lg bg-muted">
-                    <p className="text-sm text-muted-foreground">Your Price</p>
-                    <p className="text-2xl font-bold text-foreground">$9.99</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-muted">
-                    <p className="text-sm text-muted-foreground">Stripe (2.9% + $0.30)</p>
-                    <p className="text-2xl font-bold text-destructive">-$0.59</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-muted">
-                    <p className="text-sm text-muted-foreground">Platform Fee (3%)</p>
-                    <p className="text-2xl font-bold text-destructive">-$0.30</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
-                    <p className="text-sm text-primary">You Receive</p>
-                    <p className="text-2xl font-bold text-primary">$9.10</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {activeTab === 'managing' && (
-            <>
-              <SectionHeader
-                title="Managing Your Books"
-                description="Monitor sales, update listings, and track your success."
-              />
-              <div className="mb-6 grid gap-4 md:grid-cols-3">
-                <div className="rounded-lg border border-border bg-card/80 p-4 text-center">
-                  <Clock className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <h4 className="font-medium text-foreground">Under Review</h4>
-                  <p className="text-sm text-muted-foreground">24-48 hours typical</p>
-                </div>
-                <div className="rounded-lg border border-border bg-card/80 p-4 text-center">
-                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <h4 className="font-medium text-foreground">Live</h4>
-                  <p className="text-sm text-muted-foreground">Available for purchase</p>
-                </div>
-                <div className="rounded-lg border border-border bg-card/80 p-4 text-center">
-                  <BarChart3 className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <h4 className="font-medium text-foreground">Analytics</h4>
-                  <p className="text-sm text-muted-foreground">Track your sales</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {managingSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'promotion' && (
-            <>
-              <SectionHeader
-                title="Promoting Your Books"
-                description="Drive sales with discount codes, social sharing, and marketing strategies."
-              />
-              <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
-                <div className="flex gap-3">
-                  <Tag className="h-5 w-5 flex-shrink-0 text-primary" />
-                  <div>
-                    <h4 className="font-medium text-foreground">Discount Codes</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Create promo codes in the Discount Codes tab of your Marketplace dashboard. Offer free copies, percentage off, or fixed discounts to drive sales and reward loyal readers.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {promotionSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-
-              {/* Promo Code Examples */}
-              <div className="mt-8 p-6 rounded-xl bg-card border border-border">
-                <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Gift className="h-5 w-5 text-primary" />
-                  Example Discount Code Strategies
-                </h4>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="p-4 rounded-lg bg-muted">
-                    <p className="font-medium text-foreground">Launch Discount</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Code: LAUNCH25 | 25% off | 100 uses | First week only
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-muted">
-                    <p className="font-medium text-foreground">Review Copies</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Code: REVIEWER | Free book | 20 uses | 1 per customer
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-muted">
-                    <p className="font-medium text-foreground">Newsletter Bonus</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Code: SUBSCRIBER | Free book | Unlimited uses | Subscribers only
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-muted">
-                    <p className="font-medium text-foreground">Holiday Sale</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Code: HOLIDAY50 | 50% off | Unlimited | Dec 20-26 only
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* FAQ Section */}
-        <div className="mt-16">
-          <SectionHeader
-            title="Frequently Asked Questions"
-            description="Common questions about selling on the Digital Marketplace."
-          />
-          <div className="space-y-3">
-            {faqs.map((faq) => (
-              <FAQItem key={faq.question} faq={faq} />
-            ))}
-          </div>
-        </div>
-
-        {/* CTA Section */}
-        <div className="mt-16 rounded-2xl bg-gradient-to-r from-primary to-primary/80 p-8 text-center text-primary-foreground">
-          <h3 className="text-2xl font-bold">Ready to Start Selling?</h3>
-          <p className="mt-2 text-primary-foreground/80">Your digital books are waiting for an audience.</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-4">
-            <Link
-              href="/dashboard/marketplace"
-              className="inline-flex items-center gap-2 rounded-lg bg-background px-6 py-3 font-medium text-foreground hover:bg-muted transition-colors"
-            >
-              <BookOpen className="h-5 w-5" />
-              Go to Marketplace Dashboard
-            </Link>
-            <Link
-              href="/marketplace"
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-primary-foreground px-6 py-3 font-medium text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
-            >
-              <Star className="h-5 w-5" />
-              View Marketplace
-            </Link>
-          </div>
-        </div>
-
-        {/* Related Links */}
-        <div className="mt-12 grid gap-4 md:grid-cols-2">
-          <Link
-            href="/marketplace-handbook/backers"
-            className="rounded-lg border border-border bg-card/80 p-4 hover:border-primary/50 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h4 className="font-medium text-foreground">Backer Handbook</h4>
-                <p className="text-sm text-muted-foreground">See the buyer&apos;s perspective</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
-          </Link>
-          <Link
-            href="/creator-handbook"
-            className="rounded-lg border border-border bg-card/80 p-4 hover:border-primary/50 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
-                <Mail className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h4 className="font-medium text-foreground">Creator Handbook</h4>
-                <p className="text-sm text-muted-foreground">Learn about crowdfunding campaigns</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
-            </div>
-          </Link>
+          </div>
         </div>
       </div>
 

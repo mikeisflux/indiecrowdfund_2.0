@@ -8,13 +8,11 @@ import {
   Coins,
   Gift,
   Package,
-  CheckCircle2,
   Info,
-  ArrowRight,
   ArrowLeft,
   Shield,
   BookOpen,
-  ShoppingCart,
+  HelpCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from "@/components/footer";
@@ -23,314 +21,135 @@ const tabs = [
   { id: 'discover', label: 'Finding Projects', icon: Search },
   { id: 'backing', label: 'Making a Pledge', icon: Heart },
   { id: 'stripe', label: 'Paying with Card', icon: CreditCard },
-  { id: 'divinitycoin', label: 'Paying with DivinityCoin', icon: Coins },
+  { id: 'divinitycoin', label: 'DivinityCoin', icon: Coins },
   { id: 'rewards', label: 'Rewards & Add-ons', icon: Gift },
   { id: 'after', label: 'After You Pledge', icon: Package },
-  { id: 'marketplace', label: 'Digital Marketplace', icon: BookOpen },
+  { id: 'marketplace', label: 'Marketplace', icon: BookOpen },
+  { id: 'faq', label: 'FAQ', icon: HelpCircle },
 ];
 
 interface Step {
   title: string;
   description: string;
   tip?: string;
-  image?: string;
 }
 
-interface FAQ {
-  question: string;
-  answer: string;
-}
-
-const discoverSteps: Step[] = [
-  {
-    title: 'Browse the Discover Page',
-    description: 'Start at our Discover page to explore live crowdfunding campaigns. You can filter by category (Games, Technology, Art, etc.) and sort by popularity, newest, or ending soon.',
-    tip: 'Projects ending soon often have the most momentum - creators are pushing hard and early supporters are sharing with friends.',
+const tabContent: Record<string, { title: string; description: string; alert?: { icon: typeof Shield; title: string; text: string; color: string }; steps: Step[] }> = {
+  'discover': {
+    title: 'Finding the Perfect Project',
+    description: 'Learn how to discover campaigns that match your interests.',
+    steps: [
+      { title: 'Browse the Discover Page', description: 'Explore live campaigns. Filter by category and sort by popularity, newest, or ending soon.', tip: 'Projects ending soon often have the most momentum.' },
+      { title: 'Use Search', description: 'Find projects by name, creator, or keywords. Results include live and past projects.', tip: 'Search for creators you\'ve backed before!' },
+      { title: 'Read the Project Page', description: 'See full details, rewards, video, and learn about the creator.', tip: 'Check "Risks & Challenges" - honest creators explain obstacles upfront.' },
+      { title: 'Check FAQ & Updates', description: 'Look for FAQ answers and check Updates to see how the creator communicates.', tip: 'Active creators who post regular updates are more likely to deliver.' },
+      { title: 'Follow Before Backing', description: 'Not ready? Click the heart to follow. Get notifications without committing.', tip: 'Following pre-launch projects gets you notified at launch with early-bird pricing!' },
+    ]
   },
-  {
-    title: 'Use Search',
-    description: 'Looking for something specific? Use the search bar to find projects by name, creator, or keywords. Search results include both live campaigns and successful past projects.',
-    tip: 'Search for creators you\'ve backed before - they often launch new projects!',
+  'backing': {
+    title: 'Making Your Pledge',
+    description: 'Step-by-step walkthrough of the pledge process.',
+    steps: [
+      { title: 'Choose Your Reward Tier', description: 'Browse tiers on the right side. Each shows what you receive, amount, delivery date, and shipping.', tip: 'Limited quantity rewards go fast!' },
+      { title: 'Click "Back this project"', description: 'Start with the button or click directly on a tier. You can also pledge without a reward.', tip: 'You can change your pledge anytime before the campaign ends.' },
+      { title: 'Add Optional Add-ons', description: 'After selecting your reward, add extras like additional copies or accessories.', tip: 'Add-ons often include exclusive items not available elsewhere.' },
+      { title: 'Add Bonus Support', description: 'Want to give extra? Add a bonus amount. It doesn\'t change your reward.', tip: 'Every dollar helps projects reach stretch goals faster!' },
+      { title: 'Enter Shipping Information', description: 'For physical items, provide your address. Shipping costs vary by location.', tip: 'Double-check your address! Easiest to get it right the first time.' },
+      { title: 'Review Your Pledge', description: 'See the complete breakdown before payment. Make sure everything looks correct.', tip: 'Take a screenshot for your records.' },
+    ]
   },
-  {
-    title: 'Read the Project Page',
-    description: 'Click on any project to see the full details. Read the story, check out the rewards, watch the video, and learn about the creator. The more you know, the better decision you can make.',
-    tip: 'Scroll to the "Risks & Challenges" section - honest creators explain potential obstacles upfront.',
+  'stripe': {
+    title: 'Paying with Card (Stripe)',
+    description: 'Everything about card payments, including when you\'re charged.',
+    alert: { icon: Shield, title: 'Secure Payment Processing', text: 'All card payments are processed by Stripe. Your card details are encrypted and never stored on our servers.', color: 'emerald' },
+    steps: [
+      { title: 'Select Card Payment', description: 'Card payment is the default option, powered by Stripe - trusted by millions worldwide.', tip: 'Look for the lock icon and "Powered by Stripe".' },
+      { title: 'Enter Card Details', description: 'Fill in card number, expiration, CVV, and billing zip. Data is encrypted.', tip: 'Make sure your card won\'t expire before the campaign ends.' },
+      { title: 'Understand When You\'re Charged', description: 'You\'re NOT charged immediately. Card is saved and only charged if project reaches its goal.', tip: 'All-or-nothing: if goal isn\'t reached, you\'re never charged.' },
+      { title: 'Confirm Your Pledge', description: 'Click "Pledge" to submit. You\'ll see confirmation and receive an email.', tip: 'Save your confirmation email.' },
+      { title: 'What Happens at Campaign End', description: 'If successful, card is charged automatically. If not, nothing happens.', tip: 'Ensure sufficient funds when campaign ends.' },
+      { title: 'Already-Funded Campaigns', description: 'If a campaign already reached its goal, your card is charged immediately.', tip: 'Immediate charges are clearly indicated before you confirm.' },
+    ]
   },
-  {
-    title: 'Check the FAQ & Updates',
-    description: 'Look for the FAQ section where creators answer common questions. If the campaign is live, check the Updates tab to see how the creator communicates with backers.',
-    tip: 'Active creators who post regular updates are more likely to deliver on their promises.',
+  'divinitycoin': {
+    title: 'Paying with DivinityCoin',
+    description: 'Using DivinityCoin gift cards for pledges - like a store gift card, not crypto.',
+    alert: { icon: Coins, title: 'Gift Card System (Not Cryptocurrency)', text: '1 DivinityCoin = $1 USD, always. No crypto wallet needed - balance stored in your account. Refunds within 30 days at divinitycoin.com/dashboard.', color: 'amber' },
+    steps: [
+      { title: 'What is DivinityCoin?', description: 'A gift card system, NOT cryptocurrency. 1 coin = $1 USD. Simply platform credit.', tip: 'Learn more at our "What is DivinityCoin?" page.' },
+      { title: 'Getting DivinityCoin', description: 'Purchase from DivinityCoin.com, receive as rewards, or get refunds from cancelled projects.', tip: 'Redeem cards by entering your code in your account.' },
+      { title: 'Check Project Accepts DivinityCoin', description: 'Look for the "Accepts DivinityCoin" badge on project pages.', tip: 'Most projects accept it, but it\'s the creator\'s choice.' },
+      { title: 'Using at Checkout', description: 'Select "Pay with DivinityCoin." Use all or part of your balance.', tip: 'Check your balance anytime in your dashboard.' },
+      { title: 'Instant Balance Deduction', description: 'Unlike cards, DivinityCoin is deducted immediately when you pledge.', tip: 'Your confirmation shows exactly how much was used.' },
+      { title: 'Refunds for Failed Projects', description: 'If campaign fails, DivinityCoin is automatically returned to your wallet.', tip: 'Check transaction history for refund credits.' },
+    ]
   },
-  {
-    title: 'Follow Before Backing',
-    description: 'Not ready to pledge? Click the heart icon to follow the project. You\'ll get notifications about updates and funding milestones without committing yet.',
-    tip: 'Following a pre-launch project gets you notified the moment it goes live - often with early-bird pricing!',
+  'rewards': {
+    title: 'Understanding Rewards & Add-ons',
+    description: 'How reward tiers and add-ons work.',
+    steps: [
+      { title: 'Reward Tiers', description: 'Packages at different price points. Higher tiers include more or exclusive items.', tip: 'Compare tiers - paying a bit more often gets significantly more value.' },
+      { title: 'Limited vs Unlimited', description: 'Some rewards limited to specific number of backers. Once gone, they\'re gone.', tip: 'Early-bird tiers offer the best pricing - grab them fast!' },
+      { title: 'Estimated Delivery', description: 'Creator\'s best estimate. Crowdfunding often faces delays.', tip: 'Add a few months in your mind for realistic expectations.' },
+      { title: 'Shipping Costs', description: 'Usually charged separately. Varies by location and item size/weight.', tip: 'International backers: factor in shipping before pledging.' },
+      { title: 'Add-ons Explained', description: 'Extra items you can add to your pledge - extra copies, accessories, etc.', tip: 'Add-ons often include exclusive items not in any tier!' },
+      { title: 'Changing Your Pledge', description: 'Modify your pledge anytime before campaign ends in your backer dashboard.', tip: 'Set a reminder a day before the campaign ends to review.' },
+    ]
   },
-];
-
-const backingSteps: Step[] = [
-  {
-    title: 'Choose Your Reward Tier',
-    description: 'Browse the available reward tiers on the right side of the project page. Each tier shows what you\'ll receive, the pledge amount, estimated delivery date, and shipping information.',
-    tip: 'Limited quantity rewards go fast! If a tier says "X of Y remaining," act quickly if you want it.',
+  'after': {
+    title: 'After You Pledge',
+    description: 'What happens from confirmation to receiving your rewards.',
+    steps: [
+      { title: 'Confirmation Email', description: 'You\'ll receive email with complete pledge breakdown. Save it for records.', tip: 'Check spam folder if you don\'t see it in a few minutes.' },
+      { title: 'Your Backer Dashboard', description: 'See all pledges, update addresses, and track status. Your home base.', tip: 'Bookmark your dashboard for easy access.' },
+      { title: 'Following Updates', description: 'Creators post updates throughout. You\'ll get email notifications.', tip: 'Read updates carefully - they often contain surveys or decisions.' },
+      { title: 'Completing Surveys', description: 'After campaign ends, creators may send surveys for address, preferences, etc.', tip: 'Complete surveys promptly! Creators can\'t fulfill without the info.' },
+      { title: 'Tracking Fulfillment', description: 'See status in your dashboard: Not Started, In Progress, Shipped, Delivered.', tip: 'If "Shipped" but no tracking, check updates or contact creator.' },
+      { title: 'Receiving Rewards', description: 'When rewards arrive, celebrate! Consider sharing photos or reviews.', tip: 'Having issues? Contact creator before leaving negative feedback.' },
+    ]
   },
-  {
-    title: 'Select "Back this project" or Choose a Tier',
-    description: 'Click the green "Back this project" button to start, or click directly on a specific reward tier. You can also pledge without selecting a reward if you just want to support the creator.',
-    tip: 'You can change your pledge or switch tiers at any time before the campaign ends.',
+  'marketplace': {
+    title: 'Digital Marketplace',
+    description: 'Buying digital content for immediate download.',
+    steps: [
+      { title: 'What is the Marketplace?', description: 'A storefront for completed digital works. Immediate purchase and instant download.', tip: 'Perfect for supporting creators and getting content right away.' },
+      { title: 'Browsing', description: 'Explore Featured titles, Staff Picks, or all works. Use search for specific titles.', tip: 'Check out Staff Picks for hand-curated recommendations.' },
+      { title: 'Understanding Pricing', description: 'Fixed prices in USD set by creators. You\'re directly supporting them.', tip: 'Digital often costs less than physical - no printing or shipping.' },
+      { title: 'Making a Purchase', description: 'Click "Purchase" to checkout. Pay with card via Stripe. Charged immediately.', tip: 'Unlike pledges, marketplace purchases are instant.' },
+      { title: 'Your Digital Library', description: 'Purchases added to your Digital Library in your dashboard. Access anytime.', tip: 'Bookmark your Digital Library for quick access.' },
+      { title: 'Reading and Downloads', description: 'Read in browser or download as PDF for offline reading.', tip: 'Downloaded files are yours to keep. Back them up!' },
+    ]
   },
-  {
-    title: 'Add Optional Add-ons',
-    description: 'After selecting your main reward, you\'ll see any available add-ons. These are extras you can add to your pledge - like additional copies, accessories, or upgrades.',
-    tip: 'Add-ons are optional but often include exclusive items not available elsewhere.',
+  'faq': {
+    title: 'Frequently Asked Questions',
+    description: 'Common questions about backing projects.',
+    steps: [
+      { title: 'What if project doesn\'t reach its goal?', description: 'No money changes hands. Your card is never charged. If you used DivinityCoin, you get a refund.', tip: 'All-or-nothing funding protects you.' },
+      { title: 'Can I get a refund after pledging?', description: 'Before campaign ends, cancel anytime in your dashboard. After, contact the creator directly.', tip: 'Refund policies are set by each creator.' },
+      { title: 'Is my payment information secure?', description: 'Yes! Stripe processes all payments with PCI-DSS Level 1 certification. We never store full card numbers.', tip: 'Look for the Stripe badge for security.' },
+      { title: 'What if my card is declined?', description: 'We retry automatically 3 times over 9 days. You\'ll get emails to update your card details.', tip: 'Keep card info updated to avoid failed payments.' },
+      { title: 'How do I contact a creator?', description: 'Use "Contact" or "Ask a question" on the project page. Backers often have priority response.', tip: 'Always mention your backer email for pledge-specific issues.' },
+      { title: 'What if a creator never delivers?', description: 'Crowdfunding carries risk. Creators are legally obligated to fulfill or refund. Report concerns to our support team.', tip: 'Our verification process helps, but due diligence is important.' },
+      { title: 'Can I back anonymously?', description: 'Your pledge is visible to the creator, but you can hide from public backer lists. Payment info is always private.', tip: 'Check your privacy settings in your account.' },
+      { title: 'How do stretch goals work?', description: 'Bonus features added if campaign exceeds its goal. If unlocked while you\'re a backer, you get them free!', tip: 'Stretch goals make backing early more exciting!' },
+    ]
   },
-  {
-    title: 'Add Bonus Support (Optional)',
-    description: 'Want to give extra? Add a bonus amount on top of your pledge to show additional support for the creator. This doesn\'t change your reward - it\'s just extra love.',
-    tip: 'Every dollar of bonus support helps projects reach stretch goals faster!',
-  },
-  {
-    title: 'Enter Shipping Information',
-    description: 'If your reward includes physical items, you\'ll need to provide your shipping address. Select your country first - shipping costs vary by location.',
-    tip: 'Double-check your address! You can update it later through your backer dashboard, but it\'s easiest to get it right the first time.',
-  },
-  {
-    title: 'Review Your Pledge',
-    description: 'Before payment, you\'ll see a complete breakdown of your pledge: reward tier, add-ons, bonus support, and shipping costs. Make sure everything looks correct.',
-    tip: 'Take a screenshot of your pledge summary for your records.',
-  },
-];
-
-const stripeSteps: Step[] = [
-  {
-    title: 'Select Card Payment',
-    description: 'At the payment step, you\'ll see card payment as the default option. This uses Stripe, a secure payment processor trusted by millions of businesses worldwide.',
-    tip: 'Look for the lock icon and "Powered by Stripe" to confirm you\'re on a secure payment page.',
-  },
-  {
-    title: 'Enter Your Card Details',
-    description: 'Fill in your card number, expiration date, CVV, and billing zip code. Stripe encrypts all data - we never see or store your full card number.',
-    tip: 'Make sure the card won\'t expire before the campaign ends, or the charge might fail.',
-  },
-  {
-    title: 'Understand When You\'re Charged',
-    description: 'Here\'s the key: You are NOT charged immediately when you pledge. Your card is saved securely, and you\'re only charged if and when the project reaches its funding goal.',
-    tip: 'This is all-or-nothing funding. If the project doesn\'t reach its goal, your card is never charged.',
-  },
-  {
-    title: 'Confirm Your Pledge',
-    description: 'Click the "Pledge" button to submit. You\'ll see a confirmation screen with your full pledge breakdown, and receive a confirmation email.',
-    tip: 'Save your confirmation email - it contains important details about your pledge.',
-  },
-  {
-    title: 'What Happens at Campaign End',
-    description: 'If the campaign succeeds, your card is automatically charged. If the campaign doesn\'t reach its goal, nothing happens - no charge, no pledge. You might still see a pending authorization, but it will be released.',
-    tip: 'Make sure you have sufficient funds when the campaign ends to avoid payment failures.',
-  },
-  {
-    title: 'Already-Funded Campaigns',
-    description: 'If a campaign has already reached its funding goal, your card will be charged immediately. This is because the project is guaranteed to happen, so there\'s no risk of the campaign failing.',
-    tip: 'Immediate charges are clearly indicated on the pledge page before you confirm.',
-  },
-];
-
-const divinityCoinSteps: Step[] = [
-  {
-    title: 'What is DivinityCoin?',
-    description: 'DivinityCoin is a gift card system - NOT a cryptocurrency. Think of it like a store gift card: 1 DivinityCoin = $1 USD, always. There\'s no blockchain, no crypto wallet, no volatility. It\'s simply platform credit you can use to back projects.',
-    tip: 'Learn more at our "What is DivinityCoin?" page for a complete guide.',
-  },
-  {
-    title: 'Getting DivinityCoin',
-    description: 'You can get DivinityCoin in several ways: purchase gift cards directly from DivinityCoin.com, receive it as a reward from creators, get it during promotional events, or receive it as a refund when projects are cancelled.',
-    tip: 'DivinityCoin purchased from divinitycoin.com can be redeemed on IndieCrowdfund by entering your card code.',
-  },
-  {
-    title: 'Check if the Project Accepts DivinityCoin',
-    description: 'On the project page, look for the "Accepts DivinityCoin" badge. Not all creators choose to accept it, so check before pledging if you want to use your balance.',
-    tip: 'Most projects accept DivinityCoin, but it\'s the creator\'s choice to enable it.',
-  },
-  {
-    title: 'Using DivinityCoin at Checkout',
-    description: 'At the payment step, select "Pay with DivinityCoin." Your available balance is shown, and you can use all or part of it. If your pledge exceeds your balance, you can pay the remainder with a credit card.',
-    tip: 'Your balance is stored in your IndieCrowdfund account - check it anytime in your dashboard.',
-  },
-  {
-    title: 'Instant Balance Deduction',
-    description: 'Unlike card payments that wait for campaign success, DivinityCoin is deducted from your balance immediately when you pledge. This is because it\'s already platform credit.',
-    tip: 'Your pledge confirmation shows exactly how much DivinityCoin was used.',
-  },
-  {
-    title: 'Refunds for Failed Projects',
-    description: 'If a campaign doesn\'t reach its funding goal, your DivinityCoin is automatically returned to your IndieCrowdfund wallet. No action needed on your part.',
-    tip: 'Check your transaction history in your dashboard to see refund credits.',
-  },
-  {
-    title: 'Refunding Your DivinityCoin Purchase',
-    description: 'If you purchased DivinityCoin directly from DivinityCoin.com and want a refund, you can request one within 30 days through their self-service dashboard at divinitycoin.com/dashboard. No need to contact support.',
-    tip: 'DivinityCoin offers full refunds only (no partial). If already redeemed on IndieCrowdfund but not spent, they\'ll coordinate with us automatically.',
-  },
-];
-
-const rewardsTips: Step[] = [
-  {
-    title: 'Understanding Reward Tiers',
-    description: 'Reward tiers are packages the creator offers at different price points. Higher tiers typically include more items or exclusive bonuses. Each tier clearly lists what\'s included.',
-    tip: 'Compare tiers carefully - sometimes paying a bit more gets you significantly more value.',
-  },
-  {
-    title: 'Limited vs Unlimited Rewards',
-    description: 'Some rewards are limited to a specific number of backers (e.g., "50 of 100 remaining"). Once they\'re gone, they\'re gone. Unlimited rewards stay available throughout the campaign.',
-    tip: 'Early-bird limited tiers often offer the best pricing - grab them when you can!',
-  },
-  {
-    title: 'Estimated Delivery Dates',
-    description: 'Each reward shows an estimated delivery month and year. This is the creator\'s best estimate, but crowdfunding projects often face delays due to manufacturing or shipping.',
-    tip: 'Expect delivery estimates to be optimistic. Add a few months in your mind for a realistic expectation.',
-  },
-  {
-    title: 'Shipping Costs',
-    description: 'Shipping is usually charged separately on top of your pledge. Costs vary by your location and the size/weight of items. Some rewards include free shipping.',
-    tip: 'International backers: factor in shipping costs before pledging - they can sometimes add significantly to the total.',
-  },
-  {
-    title: 'Add-ons Explained',
-    description: 'Add-ons let you add extra items to your pledge. Want an extra copy for a friend? A special accessory? These are separate from your main reward tier.',
-    tip: 'Add-ons often include items that aren\'t in any reward tier - they can be exclusive extras!',
-  },
-  {
-    title: 'Changing Your Pledge',
-    description: 'You can modify your pledge (change tiers, add/remove add-ons, update address) anytime before the campaign ends. Go to your backer dashboard to make changes.',
-    tip: 'Set a calendar reminder a day before the campaign ends to review your pledge one last time.',
-  },
-];
-
-const afterPledgeSteps: Step[] = [
-  {
-    title: 'Confirmation Email',
-    description: 'Right after pledging, you\'ll receive an email confirmation with your complete pledge breakdown: reward tier, add-ons, shipping, and total amount. Save this email for your records.',
-    tip: 'Check your spam folder if you don\'t see the email within a few minutes.',
-  },
-  {
-    title: 'Your Backer Dashboard',
-    description: 'Access your backer dashboard to see all your pledges, update shipping addresses, and track project status. It\'s your home base for managing all your backed projects.',
-    tip: 'Bookmark your backer dashboard for easy access. You\'ll use it frequently as campaigns progress.',
-  },
-  {
-    title: 'Following Campaign Updates',
-    description: 'Creators post updates throughout the campaign and fulfillment process. You\'ll receive email notifications for new updates. These keep you informed about progress, milestones, and timelines.',
-    tip: 'Read updates carefully - they often contain important surveys or decisions you need to make.',
-  },
-  {
-    title: 'Completing Surveys',
-    description: 'After the campaign ends, the creator may send you a survey to collect additional information: final shipping address, color/size preferences, personalization details, etc.',
-    tip: 'Complete surveys promptly! Creators can\'t fulfill your reward without the information they need.',
-  },
-  {
-    title: 'Tracking Fulfillment',
-    description: 'In your backer dashboard, you can see the fulfillment status of each pledge: Not Started, In Progress, Shipped, or Delivered. You\'ll be notified when your rewards ship.',
-    tip: 'If you see "Shipped" but haven\'t received tracking info, check the project updates or contact the creator.',
-  },
-  {
-    title: 'Receiving Your Rewards',
-    description: 'When your rewards arrive, celebrate! You helped make something real. Consider sharing your experience - posting photos or reviews helps the creator and future backers.',
-    tip: 'Having issues with your reward? Contact the creator directly through the project page before leaving negative feedback.',
-  },
-];
-
-const marketplaceSteps: Step[] = [
-  {
-    title: 'What is the Digital Marketplace?',
-    description: 'The Digital Marketplace is a dedicated storefront for digital content created by indie creators. Unlike crowdfunding campaigns where you pledge toward a goal, the marketplace offers completed works available for immediate purchase and instant download.',
-    tip: 'Perfect for when you want to support creators and get content right away without waiting for a campaign to fund.',
-  },
-  {
-    title: 'Browsing the Marketplace',
-    description: 'Visit the Digital Marketplace from the main navigation to explore available digital books and content. Browse by Featured titles, Staff Picks, or explore all available works. Use the search function to find specific titles or creators.',
-    tip: 'Check out Staff Picks for hand-curated recommendations from our team.',
-  },
-  {
-    title: 'Understanding Pricing',
-    description: 'Each digital product has a fixed price set by the creator. Prices are displayed in USD. When you purchase, you\'re directly supporting the creator - they receive the majority of the sale.',
-    tip: 'Digital purchases often cost less than physical editions since there are no printing or shipping costs.',
-  },
-  {
-    title: 'Making a Purchase',
-    description: 'Click on any book to view details, then select "Purchase" to proceed to checkout. You can pay with a credit/debit card through our secure Stripe payment processing. Your purchase is charged immediately.',
-    tip: 'Unlike crowdfunding pledges, marketplace purchases are charged right away and content is delivered instantly.',
-  },
-  {
-    title: 'Accessing Your Digital Library',
-    description: 'After purchase, your content is immediately added to your Digital Library in your Backer Dashboard. You can access, download, and read your purchases anytime. Your library syncs across devices when logged in.',
-    tip: 'Bookmark your Digital Library tab for quick access to all your purchased content.',
-  },
-  {
-    title: 'Reading and Downloads',
-    description: 'Digital books can be read directly in your browser using our built-in reader, or downloaded as PDF files for offline reading on your preferred device or e-reader.',
-    tip: 'Downloaded files are yours to keep. Save them to your preferred cloud storage for backup.',
-  },
-  {
-    title: 'Finding Physical Editions',
-    description: 'Prefer physical books? Some creators offer printed editions through their own stores. Look for the "Order Physical Copies" link on the creator\'s company profile page to find where you can purchase physical versions.',
-    tip: 'Visit our Physical Media guide from the marketplace to learn how to find creators who offer printed editions.',
-  },
-  {
-    title: 'Supporting Creators',
-    description: 'Every purchase directly supports independent creators. By buying from the Digital Marketplace, you\'re helping creators continue making the content you love. Leave reviews and share your favorites!',
-    tip: 'Following creators lets you know when they release new content or launch new campaigns.',
-  },
-];
-
-const faqs: FAQ[] = [
-  {
-    question: 'What happens if a project doesn\'t reach its funding goal?',
-    answer: 'If a project doesn\'t reach its funding goal by the campaign deadline, no money changes hands. Your card is never charged (or if you paid with DivinityCoin, you receive a refund). The project simply doesn\'t happen.',
-  },
-  {
-    question: 'Can I get a refund after pledging?',
-    answer: 'Before the campaign ends, you can cancel your pledge anytime through your backer dashboard. After the campaign ends and you\'ve been charged, refund policies are set by each creator. Contact the creator directly for refund requests.',
-  },
-  {
-    question: 'Is my payment information secure?',
-    answer: 'Yes! All card payments are processed through Stripe, a PCI-DSS Level 1 certified payment processor. We never see or store your full card number. Your financial data is encrypted and protected by industry-leading security.',
-  },
-  {
-    question: 'What if my card is declined when the campaign ends?',
-    answer: 'If your payment fails, we\'ll retry automatically up to 3 times over 9 days. You\'ll receive emails about the failed payment so you can update your card details. If all retries fail, your pledge is cancelled.',
-  },
-  {
-    question: 'How do I contact a creator?',
-    answer: 'You can message creators through the project page using the "Contact" or "Ask a question" feature. Backers often have priority response times. For pledge-specific issues, always mention your backer email.',
-  },
-  {
-    question: 'What if a creator never delivers?',
-    answer: 'Crowdfunding carries inherent risk - you\'re supporting ideas, not buying products. However, our platform has a creator verification process, and creators are legally obligated to fulfill rewards or provide refunds. Report concerning projects to our support team.',
-  },
-  {
-    question: 'Can I back a project anonymously?',
-    answer: 'Your pledge is visible to the creator, but you can choose whether to appear publicly on the project\'s backer list. Your personal and payment information is always kept private.',
-  },
-  {
-    question: 'How do stretch goals work?',
-    answer: 'Stretch goals are bonus features or upgrades that creators add if the campaign exceeds its original funding goal. If a stretch goal is unlocked while you\'re a backer, you automatically get those upgrades at no extra cost!',
-  },
-];
+};
 
 function StepCard({ step, number }: { step: Step; number: number }) {
   return (
-    <div className="rounded-lg border border-border bg-card/80 backdrop-blur-sm p-5 hover:shadow-lg transition-all duration-300">
-      <div className="flex items-start gap-4">
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-sm">
+    <div className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start gap-3">
+        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-sm">
           {number}
         </div>
         <div className="flex-1">
-          <h4 className="font-semibold text-zinc-900">{step.title}</h4>
-          <p className="mt-2 text-sm text-zinc-600">{step.description}</p>
+          <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">{step.title}</h4>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{step.description}</p>
           {step.tip && (
-            <div className="mt-3 flex gap-2 rounded-lg bg-emerald-50 p-3">
-              <Info className="h-4 w-4 flex-shrink-0 text-emerald-600" />
-              <p className="text-sm text-emerald-800">{step.tip}</p>
+            <div className="mt-2 flex gap-2 rounded bg-blue-50 dark:bg-blue-950/30 p-2">
+              <Info className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <p className="text-xs text-blue-800 dark:text-blue-300">{step.tip}</p>
             </div>
           )}
         </div>
@@ -339,267 +158,93 @@ function StepCard({ step, number }: { step: Step; number: number }) {
   );
 }
 
-function FAQItem({ faq }: { faq: FAQ }) {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="rounded-lg border border-border bg-card/80 backdrop-blur-sm overflow-hidden">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between p-4 text-left hover:bg-zinc-50 transition-colors"
-      >
-        <span className="font-medium text-zinc-900">{faq.question}</span>
-        <ArrowRight className={`h-5 w-5 text-zinc-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="border-t border-border px-4 py-3 bg-zinc-50">
-          <p className="text-sm text-zinc-600">{faq.answer}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SectionHeader({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="mb-6">
-      <h3 className="text-2xl font-bold text-zinc-900">{title}</h3>
-      <p className="mt-2 text-zinc-600">{description}</p>
-    </div>
-  );
-}
-
 export default function BackerHandbookPage() {
   const [activeTab, setActiveTab] = useState('discover');
+  const currentTab = tabContent[activeTab];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-emerald-500/5 relative overflow-hidden">
-      {/* Back Link */}
-      <div className="container mx-auto px-4 pt-6">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Home
-        </Link>
-      </div>
-
-      {/* Floating Orbs */}
-      <div className="floating-orb w-96 h-96 bg-emerald-500/10 -top-48 -right-48" style={{ animationDelay: "0s" }} />
-      <div className="floating-orb w-80 h-80 bg-teal-500/10 top-1/3 -left-40" style={{ animationDelay: "2s" }} />
-      <div className="floating-orb w-64 h-64 bg-primary/10 bottom-40 right-1/4" style={{ animationDelay: "4s" }} />
-
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-500 py-12 text-center text-white relative overflow-hidden">
-        <div className="relative z-10">
-          <h1 className="text-4xl font-bold">Backer Handbook</h1>
-          <p className="mt-2 text-emerald-100">
-            Your complete guide to backing projects from start to finish
-          </p>
+      <div className="bg-gradient-to-r from-blue-600 to-cyan-500 py-8 text-white">
+        <div className="container mx-auto px-4">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-blue-100 hover:text-white mb-4">
+            <ArrowLeft className="h-4 w-4" /> Back to Home
+          </Link>
+          <h1 className="text-3xl font-bold">Backer Handbook</h1>
+          <p className="mt-1 text-blue-100">Your complete guide to backing projects from start to finish</p>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-        {/* Tab Navigation */}
-        <div className="mb-8 flex flex-wrap gap-2 rounded-xl bg-card/80 backdrop-blur-sm p-2 shadow-sm border border-border">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                id={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-emerald-600 text-white'
-                    : 'text-zinc-600 hover:bg-zinc-100'
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex gap-8">
+          {/* Sidebar Navigation */}
+          <aside className="w-64 flex-shrink-0">
+            <nav className="sticky top-8 space-y-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left ${
+                      isActive
+                        ? 'bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-100'
+                        : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
 
-        {/* Tab Content */}
-        <div className="space-y-8">
-          {activeTab === 'discover' && (
-            <>
-              <SectionHeader
-                title="Finding the Perfect Project"
-                description="Learn how to discover crowdfunding campaigns that match your interests and evaluate whether they're worth backing."
-              />
-              <div className="space-y-4">
-                {discoverSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'backing' && (
-            <>
-              <SectionHeader
-                title="Making Your Pledge"
-                description="A step-by-step walkthrough of the pledge process, from selecting your reward to confirming your support."
-              />
-              <div className="space-y-4">
-                {backingSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'stripe' && (
-            <>
-              <SectionHeader
-                title="Paying with Card (Stripe)"
-                description="Everything you need to know about card payments, including when you're charged and what to expect."
-              />
-              <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-                <div className="flex gap-3">
-                  <Shield className="h-5 w-5 flex-shrink-0 text-emerald-600" />
-                  <div>
-                    <h4 className="font-medium text-emerald-800">Secure Payment Processing</h4>
-                    <p className="mt-1 text-sm text-emerald-700">
-                      All card payments are processed by Stripe, trusted by millions of businesses worldwide. Your card details are encrypted and never stored on our servers.
-                    </p>
-                  </div>
+          {/* Content Area */}
+          <main className="flex-1 min-w-0">
+            {currentTab && (
+              <>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{currentTab.title}</h2>
+                  <p className="mt-1 text-zinc-600 dark:text-zinc-400">{currentTab.description}</p>
                 </div>
-              </div>
-              <div className="space-y-4">
-                {stripeSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
 
-          {activeTab === 'divinitycoin' && (
-            <>
-              <SectionHeader
-                title="Paying with DivinityCoin"
-                description="A guide to using DivinityCoin gift cards for your crowdfunding pledges - it's like a store gift card, not a cryptocurrency."
-              />
-              <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <div className="flex gap-3">
-                  <Coins className="h-5 w-5 flex-shrink-0 text-amber-600" />
-                  <div>
-                    <h4 className="font-medium text-amber-800">Gift Card System (Not Cryptocurrency)</h4>
-                    <p className="mt-1 text-sm text-amber-700">
-                      DivinityCoin is a platform gift card, not a cryptocurrency. 1 DivinityCoin = $1 USD, always. No crypto wallet needed - your balance is stored right in your IndieCrowdfund account. Need a refund? Request one within 30 days at divinitycoin.com/dashboard.
-                    </p>
+                {currentTab.alert && (
+                  <div className={`mb-6 rounded-lg border p-4 ${currentTab.alert.color === 'emerald' ? 'border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30' : 'border-amber-200 bg-amber-50 dark:bg-amber-950/30'}`}>
+                    <div className="flex gap-3">
+                      <currentTab.alert.icon className={`h-5 w-5 flex-shrink-0 ${currentTab.alert.color === 'emerald' ? 'text-emerald-600' : 'text-amber-600'}`} />
+                      <div>
+                        <h4 className={`font-medium ${currentTab.alert.color === 'emerald' ? 'text-emerald-800 dark:text-emerald-200' : 'text-amber-800 dark:text-amber-200'}`}>{currentTab.alert.title}</h4>
+                        <p className={`mt-1 text-sm ${currentTab.alert.color === 'emerald' ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>{currentTab.alert.text}</p>
+                      </div>
+                    </div>
                   </div>
+                )}
+
+                <div className="space-y-3">
+                  {currentTab.steps.map((step, index) => (
+                    <StepCard key={step.title} step={step} number={index + 1} />
+                  ))}
                 </div>
-              </div>
-              <div className="space-y-4">
-                {divinityCoinSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
+              </>
+            )}
 
-          {activeTab === 'rewards' && (
-            <>
-              <SectionHeader
-                title="Understanding Rewards & Add-ons"
-                description="Learn how reward tiers, add-ons, shipping, and delivery estimates work."
-              />
-              <div className="space-y-4">
-                {rewardsTips.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
+            {/* Quick Links */}
+            <div className="mt-12 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 p-6 text-white">
+              <h3 className="text-xl font-bold mb-2">Ready to Discover Projects?</h3>
+              <p className="text-blue-100 mb-4">Find amazing campaigns to support today.</p>
+              <div className="flex gap-3">
+                <Link href="/discover" className="inline-flex items-center gap-2 rounded-lg bg-white text-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-50">
+                  <Search className="h-4 w-4" /> Browse Projects
+                </Link>
+                <Link href="/creator-handbook" className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-4 py-2 text-sm font-medium hover:bg-white/10">
+                  <BookOpen className="h-4 w-4" /> Creator Handbook
+                </Link>
               </div>
-            </>
-          )}
-
-          {activeTab === 'after' && (
-            <>
-              <SectionHeader
-                title="After You Pledge"
-                description="What happens after you back a project - from confirmation to receiving your rewards."
-              />
-              <div className="space-y-4">
-                {afterPledgeSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'marketplace' && (
-            <>
-              <SectionHeader
-                title="Digital Marketplace"
-                description="Buy digital books and content directly from indie creators. Instant purchase, instant delivery to your Digital Library."
-              />
-              <div className="mb-6 rounded-lg border border-purple-200 bg-purple-50 p-4">
-                <div className="flex gap-3">
-                  <ShoppingCart className="h-5 w-5 flex-shrink-0 text-purple-600" />
-                  <div>
-                    <h4 className="font-medium text-purple-800">Instant Digital Delivery</h4>
-                    <p className="mt-1 text-sm text-purple-700">
-                      Unlike crowdfunding, marketplace purchases are charged immediately and content is delivered instantly to your Digital Library. Browse, buy, and read in minutes!
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {marketplaceSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-              <div className="mt-8 flex justify-center">
-                <a
-                  href="/marketplace"
-                  className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-6 py-3 font-medium text-white hover:bg-purple-700 transition-colors"
-                >
-                  <BookOpen className="h-5 w-5" />
-                  Visit the Digital Marketplace
-                </a>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* FAQ Section */}
-        <div className="mt-16">
-          <SectionHeader
-            title="Frequently Asked Questions"
-            description="Common questions backers ask about crowdfunding."
-          />
-          <div className="space-y-3">
-            {faqs.map((faq) => (
-              <FAQItem key={faq.question} faq={faq} />
-            ))}
-          </div>
-        </div>
-
-        {/* CTA Section */}
-        <div className="mt-16 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 p-8 text-center text-white">
-          <h3 className="text-2xl font-bold">Ready to Support a Creator?</h3>
-          <p className="mt-2 text-emerald-100">Discover amazing projects waiting for backers like you.</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-4">
-            <a
-              href="/discover"
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
-            >
-              <Search className="h-5 w-5" />
-              Explore Projects
-            </a>
-            <a
-              href="/dashboard/backer"
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-white px-6 py-3 font-medium text-white hover:bg-white/10 transition-colors"
-            >
-              <CheckCircle2 className="h-5 w-5" />
-              My Pledges
-            </a>
-          </div>
+            </div>
+          </main>
         </div>
       </div>
 

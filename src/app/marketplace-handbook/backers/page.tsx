@@ -351,260 +351,269 @@ export default function MarketplaceBackerHandbookPage() {
       </div>
 
       {/* Breadcrumb */}
-      <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
         <Link href="/backer-handbook" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" />
           Back to Backer Handbook
         </Link>
       </div>
 
-      {/* Content */}
-      <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
-        {/* Tab Navigation */}
-        <div className="mb-8 flex flex-wrap gap-2 rounded-xl bg-card/80 backdrop-blur-sm p-2 shadow-sm border border-border">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                id={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted'
-                }`}
+      {/* Content with Sidebar */}
+      <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Vertical Sidebar Navigation */}
+          <div className="lg:w-64 flex-shrink-0">
+            <div className="lg:sticky lg:top-4">
+              <nav className="flex flex-col gap-1 rounded-xl bg-card/80 backdrop-blur-sm p-3 shadow-sm border border-border">
+                <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sections</h3>
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      id={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-left ${
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            <div className="space-y-8">
+              {activeTab === 'overview' && (
+                <>
+                  <SectionHeader
+                    title="Understanding the Digital Marketplace"
+                    description="Learn what the marketplace is, how it works, and what makes it different from crowdfunding."
+                  />
+                  <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
+                    <div className="flex gap-3">
+                      <Shield className="h-5 w-5 flex-shrink-0 text-primary" />
+                      <div>
+                        <h4 className="font-medium text-foreground">Instant Access to Indie Content</h4>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          The Digital Marketplace offers completed works from verified indie creators. Buy once, own forever, and read on any device.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {overviewSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'browsing' && (
+                <>
+                  <SectionHeader
+                    title="Browsing the Marketplace"
+                    description="How to find and explore digital books and content from indie creators."
+                  />
+                  <div className="space-y-4">
+                    {browsingSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'purchasing' && (
+                <>
+                  <SectionHeader
+                    title="Making a Purchase"
+                    description="Step-by-step guide to purchasing digital content from the marketplace."
+                  />
+                  <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
+                    <div className="flex gap-3">
+                      <CreditCard className="h-5 w-5 flex-shrink-0 text-primary" />
+                      <div>
+                        <h4 className="font-medium text-foreground">Secure & Instant</h4>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          All payments are processed securely through Stripe. Once payment completes, your content is available immediately in your Digital Library.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {purchasingSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'library' && (
+                <>
+                  <SectionHeader
+                    title="Your Digital Library"
+                    description="Managing and accessing your purchased content."
+                  />
+                  <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
+                    <div className="flex gap-3">
+                      <Library className="h-5 w-5 flex-shrink-0 text-primary" />
+                      <div>
+                        <h4 className="font-medium text-foreground">Your Books, Forever</h4>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Every purchase is added to your Digital Library instantly. Access your entire collection anytime, from any device, with no expiration.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {librarySteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'reading' && (
+                <>
+                  <SectionHeader
+                    title="Reading Your Books"
+                    description="How to read and enjoy your digital content across all your devices."
+                  />
+                  <div className="mb-6 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-lg border border-border bg-card/80 p-4">
+                      <div className="flex gap-3">
+                        <Monitor className="h-5 w-5 flex-shrink-0 text-primary" />
+                        <div>
+                          <h4 className="font-medium text-foreground">Browser Reading</h4>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Read directly in your web browser - no app needed. Works on any device.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-card/80 p-4">
+                      <div className="flex gap-3">
+                        <Smartphone className="h-5 w-5 flex-shrink-0 text-primary" />
+                        <div>
+                          <h4 className="font-medium text-foreground">Offline Reading</h4>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Download PDFs for offline reading in your favorite reader app.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {readingSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'support' && (
+                <>
+                  <SectionHeader
+                    title="Supporting Indie Creators"
+                    description="Beyond purchases: how to help creators succeed and grow."
+                  />
+                  <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
+                    <div className="flex gap-3">
+                      <Users className="h-5 w-5 flex-shrink-0 text-primary" />
+                      <div>
+                        <h4 className="font-medium text-foreground">Indie Creators Depend on You</h4>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Unlike traditional publishing, indie creators receive the majority of each sale. Your purchase, review, and recommendation directly supports their ability to keep creating.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {supportSteps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* FAQ Section */}
+            <div className="mt-16">
+              <SectionHeader
+                title="Frequently Asked Questions"
+                description="Common questions about the Digital Marketplace."
+              />
+              <div className="space-y-3">
+                {faqs.map((faq) => (
+                  <FAQItem key={faq.question} faq={faq} />
+                ))}
+              </div>
+            </div>
+
+            {/* CTA Section */}
+            <div className="mt-16 rounded-2xl bg-gradient-to-r from-primary to-primary/80 p-8 text-center text-primary-foreground">
+              <h3 className="text-2xl font-bold">Ready to Explore?</h3>
+              <p className="mt-2 text-primary-foreground/80">Discover amazing digital content from indie creators.</p>
+              <div className="mt-6 flex flex-wrap justify-center gap-4">
+                <Link
+                  href="/marketplace"
+                  className="inline-flex items-center gap-2 rounded-lg bg-background px-6 py-3 font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  Visit Marketplace
+                </Link>
+                <Link
+                  href="/dashboard/backer"
+                  className="inline-flex items-center gap-2 rounded-lg border-2 border-primary-foreground px-6 py-3 font-medium text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
+                >
+                  <Library className="h-5 w-5" />
+                  My Digital Library
+                </Link>
+              </div>
+            </div>
+
+            {/* Related Links */}
+            <div className="mt-12 grid gap-4 md:grid-cols-2">
+              <Link
+                href="/marketplace-handbook/creators"
+                className="rounded-lg border border-border bg-card/80 p-4 hover:border-primary/50 transition-colors group"
               >
-                <Icon className="h-4 w-4" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tab Content */}
-        <div className="space-y-8">
-          {activeTab === 'overview' && (
-            <>
-              <SectionHeader
-                title="Understanding the Digital Marketplace"
-                description="Learn what the marketplace is, how it works, and what makes it different from crowdfunding."
-              />
-              <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
-                <div className="flex gap-3">
-                  <Shield className="h-5 w-5 flex-shrink-0 text-primary" />
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
+                    <Star className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <h4 className="font-medium text-foreground">Instant Access to Indie Content</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      The Digital Marketplace offers completed works from verified indie creators. Buy once, own forever, and read on any device.
-                    </p>
+                    <h4 className="font-medium text-foreground">Creator Handbook</h4>
+                    <p className="text-sm text-muted-foreground">Learn how creators list and sell content</p>
                   </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
-              <div className="space-y-4">
-                {overviewSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'browsing' && (
-            <>
-              <SectionHeader
-                title="Browsing the Marketplace"
-                description="How to find and explore digital books and content from indie creators."
-              />
-              <div className="space-y-4">
-                {browsingSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'purchasing' && (
-            <>
-              <SectionHeader
-                title="Making a Purchase"
-                description="Step-by-step guide to purchasing digital content from the marketplace."
-              />
-              <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
-                <div className="flex gap-3">
-                  <CreditCard className="h-5 w-5 flex-shrink-0 text-primary" />
+              </Link>
+              <Link
+                href="/backer-handbook"
+                className="rounded-lg border border-border bg-card/80 p-4 hover:border-primary/50 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
+                    <Gift className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <h4 className="font-medium text-foreground">Secure & Instant</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      All payments are processed securely through Stripe. Once payment completes, your content is available immediately in your Digital Library.
-                    </p>
+                    <h4 className="font-medium text-foreground">Backer Handbook</h4>
+                    <p className="text-sm text-muted-foreground">Learn about crowdfunding campaigns</p>
                   </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
-              <div className="space-y-4">
-                {purchasingSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'library' && (
-            <>
-              <SectionHeader
-                title="Your Digital Library"
-                description="Managing and accessing your purchased content."
-              />
-              <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
-                <div className="flex gap-3">
-                  <Library className="h-5 w-5 flex-shrink-0 text-primary" />
-                  <div>
-                    <h4 className="font-medium text-foreground">Your Books, Forever</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Every purchase is added to your Digital Library instantly. Access your entire collection anytime, from any device, with no expiration.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {librarySteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'reading' && (
-            <>
-              <SectionHeader
-                title="Reading Your Books"
-                description="How to read and enjoy your digital content across all your devices."
-              />
-              <div className="mb-6 grid gap-4 md:grid-cols-2">
-                <div className="rounded-lg border border-border bg-card/80 p-4">
-                  <div className="flex gap-3">
-                    <Monitor className="h-5 w-5 flex-shrink-0 text-primary" />
-                    <div>
-                      <h4 className="font-medium text-foreground">Browser Reading</h4>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Read directly in your web browser - no app needed. Works on any device.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-lg border border-border bg-card/80 p-4">
-                  <div className="flex gap-3">
-                    <Smartphone className="h-5 w-5 flex-shrink-0 text-primary" />
-                    <div>
-                      <h4 className="font-medium text-foreground">Offline Reading</h4>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Download PDFs for offline reading in your favorite reader app.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {readingSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'support' && (
-            <>
-              <SectionHeader
-                title="Supporting Indie Creators"
-                description="Beyond purchases: how to help creators succeed and grow."
-              />
-              <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
-                <div className="flex gap-3">
-                  <Users className="h-5 w-5 flex-shrink-0 text-primary" />
-                  <div>
-                    <h4 className="font-medium text-foreground">Indie Creators Depend on You</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Unlike traditional publishing, indie creators receive the majority of each sale. Your purchase, review, and recommendation directly supports their ability to keep creating.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {supportSteps.map((step, index) => (
-                  <StepCard key={step.title} step={step} number={index + 1} />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* FAQ Section */}
-        <div className="mt-16">
-          <SectionHeader
-            title="Frequently Asked Questions"
-            description="Common questions about the Digital Marketplace."
-          />
-          <div className="space-y-3">
-            {faqs.map((faq) => (
-              <FAQItem key={faq.question} faq={faq} />
-            ))}
-          </div>
-        </div>
-
-        {/* CTA Section */}
-        <div className="mt-16 rounded-2xl bg-gradient-to-r from-primary to-primary/80 p-8 text-center text-primary-foreground">
-          <h3 className="text-2xl font-bold">Ready to Explore?</h3>
-          <p className="mt-2 text-primary-foreground/80">Discover amazing digital content from indie creators.</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-4">
-            <Link
-              href="/marketplace"
-              className="inline-flex items-center gap-2 rounded-lg bg-background px-6 py-3 font-medium text-foreground hover:bg-muted transition-colors"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              Visit Marketplace
-            </Link>
-            <Link
-              href="/dashboard/backer"
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-primary-foreground px-6 py-3 font-medium text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
-            >
-              <Library className="h-5 w-5" />
-              My Digital Library
-            </Link>
-          </div>
-        </div>
-
-        {/* Related Links */}
-        <div className="mt-12 grid gap-4 md:grid-cols-2">
-          <Link
-            href="/marketplace-handbook/creators"
-            className="rounded-lg border border-border bg-card/80 p-4 hover:border-primary/50 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
-                <Star className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h4 className="font-medium text-foreground">Creator Handbook</h4>
-                <p className="text-sm text-muted-foreground">Learn how creators list and sell content</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
-          </Link>
-          <Link
-            href="/backer-handbook"
-            className="rounded-lg border border-border bg-card/80 p-4 hover:border-primary/50 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
-                <Gift className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h4 className="font-medium text-foreground">Backer Handbook</h4>
-                <p className="text-sm text-muted-foreground">Learn about crowdfunding campaigns</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
-            </div>
-          </Link>
+          </div>
         </div>
       </div>
 
