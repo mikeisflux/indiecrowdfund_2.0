@@ -51,6 +51,39 @@ const EmailHeading = Heading.extend({
   },
 });
 
+// Custom Image extension that supports alignment via wrapper div
+const EmailImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      textAlign: {
+        default: "center",
+        parseHTML: (element) => {
+          // Check parent div for text-align style
+          const parent = element.parentElement;
+          if (parent?.tagName === "DIV") {
+            const style = parent.getAttribute("style") || "";
+            if (style.includes("text-align: left")) return "left";
+            if (style.includes("text-align: right")) return "right";
+          }
+          return "center";
+        },
+      },
+    };
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    const textAlign = node.attrs.textAlign || "center";
+    // Wrap image in a div with text-align for email compatibility
+    const wrapperStyle = `text-align: ${textAlign}; margin: 16px 0;`;
+    const imgStyle = "max-width: 100%; height: auto; border-radius: 8px; display: inline-block;";
+    return [
+      "div",
+      { style: wrapperStyle },
+      ["img", { ...HTMLAttributes, style: imgStyle }],
+    ];
+  },
+});
+
 interface EmailEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -118,10 +151,7 @@ export function EmailEditor({
       EmailHeading.configure({
         levels: [1, 2],
       }),
-      Image.configure({
-        HTMLAttributes: {
-          style: "max-width: 100%; height: auto; border-radius: 8px; margin: 16px auto; display: block;",
-        },
+      EmailImage.configure({
         allowBase64: true,
       }),
       Link.configure({
@@ -131,7 +161,7 @@ export function EmailEditor({
         },
       }),
       TextAlign.configure({
-        types: ["heading", "paragraph"],
+        types: ["heading", "paragraph", "image"],
         alignments: ["left", "center", "right"],
         defaultAlignment: "left",
       }),
