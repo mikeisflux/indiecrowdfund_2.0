@@ -51,7 +51,7 @@ const EmailHeading = Heading.extend({
   },
 });
 
-// Custom Image extension that supports alignment via wrapper div
+// Custom Image extension that supports alignment via wrapper table for email compatibility
 const EmailImage = Image.extend({
   addAttributes() {
     return {
@@ -59,27 +59,48 @@ const EmailImage = Image.extend({
       textAlign: {
         default: "center",
         parseHTML: (element) => {
-          // Check parent div for text-align style
+          // Check parent td or div for align/text-align
           const parent = element.parentElement;
-          if (parent?.tagName === "DIV") {
+          if (parent) {
+            const align = parent.getAttribute("align");
+            if (align) return align;
             const style = parent.getAttribute("style") || "";
             if (style.includes("text-align: left")) return "left";
             if (style.includes("text-align: right")) return "right";
+            if (style.includes("text-align: center")) return "center";
           }
           return "center";
+        },
+        renderHTML: () => {
+          // Don't render textAlign as an attribute on img tag
+          return {};
         },
       },
     };
   },
   renderHTML({ node, HTMLAttributes }) {
     const textAlign = node.attrs.textAlign || "center";
-    // Wrap image in a div with text-align for email compatibility
-    const wrapperStyle = `text-align: ${textAlign}; margin: 16px 0;`;
-    const imgStyle = "max-width: 100%; height: auto; border-radius: 8px; display: inline-block;";
+    const imgStyle = "max-width: 100%; height: auto; border-radius: 8px;";
+
+    // Use table-based centering for maximum email client compatibility
     return [
-      "div",
-      { style: wrapperStyle },
-      ["img", { ...HTMLAttributes, style: imgStyle }],
+      "table",
+      {
+        cellpadding: "0",
+        cellspacing: "0",
+        border: "0",
+        width: "100%",
+        style: "margin: 16px 0;",
+      },
+      [
+        "tr",
+        {},
+        [
+          "td",
+          { align: textAlign, style: `text-align: ${textAlign};` },
+          ["img", { ...HTMLAttributes, style: imgStyle }],
+        ],
+      ],
     ];
   },
 });
