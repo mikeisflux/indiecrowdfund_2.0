@@ -295,20 +295,22 @@ export async function POST(request: Request) {
       data: {
         name,
         subject: aiContent.subject,
-        preheader: aiContent.preheader,
-        bodyHtml: generateEmailHtml(aiContent, projects, includeProjectRecommendations),
-        bodyText: generateEmailText(aiContent, projects, includeProjectRecommendations),
+        htmlContent: generateEmailHtml(aiContent, projects, includeProjectRecommendations),
         status: scheduleFor ? "SCHEDULED" : "DRAFT",
         recipientCount,
         targetAudience: targetAudience || "all",
-        projectCategory: projectCategory || "all",
-        scheduledAt: scheduleFor ? new Date(scheduleFor) : null,
-        aiGenerated: true,
-        aiContent: {
-          ...aiContent as object,
-          subjectVariants: subjectVariants || undefined,
-          hasOptimalSchedule: !!optimalSchedule,
-          segmentInfo: segmentInfo || undefined,
+        scheduledFor: scheduleFor ? new Date(scheduleFor) : null,
+        filters: {
+          projectCategory: projectCategory || "all",
+          aiGenerated: true,
+          preheader: aiContent.preheader,
+          bodyText: generateEmailText(aiContent, projects, includeProjectRecommendations),
+          aiContent: {
+            ...aiContent as object,
+            subjectVariants: subjectVariants || undefined,
+            hasOptimalSchedule: !!optimalSchedule,
+            segmentInfo: segmentInfo || undefined,
+          },
         },
       },
     });
