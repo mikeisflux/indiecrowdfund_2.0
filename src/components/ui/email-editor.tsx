@@ -6,6 +6,8 @@ import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
+import Paragraph from "@tiptap/extension-paragraph";
+import Heading from "@tiptap/extension-heading";
 import { useEffect, useCallback, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
@@ -29,6 +31,25 @@ import {
   Upload,
   Loader2,
 } from "lucide-react";
+
+// Custom Paragraph extension that outputs inline styles for emails
+const EmailParagraph = Paragraph.extend({
+  renderHTML({ node, HTMLAttributes }) {
+    const textAlign = node.attrs.textAlign || "left";
+    const style = `margin: 0 0 16px 0;${textAlign !== "left" ? ` text-align: ${textAlign};` : ""}`;
+    return ["p", { ...HTMLAttributes, style }, 0];
+  },
+});
+
+// Custom Heading extension that outputs inline styles for emails
+const EmailHeading = Heading.extend({
+  renderHTML({ node, HTMLAttributes }) {
+    const textAlign = node.attrs.textAlign || "left";
+    const level = node.attrs.level || 1;
+    const style = `margin: 0 0 16px 0;${textAlign !== "left" ? ` text-align: ${textAlign};` : ""}`;
+    return [`h${level}`, { ...HTMLAttributes, style }, 0];
+  },
+});
 
 interface EmailEditorProps {
   value: string;
@@ -84,21 +105,18 @@ export function EmailEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: {
-          levels: [1, 2],
-          HTMLAttributes: {
-            style: "margin: 0 0 16px 0;",
-          },
-        },
-        paragraph: {
-          HTMLAttributes: {
-            style: "margin: 0 0 16px 0;",
-          },
-        },
+        // Disable built-in paragraph and heading - we use custom ones for inline styles
+        paragraph: false,
+        heading: false,
         dropcursor: {
           color: "#10B981",
           width: 2,
         },
+      }),
+      // Custom extensions that output proper inline styles for emails
+      EmailParagraph,
+      EmailHeading.configure({
+        levels: [1, 2],
       }),
       Image.configure({
         HTMLAttributes: {
