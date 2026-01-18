@@ -26,41 +26,108 @@ import {
   Settings,
   UserCircle,
   CheckCircle2,
-  AlertCircle,
   Info,
   ArrowLeft,
   Sparkles,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from "@/components/footer";
 
-const tabs = [
-  { id: 'getting-started', label: 'Getting Started', icon: Sparkles },
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'backers', label: 'Backers', icon: Users },
-  { id: 'projects', label: 'Projects', icon: FolderKanban },
-  { id: 'updates', label: 'Updates', icon: FileText },
-  { id: 'timeline', label: 'Timeline', icon: Clock },
-  { id: 'support', label: 'Support', icon: HeadphonesIcon },
-  { id: 'sku-mapping', label: 'SKU Mapping', icon: Link2 },
-  { id: 'packages', label: 'Packages', icon: Box },
-  { id: 'products', label: 'Products', icon: BoxIcon },
-  { id: 'shipping', label: 'Shipping', icon: Truck },
-  { id: 'digital', label: 'Digital', icon: Download },
-  { id: 'addons', label: 'Add-ons', icon: ShoppingCart },
-  { id: 'preorders', label: 'Pre-Orders', icon: TrendingUp },
-  { id: 'inbox', label: 'Inbox', icon: Inbox },
-  { id: 'emails', label: 'Email Campaigns', icon: Mail },
-  { id: 'email-list', label: 'Email List', icon: UsersRound },
-  { id: 'teaser', label: 'Teaser Pages', icon: FileText },
-  { id: 'segments', label: 'Segments', icon: Layers },
-  { id: 'counts', label: 'Counts', icon: BarChart3 },
-  { id: 'export', label: 'Export', icon: FileDown },
-  { id: 'survey-builder', label: 'Survey Builder', icon: FormInput },
-  { id: 'manage-survey', label: 'Manage Survey', icon: ClipboardList },
-  { id: 'settings', label: 'Settings', icon: Settings },
-  { id: 'account', label: 'Account', icon: UserCircle },
-  { id: 'workflow', label: 'Workflow', icon: CheckCircle2 },
+interface TabItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+interface SectionGroup {
+  id: string;
+  label: string;
+  tabs: TabItem[];
+}
+
+const sections: SectionGroup[] = [
+  {
+    id: 'getting-started-section',
+    label: 'Getting Started',
+    tabs: [
+      { id: 'getting-started', label: 'Introduction', icon: Sparkles },
+      { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { id: 'workflow', label: 'Workflow', icon: CheckCircle2 },
+    ],
+  },
+  {
+    id: 'backer-section',
+    label: 'Backer Management',
+    tabs: [
+      { id: 'backers', label: 'Backers', icon: Users },
+      { id: 'projects', label: 'Projects', icon: FolderKanban },
+      { id: 'support', label: 'Support', icon: HeadphonesIcon },
+      { id: 'inbox', label: 'Inbox', icon: Inbox },
+    ],
+  },
+  {
+    id: 'content-section',
+    label: 'Content & Updates',
+    tabs: [
+      { id: 'updates', label: 'Updates', icon: FileText },
+      { id: 'timeline', label: 'Timeline', icon: Clock },
+      { id: 'teaser', label: 'Teaser Pages', icon: FileText },
+    ],
+  },
+  {
+    id: 'fulfillment-section',
+    label: 'Fulfillment',
+    tabs: [
+      { id: 'packages', label: 'Packages', icon: Box },
+      { id: 'products', label: 'Products', icon: BoxIcon },
+      { id: 'shipping', label: 'Shipping', icon: Truck },
+      { id: 'sku-mapping', label: 'SKU Mapping', icon: Link2 },
+    ],
+  },
+  {
+    id: 'digital-section',
+    label: 'Digital & Add-ons',
+    tabs: [
+      { id: 'digital', label: 'Digital', icon: Download },
+      { id: 'addons', label: 'Add-ons', icon: ShoppingCart },
+      { id: 'preorders', label: 'Pre-Orders', icon: TrendingUp },
+    ],
+  },
+  {
+    id: 'email-section',
+    label: 'Email & Communication',
+    tabs: [
+      { id: 'emails', label: 'Email Campaigns', icon: Mail },
+      { id: 'email-list', label: 'Email List', icon: UsersRound },
+      { id: 'segments', label: 'Segments', icon: Layers },
+    ],
+  },
+  {
+    id: 'survey-section',
+    label: 'Surveys',
+    tabs: [
+      { id: 'survey-builder', label: 'Survey Builder', icon: FormInput },
+      { id: 'manage-survey', label: 'Manage Survey', icon: ClipboardList },
+    ],
+  },
+  {
+    id: 'data-section',
+    label: 'Data & Analytics',
+    tabs: [
+      { id: 'counts', label: 'Counts', icon: BarChart3 },
+      { id: 'export', label: 'Export', icon: FileDown },
+    ],
+  },
+  {
+    id: 'settings-section',
+    label: 'Settings',
+    tabs: [
+      { id: 'settings', label: 'Settings', icon: Settings },
+      { id: 'account', label: 'Account', icon: UserCircle },
+    ],
+  },
 ];
 
 interface FieldInfo {
@@ -350,9 +417,102 @@ function FieldCard({ field }: { field: FieldInfo }) {
   );
 }
 
+function CollapsibleSection({
+  section,
+  isOpen,
+  onToggle,
+  activeTab,
+  onTabSelect
+}: {
+  section: SectionGroup;
+  isOpen: boolean;
+  onToggle: () => void;
+  activeTab: string;
+  onTabSelect: (tabId: string) => void;
+}) {
+  const hasActiveTab = section.tabs.some(tab => tab.id === activeTab);
+
+  return (
+    <div className="mb-1">
+      <button
+        onClick={onToggle}
+        className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+          hasActiveTab
+            ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-100'
+            : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+        }`}
+      >
+        <span>{section.label}</span>
+        {isOpen ? (
+          <ChevronDown className="h-4 w-4" />
+        ) : (
+          <ChevronRight className="h-4 w-4" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="mt-1 ml-2 space-y-0.5">
+          {section.tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabSelect(tab.id)}
+                className={`w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors text-left ${
+                  isActive
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function IndieKitHandbookPage() {
   const [activeTab, setActiveTab] = useState('getting-started');
+  const [openSections, setOpenSections] = useState<Set<string>>(() => {
+    // Open the section containing the active tab by default
+    const initialOpen = new Set<string>();
+    for (const section of sections) {
+      if (section.tabs.some(tab => tab.id === 'getting-started')) {
+        initialOpen.add(section.id);
+        break;
+      }
+    }
+    return initialOpen;
+  });
+
   const currentTab = tabContent[activeTab];
+
+  const toggleSection = (sectionId: string) => {
+    setOpenSections(prev => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+      return next;
+    });
+  };
+
+  const handleTabSelect = (tabId: string) => {
+    setActiveTab(tabId);
+    // Auto-open the section containing the selected tab
+    for (const section of sections) {
+      if (section.tabs.some(tab => tab.id === tabId)) {
+        setOpenSections(prev => new Set(prev).add(section.id));
+        break;
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -372,25 +532,17 @@ export default function IndieKitHandbookPage() {
         <div className="flex gap-8">
           {/* Sidebar Navigation */}
           <aside className="w-64 flex-shrink-0">
-            <nav className="sticky top-8 space-y-1 max-h-[calc(100vh-8rem)] overflow-y-auto">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left ${
-                      isActive
-                        ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-100'
-                        : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4 flex-shrink-0" />
-                    {tab.label}
-                  </button>
-                );
-              })}
+            <nav className="sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2">
+              {sections.map((section) => (
+                <CollapsibleSection
+                  key={section.id}
+                  section={section}
+                  isOpen={openSections.has(section.id)}
+                  onToggle={() => toggleSection(section.id)}
+                  activeTab={activeTab}
+                  onTabSelect={handleTabSelect}
+                />
+              ))}
             </nav>
           </aside>
 
