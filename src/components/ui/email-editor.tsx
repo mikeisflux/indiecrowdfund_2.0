@@ -51,57 +51,14 @@ const EmailHeading = Heading.extend({
   },
 });
 
-// Custom Image extension that supports alignment via wrapper table for email compatibility
+// Custom Image extension with inline centering styles for email compatibility
 const EmailImage = Image.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      textAlign: {
-        default: "center",
-        parseHTML: (element) => {
-          // Check parent td or div for align/text-align
-          const parent = element.parentElement;
-          if (parent) {
-            const align = parent.getAttribute("align");
-            if (align) return align;
-            const style = parent.getAttribute("style") || "";
-            if (style.includes("text-align: left")) return "left";
-            if (style.includes("text-align: right")) return "right";
-            if (style.includes("text-align: center")) return "center";
-          }
-          return "center";
-        },
-        renderHTML: () => {
-          // Don't render textAlign as an attribute on img tag
-          return {};
-        },
-      },
-    };
-  },
-  renderHTML({ node, HTMLAttributes }) {
-    const textAlign = node.attrs.textAlign || "center";
-    const imgStyle = "max-width: 100%; height: auto; border-radius: 8px;";
+  renderHTML({ HTMLAttributes }) {
+    // Always center images using display:block + margin:auto
+    // This is the most reliable method for email clients
+    const imgStyle = "display: block; max-width: 100%; height: auto; border-radius: 8px; margin: 16px auto;";
 
-    // Use table-based centering for maximum email client compatibility
-    return [
-      "table",
-      {
-        cellpadding: "0",
-        cellspacing: "0",
-        border: "0",
-        width: "100%",
-        style: "margin: 16px 0;",
-      },
-      [
-        "tr",
-        {},
-        [
-          "td",
-          { align: textAlign, style: `text-align: ${textAlign};` },
-          ["img", { ...HTMLAttributes, style: imgStyle }],
-        ],
-      ],
-    ];
+    return ["img", { ...HTMLAttributes, style: imgStyle }];
   },
 });
 
@@ -182,7 +139,7 @@ export function EmailEditor({
         },
       }),
       TextAlign.configure({
-        types: ["heading", "paragraph", "image"],
+        types: ["heading", "paragraph"],
         alignments: ["left", "center", "right"],
         defaultAlignment: "left",
       }),
