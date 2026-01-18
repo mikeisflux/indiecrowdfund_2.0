@@ -86,6 +86,14 @@ export function EmailEditor({
       StarterKit.configure({
         heading: {
           levels: [1, 2],
+          HTMLAttributes: {
+            style: "margin: 0 0 16px 0;",
+          },
+        },
+        paragraph: {
+          HTMLAttributes: {
+            style: "margin: 0 0 16px 0;",
+          },
         },
         dropcursor: {
           color: "#10B981",
@@ -94,19 +102,20 @@ export function EmailEditor({
       }),
       Image.configure({
         HTMLAttributes: {
-          class: "max-w-full h-auto rounded-lg my-4 block mx-auto",
-          style: "max-width: 600px;",
+          style: "max-width: 100%; height: auto; border-radius: 8px; margin: 16px auto; display: block;",
         },
         allowBase64: true,
       }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: "text-emerald-600 underline cursor-pointer",
+          style: "color: #10b981; text-decoration: underline;",
         },
       }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
+        alignments: ["left", "center", "right"],
+        defaultAlignment: "left",
       }),
       Placeholder.configure({
         placeholder,
