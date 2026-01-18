@@ -121,6 +121,7 @@ export default function AIMarketingPage() {
     subjectTemplate: "",
     introMessage: "",
     autoGenerateCopy: true,
+    includeProjectRecommendations: true,
   });
 
   // Preset campaign templates
@@ -580,6 +581,7 @@ export default function AIMarketingPage() {
           subjectTemplate: "",
           introMessage: "",
           autoGenerateCopy: true,
+          includeProjectRecommendations: true,
         });
       }, 2000);
     } catch (error) {
@@ -601,6 +603,7 @@ export default function AIMarketingPage() {
       subjectTemplate: "",
       introMessage: "",
       autoGenerateCopy: true,
+      includeProjectRecommendations: true,
     });
   };
 

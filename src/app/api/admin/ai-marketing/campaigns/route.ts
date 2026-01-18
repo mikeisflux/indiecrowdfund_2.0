@@ -118,6 +118,7 @@ export async function POST(request: Request) {
       subjectTemplate,
       introMessage,
       scheduleFor,
+      includeProjectRecommendations = true,
     } = body;
 
     // Validate required fields
@@ -295,8 +296,8 @@ export async function POST(request: Request) {
         name,
         subject: aiContent.subject,
         preheader: aiContent.preheader,
-        bodyHtml: generateEmailHtml(aiContent, projects),
-        bodyText: generateEmailText(aiContent, projects),
+        bodyHtml: generateEmailHtml(aiContent, projects, includeProjectRecommendations),
+        bodyText: generateEmailText(aiContent, projects, includeProjectRecommendations),
         status: scheduleFor ? "SCHEDULED" : "DRAFT",
         recipientCount,
         targetAudience: targetAudience || "all",
@@ -364,28 +365,41 @@ function generateEmailHtml(
     }>;
     footer: string;
   },
-  projects: Array<{ id: string; title: string; slug: string; description: string | null; category: string | null; goalAmount: unknown; creator: { vanityUrl: string | null } | null }>
+  projects: Array<{ id: string; title: string; slug: string; description: string | null; category: string | null; goalAmount: unknown; creator: { vanityUrl: string | null } | null }>,
+  includeProjectRecommendations: boolean = true
 ): string {
-  const projectCards = aiContent.projectRecommendations.map((rec, i) => {
-    const project = projects.find(p => p.title === rec.projectTitle) || projects[i];
-    if (!project) return "";
+  let projectsSection = "";
 
-    // Build project URL with vanity URL if available
-    const projectUrl = project.creator?.vanityUrl
-      ? `/projects/${project.creator.vanityUrl}/${project.slug}`
-      : `/projects/${project.slug}`;
+  if (includeProjectRecommendations) {
+    const projectCards = aiContent.projectRecommendations.map((rec, i) => {
+      const project = projects.find(p => p.title === rec.projectTitle) || projects[i];
+      if (!project) return "";
 
-    return `
-      <div style="margin-bottom: 24px; padding: 20px; background: #f8f9fa; border-radius: 12px;">
-        <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 18px;">${project.title}</h3>
-        <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">${rec.recommendationReason}</p>
-        <a href="{{SITE_URL}}${projectUrl}"
-           style="display: inline-block; padding: 10px 20px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
-          ${rec.callToAction}
-        </a>
+      // Build project URL with vanity URL if available
+      const projectUrl = project.creator?.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+        : `/projects/${project.slug}`;
+
+      return `
+        <div style="margin-bottom: 24px; padding: 20px; background: #f8f9fa; border-radius: 12px;">
+          <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 18px;">${project.title}</h3>
+          <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">${rec.recommendationReason}</p>
+          <a href="{{SITE_URL}}${projectUrl}"
+             style="display: inline-block; padding: 10px 20px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            ${rec.callToAction}
+          </a>
+        </div>
+      `;
+    }).join("");
+
+    projectsSection = `
+      <!-- Projects -->
+      <div style="margin-bottom: 32px;">
+        <h2 style="color: #111827; font-size: 20px; margin-bottom: 16px;">Projects We Think You'll Love</h2>
+        ${projectCards}
       </div>
     `;
-  }).join("");
+  }
 
   return `
     <!DOCTYPE html>
@@ -412,11 +426,7 @@ function generateEmailHtml(
         <p style="font-size: 16px; color: #374151;">${aiContent.personalizedIntro}</p>
       </div>
 
-      <!-- Projects -->
-      <div style="margin-bottom: 32px;">
-        <h2 style="color: #111827; font-size: 20px; margin-bottom: 16px;">Projects We Think You'll Love</h2>
-        ${projectCards}
-      </div>
+      ${projectsSection}
 
       <!-- Footer -->
       <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; text-align: center;">
@@ -444,33 +454,41 @@ function generateEmailText(
     }>;
     footer: string;
   },
-  projects: Array<{ id: string; title: string; slug: string; description: string | null; category: string | null; goalAmount: unknown; creator: { vanityUrl: string | null } | null }>
+  projects: Array<{ id: string; title: string; slug: string; description: string | null; category: string | null; goalAmount: unknown; creator: { vanityUrl: string | null } | null }>,
+  includeProjectRecommendations: boolean = true
 ): string {
-  const projectList = aiContent.projectRecommendations.map((rec, i) => {
-    const project = projects.find(p => p.title === rec.projectTitle) || projects[i];
-    if (!project) return "";
+  let projectsSection = "";
 
-    // Build project URL with vanity URL if available
-    const projectUrl = project.creator?.vanityUrl
-      ? `/projects/${project.creator.vanityUrl}/${project.slug}`
-      : `/projects/${project.slug}`;
+  if (includeProjectRecommendations) {
+    const projectList = aiContent.projectRecommendations.map((rec, i) => {
+      const project = projects.find(p => p.title === rec.projectTitle) || projects[i];
+      if (!project) return "";
 
-    return `
+      // Build project URL with vanity URL if available
+      const projectUrl = project.creator?.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+        : `/projects/${project.slug}`;
+
+      return `
 ${project.title}
 ${rec.recommendationReason}
 View project: {{SITE_URL}}${projectUrl}
 `;
-  }).join("\n---\n");
+    }).join("\n---\n");
+
+    projectsSection = `
+
+PROJECTS WE THINK YOU'LL LOVE
+=============================
+${projectList}
+`;
+  }
 
   return `
 Hi {{USER_NAME}},
 
 ${aiContent.personalizedIntro}
-
-PROJECTS WE THINK YOU'LL LOVE
-=============================
-${projectList}
-
+${projectsSection}
 ---
 
 ${aiContent.footer}

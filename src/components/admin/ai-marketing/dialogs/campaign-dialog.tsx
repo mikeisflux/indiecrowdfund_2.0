@@ -26,6 +26,7 @@ import {
   AlertCircle,
   CheckCircle,
   RefreshCw,
+  LayoutGrid,
 } from "lucide-react";
 
 export interface CampaignForm {
@@ -35,6 +36,7 @@ export interface CampaignForm {
   subjectTemplate: string;
   introMessage: string;
   autoGenerateCopy: boolean;
+  includeProjectRecommendations: boolean;
 }
 
 export interface CampaignTemplate {
@@ -136,6 +138,23 @@ export function CampaignDialog({
                 <Switch
                   checked={form.autoGenerateCopy}
                   onCheckedChange={(checked) => onFormChange({ ...form, autoGenerateCopy: checked })}
+                />
+              </div>
+
+              {/* Include Project Recommendations Toggle */}
+              <div className="flex items-center justify-between rounded-lg border bg-blue-50 p-4 dark:bg-blue-950/20">
+                <div className="flex items-center gap-3">
+                  <LayoutGrid className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <Label className="text-blue-900 dark:text-blue-100">Include Project Recommendations</Label>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Add &quot;Projects we think you&apos;ll love&quot; section at the bottom
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={form.includeProjectRecommendations}
+                  onCheckedChange={(checked) => onFormChange({ ...form, includeProjectRecommendations: checked })}
                 />
               </div>
 
