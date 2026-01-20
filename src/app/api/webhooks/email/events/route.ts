@@ -15,6 +15,21 @@ type MailgunEventType =
   | "permanent_fail"
   | "failed";
 
+// SendGrid Event Types
+type SendGridEventType =
+  | "processed"
+  | "dropped"
+  | "delivered"
+  | "deferred"
+  | "bounce"
+  | "blocked"
+  | "open"
+  | "click"
+  | "spamreport"
+  | "unsubscribe"
+  | "group_unsubscribe"
+  | "group_resubscribe";
+
 interface MailgunEventData {
   event: MailgunEventType;
   recipient: string;
@@ -30,6 +45,20 @@ interface MailgunEventData {
   };
   reason?: string;
   severity?: string;
+}
+
+interface SendGridEventData {
+  event: SendGridEventType;
+  email: string;
+  timestamp: number;
+  sg_message_id?: string;
+  useragent?: string;
+  ip?: string;
+  url?: string;
+  reason?: string;
+  status?: string;
+  type?: string; // bounce type: "bounce" or "blocked"
+  bounce_classification?: string;
 }
 
 interface MailgunWebhookPayload {
@@ -60,28 +89,132 @@ function mapEventToStatus(event: MailgunEventType): string | null {
   }
 }
 
-// POST - Handle Mailgun Event Webhook
+// Add email to blocklist and update all related records
+async function handleBounce(email: string, reason?: string, source?: string) {
+  const normalizedEmail = email.toLowerCase().trim();
+
+  console.log(`[Bounce] Processing bounce for: ${normalizedEmail}, reason: ${reason}`);
+
+  // 1. Add to EmailBlocklist if not already there
+  const existingBlock = await db.emailBlocklist.findFirst({
+    where: {
+      type: "EMAIL",
+      value: normalizedEmail,
+    },
+  });
+
+  if (!existingBlock) {
+    await db.emailBlocklist.create({
+      data: {
+        type: "EMAIL",
+        value: normalizedEmail,
+        reason: reason || "Email bounced",
+        source: source || "webhook-bounce",
+        isActive: true,
+      },
+    });
+    console.log(`[Bounce] Added ${normalizedEmail} to blocklist`);
+  } else {
+    // Update existing blocklist entry
+    await db.emailBlocklist.update({
+      where: { id: existingBlock.id },
+      data: {
+        blockedCount: { increment: 1 },
+        lastBlockedAt: new Date(),
+        reason: reason || existingBlock.reason,
+      },
+    });
+  }
+
+  // 2. Update EmailListSubscriber status to "bounced" for all creators
+  const updatedSubscribers = await db.emailListSubscriber.updateMany({
+    where: {
+      email: normalizedEmail,
+      status: { not: "bounced" },
+    },
+    data: {
+      status: "bounced",
+    },
+  });
+
+  if (updatedSubscribers.count > 0) {
+    console.log(`[Bounce] Updated ${updatedSubscribers.count} subscriber records to bounced`);
+  }
+
+  return { blockedEmail: normalizedEmail };
+}
+
+// Handle spam complaint - more severe than bounce
+async function handleSpamComplaint(email: string) {
+  const normalizedEmail = email.toLowerCase().trim();
+
+  console.log(`[Spam] Processing spam complaint for: ${normalizedEmail}`);
+
+  // Add to blocklist with spam reason
+  const existingBlock = await db.emailBlocklist.findFirst({
+    where: {
+      type: "EMAIL",
+      value: normalizedEmail,
+    },
+  });
+
+  if (!existingBlock) {
+    await db.emailBlocklist.create({
+      data: {
+        type: "EMAIL",
+        value: normalizedEmail,
+        reason: "Spam complaint",
+        source: "webhook-spam",
+        isActive: true,
+      },
+    });
+  } else {
+    await db.emailBlocklist.update({
+      where: { id: existingBlock.id },
+      data: {
+        reason: "Spam complaint",
+        blockedCount: { increment: 1 },
+        lastBlockedAt: new Date(),
+      },
+    });
+  }
+
+  // Update subscriber status
+  await db.emailListSubscriber.updateMany({
+    where: { email: normalizedEmail },
+    data: { status: "unsubscribed" },
+  });
+}
+
+// POST - Handle Mailgun/SendGrid Event Webhook
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get("content-type") || "";
     let eventData: MailgunEventData | null = null;
+    let sendGridEvents: SendGridEventData[] | null = null;
 
     if (contentType.includes("application/json")) {
-      // JSON format (newer Mailgun format)
-      const payload: MailgunWebhookPayload = await request.json();
+      const payload = await request.json();
 
-      if (payload["event-data"]) {
-        eventData = payload["event-data"];
-      } else if (payload.event && payload.recipient) {
-        // Legacy format
-        eventData = {
-          event: payload.event as MailgunEventType,
-          recipient: payload.recipient,
-          timestamp: parseInt(payload.timestamp || "0", 10),
-        };
+      // Check if it's a SendGrid webhook (array of events)
+      if (Array.isArray(payload)) {
+        sendGridEvents = payload as SendGridEventData[];
+      } else {
+        // Mailgun JSON format
+        const mailgunPayload = payload as MailgunWebhookPayload;
+        if (mailgunPayload["event-data"]) {
+          eventData = mailgunPayload["event-data"];
+        } else if (mailgunPayload.event && mailgunPayload.recipient) {
+          // Legacy format
+          eventData = {
+            event: mailgunPayload.event as MailgunEventType,
+            recipient: mailgunPayload.recipient,
+            timestamp: parseInt(mailgunPayload.timestamp || "0", 10),
+          };
+        }
       }
     } else if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
-      // Form data format
+      // Mailgun Form data format
       const formData = await request.formData();
 
       // Try to get event-data as JSON string first
@@ -112,17 +245,75 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Handle SendGrid events
+    if (sendGridEvents && sendGridEvents.length > 0) {
+      for (const sgEvent of sendGridEvents) {
+        const email = sgEvent.email?.toLowerCase();
+        if (!email) continue;
+
+        console.log(`[SendGrid] Event ${sgEvent.event}: ${email}`);
+
+        switch (sgEvent.event) {
+          case "bounce":
+          case "blocked":
+          case "dropped":
+            await handleBounce(email, sgEvent.reason || sgEvent.bounce_classification, "sendgrid-bounce");
+            break;
+          case "spamreport":
+            await handleSpamComplaint(email);
+            break;
+          case "unsubscribe":
+          case "group_unsubscribe":
+            await db.emailListSubscriber.updateMany({
+              where: { email },
+              data: { status: "unsubscribed" },
+            });
+            break;
+        }
+      }
+
+      return NextResponse.json({ success: true, processed: sendGridEvents.length });
+    }
+
+    // Handle Mailgun events
     if (!eventData) {
-      console.error("Could not parse Mailgun webhook payload");
+      console.error("Could not parse webhook payload");
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
     const email = eventData.recipient?.toLowerCase();
     const eventType = eventData.event;
 
-    console.log(`Email ${eventType}: recipient=${email}`);
+    console.log(`[Mailgun] Email ${eventType}: recipient=${email}`);
 
-    // Find recent emails sent to this recipient
+    // Handle bounce and spam events globally (update blocklist and subscriber lists)
+    switch (eventType) {
+      case "permanent_fail":
+      case "failed":
+        if (email) {
+          await handleBounce(
+            email,
+            eventData.reason || eventData["delivery-status"]?.description,
+            "mailgun-bounce"
+          );
+        }
+        break;
+      case "complained":
+        if (email) {
+          await handleSpamComplaint(email);
+        }
+        break;
+      case "unsubscribed":
+        if (email) {
+          await db.emailListSubscriber.updateMany({
+            where: { email },
+            data: { status: "unsubscribed" },
+          });
+        }
+        break;
+    }
+
+    // Find recent emails sent to this recipient for AdminEmail tracking
     const recentEmails = await db.adminEmail.findMany({
       where: {
         toEmail: email,
@@ -137,9 +328,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (recentEmails.length === 0) {
-      // No matching email found - that's ok, just log it
-      console.log(`No matching email found for ${email} - event: ${eventType}`);
-      return NextResponse.json({ success: true, action: "no_matching_email" });
+      // No matching email found - that's ok, we already processed bounce/spam
+      console.log(`No matching AdminEmail found for ${email} - event: ${eventType}`);
+      return NextResponse.json({ success: true, action: "processed_globally" });
     }
 
     // Use the most recent email
@@ -216,7 +407,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, event: eventType, action: "no_update_needed" });
   } catch (error) {
     console.error("Error processing email event webhook:", error);
-    // Return 200 to prevent Mailgun from retrying
+    // Return 200 to prevent retries
     return NextResponse.json({
       success: false,
       error: "Failed to process event",
@@ -228,16 +419,25 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     status: "ok",
-    message: "Mailgun Event Webhook is active",
+    message: "Email Event Webhook is active (Mailgun + SendGrid)",
     endpoint: "/api/webhooks/email/events",
-    trackedEvents: [
-      "delivered",
-      "opened",
-      "clicked",
-      "permanent_fail",
-      "temporary_fail",
-      "complained",
-      "unsubscribed",
-    ],
+    trackedEvents: {
+      mailgun: [
+        "delivered",
+        "opened",
+        "clicked",
+        "permanent_fail",
+        "temporary_fail",
+        "complained",
+        "unsubscribed",
+      ],
+      sendgrid: [
+        "bounce",
+        "blocked",
+        "dropped",
+        "spamreport",
+        "unsubscribe",
+      ],
+    },
   });
 }

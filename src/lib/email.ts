@@ -103,6 +103,70 @@ export async function isEmailUnsubscribed(email: string): Promise<boolean> {
   }
 }
 
+// Check if an email is on the blocklist (bounced, spam reported, etc.)
+export async function isEmailBlocked(email: string): Promise<{ blocked: boolean; reason?: string }> {
+  try {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if email is directly blocked
+    const blockedEmail = await db.emailBlocklist.findFirst({
+      where: {
+        type: "EMAIL",
+        value: normalizedEmail,
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } },
+        ],
+      },
+    });
+
+    if (blockedEmail) {
+      // Update blocked count
+      await db.emailBlocklist.update({
+        where: { id: blockedEmail.id },
+        data: {
+          blockedCount: { increment: 1 },
+          lastBlockedAt: new Date(),
+        },
+      });
+      return { blocked: true, reason: blockedEmail.reason || "Email is on blocklist" };
+    }
+
+    // Check if domain is blocked
+    const domain = normalizedEmail.split("@")[1];
+    if (domain) {
+      const blockedDomain = await db.emailBlocklist.findFirst({
+        where: {
+          type: "DOMAIN",
+          value: domain,
+          isActive: true,
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: new Date() } },
+          ],
+        },
+      });
+
+      if (blockedDomain) {
+        await db.emailBlocklist.update({
+          where: { id: blockedDomain.id },
+          data: {
+            blockedCount: { increment: 1 },
+            lastBlockedAt: new Date(),
+          },
+        });
+        return { blocked: true, reason: blockedDomain.reason || "Domain is blocked" };
+      }
+    }
+
+    return { blocked: false };
+  } catch (error) {
+    console.error("[Email] Error checking blocklist:", error);
+    return { blocked: false };
+  }
+}
+
 // Add whitelist banner to the top of HTML email
 function addWhitelistBanner(html: string, fromEmail: string): string {
   const whitelistGuideUrl = `${APP_URL}/help/whitelist`;
@@ -259,6 +323,14 @@ async function sendViaMailgun(
 
 export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName, isCreatorEmail }: SendEmailOptions) {
   console.log(`[Email] sendEmail called - to: ${to}, subject: ${subject}`);
+
+  // Check if email is on the blocklist (bounced, spam reported, etc.)
+  // This check applies to ALL emails including transactional ones
+  const blocklistCheck = await isEmailBlocked(to);
+  if (blocklistCheck.blocked) {
+    console.log(`[Email] Skipping email - address is blocked: ${to}, reason: ${blocklistCheck.reason}`);
+    return { success: false, error: blocklistCheck.reason || "Email address is blocked", skipped: true, blocked: true };
+  }
 
   // Check if user has unsubscribed (unless this is a transactional email)
   if (!skipUnsubscribeCheck) {
