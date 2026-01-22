@@ -54,7 +54,7 @@ interface Message {
 interface Conversation {
   id: string;
   otherUser: User;
-  project: Project;
+  project: Project | null;
   lastMessage: {
     id: string;
     content: string;
@@ -125,8 +125,10 @@ export function MessagesPanel({
         try {
           const params = new URLSearchParams({
             conversationWith: selectedConversation.otherUser.id,
-            projectId: selectedConversation.project.id,
           });
+          if (selectedConversation.project?.id) {
+            params.set("projectId", selectedConversation.project.id);
+          }
           const res = await fetch(`/api/messages?${params}`);
           if (res.ok) {
             const data = await res.json();
@@ -138,14 +140,14 @@ export function MessagesPanel({
               headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
               body: JSON.stringify({
                 conversationWith: selectedConversation.otherUser.id,
-                projectId: selectedConversation.project.id,
+                projectId: selectedConversation.project?.id,
               }),
             });
 
             // Update unread count in conversation list
             setConversations((prev) =>
               prev.map((c) =>
-                c.otherUser.id === selectedConversation.otherUser.id && c.project.id === selectedConversation.project.id
+                c.otherUser.id === selectedConversation.otherUser.id && c.project?.id === selectedConversation.project?.id
                   ? { ...c, unreadCount: 0 }
                   : c
               )
@@ -279,7 +281,7 @@ export function MessagesPanel({
 
   const filteredConversations = conversations.filter((conv) =>
     conv.otherUser.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.project.title.toLowerCase().includes(searchQuery.toLowerCase())
+    conv.project?.title?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getInitials = (name: string | null) => {
@@ -402,7 +404,7 @@ export function MessagesPanel({
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {conv.project.title}
+                        {conv.project?.title || "Direct Message"}
                       </p>
                       <p className={cn(
                         "text-xs mt-1 truncate",
@@ -526,7 +528,7 @@ export function MessagesPanel({
                   {selectedConversation.otherUser.name || "Unknown User"}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  Re: {selectedConversation.project.title}
+                  {selectedConversation.project?.title ? `Re: ${selectedConversation.project.title}` : "Direct Message"}
                 </p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setSelectedConversation(null)}>
