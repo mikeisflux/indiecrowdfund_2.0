@@ -507,10 +507,10 @@ export default function BackerDashboard() {
               Backer Dashboard
             </Badge>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard/notifications" className="hidden sm:block">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Link href="/dashboard/backer?tab=notifications">
+              <Button variant="ghost" size="icon" className="relative h-9 w-9 sm:h-10 sm:w-10">
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                 {stats.pendingSurveys > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full text-[10px] flex items-center justify-center text-primary-foreground font-bold">
                     {stats.pendingSurveys}
@@ -518,9 +518,9 @@ export default function BackerDashboard() {
                 )}
               </Button>
             </Link>
-            <Link href="/dashboard/messages" className="hidden sm:block">
-              <Button variant="ghost" size="icon" className="relative">
-                <MessageSquare className="h-5 w-5" />
+            <Link href="/dashboard/backer?tab=messages">
+              <Button variant="ghost" size="icon" className="relative h-9 w-9 sm:h-10 sm:w-10">
+                <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
                 {unreadMessages > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">
                     {unreadMessages > 9 ? "9+" : unreadMessages}

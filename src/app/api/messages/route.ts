@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { sendEmail } from "@/lib/email";
+
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 const createMessageSchema = z.object({
   projectId: z.string(),
@@ -30,15 +34,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Verify recipient exists
+    // Verify recipient exists and get their details
     const recipient = await db.user.findUnique({
       where: { id: data.recipientId },
-      select: { id: true },
+      select: { id: true, email: true, name: true },
     });
 
     if (!recipient) {
       return NextResponse.json({ error: "Recipient not found" }, { status: 404 });
     }
+
+    // Get sender's name for the notification
+    const sender = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { name: true },
+    });
+
+    // Get project title for context
+    const projectForEmail = await db.project.findUnique({
+      where: { id: data.projectId },
+      select: { title: true, slug: true },
+    });
 
     const message = await db.message.create({
       data: {
@@ -54,6 +70,44 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+
+    // Send email notification to recipient
+    if (recipient.email) {
+      try {
+        const senderName = sender?.name || "Someone";
+        const projectTitle = projectForEmail?.title || "a project";
+        const contentPreview = data.content.length > 200
+          ? data.content.substring(0, 200) + "..."
+          : data.content;
+
+        await sendEmail({
+          to: recipient.email,
+          subject: `New message from ${senderName} about "${projectTitle}"`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #6366f1;">You have a new message</h2>
+              <p>Hi ${recipient.name || "there"},</p>
+              <p><strong>${senderName}</strong> sent you a message about <strong>${projectTitle}</strong>:</p>
+              <div style="background: #f3f4f6; border-left: 4px solid #6366f1; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                ${data.subject ? `<p style="margin: 0 0 8px 0; font-weight: bold;">${data.subject}</p>` : ""}
+                <p style="margin: 0; color: #374151; white-space: pre-wrap;">${contentPreview}</p>
+              </div>
+              <p style="margin-top: 20px;">
+                <a href="${APP_URL}/dashboard/messages?projectId=${data.projectId}&recipientId=${session.user.id}" style="background: linear-gradient(to right, #6366f1, #a855f7); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View & Reply</a>
+              </p>
+              <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                You received this email because someone sent you a message on ${APP_NAME}.
+                <a href="${APP_URL}/dashboard/backer?tab=notifications" style="color: #6366f1;">Manage your notification preferences</a>
+              </p>
+            </div>
+          `,
+          skipUnsubscribeCheck: true, // Transactional email for direct messages
+        });
+      } catch (emailError) {
+        console.error("Failed to send message notification email:", emailError);
+        // Don't fail the message creation if email fails
+      }
+    }
 
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {

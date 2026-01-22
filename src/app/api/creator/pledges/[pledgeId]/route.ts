@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
+import { sendEmail } from "@/lib/email";
+
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export const dynamic = "force-dynamic";
 
@@ -260,6 +264,40 @@ export async function PATCH(
 
           console.log(`[DivinityCoin Refund] Processed refund for pledge ${pledgeId}. User ${userId}: ${previousBalance} -> ${newBalance}`);
 
+          // Send refund notification email to backer
+          if (typedPledge.user.email) {
+            try {
+              await sendEmail({
+                to: typedPledge.user.email,
+                subject: `Your refund for "${typedPledge.project.title}" has been processed`,
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #16a34a;">Refund Processed</h2>
+                    <p>Hi ${typedPledge.user.name || "there"},</p>
+                    <p>Your refund for <strong>${typedPledge.project.title}</strong> has been successfully processed.</p>
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                      <p style="margin: 0 0 8px 0;"><strong>Refund Amount:</strong> $${refundAmount.toFixed(2)}</p>
+                      <p style="margin: 0 0 8px 0;"><strong>Refunded To:</strong> DivinityCoin Wallet</p>
+                      <p style="margin: 0;"><strong>New Wallet Balance:</strong> $${newBalance.toFixed(2)}</p>
+                    </div>
+                    ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
+                    <p>You can use your DivinityCoin balance to back other projects on ${APP_NAME}.</p>
+                    <p style="margin-top: 20px;">
+                      <a href="${APP_URL}/dashboard/backer?tab=wallet" style="background: #0066FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View Your Wallet</a>
+                    </p>
+                    <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                      If you have any questions, please contact the project creator or our support team.
+                    </p>
+                  </div>
+                `,
+                skipUnsubscribeCheck: true, // Transactional email
+              });
+            } catch (emailError) {
+              console.error("Failed to send refund email:", emailError);
+              // Don't fail the refund if email fails
+            }
+          }
+
           return NextResponse.json({
             success: true,
             message: "DivinityCoin refunded to backer's wallet successfully",
@@ -319,6 +357,40 @@ export async function PATCH(
             currentAmount: { decrement: typedPledge.amount },
           },
         });
+
+        // Send refund notification email to backer
+        if (typedPledge.user.email) {
+          try {
+            const refundAmount = Number(typedPledge.amount);
+            await sendEmail({
+              to: typedPledge.user.email,
+              subject: `Your refund for "${typedPledge.project.title}" has been processed`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #16a34a;">Refund Processed</h2>
+                  <p>Hi ${typedPledge.user.name || "there"},</p>
+                  <p>Your refund for <strong>${typedPledge.project.title}</strong> has been successfully processed.</p>
+                  <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                    <p style="margin: 0 0 8px 0;"><strong>Refund Amount:</strong> $${refundAmount.toFixed(2)}</p>
+                    <p style="margin: 0;"><strong>Refunded To:</strong> Original payment method</p>
+                  </div>
+                  ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
+                  <p>Please allow 5-10 business days for the refund to appear on your statement, depending on your bank.</p>
+                  <p style="margin-top: 20px;">
+                    <a href="${APP_URL}/dashboard/backer" style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View Your Dashboard</a>
+                  </p>
+                  <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                    If you have any questions, please contact the project creator or our support team.
+                  </p>
+                </div>
+              `,
+              skipUnsubscribeCheck: true, // Transactional email
+            });
+          } catch (emailError) {
+            console.error("Failed to send refund email:", emailError);
+            // Don't fail the refund if email fails
+          }
+        }
 
         return NextResponse.json({
           success: true,
