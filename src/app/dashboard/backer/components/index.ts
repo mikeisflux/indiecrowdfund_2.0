@@ -16,3 +16,4 @@ export { CollectionsTab } from "./collections-tab";
 export { NotificationPreferencesTab } from "./notification-preferences-tab";
 export { FollowingTab } from "./following-tab";
 export { DigitalLibraryTab } from "./digital-library-tab";
+export { MessagesTab } from "./messages-tab";

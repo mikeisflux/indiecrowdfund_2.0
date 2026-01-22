@@ -70,6 +70,7 @@ import {
   NotificationPreferencesTab,
   FollowingTab,
   DigitalLibraryTab,
+  MessagesTab,
 } from "./components";
 
 interface BackedProject {
@@ -194,6 +195,7 @@ export default function BackerDashboard() {
   const [divinityCoinBalance, setDivinityCoinBalance] = useState(0);
   const [isSyncingBalance, setIsSyncingBalance] = useState(false);
   const [unsavingProjectId, setUnsavingProjectId] = useState<string | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const handleSyncBalance = async () => {
     setIsSyncingBalance(true);
@@ -302,6 +304,23 @@ export default function BackerDashboard() {
     }
 
     fetchDashboardData();
+  }, []);
+
+  // Fetch unread messages count
+  useEffect(() => {
+    async function fetchUnreadMessages() {
+      try {
+        const response = await fetch("/api/messages?view=inbox");
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadMessages(data.totalUnread || 0);
+        }
+      } catch (err) {
+        console.error("Failed to fetch unread messages:", err);
+      }
+    }
+
+    fetchUnreadMessages();
   }, []);
 
   const getStatusBadge = (status: string) => {
@@ -500,8 +519,13 @@ export default function BackerDashboard() {
               </Button>
             </Link>
             <Link href="/dashboard/messages" className="hidden sm:block">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="relative">
                 <MessageSquare className="h-5 w-5" />
+                {unreadMessages > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">
+                    {unreadMessages > 9 ? "9+" : unreadMessages}
+                  </span>
+                )}
               </Button>
             </Link>
             <Link href="/dashboard/settings" className="hidden sm:block">
@@ -587,6 +611,15 @@ export default function BackerDashboard() {
                 <TabsTrigger value="saved" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                   <Heart className="mr-2 h-4 w-4" />
                   Saved ({savedProjects.length})
+                </TabsTrigger>
+                <TabsTrigger value="messages" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white relative">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Messages
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold animate-pulse">
+                      {unreadMessages > 9 ? "9+" : unreadMessages}
+                    </span>
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="downloads" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white">
                   <Download className="mr-2 h-4 w-4" />
@@ -886,6 +919,11 @@ export default function BackerDashboard() {
                     })}
                   </div>
                 )}
+              </TabsContent>
+
+              {/* Messages Tab */}
+              <TabsContent value="messages" className="space-y-4">
+                <MessagesTab />
               </TabsContent>
 
               {/* Downloads Tab */}
