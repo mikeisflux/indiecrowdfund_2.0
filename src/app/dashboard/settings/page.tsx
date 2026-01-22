@@ -211,6 +211,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch("/api/user/verify-email", {
         method: "POST",
+        headers: getCSRFHeaders(),
       });
 
       const data = await response.json();
