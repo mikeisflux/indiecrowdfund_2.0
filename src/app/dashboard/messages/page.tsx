@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
@@ -14,7 +15,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-export default function MessagesPage() {
+function MessagesContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const projectId = searchParams?.get("projectId") || undefined;
@@ -101,5 +102,24 @@ export default function MessagesPage() {
         />
       </div>
     </div>
+  );
+}
+
+function MessagesLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
+      <div className="animate-pulse flex flex-col items-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-primary/20" />
+        <div className="h-4 w-32 bg-muted rounded" />
+      </div>
+    </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<MessagesLoading />}>
+      <MessagesContent />
+    </Suspense>
   );
 }
