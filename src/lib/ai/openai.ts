@@ -66,7 +66,7 @@ interface ProjectDetails {
 export async function autoTagProject(
   project: ProjectDetails
 ): Promise<AutoTagResult> {
-  const prompt = `Analyze this crowdfunding project and suggest appropriate categories and tags.
+  const prompt = `Analyze this crowdfunding project and suggest appropriate categories and SPECIFIC thematic/content tags.
 
 Project Title: ${project.title}
 Description: ${project.description}
@@ -74,11 +74,18 @@ ${project.rewards?.length ? `Rewards: ${project.rewards.map((r) => r.title).join
 
 Available categories: ${PROJECT_CATEGORIES.join(", ")}
 
+IMPORTANT TAG GUIDELINES:
+- DO NOT use generic format/medium tags like "comics", "comic book", "graphic novel", "indie game", "board game", "music album", etc.
+- Instead, focus on THEMATIC and CONTENT-BASED tags that describe what the project is ABOUT
+- Use tags that describe: genres, themes, settings, character types, art styles, emotional tones, story elements
+- Examples of GOOD thematic tags: "sci-fi", "dystopian", "noir", "female protagonist", "space exploration", "steampunk", "post-apocalyptic", "mystery", "romance", "coming-of-age", "psychological horror", "political thriller", "slice-of-life", "cyberpunk", "fantasy adventure", "supernatural", "time travel", "heist", "survival", "dark comedy"
+- Examples of BAD generic tags to AVOID: "comics", "comic", "graphic novel", "indie", "crowdfunding", "book", "game", "music", "art", "creative"
+
 Respond in JSON format:
 {
   "primaryCategory": "most appropriate category from the list",
   "suggestedCategories": ["up to 3 other relevant categories"],
-  "tags": ["5-10 relevant keyword tags for discoverability"],
+  "tags": ["8-12 specific thematic/content tags that describe what this project is ABOUT, not what format it is"],
   "confidence": 0.0-1.0 confidence score
 }`;
 
@@ -89,7 +96,7 @@ Respond in JSON format:
         {
           role: "system",
           content:
-            "You are an expert at categorizing crowdfunding projects. Respond only with valid JSON.",
+            "You are an expert at categorizing crowdfunding projects and generating specific, thematic tags. Focus on what projects are ABOUT (themes, genres, settings, character types, story elements, art styles) rather than what format they are in. Never suggest generic format tags like 'comics', 'graphic novel', 'indie game', etc. Respond only with valid JSON.",
         },
         { role: "user", content: prompt },
       ],
