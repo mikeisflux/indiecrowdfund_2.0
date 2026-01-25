@@ -161,33 +161,81 @@ export async function POST(
     const recipientMap = new Map<string, Recipient>();
     const audience = campaign.targetAudience || "all";
 
+    // Parse segment filters if available
+    const filters = campaign.filters as { segments?: string[] } | null;
+    const selectedSegmentIds = filters?.segments || [];
+
     switch (audience) {
       case "subscriber":
         // Get newsletter subscribers (excluding retailers)
+        // If segments are selected, filter by segment tags
+        let subscriberWhere: {
+          isActive: boolean;
+          NOT?: { source: { contains: string; mode: "insensitive" } };
+          OR?: Array<{ tags: { has: string } } | { source: { in: string[] } }>;
+        } = {
+          isActive: true,
+          NOT: { source: { contains: "retailer", mode: "insensitive" } },
+        };
+
+        // If specific segments are selected, filter by them
+        if (selectedSegmentIds.length > 0) {
+          // Build filters for each segment
+          const segmentFilters: Array<{ tags: { has: string } } | { source: { in: string[] } }> = [];
+
+          for (const segmentId of selectedSegmentIds) {
+            if (segmentId === "self-signup") {
+              // Self sign-ups have specific source values
+              segmentFilters.push({ source: { in: ["website_signup", "self_signup", "footer_signup", "teaser_signup"] } });
+            } else if (segmentId === "csv-import") {
+              // Untagged CSV imports
+              segmentFilters.push({ source: { in: ["csv_import"] } });
+            } else if (segmentId.startsWith("tag-")) {
+              // Tag-based segment - extract the tag name
+              const tagName = segmentId.replace("tag-", "").replace(/-/g, " ");
+              // We need to find the actual tag name from the database
+              // For now, search for any tag that matches case-insensitively
+              segmentFilters.push({ tags: { has: tagName } });
+            } else {
+              // Direct tag name
+              segmentFilters.push({ tags: { has: segmentId } });
+            }
+          }
+
+          if (segmentFilters.length > 0) {
+            subscriberWhere = {
+              isActive: true,
+              OR: segmentFilters,
+            };
+          }
+        }
+
         const [subscribers, verifiedUsers] = await Promise.all([
           db.newsletterSubscriber.findMany({
-            where: {
-              isActive: true,
-              NOT: { source: { contains: "retailer", mode: "insensitive" } },
-            },
-            select: { email: true, name: true },
+            where: subscriberWhere,
+            select: { email: true, name: true, tags: true },
           }),
-          db.user.findMany({
-            where: { emailVerified: { not: null } },
-            select: { email: true, name: true },
-          }),
+          // Only include verified users if no specific segments are selected
+          selectedSegmentIds.length === 0
+            ? db.user.findMany({
+                where: { emailVerified: { not: null } },
+                select: { email: true, name: true },
+              })
+            : Promise.resolve([]),
         ]);
         // Add subscribers
         subscribers.forEach((s: { email: string; name: string | null }) => {
           recipientMap.set(s.email.toLowerCase(), { email: s.email.toLowerCase(), name: s.name });
         });
-        // Add/update with verified users (user names take priority)
-        verifiedUsers.forEach(u => {
-          const existing = recipientMap.get(u.email.toLowerCase());
-          if (!existing || (u.name && !existing.name)) {
-            recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
-          }
-        });
+        // Add/update with verified users (user names take priority) - only if no segment filter
+        if (selectedSegmentIds.length === 0) {
+          verifiedUsers.forEach(u => {
+            const existing = recipientMap.get(u.email.toLowerCase());
+            if (!existing || (u.name && !existing.name)) {
+              recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
+            }
+          });
+        }
         break;
 
       case "backer":

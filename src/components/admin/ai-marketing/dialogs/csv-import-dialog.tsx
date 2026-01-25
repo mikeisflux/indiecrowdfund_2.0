@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -61,6 +62,7 @@ export function CSVImportDialog({
   const [parsedData, setParsedData] = useState<ParsedSubscriber[]>([]);
   const [emailColumn, setEmailColumn] = useState<string>("");
   const [nameColumn, setNameColumn] = useState<string>("");
+  const [listTag, setListTag] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -73,6 +75,7 @@ export function CSVImportDialog({
     setParsedData([]);
     setEmailColumn("");
     setNameColumn("");
+    setListTag("");
     setColumns([]);
     setResult(null);
     setError(null);
@@ -162,6 +165,11 @@ export function CSVImportDialog({
   const handleImport = async () => {
     if (!emailColumn || parsedData.length === 0) return;
 
+    if (!listTag.trim()) {
+      setError("List name/tag is required for segmentation");
+      return;
+    }
+
     setImporting(true);
     setError(null);
 
@@ -184,7 +192,7 @@ export function CSVImportDialog({
           "Content-Type": "application/json",
           ...getCSRFHeaders(),
         },
-        body: JSON.stringify({ subscribers }),
+        body: JSON.stringify({ subscribers, listTag: listTag.trim() }),
       });
 
       const data = await response.json();
@@ -379,6 +387,19 @@ export function CSVImportDialog({
                   </div>
                 </div>
 
+                {/* List Tag / Segment */}
+                <div className="space-y-2">
+                  <Label>List Name / Tag *</Label>
+                  <Input
+                    placeholder="e.g., Creator Name, Newsletter July 2024, Kickstarter Backers"
+                    value={listTag}
+                    onChange={(e) => setListTag(e.target.value)}
+                  />
+                  <p className="text-xs text-zinc-500">
+                    Tag these subscribers for segmentation. Use creator names, list sources, or campaign names.
+                  </p>
+                </div>
+
                 {/* Preview */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -430,7 +451,7 @@ export function CSVImportDialog({
               {file && (
                 <Button
                   onClick={handleImport}
-                  disabled={importing || !emailColumn || validCount === 0}
+                  disabled={importing || !emailColumn || !listTag.trim() || validCount === 0}
                 >
                   {importing ? (
                     <>

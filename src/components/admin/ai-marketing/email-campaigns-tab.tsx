@@ -40,6 +40,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sparkles,
   Users,
@@ -64,6 +66,7 @@ import {
   Trash2,
   Loader2,
   StopCircle,
+  Filter,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 
@@ -93,6 +96,7 @@ interface CampaignDetails {
   subject: string;
   htmlContent: string;
   targetAudience: string;
+  filters: CampaignFilters | null;
   status: string;
   scheduledFor: string | null;
   sentAt: string | null;
@@ -103,6 +107,20 @@ interface CampaignDetails {
   bounceCount: number;
   unsubscribeCount: number;
   createdAt: string;
+}
+
+interface CampaignFilters {
+  segments?: string[];
+  excludeSegments?: string[];
+}
+
+interface SubscriberSegment {
+  id: string;
+  name: string;
+  description: string;
+  count: number;
+  filterType: "tag" | "source";
+  filterValues: string[];
 }
 
 interface EmailCampaignsTabProps {
@@ -143,23 +161,43 @@ export function EmailCampaignsTab({
   const [editSubject, setEditSubject] = useState("");
   const [editHtmlContent, setEditHtmlContent] = useState("");
 
+  // Segment selection state
+  const [availableSegments, setAvailableSegments] = useState<SubscriberSegment[]>([]);
+  const [selectedSegments, setSelectedSegments] = useState<string[]>([]);
+  const [segmentsLoading, setSegmentsLoading] = useState(false);
+
   // Fetch campaign details
   const fetchCampaignDetails = async (id: string) => {
     setIsLoading(true);
+    setSegmentsLoading(true);
     try {
-      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${id}`);
-      if (response.ok) {
-        const data = await response.json();
+      // Fetch both campaign details and segments in parallel
+      const [campaignRes, segmentsRes] = await Promise.all([
+        fetch(`/api/admin/ai-marketing/campaigns/manage/${id}`),
+        fetch("/api/admin/ai-marketing/subscribers/tags"),
+      ]);
+
+      if (campaignRes.ok) {
+        const data = await campaignRes.json();
         setSelectedCampaign(data.campaign);
         setEditName(data.campaign.name);
         setEditSubject(data.campaign.subject);
         setEditHtmlContent(data.campaign.htmlContent || "");
+        // Load saved segment filters
+        const filters = data.campaign.filters as CampaignFilters | null;
+        setSelectedSegments(filters?.segments || []);
         setShowPreviewDialog(true);
+      }
+
+      if (segmentsRes.ok) {
+        const segData = await segmentsRes.json();
+        setAvailableSegments(segData.segments || []);
       }
     } catch (error) {
       console.error("Failed to fetch campaign details:", error);
     } finally {
       setIsLoading(false);
+      setSegmentsLoading(false);
     }
   };
 
@@ -295,6 +333,12 @@ export function EmailCampaignsTab({
     if (!selectedCampaign) return;
     setIsLoading(true);
     try {
+      // Build filters object with selected segments
+      const filters: CampaignFilters = {};
+      if (selectedSegments.length > 0) {
+        filters.segments = selectedSegments;
+      }
+
       const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${selectedCampaign.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
@@ -302,6 +346,7 @@ export function EmailCampaignsTab({
           name: editName,
           subject: editSubject,
           htmlContent: editHtmlContent,
+          filters: Object.keys(filters).length > 0 ? filters : null,
         }),
       });
       if (response.ok) {
@@ -752,6 +797,79 @@ export function EmailCampaignsTab({
                       placeholder="Edit your email content..."
                       minHeight="300px"
                     />
+                  </div>
+
+                  {/* Subscriber Segment Selection */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-zinc-500" />
+                      <Label>Target Subscriber Segments</Label>
+                    </div>
+                    <p className="text-xs text-zinc-500">
+                      Select which subscriber lists/segments should receive this campaign. If none selected, all newsletter subscribers will be targeted.
+                    </p>
+                    {segmentsLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-zinc-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading segments...
+                      </div>
+                    ) : availableSegments.length > 0 ? (
+                      <ScrollArea className="h-48 rounded-lg border p-3">
+                        <div className="space-y-2">
+                          {availableSegments.map((segment) => (
+                            <div
+                              key={segment.id}
+                              className="flex items-center justify-between rounded-lg border p-2 hover:bg-zinc-50"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  id={segment.id}
+                                  checked={selectedSegments.includes(segment.id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedSegments([...selectedSegments, segment.id]);
+                                    } else {
+                                      setSelectedSegments(selectedSegments.filter(id => id !== segment.id));
+                                    }
+                                  }}
+                                />
+                                <div>
+                                  <label
+                                    htmlFor={segment.id}
+                                    className="text-sm font-medium cursor-pointer"
+                                  >
+                                    {segment.name}
+                                  </label>
+                                  <p className="text-xs text-zinc-500">{segment.description}</p>
+                                </div>
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                {segment.count.toLocaleString()}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    ) : (
+                      <div className="rounded-lg border border-dashed p-4 text-center text-sm text-zinc-500">
+                        No subscriber segments found. Import subscribers with tags to create segments.
+                      </div>
+                    )}
+                    {selectedSegments.length > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-zinc-500">Selected:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedSegments.map(id => {
+                            const segment = availableSegments.find(s => s.id === id);
+                            return segment ? (
+                              <Badge key={id} variant="default" className="text-xs">
+                                {segment.name}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (

@@ -29,6 +29,7 @@ interface SubscriberData {
   email: string;
   name?: string;
   source?: string;
+  tags?: string[];
 }
 
 export async function POST(req: NextRequest) {
@@ -41,8 +42,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Get admin's name for tagging
+    const admin = await db.user.findUnique({
+      where: { id: authResult.user.id },
+      select: { name: true },
+    });
+
     const body = await req.json();
-    const { subscribers } = body as { subscribers: SubscriberData[] };
+    const { subscribers, listTag } = body as { subscribers: SubscriberData[]; listTag?: string };
 
     if (!subscribers || !Array.isArray(subscribers) || subscribers.length === 0) {
       return NextResponse.json(
@@ -103,6 +110,16 @@ export async function POST(req: NextRequest) {
     );
     const skippedCount = validSubscribers.length - newSubscribers.length;
 
+    // Build tags array - include list tag and/or admin name
+    const importTags: string[] = [];
+    if (listTag && listTag.trim()) {
+      importTags.push(listTag.trim());
+    }
+    // Add admin name as "Imported by: X" if no specific list tag
+    if (admin?.name && !listTag) {
+      importTags.push(`Imported by ${admin.name}`);
+    }
+
     // Batch import new subscribers
     if (newSubscribers.length > 0) {
       await db.newsletterSubscriber.createMany({
@@ -110,6 +127,7 @@ export async function POST(req: NextRequest) {
           email: s.email,
           name: s.name || null,
           source: s.source || "csv_import",
+          tags: importTags.length > 0 ? importTags : [],
           subscribedAt: new Date(),
           isActive: true,
         })),

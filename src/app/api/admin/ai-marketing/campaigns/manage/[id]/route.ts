@@ -87,7 +87,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, subject, htmlContent, scheduledFor, status } = body;
+    const { name, subject, htmlContent, scheduledFor, status, filters } = body;
 
     // Check campaign exists
     const existing = await db.emailCampaign.findUnique({
@@ -115,6 +115,7 @@ export async function PATCH(
     if (status !== undefined && (status === "DRAFT" || status === "SCHEDULED")) {
       updateData.status = status;
     }
+    if (filters !== undefined) updateData.filters = filters;
 
     const campaign = await db.emailCampaign.update({
       where: { id },
