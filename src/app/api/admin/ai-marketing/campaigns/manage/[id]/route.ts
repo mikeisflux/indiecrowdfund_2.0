@@ -92,7 +92,7 @@ export async function PATCH(
     // Check campaign exists
     const existing = await db.emailCampaign.findUnique({
       where: { id },
-      select: { status: true },
+      select: { status: true, targetAudience: true, filters: true },
     });
 
     if (!existing) {
@@ -116,6 +116,53 @@ export async function PATCH(
       updateData.status = status;
     }
     if (filters !== undefined) updateData.filters = filters;
+
+    // Recalculate recipient count if filters changed (segments)
+    if (filters !== undefined) {
+      const segments = filters?.segments as string[] | undefined;
+      const audience = existing.targetAudience || "subscriber";
+
+      if (audience === "subscriber" && segments && segments.length > 0) {
+        // Build filters for each segment
+        const segmentFilters: Array<{ tags: { has: string } } | { source: { in: string[] } }> = [];
+
+        for (const segmentId of segments) {
+          if (segmentId.startsWith("source-")) {
+            const sourceName = segmentId.replace("source-", "");
+            segmentFilters.push({ source: { in: [sourceName] } });
+          } else if (segmentId.startsWith("tag-")) {
+            const tagName = segmentId.replace("tag-", "").replace(/-/g, " ");
+            segmentFilters.push({ tags: { has: tagName } });
+          } else {
+            segmentFilters.push({ tags: { has: segmentId } });
+          }
+        }
+
+        if (segmentFilters.length > 0) {
+          const recipientCount = await db.newsletterSubscriber.count({
+            where: {
+              isActive: true,
+              OR: segmentFilters,
+            },
+          });
+          updateData.recipientCount = recipientCount;
+        }
+      } else if (!segments || segments.length === 0) {
+        // No segments selected - calculate full audience count
+        if (audience === "subscriber") {
+          const [nlSubCount, verifiedCount] = await Promise.all([
+            db.newsletterSubscriber.count({
+              where: {
+                isActive: true,
+                NOT: { source: { contains: "retailer", mode: "insensitive" } },
+              },
+            }),
+            db.user.count({ where: { emailVerified: { not: null } } }),
+          ]);
+          updateData.recipientCount = nlSubCount + verifiedCount;
+        }
+      }
+    }
 
     const campaign = await db.emailCampaign.update({
       where: { id },
