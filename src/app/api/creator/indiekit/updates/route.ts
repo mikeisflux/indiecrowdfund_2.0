@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
 
       // Send notifications to all backers and followers
       try {
-        await notifyProjectUpdate(projectId, update.title);
+        await notifyProjectUpdate(projectId, update.title, update.content, update.id);
       } catch (notifyError) {
         console.error("Failed to send update notifications:", notifyError);
         // Don't fail the request if notifications fail
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
     // If publishing immediately, send notifications to all backers and followers
     if (validatedData.publish) {
       try {
-        await notifyProjectUpdate(projectId, update.title);
+        await notifyProjectUpdate(projectId, update.title, update.content, update.id);
       } catch (notifyError) {
         console.error("Failed to send update notifications:", notifyError);
         // Don't fail the request if notifications fail
@@ -257,7 +257,7 @@ export async function PATCH(req: NextRequest) {
     // Send notifications only when newly publishing (DRAFT -> PUBLISHED)
     if (validatedData.publish && !wasPublished) {
       try {
-        await notifyProjectUpdate(projectId, update.title);
+        await notifyProjectUpdate(projectId, update.title, update.content, update.id);
       } catch (notifyError) {
         console.error("Failed to send update notifications:", notifyError);
         // Don't fail the request if notifications fail

@@ -184,7 +184,9 @@ export async function notifyProjectLaunched(projectId: string) {
  */
 export async function notifyProjectUpdate(
   projectId: string,
-  updateTitle: string
+  updateTitle: string,
+  updateContent?: string,
+  updateId?: string
 ) {
   const project = await db.project.findUnique({
     where: { id: projectId },
@@ -276,7 +278,9 @@ export async function notifyProjectUpdate(
           project.title,
           projectUrlPath,
           updateTitle,
-          creatorName
+          creatorName,
+          updateContent,
+          updateId
         )
       )
     );

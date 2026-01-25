@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ import { getCSRFHeaders } from "@/lib/csrf";
 
 export default function ProjectPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const vanityname = (params?.vanityname as string) || "";
   const slug = (params?.slug as string) || "";
 
@@ -98,6 +99,19 @@ export default function ProjectPage() {
 
   // Check if this is a legacy slug-only URL (vanityname = "_" from middleware rewrite)
   const isLegacyUrl = vanityname === "_";
+
+  // Handle URL params for tab selection and deep linking
+  useEffect(() => {
+    const tabParam = searchParams?.get("tab");
+    const validTabs: TabValue[] = ["campaign", "rewards", "creator", "faq", "updates", "comments", "community"];
+    if (tabParam && validTabs.includes(tabParam as TabValue)) {
+      setActiveTab(tabParam as TabValue);
+      // Scroll to tabs section after a short delay to ensure content is loaded
+      setTimeout(() => {
+        tabsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [searchParams]);
 
   // Build the project URL path - use slug-only format for legacy URLs
   const projectPath = isLegacyUrl ? `/projects/${slug}` : `/projects/${vanityname}/${slug}`;

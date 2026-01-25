@@ -135,9 +135,22 @@ export async function sendProjectUpdateEmail(
   projectTitle: string,
   projectUrlPath: string,
   updateTitle: string,
-  creatorName: string
+  creatorName: string,
+  updateContent?: string,
+  updateId?: string
 ) {
-  const projectUrl = `${APP_URL}${projectUrlPath}`;
+  // Link directly to the updates tab with anchor to specific update
+  const updateUrl = updateId
+    ? `${APP_URL}${projectUrlPath}?tab=updates#update-${updateId}`
+    : `${APP_URL}${projectUrlPath}?tab=updates`;
+
+  // Truncate content for email preview (strip HTML and limit length)
+  let contentPreview = "";
+  if (updateContent) {
+    // Strip HTML tags for plain text preview
+    const plainText = updateContent.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+    contentPreview = plainText.length > 500 ? plainText.substring(0, 500) + "..." : plainText;
+  }
 
   const html = `
     <!DOCTYPE html>
@@ -157,14 +170,17 @@ export async function sendProjectUpdateEmail(
 
           <div style="background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 20px; margin: 20px 0;">
             <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">${projectTitle}</p>
-            <h3 style="margin: 0; color: #333;">${updateTitle}</h3>
+            <h3 style="margin: 0 0 15px 0; color: #333;">${updateTitle}</h3>
+            ${contentPreview ? `
+            <div style="border-top: 1px solid #e5e5e5; padding-top: 15px; margin-top: 10px;">
+              <p style="margin: 0; color: #444; font-size: 14px; white-space: pre-wrap;">${contentPreview}</p>
+            </div>
+            ` : ""}
           </div>
 
-          <p>The creator has posted a new update for this project. Click below to read the full update.</p>
-
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${projectUrl}" style="display: inline-block; background: #000; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-              Read Update
+            <a href="${updateUrl}" style="display: inline-block; background: #028858; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+              Read Full Update
             </a>
           </div>
         </div>
