@@ -64,36 +64,71 @@ export async function GET() {
       .map(([name, count]) => ({ name, count, type: "source" as const }))
       .sort((a, b) => b.count - a.count);
 
-    // Create segment groups
-    const segments = [
-      {
-        id: "self-signup",
-        name: "Self Sign-ups",
-        description: "Users who signed up directly via the website",
-        count: sourceCounts["website_signup"] || sourceCounts["self_signup"] || 0,
+    // Create segment groups dynamically from actual data
+    const segments: Array<{
+      id: string;
+      name: string;
+      description: string;
+      count: number;
+      filterType: "source" | "tag";
+      filterValues: string[];
+    }> = [];
+
+    // Add source-based segments for each unique source
+    for (const [source, count] of Object.entries(sourceCounts)) {
+      if (count === 0) continue;
+
+      // Format the source name nicely
+      let displayName = source;
+      let description = `Subscribers with source "${source}"`;
+
+      if (source === "creator_import") {
+        displayName = "Creator Imports";
+        description = "Subscribers imported by creators";
+      } else if (source === "csv_import") {
+        displayName = "CSV Imports";
+        description = "Subscribers imported via CSV upload";
+      } else if (source === "website_signup" || source === "self_signup") {
+        displayName = "Website Sign-ups";
+        description = "Users who signed up directly on the website";
+      } else if (source === "footer_signup") {
+        displayName = "Footer Sign-ups";
+        description = "Users who signed up via the website footer";
+      } else if (source === "teaser_signup") {
+        displayName = "Teaser Sign-ups";
+        description = "Users who signed up via project teasers";
+      } else if (source === "registered") {
+        displayName = "Registered Users";
+        description = "Users with verified accounts on the platform";
+      } else if (source === "manual") {
+        displayName = "Manually Added";
+        description = "Subscribers added manually by admins";
+      }
+
+      segments.push({
+        id: `source-${source}`,
+        name: displayName,
+        description,
+        count,
         filterType: "source",
-        filterValues: ["website_signup", "self_signup", "footer_signup", "teaser_signup"],
-      },
-      {
-        id: "csv-import",
-        name: "CSV Imports (Untagged)",
-        description: "Imported subscribers without creator tags",
-        count: sourceCounts["csv_import"] || 0,
-        filterType: "source",
-        filterValues: ["csv_import"],
-      },
-      // Add creator-specific segments from tags
-      ...tags
-        .filter(t => !["csv_import", "website_signup", "self_signup"].includes(t.name))
-        .map(t => ({
-          id: `tag-${t.name.toLowerCase().replace(/\s+/g, "-")}`,
-          name: t.name,
-          description: `Subscribers tagged with "${t.name}"`,
-          count: t.count,
-          filterType: "tag" as const,
-          filterValues: [t.name],
-        })),
-    ];
+        filterValues: [source],
+      });
+    }
+
+    // Add tag-based segments
+    for (const tag of tags) {
+      segments.push({
+        id: `tag-${tag.name.toLowerCase().replace(/\s+/g, "-")}`,
+        name: tag.name,
+        description: `Subscribers tagged with "${tag.name}"`,
+        count: tag.count,
+        filterType: "tag",
+        filterValues: [tag.name],
+      });
+    }
+
+    // Sort segments by count (highest first)
+    segments.sort((a, b) => b.count - a.count);
 
     return NextResponse.json({
       tags,

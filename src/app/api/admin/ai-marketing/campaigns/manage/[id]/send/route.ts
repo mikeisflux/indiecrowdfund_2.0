@@ -184,20 +184,17 @@ export async function POST(
           const segmentFilters: Array<{ tags: { has: string } } | { source: { in: string[] } }> = [];
 
           for (const segmentId of selectedSegmentIds) {
-            if (segmentId === "self-signup") {
-              // Self sign-ups have specific source values
-              segmentFilters.push({ source: { in: ["website_signup", "self_signup", "footer_signup", "teaser_signup"] } });
-            } else if (segmentId === "csv-import") {
-              // Untagged CSV imports
-              segmentFilters.push({ source: { in: ["csv_import"] } });
+            if (segmentId.startsWith("source-")) {
+              // Source-based segment - extract the source name
+              const sourceName = segmentId.replace("source-", "");
+              segmentFilters.push({ source: { in: [sourceName] } });
             } else if (segmentId.startsWith("tag-")) {
               // Tag-based segment - extract the tag name
+              // Convert dashes back to spaces for multi-word tags
               const tagName = segmentId.replace("tag-", "").replace(/-/g, " ");
-              // We need to find the actual tag name from the database
-              // For now, search for any tag that matches case-insensitively
               segmentFilters.push({ tags: { has: tagName } });
             } else {
-              // Direct tag name
+              // Legacy format or direct tag name
               segmentFilters.push({ tags: { has: segmentId } });
             }
           }

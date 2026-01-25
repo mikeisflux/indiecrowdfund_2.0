@@ -119,6 +119,7 @@ export async function POST(request: Request) {
       introMessage,
       scheduleFor,
       includeProjectRecommendations = true,
+      selectedSegments = [],
     } = body;
 
     // Validate required fields
@@ -305,6 +306,8 @@ export async function POST(request: Request) {
           aiGenerated: true,
           preheader: aiContent.preheader,
           bodyText: generateEmailText(aiContent, projects, includeProjectRecommendations),
+          // Store selected subscriber segments for filtering when sending
+          segments: selectedSegments.length > 0 ? selectedSegments : undefined,
           aiContent: {
             ...aiContent as object,
             subjectVariants: subjectVariants || undefined,

@@ -1,9 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmailEditor } from "@/components/ui/email-editor";
 import {
   Select,
@@ -27,6 +31,8 @@ import {
   CheckCircle,
   RefreshCw,
   LayoutGrid,
+  Filter,
+  Loader2,
 } from "lucide-react";
 
 export interface CampaignForm {
@@ -37,6 +43,16 @@ export interface CampaignForm {
   introMessage: string;
   autoGenerateCopy: boolean;
   includeProjectRecommendations: boolean;
+  selectedSegments: string[];
+}
+
+interface SubscriberSegment {
+  id: string;
+  name: string;
+  description: string;
+  count: number;
+  filterType: "tag" | "source";
+  filterValues: string[];
 }
 
 export interface CampaignTemplate {
@@ -75,6 +91,30 @@ export function CampaignDialog({
   onCreate,
   onReset,
 }: CampaignDialogProps) {
+  const [availableSegments, setAvailableSegments] = useState<SubscriberSegment[]>([]);
+  const [segmentsLoading, setSegmentsLoading] = useState(false);
+
+  // Fetch available segments when dialog opens
+  useEffect(() => {
+    if (open) {
+      const fetchSegments = async () => {
+        setSegmentsLoading(true);
+        try {
+          const response = await fetch("/api/admin/ai-marketing/subscribers/tags");
+          if (response.ok) {
+            const data = await response.json();
+            setAvailableSegments(data.segments || []);
+          }
+        } catch (err) {
+          console.error("Failed to fetch segments:", err);
+        } finally {
+          setSegmentsLoading(false);
+        }
+      };
+      fetchSegments();
+    }
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
       if (!isOpen) onReset();
@@ -172,13 +212,14 @@ export function CampaignDialog({
                   <Label>Target Audience</Label>
                   <Select
                     value={form.targetAudience}
-                    onValueChange={(value) => onFormChange({ ...form, targetAudience: value })}
+                    onValueChange={(value) => onFormChange({ ...form, targetAudience: value, selectedSegments: [] })}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Subscribers</SelectItem>
+                      <SelectItem value="subscriber">Newsletter Subscribers</SelectItem>
                       <SelectItem value="backers">Previous Backers</SelectItem>
                       <SelectItem value="high-value">High-Value Backers</SelectItem>
                       <SelectItem value="at-risk">At-Risk Churners</SelectItem>
@@ -209,6 +250,82 @@ export function CampaignDialog({
                   </Select>
                 </div>
               </div>
+
+              {/* Subscriber Segment Selection - only show for subscriber audience types */}
+              {(form.targetAudience === "all" || form.targetAudience === "subscriber") && (
+                <div className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-zinc-500" />
+                    <Label>Target Specific Subscriber Segments</Label>
+                  </div>
+                  <p className="text-xs text-zinc-500">
+                    Select which subscriber lists should receive this campaign. If none selected, all subscribers in the target audience will be included.
+                  </p>
+                  {segmentsLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-zinc-500">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading segments...
+                    </div>
+                  ) : availableSegments.length > 0 ? (
+                    <ScrollArea className="h-40 rounded-lg border p-3">
+                      <div className="space-y-2">
+                        {availableSegments.map((segment) => (
+                          <div
+                            key={segment.id}
+                            className="flex items-center justify-between rounded-lg border p-2 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                id={`create-${segment.id}`}
+                                checked={form.selectedSegments?.includes(segment.id) || false}
+                                onCheckedChange={(checked) => {
+                                  const currentSegments = form.selectedSegments || [];
+                                  if (checked) {
+                                    onFormChange({ ...form, selectedSegments: [...currentSegments, segment.id] });
+                                  } else {
+                                    onFormChange({ ...form, selectedSegments: currentSegments.filter(id => id !== segment.id) });
+                                  }
+                                }}
+                              />
+                              <div>
+                                <label
+                                  htmlFor={`create-${segment.id}`}
+                                  className="text-sm font-medium cursor-pointer"
+                                >
+                                  {segment.name}
+                                </label>
+                                <p className="text-xs text-zinc-500">{segment.description}</p>
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="text-xs">
+                              {segment.count.toLocaleString()}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="rounded-lg border border-dashed p-4 text-center text-sm text-zinc-500">
+                      No subscriber segments found. Import subscribers with tags to create segments.
+                    </div>
+                  )}
+                  {form.selectedSegments && form.selectedSegments.length > 0 && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-zinc-500">Selected:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {form.selectedSegments.map(id => {
+                          const segment = availableSegments.find(s => s.id === id);
+                          return segment ? (
+                            <Badge key={id} variant="default" className="text-xs">
+                              {segment.name}
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {!form.autoGenerateCopy && (
                 <>

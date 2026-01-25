@@ -122,6 +122,7 @@ export default function AIMarketingPage() {
     introMessage: "",
     autoGenerateCopy: true,
     includeProjectRecommendations: true,
+    selectedSegments: [],
   });
 
   // Preset campaign templates
@@ -582,6 +583,7 @@ export default function AIMarketingPage() {
           introMessage: "",
           autoGenerateCopy: true,
           includeProjectRecommendations: true,
+          selectedSegments: [],
         });
       }, 2000);
     } catch (error) {
@@ -604,6 +606,7 @@ export default function AIMarketingPage() {
       introMessage: "",
       autoGenerateCopy: true,
       includeProjectRecommendations: true,
+      selectedSegments: [],
     });
   };
 
