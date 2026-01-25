@@ -114,6 +114,13 @@ export function AddonSelector({
 
                     {/* Right side - Image and button */}
                     <div className="w-full md:w-44 flex-shrink-0 flex flex-col border-t md:border-t-0 md:border-l order-1 md:order-2">
+                      {/* Mobile price badge - visible only on mobile since content reorders */}
+                      <div className="md:hidden bg-gradient-to-r from-zinc-900 to-zinc-800 text-white px-4 py-2 flex items-center justify-between">
+                        <span className="font-semibold text-lg">${addon.amount}</span>
+                        {shipping > 0 && (
+                          <span className="text-zinc-300 text-sm">+${shipping} shipping</span>
+                        )}
+                      </div>
                       <div className="relative aspect-video md:aspect-square bg-zinc-100">
                         {addon.imageUrl ? (
                           <Image
@@ -159,7 +166,8 @@ export function AddonSelector({
                           onClick={() => handleAddonToggle(addon.id)}
                           className="rounded-none h-12 font-medium bg-zinc-900 hover:bg-zinc-800 text-white w-full"
                         >
-                          Add
+                          <span className="md:hidden">Add</span>
+                          <span className="hidden md:inline">Add • ${addon.amount}</span>
                         </Button>
                       )}
                     </div>

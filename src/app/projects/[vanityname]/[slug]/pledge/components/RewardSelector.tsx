@@ -187,6 +187,13 @@ export function RewardSelector({
 
                     {/* Right side - Image and button */}
                     <div className="w-full md:w-44 flex-shrink-0 flex flex-col border-t md:border-t-0 md:border-l order-1 md:order-2">
+                      {/* Mobile price badge - visible only on mobile since content reorders */}
+                      <div className="md:hidden bg-gradient-to-r from-zinc-900 to-zinc-800 text-white px-4 py-2 flex items-center justify-between">
+                        <span className="font-semibold text-lg">${reward.amount}</span>
+                        {shipping > 0 && (
+                          <span className="text-zinc-300 text-sm">+${shipping} shipping</span>
+                        )}
+                      </div>
                       {/* Image */}
                       <div className="relative aspect-video md:aspect-square bg-zinc-100">
                         {reward.imageUrl ? (
