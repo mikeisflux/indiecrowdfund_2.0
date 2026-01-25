@@ -166,6 +166,18 @@ export function EmailCampaignsTab({
   const [selectedSegments, setSelectedSegments] = useState<string[]>([]);
   const [segmentsLoading, setSegmentsLoading] = useState(false);
 
+  // Calculate filtered recipient count based on selected segments
+  const getFilteredRecipientCount = () => {
+    if (selectedSegments.length === 0) {
+      return selectedCampaign?.recipientCount || 0;
+    }
+    // Sum counts of selected segments (may have some overlap, but gives a good estimate)
+    return selectedSegments.reduce((sum, segmentId) => {
+      const segment = availableSegments.find(s => s.id === segmentId);
+      return sum + (segment?.count || 0);
+    }, 0);
+  };
+
   // Fetch campaign details
   const fetchCampaignDetails = async (id: string) => {
     setIsLoading(true);
@@ -760,7 +772,14 @@ export function EmailCampaignsTab({
                 <span className="flex items-center gap-2">
                   <CampaignStatusBadge status={selectedCampaign.status} />
                   <span className="text-zinc-400">|</span>
-                  <span>{selectedCampaign.recipientCount.toLocaleString()} recipients</span>
+                  <span>
+                    {getFilteredRecipientCount().toLocaleString()} recipients
+                    {selectedSegments.length > 0 && (
+                      <span className="text-xs text-zinc-400 ml-1">
+                        (filtered from {selectedCampaign.recipientCount.toLocaleString()})
+                      </span>
+                    )}
+                  </span>
                 </span>
               )}
             </DialogDescription>

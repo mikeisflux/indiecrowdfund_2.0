@@ -310,17 +310,30 @@ export function CampaignDialog({
                     </div>
                   )}
                   {form.selectedSegments && form.selectedSegments.length > 0 && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-zinc-500">Selected:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {form.selectedSegments.map(id => {
-                          const segment = availableSegments.find(s => s.id === id);
-                          return segment ? (
-                            <Badge key={id} variant="default" className="text-xs">
-                              {segment.name}
-                            </Badge>
-                          ) : null;
-                        })}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between rounded-lg bg-blue-50 p-3 dark:bg-blue-950/20">
+                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                          Estimated Recipients
+                        </span>
+                        <span className="text-lg font-bold text-blue-600">
+                          {form.selectedSegments.reduce((sum, id) => {
+                            const segment = availableSegments.find(s => s.id === id);
+                            return sum + (segment?.count || 0);
+                          }, 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-zinc-500">Selected segments:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {form.selectedSegments.map(id => {
+                            const segment = availableSegments.find(s => s.id === id);
+                            return segment ? (
+                              <Badge key={id} variant="default" className="text-xs">
+                                {segment.name}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
                       </div>
                     </div>
                   )}

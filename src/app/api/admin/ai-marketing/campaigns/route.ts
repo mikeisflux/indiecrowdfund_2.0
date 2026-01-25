@@ -33,9 +33,34 @@ async function requireAdmin() {
 }
 
 // Helper to get recipient count by audience type
-async function getRecipientCountByAudience(audience: string): Promise<number> {
+async function getRecipientCountByAudience(audience: string, segments?: string[]): Promise<number> {
   switch (audience) {
     case "subscriber":
+      // If specific segments are selected, count only those
+      if (segments && segments.length > 0) {
+        const segmentFilters: Array<{ tags: { has: string } } | { source: { in: string[] } }> = [];
+
+        for (const segmentId of segments) {
+          if (segmentId.startsWith("source-")) {
+            const sourceName = segmentId.replace("source-", "");
+            segmentFilters.push({ source: { in: [sourceName] } });
+          } else if (segmentId.startsWith("tag-")) {
+            const tagName = segmentId.replace("tag-", "").replace(/-/g, " ");
+            segmentFilters.push({ tags: { has: tagName } });
+          } else {
+            segmentFilters.push({ tags: { has: segmentId } });
+          }
+        }
+
+        if (segmentFilters.length > 0) {
+          return db.newsletterSubscriber.count({
+            where: {
+              isActive: true,
+              OR: segmentFilters,
+            },
+          });
+        }
+      }
       const [nlSubCount, verifiedCount] = await Promise.all([
         db.newsletterSubscriber.count({
           where: {
@@ -83,8 +108,11 @@ export async function GET() {
 
     // Recalculate recipient counts for each campaign based on current data
     const campaignsWithCounts = await Promise.all(
-      campaigns.map(async (campaign: { targetAudience: string | null; [key: string]: unknown }) => {
-        const recipientCount = await getRecipientCountByAudience(campaign.targetAudience || "all");
+      campaigns.map(async (campaign: { targetAudience: string | null; filters: unknown; [key: string]: unknown }) => {
+        // Extract segments from filters if they exist
+        const filters = campaign.filters as { segments?: string[] } | null;
+        const segments = filters?.segments;
+        const recipientCount = await getRecipientCountByAudience(campaign.targetAudience || "all", segments);
         return {
           ...campaign,
           recipientCount,
@@ -198,18 +226,45 @@ export async function POST(request: Request) {
         });
         break;
       case "subscriber":
-        // Newsletter subscribers (excluding retailers) + verified users
-        const [nlSubCount, verifiedCount] = await Promise.all([
-          db.newsletterSubscriber.count({
-            where: {
-              isActive: true,
-              NOT: { source: { contains: "retailer", mode: "insensitive" } },
-            },
-          }),
-          db.user.count({ where: { emailVerified: { not: null } } }),
-        ]);
-        // Estimate combined (some overlap expected)
-        recipientCount = nlSubCount + verifiedCount;
+        // If specific segments are selected, count only those
+        if (selectedSegments && selectedSegments.length > 0) {
+          // Build filters for each segment
+          const segmentFilters: Array<{ tags: { has: string } } | { source: { in: string[] } }> = [];
+
+          for (const segmentId of selectedSegments) {
+            if (segmentId.startsWith("source-")) {
+              const sourceName = segmentId.replace("source-", "");
+              segmentFilters.push({ source: { in: [sourceName] } });
+            } else if (segmentId.startsWith("tag-")) {
+              const tagName = segmentId.replace("tag-", "").replace(/-/g, " ");
+              segmentFilters.push({ tags: { has: tagName } });
+            } else {
+              segmentFilters.push({ tags: { has: segmentId } });
+            }
+          }
+
+          if (segmentFilters.length > 0) {
+            recipientCount = await db.newsletterSubscriber.count({
+              where: {
+                isActive: true,
+                OR: segmentFilters,
+              },
+            });
+          }
+        } else {
+          // Newsletter subscribers (excluding retailers) + verified users
+          const [nlSubCount, verifiedCount] = await Promise.all([
+            db.newsletterSubscriber.count({
+              where: {
+                isActive: true,
+                NOT: { source: { contains: "retailer", mode: "insensitive" } },
+              },
+            }),
+            db.user.count({ where: { emailVerified: { not: null } } }),
+          ]);
+          // Estimate combined (some overlap expected)
+          recipientCount = nlSubCount + verifiedCount;
+        }
         break;
       case "retailer":
         recipientCount = await db.newsletterSubscriber.count({
