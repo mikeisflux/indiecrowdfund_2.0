@@ -305,6 +305,10 @@ export default async function HomePage() {
                 <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-primary to-cyan-500 text-white rounded-full leading-none">NEW</span>
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
               </Link>
+              <Link href="/lcs-locator" className="text-sm font-medium hover:text-primary transition-colors relative group">
+                LCS Locator
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
+              </Link>
               <Link href="/retailers" className="text-sm font-medium hover:text-primary transition-colors relative group">
                 Retailers
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
@@ -366,6 +370,9 @@ export default async function HomePage() {
                   <Link href="/marketplace" className="text-sm font-medium hover:text-primary py-2 flex items-center gap-1.5">
                     Marketplace
                     <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-primary to-cyan-500 text-white rounded-full leading-none">NEW</span>
+                  </Link>
+                  <Link href="/lcs-locator" className="text-sm font-medium hover:text-primary py-2">
+                    LCS Locator
                   </Link>
                   <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2">
                     Retailers

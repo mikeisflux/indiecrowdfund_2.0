@@ -3510,3 +3510,44 @@ model FulfillmentSkippedItem {
   @@unique([projectId, sourceType, sourceId])
   @@index([projectId])
 }
+
+// ============================================
+// LCS LOCATOR - COMIC SHOP DIRECTORY
+// ============================================
+
+model ComicShop {
+  id              String    @id @default(cuid())
+
+  // Basic Info
+  name            String
+  slug            String    @unique
+
+  // Location
+  address         String?
+  city            String
+  state           String?
+  zipCode         String?
+  country         String    @default("USA")
+  region          String?   // Northeast, Midwest, Southeast, Southwest, West, International
+
+  // Contact
+  phone           String?
+  email           String?
+  website         String?
+
+  // Social Media (future)
+  socialLinks     Json?     // { facebook, twitter, instagram }
+
+  // Stats (future features)
+  viewCount       Int       @default(0)
+  favoriteCount   Int       @default(0)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([city])
+  @@index([state])
+  @@index([region])
+  @@index([name])
+}
