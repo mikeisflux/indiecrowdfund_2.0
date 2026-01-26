@@ -97,8 +97,8 @@ export async function GET(request: NextRequest) {
         hasMore: skip + shops.length < totalCount,
       },
       filters: {
-        states: states.map((s) => s.state).filter(Boolean),
-        regions: regions.map((r) => r.region).filter(Boolean),
+        states: states.map((s: { state: string | null }) => s.state).filter(Boolean),
+        regions: regions.map((r: { region: string | null }) => r.region).filter(Boolean),
       },
     });
   } catch (error) {
