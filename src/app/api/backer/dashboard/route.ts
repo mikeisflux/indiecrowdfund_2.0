@@ -177,11 +177,22 @@ export async function GET() {
     const successRate = totalBacked > 0 ? (projectsFunded / totalBacked) * 100 : 0;
     const avgContribution = totalBacked > 0 ? totalPledged / totalBacked : 0;
 
-    // Count surveys
-    const surveysCompleted = pledges.filter((p) => p.surveyCompleted).length;
+    // Count surveys - only count if a survey actually exists for the project
+    const projectIds = Array.from(new Set(pledges.map((p) => p.projectId)));
+    const existingSurveys = await db.survey.findMany({
+      where: {
+        projectId: { in: projectIds },
+        status: { in: ["SENT", "LOCKED"] }, // Only surveys that have been sent to backers
+      },
+      select: { projectId: true },
+    });
+    const projectsWithSurveys = new Set(existingSurveys.map((s) => s.projectId));
+
+    const surveysCompleted = pledges.filter(
+      (p) => p.surveyCompleted && projectsWithSurveys.has(p.projectId)
+    ).length;
     const pendingSurveys = pledges.filter(
-      (p) => !p.surveyCompleted &&
-             (p.project.status === "FUNDED" || Number(p.project.currentAmount) >= Number(p.project.goalAmount))
+      (p) => !p.surveyCompleted && projectsWithSurveys.has(p.projectId)
     ).length;
 
     // Count rewards by fulfillment status
