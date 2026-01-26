@@ -1,11 +1,15 @@
 /**
  * Script to import comic shops from CSV into the database
- * Run with: npx ts-node scripts/import-comic-shops.ts
+ * Run with: npx tsx scripts/import-comic-shops.ts
  */
 
 import { PrismaClient } from "@prisma/client";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const prisma = new PrismaClient();
 
