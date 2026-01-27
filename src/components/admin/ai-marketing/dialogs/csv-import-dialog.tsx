@@ -53,6 +53,13 @@ interface ImportResult {
   errors: string[];
 }
 
+const SUBSCRIBER_CATEGORIES = [
+  { value: "newsletter_subscribers", label: "Newsletter Subscribers" },
+  { value: "backers", label: "Backers" },
+  { value: "creators", label: "Creators" },
+  { value: "retailer_users", label: "Retailer Users" },
+] as const;
+
 export function CSVImportDialog({
   open,
   onOpenChange,
@@ -63,6 +70,7 @@ export function CSVImportDialog({
   const [emailColumn, setEmailColumn] = useState<string>("");
   const [nameColumn, setNameColumn] = useState<string>("");
   const [listTag, setListTag] = useState<string>("");
+  const [category, setCategory] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -76,6 +84,7 @@ export function CSVImportDialog({
     setEmailColumn("");
     setNameColumn("");
     setListTag("");
+    setCategory("");
     setColumns([]);
     setResult(null);
     setError(null);
@@ -165,6 +174,11 @@ export function CSVImportDialog({
   const handleImport = async () => {
     if (!emailColumn || parsedData.length === 0) return;
 
+    if (!category) {
+      setError("Please select a category for the import");
+      return;
+    }
+
     if (!listTag.trim()) {
       setError("List name/tag is required for segmentation");
       return;
@@ -182,7 +196,7 @@ export function CSVImportDialog({
           return {
             email: s.email,
             name: nameColumn && row ? row.name : undefined,
-            source: "csv_import",
+            source: category, // Use category as the source
           };
         });
 
@@ -192,7 +206,7 @@ export function CSVImportDialog({
           "Content-Type": "application/json",
           ...getCSRFHeaders(),
         },
-        body: JSON.stringify({ subscribers, listTag: listTag.trim() }),
+        body: JSON.stringify({ subscribers, listTag: listTag.trim(), category }),
       });
 
       const data = await response.json();
@@ -387,6 +401,26 @@ export function CSVImportDialog({
                   </div>
                 </div>
 
+                {/* Category */}
+                <div className="space-y-2">
+                  <Label>Category *</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SUBSCRIBER_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-zinc-500">
+                    Categorize these subscribers by type for filtering and targeting.
+                  </p>
+                </div>
+
                 {/* List Tag / Segment */}
                 <div className="space-y-2">
                   <Label>List Name / Tag *</Label>
@@ -451,7 +485,7 @@ export function CSVImportDialog({
               {file && (
                 <Button
                   onClick={handleImport}
-                  disabled={importing || !emailColumn || !listTag.trim() || validCount === 0}
+                  disabled={importing || !emailColumn || !category || !listTag.trim() || validCount === 0}
                 >
                   {importing ? (
                     <>

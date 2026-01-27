@@ -49,7 +49,11 @@ export async function POST(req: NextRequest) {
     });
 
     const body = await req.json();
-    const { subscribers, listTag } = body as { subscribers: SubscriberData[]; listTag?: string };
+    const { subscribers, listTag, category } = body as {
+      subscribers: SubscriberData[];
+      listTag?: string;
+      category?: string;
+    };
 
     if (!subscribers || !Array.isArray(subscribers) || subscribers.length === 0) {
       return NextResponse.json(
@@ -110,8 +114,20 @@ export async function POST(req: NextRequest) {
     );
     const skippedCount = validSubscribers.length - newSubscribers.length;
 
-    // Build tags array - include list tag and/or admin name
+    // Build tags array - include category, list tag and/or admin name
     const importTags: string[] = [];
+
+    // Add category as a tag for filtering
+    if (category) {
+      const categoryLabels: Record<string, string> = {
+        newsletter_subscribers: "Newsletter Subscribers",
+        backers: "Backers",
+        creators: "Creators",
+        retailer_users: "Retailer Users",
+      };
+      importTags.push(categoryLabels[category] || category);
+    }
+
     if (listTag && listTag.trim()) {
       importTags.push(listTag.trim());
     }
