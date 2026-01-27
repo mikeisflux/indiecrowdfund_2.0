@@ -446,90 +446,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Projects in Prelaunch */}
-      {prelaunchProjects.length > 0 && (
-        <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent" />
-          <div className="container relative">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 glow-pulse">
-                    <Sparkles className="h-5 w-5 text-amber-500" />
-                  </div>
-                  <h2 className="text-2xl font-bold md:text-3xl">Projects in Prelaunch</h2>
-                </div>
-                <p className="text-muted-foreground">Coming soon - follow to get notified when they launch</p>
-              </div>
-              <Link href="/discover?prelaunch=true">
-                <Button variant="ghost" className="group hover:bg-amber-500/10">
-                  View all
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {prelaunchProjects.map((project, index) => (
-                <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-amber-500/20">
-                    <div className="aspect-video bg-muted relative overflow-hidden">
-                      {project.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={project.imageUrl}
-                          alt={project.title}
-                          className="project-card-image absolute inset-0 w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-amber-500/10 to-orange-500/10">
-                          <Sparkles className="h-12 w-12 text-amber-400/50" />
-                        </div>
-                      )}
-                      <Badge className="absolute left-3 top-3 bg-gradient-to-r from-amber-500 to-orange-500 border-0 shadow-lg">
-                        <Sparkles className="w-3 h-3 mr-1" />
-                        Coming Soon
-                      </Badge>
-                      <Badge className="absolute right-3 top-3 bg-background/80 backdrop-blur-sm" variant="secondary">
-                        {project.category}
-                      </Badge>
-                    </div>
-                    <CardContent className="pt-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold line-clamp-1 flex-1">{project.title}</h3>
-                        {followedProjectIds.has(project.id) && (
-                          <Badge variant="secondary" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
-                            <Bookmark className="w-3 h-3 mr-1 fill-current" />
-                            Following
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
-                        {project.subtitle}
-                      </p>
-                      <p className="text-xs text-muted-foreground">by <span className="text-foreground/70">{project.creator}</span></p>
-                    </CardContent>
-                    <CardFooter className="border-t border-border/50 pt-4">
-                      <div className="flex w-full items-center justify-between text-sm">
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Eye className="h-4 w-4" />
-                          <span>{project.followerCount} {project.followerCount === 1 ? 'follower' : 'followers'}</span>
-                        </div>
-                        {project.launchDate && (
-                          <span className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent font-medium">
-                            Launching {new Date(project.launchDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </span>
-                        )}
-                      </div>
-                    </CardFooter>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Stats Section */}
       <section className="relative border-y border-border/50 py-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-cyan-500/5 to-purple-500/5" />
@@ -672,6 +588,90 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Projects in Prelaunch */}
+      {prelaunchProjects.length > 0 && (
+        <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent" />
+          <div className="container relative">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 glow-pulse">
+                    <Sparkles className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <h2 className="text-2xl font-bold md:text-3xl">Projects in Prelaunch</h2>
+                </div>
+                <p className="text-muted-foreground">Coming soon - follow to get notified when they launch</p>
+              </div>
+              <Link href="/discover?prelaunch=true">
+                <Button variant="ghost" className="group hover:bg-amber-500/10">
+                  View all
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {prelaunchProjects.map((project, index) => (
+                <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-amber-500/20">
+                    <div className="aspect-video bg-muted relative overflow-hidden">
+                      {project.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={project.imageUrl}
+                          alt={project.title}
+                          className="project-card-image absolute inset-0 w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-amber-500/10 to-orange-500/10">
+                          <Sparkles className="h-12 w-12 text-amber-400/50" />
+                        </div>
+                      )}
+                      <Badge className="absolute left-3 top-3 bg-gradient-to-r from-amber-500 to-orange-500 border-0 shadow-lg">
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Coming Soon
+                      </Badge>
+                      <Badge className="absolute right-3 top-3 bg-background/80 backdrop-blur-sm" variant="secondary">
+                        {project.category}
+                      </Badge>
+                    </div>
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold line-clamp-1 flex-1">{project.title}</h3>
+                        {followedProjectIds.has(project.id) && (
+                          <Badge variant="secondary" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
+                            <Bookmark className="w-3 h-3 mr-1 fill-current" />
+                            Following
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+                        {project.subtitle}
+                      </p>
+                      <p className="text-xs text-muted-foreground">by <span className="text-foreground/70">{project.creator}</span></p>
+                    </CardContent>
+                    <CardFooter className="border-t border-border/50 pt-4">
+                      <div className="flex w-full items-center justify-between text-sm">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Eye className="h-4 w-4" />
+                          <span>{project.followerCount} {project.followerCount === 1 ? 'follower' : 'followers'}</span>
+                        </div>
+                        {project.launchDate && (
+                          <span className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent font-medium">
+                            Launching {new Date(project.launchDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                    </CardFooter>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* How It Works */}
       <section className="relative py-8 md:py-12 overflow-hidden">
