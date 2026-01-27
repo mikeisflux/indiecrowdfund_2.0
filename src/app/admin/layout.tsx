@@ -49,6 +49,7 @@ import {
   BookOpen,
   Rocket,
   HardDrive,
+  SlidersHorizontal,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -118,6 +119,7 @@ const navigation: NavSection[] = [
     items: [
       { name: "Page Builder", href: "/admin/page-builder", icon: FileEdit },
       { name: "Themes & Styles", href: "/admin/themes", icon: Palette },
+      { name: "Hero Slider", href: "/admin/hero-slider", icon: SlidersHorizontal },
       { name: "Media Library", href: "/admin/media", icon: Image, badgeKey: "media" },
     ],
   },

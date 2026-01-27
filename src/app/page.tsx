@@ -42,6 +42,7 @@ import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { MobileProfileLinks } from "@/components/mobile-profile-links";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Footer } from "@/components/footer";
+import { HeroSlider } from "@/components/hero-slider";
 import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
@@ -260,16 +261,47 @@ async function getUserFollowedProjectIds(userId: string | undefined): Promise<Se
   }
 }
 
+// Fetch active hero slides
+async function getHeroSlides() {
+  try {
+    const slides = await db.heroSlide.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        title: true,
+        subtitle: true,
+        description: true,
+        buttonText: true,
+        buttonLink: true,
+        secondaryButtonText: true,
+        secondaryButtonLink: true,
+        mediaType: true,
+        imageUrl: true,
+        videoUrl: true,
+        videoThumbnail: true,
+        textAlignment: true,
+        overlayOpacity: true,
+      },
+    });
+    return slides;
+  } catch (error) {
+    console.error("Error fetching hero slides:", error);
+    return [];
+  }
+}
+
 export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [stats, featuredProjects, prelaunchProjects, pastCampaigns, followedProjectIds] = await Promise.all([
+  const [stats, featuredProjects, prelaunchProjects, pastCampaigns, followedProjectIds, heroSlides] = await Promise.all([
     getPlatformStats(),
     getFeaturedProjects(),
     getPrelaunchProjects(),
     getPastCampaigns(),
     getUserFollowedProjectIds(userId),
+    getHeroSlides(),
   ]);
 
   return (
@@ -399,52 +431,7 @@ export default async function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden hero-gradient py-1.5">
-        {/* Animated grid background */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,black_40%,transparent_100%)]" />
-
-        <div className="container relative">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-2 text-lg font-medium text-primary animate-fade-in-up">
-              IndieCrowdfund leads the way!
-            </p>
-            <h1 className="mb-2 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              <span className="gradient-text">Support</span> Who You{" "}
-              <span className="relative">
-                Love
-                <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 12" fill="none">
-                  <path d="M2 10C50 4 150 4 198 10" stroke="url(#underline-gradient)" strokeWidth="3" strokeLinecap="round" className="animate-line" />
-                  <defs>
-                    <linearGradient id="underline-gradient" x1="0" y1="0" x2="200" y2="0">
-                      <stop stopColor="#10b981" />
-                      <stop offset="0.5" stopColor="#06b6d4" />
-                      <stop offset="1" stopColor="#8b5cf6" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </span>
-            </h1>
-            <p className="mt-6 mb-4 text-lg text-muted-foreground md:text-xl max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              IndieCrowdfund is the future home to thousands of creative projects in art, design,
-              film, games, music, and more. Back a project or start your own today.
-            </p>
-            <div className="flex flex-col gap-4 sm:flex-row sm:justify-center animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-              <Link href="/discover">
-                <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/25 group btn-glow">
-                  Discover Projects
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Link href="/projects/new">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-border/50 hover:border-primary/50 hover:bg-primary/5 group glass-card">
-                  Start a Project
-                  <Rocket className="ml-2 h-4 w-4 group-hover:translate-y-[-2px] transition-transform" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HeroSlider initialSlides={heroSlides} />
 
       {/* Stats Section */}
       <section className="relative border-y border-border/50 py-8 overflow-hidden">

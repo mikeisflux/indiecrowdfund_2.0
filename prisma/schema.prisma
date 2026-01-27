@@ -3551,3 +3551,47 @@ model ComicShop {
   @@index([region])
   @@index([name])
 }
+
+// ============================================
+// HERO SLIDER
+// ============================================
+
+model HeroSlide {
+  id              String          @id @default(cuid())
+
+  // Content
+  title           String
+  subtitle        String?
+  description     String?         @db.Text
+
+  // Call to Action
+  buttonText      String?
+  buttonLink      String?
+  secondaryButtonText String?
+  secondaryButtonLink String?
+
+  // Media
+  mediaType       HeroMediaType   @default(IMAGE)
+  imageUrl        String?
+  videoUrl        String?         // YouTube URL or uploaded video URL
+  videoThumbnail  String?         // Thumbnail for video slides
+
+  // Display settings
+  textAlignment   String          @default("center")  // left, center, right
+  overlayOpacity  Int             @default(0)         // 0-100 for dark overlay on media
+
+  // Status
+  isActive        Boolean         @default(true)
+  sortOrder       Int             @default(0)
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+enum HeroMediaType {
+  IMAGE
+  YOUTUBE
+  VIDEO
+}
