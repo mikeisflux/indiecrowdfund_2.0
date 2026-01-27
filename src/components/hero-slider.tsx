@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Rocket, ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
+import { ArrowRight, Rocket, ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HeroSlide {
@@ -83,6 +83,37 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
   const [isPlaying, setIsPlaying] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [youtubeStarted, setYoutubeStarted] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
+  const [isVideoPaused, setIsVideoPaused] = useState(false);
+  const youtubeIframeRef = useRef<HTMLIFrameElement>(null);
+
+  // YouTube IFrame API control functions
+  const sendYouTubeCommand = useCallback((command: string) => {
+    if (youtubeIframeRef.current?.contentWindow) {
+      youtubeIframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: "command", func: command, args: [] }),
+        "*"
+      );
+    }
+  }, []);
+
+  const toggleVideoMute = useCallback(() => {
+    if (isVideoMuted) {
+      sendYouTubeCommand("unMute");
+    } else {
+      sendYouTubeCommand("mute");
+    }
+    setIsVideoMuted(!isVideoMuted);
+  }, [isVideoMuted, sendYouTubeCommand]);
+
+  const toggleVideoPause = useCallback(() => {
+    if (isVideoPaused) {
+      sendYouTubeCommand("playVideo");
+    } else {
+      sendYouTubeCommand("pauseVideo");
+    }
+    setIsVideoPaused(!isVideoPaused);
+  }, [isVideoPaused, sendYouTubeCommand]);
 
   // Fetch slides on mount if none provided
   useEffect(() => {
@@ -113,7 +144,10 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
     if (isTransitioning || index === currentIndex) return;
     setIsTransitioning(true);
     setCurrentIndex(index);
-    setYoutubeStarted(false); // Reset YouTube state when changing slides
+    // Reset YouTube state when changing slides
+    setYoutubeStarted(false);
+    setIsVideoMuted(true);
+    setIsVideoPaused(false);
     setTimeout(() => setIsTransitioning(false), 500);
   }, [currentIndex, isTransitioning]);
 
@@ -251,10 +285,12 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
 
         // Show iframe when autoplay is on or user clicked play
         return (
-          <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute inset-0 overflow-hidden group/video">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.78vh] min-w-full h-[56.25vw] min-h-full">
               <iframe
-                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${currentSlide.videoMuted !== false ? 1 : 0}&loop=${currentSlide.videoLoop !== false ? 1 : 0}&controls=0&showinfo=0&rel=0&iv_load_policy=3&playlist=${videoId}`}
+                ref={youtubeIframeRef}
+                id={`youtube-player-${currentSlide.id}`}
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=${currentSlide.videoLoop !== false ? 1 : 0}&controls=0&showinfo=0&rel=0&iv_load_policy=3&playlist=${videoId}&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`}
                 className="absolute inset-0 w-full h-full"
                 style={{ pointerEvents: "none" }}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -265,6 +301,25 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
               className="absolute inset-0 bg-black pointer-events-none"
               style={{ opacity: currentSlide.overlayOpacity / 100 }}
             />
+            {/* Video Controls Overlay */}
+            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-2 opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
+              {/* Play/Pause Button */}
+              <button
+                onClick={toggleVideoPause}
+                className="p-2.5 rounded-full bg-black/60 backdrop-blur-sm text-white hover:bg-black/80 transition-colors"
+                aria-label={isVideoPaused ? "Play video" : "Pause video"}
+              >
+                {isVideoPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+              </button>
+              {/* Mute/Unmute Button */}
+              <button
+                onClick={toggleVideoMute}
+                className="p-2.5 rounded-full bg-black/60 backdrop-blur-sm text-white hover:bg-black/80 transition-colors"
+                aria-label={isVideoMuted ? "Unmute video" : "Mute video"}
+              >
+                {isVideoMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
         );
       })()}
