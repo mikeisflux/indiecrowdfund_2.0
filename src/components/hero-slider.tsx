@@ -228,7 +228,10 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
               />
               {/* Play button overlay */}
               <button
-                onClick={() => setYoutubeStarted(true)}
+                onClick={() => {
+                  setYoutubeStarted(true);
+                  setIsPlaying(false); // Pause slideshow when user plays video
+                }}
                 className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors cursor-pointer z-10"
                 aria-label="Play video"
               >
