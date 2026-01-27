@@ -39,12 +39,14 @@ interface HeroSliderProps {
 
 // Helper to extract YouTube video ID
 function getYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?\s]+)/,
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([^&?\s/]+)/,
+    /^([a-zA-Z0-9_-]{11})$/, // Direct video ID
   ];
   for (const pattern of patterns) {
     const match = url.match(pattern);
-    if (match) return match[1];
+    if (match && match[1] && match[1].length === 11) return match[1];
   }
   return null;
 }
@@ -80,6 +82,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [youtubeStarted, setYoutubeStarted] = useState(false);
 
   // Fetch slides on mount if none provided
   useEffect(() => {
@@ -110,6 +113,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
     if (isTransitioning || index === currentIndex) return;
     setIsTransitioning(true);
     setCurrentIndex(index);
+    setYoutubeStarted(false); // Reset YouTube state when changing slides
     setTimeout(() => setIsTransitioning(false), 500);
   }, [currentIndex, isTransitioning]);
 
@@ -162,7 +166,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
   };
 
   return (
-    <section className="relative overflow-hidden hero-gradient py-12 md:py-16 lg:py-20 min-h-[400px] md:min-h-[450px]">
+    <section className="group relative overflow-hidden hero-gradient py-12 md:py-16 lg:py-20 min-h-[400px] md:min-h-[450px]">
       {/* Animated grid background */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,black_40%,transparent_100%)]" />
 
@@ -204,23 +208,63 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
         </div>
       )}
 
-      {currentSlide.mediaType === "YOUTUBE" && currentSlide.videoUrl && (
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.78vh] min-w-full h-[56.25vw] min-h-full">
-            <iframe
-              src={`https://www.youtube.com/embed/${getYouTubeVideoId(currentSlide.videoUrl)}?autoplay=${currentSlide.videoAutoplay !== false ? 1 : 0}&mute=${currentSlide.videoMuted !== false ? 1 : 0}&loop=${currentSlide.videoLoop !== false ? 1 : 0}&controls=0&showinfo=0&rel=0&iv_load_policy=3&playlist=${getYouTubeVideoId(currentSlide.videoUrl)}`}
-              className="absolute inset-0 w-full h-full"
-              style={{ pointerEvents: "none" }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
+      {currentSlide.mediaType === "YOUTUBE" && currentSlide.videoUrl && (() => {
+        const videoId = getYouTubeVideoId(currentSlide.videoUrl);
+        if (!videoId) return null;
+        const shouldAutoplay = currentSlide.videoAutoplay !== false;
+        const thumbnailUrl = currentSlide.videoThumbnail || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+
+        // Show thumbnail with play button if not autoplay and not started
+        if (!shouldAutoplay && !youtubeStarted) {
+          return (
+            <div className="absolute inset-0 overflow-hidden">
+              {/* Thumbnail */}
+              <Image
+                src={thumbnailUrl}
+                alt=""
+                fill
+                className="object-cover"
+                priority
+              />
+              {/* Play button overlay */}
+              <button
+                onClick={() => setYoutubeStarted(true)}
+                className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors cursor-pointer z-10"
+                aria-label="Play video"
+              >
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-red-600 rounded-xl flex items-center justify-center hover:bg-red-700 transition-colors shadow-lg">
+                  <svg className="w-8 h-8 md:w-10 md:h-10 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </button>
+              <div
+                className="absolute inset-0 bg-black pointer-events-none"
+                style={{ opacity: currentSlide.overlayOpacity / 100 }}
+              />
+            </div>
+          );
+        }
+
+        // Show iframe when autoplay is on or user clicked play
+        return (
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.78vh] min-w-full h-[56.25vw] min-h-full">
+              <iframe
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${currentSlide.videoMuted !== false ? 1 : 0}&loop=${currentSlide.videoLoop !== false ? 1 : 0}&controls=0&showinfo=0&rel=0&iv_load_policy=3&playlist=${videoId}`}
+                className="absolute inset-0 w-full h-full"
+                style={{ pointerEvents: "none" }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+            <div
+              className="absolute inset-0 bg-black pointer-events-none"
+              style={{ opacity: currentSlide.overlayOpacity / 100 }}
             />
           </div>
-          <div
-            className="absolute inset-0 bg-black"
-            style={{ opacity: currentSlide.overlayOpacity / 100 }}
-          />
-        </div>
-      )}
+        );
+      })()}
 
       {/* Content */}
       <div className="container relative">
