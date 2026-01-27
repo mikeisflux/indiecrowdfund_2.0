@@ -424,7 +424,7 @@ export default async function HomePage() {
                 </svg>
               </span>
             </h1>
-            <p className="mb-4 text-lg text-muted-foreground md:text-xl max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <p className="mt-6 mb-4 text-lg text-muted-foreground md:text-xl max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               IndieCrowdfund is the future home to thousands of creative projects in art, design,
               film, games, music, and more. Back a project or start your own today.
             </p>
