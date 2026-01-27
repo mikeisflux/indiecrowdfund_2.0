@@ -109,6 +109,8 @@ export default function HeroSliderPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
+  const [needsMigration, setNeedsMigration] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
 
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -119,6 +121,30 @@ export default function HeroSliderPage() {
   const [previewSlide, setPreviewSlide] = useState<HeroSlide | null>(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
+  // Run migration to create table and seed default slide
+  const runMigration = async () => {
+    setIsMigrating(true);
+    try {
+      const response = await fetch("/api/admin/hero-slides/migrate", {
+        method: "POST",
+        headers: getCSRFHeaders(),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message || "Migration successful!");
+        setNeedsMigration(false);
+        fetchSlides();
+      } else {
+        toast.error(data.error || "Migration failed");
+      }
+    } catch (error) {
+      console.error("Migration error:", error);
+      toast.error("Migration failed");
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   // Fetch slides
   const fetchSlides = useCallback(async () => {
     setIsLoading(true);
@@ -128,10 +154,19 @@ export default function HeroSliderPage() {
         const data = await response.json();
         setSlides(data.slides || []);
         setStats(data.stats || { total: 0, active: 0, inactive: 0 });
+        setNeedsMigration(false);
+      } else {
+        // Check if it's a database error (table doesn't exist)
+        const data = await response.json();
+        if (data.error?.includes("does not exist") || data.error?.includes("relation")) {
+          setNeedsMigration(true);
+        } else {
+          toast.error("Failed to load slides");
+        }
       }
     } catch (error) {
       console.error("Failed to fetch slides:", error);
-      toast.error("Failed to load slides");
+      setNeedsMigration(true);
     } finally {
       setIsLoading(false);
     }
@@ -265,6 +300,40 @@ export default function HeroSliderPage() {
     return (
       <div className="flex items-center justify-center h-96">
         <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  if (needsMigration) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Hero Slider</h1>
+          <p className="text-zinc-500">Manage the hero section slides on the home page</p>
+        </div>
+        <Card className="max-w-lg">
+          <CardHeader>
+            <CardTitle>Setup Required</CardTitle>
+            <CardDescription>
+              The Hero Slider table needs to be created in the database. Click the button below to set it up and create the default slide.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={runMigration} disabled={isMigrating} className="gap-2">
+              {isMigrating ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Setting up...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4" />
+                  Initialize Hero Slider
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

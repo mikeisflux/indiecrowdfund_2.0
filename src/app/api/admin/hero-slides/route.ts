@@ -4,6 +4,25 @@ import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+// Default slide content matching the original hero
+const defaultSlideData = {
+  title: "Support Who You Love",
+  subtitle: "IndieCrowdfund leads the way!",
+  description: "IndieCrowdfund is the future home to thousands of creative projects in art, design, film, games, music, and more. Back a project or start your own today.",
+  buttonText: "Discover Projects",
+  buttonLink: "/discover",
+  secondaryButtonText: "Start a Project",
+  secondaryButtonLink: "/projects/new",
+  mediaType: "IMAGE" as const,
+  imageUrl: null,
+  videoUrl: null,
+  videoThumbnail: null,
+  textAlignment: "center",
+  overlayOpacity: 0,
+  isActive: true,
+  sortOrder: 0,
+};
+
 // Require admin access
 async function requireAdmin() {
   const session = await auth();
@@ -31,9 +50,17 @@ export async function GET() {
   }
 
   try {
-    const slides = await db.heroSlide.findMany({
+    let slides = await db.heroSlide.findMany({
       orderBy: { sortOrder: "asc" },
     });
+
+    // If no slides exist, create the default slide
+    if (slides.length === 0) {
+      const newSlide = await db.heroSlide.create({
+        data: defaultSlideData,
+      });
+      slides = [newSlide];
+    }
 
     const activeCount = slides.filter((s: { isActive: boolean }) => s.isActive).length;
 
