@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { TrackingProvider } from "@/components/tracking-provider";
+import { AnnouncementBar } from "@/components/announcement-bar";
 import { auth } from "@/lib/auth";
 import "./globals.css";
 
@@ -51,6 +52,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <TrackingProvider>
+              <AnnouncementBar />
               {children}
             </TrackingProvider>
             <Toaster />

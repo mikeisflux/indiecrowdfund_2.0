@@ -3603,3 +3603,36 @@ enum HeroMediaType {
   YOUTUBE
   VIDEO
 }
+
+// ============================================
+// ANNOUNCEMENT BAR
+// ============================================
+
+model AnnouncementBar {
+  id              String    @id @default(cuid())
+
+  // Content
+  text            String    @db.Text
+  linkUrl         String?
+  linkText        String?
+
+  // Styling
+  backgroundColor String    @default("#2563eb")
+  textColor       String    @default("#ffffff")
+
+  // Options
+  dismissible     Boolean   @default(true)
+  isActive        Boolean   @default(true)
+
+  // Scheduling (optional)
+  startDate       DateTime?
+  endDate         DateTime?
+
+  // Priority/ordering
+  sortOrder       Int       @default(0)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([isActive, sortOrder])
+}

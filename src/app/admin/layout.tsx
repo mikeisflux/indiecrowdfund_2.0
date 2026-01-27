@@ -50,6 +50,7 @@ import {
   Rocket,
   HardDrive,
   SlidersHorizontal,
+  Megaphone,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -120,6 +121,7 @@ const navigation: NavSection[] = [
       { name: "Page Builder", href: "/admin/page-builder", icon: FileEdit },
       { name: "Themes & Styles", href: "/admin/themes", icon: Palette },
       { name: "Hero Slider", href: "/admin/hero-slider", icon: SlidersHorizontal },
+      { name: "Announcement Bar", href: "/admin/announcement-bar", icon: Megaphone },
       { name: "Media Library", href: "/admin/media", icon: Image, badgeKey: "media" },
     ],
   },
