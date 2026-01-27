@@ -14,14 +14,22 @@ interface HeroSlide {
   description: string | null;
   buttonText: string | null;
   buttonLink: string | null;
+  showPrimaryButton?: boolean;
   secondaryButtonText: string | null;
   secondaryButtonLink: string | null;
+  showSecondaryButton?: boolean;
   mediaType: "IMAGE" | "YOUTUBE" | "VIDEO";
   imageUrl: string | null;
   videoUrl: string | null;
   videoThumbnail: string | null;
+  videoAutoplay?: boolean;
+  videoMuted?: boolean;
+  videoLoop?: boolean;
   textAlignment: string;
   overlayOpacity: number;
+  textColor?: string;
+  showSubtitle?: boolean;
+  showDescription?: boolean;
 }
 
 interface HeroSliderProps {
@@ -49,14 +57,22 @@ const defaultSlide: HeroSlide = {
   description: "IndieCrowdfund is the future home to thousands of creative projects in art, design, film, games, music, and more. Back a project or start your own today.",
   buttonText: "Discover Projects",
   buttonLink: "/discover",
+  showPrimaryButton: true,
   secondaryButtonText: "Start a Project",
   secondaryButtonLink: "/projects/new",
+  showSecondaryButton: true,
   mediaType: "IMAGE",
   imageUrl: null,
   videoUrl: null,
   videoThumbnail: null,
+  videoAutoplay: true,
+  videoMuted: true,
+  videoLoop: true,
   textAlignment: "center",
   overlayOpacity: 0,
+  textColor: "white",
+  showSubtitle: true,
+  showDescription: true,
 };
 
 export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: HeroSliderProps) {
@@ -175,10 +191,11 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
           <video
             src={currentSlide.videoUrl}
             className="w-full h-full object-cover"
-            autoPlay
-            muted
-            loop
+            autoPlay={currentSlide.videoAutoplay !== false}
+            muted={currentSlide.videoMuted !== false}
+            loop={currentSlide.videoLoop !== false}
             playsInline
+            poster={currentSlide.videoThumbnail || undefined}
           />
           <div
             className="absolute inset-0 bg-black"
@@ -190,7 +207,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
       {currentSlide.mediaType === "YOUTUBE" && currentSlide.videoUrl && (
         <div className="absolute inset-0">
           <iframe
-            src={`https://www.youtube.com/embed/${getYouTubeVideoId(currentSlide.videoUrl)}?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&playlist=${getYouTubeVideoId(currentSlide.videoUrl)}`}
+            src={`https://www.youtube.com/embed/${getYouTubeVideoId(currentSlide.videoUrl)}?autoplay=${currentSlide.videoAutoplay !== false ? 1 : 0}&mute=${currentSlide.videoMuted !== false ? 1 : 0}&loop=${currentSlide.videoLoop !== false ? 1 : 0}&controls=0&showinfo=0&rel=0&iv_load_policy=3&playlist=${getYouTubeVideoId(currentSlide.videoUrl)}`}
             className="w-full h-full scale-150"
             style={{ pointerEvents: "none" }}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -210,10 +227,11 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
             "mx-auto max-w-3xl",
             currentSlide.textAlignment === "left" && "mr-auto ml-0 text-left",
             currentSlide.textAlignment === "right" && "ml-auto mr-0 text-right",
-            currentSlide.textAlignment === "center" && "text-center"
+            currentSlide.textAlignment === "center" && "text-center",
+            currentSlide.textColor === "dark" && "text-zinc-900"
           )}
         >
-          {currentSlide.subtitle && (
+          {currentSlide.subtitle && currentSlide.showSubtitle !== false && (
             <p
               className={cn(
                 "mb-2 text-lg font-medium text-primary animate-fade-in-up",
@@ -227,17 +245,19 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
           <h1
             className={cn(
               "mb-2 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl animate-fade-in-up",
-              isTransitioning && "opacity-0"
+              isTransitioning && "opacity-0",
+              currentSlide.textColor === "dark" && "text-zinc-900"
             )}
             style={{ animationDelay: "0.1s" }}
             key={`title-${currentIndex}`}
           >
             {renderTitle(currentSlide.title)}
           </h1>
-          {currentSlide.description && (
+          {currentSlide.description && currentSlide.showDescription !== false && (
             <p
               className={cn(
-                "mt-6 mb-4 text-lg text-muted-foreground md:text-xl max-w-2xl animate-fade-in-up",
+                "mt-6 mb-4 text-lg md:text-xl max-w-2xl animate-fade-in-up",
+                currentSlide.textColor === "dark" ? "text-zinc-600" : "text-muted-foreground",
                 currentSlide.textAlignment === "center" && "mx-auto",
                 currentSlide.textAlignment === "right" && "ml-auto",
                 isTransitioning && "opacity-0"
@@ -258,7 +278,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
             style={{ animationDelay: "0.3s" }}
             key={`buttons-${currentIndex}`}
           >
-            {currentSlide.buttonText && currentSlide.buttonLink && (
+            {currentSlide.showPrimaryButton !== false && currentSlide.buttonText && currentSlide.buttonLink && (
               <Link href={currentSlide.buttonLink}>
                 <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/25 group btn-glow">
                   {currentSlide.buttonText}
@@ -266,9 +286,12 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
                 </Button>
               </Link>
             )}
-            {currentSlide.secondaryButtonText && currentSlide.secondaryButtonLink && (
+            {currentSlide.showSecondaryButton !== false && currentSlide.secondaryButtonText && currentSlide.secondaryButtonLink && (
               <Link href={currentSlide.secondaryButtonLink}>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-border/50 hover:border-primary/50 hover:bg-primary/5 group glass-card">
+                <Button size="lg" variant="outline" className={cn(
+                  "w-full sm:w-auto hover:border-primary/50 hover:bg-primary/5 group glass-card",
+                  currentSlide.textColor === "dark" ? "border-zinc-300" : "border-border/50"
+                )}>
                   {currentSlide.secondaryButtonText}
                   <Rocket className="ml-2 h-4 w-4 group-hover:translate-y-[-2px] transition-transform" />
                 </Button>

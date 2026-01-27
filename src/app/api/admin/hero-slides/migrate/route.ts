@@ -41,14 +41,22 @@ export async function POST() {
           "description" TEXT,
           "buttonText" TEXT,
           "buttonLink" TEXT,
+          "showPrimaryButton" BOOLEAN NOT NULL DEFAULT true,
           "secondaryButtonText" TEXT,
           "secondaryButtonLink" TEXT,
+          "showSecondaryButton" BOOLEAN NOT NULL DEFAULT true,
           "mediaType" "HeroMediaType" NOT NULL DEFAULT 'IMAGE',
           "imageUrl" TEXT,
           "videoUrl" TEXT,
           "videoThumbnail" TEXT,
+          "videoAutoplay" BOOLEAN NOT NULL DEFAULT true,
+          "videoMuted" BOOLEAN NOT NULL DEFAULT true,
+          "videoLoop" BOOLEAN NOT NULL DEFAULT true,
           "textAlignment" TEXT NOT NULL DEFAULT 'center',
           "overlayOpacity" INTEGER NOT NULL DEFAULT 0,
+          "textColor" TEXT NOT NULL DEFAULT 'white',
+          "showSubtitle" BOOLEAN NOT NULL DEFAULT true,
+          "showDescription" BOOLEAN NOT NULL DEFAULT true,
           "isActive" BOOLEAN NOT NULL DEFAULT true,
           "sortOrder" INTEGER NOT NULL DEFAULT 0,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -56,6 +64,28 @@ export async function POST() {
           CONSTRAINT "HeroSlide_pkey" PRIMARY KEY ("id")
       );
     `);
+
+    // Add new columns if they don't exist (for existing tables)
+    const newColumns = [
+      { name: "showPrimaryButton", type: "BOOLEAN NOT NULL DEFAULT true" },
+      { name: "showSecondaryButton", type: "BOOLEAN NOT NULL DEFAULT true" },
+      { name: "videoAutoplay", type: "BOOLEAN NOT NULL DEFAULT true" },
+      { name: "videoMuted", type: "BOOLEAN NOT NULL DEFAULT true" },
+      { name: "videoLoop", type: "BOOLEAN NOT NULL DEFAULT true" },
+      { name: "textColor", type: "TEXT NOT NULL DEFAULT 'white'" },
+      { name: "showSubtitle", type: "BOOLEAN NOT NULL DEFAULT true" },
+      { name: "showDescription", type: "BOOLEAN NOT NULL DEFAULT true" },
+    ];
+
+    for (const col of newColumns) {
+      try {
+        await db.$executeRawUnsafe(`
+          ALTER TABLE "HeroSlide" ADD COLUMN IF NOT EXISTS "${col.name}" ${col.type};
+        `);
+      } catch {
+        // Column might already exist, ignore error
+      }
+    }
 
     // Create index if it doesn't exist
     await db.$executeRawUnsafe(`
@@ -76,14 +106,18 @@ export async function POST() {
       await db.$executeRawUnsafe(`
         INSERT INTO "HeroSlide" (
           "id", "title", "subtitle", "description",
-          "buttonText", "buttonLink",
-          "secondaryButtonText", "secondaryButtonLink",
+          "buttonText", "buttonLink", "showPrimaryButton",
+          "secondaryButtonText", "secondaryButtonLink", "showSecondaryButton",
           "mediaType", "textAlignment", "overlayOpacity",
+          "textColor", "showSubtitle", "showDescription",
+          "videoAutoplay", "videoMuted", "videoLoop",
           "isActive", "sortOrder", "createdAt", "updatedAt"
         )
         VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8,
+          $1, $2, $3, $4, $5, $6, true, $7, $8, true,
           'IMAGE', 'center', 0,
+          'white', true, true,
+          true, true, true,
           true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )
       `,

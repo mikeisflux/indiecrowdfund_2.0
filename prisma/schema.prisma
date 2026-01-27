@@ -3567,18 +3567,26 @@ model HeroSlide {
   // Call to Action
   buttonText      String?
   buttonLink      String?
+  showPrimaryButton   Boolean     @default(true)
   secondaryButtonText String?
   secondaryButtonLink String?
+  showSecondaryButton Boolean     @default(true)
 
   // Media
   mediaType       HeroMediaType   @default(IMAGE)
   imageUrl        String?
   videoUrl        String?         // YouTube URL or uploaded video URL
   videoThumbnail  String?         // Thumbnail for video slides
+  videoAutoplay   Boolean         @default(true)
+  videoMuted      Boolean         @default(true)
+  videoLoop       Boolean         @default(true)
 
   // Display settings
   textAlignment   String          @default("center")  // left, center, right
   overlayOpacity  Int             @default(0)         // 0-100 for dark overlay on media
+  textColor       String          @default("white")   // white, dark
+  showSubtitle    Boolean         @default(true)
+  showDescription Boolean         @default(true)
 
   // Status
   isActive        Boolean         @default(true)

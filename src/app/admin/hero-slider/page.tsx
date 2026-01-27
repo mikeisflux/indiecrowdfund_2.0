@@ -61,14 +61,22 @@ interface HeroSlide {
   description: string | null;
   buttonText: string | null;
   buttonLink: string | null;
+  showPrimaryButton: boolean;
   secondaryButtonText: string | null;
   secondaryButtonLink: string | null;
+  showSecondaryButton: boolean;
   mediaType: "IMAGE" | "YOUTUBE" | "VIDEO";
   imageUrl: string | null;
   videoUrl: string | null;
   videoThumbnail: string | null;
+  videoAutoplay: boolean;
+  videoMuted: boolean;
+  videoLoop: boolean;
   textAlignment: string;
   overlayOpacity: number;
+  textColor: string;
+  showSubtitle: boolean;
+  showDescription: boolean;
   isActive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -81,14 +89,22 @@ const defaultSlide: Partial<HeroSlide> = {
   description: "",
   buttonText: "Discover Projects",
   buttonLink: "/discover",
+  showPrimaryButton: true,
   secondaryButtonText: "Start a Project",
   secondaryButtonLink: "/projects/new",
+  showSecondaryButton: true,
   mediaType: "IMAGE",
   imageUrl: "",
   videoUrl: "",
   videoThumbnail: "",
+  videoAutoplay: true,
+  videoMuted: true,
+  videoLoop: true,
   textAlignment: "center",
   overlayOpacity: 0,
+  textColor: "white",
+  showSubtitle: true,
+  showDescription: true,
   isActive: true,
 };
 
@@ -661,46 +677,76 @@ export default function HeroSliderPage() {
             <div className="space-y-4">
               <h4 className="font-medium">Call to Action</h4>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="buttonText">Primary Button Text</Label>
-                  <Input
-                    id="buttonText"
-                    value={editingSlide?.buttonText || ""}
-                    onChange={(e) => setEditingSlide({ ...editingSlide, buttonText: e.target.value })}
-                    placeholder="Discover Projects"
+              {/* Primary Button */}
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Primary Button</Label>
+                    <p className="text-sm text-zinc-500">Show/hide the primary call-to-action button</p>
+                  </div>
+                  <Switch
+                    checked={editingSlide?.showPrimaryButton ?? true}
+                    onCheckedChange={(checked) => setEditingSlide({ ...editingSlide, showPrimaryButton: checked })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="buttonLink">Primary Button Link</Label>
-                  <Input
-                    id="buttonLink"
-                    value={editingSlide?.buttonLink || ""}
-                    onChange={(e) => setEditingSlide({ ...editingSlide, buttonLink: e.target.value })}
-                    placeholder="/discover"
-                  />
-                </div>
+                {editingSlide?.showPrimaryButton !== false && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="buttonText">Button Text</Label>
+                      <Input
+                        id="buttonText"
+                        value={editingSlide?.buttonText || ""}
+                        onChange={(e) => setEditingSlide({ ...editingSlide, buttonText: e.target.value })}
+                        placeholder="Discover Projects"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="buttonLink">Button Link</Label>
+                      <Input
+                        id="buttonLink"
+                        value={editingSlide?.buttonLink || ""}
+                        onChange={(e) => setEditingSlide({ ...editingSlide, buttonLink: e.target.value })}
+                        placeholder="/discover"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="secondaryButtonText">Secondary Button Text</Label>
-                  <Input
-                    id="secondaryButtonText"
-                    value={editingSlide?.secondaryButtonText || ""}
-                    onChange={(e) => setEditingSlide({ ...editingSlide, secondaryButtonText: e.target.value })}
-                    placeholder="Start a Project"
+              {/* Secondary Button */}
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Secondary Button</Label>
+                    <p className="text-sm text-zinc-500">Show/hide the secondary call-to-action button</p>
+                  </div>
+                  <Switch
+                    checked={editingSlide?.showSecondaryButton ?? true}
+                    onCheckedChange={(checked) => setEditingSlide({ ...editingSlide, showSecondaryButton: checked })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="secondaryButtonLink">Secondary Button Link</Label>
-                  <Input
-                    id="secondaryButtonLink"
-                    value={editingSlide?.secondaryButtonLink || ""}
-                    onChange={(e) => setEditingSlide({ ...editingSlide, secondaryButtonLink: e.target.value })}
-                    placeholder="/projects/new"
-                  />
-                </div>
+                {editingSlide?.showSecondaryButton !== false && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="secondaryButtonText">Button Text</Label>
+                      <Input
+                        id="secondaryButtonText"
+                        value={editingSlide?.secondaryButtonText || ""}
+                        onChange={(e) => setEditingSlide({ ...editingSlide, secondaryButtonText: e.target.value })}
+                        placeholder="Start a Project"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="secondaryButtonLink">Button Link</Label>
+                      <Input
+                        id="secondaryButtonLink"
+                        value={editingSlide?.secondaryButtonLink || ""}
+                        onChange={(e) => setEditingSlide({ ...editingSlide, secondaryButtonLink: e.target.value })}
+                        placeholder="/projects/new"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -816,27 +862,88 @@ export default function HeroSliderPage() {
                   </div>
                 </>
               )}
+
+              {/* Video Settings */}
+              {(editingSlide?.mediaType === "YOUTUBE" || editingSlide?.mediaType === "VIDEO") && (
+                <div className="rounded-lg border p-4 space-y-4">
+                  <h5 className="font-medium text-sm">Video Playback Settings</h5>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-900 p-3">
+                      <div>
+                        <Label className="text-sm">Autoplay</Label>
+                        <p className="text-xs text-zinc-500">Start automatically</p>
+                      </div>
+                      <Switch
+                        checked={editingSlide?.videoAutoplay ?? true}
+                        onCheckedChange={(checked) => setEditingSlide({ ...editingSlide, videoAutoplay: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-900 p-3">
+                      <div>
+                        <Label className="text-sm">Muted</Label>
+                        <p className="text-xs text-zinc-500">Play without sound</p>
+                      </div>
+                      <Switch
+                        checked={editingSlide?.videoMuted ?? true}
+                        onCheckedChange={(checked) => setEditingSlide({ ...editingSlide, videoMuted: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-900 p-3">
+                      <div>
+                        <Label className="text-sm">Loop</Label>
+                        <p className="text-xs text-zinc-500">Repeat video</p>
+                      </div>
+                      <Switch
+                        checked={editingSlide?.videoLoop ?? true}
+                        onCheckedChange={(checked) => setEditingSlide({ ...editingSlide, videoLoop: checked })}
+                      />
+                    </div>
+                  </div>
+                  {editingSlide?.videoAutoplay && !editingSlide?.videoMuted && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Note: Most browsers require videos to be muted for autoplay to work.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Display Settings */}
             <div className="space-y-4">
               <h4 className="font-medium">Display Settings</h4>
 
-              <div className="space-y-2">
-                <Label>Text Alignment</Label>
-                <Select
-                  value={editingSlide?.textAlignment || "center"}
-                  onValueChange={(v) => setEditingSlide({ ...editingSlide, textAlignment: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="left">Left</SelectItem>
-                    <SelectItem value="center">Center</SelectItem>
-                    <SelectItem value="right">Right</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Text Alignment</Label>
+                  <Select
+                    value={editingSlide?.textAlignment || "center"}
+                    onValueChange={(v) => setEditingSlide({ ...editingSlide, textAlignment: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="left">Left</SelectItem>
+                      <SelectItem value="center">Center</SelectItem>
+                      <SelectItem value="right">Right</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Text Color</Label>
+                  <Select
+                    value={editingSlide?.textColor || "white"}
+                    onValueChange={(v) => setEditingSlide({ ...editingSlide, textColor: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="white">White (for dark backgrounds)</SelectItem>
+                      <SelectItem value="dark">Dark (for light backgrounds)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -851,6 +958,31 @@ export default function HeroSliderPage() {
                 <p className="text-xs text-zinc-500">
                   Dark overlay to improve text readability over bright images/videos
                 </p>
+              </div>
+
+              {/* Content Visibility Options */}
+              <div className="rounded-lg border p-4 space-y-3">
+                <h5 className="font-medium text-sm">Content Visibility</h5>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-900 p-3">
+                    <div>
+                      <Label className="text-sm">Show Subtitle</Label>
+                    </div>
+                    <Switch
+                      checked={editingSlide?.showSubtitle ?? true}
+                      onCheckedChange={(checked) => setEditingSlide({ ...editingSlide, showSubtitle: checked })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-900 p-3">
+                    <div>
+                      <Label className="text-sm">Show Description</Label>
+                    </div>
+                    <Switch
+                      checked={editingSlide?.showDescription ?? true}
+                      onCheckedChange={(checked) => setEditingSlide({ ...editingSlide, showDescription: checked })}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-between rounded-lg border p-4">
@@ -895,7 +1027,7 @@ export default function HeroSliderPage() {
           </DialogHeader>
           {previewSlide && (
             <div className="relative aspect-[21/9] bg-gradient-to-br from-primary/20 to-cyan-500/20 rounded-lg overflow-hidden">
-              {previewSlide.imageUrl && (
+              {previewSlide.imageUrl && previewSlide.mediaType === "IMAGE" && (
                 <Image
                   src={previewSlide.imageUrl}
                   alt=""
@@ -905,7 +1037,7 @@ export default function HeroSliderPage() {
               )}
               {previewSlide.mediaType === "YOUTUBE" && previewSlide.videoUrl && (
                 <iframe
-                  src={`https://www.youtube.com/embed/${getYouTubeVideoId(previewSlide.videoUrl)}?autoplay=1&mute=1`}
+                  src={`https://www.youtube.com/embed/${getYouTubeVideoId(previewSlide.videoUrl)}?autoplay=${previewSlide.videoAutoplay !== false ? 1 : 0}&mute=${previewSlide.videoMuted !== false ? 1 : 0}&loop=${previewSlide.videoLoop !== false ? 1 : 0}&playlist=${getYouTubeVideoId(previewSlide.videoUrl)}`}
                   className="absolute inset-0 w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
@@ -915,9 +1047,10 @@ export default function HeroSliderPage() {
                 <video
                   src={previewSlide.videoUrl}
                   className="absolute inset-0 w-full h-full object-cover"
-                  autoPlay
-                  muted
-                  loop
+                  autoPlay={previewSlide.videoAutoplay !== false}
+                  muted={previewSlide.videoMuted !== false}
+                  loop={previewSlide.videoLoop !== false}
+                  poster={previewSlide.videoThumbnail || undefined}
                 />
               )}
 
@@ -927,7 +1060,9 @@ export default function HeroSliderPage() {
               />
 
               <div
-                className={`absolute inset-0 flex flex-col justify-center p-8 text-white ${
+                className={`absolute inset-0 flex flex-col justify-center p-8 ${
+                  previewSlide.textColor === "dark" ? "text-zinc-900" : "text-white"
+                } ${
                   previewSlide.textAlignment === "left"
                     ? "items-start"
                     : previewSlide.textAlignment === "right"
@@ -935,27 +1070,27 @@ export default function HeroSliderPage() {
                     : "items-center text-center"
                 }`}
               >
-                {previewSlide.subtitle && (
+                {previewSlide.subtitle && previewSlide.showSubtitle !== false && (
                   <p className="text-lg font-medium text-primary mb-2 drop-shadow">
                     {previewSlide.subtitle}
                   </p>
                 )}
-                <h2 className="text-4xl font-bold mb-4 drop-shadow-lg">
+                <h2 className={`text-4xl font-bold mb-4 drop-shadow-lg ${previewSlide.textColor === "dark" ? "text-zinc-900" : ""}`}>
                   {previewSlide.title}
                 </h2>
-                {previewSlide.description && (
-                  <p className="text-lg opacity-90 max-w-2xl mb-6 drop-shadow">
+                {previewSlide.description && previewSlide.showDescription !== false && (
+                  <p className={`text-lg opacity-90 max-w-2xl mb-6 drop-shadow ${previewSlide.textColor === "dark" ? "text-zinc-600" : ""}`}>
                     {previewSlide.description}
                   </p>
                 )}
                 <div className="flex gap-4">
-                  {previewSlide.buttonText && (
+                  {previewSlide.showPrimaryButton !== false && previewSlide.buttonText && (
                     <Button size="lg" className="bg-gradient-to-r from-primary to-emerald-600">
                       {previewSlide.buttonText}
                     </Button>
                   )}
-                  {previewSlide.secondaryButtonText && (
-                    <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                  {previewSlide.showSecondaryButton !== false && previewSlide.secondaryButtonText && (
+                    <Button size="lg" variant="outline" className={previewSlide.textColor === "dark" ? "border-zinc-300" : "border-white text-white hover:bg-white/10"}>
                       {previewSlide.secondaryButtonText}
                     </Button>
                   )}
