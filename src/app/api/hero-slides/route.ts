@@ -3,6 +3,18 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// CORS headers for API responses
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+// Handle preflight requests
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 // Default slide content matching the original hero
 const defaultSlideData = {
   title: "Support Who You Love",
@@ -96,9 +108,9 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({ slides });
+    return NextResponse.json({ slides }, { headers: corsHeaders });
   } catch (error) {
     console.error("Error fetching hero slides:", error);
-    return NextResponse.json({ slides: [] });
+    return NextResponse.json({ slides: [] }, { headers: corsHeaders });
   }
 }

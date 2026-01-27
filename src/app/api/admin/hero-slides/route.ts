@@ -4,6 +4,18 @@ import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+// CORS headers for API responses
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+// Handle preflight requests
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 // Default slide content matching the original hero
 const defaultSlideData = {
   title: "Support Who You Love",
@@ -46,7 +58,7 @@ async function requireAdmin() {
 export async function GET() {
   const admin = await requireAdmin();
   if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
   }
 
   try {
@@ -71,10 +83,10 @@ export async function GET() {
         active: activeCount,
         inactive: slides.length - activeCount,
       },
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error("Error fetching hero slides:", error);
-    return NextResponse.json({ error: "Failed to fetch hero slides" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch hero slides" }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -82,7 +94,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
   }
 
   try {
@@ -113,7 +125,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!title) {
-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
+      return NextResponse.json({ error: "Title is required" }, { status: 400, headers: corsHeaders });
     }
 
     // Get the highest sort order
@@ -150,10 +162,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ slide });
+    return NextResponse.json({ slide }, { headers: corsHeaders });
   } catch (error) {
     console.error("Error creating hero slide:", error);
-    return NextResponse.json({ error: "Failed to create hero slide" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create hero slide" }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -161,7 +173,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
   }
 
   try {
@@ -194,7 +206,7 @@ export async function PUT(request: NextRequest) {
     } = body;
 
     if (!id) {
-      return NextResponse.json({ error: "Slide ID is required" }, { status: 400 });
+      return NextResponse.json({ error: "Slide ID is required" }, { status: 400, headers: corsHeaders });
     }
 
     const existing = await db.heroSlide.findUnique({
@@ -202,7 +214,7 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!existing) {
-      return NextResponse.json({ error: "Slide not found" }, { status: 404 });
+      return NextResponse.json({ error: "Slide not found" }, { status: 404, headers: corsHeaders });
     }
 
     const slide = await db.heroSlide.update({
@@ -234,10 +246,10 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ slide });
+    return NextResponse.json({ slide }, { headers: corsHeaders });
   } catch (error) {
     console.error("Error updating hero slide:", error);
-    return NextResponse.json({ error: "Failed to update hero slide" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update hero slide" }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -245,7 +257,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
   }
 
   try {
@@ -253,17 +265,17 @@ export async function DELETE(request: NextRequest) {
     const id = url.searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ error: "Slide ID is required" }, { status: 400 });
+      return NextResponse.json({ error: "Slide ID is required" }, { status: 400, headers: corsHeaders });
     }
 
     await db.heroSlide.delete({
       where: { id },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
     console.error("Error deleting hero slide:", error);
-    return NextResponse.json({ error: "Failed to delete hero slide" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete hero slide" }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -271,7 +283,7 @@ export async function DELETE(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
   }
 
   try {
@@ -279,7 +291,7 @@ export async function PATCH(request: NextRequest) {
     const { slideIds } = body;
 
     if (!Array.isArray(slideIds)) {
-      return NextResponse.json({ error: "slideIds must be an array" }, { status: 400 });
+      return NextResponse.json({ error: "slideIds must be an array" }, { status: 400, headers: corsHeaders });
     }
 
     // Update sort order for each slide
@@ -292,9 +304,9 @@ export async function PATCH(request: NextRequest) {
       )
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
     console.error("Error reordering slides:", error);
-    return NextResponse.json({ error: "Failed to reorder slides" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to reorder slides" }, { status: 500, headers: corsHeaders });
   }
 }

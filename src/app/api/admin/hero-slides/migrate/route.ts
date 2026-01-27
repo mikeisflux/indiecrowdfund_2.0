@@ -4,12 +4,24 @@ import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+// CORS headers for API responses
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+// Handle preflight requests
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 // This endpoint creates the HeroSlide table and seeds the default slide
 // DELETE this file after the migration has been run successfully
 export async function POST() {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
   }
 
   const user = await db.user.findUnique({
@@ -18,7 +30,7 @@ export async function POST() {
   });
 
   if (!user || user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
   }
 
   try {
@@ -135,19 +147,19 @@ export async function POST() {
         success: true,
         message: "Table created and default slide seeded",
         slideId: id,
-      });
+      }, { headers: corsHeaders });
     }
 
     return NextResponse.json({
       success: true,
       message: "Table already exists with slides",
       count,
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error("Migration error:", error);
     return NextResponse.json(
       { error: "Migration failed", details: String(error) },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
