@@ -162,7 +162,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
   };
 
   return (
-    <section className="relative overflow-hidden hero-gradient py-1.5">
+    <section className="relative overflow-hidden hero-gradient py-12 md:py-16 lg:py-20 min-h-[400px] md:min-h-[450px]">
       {/* Animated grid background */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,black_40%,transparent_100%)]" />
 
@@ -187,10 +187,10 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
       )}
 
       {currentSlide.mediaType === "VIDEO" && currentSlide.videoUrl && (
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 overflow-hidden">
           <video
             src={currentSlide.videoUrl}
-            className="w-full h-full object-cover"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 min-w-full min-h-full w-auto h-auto object-cover"
             autoPlay={currentSlide.videoAutoplay !== false}
             muted={currentSlide.videoMuted !== false}
             loop={currentSlide.videoLoop !== false}
@@ -205,14 +205,16 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
       )}
 
       {currentSlide.mediaType === "YOUTUBE" && currentSlide.videoUrl && (
-        <div className="absolute inset-0">
-          <iframe
-            src={`https://www.youtube.com/embed/${getYouTubeVideoId(currentSlide.videoUrl)}?autoplay=${currentSlide.videoAutoplay !== false ? 1 : 0}&mute=${currentSlide.videoMuted !== false ? 1 : 0}&loop=${currentSlide.videoLoop !== false ? 1 : 0}&controls=0&showinfo=0&rel=0&iv_load_policy=3&playlist=${getYouTubeVideoId(currentSlide.videoUrl)}`}
-            className="w-full h-full scale-150"
-            style={{ pointerEvents: "none" }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.78vh] min-w-full h-[56.25vw] min-h-full">
+            <iframe
+              src={`https://www.youtube.com/embed/${getYouTubeVideoId(currentSlide.videoUrl)}?autoplay=${currentSlide.videoAutoplay !== false ? 1 : 0}&mute=${currentSlide.videoMuted !== false ? 1 : 0}&loop=${currentSlide.videoLoop !== false ? 1 : 0}&controls=0&showinfo=0&rel=0&iv_load_policy=3&playlist=${getYouTubeVideoId(currentSlide.videoUrl)}`}
+              className="absolute inset-0 w-full h-full"
+              style={{ pointerEvents: "none" }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
           <div
             className="absolute inset-0 bg-black"
             style={{ opacity: currentSlide.overlayOpacity / 100 }}
