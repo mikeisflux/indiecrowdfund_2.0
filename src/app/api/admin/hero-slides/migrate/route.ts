@@ -63,9 +63,9 @@ export async function POST() {
     `);
 
     // Check if there are any slides
-    const countResult = await db.$queryRawUnsafe<{ count: bigint }[]>(
+    const countResult = await db.$queryRawUnsafe(
       'SELECT COUNT(*) as count FROM "HeroSlide"'
-    );
+    ) as { count: bigint }[];
     const count = Number(countResult[0]?.count || 0);
 
     if (count === 0) {
