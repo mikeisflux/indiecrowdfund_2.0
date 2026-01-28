@@ -28,6 +28,7 @@ const csrfExemptRoutes = [
   "/api/admin/ai-marketing/campaigns/fix-images", // One-time fix script
   "/api/retailers/login", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/forgot-password", // Protected by CAPTCHA and rate limiting instead
+  "/api/retailers/apply", // Protected by CAPTCHA instead
 ];
 
 // Routes that allow Shopify iframe embedding

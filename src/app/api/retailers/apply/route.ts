@@ -1,11 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hash } from "bcryptjs";
+import { verifyRecaptcha } from "@/lib/auth/recaptcha";
+
+/**
+ * Get client IP from request headers
+ */
+function getClientIP(req: NextRequest): string | null {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    req.headers.get("cf-connecting-ip") ||
+    null
+  );
+}
 
 // POST - Submit retailer application
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
+    // Verify reCAPTCHA
+    const clientIP = getClientIP(req);
+    const recaptchaResult = await verifyRecaptcha(body.recaptchaToken, clientIP);
+    if (!recaptchaResult.valid) {
+      return NextResponse.json(
+        { error: recaptchaResult.error || "CAPTCHA verification failed" },
+        { status: 400 }
+      );
+    }
 
     const {
       businessName,
