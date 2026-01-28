@@ -129,6 +129,12 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Verify user is admin
+    const user = await db.user.findUnique({ where: { id: session.user.id } });
+    if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await req.json();
     const { retailerId, action, notes } = body;
 

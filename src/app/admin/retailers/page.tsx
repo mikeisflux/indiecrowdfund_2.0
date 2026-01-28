@@ -30,6 +30,8 @@ import {
   ThumbsDown,
   Star,
 } from "lucide-react";
+import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 // Types
 import type {
@@ -174,7 +176,10 @@ export default function RetailersPage() {
     try {
       const response = await fetch("/api/admin/retailers", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
         body: JSON.stringify({
           retailerId: selectedRetailer.id,
           action: actionType,
@@ -183,12 +188,24 @@ export default function RetailersPage() {
       });
 
       if (response.ok) {
+        const actionLabels: Record<string, string> = {
+          APPROVE: "approved",
+          REJECT: "rejected",
+          SUSPEND: "suspended",
+          REACTIVATE: "reactivated",
+          REQUEST_INFO: "marked for review",
+        };
+        toast.success(`Retailer ${actionLabels[actionType] || "updated"} successfully`);
         await fetchRetailers();
         setIsActionDialogOpen(false);
         setIsDetailsOpen(false);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.error || "Failed to update retailer");
       }
     } catch (error) {
       console.error("Error updating retailer:", error);
+      toast.error("An error occurred while updating the retailer");
     } finally {
       setIsSubmitting(false);
     }
