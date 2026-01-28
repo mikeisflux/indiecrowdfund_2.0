@@ -1,14 +1,66 @@
-import { Metadata } from "next";
-import Link from "next/link";
-import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
-import { Store, ArrowLeft, KeyRound } from "lucide-react";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Forgot Password | Retailer Portal",
-  description: "Reset your retailer account password",
-};
+import { useState, useCallback } from "react";
+import Link from "next/link";
+import { Store, ArrowLeft, KeyRound, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Recaptcha, useRecaptchaEnabled, getRecaptchaSiteKey } from "@/components/auth/recaptcha";
 
 export default function RetailerForgotPasswordPage() {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaEnabled = useRecaptchaEnabled();
+  const recaptchaSiteKey = getRecaptchaSiteKey();
+
+  const handleRecaptchaVerify = useCallback((token: string) => {
+    setRecaptchaToken(token);
+  }, []);
+
+  const handleRecaptchaExpire = useCallback(() => {
+    setRecaptchaToken(null);
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    // Check captcha if enabled
+    if (recaptchaEnabled && !recaptchaToken) {
+      setError("Please complete the CAPTCHA");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/retailers/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, recaptchaToken }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+      } else {
+        setError(data.error || "Something went wrong. Please try again.");
+        setRecaptchaToken(null);
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setRecaptchaToken(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 flex items-center justify-center p-4 overflow-hidden">
       {/* Floating orbs background */}
@@ -50,7 +102,90 @@ export default function RetailerForgotPasswordPage() {
             </p>
           </div>
 
-          <ForgotPasswordForm />
+          {success ? (
+            <div className="space-y-6">
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  If an approved retailer account exists with that email, we&apos;ve sent you a password reset link. Please check your inbox.
+                </AlertDescription>
+              </Alert>
+
+              <p className="text-center text-sm text-muted-foreground">
+                Didn&apos;t receive the email? Check your spam folder or{" "}
+                <button
+                  onClick={() => {
+                    setSuccess(false);
+                    setRecaptchaToken(null);
+                  }}
+                  className="text-emerald-600 hover:underline"
+                >
+                  try again
+                </button>
+              </p>
+
+              <Link
+                href="/retailers/login"
+                className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-emerald-600"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to sign in
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    required
+                    disabled={isLoading}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+
+                {recaptchaEnabled && recaptchaSiteKey && (
+                  <div className="flex justify-center">
+                    <Recaptcha
+                      siteKey={recaptchaSiteKey}
+                      onVerify={handleRecaptchaVerify}
+                      onExpire={handleRecaptchaExpire}
+                    />
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+                  disabled={isLoading || (recaptchaEnabled && !recaptchaToken)}
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send reset link
+                </Button>
+              </form>
+
+              <Link
+                href="/retailers/login"
+                className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-emerald-600"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to sign in
+              </Link>
+            </div>
+          )}
         </div>
 
         <p className="mt-8 text-center text-sm text-white/70">

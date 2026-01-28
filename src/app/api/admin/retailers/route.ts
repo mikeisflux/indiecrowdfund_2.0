@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendRetailerApprovalEmail, sendRetailerRejectionEmail } from "@/lib/email";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -218,20 +219,32 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    // In production: Send notification email based on action
-    // if (action === "APPROVE") {
-    //   await sendRetailerApprovalEmail({
-    //     to: retailer.email,
-    //     businessName: retailer.businessName,
-    //     accessCode: updateData.accessCode || retailer.accessCode,
-    //   });
-    // } else if (action === "REJECT") {
-    //   await sendRetailerRejectionEmail({
-    //     to: retailer.email,
-    //     businessName: retailer.businessName,
-    //     reason: notes,
-    //   });
-    // }
+    // Send notification email based on action
+    try {
+      if (action === "APPROVE") {
+        const accessCode = (updateData.accessCode as string) || retailer.accessCode;
+        if (accessCode) {
+          await sendRetailerApprovalEmail(
+            retailer.email,
+            retailer.businessName,
+            retailer.contactName,
+            accessCode
+          );
+          console.log(`[Admin] Sent retailer approval email to ${retailer.email}`);
+        }
+      } else if (action === "REJECT") {
+        await sendRetailerRejectionEmail(
+          retailer.email,
+          retailer.businessName,
+          retailer.contactName,
+          notes || undefined
+        );
+        console.log(`[Admin] Sent retailer rejection email to ${retailer.email}`);
+      }
+    } catch (emailError) {
+      // Don't fail the action if email fails, just log it
+      console.error("[Admin] Failed to send retailer notification email:", emailError);
+    }
 
     return NextResponse.json({
       success: true,

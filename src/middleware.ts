@@ -26,6 +26,8 @@ const csrfExemptRoutes = [
   "/api/health",
   "/api/track", // Analytics tracking endpoint
   "/api/admin/ai-marketing/campaigns/fix-images", // One-time fix script
+  "/api/retailers/login", // Protected by CAPTCHA and rate limiting instead
+  "/api/retailers/forgot-password", // Protected by CAPTCHA and rate limiting instead
 ];
 
 // Routes that allow Shopify iframe embedding

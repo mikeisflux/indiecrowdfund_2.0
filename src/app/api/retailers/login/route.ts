@@ -7,6 +7,7 @@ import {
   checkRetailerLoginRateLimit,
   recordRetailerLoginAttempt,
 } from "@/lib/auth/rate-limit";
+import { verifyRecaptcha } from "@/lib/auth/recaptcha";
 
 function getJwtSecret(): Uint8Array {
   const secret = process.env.RETAILER_JWT_SECRET;
@@ -32,10 +33,19 @@ function getClientIP(req: NextRequest): string | null {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { method, email, password, accessCode } = body;
+    const { method, email, password, accessCode, recaptchaToken } = body;
 
     // Get client IP for rate limiting
     const clientIP = getClientIP(req);
+
+    // Verify reCAPTCHA if token provided
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken, clientIP);
+    if (!recaptchaResult.valid) {
+      return NextResponse.json(
+        { error: recaptchaResult.error || "CAPTCHA verification failed" },
+        { status: 400 }
+      );
+    }
 
     // Determine identifier for rate limiting (email or access code)
     const identifier = method === "credentials" ? email : accessCode;

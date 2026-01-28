@@ -1,8 +1,6 @@
 "use client";
 
-import { getCSRFHeaders } from "@/lib/csrf";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -18,6 +16,7 @@ import {
   AlertCircle,
   Key,
 } from "lucide-react";
+import { Recaptcha, useRecaptchaEnabled, getRecaptchaSiteKey } from "@/components/auth/recaptcha";
 
 export default function RetailerLoginPage() {
   const router = useRouter();
@@ -26,6 +25,17 @@ export default function RetailerLoginPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [error, setError] = useState("");
   const [sessionMessage, setSessionMessage] = useState("");
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaEnabled = useRecaptchaEnabled();
+  const recaptchaSiteKey = getRecaptchaSiteKey();
+
+  const handleRecaptchaVerify = useCallback((token: string) => {
+    setRecaptchaToken(token);
+  }, []);
+
+  const handleRecaptchaExpire = useCallback(() => {
+    setRecaptchaToken(null);
+  }, []);
 
   // Check if user is already logged in via NextAuth with retailerAccess
   useEffect(() => {
@@ -79,13 +89,21 @@ export default function RetailerLoginPage() {
     setIsLoading(true);
     setError("");
 
+    // Check captcha if enabled
+    if (recaptchaEnabled && !recaptchaToken) {
+      setError("Please complete the CAPTCHA");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/retailers/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           method: loginMethod,
           ...formData,
+          recaptchaToken,
         }),
       });
 
@@ -95,9 +113,12 @@ export default function RetailerLoginPage() {
       } else {
         const data = await response.json();
         setError(data.error || "Invalid credentials");
+        // Reset captcha on error
+        setRecaptchaToken(null);
       }
     } catch {
       setError("An error occurred. Please try again.");
+      setRecaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -256,10 +277,20 @@ export default function RetailerLoginPage() {
                 </div>
               )}
 
+              {recaptchaEnabled && recaptchaSiteKey && (
+                <div className="flex justify-center">
+                  <Recaptcha
+                    siteKey={recaptchaSiteKey}
+                    onVerify={handleRecaptchaVerify}
+                    onExpire={handleRecaptchaExpire}
+                  />
+                </div>
+              )}
+
               <Button
                 type="submit"
                 className="w-full btn-glow bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
-                disabled={isLoading}
+                disabled={isLoading || (recaptchaEnabled && !recaptchaToken)}
               >
                 {isLoading ? (
                   <>
