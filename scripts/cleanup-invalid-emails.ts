@@ -34,7 +34,7 @@ async function main() {
 
   // Show sample of invalid emails
   console.log("Sample of invalid emails being removed:");
-  invalidEmailShops.slice(0, 20).forEach((shop) => {
+  invalidEmailShops.slice(0, 20).forEach((shop: { id: string; name: string; email: string | null }) => {
     console.log(`  - "${shop.email}" (${shop.name})`);
   });
   if (invalidEmailShops.length > 20) {
