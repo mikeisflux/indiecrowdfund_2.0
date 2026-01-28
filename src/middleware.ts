@@ -29,6 +29,7 @@ const csrfExemptRoutes = [
   "/api/retailers/login", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/forgot-password", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/apply", // Protected by CAPTCHA instead
+  "/api/retailers/session-auth", // Uses NextAuth session for authentication
 ];
 
 // Routes that allow Shopify iframe embedding

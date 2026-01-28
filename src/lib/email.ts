@@ -1402,7 +1402,6 @@ export async function sendRetailerApprovalEmail(
   accessCode: string
 ) {
   const loginUrl = `${APP_URL}/retailers/login`;
-  const dashboardUrl = `${APP_URL}/retailers/dashboard`;
 
   const html = `
     <!DOCTYPE html>
@@ -1483,8 +1482,6 @@ export async function sendRetailerRejectionEmail(
   contactName: string,
   reason?: string
 ) {
-  const applyUrl = `${APP_URL}/retailers/apply`;
-
   const html = `
     <!DOCTYPE html>
     <html>
