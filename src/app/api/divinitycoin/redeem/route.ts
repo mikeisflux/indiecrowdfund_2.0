@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { Decimal } from "@prisma/client/runtime/library";
 import { validateCSRFToken } from "@/lib/csrf";
 import { applyRedemptionBonus, checkAndAwardBadges, getAvailableBonusPercent } from "@/lib/redemption-bonus";
+import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 
 interface RedemptionResult {
   newBalance: number;
@@ -209,20 +210,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Get DivinityCoin configuration with proper base URL
+    let divinityCoinConfig;
+    try {
+      divinityCoinConfig = await getDivinityCoinConfig();
+    } catch (configError) {
+      console.error("[DivinityCoin Redeem] Failed to get config:", configError);
+      return NextResponse.json(
+        { error: "DivinityCoin is not properly configured" },
+        { status: 500 }
+      );
+    }
+
     // Call DivinityCoin API to validate and redeem the code
+    console.log(`[DivinityCoin Redeem] [${requestId}] Using API: ${divinityCoinConfig.baseUrl}/codes/validate`);
     let divinityResult;
     try {
-      const divinityResponse = await fetch("https://divinitycoin.com/internal?action=validate", {
+      const divinityResponse = await fetch(`${divinityCoinConfig.baseUrl}/codes/validate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${settings.divinityCoinApiKey}`,
-          "X-Partner-ID": settings.divinityCoinPartnerId || "",
+          "Authorization": `Bearer ${divinityCoinConfig.apiKey}`,
+          "X-Partner-ID": divinityCoinConfig.partnerId,
         },
         body: JSON.stringify({
           code: cleanCode,
           platformUserId: userId,
-          partnerId: settings.divinityCoinPartnerId || "", // Always use site's partner ID
+          partnerId: divinityCoinConfig.partnerId,
           requestId, // Include for cross-system audit trail
         }),
       });
@@ -251,9 +265,13 @@ export async function POST(req: NextRequest) {
           CODE_REVOKED: "This code has been revoked",
           RATE_LIMITED: "Too many attempts. Please try again later.",
         };
-        const errorMessage = errorMessages[divinityResult?.code] || divinityResult?.error || "Failed to validate code";
 
-        console.log(`[DivinityCoin Redeem] [${requestId}] API error: ${divinityResult?.code || "unknown"}`);
+        // Extract error code from various possible response formats
+        const errorCode = divinityResult?.code || divinityResult?.errorCode || divinityResult?.error_code;
+        const errorDetail = divinityResult?.error || divinityResult?.message || divinityResult?.detail;
+        const errorMessage = errorMessages[errorCode] || errorDetail || "Failed to validate code";
+
+        console.log(`[DivinityCoin Redeem] [${requestId}] API error: status=${divinityResponse.status}, code=${errorCode || "none"}, detail=${errorDetail || "none"}`);
 
         return NextResponse.json(
           { error: errorMessage },
