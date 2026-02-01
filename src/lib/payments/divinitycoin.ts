@@ -35,7 +35,7 @@ export async function getDivinityCoinConfig(): Promise<DivinityCoinConfig> {
         apiKey: settings.divinityCoinApiKey,
         partnerId: settings.divinityCoinPartnerId || "",
         webhookSecret: settings.divinityCoinWebhookSecret || "",
-        baseUrl: process.env.DIVINITYCOIN_API_URL || "https://api.divinitycoin.com/v1",
+        baseUrl: process.env.DIVINITYCOIN_API_URL || "https://divinitycoin.com/internal",
       };
       return cachedConfig;
     }
@@ -49,7 +49,7 @@ export async function getDivinityCoinConfig(): Promise<DivinityCoinConfig> {
       apiKey: process.env.DIVINITYCOIN_API_KEY,
       partnerId: process.env.DIVINITYCOIN_PARTNER_ID || "",
       webhookSecret: process.env.DIVINITYCOIN_WEBHOOK_SECRET || "",
-      baseUrl: process.env.DIVINITYCOIN_API_URL || "https://api.divinitycoin.com/v1",
+      baseUrl: process.env.DIVINITYCOIN_API_URL || "https://divinitycoin.com/internal",
     };
     return cachedConfig;
   }

@@ -223,10 +223,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Call DivinityCoin API to validate and redeem the code
-    console.log(`[DivinityCoin Redeem] [${requestId}] Using API: ${divinityCoinConfig.baseUrl}/codes/validate`);
+    console.log(`[DivinityCoin Redeem] [${requestId}] Using API: ${divinityCoinConfig.baseUrl}?action=validate`);
     let divinityResult;
     try {
-      const divinityResponse = await fetch(`${divinityCoinConfig.baseUrl}/codes/validate`, {
+      const divinityResponse = await fetch(`${divinityCoinConfig.baseUrl}?action=validate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
