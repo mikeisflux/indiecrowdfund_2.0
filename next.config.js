@@ -29,6 +29,16 @@ const nextConfig = {
         hostname: 'localhost',
         pathname: '/api/uploads/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'img.youtube.com',
+        pathname: '/vi/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+        pathname: '/**',
+      },
     ],
   },
 };
