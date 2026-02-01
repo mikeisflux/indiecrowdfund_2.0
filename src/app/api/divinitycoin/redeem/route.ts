@@ -231,10 +231,13 @@ export async function POST(req: NextRequest) {
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${divinityCoinConfig.apiKey}`,
+          "X-Partner-ID": divinityCoinConfig.partnerId,
         },
         body: JSON.stringify({
           code: cleanCode,
           platformUserId: userId,
+          partnerId: divinityCoinConfig.partnerId,
+          requestId, // Include for cross-system audit trail
         }),
       });
 
