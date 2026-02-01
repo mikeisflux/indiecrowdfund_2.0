@@ -110,39 +110,54 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProjectLayout({ params, children }: Props) {
   const { vanityname, slug } = await params;
 
-  // Verify the vanityname matches the project creator
-  const creator = await db.user.findUnique({
-    where: { vanityUrl: vanityname },
-    select: { id: true },
-  });
+  // Handle legacy URL (vanityname = "_" from middleware rewrite)
+  const isLegacyUrl = vanityname === "_";
 
-  if (!creator) {
-    notFound();
-  }
+  let project;
 
-  const project = await db.project.findFirst({
-    where: {
-      slug,
-      creatorId: creator.id,
-    },
-    select: { id: true },
-  });
-
-  if (!project) {
-    // Check if project exists under a different creator - redirect to correct URL
-    const projectBySlug = await db.project.findUnique({
+  if (isLegacyUrl) {
+    // For legacy URLs, look up project directly by slug
+    project = await db.project.findUnique({
       where: { slug },
-      select: {
-        creator: {
-          select: { vanityUrl: true },
-        },
-      },
+      select: { id: true },
+    });
+  } else {
+    // Verify the vanityname matches the project creator
+    const creator = await db.user.findUnique({
+      where: { vanityUrl: vanityname },
+      select: { id: true },
     });
 
-    if (projectBySlug?.creator?.vanityUrl) {
-      redirect(`/projects/${projectBySlug.creator.vanityUrl}/${slug}`);
+    if (!creator) {
+      notFound();
     }
 
+    project = await db.project.findFirst({
+      where: {
+        slug,
+        creatorId: creator.id,
+      },
+      select: { id: true },
+    });
+
+    if (!project) {
+      // Check if project exists under a different creator - redirect to correct URL
+      const projectBySlug = await db.project.findUnique({
+        where: { slug },
+        select: {
+          creator: {
+            select: { vanityUrl: true },
+          },
+        },
+      });
+
+      if (projectBySlug?.creator?.vanityUrl) {
+        redirect(`/projects/${projectBySlug.creator.vanityUrl}/${slug}`);
+      }
+    }
+  }
+
+  if (!project) {
     notFound();
   }
 
