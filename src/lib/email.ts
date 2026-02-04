@@ -104,6 +104,8 @@ export async function isEmailUnsubscribed(email: string): Promise<boolean> {
 }
 
 // Check if an email is on the blocklist (bounced, spam reported, etc.)
+// Note: "ratelimit" entries are NOT treated as blocks - rate limiting is temporary
+// and emails should be queued/retried, not permanently blocked.
 export async function isEmailBlocked(email: string): Promise<{ blocked: boolean; reason?: string }> {
   try {
     const normalizedEmail = email.toLowerCase().trim();
@@ -122,6 +124,12 @@ export async function isEmailBlocked(email: string): Promise<{ blocked: boolean;
     });
 
     if (blockedEmail) {
+      // Skip blocking for rate-limited emails - these are temporary and should go through
+      if (blockedEmail.reason === "ratelimit") {
+        console.log(`[Email] Allowing rate-limited email through for: ${normalizedEmail}`);
+        return { blocked: false };
+      }
+
       // Update blocked count
       await db.emailBlocklist.update({
         where: { id: blockedEmail.id },
