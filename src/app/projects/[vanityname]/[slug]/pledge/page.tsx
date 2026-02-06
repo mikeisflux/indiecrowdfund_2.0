@@ -23,6 +23,7 @@ import { PaymentStep } from "./components/PaymentStep";
 import { OrderSummary } from "./components/OrderSummary";
 import { FAQSection } from "./components/FAQSection";
 import { SuccessPage } from "./components/SuccessPage";
+import { DivinityCoinWallet } from "./components/DivinityCoinWallet";
 
 export default function PledgePage() {
   const params = useParams();
@@ -651,6 +652,16 @@ export default function PledgePage() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-6 space-y-6">
+              {/* DivinityCoin Wallet - only shown for DivinityCoin projects */}
+              {project.paymentProcessor === "DIVINITYCOIN" && (
+                <DivinityCoinWallet
+                  balance={divinityCoinBalance}
+                  total={isAddItemsMode ? addItemsTotal : total}
+                  onBalanceUpdate={setDivinityCoinBalance}
+                  isLoading={!divinityCoinReady}
+                />
+              )}
+
               <OrderSummary
                 step={step}
                 isAddItemsMode={isAddItemsMode}
