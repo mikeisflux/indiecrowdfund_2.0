@@ -404,56 +404,57 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
           </div>
         </div>
 
-        {/* Slider Controls */}
-        {slides.length > 1 && (
-          <>
-            {/* Navigation Arrows */}
-            <button
-              onClick={goToPrev}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 text-foreground hover:bg-background/80 transition-all opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={goToNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 text-foreground hover:bg-background/80 transition-all opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100"
-              aria-label="Next slide"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-
-            {/* Dots & Play/Pause */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
-              {/* Play/Pause button */}
-              <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 text-foreground hover:bg-background/80 transition-all"
-                aria-label={isPlaying ? "Pause slideshow" : "Play slideshow"}
-              >
-                {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-              </button>
-
-              {/* Dots */}
-              <div className="flex gap-2">
-                {slides.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => goToSlide(index)}
-                    className={cn(
-                      "w-2 h-2 rounded-full transition-all",
-                      index === currentIndex
-                        ? "bg-primary w-6"
-                        : "bg-foreground/30 hover:bg-foreground/50"
-                    )}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </>
-        )}
       </div>
+
+      {/* Slider Controls - positioned relative to section, not container */}
+      {slides.length > 1 && (
+        <>
+          {/* Navigation Arrows */}
+          <button
+            onClick={goToPrev}
+            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 text-foreground hover:bg-background/80 transition-all opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 z-10"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={goToNext}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 text-foreground hover:bg-background/80 transition-all opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 z-10"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          {/* Dots & Play/Pause */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">
+            {/* Play/Pause button */}
+            <button
+              onClick={() => setIsPlaying(!isPlaying)}
+              className="p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-border/50 text-foreground hover:bg-background/80 transition-all"
+              aria-label={isPlaying ? "Pause slideshow" : "Play slideshow"}
+            >
+              {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            </button>
+
+            {/* Dots */}
+            <div className="flex gap-2">
+              {slides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  className={cn(
+                    "w-2 h-2 rounded-full transition-all",
+                    index === currentIndex
+                      ? "bg-primary w-6"
+                      : "bg-foreground/30 hover:bg-foreground/50"
+                  )}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }
