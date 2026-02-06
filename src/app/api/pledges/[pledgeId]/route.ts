@@ -192,14 +192,18 @@ export async function PATCH(
         data: { status: "CANCELLED" },
       });
 
-      // Update project backer count and amount
-      await db.project.update({
-        where: { id: pledge.projectId },
-        data: {
-          backerCount: { decrement: 1 },
-          currentAmount: { decrement: pledge.amount },
-        },
-      });
+      // Only decrement project stats if pledge was actually confirmed
+      // (stats are only incremented when confirmationEmailSent = true)
+      // This prevents negative values from incomplete checkouts being cancelled
+      if (pledge.confirmationEmailSent) {
+        await db.project.update({
+          where: { id: pledge.projectId },
+          data: {
+            backerCount: { decrement: 1 },
+            currentAmount: { decrement: pledge.amount },
+          },
+        });
+      }
 
       return NextResponse.json({
         success: true,
@@ -515,14 +519,18 @@ export async function DELETE(
       data: { status: "CANCELLED" },
     });
 
-    // Update project backer count and amount
-    await db.project.update({
-      where: { id: pledge.projectId },
-      data: {
-        backerCount: { decrement: 1 },
-        currentAmount: { decrement: pledge.amount },
-      },
-    });
+    // Only decrement project stats if pledge was actually confirmed
+    // (stats are only incremented when confirmationEmailSent = true)
+    // This prevents negative values from incomplete checkouts being cancelled
+    if (pledge.confirmationEmailSent) {
+      await db.project.update({
+        where: { id: pledge.projectId },
+        data: {
+          backerCount: { decrement: 1 },
+          currentAmount: { decrement: pledge.amount },
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
