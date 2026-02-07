@@ -1135,6 +1135,33 @@ function ComposeEmailDialog({
               className="min-h-[200px]"
             />
           </div>
+
+          {/* Show attachments that will be forwarded */}
+          {prefill?.attachments && prefill.attachments.length > 0 && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
+                Attachments ({prefill.attachments.length})
+              </Label>
+              <div className="flex flex-wrap gap-2 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border">
+                {prefill.attachments.map((att, index) => {
+                  const FileTypeIcon = getFileIcon(att.contentType || "");
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-zinc-800 rounded-md border text-sm"
+                    >
+                      <FileTypeIcon className="h-4 w-4 text-zinc-500" />
+                      <span className="truncate max-w-[150px]">{att.filename}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                These attachments will be included in the forwarded email.
+              </p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
