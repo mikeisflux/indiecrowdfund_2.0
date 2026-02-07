@@ -175,6 +175,7 @@ export default function EmailPage() {
     subject?: string;
     body?: string;
     inReplyTo?: string;
+    attachments?: Array<{ filename: string; data: string; contentType?: string; url?: string }>;
   } | null>(null);
 
   // Delete confirmation dialogs
@@ -374,11 +375,20 @@ export default function EmailPage() {
 
     const forwardBody = `\n\n---\nForwarded message:\nFrom: ${email.fromName || email.fromEmail}\nDate: ${new Date(email.sentAt || email.createdAt).toLocaleString()}\nSubject: ${email.subject}\n\n${email.bodyText || ""}`;
 
+    // Include attachments from the original email for forwarding
+    const forwardAttachments = email.attachments?.files?.map((att) => ({
+      filename: att.filename,
+      contentType: att.contentType,
+      r2Key: att.r2Key,
+      data: "", // Will be fetched by the server
+    })) || [];
+
     setComposeMode("forward");
     setComposePrefill({
       to: "",
       subject: fwdSubject,
       body: forwardBody,
+      attachments: forwardAttachments,
     });
     setIsComposing(true);
   };
@@ -953,7 +963,7 @@ function ComposeEmailDialog({
   selectedMailbox: Mailbox | null;
   settings: EmailSettings | null;
   mode?: "new" | "reply" | "replyAll" | "forward";
-  prefill?: { to?: string; subject?: string; body?: string; inReplyTo?: string } | null;
+  prefill?: { to?: string; subject?: string; body?: string; inReplyTo?: string; attachments?: Array<{ filename: string; data: string; contentType?: string; r2Key?: string }> } | null;
   onSent: () => void;
 }) {
   const [fromMailboxId, setFromMailboxId] = useState(selectedMailbox?.id || "");
@@ -1011,6 +1021,8 @@ function ComposeEmailDialog({
           bodyHtml: body.replace(/\n/g, "<br>"),
           bodyText: body,
           sendNow: true,
+          // Include attachments for forwarding (server will fetch data from R2)
+          attachments: prefill?.attachments,
         }),
       });
 

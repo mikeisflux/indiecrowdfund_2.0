@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, EmailAttachment } from "@/lib/email";
+import { getR2Storage } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 
@@ -165,7 +166,43 @@ export async function POST(
       sendNow,
       inReplyTo,
       threadId,
+      attachments: rawAttachments,
     } = body;
+
+    // Process attachments if provided (from forwarded emails)
+    // Attachments can either have data (base64) or r2Key (need to fetch from R2)
+    const attachments: EmailAttachment[] = [];
+    if (rawAttachments && rawAttachments.length > 0) {
+      const r2Storage = await getR2Storage();
+
+      for (const att of rawAttachments as Array<{ filename: string; data?: string; contentType?: string; r2Key?: string }>) {
+        if (att.data) {
+          // Already have the data
+          attachments.push({
+            filename: att.filename,
+            data: att.data,
+            contentType: att.contentType,
+          });
+        } else if (att.r2Key && r2Storage) {
+          // Need to fetch from R2
+          try {
+            console.log(`[Admin Email] Fetching attachment from R2: ${att.r2Key}`);
+            const fileData = await r2Storage.getFile(att.r2Key);
+            if (fileData) {
+              // Convert Buffer to base64 string
+              const base64Data = Buffer.from(fileData).toString("base64");
+              attachments.push({
+                filename: att.filename,
+                data: base64Data,
+                contentType: att.contentType,
+              });
+            }
+          } catch (err) {
+            console.error(`[Admin Email] Failed to fetch attachment ${att.r2Key}:`, err);
+          }
+        }
+      }
+    }
 
     // Verify mailbox exists
     const mailbox = await db.mailbox.findUnique({
@@ -212,12 +249,13 @@ export async function POST(
     if (sendNow && folder !== "DRAFTS") {
       try {
         // Send email directly using the email library
-        console.log(`[Admin Email] Sending email to ${toEmail}, subject: ${subject}`);
+        console.log(`[Admin Email] Sending email to ${toEmail}, subject: ${subject}, attachments: ${attachments.length}`);
         const sendResult = await sendEmail({
           to: toEmail,
           subject,
           html: bodyHtml,
           text: bodyText || bodyHtml.replace(/<[^>]*>/g, ""),
+          attachments: attachments.length > 0 ? attachments : undefined,
         });
 
         if (sendResult.success) {

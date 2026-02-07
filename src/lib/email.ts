@@ -26,6 +26,13 @@ function getUnsubscribeSecret(): string {
   return secret || "development-secret";
 }
 
+// Attachment type for email attachments
+export interface EmailAttachment {
+  filename: string;
+  data: Buffer | string; // Buffer or base64 string
+  contentType?: string;
+}
+
 interface SendEmailOptions {
   to: string;
   subject: string;
@@ -36,6 +43,7 @@ interface SendEmailOptions {
   fromEmail?: string; // Custom from email (e.g., creator email)
   fromName?: string; // Custom from name
   isCreatorEmail?: boolean; // True when sending from a creator's email handle
+  attachments?: EmailAttachment[]; // Optional attachments
 }
 
 // Get email settings from database
@@ -294,7 +302,8 @@ async function sendViaMailgun(
   apiKey: string,
   domain: string,
   replyTo?: string,
-  unsubscribeUrl?: string
+  unsubscribeUrl?: string,
+  attachments?: EmailAttachment[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const mailgun = new Mailgun(formData);
@@ -319,6 +328,15 @@ async function sendViaMailgun(
       messageData["h:List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
     }
 
+    // Add attachments if provided
+    if (attachments && attachments.length > 0) {
+      messageData.attachment = attachments.map((att) => ({
+        filename: att.filename,
+        data: typeof att.data === "string" ? Buffer.from(att.data, "base64") : att.data,
+        contentType: att.contentType,
+      }));
+    }
+
     const response = await mg.messages.create(domain, messageData);
 
     console.log("Email sent via Mailgun, id:", response.id);
@@ -329,7 +347,7 @@ async function sendViaMailgun(
   }
 }
 
-export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName, isCreatorEmail }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName, isCreatorEmail, attachments }: SendEmailOptions) {
   console.log(`[Email] sendEmail called - to: ${to}, subject: ${subject}`);
 
   // Check if email is on the blocklist (bounced, spam reported, etc.)
@@ -397,8 +415,8 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
       console.error("[Email] Mailgun selected but credentials incomplete - API key:", !!mailgunApiKey, ", Domain:", !!mailgunDomain);
       return { success: false, error: "Mailgun selected but API key or domain is missing" };
     }
-    console.log(`[Email] Sending email via Mailgun to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}`);
-    result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain, replyTo, unsubscribeUrl);
+    console.log(`[Email] Sending email via Mailgun to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}, attachments: ${attachments?.length || 0}`);
+    result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain, replyTo, unsubscribeUrl, attachments);
     console.log(`[Email] Mailgun result:`, result);
   } else if (emailProvider === "sendgrid") {
     // SendGrid is explicitly selected
@@ -412,8 +430,8 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
   } else {
     // Try Mailgun first if configured, then SendGrid
     if (mailgunApiKey && mailgunDomain) {
-      console.log(`[Email] Sending email via Mailgun (auto) to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}`);
-      result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain, replyTo, unsubscribeUrl);
+      console.log(`[Email] Sending email via Mailgun (auto) to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}, attachments: ${attachments?.length || 0}`);
+      result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain, replyTo, unsubscribeUrl, attachments);
     } else if (sendgridApiKey) {
       console.log(`[Email] Sending email via SendGrid (auto) to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}`);
       result = await sendViaSendGrid(to, subject, finalHtml, plainText, fromEmail, fromName, sendgridApiKey, replyTo, unsubscribeUrl);

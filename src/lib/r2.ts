@@ -181,6 +181,35 @@ export class R2Storage {
   }
 
   /**
+   * Download file content directly
+   */
+  async getFile(key: string): Promise<Buffer | null> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.config.bucketName,
+        Key: key,
+      });
+
+      const response = await this.client.send(command);
+
+      if (!response.Body) {
+        return null;
+      }
+
+      // Convert readable stream to buffer
+      const chunks: Uint8Array[] = [];
+      const body = response.Body as AsyncIterable<Uint8Array>;
+      for await (const chunk of body) {
+        chunks.push(chunk);
+      }
+      return Buffer.concat(chunks);
+    } catch (error) {
+      console.error(`[R2] Failed to get file ${key}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Delete a file
    */
   async deleteFile(key: string): Promise<void> {
