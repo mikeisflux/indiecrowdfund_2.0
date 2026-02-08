@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendRetailerApprovalEmail, sendRetailerRejectionEmail } from "@/lib/email";
@@ -210,6 +211,9 @@ export async function PATCH(req: NextRequest) {
       where: { id: retailerId },
       data: updateData,
     });
+
+    // Invalidate the retailer stats cache so counts update immediately
+    revalidateTag("retailer-stats");
 
     // Update linked user's retailerAccess if applicable
     if (updateUserRetailerAccess !== null && retailer.userId) {
