@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +29,7 @@ import {
   Shield,
   Info,
 } from "lucide-react";
+import { Recaptcha } from "@/components/auth/recaptcha";
 
 const steps = [
   { id: 1, title: "Business Info", icon: Building2 },
@@ -68,6 +69,34 @@ export default function RetailerApplyPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [recaptchaEnabled, setRecaptchaEnabled] = useState(false);
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState<string | null>(null);
+
+  // Fetch reCAPTCHA settings from API (supports both DB and env config)
+  useEffect(() => {
+    async function fetchRecaptchaSettings() {
+      try {
+        const res = await fetch("/api/auth/recaptcha");
+        if (res.ok) {
+          const data = await res.json();
+          setRecaptchaEnabled(data.enabled);
+          setRecaptchaSiteKey(data.siteKey);
+        }
+      } catch (err) {
+        console.error("Failed to fetch reCAPTCHA settings:", err);
+      }
+    }
+    fetchRecaptchaSettings();
+  }, []);
+
+  const handleRecaptchaVerify = useCallback((token: string) => {
+    setRecaptchaToken(token);
+  }, []);
+
+  const handleRecaptchaExpire = useCallback(() => {
+    setRecaptchaToken(null);
+  }, []);
 
   const [formData, setFormData] = useState({
     // Business Info
@@ -118,20 +147,32 @@ export default function RetailerApplyPage() {
       case 4:
         return formData.taxId && formData.taxIdType;
       case 5:
-        return formData.agreeToTerms && formData.agreeToPrivacy;
+        const baseRequirements = formData.agreeToTerms && formData.agreeToPrivacy;
+        if (recaptchaEnabled) {
+          return baseRequirements && !!recaptchaToken;
+        }
+        return baseRequirements;
       default:
         return false;
     }
   };
 
   const handleSubmit = async () => {
+    if (recaptchaEnabled && !recaptchaToken) {
+      toast.error("Please complete the CAPTCHA");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const response = await fetch("/api/retailers/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          recaptchaToken,
+        }),
       });
 
       if (response.ok) {
@@ -139,10 +180,12 @@ export default function RetailerApplyPage() {
       } else {
         const data = await response.json();
         toast.error(data.error || data.message || "Failed to submit application");
+        setRecaptchaToken(null);
       }
     } catch (error) {
       console.error("Error submitting application:", error);
       toast.error("Failed to submit application. Please try again.");
+      setRecaptchaToken(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -651,6 +694,16 @@ export default function RetailerApplyPage() {
                       </label>
                     </div>
                   </div>
+
+                  {recaptchaEnabled && recaptchaSiteKey && (
+                    <div className="flex justify-center pt-4">
+                      <Recaptcha
+                        siteKey={recaptchaSiteKey}
+                        onVerify={handleRecaptchaVerify}
+                        onExpire={handleRecaptchaExpire}
+                      />
+                    </div>
+                  )}
                 </div>
               </>
             )}
