@@ -65,9 +65,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  // Strip HTML tags from description for meta
+  // Strip HTML tags and decode HTML entities for clean plain text
+  const stripHtmlAndEntities = (html: string) => {
+    return html
+      .replace(/<[^>]*>/g, "") // Remove HTML tags
+      .replace(/&nbsp;/g, " ") // Replace non-breaking spaces
+      .replace(/&amp;/g, "&")  // Decode ampersand
+      .replace(/&lt;/g, "<")   // Decode less than
+      .replace(/&gt;/g, ">")   // Decode greater than
+      .replace(/&quot;/g, '"') // Decode quotes
+      .replace(/&#39;/g, "'")  // Decode apostrophe
+      .replace(/\s+/g, " ")    // Collapse multiple whitespace
+      .trim();
+  };
+
   const plainDescription = project.description
-    ? project.description.replace(/<[^>]*>/g, "").slice(0, 200)
+    ? stripHtmlAndEntities(project.description).slice(0, 200)
     : project.subtitle || `Back ${project.title} on IndieCrowdfund`;
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
