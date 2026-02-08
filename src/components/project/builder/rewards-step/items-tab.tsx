@@ -238,21 +238,45 @@ export function ItemsTab({
   const [sortOption, setSortOption] = useState<SortOption>("manual");
   const [manualOrder, setManualOrder] = useState<RewardItemData[]>(items);
 
-  // Sync manual order with items when items change
+  // Sync manual order with items when items change (including property updates)
   useEffect(() => {
     const currentIds = new Set(items.map(i => i.id));
     const manualIds = new Set(manualOrder.map(i => i.id));
 
     // Check if items were added or removed
-    const itemsChanged = items.length !== manualOrder.length ||
+    const itemsAddedOrRemoved = items.length !== manualOrder.length ||
       items.some(item => !manualIds.has(item.id)) ||
       manualOrder.some(item => !currentIds.has(item.id));
 
-    if (itemsChanged) {
+    if (itemsAddedOrRemoved) {
       // Keep existing order for items that still exist, append new items
       const existingInOrder = manualOrder.filter(item => currentIds.has(item.id));
       const newItems = items.filter(item => !manualIds.has(item.id));
-      setManualOrder([...existingInOrder, ...newItems]);
+      // Update with latest item data while preserving order
+      const updatedOrder = existingInOrder.map(orderedItem => {
+        const latestItem = items.find(i => i.id === orderedItem.id);
+        return latestItem || orderedItem;
+      });
+      setManualOrder([...updatedOrder, ...newItems]);
+    } else {
+      // Check if any item properties changed (e.g., imageUrl update)
+      const hasPropertyChanges = manualOrder.some(orderedItem => {
+        const latestItem = items.find(i => i.id === orderedItem.id);
+        if (!latestItem) return false;
+        // Check if imageUrl or other key properties changed
+        return orderedItem.imageUrl !== latestItem.imageUrl ||
+               orderedItem.title !== latestItem.title ||
+               orderedItem.description !== latestItem.description ||
+               orderedItem.isEnded !== latestItem.isEnded;
+      });
+
+      if (hasPropertyChanges) {
+        // Update items while preserving order
+        setManualOrder(manualOrder.map(orderedItem => {
+          const latestItem = items.find(i => i.id === orderedItem.id);
+          return latestItem || orderedItem;
+        }));
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
