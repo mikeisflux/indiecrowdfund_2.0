@@ -68,14 +68,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Strip HTML tags and decode HTML entities for clean plain text
   const stripHtmlAndEntities = (html: string) => {
     return html
-      .replace(/<[^>]*>/g, "") // Remove HTML tags
-      .replace(/&nbsp;/g, " ") // Replace non-breaking spaces
-      .replace(/&amp;/g, "&")  // Decode ampersand
-      .replace(/&lt;/g, "<")   // Decode less than
-      .replace(/&gt;/g, ">")   // Decode greater than
-      .replace(/&quot;/g, '"') // Decode quotes
-      .replace(/&#39;/g, "'")  // Decode apostrophe
-      .replace(/\s+/g, " ")    // Collapse multiple whitespace
+      .replace(/<br\s*\/?>/gi, " ")           // Replace <br> with space
+      .replace(/<\/(p|div|h[1-6]|li)>/gi, " ") // Add space after block elements
+      .replace(/<[^>]*>/g, "")                 // Remove remaining HTML tags
+      .replace(/&nbsp;/g, " ")                 // Replace non-breaking spaces
+      .replace(/&amp;/g, "&")                  // Decode ampersand
+      .replace(/&lt;/g, "<")                   // Decode less than
+      .replace(/&gt;/g, ">")                   // Decode greater than
+      .replace(/&quot;/g, '"')                 // Decode quotes
+      .replace(/&#39;/g, "'")                  // Decode apostrophe
+      .replace(/\s+/g, " ")                    // Collapse multiple whitespace
       .trim();
   };
 
