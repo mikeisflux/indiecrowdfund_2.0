@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,7 @@ import {
   Shield,
   Info,
 } from "lucide-react";
-import { Recaptcha, useRecaptchaEnabled, getRecaptchaSiteKey } from "@/components/auth/recaptcha";
+import { Recaptcha } from "@/components/auth/recaptcha";
 
 const steps = [
   { id: 1, title: "Business Info", icon: Building2 },
@@ -70,8 +70,25 @@ export default function RetailerApplyPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
-  const recaptchaEnabled = useRecaptchaEnabled();
-  const recaptchaSiteKey = getRecaptchaSiteKey();
+  const [recaptchaEnabled, setRecaptchaEnabled] = useState(false);
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState<string | null>(null);
+
+  // Fetch reCAPTCHA settings from API (supports both DB and env config)
+  useEffect(() => {
+    async function fetchRecaptchaSettings() {
+      try {
+        const res = await fetch("/api/auth/recaptcha");
+        if (res.ok) {
+          const data = await res.json();
+          setRecaptchaEnabled(data.enabled);
+          setRecaptchaSiteKey(data.siteKey);
+        }
+      } catch (err) {
+        console.error("Failed to fetch reCAPTCHA settings:", err);
+      }
+    }
+    fetchRecaptchaSettings();
+  }, []);
 
   const handleRecaptchaVerify = useCallback((token: string) => {
     setRecaptchaToken(token);

@@ -16,7 +16,7 @@ import {
   AlertCircle,
   Key,
 } from "lucide-react";
-import { Recaptcha, useRecaptchaEnabled, getRecaptchaSiteKey } from "@/components/auth/recaptcha";
+import { Recaptcha } from "@/components/auth/recaptcha";
 
 export default function RetailerLoginPage() {
   const router = useRouter();
@@ -26,8 +26,8 @@ export default function RetailerLoginPage() {
   const [error, setError] = useState("");
   const [sessionMessage, setSessionMessage] = useState("");
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
-  const recaptchaEnabled = useRecaptchaEnabled();
-  const recaptchaSiteKey = getRecaptchaSiteKey();
+  const [recaptchaEnabled, setRecaptchaEnabled] = useState(false);
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState<string | null>(null);
 
   const handleRecaptchaVerify = useCallback((token: string) => {
     setRecaptchaToken(token);
@@ -35,6 +35,23 @@ export default function RetailerLoginPage() {
 
   const handleRecaptchaExpire = useCallback(() => {
     setRecaptchaToken(null);
+  }, []);
+
+  // Fetch reCAPTCHA settings from API (supports both DB and env config)
+  useEffect(() => {
+    async function fetchRecaptchaSettings() {
+      try {
+        const res = await fetch("/api/auth/recaptcha");
+        if (res.ok) {
+          const data = await res.json();
+          setRecaptchaEnabled(data.enabled);
+          setRecaptchaSiteKey(data.siteKey);
+        }
+      } catch (err) {
+        console.error("Failed to fetch reCAPTCHA settings:", err);
+      }
+    }
+    fetchRecaptchaSettings();
   }, []);
 
   // Check if user is already logged in via NextAuth with retailerAccess
