@@ -37,13 +37,14 @@ import {
   ChevronDown,
   Bug,
   FileText,
+  Store,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { MobileProfileLinks } from "@/components/mobile-profile-links";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Footer } from "@/components/footer";
 import { HeroSlider } from "@/components/hero-slider";
-import { getPlatformStats } from "@/lib/stats/actions";
+import { getPlatformStats, getRetailerStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
 import { formatTimeRemaining } from "@/lib/utils";
@@ -303,8 +304,9 @@ export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [stats, featuredProjects, prelaunchProjects, pastCampaigns, followedProjectIds, heroSlides] = await Promise.all([
+  const [stats, retailerStats, featuredProjects, prelaunchProjects, pastCampaigns, followedProjectIds, heroSlides] = await Promise.all([
     getPlatformStats(),
+    getRetailerStats(),
     getFeaturedProjects(),
     getPrelaunchProjects(),
     getPastCampaigns(),
@@ -445,7 +447,7 @@ export default async function HomePage() {
       <section className="relative border-y border-border/50 py-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-cyan-500/5 to-purple-500/5" />
         <div className="container relative">
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-5">
             <div className="glass-card glass-card-hover rounded-2xl p-6 text-center group">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-emerald-500/20 mb-3 group-hover:glow-pulse transition-all">
                 <TrendingUp className="w-6 h-6 text-primary" />
@@ -482,6 +484,15 @@ export default async function HomePage() {
               </p>
               <p className="text-sm text-muted-foreground">Success rate</p>
             </div>
+            <Link href="/retailers" className="glass-card glass-card-hover rounded-2xl p-6 text-center group">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 mb-3 group-hover:glow-pulse transition-all">
+                <Store className="w-6 h-6 text-emerald-500" />
+              </div>
+              <p className="text-3xl font-bold stat-value mb-1">
+                {retailerStats.certifiedRetailers > 0 ? formatNumber(retailerStats.certifiedRetailers) : "0"}
+              </p>
+              <p className="text-sm text-muted-foreground">Certified Retailers</p>
+            </Link>
           </div>
         </div>
       </section>
