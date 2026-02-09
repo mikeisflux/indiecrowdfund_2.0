@@ -50,6 +50,8 @@ export function ActiveProjectPanel({
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [backfillMessage, setBackfillMessage] = useState<string | null>(null);
+  const [isReconciling, setIsReconciling] = useState(false);
+  const [reconcileMessage, setReconcileMessage] = useState<string | null>(null);
   const [showVanityUrlDialog, setShowVanityUrlDialog] = useState(false);
   const [currentVanityUrl, setCurrentVanityUrl] = useState<string | null>(null);
 
@@ -59,6 +61,7 @@ export function ActiveProjectPanel({
     setProcessMessage(null);
     setVerifyMessage(null);
     setBackfillMessage(null);
+    setReconcileMessage(null);
     setCurrentVanityUrl(project?.creator?.vanityUrl || null);
   }, [project?.id, project?.creator?.vanityUrl]);
 
@@ -186,6 +189,49 @@ export function ActiveProjectPanel({
     }
   };
 
+  const handleReconcilePledges = async () => {
+    if (!project) return;
+
+    setIsReconciling(true);
+    setReconcileMessage(null);
+
+    try {
+      const response = await fetch(`/api/admin/reconcile-pledges`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ projectId: project.id, applyFixes: true }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const result = data.results?.[0];
+        if (!result) {
+          setReconcileMessage("No pledges found for this project");
+        } else if (!result.discrepancy.hasIssues) {
+          setReconcileMessage("All pledges are in sync with Stripe");
+        } else {
+          const issues = [];
+          if (result.details.statusMismatch.length > 0) {
+            issues.push(`${result.details.statusMismatch.length} status fixes`);
+          }
+          if (result.details.missingInDb.length > 0) {
+            issues.push(`${result.details.missingInDb.length} missing pledges`);
+          }
+          setReconcileMessage(`Reconciled: ${issues.join(", ") || "fixes applied"}`);
+          // Refresh stats after reconciliation
+          handleSyncStats();
+        }
+      } else {
+        setReconcileMessage(`Error: ${data.error || "Failed to reconcile"}`);
+      }
+    } catch {
+      setReconcileMessage("Error: Network request failed");
+    } finally {
+      setIsReconciling(false);
+    }
+  };
+
   if (!project || (project.status !== "LIVE" && project.status !== "APPROVED")) {
     return (
       <Card className="h-[400px] flex items-center justify-center">
@@ -307,6 +353,21 @@ export function ActiveProjectPanel({
           <div className="flex items-center gap-2 mb-2">
             <Button
               variant="outline"
+              onClick={handleReconcilePledges}
+              disabled={isReconciling}
+              className="flex-1"
+            >
+              {isReconciling ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              {isReconciling ? "Reconciling..." : "Reconcile Pledges"}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant="outline"
               onClick={handleBackfillBackerNumbers}
               disabled={isBackfilling}
               className="flex-1"
@@ -340,6 +401,11 @@ export function ActiveProjectPanel({
           {verifyMessage && (
             <p className={`text-sm mb-2 ${verifyMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
               {verifyMessage}
+            </p>
+          )}
+          {reconcileMessage && (
+            <p className={`text-sm mb-2 ${reconcileMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
+              {reconcileMessage}
             </p>
           )}
           {syncMessage && (
