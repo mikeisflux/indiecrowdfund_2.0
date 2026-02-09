@@ -342,7 +342,7 @@ export default async function RetailersPage() {
                 Why Retailers Choose Us
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
-                Join hundreds of retailers who are growing their business with exclusive crowdfunded products.
+                Get in on the ground floor and be among the first retailers who will grow their business with exclusive crowdfunded products.
               </p>
 
               <div className="mt-8 space-y-6">
