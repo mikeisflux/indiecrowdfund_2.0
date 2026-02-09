@@ -96,6 +96,7 @@ const requirements = [
   "Good standing with distributors (if applicable)",
 ];
 
+/* Testimonials data - commented out for now
 const testimonials = [
   {
     quote: "The retailer program has been a game-changer for our comic shop. We've been able to offer our customers exclusive products they can't find anywhere else.",
@@ -116,6 +117,7 @@ const testimonials = [
     avatar: "Q",
   },
 ];
+*/
 
 export default async function RetailersPage() {
   const retailerStats = await getRetailerStats();
