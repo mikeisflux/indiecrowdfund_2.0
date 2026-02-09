@@ -444,11 +444,17 @@ export default function PledgePage() {
     if (currentPledgeId) {
       try {
         await confirmPayment(currentPledgeId, isAddItemsMode);
+        setStep("success");
       } catch (err) {
         console.error("Failed to confirm payment:", err);
+        // Show error but still allow user to see they have a pending pledge
+        setPaymentError(
+          "Payment received but confirmation failed. Please refresh the page or contact support if the issue persists."
+        );
       }
+    } else {
+      setStep("success");
     }
-    setStep("success");
     setIsProcessing(false);
   };
 

@@ -110,7 +110,13 @@ export async function confirmPayment(pledgeId: string, isAddItemsMode: boolean):
     ? `/api/pledges/${pledgeId}/confirm-add-items`
     : `/api/pledges/${pledgeId}/confirm`;
 
-  await fetch(endpoint, {
+  const response = await fetch(endpoint, {
     method: "POST",
+    headers: { ...getCSRFHeaders() },
   });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to confirm payment");
+  }
 }
