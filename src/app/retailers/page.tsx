@@ -402,6 +402,20 @@ export default async function RetailersPage() {
           </div>
 
           <div className="mt-16 grid gap-8 md:grid-cols-3">
+            {/* Demo placeholder cards - testimonials coming soon */}
+            {[0, 1, 2].map((index) => (
+              <Card
+                key={index}
+                className="glass-card border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
+              >
+                <CardContent className="pt-6 flex flex-col items-center justify-center min-h-[200px]">
+                  <p className="text-lg font-semibold text-muted-foreground">Demo Content</p>
+                  <p className="text-sm text-muted-foreground">Coming Soon</p>
+                </CardContent>
+              </Card>
+            ))}
+            {/* Original testimonials - commented out for now
             {testimonials.map((testimonial, index) => (
               <Card
                 key={testimonial.author}
@@ -427,6 +441,7 @@ export default async function RetailersPage() {
                 </CardContent>
               </Card>
             ))}
+            */}
           </div>
         </div>
       </section>
