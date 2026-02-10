@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import {
   Popover,
   PopoverContent,
@@ -50,6 +51,8 @@ import {
   Ban,
   AlertTriangle,
   ShieldAlert,
+  ChevronUp,
+  Circle,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -93,6 +96,15 @@ interface StickerPack {
   }[];
 }
 
+interface ActiveUser {
+  id: string;
+  name: string | null;
+  image: string | null;
+  vanityUrl: string | null;
+  status: "active" | "inactive";
+  lastActiveAt: string;
+}
+
 export function ChatRoom() {
   const { data: session } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -102,11 +114,18 @@ export function ChatRoom() {
   const [stickerPacks, setStickerPacks] = useState<StickerPack[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
-  const [onlineCount, setOnlineCount] = useState(0);
+  const [, setOnlineCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [canModerate, setCanModerate] = useState(false);
   const [isBanned, setIsBanned] = useState(false);
   const [banReason, setBanReason] = useState<string | null>(null);
+
+  // Active users
+  const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
+
+  // Scroll-back history
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Moderation dialogs
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -115,9 +134,11 @@ export function ChatRoom() {
   const [banReasonsInput, setBanReasonsInput] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const presenceIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -142,6 +163,7 @@ export function ChatRoom() {
         setCanModerate(data.canModerate || false);
         setIsBanned(data.isBanned || false);
         setBanReason(data.banReason || null);
+        setHasMore(data.hasMore || false);
       }
 
       if (isPolling && data.messages.length > 0) {
@@ -159,17 +181,6 @@ export function ChatRoom() {
         lastMessageIdRef.current = data.messages[data.messages.length - 1].id;
       }
 
-      // Estimate online users based on recent unique authors
-      const recentAuthors = new Set(
-        data.messages
-          .filter((m: ChatMessage) => {
-            const msgTime = new Date(m.createdAt).getTime();
-            return Date.now() - msgTime < 5 * 60 * 1000; // Last 5 minutes
-          })
-          .map((m: ChatMessage) => m.user.id)
-      );
-      setOnlineCount(Math.max(recentAuthors.size, 1));
-
       setError(null);
     } catch (err) {
       console.error("Error fetching messages:", err);
@@ -180,6 +191,74 @@ export function ChatRoom() {
       setIsLoading(false);
     }
   }, [scrollToBottom]);
+
+  // Load older messages (scroll-back)
+  const loadOlderMessages = useCallback(async () => {
+    if (isLoadingMore || !hasMore || messages.length === 0) return;
+
+    setIsLoadingMore(true);
+    try {
+      const oldestMessageId = messages[0].id;
+      const params = new URLSearchParams();
+      params.set("before", oldestMessageId);
+      params.set("limit", "50");
+
+      const response = await fetch(`/api/chat/messages?${params}`);
+      if (!response.ok) throw new Error("Failed to load older messages");
+
+      const data = await response.json();
+
+      if (data.messages.length > 0) {
+        setMessages((prev) => [...data.messages, ...prev]);
+      }
+      setHasMore(data.hasMore || false);
+    } catch (err) {
+      console.error("Error loading older messages:", err);
+      toast.error("Failed to load older messages");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMore, messages]);
+
+  // Fetch active users
+  const fetchActiveUsers = useCallback(async () => {
+    try {
+      const response = await fetch("/api/chat/presence");
+      if (!response.ok) return;
+
+      const data = await response.json();
+      setActiveUsers(data.users || []);
+      setOnlineCount(
+        (data.users || []).filter((u: ActiveUser) => u.status === "active").length
+      );
+    } catch (err) {
+      console.error("Error fetching active users:", err);
+    }
+  }, []);
+
+  // Send presence heartbeat
+  const sendHeartbeat = useCallback(async () => {
+    try {
+      await fetch("/api/chat/presence", {
+        method: "POST",
+        headers: getCSRFHeaders(),
+      });
+    } catch (err) {
+      console.error("Error sending heartbeat:", err);
+    }
+  }, []);
+
+  // Leave chat presence
+  const leaveChat = useCallback(async () => {
+    try {
+      await fetch("/api/chat/presence", {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+    } catch {
+      // Ignore errors on leave
+    }
+  }, []);
 
   // Fetch stickers
   const fetchStickers = useCallback(async () => {
@@ -231,6 +310,9 @@ export function ChatRoom() {
       lastMessageIdRef.current = data.message.id;
       setNewMessage("");
       scrollToBottom();
+
+      // Refresh heartbeat on message send
+      sendHeartbeat();
     } catch (err) {
       console.error("Error sending message:", err);
       setError(err instanceof Error ? err.message : "Failed to send message");
@@ -320,9 +402,11 @@ export function ChatRoom() {
   useEffect(() => {
     fetchMessages();
     fetchStickers();
-  }, [fetchMessages, fetchStickers]);
+    sendHeartbeat();
+    fetchActiveUsers();
+  }, [fetchMessages, fetchStickers, sendHeartbeat, fetchActiveUsers]);
 
-  // Set up polling
+  // Set up polling for messages
   useEffect(() => {
     pollIntervalRef.current = setInterval(() => {
       fetchMessages(true);
@@ -334,6 +418,22 @@ export function ChatRoom() {
       }
     };
   }, [fetchMessages]);
+
+  // Set up heartbeat and presence polling
+  useEffect(() => {
+    // Send heartbeat every 30 seconds
+    const heartbeatInterval = setInterval(sendHeartbeat, 30000);
+    // Fetch active users every 10 seconds
+    const presenceInterval = setInterval(fetchActiveUsers, 10000);
+
+    presenceIntervalRef.current = presenceInterval;
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      clearInterval(presenceInterval);
+      leaveChat();
+    };
+  }, [sendHeartbeat, fetchActiveUsers, leaveChat]);
 
   // Get user initials
   const getInitials = (name: string | null) => {
@@ -347,7 +447,7 @@ export function ChatRoom() {
   };
 
   // Get user profile URL
-  const getUserProfileUrl = (user: ChatUser) => {
+  const getUserProfileUrl = (user: { id: string; vanityUrl?: string | null }) => {
     if (user.vanityUrl) return `/u/${user.vanityUrl}`;
     return `/u/${user.id}`;
   };
@@ -375,339 +475,459 @@ export function ChatRoom() {
     );
   }
 
+  const activeCount = activeUsers.filter((u) => u.status === "active").length;
+  const inactiveCount = activeUsers.filter((u) => u.status === "inactive").length;
+
   return (
     <>
-      <div className="flex flex-col h-[calc(100vh-200px)] min-h-[500px] max-h-[800px] bg-card rounded-xl border shadow-xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-primary/10 via-purple-500/10 to-cyan-500/10">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <MessageCircle className="h-6 w-6 text-primary" />
-              <Sparkles className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1" />
+      <div className="flex gap-4 h-[calc(100vh-200px)] min-h-[500px] max-h-[800px]">
+        {/* Main Chat Area */}
+        <div className="flex flex-col flex-1 bg-card rounded-xl border shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-primary/10 via-purple-500/10 to-cyan-500/10">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <MessageCircle className="h-6 w-6 text-primary" />
+                <Sparkles className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1" />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg">Community Chat</h2>
+                <p className="text-xs text-muted-foreground">
+                  Connect with fellow backers and creators
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="font-bold text-lg">Community Chat</h2>
-              <p className="text-xs text-muted-foreground">
-                Connect with fellow backers and creators
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            {canModerate && (
+            <div className="flex items-center gap-4">
+              {canModerate && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+                        <ShieldAlert className="h-4 w-4 text-amber-500" />
+                        <span className="text-xs font-medium text-amber-500">Mod</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>You have moderation powers</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-                      <ShieldAlert className="h-4 w-4 text-amber-500" />
-                      <span className="text-xs font-medium text-amber-500">Mod</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+                      <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                      <Users className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">{activeCount}</span>
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>You have moderation powers</p>
+                    <p>{activeCount} active user{activeCount !== 1 ? "s" : ""}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => fetchMessages()}
+                className="text-muted-foreground hover:text-primary"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Ban Banner */}
+          {isBanned && (
+            <div className="px-4 py-3 bg-destructive/10 border-b border-destructive/20 flex items-center gap-3">
+              <Ban className="h-5 w-5 text-destructive" />
+              <div>
+                <p className="text-sm font-medium text-destructive">You have been banned from chat</p>
+                {banReason && <p className="text-xs text-destructive/80">Reason: {banReason}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Error Banner */}
+          {error && !isBanned && (
+            <div className="px-4 py-2 bg-destructive/10 border-b border-destructive/20 text-destructive text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Messages Area */}
+          <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>
+            <div className="py-4 space-y-4">
+              {/* Load More Button */}
+              {hasMore && (
+                <div className="text-center pb-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={loadOlderMessages}
+                    disabled={isLoadingMore}
+                    className="text-muted-foreground hover:text-primary gap-2"
+                  >
+                    {isLoadingMore ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ChevronUp className="h-4 w-4" />
+                    )}
+                    {isLoadingMore ? "Loading..." : "Load older messages"}
+                  </Button>
+                </div>
+              )}
+
+              {messages.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                  <p>No messages yet. Be the first to say hello!</p>
+                </div>
+              ) : (
+                messages.map((message, index) => {
+                  const isOwnMessage = message.user.id === session?.user?.id;
+                  const showAvatar =
+                    index === 0 ||
+                    messages[index - 1].user.id !== message.user.id ||
+                    new Date(message.createdAt).getTime() -
+                      new Date(messages[index - 1].createdAt).getTime() >
+                      60000;
+
+                  return (
+                    <div
+                      key={message.id}
+                      className={cn(
+                        "flex gap-3 group",
+                        isOwnMessage && "flex-row-reverse"
+                      )}
+                    >
+                      {showAvatar ? (
+                        <Link href={getUserProfileUrl(message.user)}>
+                          <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
+                            <AvatarImage
+                              src={message.user.image || undefined}
+                              alt={message.user.name || "User"}
+                            />
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+                              {getInitials(message.user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Link>
+                      ) : (
+                        <div className="w-8" />
+                      )}
+
+                      <div
+                        className={cn(
+                          "flex flex-col max-w-[70%]",
+                          isOwnMessage && "items-end"
+                        )}
+                      >
+                        {showAvatar && (
+                          <div className={cn("flex items-center gap-2 mb-1", isOwnMessage && "flex-row-reverse")}>
+                            <Link
+                              href={getUserProfileUrl(message.user)}
+                              className="text-sm font-medium hover:text-primary transition-colors"
+                            >
+                              {message.user.name || "Anonymous"}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">
+                              {formatTime(message.createdAt)}
+                            </span>
+                            {/* Moderation Menu */}
+                            {canModerate && !isOwnMessage && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedMessage(message);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Message
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedMessage(message);
+                                      setBanDialogOpen(true);
+                                    }}
+                                    className="text-destructive"
+                                  >
+                                    <Ban className="h-4 w-4 mr-2" />
+                                    Ban User
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+                        )}
+
+                        {message.type === "STICKER" && message.stickerData ? (
+                          <div className="text-5xl hover:scale-110 transition-transform cursor-default select-none">
+                            {message.stickerData.emoji}
+                          </div>
+                        ) : (
+                          <div
+                            className={cn(
+                              "px-4 py-2 rounded-2xl break-words",
+                              isOwnMessage
+                                ? "bg-primary text-primary-foreground rounded-tr-sm"
+                                : "bg-muted rounded-tl-sm"
+                            )}
+                          >
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+
+          {/* Input Area */}
+          <div className="p-4 border-t bg-muted/30">
+            {isBanned ? (
+              <div className="text-center py-2 text-muted-foreground text-sm">
+                You cannot send messages while banned from chat.
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                {/* Emoji Picker */}
+                <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-muted-foreground hover:text-primary"
+                    >
+                      <Smile className="h-5 w-5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    side="top"
+                    align="start"
+                    className="w-auto p-0 border-none shadow-2xl"
+                  >
+                    <Picker
+                      data={async () => {
+                        const response = await fetch(
+                          "https://cdn.jsdelivr.net/npm/@emoji-mart/data"
+                        );
+                        return response.json();
+                      }}
+                      onEmojiSelect={handleEmojiSelect}
+                      theme="auto"
+                      previewPosition="none"
+                      skinTonePosition="none"
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                {/* Sticker Picker */}
+                <Popover open={showStickerPicker} onOpenChange={setShowStickerPicker}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-muted-foreground hover:text-primary"
+                    >
+                      <Sticker className="h-5 w-5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    side="top"
+                    align="start"
+                    className="w-[320px] p-0 shadow-2xl"
+                  >
+                    <Tabs defaultValue={stickerPacks[0]?.id} className="w-full">
+                      <TabsList className="w-full h-auto p-1 bg-muted/50 rounded-t-lg rounded-b-none flex-wrap justify-start">
+                        {stickerPacks.map((pack) => (
+                          <TabsTrigger
+                            key={pack.id}
+                            value={pack.id}
+                            className="text-xs px-2 py-1"
+                          >
+                            {pack.name}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                      {stickerPacks.map((pack) => (
+                        <TabsContent
+                          key={pack.id}
+                          value={pack.id}
+                          className="mt-0 p-3"
+                        >
+                          <div className="grid grid-cols-6 gap-1">
+                            {pack.stickers.map((sticker) => (
+                              <TooltipProvider key={sticker.id}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleStickerSelect(sticker, pack.id)
+                                      }
+                                      className="text-2xl p-2 rounded-lg hover:bg-muted transition-colors"
+                                    >
+                                      {sticker.emoji}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{sticker.label}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ))}
+                          </div>
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Message Input */}
+                <Input
+                  ref={inputRef}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type a message..."
+                  className="flex-1 bg-background border-border/50 focus-visible:ring-primary/20"
+                  disabled={isSending}
+                  maxLength={2000}
+                />
+
+                {/* Send Button */}
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={!newMessage.trim() || isSending}
+                  className="shrink-0 bg-primary hover:bg-primary/90"
+                >
+                  {isSending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </form>
             )}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
-                    <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <Users className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-600">{onlineCount}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{onlineCount} active in last 5 minutes</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => fetchMessages()}
-              className="text-muted-foreground hover:text-primary"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Be kind and respectful. Click on usernames to view profiles.
+            </p>
           </div>
         </div>
 
-        {/* Ban Banner */}
-        {isBanned && (
-          <div className="px-4 py-3 bg-destructive/10 border-b border-destructive/20 flex items-center gap-3">
-            <Ban className="h-5 w-5 text-destructive" />
-            <div>
-              <p className="text-sm font-medium text-destructive">You have been banned from chat</p>
-              {banReason && <p className="text-xs text-destructive/80">Reason: {banReason}</p>}
+        {/* Active Users Sidebar */}
+        <div className="w-64 bg-card rounded-xl border shadow-xl overflow-hidden flex flex-col shrink-0 hidden lg:flex">
+          {/* Sidebar Header */}
+          <div className="px-4 py-3 border-b bg-gradient-to-r from-green-500/10 to-emerald-500/10">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-green-600" />
+              <h3 className="font-semibold text-sm">Active Users</h3>
             </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {activeCount} online{inactiveCount > 0 ? ` \u00B7 ${inactiveCount} idle` : ""}
+            </p>
           </div>
-        )}
 
-        {/* Error Banner */}
-        {error && !isBanned && (
-          <div className="px-4 py-2 bg-destructive/10 border-b border-destructive/20 text-destructive text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* Messages Area */}
-        <ScrollArea className="flex-1 px-4">
-          <div className="py-4 space-y-4">
-            {messages.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                <p>No messages yet. Be the first to say hello!</p>
-              </div>
-            ) : (
-              messages.map((message, index) => {
-                const isOwnMessage = message.user.id === session?.user?.id;
-                const showAvatar =
-                  index === 0 ||
-                  messages[index - 1].user.id !== message.user.id ||
-                  new Date(message.createdAt).getTime() -
-                    new Date(messages[index - 1].createdAt).getTime() >
-                    60000;
-
-                return (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "flex gap-3 group",
-                      isOwnMessage && "flex-row-reverse"
-                    )}
-                  >
-                    {showAvatar ? (
-                      <Link href={getUserProfileUrl(message.user)}>
-                        <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
-                          <AvatarImage
-                            src={message.user.image || undefined}
-                            alt={message.user.name || "User"}
-                          />
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
-                            {getInitials(message.user.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Link>
-                    ) : (
-                      <div className="w-8" />
-                    )}
-
-                    <div
-                      className={cn(
-                        "flex flex-col max-w-[70%]",
-                        isOwnMessage && "items-end"
-                      )}
-                    >
-                      {showAvatar && (
-                        <div className={cn("flex items-center gap-2 mb-1", isOwnMessage && "flex-row-reverse")}>
-                          <Link
-                            href={getUserProfileUrl(message.user)}
-                            className="text-sm font-medium hover:text-primary transition-colors"
-                          >
-                            {message.user.name || "Anonymous"}
-                          </Link>
-                          <span className="text-xs text-muted-foreground">
-                            {formatTime(message.createdAt)}
-                          </span>
-                          {/* Moderation Menu */}
-                          {canModerate && !isOwnMessage && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <MoreVertical className="h-3 w-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedMessage(message);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete Message
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedMessage(message);
-                                    setBanDialogOpen(true);
-                                  }}
-                                  className="text-destructive"
-                                >
-                                  <Ban className="h-4 w-4 mr-2" />
-                                  Ban User
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </div>
-                      )}
-
-                      {message.type === "STICKER" && message.stickerData ? (
-                        <div className="text-5xl hover:scale-110 transition-transform cursor-default select-none">
-                          {message.stickerData.emoji}
-                        </div>
-                      ) : (
-                        <div
-                          className={cn(
-                            "px-4 py-2 rounded-2xl break-words",
-                            isOwnMessage
-                              ? "bg-primary text-primary-foreground rounded-tr-sm"
-                              : "bg-muted rounded-tl-sm"
-                          )}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
-
-        {/* Input Area */}
-        <div className="p-4 border-t bg-muted/30">
-          {isBanned ? (
-            <div className="text-center py-2 text-muted-foreground text-sm">
-              You cannot send messages while banned from chat.
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex items-center gap-2">
-              {/* Emoji Picker */}
-              <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0 text-muted-foreground hover:text-primary"
-                  >
-                    <Smile className="h-5 w-5" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  side="top"
-                  align="start"
-                  className="w-auto p-0 border-none shadow-2xl"
-                >
-                  <Picker
-                    data={async () => {
-                      const response = await fetch(
-                        "https://cdn.jsdelivr.net/npm/@emoji-mart/data"
-                      );
-                      return response.json();
-                    }}
-                    onEmojiSelect={handleEmojiSelect}
-                    theme="auto"
-                    previewPosition="none"
-                    skinTonePosition="none"
-                  />
-                </PopoverContent>
-              </Popover>
-
-              {/* Sticker Picker */}
-              <Popover open={showStickerPicker} onOpenChange={setShowStickerPicker}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0 text-muted-foreground hover:text-primary"
-                  >
-                    <Sticker className="h-5 w-5" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  side="top"
-                  align="start"
-                  className="w-[320px] p-0 shadow-2xl"
-                >
-                  <Tabs defaultValue={stickerPacks[0]?.id} className="w-full">
-                    <TabsList className="w-full h-auto p-1 bg-muted/50 rounded-t-lg rounded-b-none flex-wrap justify-start">
-                      {stickerPacks.map((pack) => (
-                        <TabsTrigger
-                          key={pack.id}
-                          value={pack.id}
-                          className="text-xs px-2 py-1"
-                        >
-                          {pack.name}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                    {stickerPacks.map((pack) => (
-                      <TabsContent
-                        key={pack.id}
-                        value={pack.id}
-                        className="mt-0 p-3"
+          {/* Users List */}
+          <ScrollArea className="flex-1">
+            <div className="p-3 space-y-1">
+              {activeUsers.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">
+                  No active users
+                </p>
+              ) : (
+                <>
+                  {/* Active Users */}
+                  {activeUsers
+                    .filter((u) => u.status === "active")
+                    .map((user) => (
+                      <Link
+                        key={user.id}
+                        href={getUserProfileUrl(user)}
+                        className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors group"
                       >
-                        <div className="grid grid-cols-6 gap-1">
-                          {pack.stickers.map((sticker) => (
-                            <TooltipProvider key={sticker.id}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleStickerSelect(sticker, pack.id)
-                                    }
-                                    className="text-2xl p-2 rounded-lg hover:bg-muted transition-colors"
-                                  >
-                                    {sticker.emoji}
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{sticker.label}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ))}
+                        <div className="relative">
+                          <Avatar className="h-7 w-7">
+                            <AvatarImage src={user.image || undefined} alt={user.name || "User"} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-medium">
+                              {getInitials(user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <Circle className="h-2.5 w-2.5 text-green-500 fill-green-500 absolute -bottom-0.5 -right-0.5 ring-2 ring-card rounded-full" />
                         </div>
-                      </TabsContent>
+                        <span className="text-sm truncate group-hover:text-primary transition-colors">
+                          {user.name || "Anonymous"}
+                        </span>
+                        {user.id === session?.user?.id && (
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-auto">
+                            you
+                          </Badge>
+                        )}
+                      </Link>
                     ))}
-                  </Tabs>
-                </PopoverContent>
-              </Popover>
 
-              {/* Message Input */}
-              <Input
-                ref={inputRef}
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
-                className="flex-1 bg-background border-border/50 focus-visible:ring-primary/20"
-                disabled={isSending}
-                maxLength={2000}
-              />
-
-              {/* Send Button */}
-              <Button
-                type="submit"
-                size="icon"
-                disabled={!newMessage.trim() || isSending}
-                className="shrink-0 bg-primary hover:bg-primary/90"
-              >
-                {isSending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </form>
-          )}
-
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            Be kind and respectful. Click on usernames to view profiles.
-          </p>
+                  {/* Inactive Users */}
+                  {activeUsers.filter((u) => u.status === "inactive").length > 0 && (
+                    <>
+                      <div className="pt-2 pb-1 px-2">
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                          Idle
+                        </p>
+                      </div>
+                      {activeUsers
+                        .filter((u) => u.status === "inactive")
+                        .map((user) => (
+                          <Link
+                            key={user.id}
+                            href={getUserProfileUrl(user)}
+                            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors group opacity-60"
+                          >
+                            <div className="relative">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={user.image || undefined} alt={user.name || "User"} />
+                                <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-medium">
+                                  {getInitials(user.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <Circle className="h-2.5 w-2.5 text-yellow-500 fill-yellow-500 absolute -bottom-0.5 -right-0.5 ring-2 ring-card rounded-full" />
+                            </div>
+                            <span className="text-sm truncate text-muted-foreground group-hover:text-primary transition-colors">
+                              {user.name || "Anonymous"}
+                            </span>
+                            {user.id === session?.user?.id && (
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-auto">
+                                you
+                              </Badge>
+                            )}
+                          </Link>
+                        ))}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </ScrollArea>
         </div>
       </div>
 

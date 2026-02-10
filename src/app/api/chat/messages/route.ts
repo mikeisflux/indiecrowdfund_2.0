@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const after = searchParams.get("after"); // For polling - get messages after this ID
+    const before = searchParams.get("before"); // For scroll-back - get messages before this ID
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
 
     // Get current user info including role and ban status
@@ -27,10 +28,13 @@ export async function GET(req: NextRequest) {
 
     const whereClause: {
       deletedAt: null;
-      createdAt?: { gt: Date };
+      createdAt?: { gt?: Date; lt?: Date; gte?: Date };
     } = {
       deletedAt: null,
     };
+
+    // Enforce 1-week history retention window for initial/scroll-back loads
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     // If polling for new messages
     if (after) {
@@ -42,6 +46,19 @@ export async function GET(req: NextRequest) {
       if (afterMessage) {
         whereClause.createdAt = { gt: afterMessage.createdAt };
       }
+    } else if (before) {
+      // Scroll-back: load older messages before a given message
+      const beforeMessage = await db.chatMessage.findUnique({
+        where: { id: before },
+        select: { createdAt: true },
+      });
+
+      if (beforeMessage) {
+        whereClause.createdAt = { lt: beforeMessage.createdAt, gte: oneWeekAgo };
+      }
+    } else {
+      // Initial load - only show messages from the last week
+      whereClause.createdAt = { gte: oneWeekAgo };
     }
 
     const messages = await db.chatMessage.findMany({
@@ -64,9 +81,26 @@ export async function GET(req: NextRequest) {
     const canModerate =
       currentUser?.role === "ADMIN" || currentUser?.role === "SUPER_ADMIN";
 
+    // Check if there are older messages available (for scroll-back)
+    const oldestFetched = messages[messages.length - 1];
+    let hasMore = false;
+    if (oldestFetched && !after) {
+      const olderCount = await db.chatMessage.count({
+        where: {
+          deletedAt: null,
+          createdAt: {
+            lt: oldestFetched.createdAt,
+            gte: oneWeekAgo,
+          },
+        },
+      });
+      hasMore = olderCount > 0;
+    }
+
     // Return in chronological order (oldest first)
     return NextResponse.json({
       messages: messages.reverse(),
+      hasMore,
       canModerate,
       isBanned: !!currentUser?.chatBannedAt,
       banReason: currentUser?.chatBanReason,

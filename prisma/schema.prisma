@@ -79,6 +79,7 @@ model User {
   sentMessages      Message[] @relation("MessageSender")
   receivedMessages  Message[] @relation("MessageRecipient")
   chatMessages      ChatMessage[] @relation("ChatMessages")
+  chatPresence      ChatPresence?
   comments          Comment[]
   behaviors         UserBehavior[]
   preferences       UserPreference?
@@ -3693,4 +3694,14 @@ enum ChatMessageType {
   TEXT
   EMOJI
   STICKER
+}
+
+model ChatPresence {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastActiveAt DateTime @default(now())
+  joinedAt     DateTime @default(now())
+
+  @@index([lastActiveAt])
 }
