@@ -92,16 +92,19 @@ export async function POST(
     }
 
     // Validate Stripe Connect account is fully set up before launching
-    const stripeValidation = await validateStripeConnectAccount(project.creatorId);
-    if (!stripeValidation.isValid) {
-      return NextResponse.json(
-        {
-          error: "Stripe account not ready",
-          message: stripeValidation.error,
-          code: "STRIPE_NOT_READY",
-        },
-        { status: 400 }
-      );
+    // Skip this check for DivinityCoin projects - they don't need Stripe
+    if (project.paymentProcessor !== "DIVINITYCOIN") {
+      const stripeValidation = await validateStripeConnectAccount(project.creatorId);
+      if (!stripeValidation.isValid) {
+        return NextResponse.json(
+          {
+            error: "Stripe account not ready",
+            message: stripeValidation.error,
+            code: "STRIPE_NOT_READY",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Check campaign limits based on user role (skip for ADMIN/SUPER_ADMIN)
