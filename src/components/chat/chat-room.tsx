@@ -330,6 +330,7 @@ export function ChatRoom() {
       setError(err instanceof Error ? err.message : "Failed to send message");
     } finally {
       setIsSending(false);
+      inputRef.current?.focus();
     }
   };
 
