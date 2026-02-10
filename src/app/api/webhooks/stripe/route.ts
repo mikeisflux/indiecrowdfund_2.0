@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
           source: "stripe",
         },
       });
-    } catch (dbError) {
+    } catch {
       // If insert fails due to unique constraint, another request is processing this
       console.log(`[Stripe Webhook] Event already being processed: ${event.id}`);
       return NextResponse.json({ received: true, duplicate: true });
