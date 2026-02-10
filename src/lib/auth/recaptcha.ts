@@ -154,8 +154,11 @@ export async function verifyRecaptcha(
 
     if (!response.ok) {
       console.error("[reCAPTCHA] Verification request failed:", response.status);
-      // Fail open - don't block users if Google's API is down
-      return { valid: true };
+      // Fail closed - security over availability, but with helpful message
+      return {
+        valid: false,
+        error: "Unable to verify CAPTCHA. Please refresh the page and try again."
+      };
     }
 
     const result: RecaptchaVerifyResult = await response.json();
@@ -175,7 +178,10 @@ export async function verifyRecaptcha(
     };
   } catch (error) {
     console.error("[reCAPTCHA] Verification error:", error);
-    // Fail open - don't block users if there's an error
-    return { valid: true };
+    // Fail closed - security over availability
+    return {
+      valid: false,
+      error: "Unable to verify CAPTCHA. Please refresh the page and try again."
+    };
   }
 }

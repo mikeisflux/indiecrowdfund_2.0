@@ -38,7 +38,9 @@ export async function GET(req: NextRequest) {
 
     // Build where clause - start with AND conditions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: Record<string, any> = {};
+    const where: Record<string, any> = {
+      deletedAt: null, // Always filter out soft-deleted projects
+    };
 
     if (category) {
       where.category = category;

@@ -1,15 +1,38 @@
 /**
  * Internal API for bot blocker persistence
  * Called by middleware to persist/retrieve blocked IPs
+ *
+ * SECURITY: This endpoint is restricted to localhost only
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// Check if request is from localhost (middleware runs on same server)
+function isLocalhost(req: NextRequest): boolean {
+  const forwarded = req.headers.get("x-forwarded-for");
+  const realIp = req.headers.get("x-real-ip");
+
+  // If behind a proxy, check the original IP
+  const clientIp = forwarded?.split(",")[0]?.trim() || realIp || "";
+
+  // Allow localhost requests only
+  // When called from middleware on same server, there's no x-forwarded-for
+  // so we also check if the header is absent (internal request)
+  const isInternal = !forwarded && !realIp;
+  const isLoopback = clientIp === "127.0.0.1" || clientIp === "::1" || clientIp === "localhost";
+
+  return isInternal || isLoopback;
+}
+
 // GET - Retrieve all currently blocked IPs
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Restrict to localhost only
+  if (!isLocalhost(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   try {
     const now = new Date();
     const blockedIPs = await db.blockedIP.findMany({
@@ -30,7 +53,12 @@ export async function GET() {
 }
 
 // POST - Record suspicious activity and potentially block IP
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Restrict to localhost only
+  if (!isLocalhost(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const body = await req.json();
     const { ip, reason, actionId, path, userAgent, block } = body;

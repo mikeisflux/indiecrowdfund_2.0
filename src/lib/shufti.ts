@@ -169,6 +169,14 @@ export class ShuftiService {
         body: JSON.stringify(requestBody),
       });
 
+      if (!response.ok) {
+        console.error("Shufti API error:", response.status, response.statusText);
+        return {
+          success: false,
+          error: `Verification service unavailable (${response.status})`,
+        };
+      }
+
       const data: ShuftiResponse = await response.json();
 
       if (data.error) {
@@ -216,6 +224,14 @@ export class ShuftiService {
         },
         body: JSON.stringify({ reference }),
       });
+
+      if (!response.ok) {
+        console.error("Shufti status API error:", response.status, response.statusText);
+        return {
+          success: false,
+          error: `Status check failed (${response.status})`,
+        };
+      }
 
       const data: ShuftiResponse = await response.json();
 
@@ -339,6 +355,11 @@ export class ShuftiService {
         },
         body: JSON.stringify({ reference }),
       });
+
+      if (!response.ok) {
+        console.error("Shufti delete API error:", response.status, response.statusText);
+        return { success: false, error: `Delete request failed (${response.status})` };
+      }
 
       const data = await response.json();
 
