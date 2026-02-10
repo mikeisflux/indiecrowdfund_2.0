@@ -218,6 +218,65 @@ export async function checkAndUpdateStripeOnboarding(stripeConfigId: string, str
   }
 }
 
+/**
+ * Validate that a user has a fully onboarded Stripe Connect account.
+ * Used as a safeguard before launching projects or publishing marketplace products.
+ * Returns { isValid: true } if the account is ready to receive payments,
+ * or { isValid: false, error: string } with a descriptive error message.
+ */
+export async function validateStripeConnectAccount(userId: string): Promise<{ isValid: boolean; error?: string }> {
+  try {
+    // Get user's Stripe config
+    const stripeConfig = await db.stripeConfig.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        stripeAccountId: true,
+        isOnboarded: true,
+        isActive: true,
+      },
+    });
+
+    // No Stripe account at all
+    if (!stripeConfig) {
+      return {
+        isValid: false,
+        error: "Stripe Connect account not set up. Please connect your Stripe account in Settings before proceeding.",
+      };
+    }
+
+    // Account exists but not active
+    if (!stripeConfig.isActive) {
+      return {
+        isValid: false,
+        error: "Your Stripe Connect account is inactive. Please check your Stripe account status.",
+      };
+    }
+
+    // Check onboarding status (query Stripe if needed)
+    const isOnboarded = await checkAndUpdateStripeOnboarding(
+      stripeConfig.id,
+      stripeConfig.stripeAccountId,
+      stripeConfig.isOnboarded
+    );
+
+    if (!isOnboarded) {
+      return {
+        isValid: false,
+        error: "Stripe Connect onboarding is incomplete. Please complete your Stripe account setup to receive payments.",
+      };
+    }
+
+    return { isValid: true };
+  } catch (error) {
+    console.error("Error validating Stripe Connect account:", error);
+    return {
+      isValid: false,
+      error: "Unable to verify Stripe account status. Please try again.",
+    };
+  }
+}
+
 // Export safe cancellation functions for use in API routes
 export { safeCancelSetupIntent, safeCancelPaymentIntent };
 

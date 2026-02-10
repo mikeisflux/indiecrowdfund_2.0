@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
+import { validateStripeConnectAccount } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,21 @@ export async function POST(
         { error: "Valid price is required" },
         { status: 400 }
       );
+    }
+
+    // Validate Stripe Connect account if payment processor is Stripe
+    if (book.paymentProcessor === "STRIPE") {
+      const stripeValidation = await validateStripeConnectAccount(session.user.id);
+      if (!stripeValidation.isValid) {
+        return NextResponse.json(
+          {
+            error: "Stripe account not ready",
+            message: stripeValidation.error,
+            code: "STRIPE_NOT_READY",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Update status to pending review

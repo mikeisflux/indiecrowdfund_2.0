@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { validateStripeConnectAccount } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,20 @@ export async function POST(request: Request) {
             { status: 400 }
           );
         }
+        // Validate Stripe Connect before reactivating
+        {
+          const stripeValidation = await validateStripeConnectAccount(project.creator.id);
+          if (!stripeValidation.isValid) {
+            return NextResponse.json(
+              {
+                error: "Cannot reactivate: Creator's Stripe account is not ready",
+                message: stripeValidation.error,
+                code: "STRIPE_NOT_READY",
+              },
+              { status: 400 }
+            );
+          }
+        }
         newStatus = "LIVE";
         actionDescription = "Campaign reactivated";
         break;
@@ -95,6 +110,20 @@ export async function POST(request: Request) {
             { error: "Only approved or paused campaigns can be made live" },
             { status: 400 }
           );
+        }
+        // Validate Stripe Connect before making live
+        {
+          const stripeValidation = await validateStripeConnectAccount(project.creator.id);
+          if (!stripeValidation.isValid) {
+            return NextResponse.json(
+              {
+                error: "Cannot make live: Creator's Stripe account is not ready",
+                message: stripeValidation.error,
+                code: "STRIPE_NOT_READY",
+              },
+              { status: 400 }
+            );
+          }
         }
         newStatus = "LIVE";
         actionDescription = "Campaign set to live by admin";
