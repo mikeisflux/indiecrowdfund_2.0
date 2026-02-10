@@ -38,8 +38,8 @@ export function ItemDialog({
   projectId,
 }: ItemDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={isOpen} onOpenChange={onOpenChange} modal={true}>
+      <DialogContent className="sm:max-w-[500px] z-[200]">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit item" : "Create new item"}
