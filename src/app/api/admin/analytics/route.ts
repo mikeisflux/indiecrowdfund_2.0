@@ -85,36 +85,38 @@ export async function GET(req: NextRequest) {
             timestamp: { gte: previousStartDate, lt: startDate }
           }
         }),
-        // Pledges current period
+        // Pledges current period (exclude deleted)
         db.pledge.aggregate({
           where: {
+            deletedAt: null,
             status: "COMPLETED",
             createdAt: { gte: startDate }
           },
           _sum: { amount: true },
           _count: true
         }),
-        // Pledges previous period
+        // Pledges previous period (exclude deleted)
         db.pledge.aggregate({
           where: {
+            deletedAt: null,
             status: "COMPLETED",
             createdAt: { gte: previousStartDate, lt: startDate }
           },
           _sum: { amount: true },
           _count: true
         }),
-        // New users current period
+        // New users current period (exclude deleted)
         db.user.count({
-          where: { createdAt: { gte: startDate } }
+          where: { deletedAt: null, createdAt: { gte: startDate } }
         }),
-        // New users previous period
+        // New users previous period (exclude deleted)
         db.user.count({
-          where: { createdAt: { gte: previousStartDate, lt: startDate } }
+          where: { deletedAt: null, createdAt: { gte: previousStartDate, lt: startDate } }
         }),
-        // Projects by category
+        // Projects by category (exclude deleted)
         db.project.groupBy({
           by: ["category"],
-          where: { status: { in: ["LIVE", "FUNDED"] } },
+          where: { deletedAt: null, status: { in: ["LIVE", "FUNDED"] } },
           _count: true,
           _sum: { currentAmount: true }
         })

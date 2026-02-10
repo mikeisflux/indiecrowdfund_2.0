@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, BCRYPT_COST } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_COST);
 
     // Update password
     await db.user.update({

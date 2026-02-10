@@ -3636,3 +3636,19 @@ model AnnouncementBar {
 
   @@index([isActive, sortOrder])
 }
+
+// ============================================
+// WEBHOOK EVENT DEDUPLICATION
+// ============================================
+
+// Track processed webhook events to prevent duplicate processing
+model ProcessedWebhookEvent {
+  id              String    @id @default(cuid())
+  eventId         String    @unique  // Stripe event ID (evt_xxx)
+  eventType       String               // Event type (e.g., payment_intent.succeeded)
+  source          String    @default("stripe")  // Source system (stripe, etc.)
+  processedAt     DateTime  @default(now())
+
+  @@index([eventId])
+  @@index([processedAt])
+}

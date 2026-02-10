@@ -70,40 +70,47 @@ export async function GET(request: Request) {
       );
     }
 
-    // Complete the purchase
-    await prisma.marketplacePurchase.update({
-      where: { id: purchase.id },
-      data: {
-        status: "COMPLETED",
-        completedAt: new Date(),
-        deliveredAt: new Date(),
-        stripePaymentIntentId: typeof checkoutSession.payment_intent === "string"
-          ? checkoutSession.payment_intent
-          : checkoutSession.payment_intent?.id,
-      },
-    });
-
-    // Update book purchase count
-    await prisma.marketplaceBook.update({
-      where: { id: purchase.bookId },
-      data: {
-        purchaseCount: { increment: 1 },
-      },
-    });
-
-    // Update company total sales if applicable
-    if (purchase.book.companyId) {
-      await prisma.companyProfile.update({
-        where: { id: purchase.book.companyId },
+    // Complete the purchase atomically in a transaction
+    await prisma.$transaction(async (tx) => {
+      // Update purchase status
+      await tx.marketplacePurchase.update({
+        where: { id: purchase.id },
         data: {
-          totalSales: { increment: 1 },
+          status: "COMPLETED",
+          completedAt: new Date(),
+          deliveredAt: new Date(),
+          stripePaymentIntentId: typeof checkoutSession.payment_intent === "string"
+            ? checkoutSession.payment_intent
+            : checkoutSession.payment_intent?.id,
         },
       });
-    }
+
+      // Update book purchase count
+      await tx.marketplaceBook.update({
+        where: { id: purchase.bookId },
+        data: {
+          purchaseCount: { increment: 1 },
+        },
+      });
+
+      // Update company total sales if applicable
+      if (purchase.book.companyId) {
+        await tx.companyProfile.update({
+          where: { id: purchase.book.companyId },
+          data: {
+            totalSales: { increment: 1 },
+          },
+        });
+      }
+    });
 
     // Send notifications (don't await to avoid blocking the response)
-    notifyMarketplacePurchase(purchase.id, "STRIPE").catch(console.error);
-    notifyMarketplaceSale(purchase.id, "STRIPE").catch(console.error);
+    notifyMarketplacePurchase(purchase.id, "STRIPE").catch((err) =>
+      console.error(`[CheckoutVerify] Failed to notify purchase ${purchase.id}:`, err)
+    );
+    notifyMarketplaceSale(purchase.id, "STRIPE").catch((err) =>
+      console.error(`[CheckoutVerify] Failed to notify sale ${purchase.id}:`, err)
+    );
 
     return NextResponse.json({
       success: true,

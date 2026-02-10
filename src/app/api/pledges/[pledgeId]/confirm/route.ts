@@ -6,7 +6,7 @@ import {
   notifyPledgeReceived,
   notifyProjectFunded,
 } from "@/lib/notifications";
-import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
+import { processPendingPledgesForProject, getStripeInstance, claimRewardSlot } from "@/lib/payments/stripe";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm
@@ -141,14 +141,13 @@ export async function POST(
         },
       });
 
-      // Update reward quantity if limited
+      // Atomically claim reward slot if pledge has a reward (prevents overselling)
       if (pledge.reward?.id) {
-        await db.reward.update({
-          where: { id: pledge.reward.id },
-          data: {
-            quantityClaimed: { increment: 1 },
-          },
-        });
+        const claimed = await claimRewardSlot(pledge.reward.id);
+        if (!claimed) {
+          // Reward sold out - log but don't fail (pledge is still valid)
+          console.warn(`[Confirm] Reward ${pledge.reward.id} sold out for pledge ${pledgeId}`);
+        }
       }
 
       // Notify creator of new pledge

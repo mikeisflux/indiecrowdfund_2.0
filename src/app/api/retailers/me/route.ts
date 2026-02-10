@@ -118,9 +118,9 @@ export async function GET() {
         },
       });
 
-      // Get featured projects
+      // Get featured projects (exclude deleted)
       const featuredProjects = await db.project.findMany({
-        where: { status: "LIVE", allowRetailerPledges: true },
+        where: { deletedAt: null, status: "LIVE", allowRetailerPledges: true },
         orderBy: { createdAt: "desc" },
         take: 3,
         select: {
@@ -267,17 +267,19 @@ export async function GET() {
       },
     });
 
-    // Get count of retailer-eligible live projects
+    // Get count of retailer-eligible live projects (exclude deleted)
     const activeProjects = await db.project.count({
       where: {
+        deletedAt: null,
         status: "LIVE",
         allowRetailerPledges: true,
       },
     });
 
-    // Get featured projects
+    // Get featured projects (exclude deleted)
     const featuredProjects = await db.project.findMany({
       where: {
+        deletedAt: null,
         status: "LIVE",
         allowRetailerPledges: true,
       },

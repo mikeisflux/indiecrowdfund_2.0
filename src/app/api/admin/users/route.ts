@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, BCRYPT_COST } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { sendPasswordResetEmail } from "@/lib/email";
@@ -52,8 +52,10 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Build where clause
-    const where: Record<string, unknown> = {};
+    // Build where clause (always exclude deleted users)
+    const where: Record<string, unknown> = {
+      deletedAt: null,
+    };
 
     if (search) {
       where.OR = [
@@ -66,7 +68,7 @@ export async function GET(req: NextRequest) {
       where.role = role;
     }
 
-    // Get users with stats
+    // Get users with stats (exclude deleted)
     const [users, total, roleCounts] = await Promise.all([
       db.user.findMany({
         where,
@@ -94,10 +96,10 @@ export async function GET(req: NextRequest) {
       }),
       db.user.count({ where }),
       Promise.all([
-        db.user.count({ where: { role: "USER" } }),
-        db.user.count({ where: { role: "COOL_KIDS" } }),
-        db.user.count({ where: { role: "ADMIN" } }),
-        db.user.count({ where: { role: "SUPER_ADMIN" } })
+        db.user.count({ where: { deletedAt: null, role: "USER" } }),
+        db.user.count({ where: { deletedAt: null, role: "COOL_KIDS" } }),
+        db.user.count({ where: { deletedAt: null, role: "ADMIN" } }),
+        db.user.count({ where: { deletedAt: null, role: "SUPER_ADMIN" } })
       ])
     ]);
 
@@ -267,7 +269,7 @@ export async function PATCH(req: NextRequest) {
             { status: 400 }
           );
         }
-        updateData.password = await bcrypt.hash(data.password, 12);
+        updateData.password = await bcrypt.hash(data.password, BCRYPT_COST);
         break;
 
       case "SEND_RESET_EMAIL":
@@ -516,7 +518,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_COST);
 
     // Create user
     const newUser = await db.user.create({

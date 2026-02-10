@@ -30,9 +30,11 @@ export async function GET() {
       // A pledge is considered valid if:
       // 1. Status is COMPLETED, OR
       // 2. Status is PENDING and has any Stripe reference (indicates checkout was attempted)
+      // Exclude deleted pledges
       db.pledge.findMany({
         where: {
           userId,
+          deletedAt: null,
           OR: [
             { status: "COMPLETED" },
             {
@@ -99,10 +101,13 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
       }),
 
-      // Get user's saved/followed projects
+      // Get user's saved/followed projects (exclude deleted projects)
       db.projectFollower.findMany({
         where: {
           userId,
+          project: {
+            deletedAt: null,
+          },
         },
         include: {
           project: {
@@ -132,10 +137,11 @@ export async function GET() {
       }),
 
       // Get monthly spending data (last 6 months)
-      // Include both COMPLETED and valid PENDING pledges
+      // Include both COMPLETED and valid PENDING pledges (exclude deleted)
       db.pledge.findMany({
         where: {
           userId,
+          deletedAt: null,
           createdAt: {
             gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000),
           },

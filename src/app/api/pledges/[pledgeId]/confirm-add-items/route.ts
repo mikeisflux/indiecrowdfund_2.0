@@ -145,13 +145,36 @@ export async function POST(
           });
         }
 
-        // Update addon claimed count
-        await tx.addon.update({
-          where: { id: addon.id },
-          data: {
-            quantityClaimed: { increment: quantity },
-          },
-        });
+        // Atomically claim addon slots (prevents overselling)
+        // Lock the row and check availability within this transaction
+        const addonRows = await tx.$queryRaw<Array<{
+          id: string;
+          quantityAvailable: number | null;
+          quantityClaimed: number;
+        }>>`
+          SELECT id, "quantityAvailable", "quantityClaimed"
+          FROM "Addon"
+          WHERE id = ${addon.id}
+          FOR UPDATE
+        `;
+
+        const addonInfo = addonRows[0];
+        if (addonInfo) {
+          // Check if enough slots available (null means unlimited)
+          const availableSlots = addonInfo.quantityAvailable === null
+            ? Infinity
+            : addonInfo.quantityAvailable - addonInfo.quantityClaimed;
+
+          if (availableSlots >= quantity) {
+            await tx.addon.update({
+              where: { id: addon.id },
+              data: { quantityClaimed: { increment: quantity } },
+            });
+          } else {
+            console.warn(`[ConfirmAddItems] Addon ${addon.id} has only ${availableSlots} available but ${quantity} requested`);
+            throw new Error(`Not enough ${addon.title || 'addon'} available`);
+          }
+        }
       }
 
       // Update pledge amount

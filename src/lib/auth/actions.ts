@@ -19,6 +19,14 @@ import {
 import { verifyRecaptcha } from "./recaptcha";
 
 /**
+ * Bcrypt cost factor for password hashing.
+ * Value of 12 provides good security while maintaining reasonable performance.
+ * Increasing this value makes hashing slower (more secure but impacts login time).
+ * OWASP recommends a minimum of 10, and 12 is commonly used for production.
+ */
+export const BCRYPT_COST = 12;
+
+/**
  * Get client IP address from request headers
  */
 async function getClientIP(): Promise<string | null> {
@@ -111,7 +119,7 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
     // Hash password
     let hashedPassword;
     try {
-      hashedPassword = await bcrypt.hash(password, 12);
+      hashedPassword = await bcrypt.hash(password, BCRYPT_COST);
     } catch (hashError) {
       console.error("[Register] Password hashing error:", hashError);
       return { error: { _form: ["Something went wrong. Please try again."] } };
@@ -399,7 +407,7 @@ export async function resetPassword(formData: FormData, token: string) {
     }
 
     // Hash the new password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_COST);
 
     // Update the user's password
     await db.user.update({

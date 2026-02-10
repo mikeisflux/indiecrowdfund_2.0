@@ -64,26 +64,27 @@ export async function GET() {
       // Reports/Moderation
       pendingReports,
     ] = await Promise.all([
-      // Users
-      db.user.count(),
-      db.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
-      db.user.count({ where: { createdAt: { gte: previousThirtyDays, lt: thirtyDaysAgo } } }),
+      // Users (exclude deleted)
+      db.user.count({ where: { deletedAt: null } }),
+      db.user.count({ where: { deletedAt: null, createdAt: { gte: thirtyDaysAgo } } }),
+      db.user.count({ where: { deletedAt: null, createdAt: { gte: previousThirtyDays, lt: thirtyDaysAgo } } }),
 
-      // Projects
-      db.project.count(),
-      db.project.count({ where: { status: "LIVE" } }),
-      db.project.count({ where: { status: "SUBMITTED" } }),
-      db.project.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+      // Projects (exclude deleted)
+      db.project.count({ where: { deletedAt: null } }),
+      db.project.count({ where: { deletedAt: null, status: "LIVE" } }),
+      db.project.count({ where: { deletedAt: null, status: "SUBMITTED" } }),
+      db.project.count({ where: { deletedAt: null, createdAt: { gte: thirtyDaysAgo } } }),
 
-      // Pledges
-      db.pledge.count(),
+      // Pledges (exclude deleted)
+      db.pledge.count({ where: { deletedAt: null } }),
       db.pledge.aggregate({
-        where: { status: "COMPLETED" },
+        where: { deletedAt: null, status: "COMPLETED" },
         _sum: { amount: true },
         _count: true
       }),
       db.pledge.aggregate({
         where: {
+          deletedAt: null,
           status: "COMPLETED",
           createdAt: { gte: thirtyDaysAgo }
         },
@@ -92,6 +93,7 @@ export async function GET() {
       }),
       db.pledge.aggregate({
         where: {
+          deletedAt: null,
           status: "COMPLETED",
           createdAt: { gte: previousThirtyDays, lt: thirtyDaysAgo }
         },
@@ -99,8 +101,9 @@ export async function GET() {
         _count: true
       }),
 
-      // Recent activity
+      // Recent activity (exclude deleted)
       db.user.findMany({
+        where: { deletedAt: null },
         take: 5,
         orderBy: { createdAt: "desc" },
         select: {
@@ -111,7 +114,7 @@ export async function GET() {
         }
       }),
       db.project.findMany({
-        where: { status: { in: ["SUBMITTED", "APPROVED"] } },
+        where: { deletedAt: null, status: { in: ["SUBMITTED", "APPROVED"] } },
         take: 10,
         orderBy: { createdAt: "asc" },
         select: {
@@ -143,9 +146,10 @@ export async function GET() {
       ? ((revenueThisMonth - revenuePrevMonth) / revenuePrevMonth * 100).toFixed(1)
       : revenueThisMonth > 0 ? 100 : 0;
 
-    // Get project status breakdown
+    // Get project status breakdown (exclude deleted)
     const projectsByStatus = await db.project.groupBy({
       by: ["status"],
+      where: { deletedAt: null },
       _count: true
     });
 
@@ -154,10 +158,11 @@ export async function GET() {
       return acc;
     }, {} as Record<string, number>);
 
-    // Get pledges by day for chart (last 7 days)
+    // Get pledges by day for chart (last 7 days, exclude deleted)
     const pledgesByDay = await db.pledge.groupBy({
       by: ["createdAt"],
       where: {
+        deletedAt: null,
         createdAt: { gte: sevenDaysAgo },
         status: "COMPLETED"
       },

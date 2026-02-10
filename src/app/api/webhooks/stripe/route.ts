@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripeInstance, getStripeWebhookSecret, handleStripeWebhook } from "@/lib/payments/stripe";
+import { db } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,6 +41,33 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[Stripe Webhook] Received event: ${event.type} (${event.id})`);
+
+    // Check for duplicate event (idempotency)
+    const existingEvent = await db.processedWebhookEvent.findUnique({
+      where: { eventId: event.id },
+    });
+
+    if (existingEvent) {
+      console.log(`[Stripe Webhook] Duplicate event ignored: ${event.id}`);
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+
+    // Record this event as processed BEFORE handling to prevent race conditions
+    // If handling fails, the event will still be marked processed to prevent retries
+    // from causing duplicate side effects. Stripe will retry anyway if we return non-200.
+    try {
+      await db.processedWebhookEvent.create({
+        data: {
+          eventId: event.id,
+          eventType: event.type,
+          source: "stripe",
+        },
+      });
+    } catch (dbError) {
+      // If insert fails due to unique constraint, another request is processing this
+      console.log(`[Stripe Webhook] Event already being processed: ${event.id}`);
+      return NextResponse.json({ received: true, duplicate: true });
+    }
 
     await handleStripeWebhook(event);
 

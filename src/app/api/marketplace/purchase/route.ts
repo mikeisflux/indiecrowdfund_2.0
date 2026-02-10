@@ -152,8 +152,12 @@ export async function POST(request: Request) {
       }
 
       // Send notifications (don't await to avoid blocking the response)
-      notifyMarketplacePurchase(completedPurchase.id, "DIVINITYCOIN").catch(console.error);
-      notifyMarketplaceSale(completedPurchase.id, "DIVINITYCOIN").catch(console.error);
+      notifyMarketplacePurchase(completedPurchase.id, "DIVINITYCOIN").catch((err) =>
+        console.error(`[MarketplacePurchase] Failed to notify purchase ${completedPurchase.id}:`, err)
+      );
+      notifyMarketplaceSale(completedPurchase.id, "DIVINITYCOIN").catch((err) =>
+        console.error(`[MarketplacePurchase] Failed to notify sale ${completedPurchase.id}:`, err)
+      );
 
       return NextResponse.json({
         success: true,

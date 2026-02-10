@@ -265,17 +265,18 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
     const skip = (page - 1) * limit;
 
-    let where: Record<string, unknown>;
+    // Always exclude deleted projects
+    let where: Record<string, unknown> = { deletedAt: null };
     if (prelaunchActive) {
       // Active prelaunch pages - show all with prelaunchActive: true
       // (includes legacy pages that were published before prelaunchStatus was added)
-      where = { prelaunchActive: true };
+      where = { deletedAt: null, prelaunchActive: true };
     } else if (prelaunchReview) {
       // Prelaunch pages pending review
-      where = { prelaunchStatus: "SUBMITTED" };
+      where = { deletedAt: null, prelaunchStatus: "SUBMITTED" };
     } else {
       // Regular project status query
-      where = { status };
+      where = { deletedAt: null, status };
     }
 
     if (category && category !== "all") {

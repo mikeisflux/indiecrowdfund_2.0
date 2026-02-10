@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check reward availability (skip if pledging without reward)
+    // Validate reward exists and belongs to project (without quantity check - that happens atomically later)
     let reward = null;
     if (data.rewardId && data.rewardId !== "no-reward") {
       reward = await db.reward.findUnique({
@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Invalid reward" }, { status: 400 });
       }
 
+      // Quick pre-check for sold out (actual atomic check happens during pledge creation)
       if (reward.quantityAvailable !== null &&
           reward.quantityClaimed >= reward.quantityAvailable) {
         return NextResponse.json({ error: "Reward sold out" }, { status: 400 });

@@ -224,14 +224,35 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Update reward quantity if pledge has a reward
+      // Atomically claim reward slot if pledge has a reward (prevents overselling)
       if (pledge?.rewardId) {
-        await tx.reward.update({
-          where: { id: pledge.rewardId },
-          data: {
-            quantityClaimed: { increment: 1 },
-          },
-        });
+        // Lock the reward row and check availability within this transaction
+        const rewardRows = await tx.$queryRaw<Array<{
+          id: string;
+          quantityAvailable: number | null;
+          quantityClaimed: number;
+        }>>`
+          SELECT id, "quantityAvailable", "quantityClaimed"
+          FROM "Reward"
+          WHERE id = ${pledge.rewardId}
+          FOR UPDATE
+        `;
+
+        const reward = rewardRows[0];
+        if (reward) {
+          // Check if slot available (null means unlimited)
+          const canClaim = reward.quantityAvailable === null ||
+            reward.quantityClaimed < reward.quantityAvailable;
+
+          if (canClaim) {
+            await tx.reward.update({
+              where: { id: pledge.rewardId },
+              data: { quantityClaimed: { increment: 1 } },
+            });
+          } else {
+            console.warn(`[DivinityCoin Pay] Reward ${pledge.rewardId} sold out - payment completed but reward unavailable`);
+          }
+        }
       }
 
       // Calculate new project total and check if just reached goal

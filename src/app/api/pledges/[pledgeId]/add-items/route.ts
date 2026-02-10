@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getStripeInstance } from "@/lib/payments/stripe";
+import { getStripeInstance, assignBackerNumber } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -22,21 +22,15 @@ async function healStuckPendingPledge(pledgeId: string, stripePaymentIntentId: s
         ? paymentIntent.payment_method
         : paymentIntent.payment_method?.id;
 
-      // Calculate backer number if not already assigned
+      // Get pledge to check if backer number already assigned
       const pledge = await db.pledge.findUnique({
         where: { id: pledgeId },
         select: { projectId: true, backerNumber: true },
       });
 
-      let backerNumber = pledge?.backerNumber;
-      if (!backerNumber && pledge?.projectId) {
-        const existingBackerCount = await db.pledge.count({
-          where: {
-            projectId: pledge.projectId,
-            backerNumber: { not: null },
-          },
-        });
-        backerNumber = existingBackerCount + 1;
+      // Assign backer number atomically if not already assigned
+      if (!pledge?.backerNumber && pledge?.projectId) {
+        await assignBackerNumber(pledge.projectId, pledgeId);
       }
 
       await db.pledge.update({
@@ -44,7 +38,6 @@ async function healStuckPendingPledge(pledgeId: string, stripePaymentIntentId: s
         data: {
           status: "COMPLETED",
           stripePaymentMethodId: paymentMethodId,
-          backerNumber,
         },
       });
 
