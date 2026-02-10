@@ -133,7 +133,6 @@ export function ChatRoom() {
   const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null);
   const [banReasonsInput, setBanReasonsInput] = useState("");
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -141,8 +140,21 @@ export function ChatRoom() {
   const presenceIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = useCallback((immediate = false) => {
+    const doScroll = () => {
+      const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
+    };
+    if (immediate) {
+      doScroll();
+    } else {
+      // Wait for React to render new messages, then scroll
+      requestAnimationFrame(() => {
+        requestAnimationFrame(doScroll);
+      });
+    }
   }, []);
 
   // Fetch messages
@@ -173,7 +185,7 @@ export function ChatRoom() {
       } else if (!isPolling) {
         // Initial load
         setMessages(data.messages);
-        setTimeout(scrollToBottom, 100);
+        scrollToBottom();
       }
 
       // Update last message ID for polling
@@ -696,7 +708,6 @@ export function ChatRoom() {
                   );
                 })
               )}
-              <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
 
