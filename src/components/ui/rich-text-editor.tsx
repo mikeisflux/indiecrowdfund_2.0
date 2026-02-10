@@ -8,6 +8,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect, useCallback, useState, useRef } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "./button";
 import {
   Bold,
@@ -57,20 +58,9 @@ export function RichTextEditor({
         formData.append("projectId", projectId);
       }
 
-      // Get CSRF token from cookie for the upload request
-      const csrfToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("csrf_token="))
-        ?.split("=")[1];
-
-      const headers: HeadersInit = {};
-      if (csrfToken) {
-        headers["x-csrf-token"] = decodeURIComponent(csrfToken);
-      }
-
       const response = await fetch("/api/upload", {
         method: "POST",
-        headers,
+        headers: getCSRFHeaders(),
         body: formData,
       });
 
