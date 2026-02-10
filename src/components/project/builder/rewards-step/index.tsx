@@ -686,140 +686,150 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     return importedCount;
   };
 
-  // If import screen is open, show import interface
-  if (isImportScreenOpen) {
-    return (
-      <CSVImportScreen
-        onClose={() => {
-          setIsImportScreenOpen(false);
-          onFormOpenChange?.(false);
-        }}
-        onImportComplete={(type) => setActiveTab(type)}
-        parseCSV={parseCSV}
-        onImportItems={handleImportItems}
-        onImportRewards={handleImportRewards}
-      />
-    );
-  }
+  // Determine which main content to render
+  const renderMainContent = () => {
+    // If import screen is open, show import interface
+    if (isImportScreenOpen) {
+      return (
+        <CSVImportScreen
+          onClose={() => {
+            setIsImportScreenOpen(false);
+            onFormOpenChange?.(false);
+          }}
+          onImportComplete={(type) => setActiveTab(type)}
+          parseCSV={parseCSV}
+          onImportItems={handleImportItems}
+          onImportRewards={handleImportRewards}
+        />
+      );
+    }
 
-  // If reward form is open, show full-page form
-  if (isRewardFormOpen) {
+    // If reward form is open, show full-page form
+    if (isRewardFormOpen) {
+      return (
+        <RewardForm
+          currentReward={currentReward}
+          onRewardChange={setCurrentReward}
+          selectedItemIds={selectedItemIds}
+          onToggleItemSelection={toggleItemSelection}
+          items={items}
+          quantityType={quantityType}
+          onQuantityTypeChange={setQuantityType}
+          audienceType={audienceType}
+          onAudienceTypeChange={setAudienceType}
+          timeLimitType={timeLimitType}
+          onTimeLimitTypeChange={setTimeLimitType}
+          deliveryMonth={deliveryMonth}
+          onDeliveryMonthChange={setDeliveryMonth}
+          deliveryYear={deliveryYear}
+          onDeliveryYearChange={setDeliveryYear}
+          secretToken={secretToken}
+          onSecretTokenChange={setSecretToken}
+          isSaving={isSaving}
+          isEditing={editingRewardIndex !== null}
+          projectId={projectId}
+          projectSlug={projectSlug}
+          onSave={handleSaveReward}
+          onCancel={handleCancelRewardForm}
+          onCreateItem={openCreateItemDialog}
+        />
+      );
+    }
+
+    // Default: show main tabs view
     return (
-      <RewardForm
-        currentReward={currentReward}
-        onRewardChange={setCurrentReward}
-        selectedItemIds={selectedItemIds}
-        onToggleItemSelection={toggleItemSelection}
-        items={items}
-        quantityType={quantityType}
-        onQuantityTypeChange={setQuantityType}
-        audienceType={audienceType}
-        onAudienceTypeChange={setAudienceType}
-        timeLimitType={timeLimitType}
-        onTimeLimitTypeChange={setTimeLimitType}
-        deliveryMonth={deliveryMonth}
-        onDeliveryMonthChange={setDeliveryMonth}
-        deliveryYear={deliveryYear}
-        onDeliveryYearChange={setDeliveryYear}
-        secretToken={secretToken}
-        onSecretTokenChange={setSecretToken}
-        isSaving={isSaving}
-        isEditing={editingRewardIndex !== null}
-        projectId={projectId}
-        projectSlug={projectSlug}
-        onSave={handleSaveReward}
-        onCancel={handleCancelRewardForm}
-        onCreateItem={openCreateItemDialog}
-      />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold">Create your rewards</h2>
+          <Button variant="outline" onClick={() => {
+            setIsImportScreenOpen(true);
+            onFormOpenChange?.(true);
+          }}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import
+          </Button>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+          <TabsList className="border-b w-full justify-start rounded-none bg-transparent p-0 h-auto">
+            <TabsTrigger
+              value="items"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 pb-3 pt-2"
+            >
+              Items
+            </TabsTrigger>
+            <TabsTrigger
+              value="tiers"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 pb-3 pt-2"
+            >
+              Reward tiers
+            </TabsTrigger>
+            <TabsTrigger
+              value="addons"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 pb-3 pt-2"
+            >
+              Add-ons
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="items">
+            <ItemsTab
+              items={items}
+              rewards={rewards}
+              projectId={projectId}
+              isLive={isLive}
+              onCreateItem={openCreateItemDialog}
+              onEditItem={openEditItemDialog}
+              onDeleteItem={handleDeleteItem}
+              onEndItem={handleEndItem}
+              onItemImageChange={handleItemImageChange}
+              onReorderItems={reorderItems}
+            />
+          </TabsContent>
+
+          <TabsContent value="tiers">
+            <TiersTab
+              tiers={tiers}
+              rewards={rewards}
+              isLive={isLive}
+              projectId={projectId}
+              onCreateReward={() => openCreateRewardForm("TIER")}
+              onEditReward={openEditRewardForm}
+              onDuplicateReward={handleDuplicateReward}
+              onDeleteReward={handleDeleteReward}
+              onEndReward={handleEndReward}
+              onRewardImageChange={handleRewardImageChange}
+              onOpenImportDialog={() => setIsImportRewardDialogOpen(true)}
+              onReorderRewards={reorderRewards}
+            />
+          </TabsContent>
+
+          <TabsContent value="addons">
+            <AddonsTab
+              addons={addons}
+              rewards={rewards}
+              isLive={isLive}
+              projectId={projectId}
+              onCreateAddon={() => openCreateRewardForm("ADDON")}
+              onEditReward={openEditRewardForm}
+              onDuplicateReward={handleDuplicateReward}
+              onDeleteReward={handleDeleteReward}
+              onEndReward={handleEndReward}
+              onRewardImageChange={handleRewardImageChange}
+              onOpenImportDialog={() => setIsImportAddonDialogOpen(true)}
+              onReorderRewards={reorderRewards}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
     );
-  }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Create your rewards</h2>
-        <Button variant="outline" onClick={() => {
-          setIsImportScreenOpen(true);
-          onFormOpenChange?.(true);
-        }}>
-          <Upload className="h-4 w-4 mr-2" />
-          Import
-        </Button>
-      </div>
+    <>
+      {renderMainContent()}
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-        <TabsList className="border-b w-full justify-start rounded-none bg-transparent p-0 h-auto">
-          <TabsTrigger
-            value="items"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 pb-3 pt-2"
-          >
-            Items
-          </TabsTrigger>
-          <TabsTrigger
-            value="tiers"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 pb-3 pt-2"
-          >
-            Reward tiers
-          </TabsTrigger>
-          <TabsTrigger
-            value="addons"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 pb-3 pt-2"
-          >
-            Add-ons
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="items">
-          <ItemsTab
-            items={items}
-            rewards={rewards}
-            projectId={projectId}
-            isLive={isLive}
-            onCreateItem={openCreateItemDialog}
-            onEditItem={openEditItemDialog}
-            onDeleteItem={handleDeleteItem}
-            onEndItem={handleEndItem}
-            onItemImageChange={handleItemImageChange}
-            onReorderItems={reorderItems}
-          />
-        </TabsContent>
-
-        <TabsContent value="tiers">
-          <TiersTab
-            tiers={tiers}
-            rewards={rewards}
-            isLive={isLive}
-            projectId={projectId}
-            onCreateReward={() => openCreateRewardForm("TIER")}
-            onEditReward={openEditRewardForm}
-            onDuplicateReward={handleDuplicateReward}
-            onDeleteReward={handleDeleteReward}
-            onEndReward={handleEndReward}
-            onRewardImageChange={handleRewardImageChange}
-            onOpenImportDialog={() => setIsImportRewardDialogOpen(true)}
-            onReorderRewards={reorderRewards}
-          />
-        </TabsContent>
-
-        <TabsContent value="addons">
-          <AddonsTab
-            addons={addons}
-            rewards={rewards}
-            isLive={isLive}
-            projectId={projectId}
-            onCreateAddon={() => openCreateRewardForm("ADDON")}
-            onEditReward={openEditRewardForm}
-            onDuplicateReward={handleDuplicateReward}
-            onDeleteReward={handleDeleteReward}
-            onEndReward={handleEndReward}
-            onRewardImageChange={handleRewardImageChange}
-            onOpenImportDialog={() => setIsImportAddonDialogOpen(true)}
-            onReorderRewards={reorderRewards}
-          />
-        </TabsContent>
-      </Tabs>
-
-      {/* Item Dialog */}
+      {/* Item Dialog - Always rendered so it's available from RewardForm */}
       <ItemDialog
         isOpen={isItemDialogOpen}
         onOpenChange={setIsItemDialogOpen}
@@ -848,6 +858,6 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
         onImportFromCurrentProject={handleImportFromCurrentProject}
         onImportAddon={handleImportAddonFromProject}
       />
-    </div>
+    </>
   );
 }
