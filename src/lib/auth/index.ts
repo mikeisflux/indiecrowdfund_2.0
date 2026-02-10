@@ -12,7 +12,10 @@ export {
 } from "./session";
 
 // Re-export auth actions
-export { login, logout, register, BCRYPT_COST } from "./actions";
+export { login, logout, register } from "./actions";
+
+// Re-export constants
+export { BCRYPT_COST } from "./constants";
 
 // Helper function to get current session (for use in server components)
 import { validateSession } from "./session";
