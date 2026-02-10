@@ -96,8 +96,9 @@ export interface ShuftiResponse {
   decline_codes?: string[];
 }
 
+// Shufti Pro uses the same API endpoint for both sandbox and production.
+// Sandbox vs production is determined by the API credentials, not the URL.
 const SHUFTI_API_URL = "https://api.shuftipro.com";
-const SHUFTI_SANDBOX_URL = "https://api.shuftipro.com";
 
 export class ShuftiService {
   private config: ShuftiConfig;
@@ -105,7 +106,7 @@ export class ShuftiService {
 
   constructor(config: ShuftiConfig) {
     this.config = config;
-    this.baseUrl = config.mode === "sandbox" ? SHUFTI_SANDBOX_URL : SHUFTI_API_URL;
+    this.baseUrl = SHUFTI_API_URL;
   }
 
   private getAuthHeader(): string {
