@@ -14,6 +14,7 @@ import {
   Zap,
   Loader2,
   LogIn,
+  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -150,6 +151,17 @@ export default function ChatPage() {
   // Logged in - show chat room
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      {/* Back Link */}
+      <div className="container pt-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="relative overflow-hidden border-b">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-purple-500/10 to-cyan-500/10" />
