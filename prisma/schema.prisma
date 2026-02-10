@@ -63,6 +63,11 @@ model User {
   idVerificationId  String?   // Shufti reference ID
   dateOfBirth       DateTime?
 
+  // Chat Moderation
+  chatBannedAt      DateTime?   // When user was banned from chat
+  chatBannedById    String?     // Admin who banned the user
+  chatBanReason     String?     // Reason for the ban
+
   // Auth
   accounts          Account[]
   sessions          Session[]
@@ -73,6 +78,7 @@ model User {
   pledges           Pledge[]
   sentMessages      Message[] @relation("MessageSender")
   receivedMessages  Message[] @relation("MessageRecipient")
+  chatMessages      ChatMessage[] @relation("ChatMessages")
   comments          Comment[]
   behaviors         UserBehavior[]
   preferences       UserPreference?
@@ -3651,4 +3657,40 @@ model ProcessedWebhookEvent {
 
   @@index([eventId])
   @@index([processedAt])
+}
+
+// ============================================
+// COMMUNITY CHAT
+// ============================================
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  
+  // Message type: text, emoji, sticker
+  type      ChatMessageType @default(TEXT)
+  
+  // For stickers - stores sticker pack and sticker ID
+  stickerData Json?
+  
+  // Author
+  userId    String
+  user      User     @relation("ChatMessages", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Soft delete (for admin moderation)
+  deletedAt   DateTime?
+  deletedById String?    // Admin who deleted the message
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([deletedAt, createdAt])
+}
+
+enum ChatMessageType {
+  TEXT
+  EMOJI
+  STICKER
 }
