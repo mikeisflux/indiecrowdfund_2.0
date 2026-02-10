@@ -1172,8 +1172,10 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
     // Update pledge status based on PaymentIntent status (don't rely solely on webhook)
     if (paymentIntent.status === "succeeded") {
       // Payment succeeded - update pledge to COMPLETED with atomic backer number assignment
+      let finalBackerNumber: number;
       if (pledge.backerNumber) {
         // Already has backer number, just update status
+        finalBackerNumber = pledge.backerNumber;
         await db.pledge.update({
           where: { id: pledgeId },
           data: {
@@ -1186,7 +1188,7 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
         });
       } else {
         // Assign backer number atomically and update status
-        await assignBackerNumber(pledge.projectId, pledgeId);
+        finalBackerNumber = await assignBackerNumber(pledge.projectId, pledgeId);
         await db.pledge.update({
           where: { id: pledgeId },
           data: {
@@ -1211,7 +1213,7 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
         console.warn(`Could not send confirmation email for pledge ${pledgeId}:`, e);
       }
 
-      console.log(`[ChargePledge] Payment succeeded for pledge ${pledgeId}, backer #${backerNumber}, status updated to COMPLETED`);
+      console.log(`[ChargePledge] Payment succeeded for pledge ${pledgeId}, backer #${finalBackerNumber}, status updated to COMPLETED`);
     } else if (paymentIntent.status === "processing") {
       // Payment is processing - save intent ID, status will be updated by webhook
       await db.pledge.update({
