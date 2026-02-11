@@ -61,27 +61,10 @@ export async function GET(
               },
             },
             // Get the first 5 backers for avatar display
-            // Include COMPLETED and committed PENDING pledges
+            // Only show COMPLETED pledges to match backerCount
             pledges: {
               where: {
-                OR: [
-                  { status: "COMPLETED" },
-                  {
-                    // PENDING with saved payment method
-                    status: "PENDING",
-                    stripePaymentMethodId: { not: null },
-                  },
-                  {
-                    // PENDING with confirmed checkout
-                    status: "PENDING",
-                    confirmationEmailSent: true,
-                  },
-                  {
-                    // PENDING with SetupIntent (checkout was started)
-                    status: "PENDING",
-                    stripeSetupIntentId: { not: null },
-                  },
-                ],
+                status: "COMPLETED",
               },
               take: 5,
               orderBy: { createdAt: "desc" },
