@@ -42,6 +42,10 @@ export async function GET(req: NextRequest) {
       deletedAt: null, // Always filter out soft-deleted projects
     };
 
+    // Collect AND conditions for combining OR clauses safely
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const andConditions: Record<string, any>[] = [];
+
     if (category) {
       where.category = category;
     }
@@ -54,8 +58,15 @@ export async function GET(req: NextRequest) {
     } else if (status) {
       where.status = status;
     } else {
-      // Default to showing live projects
+      // Default to showing live projects that haven't ended yet
       where.status = "LIVE";
+      const now = new Date();
+      andConditions.push({
+        OR: [
+          { endDate: null },
+          { endDate: { gt: now } },
+        ],
+      });
     }
 
     // Staff picks filter
@@ -63,13 +74,20 @@ export async function GET(req: NextRequest) {
       where.isStaffPick = true;
     }
 
-    // Search filter - needs to be combined properly with other conditions
+    // Search filter
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { subtitle: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-      ];
+      andConditions.push({
+        OR: [
+          { title: { contains: search, mode: "insensitive" } },
+          { subtitle: { contains: search, mode: "insensitive" } },
+          { description: { contains: search, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    // Combine AND conditions if any exist
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
 
