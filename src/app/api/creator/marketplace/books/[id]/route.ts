@@ -118,6 +118,7 @@ export async function PUT(
       promoVideoUrl,
       pdfFileUrl,
       pdfFileName,
+      pdfFileSize,
       isNsfw,
       tags,
     } = body;
@@ -135,6 +136,7 @@ export async function PUT(
     if (promoVideoUrl !== undefined) updateData.promoVideoUrl = promoVideoUrl;
     if (pdfFileUrl !== undefined) updateData.pdfFileUrl = pdfFileUrl;
     if (pdfFileName !== undefined) updateData.pdfFileName = pdfFileName;
+    if (pdfFileSize !== undefined) updateData.pdfFileSize = pdfFileSize ? parseInt(String(pdfFileSize)) : null;
     if (isNsfw !== undefined) {
       updateData.hasAdultContent = isNsfw;
       updateData.promoContentSfw = !isNsfw;

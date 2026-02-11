@@ -371,9 +371,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (tab === "geography") {
-      // Get geographic data
-      const [countryData, cityData] = await Promise.all([
-        // By country
+      // Get geographic data from multiple sources
+      const [countryData, cityData, userLocations, backerLocations] = await Promise.all([
+        // By country from tracking data
         db.userBehavior.groupBy({
           by: ["country"],
           where: {
@@ -388,13 +388,55 @@ export async function GET(req: NextRequest) {
         db.project.groupBy({
           by: ["location"],
           where: {
-            location: { not: null }
+            deletedAt: null,
+            location: { not: null },
+            NOT: { location: "" }
           },
           _count: true,
           orderBy: { _count: { location: "desc" } },
           take: 10
+        }),
+        // User profile locations
+        db.user.groupBy({
+          by: ["location"],
+          where: {
+            deletedAt: null,
+            location: { not: null },
+            NOT: { location: "" }
+          },
+          _count: true,
+          orderBy: { _count: { location: "desc" } },
+          take: 15
+        }),
+        // Backer locations (users who have made pledges)
+        db.user.findMany({
+          where: {
+            deletedAt: null,
+            location: { not: null },
+            NOT: { location: "" },
+            pledges: {
+              some: {
+                status: "COMPLETED",
+                deletedAt: null
+              }
+            }
+          },
+          select: { location: true },
         })
       ]);
+
+      // Aggregate backer locations
+      const backerLocationMap = new Map<string, number>();
+      backerLocations.forEach(u => {
+        if (u.location) {
+          const loc = u.location.trim();
+          backerLocationMap.set(loc, (backerLocationMap.get(loc) || 0) + 1);
+        }
+      });
+      const backerLocationsSorted = Array.from(backerLocationMap.entries())
+        .map(([location, count]) => ({ location, backerCount: count }))
+        .sort((a, b) => b.backerCount - a.backerCount)
+        .slice(0, 10);
 
       return NextResponse.json({
         geography: {
@@ -405,7 +447,12 @@ export async function GET(req: NextRequest) {
           cities: cityData.map(c => ({
             location: c.location,
             projectCount: c._count
-          }))
+          })),
+          userLocations: userLocations.map(u => ({
+            location: u.location || "Unknown",
+            userCount: u._count
+          })),
+          backerLocations: backerLocationsSorted
         }
       });
     }

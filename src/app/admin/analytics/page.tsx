@@ -83,6 +83,8 @@ interface ProjectsData {
 interface GeographyData {
   countries: { country: string; visits: number }[];
   cities: { location: string; projectCount: number }[];
+  userLocations: { location: string; userCount: number }[];
+  backerLocations: { location: string; backerCount: number }[];
 }
 
 export default function AnalyticsPage() {
@@ -252,6 +254,20 @@ export default function AnalyticsPage() {
           geographyData.countries.forEach(country => {
             csvContent += `"${country.country.replace(/"/g, '""')}",${country.visits}\n`;
           });
+
+          if (geographyData.userLocations?.length > 0) {
+            csvContent += "\nUser Locations\nLocation,User Count\n";
+            geographyData.userLocations.forEach(loc => {
+              csvContent += `"${loc.location.replace(/"/g, '""')}",${loc.userCount}\n`;
+            });
+          }
+
+          if (geographyData.backerLocations?.length > 0) {
+            csvContent += "\nBacker Locations\nLocation,Backer Count\n";
+            geographyData.backerLocations.forEach(loc => {
+              csvContent += `"${loc.location.replace(/"/g, '""')}",${loc.backerCount}\n`;
+            });
+          }
 
           if (geographyData.cities.length > 0) {
             csvContent += "\nProject Locations\nLocation,Project Count\n";
@@ -715,33 +731,120 @@ export default function AnalyticsPage() {
 
             <TabsContent value="geography" className="mt-6 space-y-6">
               {geographyData ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Top Countries</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {geographyData.countries.length === 0 ? (
-                      <p className="text-center text-zinc-500 py-8">No geographic data available</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {geographyData.countries.map((country, i) => (
-                          <div key={i} className="flex items-center gap-4 rounded-lg border p-4">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100">
-                              <Globe className="h-5 w-5 text-zinc-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium">{country.country}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-medium">{formatNumber(country.visits)}</p>
-                              <p className="text-xs text-zinc-500">visitors</p>
-                            </div>
+                <>
+                  {/* Visitor Countries */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Globe className="h-5 w-5 text-blue-600" />
+                        Top Countries by Visitors
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {geographyData.countries.length === 0 ? (
+                        <p className="text-center text-zinc-500 py-8">
+                          No visitor country data yet. Country data is captured automatically from visitor IP addresses and will appear here as users browse the site.
+                        </p>
+                      ) : (
+                        <div className="space-y-4">
+                          {geographyData.countries.map((country, i) => {
+                            const maxVisits = Math.max(...geographyData.countries.map(c => c.visits));
+                            return (
+                              <div key={i} className="flex items-center gap-4 rounded-lg border p-4">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                                  <Globe className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium">{country.country}</p>
+                                  <Progress value={(country.visits / maxVisits) * 100} className="h-1.5 mt-1" />
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-medium">{formatNumber(country.visits)}</p>
+                                  <p className="text-xs text-zinc-500">visitors</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* User & Backer Locations */}
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    {/* User Locations */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="h-5 w-5 text-emerald-600" />
+                          User Locations
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {(!geographyData.userLocations || geographyData.userLocations.length === 0) ? (
+                          <p className="text-center text-zinc-500 py-8">No user location data available</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {geographyData.userLocations.map((loc, i) => (
+                              <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                                <span className="text-sm font-medium truncate max-w-[60%]">{loc.location}</span>
+                                <Badge variant="secondary">{loc.userCount} users</Badge>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Backer Locations */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <DollarSign className="h-5 w-5 text-violet-600" />
+                          Backer Locations
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {(!geographyData.backerLocations || geographyData.backerLocations.length === 0) ? (
+                          <p className="text-center text-zinc-500 py-8">No backer location data available</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {geographyData.backerLocations.map((loc, i) => (
+                              <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                                <span className="text-sm font-medium truncate max-w-[60%]">{loc.location}</span>
+                                <Badge variant="secondary">{loc.backerCount} backers</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Project Locations */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FolderKanban className="h-5 w-5 text-amber-600" />
+                        Project Locations
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {geographyData.cities.length === 0 ? (
+                        <p className="text-center text-zinc-500 py-8">No project location data available</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {geographyData.cities.map((city, i) => (
+                            <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                              <span className="text-sm font-medium truncate max-w-[60%]">{city.location || "Unknown"}</span>
+                              <Badge variant="secondary">{city.projectCount} projects</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
               ) : (
                 <Card>
                   <CardContent className="py-12 text-center text-zinc-500">

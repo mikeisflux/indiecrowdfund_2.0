@@ -30,6 +30,7 @@ interface PdfManagementTabProps {
   onSearchChange: (search: string) => void;
   onRefresh: () => void;
   onSave: (bookId: string, url: string, fileName: string, fileSize: string) => void;
+  onBulkFixSizes: () => void;
   isSaving: boolean;
 }
 
@@ -43,6 +44,7 @@ export function PdfManagementTab({
   onSearchChange,
   onRefresh,
   onSave,
+  onBulkFixSizes,
   isSaving,
 }: PdfManagementTabProps) {
   const [editingBookId, setEditingBookId] = useState<string | null>(null);
@@ -130,6 +132,22 @@ export function PdfManagementTab({
           <option value="missing-pdf">Missing PDF</option>
           <option value="has-pdf">Has PDF</option>
         </select>
+        {pdfStats.missingSize > 0 && (
+          <Button
+            onClick={onBulkFixSizes}
+            variant="default"
+            size="sm"
+            disabled={isSaving}
+            className="bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <HardDrive className="w-4 h-4 mr-2" />
+            )}
+            Fix All Sizes ({pdfStats.missingSize})
+          </Button>
+        )}
         <Button
           onClick={onRefresh}
           variant="outline"

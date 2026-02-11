@@ -276,6 +276,107 @@ function detectIssues(book: {
 }
 
 /**
+ * PATCH /api/admin/marketplace/pdf-management
+ *
+ * Bulk-fix: fetch file sizes from R2 for all books missing pdfFileSize
+ */
+export async function PATCH() {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+
+    if (user?.role !== "SUPER_ADMIN" && user?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Find all books with a PDF URL but missing file size
+    const booksToFix = await prisma.marketplaceBook.findMany({
+      where: {
+        deletedAt: null,
+        NOT: { pdfFileUrl: "" },
+        OR: [{ pdfFileSize: null }, { pdfFileSize: 0 }],
+      },
+      select: {
+        id: true,
+        pdfFileUrl: true,
+      },
+    });
+
+    if (booksToFix.length === 0) {
+      return NextResponse.json({
+        message: "No books need fixing",
+        fixed: 0,
+        failed: 0,
+      });
+    }
+
+    const r2 = await getR2Storage();
+    if (!r2) {
+      return NextResponse.json(
+        { error: "R2 storage not configured" },
+        { status: 500 }
+      );
+    }
+
+    let fixed = 0;
+    let failed = 0;
+    const results: { id: string; status: string; size?: number }[] = [];
+
+    for (const book of booksToFix) {
+      try {
+        // Extract R2 key from URL
+        const match = book.pdfFileUrl?.match(/\/api\/r2\/serve\/(.+)$/);
+        if (!match) {
+          results.push({ id: book.id, status: "skipped - non-R2 URL" });
+          failed++;
+          continue;
+        }
+
+        const r2Key = match[1];
+        const metadata = await r2.getFileMetadata(r2Key);
+
+        if (metadata && metadata.size > 0) {
+          await prisma.marketplaceBook.update({
+            where: { id: book.id },
+            data: { pdfFileSize: metadata.size },
+          });
+          results.push({ id: book.id, status: "fixed", size: metadata.size });
+          fixed++;
+        } else {
+          results.push({ id: book.id, status: "failed - file not found in R2" });
+          failed++;
+        }
+      } catch (err) {
+        console.error(`Error fixing book ${book.id}:`, err);
+        results.push({ id: book.id, status: "error" });
+        failed++;
+      }
+    }
+
+    return NextResponse.json({
+      message: `Fixed ${fixed} of ${booksToFix.length} books`,
+      fixed,
+      failed,
+      total: booksToFix.length,
+      results,
+    });
+  } catch (error) {
+    console.error("Error bulk-fixing PDF file sizes:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * Format file size to human readable
  */
 function formatFileSize(bytes: number): string {

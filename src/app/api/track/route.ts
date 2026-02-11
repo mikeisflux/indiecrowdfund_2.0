@@ -3,6 +3,38 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
+// Simple in-memory cache to avoid hitting IP-API rate limits (45 req/min)
+const geoCache = new Map<string, { country: string; timestamp: number }>();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Lookup country from IP using ip-api.com (free, no API key needed)
+ */
+async function lookupCountryFromIP(ip: string): Promise<string | null> {
+  const cached = geoCache.get(ip);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.country;
+  }
+
+  try {
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
+      signal: AbortSignal.timeout(2000),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.countryCode) {
+        geoCache.set(ip, { country: data.countryCode, timestamp: Date.now() });
+        return data.countryCode;
+      }
+    }
+  } catch {
+    // Don't let geo lookup failures affect tracking
+  }
+
+  return null;
+}
+
 // Allow CORS for tracking requests
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -83,7 +115,13 @@ export async function POST(request: Request) {
     const userAgent = headersList.get("user-agent") || undefined;
     const forwardedFor = headersList.get("x-forwarded-for");
     const realIp = headersList.get("x-real-ip");
-    const ipAddress = forwardedFor?.split(",")[0] || realIp || undefined;
+    const ipAddress = forwardedFor?.split(",")[0]?.trim() || realIp || undefined;
+
+    // Lookup country from IP (skip localhost/private IPs)
+    let country: string | null = null;
+    if (ipAddress && !ipAddress.startsWith("127.") && !ipAddress.startsWith("192.168.") && !ipAddress.startsWith("10.") && ipAddress !== "::1") {
+      country = await lookupCountryFromIP(ipAddress);
+    }
 
     // Create the behavior record
     await db.userBehavior.create({
@@ -99,6 +137,7 @@ export async function POST(request: Request) {
         referrer: referrer || null,
         userAgent,
         ipAddress,
+        country,
         timeSpent: timeSpent ? parseInt(timeSpent) : null,
         scrollDepth: scrollDepth ? parseFloat(scrollDepth) : null,
         metadata: metadata || null,

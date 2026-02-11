@@ -60,6 +60,7 @@ interface BookFormData {
   pdfFileUrl: string;
   pdfFileName: string;
   pdfStorageKey: string;
+  pdfFileSize: number | null;
   isNsfw: boolean;
   tags: string[];
 }
@@ -145,7 +146,7 @@ function PDFFilePicker({
   currentFileName,
   currentStorageKey,
 }: {
-  onSelect: (url: string, fileName: string, storageKey: string) => void;
+  onSelect: (url: string, fileName: string, storageKey: string, fileSize?: number) => void;
   currentUrl: string;
   currentFileName: string;
   currentStorageKey: string;
@@ -180,7 +181,7 @@ function PDFFilePicker({
   const handleSelectExisting = (file: ExistingFile) => {
     // Generate a public URL for the file (don't encode slashes in the path)
     const publicUrl = `/api/r2/serve/${file.key}`;
-    onSelect(publicUrl, file.name, file.key);
+    onSelect(publicUrl, file.name, file.key, file.size);
     toast.success(`Selected: ${file.name}`);
   };
 
@@ -226,12 +227,12 @@ function PDFFilePicker({
 
       setUploadProgress(90);
 
-      const { publicUrl, storageKey, fileName: returnedFileName, isDuplicate } = result;
+      const { publicUrl, storageKey, fileName: returnedFileName, fileSize: returnedFileSize, isDuplicate } = result;
 
       setUploadProgress(100);
 
       // Use returned filename (handles duplicates with different original names)
-      onSelect(publicUrl, returnedFileName || file.name, storageKey);
+      onSelect(publicUrl, returnedFileName || file.name, storageKey, returnedFileSize || file.size);
 
       if (isDuplicate) {
         toast.info("This file was already uploaded. Using existing copy.");
@@ -591,6 +592,7 @@ function createInitialFormData(): BookFormData {
     pdfFileUrl: "",
     pdfFileName: "",
     pdfStorageKey: "",
+    pdfFileSize: null,
     isNsfw: false,
     tags: [],
   };
@@ -858,10 +860,11 @@ function NewBookForm() {
             </CardHeader>
             <CardContent className="space-y-6">
               <PDFFilePicker
-                onSelect={(url, fileName, storageKey) => {
+                onSelect={(url, fileName, storageKey, fileSize) => {
                   updateForm("pdfFileUrl", url);
                   updateForm("pdfFileName", fileName);
                   updateForm("pdfStorageKey", storageKey);
+                  setFormData(prev => ({ ...prev, pdfFileSize: fileSize || null }));
                 }}
                 currentUrl={formData.pdfFileUrl}
                 currentFileName={formData.pdfFileName}

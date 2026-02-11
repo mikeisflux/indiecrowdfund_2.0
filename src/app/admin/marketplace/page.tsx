@@ -447,6 +447,33 @@ export default function AdminMarketplacePage() {
     setShowAddDialog(false);
   };
 
+  const handleBulkFixSizes = async () => {
+    setIsSavingPdf(true);
+    try {
+      const response = await fetch("/api/admin/marketplace/pdf-management", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to fix file sizes");
+      }
+
+      const result = await response.json();
+      toast.success(`Fixed ${result.fixed} of ${result.total} books`);
+      fetchPdfBooks(pdfFilter, pdfSearch);
+    } catch (error) {
+      console.error("Error bulk-fixing sizes:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to fix file sizes");
+    } finally {
+      setIsSavingPdf(false);
+    }
+  };
+
   const handleSavePdf = async (bookId: string, url: string, fileName: string, fileSize: string) => {
     setIsSavingPdf(true);
     try {
@@ -676,6 +703,7 @@ export default function AdminMarketplacePage() {
             onSearchChange={setPdfSearch}
             onRefresh={() => fetchPdfBooks(pdfFilter, pdfSearch)}
             onSave={handleSavePdf}
+            onBulkFixSizes={handleBulkFixSizes}
             isSaving={isSavingPdf}
           />
         </TabsContent>
