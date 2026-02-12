@@ -87,6 +87,9 @@ import {
   NPSFeedbackDialog,
 } from "../indiekit/components/dialogs";
 
+// Import WhatsNextBanner from v1
+import { WhatsNextBanner } from "../indiekit/components/whats-next-banner";
+
 // Import layout components
 import { PhaseSelector } from "./components/layout/PhaseSelector";
 import { WorkflowProgress } from "./components/layout/WorkflowProgress";
@@ -203,6 +206,8 @@ export default function IndieKitV2Page() {
     ["ACTIVE", "FUNDED", "COMPLETED", "FULFILLING", "LIVE"].includes(p.status) ||
     p.prelaunchActive === true
   ) || backers.length > 0;
+
+  const fulfillmentPercent = stats ? (stats.fulfilledBackers / stats.totalBackers) * 100 : 0;
 
   const filteredBackers = backers.filter((backer) => {
     const matchesSearch = backer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -471,6 +476,7 @@ export default function IndieKitV2Page() {
               workflowActionLoading={workflowActionLoading}
               onWorkflowAction={handleWorkflowAction}
               onNavigateToTab={handleNavigateFromWorkflow}
+              onGiveFeedback={() => setIsNPSDialogOpen(true)}
             />
           </div>
 
@@ -515,6 +521,17 @@ export default function IndieKitV2Page() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* What's Next Banner - shown when fulfillment is nearly complete */}
+            {fulfillmentPercent >= 95 && (
+              <div className="mb-6">
+                <WhatsNextBanner
+                  upcomingProjectsCount={3}
+                  onTellUsClick={() => window.location.href = "/dashboard/create"}
+                  onViewProjects={() => handleSelectAlwaysTab("projects")}
+                />
+              </div>
+            )}
 
             {/* Always Available Navigation Bar */}
             <div className="mb-4 flex flex-wrap gap-1 p-2 rounded-xl bg-muted/50 border border-border">

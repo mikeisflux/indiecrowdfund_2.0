@@ -15,6 +15,7 @@ interface WorkflowProgressProps {
   workflowActionLoading: string | null;
   onWorkflowAction: (stepId: string) => void;
   onNavigateToTab: (tab: string) => void;
+  onGiveFeedback?: () => void;
 }
 
 export function WorkflowProgress({
@@ -24,6 +25,7 @@ export function WorkflowProgress({
   workflowActionLoading,
   onWorkflowAction,
   onNavigateToTab,
+  onGiveFeedback,
 }: WorkflowProgressProps) {
   const fulfillmentPercent = stats ? (stats.fulfilledBackers / stats.totalBackers) * 100 : 0;
   const surveyPercent = stats ? (stats.surveysCompleted / stats.totalBackers) * 100 : 0;
@@ -172,6 +174,16 @@ export function WorkflowProgress({
             <Progress value={surveyPercent} className="h-2" />
             <p className="text-xs text-muted-foreground mt-1">{surveyPercent.toFixed(0)}% collected</p>
           </div>
+          {onGiveFeedback && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-2"
+              onClick={onGiveFeedback}
+            >
+              Give Feedback
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>
