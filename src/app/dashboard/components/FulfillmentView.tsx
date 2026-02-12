@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Truck, CheckCircle, Package, Gift, Box } from "lucide-react";
+import { Truck, CheckCircle, Package, Gift, Box, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CircularProgress } from "./CircularProgress";
 import type { FulfillmentStats } from "../types";
@@ -209,12 +209,20 @@ export function FulfillmentView({ fulfillmentStats }: FulfillmentViewProps) {
                 Use IndieKit for advanced fulfillment management, backer surveys, shipping integration, and more.
               </p>
             </div>
-            <Link href="/dashboard/indiekit">
-              <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 shadow-lg shadow-primary/25">
-                <Package className="mr-2 h-4 w-4" />
-                Open IndieKit
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/dashboard/indiekit">
+                <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 shadow-lg shadow-primary/25">
+                  <Package className="mr-2 h-4 w-4" />
+                  Open IndieKit
+                </Button>
+              </Link>
+              <Link href="/dashboard/indiekit-v2">
+                <Button className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white shadow-lg shadow-teal-500/25">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  IndieKit 2.0
+                </Button>
+              </Link>
+            </div>
           </div>
         </CardContent>
       </Card>
