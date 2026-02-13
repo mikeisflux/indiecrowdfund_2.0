@@ -104,6 +104,7 @@ export async function GET() {
       r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
       recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
+      chain2payMerchantWallet: settings.chain2payMerchantWallet ? "••••••••" : null,
     };
 
     return NextResponse.json({ settings: maskedSettings });
@@ -167,7 +168,8 @@ export async function PATCH(req: NextRequest) {
       'twitterAccessToken', 'twitterAccessSecret',
       'dalleApiKey', 'stabilityApiKey', 'shuftiSecretKey',
       'r2AccessKeyId', 'r2SecretAccessKey',
-      'recaptchaSiteKey', 'recaptchaSecretKey'
+      'recaptchaSiteKey', 'recaptchaSecretKey',
+      'chain2payMerchantWallet'
     ];
 
     const filteredData = Object.fromEntries(
@@ -320,6 +322,7 @@ export async function PATCH(req: NextRequest) {
       r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
       recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
+      chain2payMerchantWallet: settings.chain2payMerchantWallet ? "••••••••" : null,
     };
 
     return NextResponse.json({

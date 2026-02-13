@@ -276,11 +276,13 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
 
           <div className="space-y-2">
             <Label>Merchant Wallet Address (Polygon USDC)</Label>
-            <Input
+            <SecureKeyInput
               value={settings.chain2payMerchantWallet}
-              onChange={(e) => onSettingsChange({ ...settings, chain2payMerchantWallet: e.target.value })}
+              onChange={(value) => onSettingsChange({ ...settings, chain2payMerchantWallet: value })}
+              onSave={onSave}
+              hasExistingValue={settings.chain2payMerchantWallet === "••••••••"}
               placeholder="0x..."
-              className="font-mono"
+              forceShowValue={showAllKeys}
             />
             <p className="text-xs text-zinc-500">Your Polygon network wallet address for receiving USDC settlements</p>
           </div>
