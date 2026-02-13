@@ -237,15 +237,17 @@ export function ProjectBuilder() {
         })
       );
 
-      // Save payment settings - for launched projects, only send retailer settings
+      // Save payment settings - for launched projects, only send retailer settings + payment processor
       const paymentPayload = isLive
         ? {
+            paymentProcessor: payment.paymentProcessor,
             allowRetailerPledges: payment.allowRetailerPledges || false,
             retailerDiscount: Number(payment.retailerDiscount) || 50,
             retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
           }
         : {
             projectType: payment.projectType || "INDIVIDUAL",
+            paymentProcessor: payment.paymentProcessor,
             hasAdultContent: payment.hasAdultContent || false,
             hasRiskyContent: payment.hasRiskyContent || false,
             promoContentSfw: payment.promoContentSfw !== false,
