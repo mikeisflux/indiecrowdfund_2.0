@@ -87,6 +87,7 @@ model User {
   emailLogs         EmailLog[]
   stripeConfig      StripeConfig?
   divinityCoinBankAccount DivinityCoinBankAccount?
+  chain2payBankAccount    Chain2PayBankAccount?
   divinityCoinBalance Decimal @default(0) @db.Decimal(10, 2)
   divinityCoinRedemptions DivinityCoinRedemption[]
   divinityCoinTransactions DivinityCoinTransaction[]
@@ -256,6 +257,9 @@ model Project {
   // Stripe
   stripeAccountId       String?
 
+  // Chain2Pay
+  chain2payWallet       String?  // Polygon USDC wallet address for Chain2Pay settlements
+
   // Promotion
   prelaunchActive       Boolean         @default(false)
   prelaunchStatus       PrelaunchStatus @default(DRAFT)
@@ -300,6 +304,7 @@ model Project {
   followers             ProjectFollower[]
   retailerPledges       RetailerPledge[]
   divinityCoinSettlements DivinityCoinSettlement[]
+  chain2paySettlements  Chain2PaySettlement[]
   digitalFiles          DigitalFile[]
   collectionItems       ProjectCollectionItem[]
   notificationPrefs     ProjectNotificationPreference[]
@@ -367,6 +372,7 @@ enum PrelaunchStatus {
 enum PaymentProcessor {
   STRIPE
   DIVINITYCOIN
+  CHAIN2PAY
 }
 
 // ============================================
@@ -504,6 +510,11 @@ model Pledge {
 
   // DivinityCoin fields
   divinityCoinPaymentId String?      @unique
+
+  // Chain2Pay fields
+  chain2payOrderId      String?      @unique
+  chain2payIpnToken     String?
+  chain2payTxHash       String?      // Polygon transaction hash (proof of payment)
 
   // Payment retry tracking
   retryCount            Int          @default(0)
@@ -921,6 +932,86 @@ model DivinityCoinSettlement {
 }
 
 enum DivinityCoinSettlementStatus {
+  PENDING     // Awaiting processing
+  INITIATED   // Wire transfer initiated
+  PROCESSING  // In progress
+  COMPLETED   // Successfully delivered
+  FAILED      // Failed to process
+  CANCELLED   // Cancelled by admin
+}
+
+// Chain2Pay bank account for creator payouts (same structure as DivinityCoin)
+model Chain2PayBankAccount {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+
+  // Encrypted bank details (AES-256 encrypted)
+  bankNameEncrypted     String   @db.Text
+  accountHolderEncrypted String  @db.Text
+  accountNumberEncrypted String  @db.Text
+  routingNumberEncrypted String  @db.Text
+
+  // Non-sensitive display data
+  bankNameDisplay       String?  // e.g., "Chase Bank"
+  accountLastFour       String?  // e.g., "4567"
+  accountType           String   @default("checking") // checking or savings
+
+  // Verification status
+  isVerified            Boolean  @default(false)
+  verifiedAt            DateTime?
+  verificationMethod    String?  // e.g., "micro_deposits", "instant"
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settlements           Chain2PaySettlement[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Chain2Pay settlement tracking for admin payouts
+model Chain2PaySettlement {
+  id                    String   @id @default(cuid())
+  bankAccountId         String
+
+  // Settlement details
+  amount                Decimal  @db.Decimal(10, 2) // Amount in USD
+  currency              String   @default("USD")
+  status                Chain2PaySettlementStatus @default(PENDING)
+
+  // Project reference (optional - for project-specific settlements)
+  projectId             String?
+  projectName           String?  // Denormalized for history
+
+  // Chain2Pay reference
+  chain2payTxId         String?  @unique // Polygon transaction hash
+  chain2payBatchId      String?  // Batch ID if part of a batch settlement
+
+  // Processing details
+  initiatedAt           DateTime?
+  processedAt           DateTime?
+  completedAt           DateTime?
+  failedAt              DateTime?
+  failureReason         String?
+
+  // Admin notes
+  adminNotes            String?  @db.Text
+  processedBy           String?  // Admin user ID who processed it
+
+  bankAccount           Chain2PayBankAccount @relation(fields: [bankAccountId], references: [id])
+  project               Project? @relation(fields: [projectId], references: [id])
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([bankAccountId])
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum Chain2PaySettlementStatus {
   PENDING     // Awaiting processing
   INITIATED   // Wire transfer initiated
   PROCESSING  // In progress
@@ -1672,6 +1763,12 @@ model PlatformSettings {
   divinityCoinWebhookSecret String?
   divinityCoinPartnerId String?
   divinityCoinSettlementFrequency String @default("weekly")
+
+  // Chain2Pay Settings - Crypto payment processor (USDC on Polygon)
+  chain2payEnabled      Boolean  @default(false)
+  chain2payMerchantWallet String? // Platform Polygon USDC wallet address
+  chain2payDefaultProvider String @default("multihosted") // mercuryo, moonpay, revolut, wert, multihosted
+  chain2payCallbackBaseUrl String? // Base URL for webhooks
 
   // Payout Settings
   autoPayouts           Boolean  @default(false)
@@ -3143,6 +3240,10 @@ model MarketplacePurchase {
 
   // DivinityCoin fields
   divinityCoinPaymentId String?  @unique
+
+  // Chain2Pay fields
+  chain2payOrderId      String?  @unique
+  chain2payTxHash       String?
 
   // Status
   status            MarketplacePurchaseStatus @default(PENDING)

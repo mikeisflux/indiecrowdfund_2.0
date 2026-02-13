@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 const paymentSchema = z.object({
   projectType: z.enum(["INDIVIDUAL", "BUSINESS", "NONPROFIT"]).optional(),
+  paymentProcessor: z.enum(["STRIPE", "DIVINITYCOIN", "CHAIN2PAY"]).optional(),
   hasAdultContent: z.boolean().optional(),
   hasRiskyContent: z.boolean().optional(),
   promoContentSfw: z.boolean().optional(),
@@ -42,8 +43,9 @@ export async function POST(
     const body = await req.json();
     const data = paymentSchema.parse(body);
 
-    // For launched projects, only allow retailer settings to be updated
-    const launchedAllowedFields = ["allowRetailerPledges", "retailerDiscount", "retailerMinQuantity"];
+    // For launched projects, allow retailer settings AND payment processor changes
+    // Payment processor can be switched without affecting campaign numbers or backer count
+    const launchedAllowedFields = ["allowRetailerPledges", "retailerDiscount", "retailerMinQuantity", "paymentProcessor"];
 
     if (permission.isLaunched) {
       const requestedFields = Object.keys(data).filter(key => data[key as keyof typeof data] !== undefined);
@@ -57,6 +59,12 @@ export async function POST(
       }
     }
 
+    // Get current project to check content flags
+    const currentProject = await db.project.findUnique({
+      where: { id: projectId },
+      select: { paymentProcessor: true, hasAdultContent: true, hasRiskyContent: true },
+    });
+
     const updateData: Record<string, unknown> = {};
 
     if (data.projectType !== undefined) updateData.projectType = data.projectType;
@@ -67,12 +75,31 @@ export async function POST(
     if (data.retailerDiscount !== undefined) updateData.retailerDiscount = data.retailerDiscount;
     if (data.retailerMinQuantity !== undefined) updateData.retailerMinQuantity = data.retailerMinQuantity;
 
+    // Handle explicit payment processor change
+    if (data.paymentProcessor !== undefined) {
+      // NSFW campaigns can NEVER switch to Stripe
+      const isNsfw = (data.hasAdultContent ?? currentProject?.hasAdultContent) ||
+                     (data.hasRiskyContent ?? currentProject?.hasRiskyContent);
+      if (data.paymentProcessor === "STRIPE" && isNsfw) {
+        return NextResponse.json(
+          { error: "Projects with adult or controversial content cannot use Stripe" },
+          { status: 400 }
+        );
+      }
+      updateData.paymentProcessor = data.paymentProcessor;
+    }
+
     // Automatically set payment processor based on content flags
-    // Adult or risky content requires DivinityCoin, otherwise use Stripe
+    // Adult or risky content cannot use Stripe - must use DivinityCoin or Chain2Pay
     if (data.hasAdultContent !== undefined || data.hasRiskyContent !== undefined) {
       const hasAdult = data.hasAdultContent ?? false;
       const hasRisky = data.hasRiskyContent ?? false;
-      updateData.paymentProcessor = (hasAdult || hasRisky) ? "DIVINITYCOIN" : "STRIPE";
+      if (hasAdult || hasRisky) {
+        // Only force-switch if currently on Stripe (leave CHAIN2PAY or DIVINITYCOIN as-is)
+        if (currentProject?.paymentProcessor === "STRIPE" && !updateData.paymentProcessor) {
+          updateData.paymentProcessor = "DIVINITYCOIN";
+        }
+      }
     }
 
     const updated = await db.project.update({

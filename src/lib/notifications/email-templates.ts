@@ -267,12 +267,12 @@ export async function sendMarketplacePurchaseEmail(
   bookSlug: string,
   amount: number,
   currency: string,
-  paymentMethod: "STRIPE" | "DIVINITYCOIN",
+  paymentMethod: "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY",
   coverImageUrl?: string | null
 ) {
   const libraryUrl = `${APP_URL}/dashboard/backer?tab=digital-library`;
 
-  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : "Card";
+  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : paymentMethod === "CHAIN2PAY" ? "Chain2Pay" : "Card";
   const amountFormatted = paymentMethod === "DIVINITYCOIN"
     ? `${amount.toFixed(2)} DC`
     : `$${amount.toFixed(2)} ${currency}`;
@@ -352,12 +352,12 @@ export async function sendMarketplaceSaleEmail(
   platformFee: number,
   payout: number,
   currency: string,
-  paymentMethod: "STRIPE" | "DIVINITYCOIN",
+  paymentMethod: "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY",
   buyerName: string
 ) {
   const dashboardUrl = `${APP_URL}/dashboard/marketplace`;
 
-  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : "Stripe";
+  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : paymentMethod === "CHAIN2PAY" ? "Chain2Pay" : "Stripe";
   const formatAmount = (amt: number) => paymentMethod === "DIVINITYCOIN"
     ? `${amt.toFixed(2)} DC`
     : `$${amt.toFixed(2)} ${currency}`;

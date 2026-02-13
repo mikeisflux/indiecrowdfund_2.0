@@ -223,6 +223,93 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Chain2Pay payment flow - create pending pledge, frontend redirects to Chain2Pay checkout
+    if (project.paymentProcessor === "CHAIN2PAY") {
+      // Check for existing COMPLETED pledge
+      const completedPledge = await db.pledge.findFirst({
+        where: {
+          userId: session.user.id,
+          projectId: data.projectId,
+          paymentProcessor: "CHAIN2PAY",
+          status: "COMPLETED",
+        },
+      });
+
+      if (completedPledge) {
+        return NextResponse.json(
+          { error: "You have already backed this project" },
+          { status: 400 }
+        );
+      }
+
+      // Clean up existing PENDING pledges
+      const pendingPledges = await db.pledge.findMany({
+        where: {
+          userId: session.user.id,
+          projectId: data.projectId,
+          paymentProcessor: "CHAIN2PAY",
+          status: "PENDING",
+        },
+        select: { id: true },
+      });
+
+      if (pendingPledges.length > 0) {
+        const pendingIds = pendingPledges.map(p => p.id);
+        await db.pledgeAddon.deleteMany({
+          where: { pledgeId: { in: pendingIds } },
+        });
+        await db.pledge.deleteMany({
+          where: { id: { in: pendingIds } },
+        });
+      }
+
+      const rewardAmountValue = reward ? Number(reward.amount) : 0;
+      const rewardAmount = isNaN(rewardAmountValue) ? 0 : rewardAmountValue;
+
+      const addonIds = addonsWithQuantity.map(a => a.id);
+      const addonRecords = addonIds.length > 0 ? await db.reward.findMany({
+        where: { id: { in: addonIds } },
+        select: { id: true, amount: true },
+      }) : [];
+      const addonAmountMap = new Map(addonRecords.map(a => [a.id, Number(a.amount)]));
+      const addonsAmountValue = addonsWithQuantity.reduce((sum, addon) => {
+        return sum + (addonAmountMap.get(addon.id) || 0) * addon.quantity;
+      }, 0);
+      const addonsAmount = isNaN(addonsAmountValue) ? 0 : addonsAmountValue;
+      const shippingAmount = data.shippingAmount || 0;
+
+      const pledge = await db.pledge.create({
+        data: {
+          userId: session.user.id,
+          projectId: data.projectId,
+          rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
+          amount: data.amount,
+          rewardAmount,
+          addonsAmount,
+          shippingAmount,
+          status: "PENDING",
+          paymentProcessor: "CHAIN2PAY",
+          ...(sourceCampaignId ? { sourceCampaignId } : {}),
+        },
+      });
+
+      if (addonsWithQuantity.length > 0) {
+        await db.pledgeAddon.createMany({
+          data: addonsWithQuantity.map(addon => ({
+            pledgeId: pledge.id,
+            addonId: addon.id,
+            quantity: addon.quantity,
+            amount: (addonAmountMap.get(addon.id) || 0) * addon.quantity,
+          })),
+        });
+      }
+
+      return NextResponse.json({
+        paymentMethod: "CHAIN2PAY",
+        pledgeId: pledge.id,
+      });
+    }
+
     // For Stripe projects, verify creator has Stripe configured
     const stripeConfig = project.creator.stripeConfig;
     if (!stripeConfig?.stripeAccountId) {

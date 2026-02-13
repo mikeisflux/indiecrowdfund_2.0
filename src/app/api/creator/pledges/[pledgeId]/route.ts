@@ -77,7 +77,7 @@ export async function GET(
       amount: number;
       status: string;
       createdAt: Date;
-      paymentProcessor: "STRIPE" | "DIVINITYCOIN";
+      paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY";
       stripePaymentIntentId: string | null;
       stripeSetupIntentId: string | null;
       divinityCoinPaymentId: string | null;
@@ -141,7 +141,7 @@ export async function PATCH(
       amount: number;
       status: string;
       projectId: string;
-      paymentProcessor: "STRIPE" | "DIVINITYCOIN";
+      paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY";
       stripePaymentIntentId: string | null;
       stripeSetupIntentId: string | null;
       divinityCoinPaymentId: string | null;

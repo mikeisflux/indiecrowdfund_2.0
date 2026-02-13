@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle, RefreshCw, Loader2, Save, Banknote, Lock, Building2 } from "lucide-react";
+import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle, RefreshCw, Loader2, Save, Banknote, Lock, Building2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -53,6 +53,21 @@ export function PaymentStep() {
   }>({ saved: false, loading: true, lastFour: null });
   const [isSavingBank, setIsSavingBank] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Chain2Pay bank account state
+  const [chain2payBank, setChain2payBank] = useState({
+    bankName: "",
+    accountHolder: "",
+    accountNumber: "",
+    routingNumber: "",
+    accountType: "checking" as "checking" | "savings",
+  });
+  const [chain2payBankStatus, setChain2payBankStatus] = useState<{
+    saved: boolean;
+    loading: boolean;
+    lastFour: string | null;
+  }>({ saved: false, loading: true, lastFour: null });
+  const [isSavingChain2payBank, setIsSavingChain2payBank] = useState(false);
 
   // Save contact email to database immediately
   const handleSaveContactEmail = async () => {
@@ -148,6 +163,57 @@ export function PaymentStep() {
     }
   };
 
+  // Save Chain2Pay bank account
+  const handleSaveChain2payBank = async () => {
+    if (!chain2payBank.bankName || !chain2payBank.accountHolder ||
+        !chain2payBank.accountNumber || !chain2payBank.routingNumber) {
+      toast.error("Please fill in all bank account fields");
+      return;
+    }
+
+    if (chain2payBank.routingNumber.length !== 9) {
+      toast.error("Routing number must be 9 digits");
+      return;
+    }
+
+    if (chain2payBank.accountNumber.length < 4 || chain2payBank.accountNumber.length > 17) {
+      toast.error("Please enter a valid account number");
+      return;
+    }
+
+    setIsSavingChain2payBank(true);
+    try {
+      const response = await fetch("/api/creator/chain2pay-bank-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ ...chain2payBank, projectId }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save bank account");
+      }
+
+      const data = await response.json();
+      setChain2payBankStatus({
+        saved: true,
+        loading: false,
+        lastFour: data.lastFour,
+      });
+      setChain2payBank(prev => ({
+        ...prev,
+        accountNumber: "",
+        routingNumber: "",
+      }));
+      toast.success("Chain2Pay bank account saved securely!");
+    } catch (error) {
+      console.error("Failed to save Chain2Pay bank account:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save bank account");
+    } finally {
+      setIsSavingChain2payBank(false);
+    }
+  };
+
   // Load current contact email from database on mount
   useEffect(() => {
     async function loadContactEmail() {
@@ -198,6 +264,36 @@ export function PaymentStep() {
     checkBankAccountStatus();
   }, []);
 
+  // Check Chain2Pay bank account status on mount
+  useEffect(() => {
+    async function checkChain2payBankStatus() {
+      try {
+        const response = await fetch("/api/creator/chain2pay-bank-account");
+        if (response.ok) {
+          const data = await response.json();
+          setChain2payBankStatus({
+            saved: data.exists,
+            loading: false,
+            lastFour: data.lastFour || null,
+          });
+          if (data.exists) {
+            setChain2payBank(prev => ({
+              ...prev,
+              bankName: data.bankName || "",
+              accountHolder: data.accountHolder || "",
+              accountType: data.accountType || "checking",
+            }));
+          }
+        } else {
+          setChain2payBankStatus({ saved: false, loading: false, lastFour: null });
+        }
+      } catch {
+        setChain2payBankStatus({ saved: false, loading: false, lastFour: null });
+      }
+    }
+    checkChain2payBankStatus();
+  }, []);
+
   // Check Stripe connection status on mount
   useEffect(() => {
     async function checkStripeStatus() {
@@ -237,15 +333,15 @@ export function PaymentStep() {
   const goalAmount = basics.goalAmount || 10000;
   const hasAdultContent = payment.hasAdultContent || payment.hasRiskyContent;
 
-  // If adult/risky content is selected, DivinityCoin is mandatory
-  const mustUseDivinityCoin = payment.hasAdultContent || payment.hasRiskyContent;
+  // If adult/risky content is selected, Stripe is NOT allowed (must use DivinityCoin or Chain2Pay)
+  const mustUseAltProcessor = payment.hasAdultContent || payment.hasRiskyContent;
 
-  // Auto-switch to DivinityCoin if adult content is selected
+  // Auto-switch away from Stripe if adult content is selected (keep Chain2Pay or DivinityCoin if already selected)
   useEffect(() => {
-    if (mustUseDivinityCoin && payment.paymentProcessor !== "DIVINITYCOIN") {
+    if (mustUseAltProcessor && payment.paymentProcessor !== "DIVINITYCOIN" && payment.paymentProcessor !== "CHAIN2PAY") {
       updatePayment({ paymentProcessor: "DIVINITYCOIN" });
     }
-  }, [mustUseDivinityCoin, payment.paymentProcessor, updatePayment]);
+  }, [mustUseAltProcessor, payment.paymentProcessor, updatePayment]);
 
   // Stripe fee calculations
   // Stripe: 2.9% + $0.30 per transaction
@@ -476,24 +572,24 @@ export function PaymentStep() {
           </p>
         </div>
 
-        {mustUseDivinityCoin && (
+        {mustUseAltProcessor && (
           <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
             <AlertTriangle className="h-4 w-4 text-[#0066FF]" />
-            <AlertTitle>DivinityCoin Required</AlertTitle>
+            <AlertTitle>Alternative Processor Required</AlertTitle>
             <AlertDescription>
-              Projects with adult or controversial content must use DivinityCoin for payment processing.
+              Projects with adult or controversial content must use DivinityCoin or Chain2Pay for payment processing.
               Stripe does not process payments for this type of content.
             </AlertDescription>
           </Alert>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           {/* Stripe Option */}
           <Card
             className={`cursor-pointer transition-all ${
               payment.paymentProcessor === "STRIPE" ? "border-2 border-primary" : "border"
-            } ${mustUseDivinityCoin ? "opacity-50 cursor-not-allowed" : ""}`}
-            onClick={() => !mustUseDivinityCoin && updatePayment({ paymentProcessor: "STRIPE" })}
+            } ${mustUseAltProcessor ? "opacity-50 cursor-not-allowed" : ""}`}
+            onClick={() => !mustUseAltProcessor && updatePayment({ paymentProcessor: "STRIPE" })}
           >
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -502,7 +598,7 @@ export function PaymentStep() {
                     <CreditCard className="h-5 w-5 text-white" />
                   </div>
                   Stripe
-                  {!mustUseDivinityCoin && (
+                  {!mustUseAltProcessor && (
                     <Badge variant="secondary" className="ml-2">Recommended</Badge>
                   )}
                 </CardTitle>
@@ -511,7 +607,7 @@ export function PaymentStep() {
                 )}
               </div>
               <CardDescription>
-                {mustUseDivinityCoin
+                {mustUseAltProcessor
                   ? "Not available for adult/controversial content"
                   : "Industry-leading payment processing"}
               </CardDescription>
@@ -548,7 +644,7 @@ export function PaymentStep() {
                     <Banknote className="h-5 w-5 text-white" />
                   </div>
                   DivinityCoin
-                  {mustUseDivinityCoin && (
+                  {mustUseAltProcessor && (
                     <Badge variant="default" className="ml-2 bg-[#0066FF]">Required</Badge>
                   )}
                 </CardTitle>
@@ -569,6 +665,47 @@ export function PaymentStep() {
                 <div className="flex items-center gap-2">
                   <Check className="h-3 w-3 text-green-500" />
                   <span>Settlements within 14 business days</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-3 w-3 text-green-500" />
+                  <span>Supports adult/controversial content</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Chain2Pay Option */}
+          <Card
+            className={`cursor-pointer transition-all ${
+              payment.paymentProcessor === "CHAIN2PAY" ? "border-2 border-indigo-500" : "border"
+            }`}
+            onClick={() => updatePayment({ paymentProcessor: "CHAIN2PAY" })}
+          >
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+                    <Wallet className="h-5 w-5 text-white" />
+                  </div>
+                  Chain2Pay
+                </CardTitle>
+                {payment.paymentProcessor === "CHAIN2PAY" && (
+                  <CheckCircle className="h-5 w-5 text-indigo-500" />
+                )}
+              </div>
+              <CardDescription>
+                Accept payments via credit card and crypto. Lowest fees available.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Check className="h-3 w-3 text-green-500" />
+                  <span>Only 2.5% total platform fee — our lowest rate</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-3 w-3 text-green-500" />
+                  <span>Settlements via bank transfer</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-3 w-3 text-green-500" />
@@ -662,6 +799,62 @@ export function PaymentStep() {
                 <span>You receive</span>
                 <span className="text-green-600">
                   {formatCurrency(goalAmount - goalAmount * 0.06 - (goalAmount - goalAmount * 0.06) * 0.03)}
+                </span>
+              </div>
+            </div>
+          </div>
+          </>
+        )}
+
+        {payment.paymentProcessor === "CHAIN2PAY" && (
+          <>
+          <Alert className="bg-gradient-to-r from-indigo-50/80 to-blue-50/80 dark:from-indigo-900/20 dark:to-blue-900/20 border-indigo-400/30 dark:border-indigo-500/40">
+            <Wallet className="h-4 w-4 text-indigo-600" />
+            <AlertTitle>Why Choose Chain2Pay?</AlertTitle>
+            <AlertDescription className="mt-2 space-y-2 text-sm">
+              <p>
+                <strong>Lowest Fees:</strong> Chain2Pay offers our lowest platform fee at just 2.5% with no additional
+                processing fees — significantly less than traditional card processing.
+              </p>
+              <p>
+                <strong>Crypto & Card Payments:</strong> Accept both credit card and cryptocurrency payments from your backers,
+                giving them flexible payment options.
+              </p>
+              <p>
+                <strong>Bank Settlements:</strong> Receive your funds via direct bank transfer after your campaign is funded.
+                Chain2Pay handles the crypto-to-fiat conversion automatically.
+              </p>
+              <p>
+                <strong>Content Friendly:</strong> Like DivinityCoin, Chain2Pay supports all content types including
+                adult and controversial content.
+              </p>
+            </AlertDescription>
+          </Alert>
+
+          <div className="rounded-lg bg-muted/50 p-4 border">
+            <h4 className="font-medium mb-3">
+              Chain2Pay Fee Breakdown for {formatCurrency(goalAmount)} Goal
+            </h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Platform fee (2.5%)</span>
+                <span className="font-medium">{formatCurrency(goalAmount * 0.025)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Chain2Pay processing</span>
+                <span className="font-medium text-emerald-600">Included</span>
+              </div>
+              <Separator className="my-2" />
+              <div className="flex justify-between font-semibold">
+                <span>Total fees</span>
+                <span className="text-indigo-600">
+                  {formatCurrency(goalAmount * 0.025)}
+                </span>
+              </div>
+              <div className="flex justify-between font-semibold text-lg">
+                <span>You receive</span>
+                <span className="text-green-600">
+                  {formatCurrency(goalAmount - goalAmount * 0.025)}
                 </span>
               </div>
             </div>
@@ -789,6 +982,187 @@ export function PaymentStep() {
           </p>
         )}
       </div>
+      )}
+
+      {/* Chain2Pay Bank Account for Settlements - Only show when Chain2Pay is selected */}
+      {payment.paymentProcessor === "CHAIN2PAY" && (
+      <>
+      <Separator />
+
+      <div className="space-y-4">
+        <div>
+          <h3 className="font-semibold flex items-center gap-2">
+            <Wallet className="h-5 w-5 text-indigo-600" />
+            Chain2Pay Settlement Account
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Enter your bank account details for Chain2Pay settlements. All data is encrypted and stored securely.
+          </p>
+        </div>
+
+        <Card className={chain2payBankStatus.saved ? "border-green-500" : ""}>
+          <CardContent className="pt-6">
+            {chain2payBankStatus.loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : chain2payBankStatus.saved ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-green-500 flex items-center justify-center shrink-0">
+                      <CheckCircle className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Bank Account Connected</p>
+                      <p className="text-sm text-muted-foreground">
+                        {chain2payBank.bankName} • Account ending in {chain2payBankStatus.lastFour}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="default" className="bg-green-500">
+                    <Lock className="h-3 w-3 mr-1" />
+                    Secured
+                  </Badge>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setChain2payBankStatus(prev => ({ ...prev, saved: false }))}
+                >
+                  Update Bank Account
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                  <Lock className="h-4 w-4" />
+                  <AlertTitle>Secure & Encrypted</AlertTitle>
+                  <AlertDescription>
+                    Your bank account information is encrypted using AES-256 encryption before storage.
+                    We never store unencrypted account numbers.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="c2p-bank-name">Bank Name</Label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="c2p-bank-name"
+                        placeholder="e.g., Chase Bank, Bank of America"
+                        value={chain2payBank.bankName}
+                        onChange={(e) => setChain2payBank(prev => ({ ...prev, bankName: e.target.value }))}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="c2p-account-holder">Account Holder Name</Label>
+                    <Input
+                      id="c2p-account-holder"
+                      placeholder="Name as it appears on account"
+                      value={chain2payBank.accountHolder}
+                      onChange={(e) => setChain2payBank(prev => ({ ...prev, accountHolder: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="c2p-routing-number">Routing Number</Label>
+                    <Input
+                      id="c2p-routing-number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={9}
+                      placeholder="9-digit routing number"
+                      value={chain2payBank.routingNumber}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "").slice(0, 9);
+                        setChain2payBank(prev => ({ ...prev, routingNumber: value }));
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      9 digits, found on the bottom left of your checks
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="c2p-account-number">Account Number</Label>
+                    <Input
+                      id="c2p-account-number"
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={17}
+                      placeholder="Your account number"
+                      value={chain2payBank.accountNumber}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "").slice(0, 17);
+                        setChain2payBank(prev => ({ ...prev, accountNumber: value }));
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Account Type</Label>
+                  <Select
+                    value={chain2payBank.accountType}
+                    onValueChange={(value: "checking" | "savings") =>
+                      setChain2payBank(prev => ({ ...prev, accountType: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="checking">Checking</SelectItem>
+                      <SelectItem value="savings">Savings</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <Button
+                    onClick={handleSaveChain2payBank}
+                    disabled={isSavingChain2payBank}
+                    className="bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    {isSavingChain2payBank ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Encrypting & Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Save Bank Account
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Chain2Pay settlements are processed within 14 business days after your campaign ends.{" "}
+                  <a
+                    href="https://chain2pay.cloud/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline"
+                  >
+                    Learn more about Chain2Pay
+                  </a>
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      </>
       )}
 
       {/* DivinityCoin Bank Account for Settlements - Only show when DivinityCoin is selected */}

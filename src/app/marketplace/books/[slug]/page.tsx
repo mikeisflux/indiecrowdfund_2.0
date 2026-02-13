@@ -61,7 +61,7 @@ interface Book {
   publishedAt: string | null;
   hasAdultContent: boolean;
   hasRiskyContent: boolean;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN";
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY";
   creator: {
     id: string;
     name: string | null;
@@ -517,6 +517,14 @@ export default function BookDetailPage() {
                     <Coins className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                     <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
                       DivinityCoin payment only
+                    </span>
+                  </div>
+                )}
+                {book.paymentProcessor === "CHAIN2PAY" && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-700">
+                    <Coins className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                      Chain2Pay (Card &amp; Crypto)
                     </span>
                   </div>
                 )}

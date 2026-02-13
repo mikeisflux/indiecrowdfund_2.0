@@ -37,9 +37,9 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const status = searchParams.get("status"); // pending, settled, all
 
-    // Build where clause for DivinityCoin projects that are funded/failed
+    // Build where clause for DivinityCoin AND Chain2Pay projects that are funded/failed
     const where: Record<string, unknown> = {
-      paymentProcessor: "DIVINITYCOIN",
+      paymentProcessor: { in: ["DIVINITYCOIN", "CHAIN2PAY"] },
       status: { in: ["FUNDED", "FAILED"] },
       deletedAt: null,
     };
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Fetch DivinityCoin projects with creator and bank account info
+    // Fetch DivinityCoin and Chain2Pay projects with creator and bank account info
     const projects = await db.project.findMany({
       where,
       include: {
@@ -72,20 +72,40 @@ export async function GET(request: NextRequest) {
                 verifiedAt: true,
               },
             },
+            chain2payBankAccount: {
+              select: {
+                id: true,
+                bankNameDisplay: true,
+                accountLastFour: true,
+                accountType: true,
+                isVerified: true,
+                verifiedAt: true,
+              },
+            },
           },
         },
         pledges: {
           where: {
             status: "COMPLETED",
-            paymentProcessor: "DIVINITYCOIN",
+            paymentProcessor: { in: ["DIVINITYCOIN", "CHAIN2PAY"] },
             deletedAt: null,
           },
           select: {
             id: true,
             amount: true,
+            paymentProcessor: true,
           },
         },
         divinityCoinSettlements: {
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+            processedAt: true,
+            completedAt: true,
+          },
+        },
+        chain2paySettlements: {
           select: {
             id: true,
             amount: true,
@@ -100,18 +120,26 @@ export async function GET(request: NextRequest) {
 
     // Calculate stats and format the response
     const formattedProjects = projects.map((project) => {
-      // Calculate total raised from DivinityCoin pledges
+      const isChain2Pay = project.paymentProcessor === "CHAIN2PAY";
+
+      // Calculate total raised from completed pledges matching processor
       const totalRaised = project.pledges.reduce(
-        (sum: number, pledge: { id: string; amount: unknown }) => sum + Number(pledge.amount),
+        (sum: number, pledge: { id: string; amount: unknown; paymentProcessor: string }) => sum + Number(pledge.amount),
         0
       );
 
-      // Calculate platform fee (5% for DivinityCoin)
-      const platformFee = totalRaised * 0.05;
+      // Calculate platform fee: 2.5% for Chain2Pay, 5% for DivinityCoin
+      const feeRate = isChain2Pay ? 0.025 : 0.05;
+      const platformFee = totalRaised * feeRate;
       const amountOwed = totalRaised - platformFee;
 
+      // Use correct settlements based on processor
+      const settlements = isChain2Pay
+        ? project.chain2paySettlements
+        : project.divinityCoinSettlements;
+
       // Calculate amount already settled
-      const completedSettlements = project.divinityCoinSettlements.filter(
+      const completedSettlements = settlements.filter(
         (s: { status: string }) => s.status === "COMPLETED"
       );
       const amountSettled = completedSettlements.reduce(
@@ -120,11 +148,16 @@ export async function GET(request: NextRequest) {
       );
 
       // Check for pending/processing settlements
-      const pendingSettlements = project.divinityCoinSettlements.filter(
+      const pendingSettlements = settlements.filter(
         (s: { status: string }) => s.status === "PENDING" || s.status === "PROCESSING" || s.status === "INITIATED"
       );
 
       const remainingAmount = amountOwed - amountSettled;
+
+      // Get the correct bank account based on processor
+      const bankAccount = isChain2Pay
+        ? project.creator.chain2payBankAccount
+        : project.creator.divinityCoinBankAccount;
 
       return {
         id: project.id,
@@ -132,6 +165,7 @@ export async function GET(request: NextRequest) {
         slug: project.slug,
         imageUrl: project.imageUrl,
         status: project.status,
+        paymentProcessor: project.paymentProcessor,
         fundedAt: project.fundedAt,
         totalRaised,
         platformFee,
@@ -139,8 +173,8 @@ export async function GET(request: NextRequest) {
         amountSettled,
         remainingAmount,
         backerCount: project.pledges.length,
-        hasBank: !!project.creator.divinityCoinBankAccount,
-        bankVerified: project.creator.divinityCoinBankAccount?.isVerified || false,
+        hasBank: !!bankAccount,
+        bankVerified: bankAccount?.isVerified || false,
         hasPendingSettlement: pendingSettlements.length > 0,
         settlementStatus: pendingSettlements.length > 0
           ? "processing"
@@ -152,17 +186,17 @@ export async function GET(request: NextRequest) {
           name: project.creator.name,
           email: project.creator.email,
           image: project.creator.image,
-          bankAccount: project.creator.divinityCoinBankAccount
+          bankAccount: bankAccount
             ? {
-                id: project.creator.divinityCoinBankAccount.id,
-                bankName: project.creator.divinityCoinBankAccount.bankNameDisplay,
-                accountLastFour: project.creator.divinityCoinBankAccount.accountLastFour,
-                accountType: project.creator.divinityCoinBankAccount.accountType,
-                isVerified: project.creator.divinityCoinBankAccount.isVerified,
+                id: bankAccount.id,
+                bankName: bankAccount.bankNameDisplay,
+                accountLastFour: bankAccount.accountLastFour,
+                accountType: bankAccount.accountType,
+                isVerified: bankAccount.isVerified,
               }
             : null,
         },
-        settlements: project.divinityCoinSettlements.map((s: { id: string; amount: unknown; status: string; processedAt: Date | null; completedAt: Date | null }) => ({
+        settlements: settlements.map((s: { id: string; amount: unknown; status: string; processedAt: Date | null; completedAt: Date | null }) => ({
           id: s.id,
           amount: Number(s.amount),
           status: s.status,
@@ -442,13 +476,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the project with creator bank account
+    // Get the project with creator bank accounts
     const project = await db.project.findUnique({
       where: { id: projectId },
       include: {
         creator: {
           include: {
             divinityCoinBankAccount: true,
+            chain2payBankAccount: true,
           },
         },
       },
@@ -461,32 +496,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (project.paymentProcessor !== "DIVINITYCOIN") {
+    if (project.paymentProcessor !== "DIVINITYCOIN" && project.paymentProcessor !== "CHAIN2PAY") {
       return NextResponse.json(
-        { error: "Project is not using DivinityCoin payment processor" },
+        { error: "Project is not using DivinityCoin or Chain2Pay payment processor" },
         { status: 400 }
       );
     }
 
-    if (!project.creator.divinityCoinBankAccount) {
+    // Get the correct bank account based on the project's payment processor
+    const isChain2Pay = project.paymentProcessor === "CHAIN2PAY";
+    const bankAccount = isChain2Pay
+      ? project.creator.chain2payBankAccount
+      : project.creator.divinityCoinBankAccount;
+
+    if (!bankAccount) {
       return NextResponse.json(
-        { error: "Creator has no bank account on file" },
+        { error: `Creator has no ${isChain2Pay ? "Chain2Pay" : "DivinityCoin"} bank account on file` },
         { status: 400 }
       );
     }
 
-    // Create the settlement record
-    const settlement = await db.divinityCoinSettlement.create({
-      data: {
-        bankAccountId: project.creator.divinityCoinBankAccount.id,
-        projectId,
-        projectName: project.title,
-        amount,
-        status: "PENDING",
-        adminNotes: adminNotes || null,
-        processedBy: authResult.user.id,
-      },
-    });
+    // Create the settlement record using the appropriate model
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let settlement: any;
+    if (isChain2Pay) {
+      settlement = await db.chain2PaySettlement.create({
+        data: {
+          bankAccountId: bankAccount.id,
+          projectId,
+          projectName: project.title,
+          amount,
+          status: "PENDING",
+          adminNotes: adminNotes || null,
+          processedBy: authResult.user.id,
+        },
+      });
+    } else {
+      settlement = await db.divinityCoinSettlement.create({
+        data: {
+          bankAccountId: bankAccount.id,
+          projectId,
+          projectName: project.title,
+          amount,
+          status: "PENDING",
+          adminNotes: adminNotes || null,
+          processedBy: authResult.user.id,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

@@ -12,7 +12,7 @@ import { APP_NAME, APP_URL } from "./types";
  */
 export async function notifyMarketplacePurchase(
   purchaseId: string,
-  paymentMethod: "STRIPE" | "DIVINITYCOIN"
+  paymentMethod: "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY"
 ) {
   const purchase = await db.marketplacePurchase.findUnique({
     where: { id: purchaseId },
@@ -68,7 +68,7 @@ export async function notifyMarketplacePurchase(
  */
 export async function notifyMarketplaceSale(
   purchaseId: string,
-  paymentMethod: "STRIPE" | "DIVINITYCOIN"
+  paymentMethod: "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY"
 ) {
   const purchase = await db.marketplacePurchase.findUnique({
     where: { id: purchaseId },

@@ -207,7 +207,7 @@ export default function PledgePage() {
 
       setCurrentPledgeId(result.pledgeId);
 
-      if (result.paymentMethod === "DIVINITYCOIN") {
+      if (result.paymentMethod === "DIVINITYCOIN" || result.paymentMethod === "CHAIN2PAY") {
         setIsProcessing(false);
         return;
       }

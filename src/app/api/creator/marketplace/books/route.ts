@@ -62,8 +62,8 @@ export async function POST(request: Request) {
     }
 
     // Validate Stripe Connect account if submitting for review with Stripe payment processor
-    // Note: NSFW content forces DIVINITYCOIN, so only check if not NSFW and using STRIPE
-    const effectivePaymentProcessor = isNsfw ? "DIVINITYCOIN" : paymentProcessor;
+    // Note: NSFW content cannot use Stripe - only DIVINITYCOIN or CHAIN2PAY
+    const effectivePaymentProcessor = isNsfw && paymentProcessor === "STRIPE" ? "DIVINITYCOIN" : paymentProcessor;
     if (submitForReview && effectivePaymentProcessor === "STRIPE") {
       const stripeValidation = await validateStripeConnectAccount(session.user.id);
       if (!stripeValidation.isValid) {

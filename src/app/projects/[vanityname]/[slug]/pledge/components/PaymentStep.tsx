@@ -3,7 +3,7 @@
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Coins } from "lucide-react";
+import { Loader2, Coins, Wallet, ExternalLink } from "lucide-react";
 import { Elements } from "@stripe/react-stripe-js";
 import { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
@@ -114,8 +114,8 @@ export function PaymentStep({
         <CardContent className="p-5">
           <h3 className="font-medium mb-4">Payment</h3>
 
-          {/* Show error if any - only for Stripe, not DivinityCoin */}
-          {paymentError && project?.paymentProcessor !== "DIVINITYCOIN" && (
+          {/* Show error if any - only for Stripe */}
+          {paymentError && project?.paymentProcessor === "STRIPE" && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-sm text-red-600 dark:text-red-400 mb-2">{paymentError}</p>
               <Button
@@ -133,7 +133,7 @@ export function PaymentStep({
             </div>
           )}
 
-          {/* Payment Form - DivinityCoin or Stripe */}
+          {/* Payment Form - DivinityCoin, Chain2Pay, or Stripe */}
           {project?.paymentProcessor === "DIVINITYCOIN" ? (
             /* DivinityCoin Payment */
             divinityCoinReady ? (
@@ -261,6 +261,70 @@ export function PaymentStep({
                 </div>
               </div>
             )
+          ) : project?.paymentProcessor === "CHAIN2PAY" ? (
+            /* Chain2Pay Payment - Redirect to hosted checkout */
+            <div className="space-y-4">
+              <div className="rounded-xl border-2 border-indigo-500/20 bg-gradient-to-br from-indigo-500/5 via-white to-blue-500/10 dark:from-indigo-500/10 dark:via-zinc-900 dark:to-blue-500/5 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+                    <Wallet className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="font-semibold text-indigo-600">Chain2Pay</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  You&apos;ll be redirected to a secure checkout page to complete your payment via credit card or crypto.
+                  Payment is settled in USDC on the Polygon network.
+                </p>
+              </div>
+
+              {paymentError && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+                </div>
+              )}
+
+              <Button
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium disabled:opacity-50"
+                size="lg"
+                onClick={async () => {
+                  if (!agreedToTerms) return;
+                  setIsProcessing(true);
+                  setPaymentError(null);
+                  try {
+                    const response = await fetch("/api/chain2pay/pay", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                      body: JSON.stringify({
+                        pledgeId: currentPledgeId,
+                        amount: total,
+                      }),
+                    });
+                    const result = await response.json();
+                    if (!response.ok) {
+                      throw new Error(result.error || "Payment failed");
+                    }
+                    // Redirect to Chain2Pay hosted checkout
+                    window.location.href = result.paymentUrl;
+                  } catch (err) {
+                    handlePaymentError(err instanceof Error ? err.message : "Payment failed");
+                    setIsProcessing(false);
+                  }
+                }}
+                disabled={!agreedToTerms || isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Redirecting to checkout...
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Pay ${total.toFixed(2)} with Chain2Pay
+                  </>
+                )}
+              </Button>
+            </div>
           ) : (
             /* Stripe Payment */
             clientSecret && stripePromise ? (
