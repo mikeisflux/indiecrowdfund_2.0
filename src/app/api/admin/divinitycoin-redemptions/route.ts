@@ -125,7 +125,8 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      transactions: transactions.map((t) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      transactions: transactions.map((t: any) => ({
         id: t.id,
         userId: t.userId,
         pledgeId: t.pledgeId,
