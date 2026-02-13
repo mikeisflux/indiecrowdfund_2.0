@@ -58,6 +58,7 @@ function BookTile({ book }: { book: Book }) {
             alt={book.title}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"
+            unoptimized={book.coverImage.endsWith(".gif")}
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-indigo-900/50 flex items-center justify-center">
@@ -121,6 +122,7 @@ function CompanyTile({ company }: { company: Company }) {
               alt={company.name}
               fill
               className="object-cover"
+              unoptimized={company.banner.endsWith(".gif")}
             />
           )}
           <div className="absolute inset-0 bg-black/30" />
@@ -136,6 +138,7 @@ function CompanyTile({ company }: { company: Company }) {
                 width={64}
                 height={64}
                 className="object-cover"
+                unoptimized={company.logo.endsWith(".gif")}
               />
             ) : (
               <Building2 className="h-8 w-8 text-muted-foreground/50" />

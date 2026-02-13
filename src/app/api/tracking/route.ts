@@ -57,7 +57,24 @@ async function getGeoData(req: NextRequest): Promise<{ country: string | null; i
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // Guard against empty or malformed request bodies
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid or empty request body" },
+        { status: 400 }
+      );
+    }
+
+    if (!body || typeof body !== "object") {
+      return NextResponse.json(
+        { error: "Request body must be a JSON object" },
+        { status: 400 }
+      );
+    }
+
     const {
       eventType,
       userId,

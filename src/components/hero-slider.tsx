@@ -216,6 +216,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
               isTransitioning ? "opacity-0" : "opacity-100"
             )}
             priority
+            unoptimized={currentSlide.imageUrl.endsWith(".gif")}
           />
           <div
             className="absolute inset-0 bg-black transition-opacity duration-300"

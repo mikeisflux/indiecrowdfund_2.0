@@ -153,6 +153,7 @@ export function ImageUpload({
           alt="Uploaded image"
           fill
           className="object-cover"
+          unoptimized={value.endsWith(".gif")}
         />
         <Button
           type="button"

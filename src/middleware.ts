@@ -45,15 +45,19 @@ const shopifyIframeRoutes = [
 // In-memory cache for fast middleware checks
 const blockedIPCache = new Map<string, { expiresAt: number }>();
 const suspiciousIPCounts = new Map<string, { count: number; firstSeen: number }>();
+const serverActionRateLimit = new Map<string, { count: number; windowStart: number }>();
 
 // Configuration
 const BOT_BLOCK_THRESHOLD = 3;
 const SUSPICIOUS_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const SERVER_ACTION_RATE_WINDOW_MS = 60 * 1000; // 1 minute
+const SERVER_ACTION_RATE_LIMIT = 30; // max server actions per IP per minute
 
-// Track last sync time
+// Track last sync/cleanup time
 let lastDbSync = 0;
 let isInitialized = false;
+let lastRateLimitCleanup = 0;
 
 /**
  * Get internal API URL - use localhost to bypass reverse proxy SSL issues
@@ -154,6 +158,38 @@ function isIPBlockedFast(ip: string): boolean {
 function isValidServerActionId(actionId: string): boolean {
   if (!actionId || actionId.length < 10) return false;
   return /^[a-f0-9]+$/i.test(actionId);
+}
+
+/**
+ * Rate limit server action requests per IP
+ * Returns true if the request should be blocked
+ */
+function isServerActionRateLimited(ip: string): boolean {
+  const now = Date.now();
+
+  // Periodic cleanup of stale rate limit entries (every 5 minutes)
+  if (now - lastRateLimitCleanup > 5 * 60 * 1000) {
+    lastRateLimitCleanup = now;
+    for (const [key, val] of serverActionRateLimit) {
+      if (now - val.windowStart > SERVER_ACTION_RATE_WINDOW_MS * 2) {
+        serverActionRateLimit.delete(key);
+      }
+    }
+  }
+
+  const entry = serverActionRateLimit.get(ip);
+
+  if (!entry || now - entry.windowStart > SERVER_ACTION_RATE_WINDOW_MS) {
+    serverActionRateLimit.set(ip, { count: 1, windowStart: now });
+    return false;
+  }
+
+  entry.count++;
+  if (entry.count > SERVER_ACTION_RATE_LIMIT) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -296,6 +332,39 @@ export function middleware(req: NextRequest) {
 
       // Return 400 Bad Request for invalid action IDs
       return new NextResponse("Bad Request - Invalid action ID", { status: 400 });
+    }
+
+    // Rate limit server action requests per IP (catches brute-force action ID guessing)
+    if (isServerActionRateLimited(clientIP)) {
+      console.log(`[Bot Blocker] Server action rate limit exceeded for IP ${clientIP}`);
+      const shouldBlock = recordSuspiciousRequest(
+        clientIP,
+        "Server action rate limit exceeded",
+        { actionId: serverActionId, path: pathname, userAgent }
+      );
+      if (shouldBlock) {
+        return new NextResponse("Forbidden", { status: 403 });
+      }
+      return new NextResponse("Too Many Requests", { status: 429 });
+    }
+
+    // Detect suspicious server action patterns:
+    // Bots often send server actions with no referer, no origin, and no session cookie
+    const hasReferer = req.headers.get("referer") && req.headers.get("referer") !== "none";
+    const hasOrigin = req.headers.get("origin") && req.headers.get("origin") !== "none";
+    const hasSession = !!req.cookies.get("session_token");
+
+    if (!hasReferer && !hasOrigin && !hasSession) {
+      console.log(`[Bot Blocker] Suspicious server action: no referer/origin/session from IP ${clientIP}`);
+      const shouldBlock = recordSuspiciousRequest(
+        clientIP,
+        "Server action with no referer, origin, or session",
+        { actionId: serverActionId, path: pathname, userAgent }
+      );
+      if (shouldBlock) {
+        return new NextResponse("Forbidden", { status: 403 });
+      }
+      return new NextResponse("Bad Request", { status: 400 });
     }
   }
 

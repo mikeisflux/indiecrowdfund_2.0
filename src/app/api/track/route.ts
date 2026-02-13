@@ -50,7 +50,24 @@ export async function OPTIONS() {
 // POST - Log a behavior event
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    // Guard against empty or malformed request bodies (bots often send empty POSTs)
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid or empty request body" },
+        { status: 400 }
+      );
+    }
+
+    if (!body || typeof body !== "object") {
+      return NextResponse.json(
+        { error: "Request body must be a JSON object" },
+        { status: 400 }
+      );
+    }
+
     const {
       eventType,
       sessionId,

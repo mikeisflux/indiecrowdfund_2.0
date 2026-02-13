@@ -534,7 +534,7 @@ export default function ProjectPage() {
                       return (
                         <a href={project.videoUrl} target="_blank" rel="noopener noreferrer" className="block h-full">
                           {project.imageUrl ? (
-                            <Image src={project.imageUrl} alt={project.title} fill sizes="(max-width: 1024px) 100vw, 60vw" priority className="object-cover" />
+                            <Image src={project.imageUrl} alt={project.title} fill sizes="(max-width: 1024px) 100vw, 60vw" priority className="object-cover" unoptimized={project.imageUrl.endsWith(".gif")} />
                           ) : (
                             <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900" />
                           )}
@@ -548,7 +548,7 @@ export default function ProjectPage() {
                     }
                   })()
                 ) : project.imageUrl ? (
-                  <Image src={project.imageUrl} alt={project.title} fill sizes="(max-width: 1024px) 100vw, 60vw" priority className="object-cover" />
+                  <Image src={project.imageUrl} alt={project.title} fill sizes="(max-width: 1024px) 100vw, 60vw" priority className="object-cover" unoptimized={project.imageUrl.endsWith(".gif")} />
                 ) : (
                   <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
                     <Play className="h-16 w-16 text-white/50" />

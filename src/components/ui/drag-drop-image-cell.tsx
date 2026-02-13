@@ -145,6 +145,7 @@ export function DragDropImageCell({
           width={96}
           height={54}
           className="w-full h-full object-cover pointer-events-none"
+          unoptimized={imageUrl.endsWith(".gif")}
         />
       ) : (
         <div className="w-full h-full bg-muted flex items-center justify-center pointer-events-none">
