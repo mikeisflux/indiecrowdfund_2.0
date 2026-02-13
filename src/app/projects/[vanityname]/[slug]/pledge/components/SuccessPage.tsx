@@ -94,14 +94,6 @@ export function SuccessPage({
         }
       `}</style>
 
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container flex h-14 items-center">
-          <Link href="/" className="text-xl font-bold text-primary">
-            IndieCrowdfund
-          </Link>
-        </div>
-      </header>
-
       <div className="container py-16 relative z-10">
         <div className="mx-auto max-w-lg text-center">
           {/* Animated checkmark with glow */}

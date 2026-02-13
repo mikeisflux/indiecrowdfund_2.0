@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, ArrowLeft, Star } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 interface Book {
   id: string;
@@ -85,21 +85,6 @@ export default function FeaturedBooksPage() {
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 -left-40 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
       </div>
-
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/marketplace" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Marketplace
-            </Link>
-          </div>
-          <Badge className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30">
-            <Star className="w-3 h-3 mr-1 fill-current" />
-            Featured Books
-          </Badge>
-        </div>
-      </header>
 
       <main className="container relative py-8">
         <div className="mb-8">

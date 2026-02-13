@@ -41,14 +41,12 @@ import {
   Sparkles,
   ArrowUpDown,
   X,
-  Menu,
   Loader2,
   Bell,
   CalendarClock,
   ArrowLeft,
 } from "lucide-react";
 import { PROJECT_CATEGORIES } from "@/types";
-import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { formatTimeRemaining } from "@/lib/utils";
 
 // Project type from API
@@ -241,98 +239,6 @@ function DiscoverContent() {
         <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
         <div className="floating-orb absolute bottom-20 right-1/4 w-[300px] h-[300px] bg-cyan-500/10" style={{ animationDelay: '-10s' }} />
       </div>
-
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/50 glass-card">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-shadow">
-                <Sparkles className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
-                IndieCrowdfund
-              </span>
-            </Link>
-            <nav className="hidden items-center gap-6 md:flex">
-              <Link
-                href="/discover"
-                className="relative text-sm font-medium text-primary group"
-              >
-                Discover
-                <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full" />
-              </Link>
-              <Link
-                href="/projects/new"
-                className="relative text-sm font-medium text-muted-foreground hover:text-primary transition-colors group"
-              >
-                Start a Project
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full group-hover:w-full transition-all" />
-              </Link>
-              <Link
-                href="/retailers"
-                className="relative text-sm font-medium text-muted-foreground hover:text-primary transition-colors group"
-              >
-                Retailers
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full group-hover:w-full transition-all" />
-              </Link>
-              <Link
-                href="/about-us"
-                className="relative text-sm font-medium text-muted-foreground hover:text-primary transition-colors group"
-              >
-                About Us
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full group-hover:w-full transition-all" />
-              </Link>
-              <Link
-                href="/faq"
-                className="relative text-sm font-medium text-muted-foreground hover:text-primary transition-colors group"
-              >
-                FAQ
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full group-hover:w-full transition-all" />
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:block">
-              <UserProfileDropdown />
-            </div>
-            {/* Mobile Menu */}
-            <Sheet>
-              <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon" className="hover:bg-primary/10">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Toggle menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] glass-card border-l border-border/50">
-                <SheetHeader>
-                  <SheetTitle className="text-left">Menu</SheetTitle>
-                </SheetHeader>
-                <nav className="flex flex-col gap-4 mt-6">
-                  <Link href="/discover" className="text-sm font-medium text-primary py-2 px-3 rounded-lg bg-primary/10">
-                    Discover
-                  </Link>
-                  <Link href="/projects/new" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
-                    Start a Project
-                  </Link>
-                  <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
-                    Retailers
-                  </Link>
-                  <Link href="/about-us" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
-                    About Us
-                  </Link>
-                  <Link href="/faq" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
-                    FAQ
-                  </Link>
-                  <div className="border-t border-border/50 pt-4 mt-2">
-                    <UserProfileDropdown />
-                  </div>
-                </nav>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </header>
 
       {/* Hero */}
       <section className="relative border-b border-border/50 py-8 hero-gradient overflow-hidden">

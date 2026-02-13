@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, ArrowLeft, Sparkles } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 interface Book {
   id: string;
@@ -85,21 +85,6 @@ export default function StaffPicksPage() {
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 -left-40 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
-
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/marketplace" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Marketplace
-            </Link>
-          </div>
-          <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
-            <Sparkles className="w-3 h-3 mr-1" />
-            Staff Picks
-          </Badge>
-        </div>
-      </header>
 
       <main className="container relative py-8">
         <div className="mb-8">

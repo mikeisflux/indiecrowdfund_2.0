@@ -6,13 +6,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
   Bookmark,
   MapPin,
   CheckCircle,
@@ -23,10 +16,7 @@ import {
   ShieldCheck,
   Info,
   Loader2,
-  Menu,
-  ArrowLeft,
 } from "lucide-react";
-import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import {
   ProjectData,
   RewardData,
@@ -457,84 +447,9 @@ export default function ProjectPage() {
         <div className="floating-orb absolute bottom-20 right-1/4 w-[300px] h-[300px] bg-cyan-500/10" style={{ animationDelay: '-10s' }} />
       </div>
 
-      {/* Main Navigation */}
-      <header className="border-b border-border/50 glass-card relative z-10">
-        <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Link href="/">
-              <Button variant="ghost" size="icon" className="hover:bg-primary/10">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-shadow">
-                <Heart className="h-3.5 w-3.5 text-white" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
-                IndieCrowdfund
-              </span>
-            </Link>
-          </div>
-          <nav className="hidden md:flex items-center gap-4 text-sm">
-            {['Art', 'Comics', 'Crafts', 'Design', 'Film', 'Games', 'Music', 'Publishing', 'Technology'].map((cat) => (
-              <Link
-                key={cat}
-                href={`/discover?category=${cat.toLowerCase()}`}
-                className="text-muted-foreground hover:text-primary transition-colors"
-              >
-                {cat}
-              </Link>
-            ))}
-            <Link href="/discover" className="text-primary font-medium relative">
-              Discover
-              <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-emerald-500 rounded-full" />
-            </Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:block">
-              <UserProfileDropdown />
-            </div>
-            {/* Mobile Menu */}
-            <Sheet>
-              <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon" className="hover:bg-primary/10">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Toggle menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] glass-card border-l border-border/50">
-                <SheetHeader>
-                  <SheetTitle className="text-left">Menu</SheetTitle>
-                </SheetHeader>
-                <nav className="flex flex-col gap-4 mt-6">
-                  <Link href="/discover" className="text-sm font-medium text-primary py-2 px-3 rounded-lg bg-primary/10">
-                    Discover
-                  </Link>
-                  <Link href="/projects/new" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
-                    Start a Project
-                  </Link>
-                  <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
-                    Retailers
-                  </Link>
-                  <Link href="/about-us" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
-                    About Us
-                  </Link>
-                  <Link href="/faq" className="text-sm font-medium hover:text-primary py-2 px-3 rounded-lg hover:bg-primary/5 transition-all">
-                    FAQ
-                  </Link>
-                  <div className="border-t border-border/50 pt-4 mt-2">
-                    <UserProfileDropdown />
-                  </div>
-                </nav>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </header>
-
       {/* Sticky Header (appears on scroll) */}
       {showStickyHeader && (
-        <div className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 glass-card shadow-lg animate-in slide-in-from-top-2 duration-300">
+        <div className="fixed top-16 left-0 right-0 z-40 border-b border-border/50 glass-card shadow-lg animate-in slide-in-from-top-2 duration-300">
           <div className="container flex h-14 items-center justify-between">
             <div className="flex items-center gap-4">
               <span className="font-medium truncate max-w-md">{project.title}</span>

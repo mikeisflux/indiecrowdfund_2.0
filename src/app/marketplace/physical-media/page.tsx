@@ -3,10 +3,8 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   BookOpen,
-  ArrowLeft,
   ArrowRight,
   Package,
   Building2,
@@ -24,32 +22,6 @@ export default function PhysicalMediaPage() {
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 -left-40 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
       </div>
-
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/marketplace"
-              className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"
-            >
-              IndieCrowdfund
-            </Link>
-            <Badge className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30">
-              <Package className="w-3 h-3 mr-1" />
-              Physical Media
-            </Badge>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/marketplace">
-              <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Marketplace
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
 
       <main className="container relative py-12 max-w-4xl">
         {/* Hero */}

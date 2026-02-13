@@ -23,12 +23,8 @@ import {
   Users,
   Sparkles,
   Copy,
-  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
-import { UserProfileDropdown } from "@/components/user-profile-dropdown";
-import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 // Social share icons
 const FacebookIcon = () => (
@@ -253,30 +249,6 @@ export default function PrelaunchPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-              IndieCrowdfund
-            </Link>
-            <Link href="/discover" className="hidden sm:block text-sm font-medium hover:text-primary">
-              Discover
-            </Link>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            {session?.user && <NotificationsDropdown />}
-            <UserProfileDropdown />
-          </div>
-        </div>
-      </header>
-
       {/* Admin/Owner Preview Banner */}
       {isPreviewMode && (
         <div className="bg-amber-500 text-amber-950 text-center py-2 px-4 text-sm font-medium">

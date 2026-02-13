@@ -11,7 +11,6 @@ import {
   BookOpen,
   Building2,
   ArrowRight,
-  ArrowLeft,
   Star,
   Sparkles,
   TrendingUp,
@@ -319,40 +318,6 @@ export default function MarketplacePage() {
         <div className="absolute -bottom-40 right-1/3 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link
-              href="/"
-              className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"
-            >
-              IndieCrowdfund
-            </Link>
-            <Badge className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30">
-              <BookOpen className="w-3 h-3 mr-1" />
-              Marketplace
-            </Badge>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/discover">
-              <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
-                Crowdfunding
-              </Button>
-            </Link>
-            <Link href="/dashboard/backer?tab=digital-library">
-              <Button variant="outline" className="border-purple-500/30 text-purple-600 dark:text-purple-300 hover:bg-purple-500/10">
-                My Library
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
 
       <main className="container relative py-8">
         {/* Old School Physical Media Section */}
