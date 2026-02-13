@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -15,6 +17,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -39,11 +43,14 @@ import {
   ChevronRight,
   CreditCard,
   Undo2,
-  Eye,
   DollarSign,
+  Plus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 
 interface TransactionUser {
   id: string;
@@ -109,7 +116,22 @@ export default function DivinityCoinRedemptionsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  // Detail dialog
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+
+  // Create/Edit dialog
+  const [showFormDialog, setShowFormDialog] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [formUserId, setFormUserId] = useState("");
+  const [formAmount, setFormAmount] = useState("");
+  const [formType, setFormType] = useState("PAYMENT");
+  const [formDescription, setFormDescription] = useState("");
+  const [formSubmitting, setFormSubmitting] = useState(false);
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -198,6 +220,115 @@ export default function DivinityCoinRedemptionsPage() {
     }
   };
 
+  // --- Create / Edit ---
+  const openCreateDialog = () => {
+    setEditingTransaction(null);
+    setFormUserId("");
+    setFormAmount("");
+    setFormType("PAYMENT");
+    setFormDescription("");
+    setShowFormDialog(true);
+  };
+
+  const openEditDialog = (txn: Transaction) => {
+    setEditingTransaction(txn);
+    setFormUserId(txn.userId);
+    setFormAmount(String(txn.amount));
+    setFormType(txn.type);
+    setFormDescription(txn.description || "");
+    setSelectedTransaction(null);
+    setShowFormDialog(true);
+  };
+
+  const handleFormSubmit = async () => {
+    if (!formAmount || (!editingTransaction && !formUserId)) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setFormSubmitting(true);
+    try {
+      if (editingTransaction) {
+        // PATCH
+        const response = await fetch("/api/admin/divinitycoin-redemptions", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            id: editingTransaction.id,
+            amount: parseFloat(formAmount),
+            type: formType,
+            description: formDescription,
+          }),
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || "Failed to update transaction");
+        }
+
+        toast.success("Transaction updated");
+      } else {
+        // POST
+        const response = await fetch("/api/admin/divinitycoin-redemptions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          body: JSON.stringify({
+            userId: formUserId,
+            amount: parseFloat(formAmount),
+            type: formType,
+            description: formDescription,
+          }),
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || "Failed to create transaction");
+        }
+
+        toast.success("Transaction created");
+      }
+
+      setShowFormDialog(false);
+      fetchTransactions();
+    } catch (error) {
+      console.error("Form submit error:", error);
+      toast.error(error instanceof Error ? error.message : "Operation failed");
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  // --- Delete ---
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/admin/divinitycoin-redemptions?id=${deleteTarget.id}`,
+        {
+          method: "DELETE",
+          headers: { ...getCSRFHeaders() },
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to delete transaction");
+      }
+
+      toast.success("Transaction deleted");
+      setDeleteTarget(null);
+      setSelectedTransaction(null);
+      fetchTransactions();
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const exportCSV = () => {
     const csv = [
       ["ID", "Date", "User", "Email", "Type", "Amount", "Description", "Project", "Pledge ID"].join(","),
@@ -244,6 +375,10 @@ export default function DivinityCoinRedemptionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={openCreateDialog} className="bg-purple-600 hover:bg-purple-700 flex-1 sm:flex-none">
+            <Plus className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Add Transaction</span>
+          </Button>
           <Button variant="outline" onClick={fetchTransactions} disabled={loading} className="flex-1 sm:flex-none">
             <RefreshCw className={`w-4 h-4 sm:mr-2 ${loading ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">Refresh</span>
@@ -363,15 +498,14 @@ export default function DivinityCoinRedemptionsPage() {
                   <TableHead>Description</TableHead>
                   <TableHead>Project</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[100px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {transactions.map((txn) => (
                   <TableRow
                     key={txn.id}
-                    className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                    onClick={() => setSelectedTransaction(txn)}
+                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                   >
                     <TableCell className="whitespace-nowrap text-sm text-zinc-500">
                       {format(new Date(txn.createdAt), "MMM d, yyyy")}
@@ -414,8 +548,45 @@ export default function DivinityCoinRedemptionsPage() {
                         {formatCurrency(txn.amount)}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <Eye className="w-4 h-4 text-zinc-400" />
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTransaction(txn);
+                          }}
+                          title="View details"
+                        >
+                          <Coins className="w-3.5 h-3.5 text-zinc-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(txn);
+                          }}
+                          title="Edit"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-zinc-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(txn);
+                          }}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -570,8 +741,206 @@ export default function DivinityCoinRedemptionsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Edit / Delete from detail view */}
+              <DialogFooter className="mt-4 flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => openEditDialog(selectedTransaction)}
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setDeleteTarget(selectedTransaction);
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create / Edit Dialog */}
+      <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingTransaction ? "Edit Transaction" : "Create Transaction"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingTransaction
+                ? "Modify the transaction details below."
+                : "Manually add a new DivinityCoin transaction record."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            {/* User ID - only for create */}
+            {!editingTransaction && (
+              <div className="space-y-2">
+                <Label htmlFor="userId">User ID</Label>
+                <Input
+                  id="userId"
+                  placeholder="e.g. clx9abc123..."
+                  value={formUserId}
+                  onChange={(e) => setFormUserId(e.target.value)}
+                />
+                <p className="text-xs text-zinc-500">
+                  The user&apos;s database ID (find in admin Users page)
+                </p>
+              </div>
+            )}
+
+            {editingTransaction && (
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800">
+                <p className="text-xs text-zinc-500">User</p>
+                <p className="font-medium text-sm">
+                  {editingTransaction.user.name || editingTransaction.user.email}
+                </p>
+              </div>
+            )}
+
+            {/* Type */}
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select value={formType} onValueChange={setFormType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PAYMENT">Payment</SelectItem>
+                  <SelectItem value="REDEMPTION">Redemption</SelectItem>
+                  <SelectItem value="REFUND">Refund</SelectItem>
+                  <SelectItem value="REFUND_DEDUCTION">Refund Deduction</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Amount */}
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (USD)</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  className="pl-10"
+                  value={formAmount}
+                  onChange={(e) => setFormAmount(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-zinc-500">
+                Use negative values for deductions (refunds, deductions)
+              </p>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea
+                id="description"
+                placeholder="e.g. Manual adjustment for..."
+                rows={3}
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFormDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleFormSubmit}
+              disabled={formSubmitting || !formAmount || (!editingTransaction && !formUserId)}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {formSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : editingTransaction ? (
+                <>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Delete Transaction</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete this transaction? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteTarget && (
+            <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-zinc-500">Type</span>
+                <span className="font-medium">{deleteTarget.type}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">Amount</span>
+                <span className="font-bold">
+                  {deleteTarget.amount >= 0 ? "+" : ""}
+                  {formatCurrency(deleteTarget.amount)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">User</span>
+                <span>{deleteTarget.user.name || deleteTarget.user.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">ID</span>
+                <span className="font-mono text-xs text-zinc-400">{deleteTarget.id}</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Forever
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
