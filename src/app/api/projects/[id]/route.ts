@@ -392,6 +392,25 @@ export async function PATCH(
     // Determine what can be edited based on project status
     const isLaunched = ["LIVE", "FUNDED", "PAUSED"].includes(project.status);
 
+    // For launched projects, require chargeback card before allowing any edits
+    if (isLaunched) {
+      const chargebackCard = await db.creatorChargebackCard.findUnique({
+        where: { projectId: params.id },
+        select: { id: true },
+      });
+
+      if (!chargebackCard) {
+        return NextResponse.json(
+          {
+            error: "Chargeback protection card required",
+            message: "A chargeback protection card must be on file before you can edit this project. Please add one in the Payment step first.",
+            code: "CHARGEBACK_CARD_REQUIRED",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const body = await req.json();
 
     const data = updateProjectSchema.parse(body);

@@ -107,6 +107,23 @@ export async function POST(
       }
     }
 
+    // Validate chargeback protection card is on file
+    const chargebackCard = await db.creatorChargebackCard.findUnique({
+      where: { projectId },
+      select: { id: true },
+    });
+
+    if (!chargebackCard) {
+      return NextResponse.json(
+        {
+          error: "Chargeback protection card required",
+          message: "A chargeback protection card must be on file before your project can be launched. Go to the Payment step to add one.",
+          code: "CHARGEBACK_CARD_REQUIRED",
+        },
+        { status: 400 }
+      );
+    }
+
     // Check campaign limits based on user role (skip for ADMIN/SUPER_ADMIN)
     if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
       // Get all user's projects that are LIVE or FUNDED (not yet fully fulfilled)

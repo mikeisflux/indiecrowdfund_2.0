@@ -90,6 +90,15 @@ export async function POST(
       validationErrors.push("Contact email is required");
     }
 
+    // Check chargeback card
+    const chargebackCard = await db.creatorChargebackCard.findUnique({
+      where: { projectId },
+      select: { id: true },
+    });
+    if (!chargebackCard) {
+      validationErrors.push("Chargeback protection card is required");
+    }
+
     // If there are validation errors, return them
     if (validationErrors.length > 0) {
       return NextResponse.json(

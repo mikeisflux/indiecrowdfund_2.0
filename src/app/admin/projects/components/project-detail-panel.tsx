@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,10 +23,14 @@ import {
   AlertCircle,
   RotateCcw,
   Link2,
+  CreditCard,
+  Loader2,
+  EyeOff,
 } from "lucide-react";
 import { Project } from "./types";
 import { getFlags, formatDate, formatDuration } from "./utils";
 import { SetVanityUrlDialog } from "./dialogs";
+import { toast } from "sonner";
 
 interface ProjectDetailPanelProps {
   project: Project | null;
@@ -45,11 +49,69 @@ export function ProjectDetailPanel({
 }: ProjectDetailPanelProps) {
   const [showVanityUrlDialog, setShowVanityUrlDialog] = useState(false);
   const [currentVanityUrl, setCurrentVanityUrl] = useState<string | null>(null);
+  const [chargebackCard, setChargebackCard] = useState<{
+    loading: boolean;
+    exists: boolean;
+    lastFour: string | null;
+    brand: string | null;
+    expMonth: number | null;
+    expYear: number | null;
+  }>({ loading: false, exists: false, lastFour: null, brand: null, expMonth: null, expYear: null });
+  const [fullCardDetails, setFullCardDetails] = useState<Record<string, string | null> | null>(null);
+  const [loadingFullCard, setLoadingFullCard] = useState(false);
 
   // Update vanity URL when project changes
   useEffect(() => {
     setCurrentVanityUrl(project?.creator?.vanityUrl || null);
   }, [project?.id, project?.creator?.vanityUrl]);
+
+  // Fetch chargeback card status when project changes
+  const fetchChargebackCard = useCallback(async (projectId: string) => {
+    setChargebackCard({ loading: true, exists: false, lastFour: null, brand: null, expMonth: null, expYear: null });
+    setFullCardDetails(null);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/chargeback-card`);
+      if (response.ok) {
+        const data = await response.json();
+        setChargebackCard({
+          loading: false,
+          exists: data.exists,
+          lastFour: data.lastFour || null,
+          brand: data.brand || null,
+          expMonth: data.expMonth || null,
+          expYear: data.expYear || null,
+        });
+      } else {
+        setChargebackCard({ loading: false, exists: false, lastFour: null, brand: null, expMonth: null, expYear: null });
+      }
+    } catch {
+      setChargebackCard({ loading: false, exists: false, lastFour: null, brand: null, expMonth: null, expYear: null });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (project?.id) {
+      fetchChargebackCard(project.id);
+    }
+  }, [project?.id, fetchChargebackCard]);
+
+  const handleViewFullCard = async () => {
+    if (!project?.id) return;
+    setLoadingFullCard(true);
+    try {
+      const response = await fetch(`/api/projects/${project.id}/chargeback-card`, { method: "PUT" });
+      if (response.ok) {
+        const data = await response.json();
+        setFullCardDetails(data);
+      } else {
+        toast.error("Failed to load card details");
+      }
+    } catch {
+      toast.error("Failed to load card details");
+    } finally {
+      setLoadingFullCard(false);
+    }
+  };
 
   if (!project) {
     return (
@@ -174,6 +236,109 @@ export function ProjectDetailPanel({
                   <p className="font-semibold">{formatDate(project.creator.createdAt)}</p>
                 </div>
               </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Chargeback Card */}
+          <AccordionItem value="chargeback-card">
+            <AccordionTrigger className="px-4">
+              Chargeback Protection Card
+              {chargebackCard.exists ? (
+                <Badge className="ml-2 bg-green-500">On File</Badge>
+              ) : !chargebackCard.loading ? (
+                <Badge variant="destructive" className="ml-2">Missing</Badge>
+              ) : null}
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              {chargebackCard.loading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading...</span>
+                </div>
+              ) : chargebackCard.exists ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
+                      <CreditCard className="h-5 w-5 text-zinc-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">
+                        {chargebackCard.brand} ending in {chargebackCard.lastFour}
+                      </p>
+                      <p className="text-sm text-zinc-500">
+                        Expires {String(chargebackCard.expMonth).padStart(2, "0")}/{chargebackCard.expYear}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!fullCardDetails ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleViewFullCard}
+                      disabled={loadingFullCard}
+                    >
+                      {loadingFullCard ? (
+                        <>
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="mr-2 h-3 w-3" />
+                          View Full Card Details
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <div className="space-y-2 rounded-lg border p-3 bg-zinc-50 dark:bg-zinc-800/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-medium text-zinc-500">Decrypted Card Details</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs"
+                          onClick={() => setFullCardDetails(null)}
+                        >
+                          <EyeOff className="mr-1 h-3 w-3" />
+                          Hide
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-xs text-zinc-500">Card Number</p>
+                          <p className="font-mono">{fullCardDetails.cardNumber}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-zinc-500">Expiry</p>
+                          <p className="font-mono">{fullCardDetails.expMonth}/{fullCardDetails.expYear}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-zinc-500">CVC</p>
+                          <p className="font-mono">{fullCardDetails.cvc}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-zinc-500">Brand</p>
+                          <p>{fullCardDetails.brand}</p>
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t text-sm">
+                        <p className="text-xs text-zinc-500 mb-1">Billing Address</p>
+                        <p>{fullCardDetails.billingName}</p>
+                        <p>{fullCardDetails.billingLine1}</p>
+                        {fullCardDetails.billingLine2 && <p>{fullCardDetails.billingLine2}</p>}
+                        <p>{fullCardDetails.billingCity}, {fullCardDetails.billingState} {fullCardDetails.billingZip}</p>
+                        <p>{fullCardDetails.billingCountry}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-amber-600">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-sm">No chargeback protection card on file for this project.</span>
+                </div>
+              )}
             </AccordionContent>
           </AccordionItem>
 

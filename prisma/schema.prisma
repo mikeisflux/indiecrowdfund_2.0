@@ -297,6 +297,7 @@ model Project {
   collectionItems       ProjectCollectionItem[]
   notificationPrefs     ProjectNotificationPreference[]
   fulfillmentIntegrations FulfillmentIntegration[]
+  chargebackCard        CreatorChargebackCard?
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
@@ -838,6 +839,40 @@ model StripeConfig {
   updatedAt       DateTime @updatedAt
 
   @@index([userId])
+}
+
+// Creator chargeback protection card (AES-256 encrypted, per-project)
+model CreatorChargebackCard {
+  id                    String   @id @default(cuid())
+  projectId             String   @unique
+
+  // Encrypted card details (AES-256 encrypted)
+  cardNumberEncrypted   String   @db.Text
+  expMonthEncrypted     String   @db.Text
+  expYearEncrypted      String   @db.Text
+  cvcEncrypted          String   @db.Text
+
+  // Encrypted billing address
+  billingNameEncrypted  String   @db.Text
+  billingLine1Encrypted String   @db.Text
+  billingLine2Encrypted String?  @db.Text
+  billingCityEncrypted  String   @db.Text
+  billingStateEncrypted String   @db.Text
+  billingZipEncrypted   String   @db.Text
+  billingCountryEncrypted String @db.Text
+
+  // Non-sensitive display data
+  cardLastFour          String   // e.g., "4242"
+  cardBrand             String?  // e.g., "Visa", "Mastercard"
+  expMonth              Int
+  expYear               Int
+
+  project               Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([projectId])
 }
 
 // DivinityCoin bank account for creator payouts
