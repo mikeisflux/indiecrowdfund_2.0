@@ -126,23 +126,8 @@ export default function PledgePage() {
     initStripe();
   }, []);
 
-  // Initialize DivinityCoin's Stripe account (separate publishable key)
-  useEffect(() => {
-    if (project?.paymentProcessor === "DIVINITYCOIN") {
-      const initDcStripe = async () => {
-        try {
-          const res = await fetch("/api/divinitycoin/config");
-          const data = await res.json();
-          if (data.stripePublishableKey) {
-            setDcStripePromise(loadStripe(data.stripePublishableKey));
-          }
-        } catch (err) {
-          console.error("Failed to load DivinityCoin Stripe config:", err);
-        }
-      }
-      initDcStripe();
-    }
-  }, [project?.paymentProcessor]);
+  // DivinityCoin's Stripe publishable key is loaded dynamically from the
+  // create-payment-intent response (see createPledgeForPayment below)
 
 
   // Calculate totals
@@ -233,6 +218,11 @@ export default function PledgePage() {
       // Stripe projects also return clientSecret (from IndieK's Stripe account)
       if (!result.clientSecret) {
         throw new Error("Invalid payment response - missing client secret");
+      }
+
+      // DivinityCoin returns publishableKey from create-payment-intent response
+      if (result.publishableKey && !dcStripePromise) {
+        setDcStripePromise(loadStripe(result.publishableKey));
       }
 
       setClientSecret(result.clientSecret);

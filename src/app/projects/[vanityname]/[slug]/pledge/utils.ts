@@ -84,6 +84,7 @@ export async function createPledgeForPayment(
   pledgeId: string;
   paymentMethod?: string;
   clientSecret?: string;
+  publishableKey?: string;
   type?: string;
 }> {
   const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
@@ -114,6 +115,7 @@ export async function createPledgeForPayment(
     pledgeId: data.pledgeId,
     paymentMethod: data.paymentMethod,
     clientSecret: data.clientSecret,
+    publishableKey: data.publishableKey,
     type: data.type,
   };
 }

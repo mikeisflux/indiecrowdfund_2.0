@@ -267,6 +267,7 @@ export async function POST(req: NextRequest) {
           paymentMethod: "DIVINITYCOIN",
           type: "payment_intent",
           clientSecret: dcResult.clientSecret,
+          publishableKey: dcResult.publishableKey,
           pledgeId: pledge.id,
           chargedImmediately: true,
         });
