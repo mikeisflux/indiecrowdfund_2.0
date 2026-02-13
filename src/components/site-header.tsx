@@ -51,7 +51,7 @@ export function SiteHeader() {
   const pathname = usePathname();
 
   // Hide on admin, auth, and retailer portal pages
-  const shouldHide = HIDDEN_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const shouldHide = HIDDEN_PATH_PREFIXES.some((prefix) => pathname?.startsWith(prefix));
   if (shouldHide) return null;
 
   return (

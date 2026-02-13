@@ -170,11 +170,11 @@ function isServerActionRateLimited(ip: string): boolean {
   // Periodic cleanup of stale rate limit entries (every 5 minutes)
   if (now - lastRateLimitCleanup > 5 * 60 * 1000) {
     lastRateLimitCleanup = now;
-    for (const [key, val] of serverActionRateLimit) {
+    Array.from(serverActionRateLimit.entries()).forEach(([key, val]) => {
       if (now - val.windowStart > SERVER_ACTION_RATE_WINDOW_MS * 2) {
         serverActionRateLimit.delete(key);
       }
-    }
+    });
   }
 
   const entry = serverActionRateLimit.get(ip);
