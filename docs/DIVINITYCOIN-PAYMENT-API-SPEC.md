@@ -2,11 +2,11 @@
 
 ## The Big Picture
 
-DivinityCoin becomes a **seamless, white-label payment processor** for IndieK. The backer enters their credit card on IndieK, clicks "Pledge $50", and they're done. They never see DivinityCoin, never see a wallet, never see a gift card code.
+Transform DivinityCoin from a manual prepaid credit system into a **seamless, invisible payment processor**. The backer enters their credit card on IndieK, clicks "Pledge $50", and they're done. They never see DivinityCoin, never see a wallet, never see a gift card code.
 
-Behind the scenes, the gift card system still exists as the **compliance layer** that separates Stripe from adult/NSFW content. Stripe sees "DivinityCoin digital product purchase" - a perfectly legitimate transaction. The actual content on IndieK is not Stripe's concern.
+Behind the scenes, the gift card system still exists as the **compliance layer** that separates Stripe from adult/NSFW content. Stripe sees "DivinityCoin digital product purchase" on DivinityCoin's Stripe account - a perfectly legitimate transaction.
 
-### Current Flow (bad UX, lots of friction):
+### Current Flow (friction, site-hopping):
 ```
 Backer → goes to divinitycoin.com → buys $50 gift card via Stripe →
 gets voucher code → comes back to IndieK → redeems code in wallet →
@@ -18,20 +18,22 @@ goes to pledge page → pays $50 from balance
 Backer → enters card on IndieK → clicks "Pledge $50" → done
 ```
 
-### What happens behind the scenes:
+### What happens behind the scenes (all invisible to backer):
 ```
-1. IndieK backend calls DivinityCoin API: "Process $50 for pledge XYZ"
-2. DivinityCoin creates a Stripe PaymentIntent on THEIR Stripe account
-3. DivinityCoin returns the Stripe client_secret to IndieK
-4. IndieK frontend renders Stripe Elements using DivinityCoin's publishable key
-5. Backer enters card → Stripe processes it → money lands in DivinityCoin's Stripe
-6. DivinityCoin internally auto-generates a $50 gift card + auto-redeems it (audit trail)
-7. DivinityCoin sends webhook to IndieK: "payment succeeded for pledge XYZ"
-8. IndieK marks pledge as COMPLETED, sends confirmation email
+1. IndieK calls DC API: POST /internal?action=create-payment-intent
+2. DC creates Stripe PaymentIntent on DC's Stripe account, returns client_secret
+3. IndieK renders Stripe Elements using DC's Stripe publishable key
+4. Backer enters card → Stripe charges it → money lands in DC's Stripe account
+5. Stripe webhook hits DC → DC auto-creates $50 gift card → auto-redeems → auto-holds for pledge
+6. DC sends webhook to IndieK: "payment succeeded, credits held for pledge XYZ"
+7. IndieK marks pledge as COMPLETED, sends confirmation email
+
+Campaign succeeds → IndieK calls /internal?action=capture → credits go to settlement
+Campaign fails → IndieK calls /internal?action=release → DC auto-refunds via Stripe
 
 What Stripe sees: "Customer purchased $50 DivinityCoin digital product"
 What backer sees: "I entered my card and pledged $50"
-What the audit trail shows: Gift card created → redeemed → applied to pledge
+What the audit trail shows: Gift card created → redeemed → held → captured/released
 ```
 
 ---
@@ -55,510 +57,258 @@ What the audit trail shows: Gift card created → redeemed → applied to pledge
 │  │                                                            │  │
 │  │  [ Pledge $50.00 ]                                         │  │
 │  └────────────────────────────────────────────────────────────┘  │
-└──────────┬────────────────────────────────────┬──────────────────┘
-           │                                    │
-           │ Card data goes directly to         │ IndieK backend only
-           │ Stripe (DivinityCoin's account)    │ sends pledgeId + amount
-           │                                    │
-           ▼                                    ▼
-┌─────────────────────┐              ┌──────────────────────────┐
-│  Stripe             │              │  IndieK Backend          │
-│  (DivinityCoin's    │              │                          │
-│   Stripe account)   │              │  POST /api/pledges       │
-│                     │              │  → calls DivinityCoin    │
-│  Sees: "DivinityCoin│              │    API to create intent  │
-│  digital product    │              │  → returns clientSecret  │
-│  purchase"          │              │                          │
-└────────┬────────────┘              └──────────┬───────────────┘
-         │                                      │
-         │ Payment succeeds                     │
-         ▼                                      │
-┌──────────────────────────┐                    │
-│  DivinityCoin Backend    │                    │
-│                          │                    │
-│  1. Receives Stripe      │   webhook:         │
-│     payment success      │   "payment         │
-│  2. Auto-creates $50     │   succeeded"       │
-│     gift card (internal) │────────────────────►│
-│  3. Auto-redeems to      │                    │
-│     backer account       │                    │
-│  4. Creates audit trail  │                    │
-│  5. Sends webhook to     │                    │
-│     IndieK               │                    │
-│                          │                    │
-│  Stripe sees: gift card  │                    │
-│  Audit shows: compliant  │                    │
-└──────────────────────────┘                    │
+└──────────┬────────────────────────────────────────┬──────────────┘
+           │                                        │
+           │ Card data goes directly to Stripe      │ IndieK only sends
+           │ (DC's Stripe account, not IndieK's)    │ amount + pledge info
+           ▼                                        ▼
+┌─────────────────────────┐              ┌──────────────────────────┐
+│  Stripe                 │              │  IndieK Backend          │
+│  (DivinityCoin's        │              │                          │
+│   Stripe account)       │              │  Calls DC Partner API:   │
+│                         │              │  /internal?action=       │
+│  Sees: "DivinityCoin    │              │    create-payment-intent │
+│  digital product"       │              │    hold / capture /      │
+│                         │              │    release               │
+└────────┬────────────────┘              └──────────┬───────────────┘
+         │                                          │
+         │ payment_intent.succeeded                 │
+         ▼                                          │
+┌──────────────────────────────┐                    │
+│  DivinityCoin Backend        │                    │
+│  (EXISTING infrastructure)   │                    │
+│                              │   webhook:         │
+│  1. Stripe webhook received  │   "payment         │
+│  2. Auto-create gift card    │   succeeded"       │
+│  3. Auto-redeem to balance   │────────────────────►
+│  4. Auto-hold for pledge     │                    │
+│  5. Audit trail created      │                    │
+│  6. Send webhook to IndieK   │                    │
+│                              │                    │
+│  EXISTING: hold/capture/     │                    │
+│  release, settlements,       │                    │
+│  webhooks, gift cards        │                    │
+└──────────────────────────────┘                    │
 ```
 
 ---
 
-## Part 1: What DivinityCoin Needs to Build
+## What DivinityCoin Already Has (from DIVINITYCOIN.md)
 
-Since DivinityCoin already uses Stripe, this is essentially building a thin API layer on top of DivinityCoin's existing Stripe integration.
+DivinityCoin already has almost everything needed:
 
-### 1.1 Core Payment API
+### Existing Partner API (`POST /internal?action=`)
+| Action | Purpose | Status |
+|--------|---------|--------|
+| `validate` | Redeem gift card code → credits | EXISTS |
+| `balance` | Get user's available/held/total balance | EXISTS |
+| `hold` | Reserve credits for a pledge (amount, pledgeId, projectId) | EXISTS |
+| `release` | Return held credits when project fails | EXISTS |
+| `capture` | Transfer held credits when project succeeds → settlement | EXISTS |
+| `health` | Service health check | EXISTS |
+| **`create-payment-intent`** | **Create Stripe PaymentIntent, return client_secret** | **NEW** |
+| **`refund`** | **Refund a payment + void gift card** | **NEW** |
 
-#### `POST /api/v1/payment-intents`
+### Existing Infrastructure
+- Stripe payment processing with PaymentIntents
+- Auto gift card creation on `payment_intent.succeeded`
+- Credit balance system (available / held / total)
+- Credit holds with lifecycle (ACTIVE → CAPTURED / RELEASED / EXPIRED)
+- Partner authentication (Bearer token API keys)
+- Webhook delivery with HMAC-SHA256 signing
+- Weekly settlement system (configurable fees, min thresholds)
+- Gift card generation (16-char hex, SHA-256 hashed)
+- Audit logging (CreditLedger, AdminAuditLog)
 
-Creates a Stripe PaymentIntent on DivinityCoin's Stripe account. Returns the client_secret so IndieK can render Stripe Elements.
+---
+
+## Part 1: What DivinityCoin Needs to Add
+
+Only **2 new actions** + **1 enhancement** to the existing partner API.
+
+### 1.1 NEW: `create-payment-intent` Action
+
+This is the main new feature. Creates a Stripe PaymentIntent on DC's Stripe account and returns the `client_secret` so IndieK can render Stripe Elements.
+
+#### `POST /internal?action=create-payment-intent`
 
 **Request:**
 ```json
 {
   "amount": 5000,
   "currency": "usd",
-  "partner_id": "partner_indiecrowdfund",
-  "metadata": {
-    "pledgeId": "pledge_abc123",
-    "projectId": "project_xyz",
-    "userId": "user_456",
-    "platform": "indiecrowdfund"
-  },
-  "customer_id": "dcust_789",
+  "platformUserId": "user_456",
+  "email": "backer@example.com",
+  "pledgeId": "pledge_abc123",
+  "projectId": "project_xyz",
   "statement_descriptor": "INDIECROWDFUND"
 }
 ```
 
-**What DivinityCoin does internally:**
-```python
-# Pseudocode for DivinityCoin's implementation
-def create_payment_intent(request):
-    # 1. Create Stripe PaymentIntent on DivinityCoin's Stripe account
-    stripe.api_key = DIVINITYCOIN_STRIPE_SECRET_KEY
-    intent = stripe.PaymentIntent.create(
-        amount=request.amount,
-        currency=request.currency,
-        # Statement descriptor shows "DIVINITYCOIN" or custom text
-        statement_descriptor=request.statement_descriptor or "DIVINITYCOIN",
-        metadata={
-            "partner": request.partner_id,
-            "type": "gift_card_purchase",  # <-- This is what Stripe sees
-            **request.metadata
-        },
-        customer=get_or_create_stripe_customer(request.customer_id),
-    )
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `amount` | integer | Yes | Amount in cents (5000 = $50.00) |
+| `currency` | string | Yes | Currency code ("usd") |
+| `platformUserId` | string | Yes | IndieK's user ID for this backer |
+| `email` | string | Yes | Backer's email (for Stripe customer creation) |
+| `pledgeId` | string | Yes | IndieK's pledge ID (for hold/capture tracking) |
+| `projectId` | string | Yes | IndieK's project ID (for hold/capture tracking) |
+| `statement_descriptor` | string | No | What appears on the card statement |
 
-    # 2. Store the mapping: payment_intent_id → partner metadata
-    db.save_pending_transaction(
-        stripe_intent_id=intent.id,
-        partner_id=request.partner_id,
-        metadata=request.metadata,
-        amount=request.amount,
-    )
-
-    # 3. Return client_secret to IndieK
-    return {
-        "id": f"dpi_{intent.id}",
-        "client_secret": intent.client_secret,  # IndieK passes this to Stripe Elements
-        "status": intent.status,
-        "amount": request.amount,
-    }
+**What DC does internally:**
+```
+1. Find or create DC user record for this platformUserId
+2. Find or create Stripe customer on DC's Stripe account
+3. Create Stripe PaymentIntent:
+   - amount, currency
+   - customer = DC's Stripe customer
+   - metadata.type = "gift_card_purchase"
+   - metadata.partner = partner_id (from API key)
+   - metadata.platformUserId, pledgeId, projectId
+   - statement_descriptor
+4. Store pending transaction mapping
+5. Return client_secret to IndieK
 ```
 
 **Response:**
 ```json
 {
-  "id": "dpi_pi_3ABC123",
-  "client_secret": "pi_3ABC123_secret_XYZ789",
-  "amount": 5000,
-  "currency": "usd",
-  "status": "requires_payment_method"
+  "success": true,
+  "clientSecret": "pi_3ABC123_secret_XYZ789",
+  "paymentIntentId": "pi_3ABC123",
+  "amount": 5000
 }
 ```
 
-**Key point:** The `client_secret` is literally the Stripe PaymentIntent client secret from DivinityCoin's Stripe account. IndieK uses this with Stripe Elements + DivinityCoin's Stripe publishable key.
+The `clientSecret` is the raw Stripe PaymentIntent client_secret. IndieK passes this directly to Stripe Elements.
 
 ---
 
-#### `GET /api/v1/payment-intents/:id`
+### 1.2 ENHANCED: Auto Gift Card + Hold on Payment Success
 
-Check status of a payment.
+When DC receives Stripe's `payment_intent.succeeded` webhook for a partner-initiated payment, the flow becomes:
 
-**Response:**
-```json
-{
-  "id": "dpi_pi_3ABC123",
-  "amount": 5000,
-  "status": "succeeded",
-  "payment_method": {
-    "type": "card",
-    "brand": "visa",
-    "last4": "4242"
-  },
-  "gift_card": {
-    "code": "DC-XXXXXXXX",
-    "created_at": "2026-02-13T10:01:30Z",
-    "auto_redeemed": true
-  },
-  "metadata": { ... }
-}
+```
+Stripe payment_intent.succeeded
+  ↓
+1. Auto-create gift card (EXISTING - DC already does this)
+  ↓
+2. Auto-redeem to user's balance (EXISTING - DC already does this)
+  ↓
+3. Auto-place HOLD for the pledgeId/projectId (NEW - use existing hold logic)
+  ↓
+4. Send webhook to partner (IndieK) with hold confirmation (ENHANCED)
 ```
 
----
+Step 3 is new but uses the **existing hold system**. DC just needs to automatically call the hold logic after auto-redeem, using the `pledgeId` and `projectId` from the PaymentIntent metadata.
 
-### 1.2 Setup Intents API (Save Card for Unfunded Campaigns)
-
-For campaigns that haven't reached their goal yet - save the card, charge later.
-
-#### `POST /api/v1/setup-intents`
-
-**Request:**
+**Enhanced webhook payload to IndieK:**
 ```json
 {
-  "partner_id": "partner_indiecrowdfund",
-  "customer_id": "dcust_789",
-  "metadata": {
+  "event": "payment.succeeded",
+  "data": {
+    "paymentIntentId": "pi_3ABC123",
+    "amount": 5000,
+    "platformUserId": "user_456",
     "pledgeId": "pledge_abc123",
     "projectId": "project_xyz",
-    "amount": 5000
-  }
-}
-```
-
-**What DivinityCoin does internally:**
-```python
-def create_setup_intent(request):
-    stripe.api_key = DIVINITYCOIN_STRIPE_SECRET_KEY
-    intent = stripe.SetupIntent.create(
-        customer=get_stripe_customer(request.customer_id),
-        payment_method_types=["card"],
-        metadata={
-            "partner": request.partner_id,
-            "type": "saved_card_for_future_gift_card",
-            **request.metadata
-        },
-    )
-    return {
-        "id": f"dsi_{intent.id}",
-        "client_secret": intent.client_secret,
-        "status": intent.status,
-    }
-```
-
-**Response:**
-```json
-{
-  "id": "dsi_seti_3XYZ456",
-  "client_secret": "seti_3XYZ456_secret_ABC123",
-  "status": "requires_payment_method",
-  "customer_id": "dcust_789"
-}
-```
-
----
-
-#### `POST /api/v1/customers/:id/charge`
-
-Charge a saved card when campaign reaches its goal. DivinityCoin creates a PaymentIntent using the saved payment method.
-
-**Request:**
-```json
-{
-  "amount": 5000,
-  "currency": "usd",
-  "payment_method_id": "dpm_pm_1ABC123",
-  "metadata": {
-    "pledgeId": "pledge_abc123",
-    "type": "campaign_funded_collection"
-  }
-}
-```
-
-**What DivinityCoin does internally:**
-```python
-def charge_saved_card(customer_id, request):
-    stripe.api_key = DIVINITYCOIN_STRIPE_SECRET_KEY
-    intent = stripe.PaymentIntent.create(
-        amount=request.amount,
-        currency=request.currency,
-        customer=get_stripe_customer(customer_id),
-        payment_method=get_stripe_pm(request.payment_method_id),
-        off_session=True,
-        confirm=True,
-        metadata={
-            "type": "gift_card_purchase",
-            **request.metadata
-        },
-    )
-
-    if intent.status == "succeeded":
-        # Auto-generate gift card + auto-redeem
-        create_and_redeem_gift_card(customer_id, request.amount, request.metadata)
-
-    return {"id": f"dpi_{intent.id}", "status": intent.status}
-```
-
-**Response:**
-```json
-{
-  "id": "dpi_pi_3NEW789",
-  "status": "succeeded",
-  "amount": 5000
-}
-```
-
----
-
-### 1.3 Customers API
-
-#### `POST /api/v1/customers`
-
-Creates a customer record on DivinityCoin (and a corresponding Stripe customer on DivinityCoin's Stripe).
-
-**Request:**
-```json
-{
-  "email": "backer@example.com",
-  "name": "John Doe",
-  "partner_id": "partner_indiecrowdfund",
-  "metadata": {
-    "indiek_user_id": "user_456"
-  }
-}
-```
-
-**What DivinityCoin does:** Creates both a DivinityCoin customer record AND a Stripe customer on their Stripe account.
-
-**Response:**
-```json
-{
-  "id": "dcust_789",
-  "email": "backer@example.com"
-}
-```
-
-#### `GET /api/v1/customers/:id/payment-methods`
-
-List saved cards.
-
-**Response:**
-```json
-{
-  "data": [
-    {
-      "id": "dpm_pm_1ABC123",
-      "type": "card",
-      "brand": "visa",
-      "last4": "4242",
-      "exp_month": 12,
-      "exp_year": 2027
-    }
-  ]
-}
-```
-
----
-
-### 1.4 Refunds API
-
-#### `POST /api/v1/refunds`
-
-**Request:**
-```json
-{
-  "payment_intent_id": "dpi_pi_3ABC123",
-  "amount": 5000,
-  "reason": "campaign_failed",
-  "metadata": {
-    "pledgeId": "pledge_abc123"
-  }
-}
-```
-
-**What DivinityCoin does:** Refunds via Stripe, voids the internal gift card.
-
-**Response:**
-```json
-{
-  "id": "dref_abc123",
-  "status": "succeeded",
-  "amount": 5000
-}
-```
-
----
-
-### 1.5 Webhook Delivery (DivinityCoin → IndieK)
-
-When a payment succeeds (Stripe notifies DivinityCoin), DivinityCoin should:
-
-1. Auto-create the internal gift card for the exact amount
-2. Auto-redeem it to the backer's DivinityCoin account (create account if needed)
-3. Record the audit trail
-4. Send a webhook to IndieK
-
-**Events to deliver:**
-
-| Event | Trigger |
-|-------|---------|
-| `payment.succeeded` | Stripe PaymentIntent succeeded → gift card created & redeemed |
-| `payment.failed` | Stripe PaymentIntent failed |
-| `setup.succeeded` | Card saved successfully via SetupIntent |
-| `refund.completed` | Refund processed |
-
-**Webhook payload:**
-```json
-{
-  "id": "evt_abc123",
-  "type": "payment.succeeded",
-  "data": {
-    "payment_intent_id": "dpi_pi_3ABC123",
-    "amount": 5000,
-    "currency": "usd",
-    "status": "succeeded",
-    "gift_card": {
-      "code": "DC-A1B2C3D4",
+    "giftCard": {
+      "last4": "C3D4",
       "amount": 5000,
-      "auto_redeemed": true
+      "autoRedeemed": true
     },
-    "payment_method": {
+    "hold": {
+      "holdId": "hold_abc123",
+      "amount": 5000,
+      "status": "ACTIVE"
+    },
+    "paymentMethod": {
       "type": "card",
       "brand": "visa",
       "last4": "4242"
-    },
-    "metadata": {
-      "pledgeId": "pledge_abc123",
-      "projectId": "project_xyz",
-      "userId": "user_456"
     }
-  },
-  "created_at": "2026-02-13T10:01:30Z"
-}
-```
-
-**Signature:** Same HMAC-SHA256 format already in use:
-```
-X-Webhook-Signature: t=1707825600,v1=<hmac_hex>
-```
-
----
-
-### 1.6 The Internal Gift Card Flow (Compliance Layer)
-
-This is the key piece. When a payment succeeds, DivinityCoin:
-
-```python
-def on_payment_succeeded(stripe_payment_intent):
-    """Called by Stripe webhook on DivinityCoin's side"""
-
-    metadata = stripe_payment_intent.metadata
-    amount = stripe_payment_intent.amount  # in cents
-
-    # 1. Generate internal gift card
-    gift_card = GiftCard.create(
-        code=generate_unique_code(),  # e.g., "DC-A1B2C3D4"
-        amount_cents=amount,
-        purchased_via="stripe",
-        stripe_payment_intent_id=stripe_payment_intent.id,
-        partner_id=metadata.get("partner"),
-        status="ACTIVE",
-        # This is what makes it compliant:
-        product_type="digital_gift_card",
-        description=f"DivinityCoin Gift Card - ${amount/100:.2f}",
-    )
-
-    # 2. Auto-redeem to backer's DivinityCoin account
-    customer = get_customer(metadata.get("customer_id"))
-    redemption = Redemption.create(
-        gift_card_id=gift_card.id,
-        customer_id=customer.id,
-        amount_cents=amount,
-        auto_redeemed=True,  # Flag that this was system-initiated
-    )
-
-    # 3. Credit the internal balance
-    customer.balance += amount
-    customer.save()
-
-    # 4. Create audit trail
-    Transaction.create(
-        customer_id=customer.id,
-        type="AUTO_PURCHASE_AND_REDEEM",
-        amount_cents=amount,
-        gift_card_code=gift_card.code,
-        stripe_payment_intent_id=stripe_payment_intent.id,
-        partner_metadata=metadata,
-    )
-
-    # 5. Notify IndieK via webhook
-    send_webhook(
-        url=partner.webhook_url,
-        event="payment.succeeded",
-        data={
-            "payment_intent_id": f"dpi_{stripe_payment_intent.id}",
-            "amount": amount,
-            "gift_card": {
-                "code": gift_card.code,
-                "auto_redeemed": True,
-            },
-            "metadata": metadata,
-        }
-    )
-```
-
-**Audit trail for any gift card purchase looks like:**
-```
-2026-02-13 10:01:28  GIFT_CARD_CREATED    DC-A1B2C3D4  $50.00  stripe:pi_3ABC123
-2026-02-13 10:01:28  GIFT_CARD_REDEEMED   DC-A1B2C3D4  $50.00  customer:dcust_789
-2026-02-13 10:01:28  BALANCE_CREDITED     dcust_789     $50.00  gift_card:DC-A1B2C3D4
-```
-
-This is a legitimate digital product sale. The gift card exists. It was purchased. It was redeemed. It's just automated.
-
----
-
-### 1.7 Authentication
-
-**Server-to-server (IndieK backend → DivinityCoin API):**
-```
-Authorization: Bearer dsk_live_<secret_key>
-X-Partner-ID: partner_indiecrowdfund
-Content-Type: application/json
-```
-
-**Browser-side (for Stripe Elements):**
-IndieK loads Stripe Elements using DivinityCoin's **Stripe publishable key** (`pk_live_divinitycoin...`). This is safe to expose - it can only be used to confirm payment/setup intents that were already created server-side.
-
-**Key types:**
-| Key | Where Used | Example |
-|-----|-----------|---------|
-| DivinityCoin API Secret Key | IndieK backend → DC API | `dsk_live_abc123...` |
-| DivinityCoin Stripe Publishable Key | IndieK frontend → Stripe | `pk_live_dcstripe...` |
-| Webhook Secret | DC → IndieK webhook signing | `whsec_xyz789...` |
-
----
-
-### 1.8 Settlement & Payouts to Creators
-
-DivinityCoin collects all the money in their Stripe account. When an IndieK campaign is funded and ready for payout:
-
-1. IndieK admin triggers "Initiate Payout" in admin panel
-2. IndieK calls `POST /api/v1/payouts` on DivinityCoin
-3. DivinityCoin transfers funds to creator's bank account
-
-#### `POST /api/v1/payouts`
-
-```json
-{
-  "amount": 47000,
-  "currency": "usd",
-  "destination": {
-    "bank_name": "Chase",
-    "routing_number": "021000021",
-    "account_number": "123456789",
-    "account_holder": "Creator Studios LLC",
-    "account_type": "checking"
-  },
-  "metadata": {
-    "projectId": "project_xyz",
-    "settlementId": "settlement_abc",
-    "platform": "indiecrowdfund"
   }
 }
 ```
 
-DivinityCoin can process this via ACH, wire, or even Stripe payouts. The existing `DivinityCoinBankAccount` and `DivinityCoinSettlement` models on IndieK already support this.
+The key addition to the webhook is the `hold` object - confirming that credits were auto-held for this pledge.
+
+---
+
+### 1.3 NEW: `refund` Action
+
+For when a campaign fails and IndieK needs to refund the backer's card (not just release credits).
+
+#### `POST /internal?action=refund`
+
+**Request:**
+```json
+{
+  "paymentIntentId": "pi_3ABC123",
+  "amount": 5000,
+  "reason": "campaign_failed",
+  "pledgeId": "pledge_abc123"
+}
+```
+
+**What DC does internally:**
+```
+1. Find the original Stripe PaymentIntent
+2. Process Stripe refund (full or partial)
+3. Void/revoke the associated gift card
+4. Release the hold (if still active)
+5. Deduct from user's balance
+6. Create audit trail
+7. Send webhook to partner: "refund.completed"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "refundId": "re_abc123",
+  "amount": 5000,
+  "status": "succeeded"
+}
+```
+
+---
+
+### 1.4 Expose Stripe Publishable Key
+
+IndieK needs DC's Stripe publishable key to render Stripe Elements in the browser. Two options:
+
+**Option A: Return it in the `create-payment-intent` response:**
+```json
+{
+  "success": true,
+  "clientSecret": "pi_3ABC123_secret_XYZ789",
+  "publishableKey": "pk_live_dc_abc123",
+  "paymentIntentId": "pi_3ABC123"
+}
+```
+
+**Option B: Separate endpoint or partner config field:**
+```
+GET /internal?action=config
+→ { "stripePublishableKey": "pk_live_dc_abc123" }
+```
+
+Option A is simpler (one fewer API call). IndieK caches the publishable key after the first response.
+
+---
+
+### 1.5 Summary: Changes Needed on DivinityCoin
+
+| Change | Effort | Description |
+|--------|--------|-------------|
+| `create-payment-intent` action | Medium | Create Stripe PaymentIntent, return client_secret + publishable key |
+| Auto-hold after payment success | Small | After auto gift card + auto redeem, also auto-hold using existing hold logic |
+| Enhanced webhook payload | Small | Include hold info + payment method in webhook to partner |
+| `refund` action | Medium | Stripe refund + void gift card + release hold + deduct balance |
+| Expose publishable key | Tiny | Include in create-payment-intent response |
+
+Everything else (gift cards, holds, captures, releases, settlements, webhooks) **already exists and works**.
 
 ---
 
@@ -566,157 +316,129 @@ DivinityCoin can process this via ACH, wire, or even Stripe payouts. The existin
 
 ### 2.1 Frontend: Replace Balance UI with Card Form
 
-The DivinityCoin section in `PaymentStep.tsx` changes from:
-- Balance card showing "You have $X" / "You need $X more"
-- "Pay with DivinityCoin" button
+Since DC uses Stripe under the hood, IndieK uses the same `@stripe/react-stripe-js` library - just initialized with DC's Stripe publishable key instead of IndieK's. The existing `StripePaymentForm` component works as-is.
 
-To:
-- Standard card input form (Stripe Elements, loaded with DivinityCoin's publishable key)
-- "Pledge $50" button
-
-Since DivinityCoin uses Stripe under the hood, IndieK literally uses the same `@stripe/react-stripe-js` library but initialized with DivinityCoin's Stripe publishable key instead of IndieK's. The `StripePaymentForm` component can be reused as-is.
-
-**Changes to `PaymentStep.tsx`:**
+**Changes to `PaymentStep.tsx` - DivinityCoin section becomes:**
 ```tsx
-// BEFORE (balance-based):
-project?.paymentProcessor === "DIVINITYCOIN" ? (
-  <DivinityCoinBalanceCard />
-  <Button>Pay $50 with DivinityCoin</Button>
-)
-
-// AFTER (card form - identical to Stripe but different keys):
 project?.paymentProcessor === "DIVINITYCOIN" ? (
   clientSecret && divinityCoinStripePromise ? (
     <Elements
-      stripe={divinityCoinStripePromise}  // loadStripe(DIVINITYCOIN_STRIPE_PK)
-      options={{ clientSecret, appearance: { theme: "stripe", variables: { colorPrimary: "#028858" } } }}
+      stripe={divinityCoinStripePromise}  // loadStripe(DC's pk_live_...)
+      options={{
+        clientSecret,
+        appearance: { theme: "stripe", variables: { colorPrimary: "#028858" } },
+      }}
     >
-      <StripePaymentForm  // Same exact component - just different Stripe account
+      <StripePaymentForm  // Reuse same component - different Stripe account
         onSuccess={handlePaymentSuccess}
         onError={handlePaymentError}
         agreedToTerms={agreedToTerms}
         isProcessing={isProcessing}
         setIsProcessing={setIsProcessing}
         total={total}
-        intentType={intentType}
+        intentType="payment_intent"  // Always payment_intent (DC charges immediately + holds)
         pledgeId={currentPledgeId}
         projectPath={projectPath}
       />
     </Elements>
-  ) : <LoadingSpinner />
-)
+  ) : (
+    <div className="flex flex-col items-center justify-center py-8">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+      <p className="text-sm text-muted-foreground">Loading payment form...</p>
+    </div>
+  )
+) : // ... Chain2Pay / Stripe branches
 ```
+
+**Key difference from current Stripe flow:** `intentType` is always `"payment_intent"` (never `"setup_intent"`) because DC charges immediately and uses credit holds instead of saved cards.
 
 **Changes to `pledge/page.tsx`:**
 ```tsx
-// Add separate Stripe promise for DivinityCoin's Stripe account
-const [divinityCoinStripePromise, setDivinityCoinStripePromise] = useState(null);
+// Load DC's Stripe publishable key (cached after first load)
+const [dcStripePromise, setDcStripePromise] = useState<Promise<Stripe | null> | null>(null);
 
 useEffect(() => {
   if (project?.paymentProcessor === "DIVINITYCOIN") {
     fetch("/api/divinitycoin/config")
       .then(res => res.json())
-      .then(data => setDivinityCoinStripePromise(loadStripe(data.stripePublishableKey)));
+      .then(data => {
+        if (data.stripePublishableKey) {
+          setDcStripePromise(loadStripe(data.stripePublishableKey));
+        }
+      });
   }
 }, [project?.paymentProcessor]);
 ```
 
-### 2.2 Backend: New DivinityCoin Payment Flow
+### 2.2 Backend: Pledge Creation for DivinityCoin
 
-**New file: `src/lib/payments/divinitycoin-processor.ts`**
+When creating a pledge for a DC project, IndieK calls DC's API instead of creating a Stripe PaymentIntent on IndieK's Stripe.
 
-This replaces the current balance-deduction logic with API calls to DivinityCoin:
-
+**In `/api/pledges/route.ts` - add DC branch:**
 ```typescript
-export async function createDivinityCoinPayment({
-  projectId, rewardId, addons, amount, userId, shippingAmount
-}) {
+if (project.paymentProcessor === "DIVINITYCOIN") {
   const config = await getDivinityCoinConfig();
-  const project = await db.project.findUnique({ where: { id: projectId } });
-  const user = await db.user.findUnique({ where: { id: userId } });
-  const isCampaignFunded = Number(project.currentAmount) >= Number(project.goalAmount);
 
-  // 1. Create pledge locally
+  // Create pledge locally first
   const pledge = await db.pledge.create({
     data: {
-      userId, projectId, rewardId, amount,
+      userId: session.user.id,
+      projectId,
+      rewardId,
+      amount: totalAmount,
       status: "PENDING",
       paymentProcessor: "DIVINITYCOIN",
     },
   });
 
-  // 2. Ensure customer exists on DivinityCoin
-  let dcCustomerId = user.divinityCoinCustomerId;
-  if (!dcCustomerId) {
-    const res = await fetch(`${config.baseUrl}/api/v1/customers`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ email: user.email, name: user.name, partner_id: config.partnerId }),
-    });
-    const customer = await res.json();
-    dcCustomerId = customer.id;
-    await db.user.update({ where: { id: userId }, data: { divinityCoinCustomerId: dcCustomerId } });
+  // Call DC's partner API to create payment intent
+  const dcResponse = await fetch(`${config.baseUrl}?action=create-payment-intent`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount: Math.round(totalAmount * 100),  // cents
+      currency: "usd",
+      platformUserId: session.user.id,
+      email: session.user.email,
+      pledgeId: pledge.id,
+      projectId,
+    }),
+  });
+
+  const dcResult = await dcResponse.json();
+  if (!dcResult.success) {
+    throw new Error(dcResult.error || "Failed to create payment intent");
   }
 
-  if (isCampaignFunded) {
-    // 3a. Campaign funded → create PaymentIntent (charge immediately)
-    const res = await fetch(`${config.baseUrl}/api/v1/payment-intents`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: Math.round(amount * 100),
-        currency: "usd",
-        customer_id: dcCustomerId,
-        partner_id: config.partnerId,
-        metadata: { pledgeId: pledge.id, projectId, userId },
-      }),
-    });
-    const intent = await res.json();
-
-    await db.pledge.update({
-      where: { id: pledge.id },
-      data: { divinityCoinPaymentId: intent.id },
-    });
-
-    return {
-      type: "payment_intent" as const,
-      clientSecret: intent.client_secret,
-      pledgeId: pledge.id,
-      chargedImmediately: true,
-    };
-  } else {
-    // 3b. Campaign not funded → create SetupIntent (save card for later)
-    const res = await fetch(`${config.baseUrl}/api/v1/setup-intents`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customer_id: dcCustomerId,
-        partner_id: config.partnerId,
-        metadata: { pledgeId: pledge.id, projectId, userId, amount: Math.round(amount * 100) },
-      }),
-    });
-    const intent = await res.json();
-
-    await db.pledge.update({
-      where: { id: pledge.id },
-      data: { divinityCoinPaymentId: intent.id },
-    });
-
-    return {
-      type: "setup_intent" as const,
-      clientSecret: intent.client_secret,
-      pledgeId: pledge.id,
-      chargedImmediately: false,
-    };
+  // Cache DC's publishable key if returned
+  if (dcResult.publishableKey) {
+    // Store for frontend to use
   }
+
+  // Store DC's payment intent ID on pledge
+  await db.pledge.update({
+    where: { id: pledge.id },
+    data: { divinityCoinPaymentId: dcResult.paymentIntentId },
+  });
+
+  return NextResponse.json({
+    type: "payment_intent",  // Always payment_intent for DC
+    clientSecret: dcResult.clientSecret,
+    pledgeId: pledge.id,
+    chargedImmediately: true,  // DC always charges immediately (uses holds for unfunded)
+    paymentMethod: "DIVINITYCOIN",
+  });
 }
 ```
 
-### 2.3 New API Endpoint: DivinityCoin Config
+### 2.3 Backend: New Config Endpoint
 
-**`src/app/api/divinitycoin/config/route.ts`**
+**`/api/divinitycoin/config/route.ts`**
 
-Serves DivinityCoin's Stripe publishable key to the frontend:
+Serves DC's Stripe publishable key to the frontend:
 
 ```typescript
 export async function GET() {
@@ -730,169 +452,241 @@ export async function GET() {
 }
 ```
 
-### 2.4 Updated Webhook Handler
+### 2.4 Backend: Updated Webhook Handler
 
-The existing `/api/webhooks/divinitycoin/route.ts` gets new payment event handlers:
+The existing `/api/webhooks/divinitycoin/route.ts` gets new event types:
 
 ```typescript
 case "payment.succeeded":
-  // 1. Find pledge by metadata.pledgeId
+  // DC already created gift card, redeemed, and held credits
+  // IndieK just needs to:
+  // 1. Find pledge by data.pledgeId
   // 2. Mark pledge as COMPLETED
-  // 3. Increment project currentAmount + backerCount
-  // 4. Claim reward slot
-  // 5. Send backer confirmation email
-  // 6. Notify creator
-  // 7. Add to creator email list
-  // 8. Check if project just reached goal → notify + process pending pledges
+  // 3. Store holdId in pledge metadata (for later capture/release)
+  // 4. Update project currentAmount + backerCount
+  // 5. Claim reward slot
+  // 6. Send backer confirmation email
+  // 7. Notify creator
+  // 8. Add to creator email list
+  // 9. Check if project just reached goal
   break;
 
 case "payment.failed":
-  // Mark pledge as FAILED, notify backer
+  // Payment declined - mark pledge as FAILED, notify backer
   break;
 
-case "setup.succeeded":
-  // Card saved - update pledge with payment method ID for future charging
+case "refund.completed":
+  // Refund processed - update pledge status
   break;
 ```
 
-### 2.5 Charge Saved Cards When Campaign Funded
+### 2.5 Campaign Funded: Capture Holds
 
-Update `processPendingPledgesForProject()` to handle DivinityCoin pledges:
+When a DC-processed campaign reaches its funding goal, capture all the holds:
 
 ```typescript
-if (pledge.paymentProcessor === "DIVINITYCOIN") {
-  const config = await getDivinityCoinConfig();
-  const res = await fetch(
-    `${config.baseUrl}/api/v1/customers/${pledge.user.divinityCoinCustomerId}/charge`,
-    {
+// In processPendingPledgesForProject() or campaign-funded handler:
+
+for (const pledge of dcPledges) {
+  const holdId = pledge.metadata?.divinityCoinHoldId;
+  if (!holdId) continue;
+
+  const res = await fetch(`${config.baseUrl}?action=capture`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ holdId }),
+  });
+
+  // On success: credits move from "held" → "captured" → settlement queue
+  // DC handles settlement to creator via existing weekly settlement cycle
+}
+```
+
+### 2.6 Campaign Failed: Release Holds + Refund
+
+When a DC campaign fails, release holds and refund cards:
+
+```typescript
+// In campaign-failed handler:
+
+for (const pledge of dcPledges) {
+  const holdId = pledge.metadata?.divinityCoinHoldId;
+  const paymentIntentId = pledge.divinityCoinPaymentId;
+
+  // 1. Release the hold (credits return to available balance)
+  if (holdId) {
+    await fetch(`${config.baseUrl}?action=release`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ holdId }),
+    });
+  }
+
+  // 2. Refund the original card charge
+  if (paymentIntentId) {
+    await fetch(`${config.baseUrl}?action=refund`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
+        paymentIntentId,
         amount: Math.round(Number(pledge.amount) * 100),
-        currency: "usd",
-        payment_method_id: pledge.metadata?.savedPaymentMethodId,
-        metadata: { pledgeId: pledge.id, projectId: pledge.projectId },
+        reason: "campaign_failed",
+        pledgeId: pledge.id,
       }),
-    }
-  );
-  // Handle response, update pledge status
+    });
+  }
 }
 ```
 
-### 2.6 Database Changes
+### 2.7 Database Changes
 
 ```prisma
-model User {
-  // Add:
-  divinityCoinCustomerId    String?   // Customer ID on DivinityCoin's system
-}
-
 model PlatformSettings {
   // Add:
-  divinityCoinStripePublishableKey  String?  // DivinityCoin's Stripe publishable key (safe for browser)
+  divinityCoinStripePublishableKey  String?  // DC's Stripe publishable key (safe for browser)
 }
 ```
 
-### 2.7 Admin Settings Update
+Note: `divinityCoinCustomerId` on User is NOT needed because DC manages its own user records via `platformUserId`. DC maps IndieK user IDs to DC users internally.
 
-Add to Admin > Payment Settings > DivinityCoin section:
+### 2.8 Admin Settings
+
+Add one new field to Admin > Payment Settings > DivinityCoin:
 
 | Setting | Type | Description |
 |---------|------|-------------|
-| DivinityCoin Stripe Publishable Key | SecureKeyInput | The Stripe publishable key from DC's Stripe account |
+| Stripe Publishable Key | SecureKeyInput | DC's Stripe publishable key for card form rendering |
 
-The existing API Key, Partner ID, and Webhook Secret fields remain.
+Existing settings remain: API Key, Partner ID, Webhook Secret, Settlement Frequency.
 
 ---
 
-## Part 3: What Stays / What Changes
+## Part 3: Payment Lifecycle Comparison
 
-### Stays (internal, invisible to backer):
-- `DivinityCoinRedemption` model - now records auto-redemptions from the API
-- `DivinityCoinTransaction` model - expanded to track card-based payments
-- `DivinityCoinBankAccount` model - creator payout bank info (unchanged)
-- `DivinityCoinSettlement` model - admin payout tracking (unchanged)
-- Gift card codes - still generated, just auto-created and auto-redeemed
-- Webhook signature verification - same HMAC-SHA256 pattern
+### How Each Processor Handles the Crowdfunding Lifecycle
 
-### Changes:
-- `PaymentStep.tsx` - Card form replaces balance display
-- `pledge/page.tsx` - Loads DivinityCoin's Stripe publishable key
-- Pledge creation API - Calls DivinityCoin API instead of checking balance
-- `/api/divinitycoin/pay` - Replaced by DivinityCoin API payment intents
-- Wallet/balance UI - No longer shown to backers (internal bookkeeping only)
+| Stage | Stripe (direct) | DivinityCoin (new) | Chain2Pay |
+|-------|-----------------|-------------------|-----------|
+| **Unfunded pledge** | Save card (SetupIntent) | Charge immediately + hold credits | Charge immediately |
+| **Card data** | Stripe Elements (IndieK's key) | Stripe Elements (DC's key) | Redirect to hosted checkout |
+| **Campaign succeeds** | Charge saved card | Capture hold → settlement | Already charged |
+| **Campaign fails** | Release card (no charge) | Release hold + Stripe refund | Refund needed |
+| **Backer experience** | Card saved, charged later | Card charged, refunded if fails | Card charged immediately |
+| **Statement shows** | "INDIECROWDFUND" | "DIVINITYCOIN" (or custom) | Chain2Pay branding |
+| **Settlement** | Stripe Connect → creator | DC settlement → creator bank | USDC on Polygon |
 
-### Optional (can keep for power users):
-- Manual gift card redemption at divinitycoin.com - for users who prefer buying in bulk
-- Wallet page in backer dashboard - shows transaction history if they care
-- "Pay with DivinityCoin balance" option - if a user already has credits
+### Why "Charge Immediately + Hold" Works for DivinityCoin
+
+The DivinityCoin model charges upfront and uses credit holds, which differs from Stripe's save-card-charge-later approach. This works because:
+
+1. **The gift card IS the product** - Stripe sees a completed digital product purchase
+2. **Holds prevent double-spending** - credits can't be used elsewhere while held
+3. **Refunds are clean** - if campaign fails, Stripe refund + void gift card, backer's card gets money back
+4. **No expired cards** - unlike Stripe where a saved card might expire/decline months later
+5. **Compliance preserved** - gift card audit trail exists regardless of outcome
 
 ---
 
 ## Part 4: Implementation Plan
 
-### Phase 1: DivinityCoin API (DivinityCoin side) ~1-2 weeks
+### Phase 1: DivinityCoin Changes (~3-5 days)
 
-Build the thin API layer on top of existing Stripe integration:
+Since most infrastructure exists, DC only needs:
 
-1. **`POST /api/v1/customers`** - Create DC customer + Stripe customer
-2. **`POST /api/v1/payment-intents`** - Create Stripe PaymentIntent, return client_secret
-3. **`POST /api/v1/setup-intents`** - Create Stripe SetupIntent, return client_secret
-4. **`GET /api/v1/payment-intents/:id`** - Check payment status
-5. **`POST /api/v1/customers/:id/charge`** - Charge saved card
-6. **`POST /api/v1/refunds`** - Process refund via Stripe
-7. **Auto gift card flow** - On Stripe payment_intent.succeeded webhook:
-   - Generate internal gift card for exact amount
-   - Auto-redeem to customer account
-   - Create audit trail
-   - Send webhook to IndieK
-8. **Webhook delivery** - Send signed webhooks to partner webhook URL
-9. **Generate API keys** - Secret key + expose Stripe publishable key
+1. **New `create-payment-intent` action** (~1 day)
+   - Create Stripe PaymentIntent
+   - Map to partner/user/pledge metadata
+   - Return client_secret + publishable key
 
-### Phase 2: IndieK Integration (IndieK side) ~1 week
+2. **Auto-hold on payment success** (~0.5 day)
+   - After existing auto gift card + auto redeem
+   - Use existing hold logic with pledgeId/projectId from metadata
+   - Include holdId in webhook to IndieK
 
-1. Add `divinityCoinStripePublishableKey` + `divinityCoinCustomerId` to schema
+3. **Enhanced webhook payload** (~0.5 day)
+   - Add holdId, payment method info to payment.succeeded event
+   - Add payment.failed event type
+
+4. **New `refund` action** (~1 day)
+   - Stripe refund + void gift card + release hold + deduct balance
+   - Send refund.completed webhook
+
+5. **Expose publishable key** (~0.5 day)
+   - Return in create-payment-intent response
+   - Or new `config` action
+
+### Phase 2: IndieK Changes (~3-5 days)
+
+1. Add `divinityCoinStripePublishableKey` to PlatformSettings schema
 2. Create `/api/divinitycoin/config` endpoint
-3. Create `divinitycoin-processor.ts` (payment intent creation via DC API)
-4. Update pledge creation to call DivinityCoin API for DC projects
-5. Update `PaymentStep.tsx` to render card form for DivinityCoin projects
-6. Update `pledge/page.tsx` to load DivinityCoin's Stripe publishable key
-7. Update webhook handler for new payment events
-8. Update `processPendingPledgesForProject` for DC saved cards
-9. Update admin settings for new config fields
-10. End-to-end testing
+3. Update pledge creation API - DC branch calls `create-payment-intent`
+4. Update `PaymentStep.tsx` - card form replaces balance UI
+5. Update `pledge/page.tsx` - load DC's Stripe publishable key
+6. Update webhook handler - new payment events
+7. Add capture/release logic for campaign funded/failed
+8. Update admin settings UI
+9. End-to-end testing
 
-### Phase 3: Polish ~3-5 days
-
+### Phase 3: Polish (~2-3 days)
 1. Apple Pay / Google Pay (free with Stripe Elements)
-2. Saved card display for returning backers
-3. Settlement/payout API integration
-4. Dispute handling
+2. Error handling and retry logic
+3. Remove old balance-based payment UI (or keep as fallback)
+4. Settlement automation
 
 ---
 
 ## Part 5: The Compliance Story
 
-If anyone ever asks "how does payment work for NSFW content?":
+The compliance structure is identical to the current manual flow - just automated:
 
-1. Backers purchase DivinityCoin digital gift cards (processed via Stripe)
-2. Gift cards are redeemed on partner platforms (IndieK)
-3. Stripe's relationship is with DivinityCoin (digital goods seller), not with the NSFW content
-4. Complete audit trail exists: card purchase → gift card creation → redemption → platform usage
-5. DivinityCoin is the merchant of record for card transactions
+| Step | Manual Flow (current) | Automated Flow (new) |
+|------|----------------------|---------------------|
+| 1 | Backer goes to divinitycoin.com | IndieK calls DC API |
+| 2 | Backer buys $50 gift card via Stripe | DC creates Stripe PaymentIntent |
+| 3 | Stripe charges backer's card | Stripe charges backer's card |
+| 4 | DC creates gift card, sends code | DC auto-creates gift card |
+| 5 | Backer redeems code on IndieK | DC auto-redeems to balance |
+| 6 | IndieK deducts from balance | DC auto-holds for pledge |
+| 7 | - | DC sends webhook to IndieK |
 
-The automation just removes the manual steps. Instead of the backer manually buying a gift card and manually redeeming it, the system does it instantly and invisibly. The legal structure is identical.
+Same gift cards. Same Stripe account. Same audit trail. Same legal structure.
+The automation just removes the manual steps that create friction.
+
+Stripe's relationship is with DivinityCoin (digital goods seller).
+IndieK's relationship is with DivinityCoin (partner platform using credits).
+The backer's card statement shows DivinityCoin (or a custom descriptor).
 
 ---
 
-## Summary: What DivinityCoin Needs to Provide IndieK
+## Summary: Minimal Changes Required
 
-Once the API is built, IndieK just needs these credentials:
+### DivinityCoin (you build):
+| What | Effort | Uses Existing? |
+|------|--------|---------------|
+| `create-payment-intent` action | ~1 day | Existing Stripe + partner API |
+| Auto-hold after payment | ~0.5 day | Existing hold system |
+| Enhanced webhook payload | ~0.5 day | Existing webhook delivery |
+| `refund` action | ~1 day | Existing Stripe + gift card + hold |
+| Expose publishable key | ~0.5 day | New but trivial |
 
-| What | Example | Where It's Used |
-|------|---------|-----------------|
-| API Secret Key | `dsk_live_abc123` | IndieK backend → DivinityCoin API calls |
-| Stripe Publishable Key | `pk_live_dc_xyz789` | IndieK frontend → Stripe Elements |
-| Webhook Secret | `whsec_def456` | Verify webhooks from DivinityCoin |
-| Partner ID | `partner_indiecrowdfund` | Identify IndieK in API calls |
-| API Base URL | `https://api.divinitycoin.com` | Where to send API requests |
+### IndieK (I build):
+| What | Effort | Uses Existing? |
+|------|--------|---------------|
+| Card form in PaymentStep | ~0.5 day | Reuses StripePaymentForm |
+| DC config endpoint | ~0.5 day | New but trivial |
+| Pledge creation DC branch | ~1 day | Follows existing Stripe pattern |
+| Webhook handler updates | ~1 day | Extends existing handler |
+| Capture/release on campaign lifecycle | ~1 day | New but straightforward |
+| Admin settings + schema | ~0.5 day | Extends existing |
+
+### What IndieK Needs From You:
+| Credential | Example | Purpose |
+|------------|---------|---------|
+| Partner API Key | (existing) | Server-to-server auth |
+| Stripe Publishable Key | `pk_live_dc_...` | Render card form in browser |
+| Webhook Secret | (existing) | Verify webhooks |
+| Partner ID | (existing) | Identify IndieK |
+| API Base URL | `https://divinitycoin.com/internal` | Where to send requests |
