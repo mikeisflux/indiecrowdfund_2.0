@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import {
+  notifyPledgeReceived,
+  notifyBackerPledgeConfirmed,
+  notifyProjectFunded,
+} from "@/lib/notifications";
+import { processPendingPledgesForProject } from "@/lib/payments/stripe";
+import { addToCreatorEmailList } from "@/lib/email";
 
 /**
  * GET /api/webhooks/chain2pay
@@ -34,7 +41,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    // Find the pledge
+    // Find the pledge with user and project details for notifications
     const pledge = await db.pledge.findUnique({
       where: { id: pledgeId },
       include: {
@@ -42,9 +49,17 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             title: true,
+            creatorId: true,
             goalAmount: true,
             currentAmount: true,
             fundedAt: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
       },
@@ -72,6 +87,8 @@ export async function GET(req: NextRequest) {
     const goalAmount = Number(project.goalAmount);
     const currentAmount = Number(project.currentAmount);
     const isCampaignFunded = currentAmount >= goalAmount;
+    const newCurrentAmount = currentAmount + amount;
+    const justReachedGoal = newCurrentAmount >= goalAmount && !isCampaignFunded && !project.fundedAt;
 
     // Process the payment in a transaction
     await db.$transaction(async (tx) => {
@@ -121,9 +138,6 @@ export async function GET(req: NextRequest) {
       }
 
       // Update project funding
-      const newCurrentAmount = currentAmount + amount;
-      const justReachedGoal = newCurrentAmount >= goalAmount && !isCampaignFunded && !project.fundedAt;
-
       await tx.project.update({
         where: { id: project.id },
         data: {
@@ -135,6 +149,71 @@ export async function GET(req: NextRequest) {
     });
 
     console.log(`[Chain2Pay Webhook] Payment confirmed for pledge ${pledgeId}: tx=${txidOut}, amount=${valueCoin} USDC`);
+
+    // === Post-transaction notifications (non-blocking - don't fail webhook) ===
+
+    // Send confirmation email to backer
+    try {
+      await notifyBackerPledgeConfirmed(pledgeId, isCampaignFunded);
+    } catch (emailError) {
+      console.error(`[Chain2Pay Webhook] Failed to send confirmation email for pledge ${pledgeId}:`, emailError);
+    }
+
+    // Notify creator of new pledge
+    try {
+      await notifyPledgeReceived(
+        project.id,
+        project.creatorId,
+        pledge.user.name || "A backer",
+        amount
+      );
+    } catch (notifyError) {
+      console.error(`[Chain2Pay Webhook] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
+    }
+
+    // Auto-add backer to creator's email list
+    if (pledge.user.email) {
+      try {
+        await addToCreatorEmailList({
+          creatorId: project.creatorId,
+          email: pledge.user.email,
+          name: pledge.user.name,
+          source: "pledge",
+          sourceProjectId: project.id,
+        });
+      } catch (emailListError) {
+        console.error(`[Chain2Pay Webhook] Failed to add backer to email list:`, emailListError);
+      }
+    }
+
+    // Handle project funding events
+    if (justReachedGoal) {
+      try {
+        await notifyProjectFunded(project.id);
+      } catch (fundedError) {
+        console.error(`[Chain2Pay Webhook] Failed to notify project funded for ${project.id}:`, fundedError);
+      }
+    }
+
+    // Process pending Stripe pledges if project is now funded
+    if (newCurrentAmount >= goalAmount) {
+      try {
+        const pendingCount = await db.pledge.count({
+          where: {
+            projectId: project.id,
+            status: "PENDING",
+            chargedImmediately: false,
+            stripePaymentMethodId: { not: null },
+          },
+        });
+        if (pendingCount > 0) {
+          console.log(`[Chain2Pay Webhook] Processing ${pendingCount} pending Stripe pledges for project ${project.id}`);
+          await processPendingPledgesForProject(project.id);
+        }
+      } catch (processError) {
+        console.error(`[Chain2Pay Webhook] Failed to process pending pledges for ${project.id}:`, processError);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

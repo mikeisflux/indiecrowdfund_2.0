@@ -3,6 +3,13 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import crypto from "crypto";
 import { validateCSRFToken } from "@/lib/csrf";
+import {
+  notifyPledgeReceived,
+  notifyBackerPledgeConfirmed,
+  notifyProjectFunded,
+} from "@/lib/notifications";
+import { processPendingPledgesForProject } from "@/lib/payments/stripe";
+import { addToCreatorEmailList } from "@/lib/email";
 
 // In-memory rate limiting (consider Redis for production clusters)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -30,6 +37,11 @@ interface TransactionResult {
   alreadyPaid: boolean;
   balance: number;
   paymentId?: string;
+  projectId?: string;
+  creatorId?: string;
+  isCampaignFunded?: boolean;
+  justReachedGoal?: boolean;
+  isNowFunded?: boolean;
 }
 
 /**
@@ -297,11 +309,82 @@ export async function POST(req: NextRequest) {
         alreadyPaid: false,
         balance: currentBalance - amount,
         paymentId,
+        projectId: project.id,
+        creatorId: project.creatorId,
+        isCampaignFunded,
+        justReachedGoal,
+        isNowFunded,
       };
     });
 
     const duration = Date.now() - startTime;
     console.log(`[DivinityCoin Pay] [${requestId}] Payment ${result.alreadyPaid ? "already completed" : "successful"} in ${duration}ms`);
+
+    // === Post-transaction notifications (non-blocking - don't fail payment response) ===
+    if (!result.alreadyPaid && result.projectId && result.creatorId) {
+      // Send confirmation email to backer
+      try {
+        await notifyBackerPledgeConfirmed(pledgeId, result.isCampaignFunded || false);
+      } catch (emailError) {
+        console.error(`[DivinityCoin Pay] [${requestId}] Failed to send confirmation email:`, emailError);
+      }
+
+      // Notify creator of new pledge
+      try {
+        await notifyPledgeReceived(
+          result.projectId,
+          result.creatorId,
+          session.user.name || "A backer",
+          amount
+        );
+      } catch (notifyError) {
+        console.error(`[DivinityCoin Pay] [${requestId}] Failed to notify creator:`, notifyError);
+      }
+
+      // Auto-add backer to creator's email list
+      if (session.user.email) {
+        try {
+          await addToCreatorEmailList({
+            creatorId: result.creatorId,
+            email: session.user.email,
+            name: session.user.name,
+            source: "pledge",
+            sourceProjectId: result.projectId,
+          });
+        } catch (emailListError) {
+          console.error(`[DivinityCoin Pay] [${requestId}] Failed to add backer to email list:`, emailListError);
+        }
+      }
+
+      // Handle project funding events
+      if (result.justReachedGoal) {
+        try {
+          await notifyProjectFunded(result.projectId);
+        } catch (fundedError) {
+          console.error(`[DivinityCoin Pay] [${requestId}] Failed to notify project funded:`, fundedError);
+        }
+      }
+
+      // Process pending Stripe pledges if project is now funded
+      if (result.isNowFunded) {
+        try {
+          const pendingCount = await db.pledge.count({
+            where: {
+              projectId: result.projectId,
+              status: "PENDING",
+              chargedImmediately: false,
+              stripePaymentMethodId: { not: null },
+            },
+          });
+          if (pendingCount > 0) {
+            console.log(`[DivinityCoin Pay] [${requestId}] Processing ${pendingCount} pending Stripe pledges`);
+            await processPendingPledgesForProject(result.projectId);
+          }
+        } catch (processError) {
+          console.error(`[DivinityCoin Pay] [${requestId}] Failed to process pending pledges:`, processError);
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,
