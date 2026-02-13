@@ -814,20 +814,41 @@ export function PaymentStep() {
             <AlertDescription className="mt-2 space-y-2 text-sm">
               <p>
                 <strong>Lower Fees:</strong> Chain2Pay offers our lowest total fees at ~5.5% (3% platform fee + 2.5% Chain2Pay processing)
-                — lower than traditional card processing through Stripe (~6%).
+                — lower than traditional card processing through Stripe (~6%). More of your backers&apos; money goes directly to your project.
               </p>
               <p>
-                <strong>Crypto & Card Payments:</strong> Accept both credit card and cryptocurrency payments from your backers,
-                giving them flexible payment options.
+                <strong>Chargeback Protection:</strong> Because Chain2Pay settles payments as USDC on the Polygon blockchain,
+                transactions are final and irreversible once confirmed. This eliminates the risk of chargebacks that plague
+                traditional card processors, where backers can dispute charges months after a campaign ends — protecting your
+                revenue and giving you peace of mind during fulfillment.
+              </p>
+              <p>
+                <strong>Content Freedom:</strong> Like DivinityCoin, Chain2Pay has no content restrictions. Your campaign cannot
+                be taken down or have payments frozen due to adult, mature, or controversial content. Traditional processors like
+                Stripe can refuse service or freeze funds based on their content policies — Chain2Pay removes that risk entirely.
+              </p>
+              <p>
+                <strong>Flexible Payment Options:</strong> Accept both credit card and cryptocurrency payments from your backers.
+                Backers pay with their regular card in USD — no crypto knowledge needed on their end. Chain2Pay handles the
+                fiat-to-crypto conversion seamlessly behind the scenes.
               </p>
               <p>
                 <strong>Bank Settlements:</strong> Receive your funds via direct bank transfer after your campaign is funded.
-                Chain2Pay handles the crypto-to-fiat conversion automatically.
+                Chain2Pay converts crypto settlements to fiat automatically and deposits to your bank account within 14 business days.
               </p>
               <p>
-                <strong>Content Friendly:</strong> Like DivinityCoin, Chain2Pay supports all content types including
-                adult and controversial content.
+                <strong>PCI Compliant & Secure:</strong> Chain2Pay uses a redirect-based hosted checkout (SAQ A — the lowest PCI
+                burden level). Your backers enter card details on Chain2Pay&apos;s secure page, so IndieCrowdfund never touches
+                credit card data. All communication is HTTPS-only with CSRF protection on every payment initiation.
               </p>
+              <a
+                href="https://chain2pay.cloud/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 hover:underline font-medium"
+              >
+                Learn more about Chain2Pay <ExternalLink className="h-3 w-3" />
+              </a>
             </AlertDescription>
           </Alert>
 
