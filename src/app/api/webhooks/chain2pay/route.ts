@@ -17,8 +17,9 @@ import { addToCreatorEmailList } from "@/lib/email";
  *   - value_coin: Amount paid in USDC
  *   - coin: Crypto used (always polygon_usdc)
  *
- * Our custom query param:
+ * Our custom query params:
  *   - pledgeId: The pledge ID we appended to the callback URL
+ *   - addItems: "true" if this is a payment for additional items on an existing pledge
  *
  * Security Notes:
  * - No credit card data is ever transmitted to this endpoint
@@ -33,8 +34,9 @@ export async function GET(req: NextRequest) {
     const txidOut = searchParams.get("txid_out");
     const valueCoin = searchParams.get("value_coin");
     const coin = searchParams.get("coin");
+    const isAddItems = searchParams.get("addItems") === "true";
 
-    console.log(`[Chain2Pay Webhook] Received: pledgeId=${pledgeId}, txid=${txidOut}, value=${valueCoin}, coin=${coin}`);
+    console.log(`[Chain2Pay Webhook] Received: pledgeId=${pledgeId}, txid=${txidOut}, value=${valueCoin}, coin=${coin}${isAddItems ? ", addItems=true" : ""}`);
 
     if (!pledgeId || !txidOut) {
       console.error("[Chain2Pay Webhook] Missing required params");
@@ -70,16 +72,136 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    // Idempotency: skip if already completed
-    if (pledge.status === "COMPLETED") {
-      console.log(`[Chain2Pay Webhook] Pledge ${pledgeId} already completed - skipping`);
-      return NextResponse.json({ success: true, message: "Already processed" });
-    }
-
     // Verify payment processor
     if (pledge.paymentProcessor !== "CHAIN2PAY") {
       console.error(`[Chain2Pay Webhook] Pledge ${pledgeId} is not CHAIN2PAY processor`);
       return NextResponse.json({ error: "Invalid payment processor" }, { status: 400 });
+    }
+
+    // === ADD-ITEMS FLOW: Process additional items for an already-completed pledge ===
+    if (isAddItems && pledge.status === "COMPLETED") {
+      const pledgeMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+        ? pledge.metadata as Record<string, unknown>
+        : {};
+      const pendingItems = pledgeMetadata.pendingAdditionalItems as {
+        paymentMethod: string;
+        addons: { id: string; quantity: number }[];
+        amount: number;
+      } | undefined;
+
+      if (!pendingItems || pendingItems.addons.length === 0) {
+        console.error(`[Chain2Pay Webhook] No pending add-items for pledge ${pledgeId}`);
+        return NextResponse.json({ error: "No pending additional items" }, { status: 400 });
+      }
+
+      const addItemsAmount = pendingItems.amount;
+      const addonsWithQuantity = pendingItems.addons;
+      const addonIds = addonsWithQuantity.map(a => a.id);
+      const quantityMap = new Map(addonsWithQuantity.map(a => [a.id, a.quantity]));
+
+      // Get the addons (rewards with type ADDON)
+      const addons = await db.reward.findMany({
+        where: { id: { in: addonIds } },
+      });
+
+      await db.$transaction(async (tx) => {
+        // Create PledgeAddon records for each addon
+        for (const addon of addons) {
+          const quantity = quantityMap.get(addon.id) || 1;
+
+          const existingAddon = await tx.pledgeAddon.findFirst({
+            where: { pledgeId: pledge.id, addonId: addon.id },
+          });
+
+          if (existingAddon) {
+            await tx.pledgeAddon.update({
+              where: { id: existingAddon.id },
+              data: {
+                quantity: existingAddon.quantity + quantity,
+                amount: (existingAddon.quantity + quantity) * Number(addon.amount),
+              },
+            });
+          } else {
+            await tx.pledgeAddon.create({
+              data: {
+                pledgeId: pledge.id,
+                addonId: addon.id,
+                quantity,
+                amount: Number(addon.amount) * quantity,
+              },
+            });
+          }
+
+          // Atomically claim addon slots
+          const addonRows = await tx.$queryRaw<Array<{
+            id: string;
+            quantityAvailable: number | null;
+            quantityClaimed: number;
+          }>>`
+            SELECT id, "quantityAvailable", "quantityClaimed"
+            FROM "Reward"
+            WHERE id = ${addon.id}
+            FOR UPDATE
+          `;
+
+          const addonInfo = addonRows[0];
+          if (addonInfo && addonInfo.quantityAvailable !== null) {
+            const available = addonInfo.quantityAvailable - addonInfo.quantityClaimed;
+            if (available >= quantity) {
+              await tx.reward.update({
+                where: { id: addon.id },
+                data: { quantityClaimed: { increment: quantity } },
+              });
+            }
+          } else if (addonInfo) {
+            // Unlimited quantity - just increment claimed
+            await tx.reward.update({
+              where: { id: addon.id },
+              data: { quantityClaimed: { increment: quantity } },
+            });
+          }
+        }
+
+        // Update pledge amount and clear pending items
+        await tx.pledge.update({
+          where: { id: pledge.id },
+          data: {
+            amount: Number(pledge.amount) + addItemsAmount,
+            chain2payTxHash: txidOut,
+            metadata: {
+              ...pledgeMetadata,
+              pendingAdditionalItems: undefined,
+              completedAdditionalItems: [
+                ...((pledgeMetadata.completedAdditionalItems as unknown[]) || []),
+                {
+                  paymentMethod: "CHAIN2PAY",
+                  txHash: txidOut,
+                  addons: addonsWithQuantity,
+                  amount: addItemsAmount,
+                  completedAt: new Date().toISOString(),
+                },
+              ],
+            },
+          },
+        });
+
+        // Update project currentAmount (NOT backerCount - they're already a backer)
+        await tx.project.update({
+          where: { id: pledge.project.id },
+          data: { currentAmount: { increment: addItemsAmount } },
+        });
+      });
+
+      console.log(`[Chain2Pay Webhook] Add-items confirmed for pledge ${pledgeId}: ${addons.length} addons, $${addItemsAmount}, tx=${txidOut}`);
+      return NextResponse.json({ success: true });
+    }
+
+    // === NORMAL PLEDGE FLOW ===
+
+    // Idempotency: skip if already completed (and not add-items)
+    if (pledge.status === "COMPLETED") {
+      console.log(`[Chain2Pay Webhook] Pledge ${pledgeId} already completed - skipping`);
+      return NextResponse.json({ success: true, message: "Already processed" });
     }
 
     const amount = Number(pledge.amount);

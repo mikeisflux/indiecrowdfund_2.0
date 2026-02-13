@@ -114,6 +114,164 @@ export async function POST(req: NextRequest) {
 
     console.log(`[DivinityCoin Pay] [${requestId}] Payment request: user=${userId}, pledge=${pledgeId}, amount=${amount}`);
 
+    // Check if this is an add-items payment (pledge already completed with pending items)
+    const existingPledge = await db.pledge.findUnique({
+      where: { id: pledgeId },
+      select: { status: true, userId: true, metadata: true, projectId: true },
+    });
+
+    if (existingPledge?.status === "COMPLETED") {
+      // Check for pending additional items
+      const pledgeMetadata = (typeof existingPledge.metadata === "object" && existingPledge.metadata !== null)
+        ? existingPledge.metadata as Record<string, unknown>
+        : {};
+      const pendingItems = pledgeMetadata.pendingAdditionalItems as {
+        paymentMethod: string;
+        addons: { id: string; quantity: number }[];
+        amount: number;
+      } | undefined;
+
+      if (pendingItems?.paymentMethod === "DIVINITYCOIN" && pendingItems.addons.length > 0) {
+        // === ADD-ITEMS FLOW ===
+        if (existingPledge.userId !== userId) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        }
+
+        const addItemsAmount = pendingItems.amount;
+        const addonsWithQuantity = pendingItems.addons;
+        const addonIds = addonsWithQuantity.map(a => a.id);
+        const quantityMap = new Map(addonsWithQuantity.map(a => [a.id, a.quantity]));
+
+        const addItemsResult = await db.$transaction(async (tx) => {
+          // Lock user row and check balance
+          const userRows = await tx.$queryRaw<Array<{ id: string; divinityCoinBalance: string }>>`
+            SELECT id, "divinityCoinBalance" FROM "User" WHERE id = ${userId} FOR UPDATE
+          `;
+          const userRow = userRows[0];
+          if (!userRow) throw new Error("USER_NOT_FOUND");
+
+          const currentBalance = Number(userRow.divinityCoinBalance);
+          if (currentBalance < addItemsAmount) throw new Error("INSUFFICIENT_BALANCE");
+
+          // Deduct balance
+          await tx.user.update({
+            where: { id: userId },
+            data: { divinityCoinBalance: { decrement: addItemsAmount } },
+          });
+
+          // Get addon details
+          const addons = await tx.reward.findMany({
+            where: { id: { in: addonIds } },
+          });
+
+          // Create PledgeAddon records
+          for (const addon of addons) {
+            const quantity = quantityMap.get(addon.id) || 1;
+
+            const existingAddon = await tx.pledgeAddon.findFirst({
+              where: { pledgeId, addonId: addon.id },
+            });
+
+            if (existingAddon) {
+              await tx.pledgeAddon.update({
+                where: { id: existingAddon.id },
+                data: {
+                  quantity: existingAddon.quantity + quantity,
+                  amount: (existingAddon.quantity + quantity) * Number(addon.amount),
+                },
+              });
+            } else {
+              await tx.pledgeAddon.create({
+                data: {
+                  pledgeId,
+                  addonId: addon.id,
+                  quantity,
+                  amount: Number(addon.amount) * quantity,
+                },
+              });
+            }
+
+            // Claim addon slots
+            await tx.reward.update({
+              where: { id: addon.id },
+              data: { quantityClaimed: { increment: quantity } },
+            });
+          }
+
+          // Update pledge amount and clear pending items
+          const currentPledge = await tx.pledge.findUnique({
+            where: { id: pledgeId },
+            select: { amount: true },
+          });
+
+          await tx.pledge.update({
+            where: { id: pledgeId },
+            data: {
+              amount: Number(currentPledge!.amount) + addItemsAmount,
+              metadata: {
+                ...pledgeMetadata,
+                pendingAdditionalItems: undefined,
+                completedAdditionalItems: [
+                  ...((pledgeMetadata.completedAdditionalItems as unknown[]) || []),
+                  {
+                    paymentMethod: "DIVINITYCOIN",
+                    addons: addonsWithQuantity,
+                    amount: addItemsAmount,
+                    completedAt: new Date().toISOString(),
+                  },
+                ],
+              },
+            },
+          });
+
+          // Update project currentAmount (NOT backerCount)
+          await tx.project.update({
+            where: { id: existingPledge.projectId },
+            data: { currentAmount: { increment: addItemsAmount } },
+          });
+
+          // Audit record
+          const paymentId = `dc_additem_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`;
+          await tx.divinityCoinTransaction.create({
+            data: {
+              userId,
+              pledgeId,
+              amount: -addItemsAmount,
+              type: "PAYMENT",
+              description: `Additional items payment for pledge ${pledgeId}`,
+              metadata: JSON.stringify({
+                requestId,
+                paymentId,
+                addItems: true,
+                addons: addonsWithQuantity,
+                previousBalance: currentBalance,
+                newBalance: currentBalance - addItemsAmount,
+              }),
+            },
+          });
+
+          return { balance: currentBalance - addItemsAmount };
+        });
+
+        console.log(`[DivinityCoin Pay] [${requestId}] Add-items payment successful for pledge ${pledgeId}`);
+
+        return NextResponse.json({
+          success: true,
+          newBalance: addItemsResult.balance,
+          message: `Successfully paid $${addItemsAmount.toFixed(2)} for additional items`,
+        });
+      }
+
+      // No pending items - normal idempotency
+      return NextResponse.json({
+        success: true,
+        newBalance: 0,
+        message: "Payment was already processed",
+      });
+    }
+
+    // === NORMAL PLEDGE PAYMENT FLOW ===
+
     // Process the payment in a transaction to prevent race conditions
     const result: TransactionResult = await db.$transaction(async (tx) => {
       // First, lock the user row and get current balance (SELECT FOR UPDATE equivalent)

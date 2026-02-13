@@ -26,7 +26,12 @@ export async function createAdditionalItemsPurchase(
   existingPledgeId: string,
   selectedAddons: Record<string, number>,
   addItemsTotal: number
-): Promise<{ clientSecret: string; type: string; pledgeId: string }> {
+): Promise<{
+  clientSecret?: string;
+  type?: string;
+  pledgeId: string;
+  paymentMethod?: string;
+}> {
   const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
     id,
     quantity,
@@ -47,6 +52,14 @@ export async function createAdditionalItemsPurchase(
     throw new Error(data.error || "Failed to create additional items purchase");
   }
 
+  // Chain2Pay and DivinityCoin don't return a clientSecret - payment is handled separately
+  if (data.paymentMethod === "CHAIN2PAY" || data.paymentMethod === "DIVINITYCOIN") {
+    return {
+      pledgeId: existingPledgeId,
+      paymentMethod: data.paymentMethod,
+    };
+  }
+
   if (!data.clientSecret) {
     throw new Error("Invalid payment response - missing client secret");
   }
@@ -55,6 +68,7 @@ export async function createAdditionalItemsPurchase(
     clientSecret: data.clientSecret,
     type: data.type || "payment_intent",
     pledgeId: existingPledgeId,
+    paymentMethod: data.paymentMethod || "STRIPE",
   };
 }
 

@@ -157,7 +157,7 @@ export default function PledgePage() {
   // Auto-create pledge when entering payment step
   useEffect(() => {
     if (isAddItemsMode) {
-      if (step === "payment" && !clientSecret && !isProcessing && !paymentError && project && Object.keys(selectedAddons).length > 0) {
+      if (step === "payment" && !clientSecret && !currentPledgeId && !isProcessing && !paymentError && project && Object.keys(selectedAddons).length > 0) {
         createAdditionalItemsPurchase();
       }
     } else {
@@ -170,15 +170,23 @@ export default function PledgePage() {
 
   const createAdditionalItemsPurchase = async () => {
     if (!project || !existingPledgeId || Object.keys(selectedAddons).length === 0) return;
-    if (clientSecret) return;
+    if (clientSecret || currentPledgeId) return;
 
     setIsProcessing(true);
     setPaymentError(null);
 
     try {
       const result = await createAdditionalItemsAPI(existingPledgeId, selectedAddons, addItemsTotal);
-      setClientSecret(result.clientSecret);
-      setIntentType(result.type as "payment_intent" | "setup_intent");
+
+      // Chain2Pay and DivinityCoin don't return a clientSecret - payment is handled by their own buttons
+      if (result.paymentMethod === "CHAIN2PAY" || result.paymentMethod === "DIVINITYCOIN") {
+        setCurrentPledgeId(result.pledgeId);
+        setIsProcessing(false);
+        return;
+      }
+
+      setClientSecret(result.clientSecret!);
+      setIntentType((result.type || "payment_intent") as "payment_intent" | "setup_intent");
       setCurrentPledgeId(result.pledgeId);
       setIsProcessing(false);
     } catch (err) {

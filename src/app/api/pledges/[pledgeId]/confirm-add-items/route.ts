@@ -51,7 +51,8 @@ export async function POST(
     // Get pending additional items from metadata
     const metadata = pledge.metadata as {
       pendingAdditionalItems?: {
-        paymentIntentId: string;
+        paymentMethod?: string;
+        paymentIntentId?: string;
         addons?: { id: string; quantity: number }[]; // New format with quantities
         addonIds?: string[]; // Legacy format
         amount: number;
@@ -62,10 +63,12 @@ export async function POST(
     const pendingItems = metadata?.pendingAdditionalItems;
 
     if (!pendingItems) {
-      return NextResponse.json(
-        { error: "No pending additional items found" },
-        { status: 400 }
-      );
+      // For Chain2Pay/DivinityCoin, items may already be processed by webhook/pay endpoint
+      // Return success if no pending items remain
+      return NextResponse.json({
+        success: true,
+        message: "Additional items already processed",
+      });
     }
 
     // Support both new format (addons with quantities) and legacy format (addonIds)
@@ -73,31 +76,43 @@ export async function POST(
       (pendingItems.addonIds ? pendingItems.addonIds.map(id => ({ id, quantity: 1 })) : []);
 
     if (addonsWithQuantity.length === 0) {
-      return NextResponse.json(
-        { error: "No addons found in pending items" },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: true,
+        message: "No addons to process",
+      });
     }
 
     const addonIds = addonsWithQuantity.map(a => a.id);
     const quantityMap = new Map(addonsWithQuantity.map(a => [a.id, a.quantity]));
 
-    // Verify payment was successful
-    const stripe = await getStripeInstance();
-    if (!stripe) {
-      return NextResponse.json(
-        { error: "Payment system unavailable" },
-        { status: 500 }
-      );
-    }
+    // For Stripe: verify payment via PaymentIntent
+    // For Chain2Pay/DivinityCoin: payment was already verified by webhook/pay endpoint
+    const paymentMethod = pendingItems.paymentMethod || "STRIPE";
 
-    const paymentIntent = await stripe.paymentIntents.retrieve(pendingItems.paymentIntentId);
+    if (paymentMethod === "STRIPE") {
+      const stripe = await getStripeInstance();
+      if (!stripe) {
+        return NextResponse.json(
+          { error: "Payment system unavailable" },
+          { status: 500 }
+        );
+      }
 
-    if (paymentIntent.status !== "succeeded") {
-      return NextResponse.json(
-        { error: "Payment not yet completed" },
-        { status: 400 }
-      );
+      if (!pendingItems.paymentIntentId) {
+        return NextResponse.json(
+          { error: "Missing payment intent ID" },
+          { status: 400 }
+        );
+      }
+
+      const paymentIntent = await stripe.paymentIntents.retrieve(pendingItems.paymentIntentId);
+
+      if (paymentIntent.status !== "succeeded") {
+        return NextResponse.json(
+          { error: "Payment not yet completed" },
+          { status: 400 }
+        );
+      }
     }
 
     // Get the addons

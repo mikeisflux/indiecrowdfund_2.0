@@ -99,6 +99,7 @@ export async function POST(
             id: true,
             status: true,
             creatorId: true,
+            paymentProcessor: true,
             stripeAccountId: true,
             creator: {
               select: {
@@ -194,7 +195,39 @@ export async function POST(
       );
     }
 
-    // Create Stripe PaymentIntent for immediate charge
+    const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
+
+    // Chain2Pay or DivinityCoin: store pending items in metadata, payment handled separately
+    if (paymentProcessor === "CHAIN2PAY" || paymentProcessor === "DIVINITYCOIN") {
+      // Store pending additional items in pledge metadata for processing after payment
+      const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+        ? pledge.metadata as Record<string, unknown>
+        : {};
+
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          metadata: {
+            ...currentMetadata,
+            pendingAdditionalItems: {
+              paymentMethod: paymentProcessor,
+              addons: addonsWithQuantity,
+              amount,
+              createdAt: new Date().toISOString(),
+            },
+          },
+        },
+      });
+
+      console.log(`[AddItems] Stored pending items for ${paymentProcessor} pledge ${pledgeId}: ${addonsWithQuantity.length} addons, $${amount}`);
+
+      return NextResponse.json({
+        paymentMethod: paymentProcessor,
+        pledgeId: pledge.id,
+      });
+    }
+
+    // Stripe: Create PaymentIntent for immediate charge
     const stripe = await getStripeInstance();
     if (!stripe) {
       return NextResponse.json(
@@ -243,10 +276,29 @@ export async function POST(
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
 
-    // Note: The addon data is stored in the PaymentIntent metadata (line 157 above)
-    // The webhook handler will use this to complete the addon associations when payment succeeds
+    // Store pending items in metadata for Stripe too (webhook uses PaymentIntent metadata)
+    const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+      ? pledge.metadata as Record<string, unknown>
+      : {};
+
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: {
+        metadata: {
+          ...currentMetadata,
+          pendingAdditionalItems: {
+            paymentMethod: "STRIPE",
+            paymentIntentId: paymentIntent.id,
+            addons: addonsWithQuantity,
+            amount,
+            createdAt: new Date().toISOString(),
+          },
+        },
+      },
+    });
 
     return NextResponse.json({
+      paymentMethod: "STRIPE",
       clientSecret: paymentIntent.client_secret,
       type: "payment_intent",
       paymentIntentId: paymentIntent.id,

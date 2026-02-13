@@ -82,7 +82,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    if (pledge.status === "COMPLETED") {
+    // Check if this is an add-items payment (pledge already completed with pending items)
+    const metadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+      ? pledge.metadata as Record<string, unknown>
+      : {};
+    const pendingItems = metadata.pendingAdditionalItems as {
+      paymentMethod: string;
+      addons: { id: string; quantity: number }[];
+      amount: number;
+    } | undefined;
+    const isAddItems = pledge.status === "COMPLETED" && pendingItems?.paymentMethod === "CHAIN2PAY";
+
+    if (pledge.status === "COMPLETED" && !isAddItems) {
       return NextResponse.json({
         success: true,
         message: "Payment was already processed",
@@ -95,6 +106,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // For add-items, use the pending items amount instead of the pledge amount
+    const paymentAmount = isAddItems ? pendingItems!.amount : amount;
 
     // Get platform Chain2Pay settings
     const settings = await db.platformSettings.findFirst({
@@ -118,14 +132,16 @@ export async function POST(req: NextRequest) {
 
     // Build callback URL with pledge ID for webhook identification
     const callbackBase = settings.chain2payCallbackBaseUrl || `${req.nextUrl.origin}`;
-    const callbackUrl = `${callbackBase}/api/webhooks/chain2pay?pledgeId=${pledgeId}`;
+    const callbackUrl = isAddItems
+      ? `${callbackBase}/api/webhooks/chain2pay?pledgeId=${pledgeId}&addItems=true`
+      : `${callbackBase}/api/webhooks/chain2pay?pledgeId=${pledgeId}`;
 
     // Call Chain2Pay API to generate payment link
     const chain2payRes = await fetch("https://chain2pay.cloud/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        amount: Number(amount.toFixed(2)),
+        amount: Number(paymentAmount.toFixed(2)),
         currency: "USD",
         merchant_wallet: merchantWallet,
         callback_url: callbackUrl,
@@ -153,7 +169,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`[Chain2Pay] Payment link generated for pledge ${pledgeId}: order=${chain2payData.order_id}`);
+    console.log(`[Chain2Pay] Payment link generated for pledge ${pledgeId}${isAddItems ? " (add-items)" : ""}: order=${chain2payData.order_id}`);
 
     return NextResponse.json({
       success: true,
