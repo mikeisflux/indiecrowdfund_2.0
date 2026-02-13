@@ -613,15 +613,21 @@ export interface PaymentEventResponse {
 /**
  * Handle payment.succeeded webhook event
  * DivinityCoin calls this when a payment (via their Stripe) has succeeded.
- * This confirms the pledge and marks it as completed.
+ * This confirms the pledge or marketplace purchase and marks it as completed.
  */
 export async function handlePaymentSucceeded(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>
 ): Promise<PaymentEventResponse> {
   const { pledgeId, paymentId, holdId, giftCardCode } = data;
+  const purchaseId = data.purchaseId as string | undefined;
+
+  // Handle marketplace purchase if purchaseId is provided
+  if (purchaseId) {
+    return handleMarketplacePaymentSucceeded(data, purchaseId);
+  }
 
   if (!pledgeId) {
-    return { success: false, error: "pledgeId is required" };
+    return { success: false, error: "pledgeId or purchaseId is required" };
   }
 
   console.log(
@@ -693,6 +699,84 @@ export async function handlePaymentSucceeded(
 }
 
 /**
+ * Handle payment.succeeded for marketplace purchases
+ * Confirms the purchase, increments purchase count, and delivers the book.
+ */
+async function handleMarketplacePaymentSucceeded(
+  data: NonNullable<DivinityCoinWebhookRequest["data"]>,
+  purchaseId: string
+): Promise<PaymentEventResponse> {
+  const { paymentId, holdId, giftCardCode } = data;
+
+  console.log(
+    `[DivinityCoin] Marketplace payment succeeded: purchase=${purchaseId}, payment=${paymentId}`
+  );
+
+  try {
+    const purchase = await db.marketplacePurchase.findUnique({
+      where: { id: purchaseId },
+      select: { id: true, status: true, bookId: true, buyerId: true, amount: true },
+    });
+
+    if (!purchase) {
+      return { success: false, error: `Purchase ${purchaseId} not found` };
+    }
+
+    if (purchase.status !== "PENDING") {
+      console.log(`[DivinityCoin] Purchase ${purchaseId} already ${purchase.status}, skipping`);
+      return { success: true, message: `Purchase already ${purchase.status}` };
+    }
+
+    await db.$transaction(async (tx) => {
+      // Mark purchase as completed
+      await tx.marketplacePurchase.update({
+        where: { id: purchaseId },
+        data: {
+          status: "COMPLETED",
+          completedAt: new Date(),
+          deliveredAt: new Date(),
+          divinityCoinPaymentId: paymentId || null,
+        },
+      });
+
+      // Increment purchase count on the book
+      await tx.marketplaceBook.update({
+        where: { id: purchase.bookId },
+        data: {
+          purchaseCount: { increment: 1 },
+        },
+      });
+
+      // Record the transaction
+      await tx.divinityCoinTransaction.create({
+        data: {
+          userId: purchase.buyerId,
+          amount: Number(purchase.amount),
+          type: "PAYMENT",
+          description: `Marketplace purchase via DivinityCoin`,
+          metadata: JSON.stringify({
+            purchaseId,
+            bookId: purchase.bookId,
+            paymentId,
+            holdId,
+            giftCardCode: giftCardCode ? `${String(giftCardCode).substring(0, 4)}****` : null,
+            stripePaymentIntentId: data.stripePaymentIntentId,
+            processedAt: new Date().toISOString(),
+            source: "divinitycoin_webhook",
+          }),
+        },
+      });
+    });
+
+    console.log(`[DivinityCoin] Purchase ${purchaseId} marked as COMPLETED via payment webhook`);
+    return { success: true, message: "Purchase completed" };
+  } catch (error) {
+    console.error(`[DivinityCoin] Error handling payment.succeeded for purchase ${purchaseId}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Handle payment.failed webhook event
  * DivinityCoin calls this when a payment fails (e.g. card declined).
  */
@@ -700,9 +784,43 @@ export async function handlePaymentFailed(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>
 ): Promise<PaymentEventResponse> {
   const { pledgeId, paymentId, reason } = data;
+  const purchaseId = data.purchaseId as string | undefined;
+
+  // Handle marketplace purchase failure
+  if (purchaseId) {
+    console.log(
+      `[DivinityCoin] Marketplace payment failed: purchase=${purchaseId}, payment=${paymentId}, reason=${reason}`
+    );
+
+    try {
+      const purchase = await db.marketplacePurchase.findUnique({
+        where: { id: purchaseId },
+        select: { id: true, status: true },
+      });
+
+      if (!purchase) {
+        return { success: false, error: `Purchase ${purchaseId} not found` };
+      }
+
+      if (purchase.status !== "PENDING") {
+        return { success: true, message: `Purchase already ${purchase.status}` };
+      }
+
+      await db.marketplacePurchase.update({
+        where: { id: purchaseId },
+        data: { status: "FAILED" },
+      });
+
+      console.log(`[DivinityCoin] Purchase ${purchaseId} marked as FAILED`);
+      return { success: true, message: "Purchase marked as failed" };
+    } catch (error) {
+      console.error(`[DivinityCoin] Error handling payment.failed for purchase ${purchaseId}:`, error);
+      throw error;
+    }
+  }
 
   if (!pledgeId) {
-    return { success: false, error: "pledgeId is required" };
+    return { success: false, error: "pledgeId or purchaseId is required" };
   }
 
   console.log(
@@ -748,9 +866,76 @@ export async function handleRefundCompleted(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>
 ): Promise<PaymentEventResponse> {
   const { pledgeId, paymentId, refundId, amount } = data;
+  const purchaseId = data.purchaseId as string | undefined;
+
+  // Handle marketplace purchase refund
+  if (purchaseId) {
+    console.log(
+      `[DivinityCoin] Marketplace refund completed: purchase=${purchaseId}, refund=${refundId}, amount=${amount}`
+    );
+
+    try {
+      const purchase = await db.marketplacePurchase.findUnique({
+        where: { id: purchaseId },
+        select: { id: true, status: true, buyerId: true, bookId: true, amount: true },
+      });
+
+      if (!purchase) {
+        return { success: false, error: `Purchase ${purchaseId} not found` };
+      }
+
+      if (purchase.status === "REFUNDED") {
+        return { success: true, message: "Purchase already refunded" };
+      }
+
+      await db.$transaction(async (tx) => {
+        await tx.marketplacePurchase.update({
+          where: { id: purchaseId },
+          data: {
+            status: "REFUNDED",
+            refundedAt: new Date(),
+            refundReason: "Refund completed via DivinityCoin",
+          },
+        });
+
+        // Decrement purchase count if was completed
+        if (purchase.status === "COMPLETED") {
+          await tx.marketplaceBook.update({
+            where: { id: purchase.bookId },
+            data: {
+              purchaseCount: { decrement: 1 },
+            },
+          });
+        }
+
+        await tx.divinityCoinTransaction.create({
+          data: {
+            userId: purchase.buyerId,
+            amount: -(amount || Number(purchase.amount)),
+            type: "REFUND",
+            description: `Marketplace refund via DivinityCoin`,
+            metadata: JSON.stringify({
+              purchaseId,
+              bookId: purchase.bookId,
+              paymentId,
+              refundId,
+              processedAt: new Date().toISOString(),
+              source: "divinitycoin_webhook",
+            }),
+          },
+        });
+      });
+
+      console.log(`[DivinityCoin] Purchase ${purchaseId} marked as REFUNDED via webhook`);
+      return { success: true, message: "Purchase refund recorded" };
+    } catch (error) {
+      console.error(`[DivinityCoin] Error handling refund.completed for purchase ${purchaseId}:`, error);
+      throw error;
+    }
+  }
 
   if (!pledgeId) {
-    return { success: false, error: "pledgeId is required" };
+    return { success: false, error: "pledgeId or purchaseId is required" };
   }
 
   console.log(

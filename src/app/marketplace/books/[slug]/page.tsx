@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -41,6 +41,9 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { loadStripe, Stripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import { StripePaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm";
 
 interface Book {
   id: string;
@@ -98,12 +101,14 @@ export default function BookDetailPage() {
     creatorName: string;
   } | null>(null);
 
-  useEffect(() => {
-    fetchBook();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  // DC Stripe Elements state
+  const [dcClientSecret, setDcClientSecret] = useState<string | null>(null);
+  const [dcStripePromise, setDcStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [dcPurchaseId, setDcPurchaseId] = useState<string | null>(null);
+  const [dcPaymentProcessing, setDcPaymentProcessing] = useState(false);
+  const [dcPaymentError, setDcPaymentError] = useState<string | null>(null);
 
-  const fetchBook = async () => {
+  const fetchBook = useCallback(async () => {
     try {
       const res = await fetch(`/api/marketplace/books/${slug}`);
       if (!res.ok) {
@@ -122,7 +127,11 @@ export default function BookDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug, router]);
+
+  useEffect(() => {
+    fetchBook();
+  }, [fetchBook]);
 
   const validatePromoCode = async () => {
     if (!promoCode.trim() || !book) return;
@@ -168,6 +177,14 @@ export default function BookDetailPage() {
   const clearPromoCode = () => {
     setPromoCode("");
     setAppliedPromo(null);
+  };
+
+  const resetDcPayment = () => {
+    setDcClientSecret(null);
+    setDcStripePromise(null);
+    setDcPurchaseId(null);
+    setDcPaymentProcessing(false);
+    setDcPaymentError(null);
   };
 
   const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin") => {
@@ -231,7 +248,7 @@ export default function BookDetailPage() {
           return;
         }
       } else {
-        // DivinityCoin payment
+        // DivinityCoin seamless payment - get clientSecret + publishableKey
         const res = await fetch("/api/marketplace/purchase", {
           method: "POST",
           headers: {
@@ -251,7 +268,17 @@ export default function BookDetailPage() {
           throw new Error(data.error || "Purchase failed");
         }
 
-        if (data.success) {
+        if (data.paymentRequired && data.clientSecret && data.publishableKey) {
+          // Set up Stripe Elements with DC's publishable key
+          setDcClientSecret(data.clientSecret);
+          setDcPurchaseId(data.purchaseId);
+          setDcStripePromise(loadStripe(data.publishableKey));
+          setDcPaymentError(null);
+          // Don't mark as purchased yet - payment form will show
+          return;
+        }
+
+        if (data.success && !data.paymentRequired) {
           setHasPurchased(true);
           setShowSuccessModal(true);
           clearPromoCode();
@@ -262,6 +289,43 @@ export default function BookDetailPage() {
     } finally {
       setPurchasing(false);
     }
+  };
+
+  const handleDcPaymentSuccess = async () => {
+    // Payment confirmed on Stripe side, now confirm with our backend
+    try {
+      const res = await fetch("/api/marketplace/purchase/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify({
+          purchaseId: dcPurchaseId,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Confirm failed:", data.error);
+        // Even if confirm call fails, the webhook will handle it
+      }
+    } catch (error) {
+      console.error("Error confirming purchase:", error);
+    }
+
+    // Show success regardless - webhook will finalize if confirm fails
+    resetDcPayment();
+    setHasPurchased(true);
+    setShowSuccessModal(true);
+    clearPromoCode();
+    setPurchasing(false);
+  };
+
+  const handleDcPaymentError = (message: string) => {
+    setDcPaymentError(message);
+    setDcPaymentProcessing(false);
+    toast.error(message);
   };
 
   const handleShare = async () => {
@@ -305,6 +369,9 @@ export default function BookDetailPage() {
   if (!book) {
     return null;
   }
+
+  // Show DC payment form if clientSecret is ready
+  const showDcPaymentForm = dcClientSecret && dcStripePromise;
 
   return (
     <div className="min-h-screen bg-background">
@@ -520,38 +587,109 @@ export default function BookDetailPage() {
                     </span>
                   </div>
                 )}
-                {/* Purchase Button */}
-                {hasPurchased ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                      <CheckCircle className="w-5 h-5 text-emerald-400" />
-                      <span className="text-sm text-emerald-300">You own this book</span>
-                    </div>
-                    <Link href="/dashboard/backer?tab=digital-library">
-                      <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
-                        <Library className="w-4 h-4 mr-2" />
-                        Read in Digital Library
+
+                {/* DC Stripe Elements Payment Form */}
+                {showDcPaymentForm ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-foreground">Complete Payment</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground"
+                        onClick={resetDcPayment}
+                      >
+                        Cancel
                       </Button>
-                    </Link>
+                    </div>
+
+                    {dcPaymentError && (
+                      <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <p className="text-sm text-red-600 dark:text-red-400">{dcPaymentError}</p>
+                      </div>
+                    )}
+
+                    <Elements
+                      stripe={dcStripePromise}
+                      options={{
+                        clientSecret: dcClientSecret,
+                        appearance: {
+                          theme: "stripe",
+                          variables: {
+                            colorPrimary: "#028858",
+                            fontFamily: "system-ui, -apple-system, sans-serif",
+                            borderRadius: "8px",
+                            spacingUnit: "4px",
+                          },
+                          rules: {
+                            ".Tab": {
+                              borderRadius: "8px",
+                              boxShadow: "none",
+                            },
+                            ".Tab--selected": {
+                              borderColor: "#028858",
+                              boxShadow: "0 0 0 1.5px #028858",
+                            },
+                            ".Input": {
+                              borderRadius: "8px",
+                              boxShadow: "none",
+                            },
+                            ".Input:focus": {
+                              borderColor: "#028858",
+                              boxShadow: "0 0 0 1.5px #028858",
+                            },
+                          },
+                        },
+                      }}
+                    >
+                      <StripePaymentForm
+                        onSuccess={handleDcPaymentSuccess}
+                        onError={handleDcPaymentError}
+                        isProcessing={dcPaymentProcessing}
+                        setIsProcessing={setDcPaymentProcessing}
+                        total={book.price}
+                        intentType="payment_intent"
+                        buttonLabel={`Purchase $${book.price.toFixed(2)}`}
+                        returnUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/marketplace/books/${book.slug}?purchase=success`}
+                      />
+                    </Elements>
                   </div>
                 ) : (
-                  <Button
-                    className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 h-12 text-lg"
-                    onClick={() => setShowPaymentModal(true)}
-                    disabled={purchasing}
-                  >
-                    {purchasing ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Processing...
-                      </>
+                  <>
+                    {/* Purchase Button */}
+                    {hasPurchased ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                          <CheckCircle className="w-5 h-5 text-emerald-400" />
+                          <span className="text-sm text-emerald-300">You own this book</span>
+                        </div>
+                        <Link href="/dashboard/backer?tab=digital-library">
+                          <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+                            <Library className="w-4 h-4 mr-2" />
+                            Read in Digital Library
+                          </Button>
+                        </Link>
+                      </div>
                     ) : (
-                      <>
-                        <ShoppingCart className="w-5 h-5 mr-2" />
-                        Buy Now
-                      </>
+                      <Button
+                        className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 h-12 text-lg"
+                        onClick={() => setShowPaymentModal(true)}
+                        disabled={purchasing}
+                      >
+                        {purchasing ? (
+                          <>
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingCart className="w-5 h-5 mr-2" />
+                            Buy Now
+                          </>
+                        )}
+                      </Button>
                     )}
-                  </Button>
+                  </>
                 )}
 
                 {/* Order Physical Copy Button */}
@@ -604,9 +742,6 @@ export default function BookDetailPage() {
       {/* Payment Method Modal */}
       <Dialog open={showPaymentModal} onOpenChange={(open) => {
         setShowPaymentModal(open);
-        if (!open) {
-          // Don't clear promo code when closing
-        }
       }}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
@@ -737,7 +872,7 @@ export default function BookDetailPage() {
                   <div className="text-left">
                     <div className="font-semibold">DivinityCoin</div>
                     <div className="text-sm opacity-80">
-                      Pay from your wallet balance
+                      Pay with credit or debit card
                     </div>
                   </div>
                 </Button>

@@ -140,6 +140,27 @@ export function PaymentStep({
                     theme: "stripe",
                     variables: {
                       colorPrimary: "#028858",
+                      fontFamily: "system-ui, -apple-system, sans-serif",
+                      borderRadius: "8px",
+                      spacingUnit: "4px",
+                    },
+                    rules: {
+                      ".Tab": {
+                        borderRadius: "8px",
+                        boxShadow: "none",
+                      },
+                      ".Tab--selected": {
+                        borderColor: "#028858",
+                        boxShadow: "0 0 0 1.5px #028858",
+                      },
+                      ".Input": {
+                        borderRadius: "8px",
+                        boxShadow: "none",
+                      },
+                      ".Input:focus": {
+                        borderColor: "#028858",
+                        boxShadow: "0 0 0 1.5px #028858",
+                      },
                     },
                   },
                 }}
@@ -192,6 +213,27 @@ export function PaymentStep({
                     theme: "stripe",
                     variables: {
                       colorPrimary: "#028858",
+                      fontFamily: "system-ui, -apple-system, sans-serif",
+                      borderRadius: "8px",
+                      spacingUnit: "4px",
+                    },
+                    rules: {
+                      ".Tab": {
+                        borderRadius: "8px",
+                        boxShadow: "none",
+                      },
+                      ".Tab--selected": {
+                        borderColor: "#028858",
+                        boxShadow: "0 0 0 1.5px #028858",
+                      },
+                      ".Input": {
+                        borderRadius: "8px",
+                        boxShadow: "none",
+                      },
+                      ".Input:focus": {
+                        borderColor: "#028858",
+                        boxShadow: "0 0 0 1.5px #028858",
+                      },
                     },
                   },
                 }}

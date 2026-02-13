@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
+import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 
 export const dynamic = "force-dynamic";
 
@@ -77,9 +78,70 @@ export async function POST(request: Request) {
       },
     });
 
-    // For Stripe payments, create a payment intent
-    // This would integrate with Stripe's API
-    // For now, return the purchase info for client-side Stripe handling
+    // DivinityCoin seamless payment flow
+    if (book.paymentProcessor === "DIVINITYCOIN" && paymentMethod === "divinitycoin") {
+      try {
+        const dcConfig = await getDivinityCoinConfig();
+        const userRecord = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { email: true, name: true },
+        });
+
+        const dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${dcConfig.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: Math.round(Number(book.price) * 100), // cents
+            currency: book.currency || "usd",
+            platformUserId: session.user.id,
+            email: userRecord?.email || "",
+            name: userRecord?.name || "",
+            purchaseId: purchase.id,
+            bookId: book.id,
+            statement_descriptor: "INDIECROWDFUND",
+          }),
+        });
+
+        const dcResult = await dcResponse.json();
+        if (!dcResponse.ok || !dcResult.success) {
+          console.error("[Marketplace DC] Failed to create payment intent:", dcResult);
+          await prisma.marketplacePurchase.delete({ where: { id: purchase.id } });
+          return NextResponse.json(
+            { error: dcResult.error || "Failed to initialize payment" },
+            { status: 502 }
+          );
+        }
+
+        // Store DC's payment intent ID on purchase
+        await prisma.marketplacePurchase.update({
+          where: { id: purchase.id },
+          data: { divinityCoinPaymentId: dcResult.paymentIntentId },
+        });
+
+        return NextResponse.json({
+          success: true,
+          purchaseId: purchase.id,
+          paymentRequired: true,
+          paymentProcessor: "DIVINITYCOIN",
+          clientSecret: dcResult.clientSecret,
+          publishableKey: dcResult.publishableKey,
+          amount: Number(book.price),
+          currency: book.currency,
+        });
+      } catch (dcError) {
+        console.error("[Marketplace DC] API error:", dcError);
+        await prisma.marketplacePurchase.delete({ where: { id: purchase.id } });
+        return NextResponse.json(
+          { error: "Failed to connect to payment processor" },
+          { status: 502 }
+        );
+      }
+    }
+
+    // For Stripe payments, return the purchase info for client-side Stripe handling
     return NextResponse.json({
       success: true,
       purchase,
