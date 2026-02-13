@@ -197,8 +197,8 @@ export async function POST(
 
     const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
 
-    // Chain2Pay or DivinityCoin: store pending items in metadata, payment handled separately
-    if (paymentProcessor === "CHAIN2PAY" || paymentProcessor === "DIVINITYCOIN") {
+    // DivinityCoin: store pending items in metadata, payment handled separately
+    if (paymentProcessor === "DIVINITYCOIN") {
       // Store pending additional items in pledge metadata for processing after payment
       const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
         ? pledge.metadata as Record<string, unknown>

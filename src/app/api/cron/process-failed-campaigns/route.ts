@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 
 /**
  * Cron job endpoint for processing failed campaigns
@@ -132,10 +133,13 @@ export async function GET(req: NextRequest) {
 /**
  * Refund DivinityCoin pledges for a failed project
  *
+ * Calls DC's API to:
+ * 1. Release any credit holds (for unfunded campaigns)
+ * 2. Process Stripe refunds for card payments
+ *
  * Only refunds pledges where:
  * - paymentProcessor = DIVINITYCOIN
  * - status = COMPLETED
- * - chargedImmediately = false (pledge was made before funding goal was reached)
  */
 async function refundDivinityCoinPledges(projectId: string, projectTitle: string) {
   // Find all DivinityCoin pledges that need refunding
@@ -144,7 +148,6 @@ async function refundDivinityCoinPledges(projectId: string, projectTitle: string
       projectId,
       paymentProcessor: "DIVINITYCOIN",
       status: "COMPLETED",
-      chargedImmediately: false, // Only refund pledges made before funding
     },
     select: {
       id: true,
@@ -161,23 +164,30 @@ async function refundDivinityCoinPledges(projectId: string, projectTitle: string
     try {
       const amount = Number(pledge.amount);
 
-      // Process refund in a transaction
-      await db.$transaction(async (tx) => {
-        // Refund coins to user
-        await tx.user.update({
-          where: { id: pledge.userId },
-          data: {
-            divinityCoinBalance: {
-              increment: amount,
-            },
-          },
-        });
+      // Step 1: Call DC API to release hold + refund the Stripe charge
+      const dcResult = await callDivinityCoinAPI("release", {
+        pledgeId: pledge.id,
+        paymentId: pledge.divinityCoinPaymentId,
+        reason: "campaign_failed",
+        refund: true, // Tell DC to also process the Stripe refund
+      });
 
+      if (!dcResult.success) {
+        console.error(
+          `[Cron Failed Campaigns] DC API release failed for pledge ${pledge.id}:`,
+          dcResult.error
+        );
+        // Continue processing other pledges even if one fails
+      }
+
+      // Step 2: Update local records
+      await db.$transaction(async (tx) => {
         // Mark pledge as refunded
         await tx.pledge.update({
           where: { id: pledge.id },
           data: {
             status: "REFUNDED",
+            lastFailureReason: "Campaign did not reach funding goal",
           },
         });
 
@@ -196,13 +206,14 @@ async function refundDivinityCoinPledges(projectId: string, projectTitle: string
           data: {
             userId: pledge.userId,
             pledgeId: pledge.id,
-            amount: amount, // Positive for refund
+            amount: -amount,
             type: "REFUND",
             description: `Refund for failed campaign "${projectTitle}"`,
             metadata: JSON.stringify({
               reason: "campaign_failed",
               projectId,
               originalPaymentId: pledge.divinityCoinPaymentId,
+              dcReleaseResult: dcResult.data,
               timestamp: new Date().toISOString(),
             }),
           },

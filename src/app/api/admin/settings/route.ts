@@ -82,6 +82,7 @@ export async function GET() {
       stripeConnectWebhookSecret: settings.stripeConnectWebhookSecret ? "••••••••" : null,
       divinityCoinApiKey: settings.divinityCoinApiKey ? "••••••••" : null,
       divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
+      divinityCoinStripePublishableKey: settings.divinityCoinStripePublishableKey ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
@@ -104,7 +105,6 @@ export async function GET() {
       r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
       recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
-      chain2payMerchantWallet: settings.chain2payMerchantWallet ? "••••••••" : null,
     };
 
     return NextResponse.json({ settings: maskedSettings });
@@ -159,7 +159,7 @@ export async function PATCH(req: NextRequest) {
     // Filter out masked values and empty strings for secret fields (don't update if user hasn't changed them)
     const secretFields = [
       'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret', 'stripeConnectWebhookSecret',
-      'divinityCoinApiKey', 'divinityCoinWebhookSecret',
+      'divinityCoinApiKey', 'divinityCoinWebhookSecret', 'divinityCoinStripePublishableKey',
       'smtpPassword', 'sendgridApiKey', 'sendgridWebhookVerificationKey', 'mailgunApiKey',
       'openaiApiKey', 'anthropicApiKey', 'googlePlacesApiKey',
       'facebookAppSecret', 'facebookPageAccessToken',
@@ -168,8 +168,7 @@ export async function PATCH(req: NextRequest) {
       'twitterAccessToken', 'twitterAccessSecret',
       'dalleApiKey', 'stabilityApiKey', 'shuftiSecretKey',
       'r2AccessKeyId', 'r2SecretAccessKey',
-      'recaptchaSiteKey', 'recaptchaSecretKey',
-      'chain2payMerchantWallet'
+      'recaptchaSiteKey', 'recaptchaSecretKey'
     ];
 
     const filteredData = Object.fromEntries(
@@ -193,8 +192,7 @@ export async function PATCH(req: NextRequest) {
         "stripeEnabled", "stripePublishableKey", "stripeSecretKey", "stripeWebhookSecret",
         "stripeConnectWebhookSecret",
         "divinityCoinEnabled", "divinityCoinApiKey", "divinityCoinWebhookSecret",
-        "divinityCoinPartnerId", "divinityCoinSettlementFrequency",
-        "chain2payEnabled", "chain2payMerchantWallet", "chain2payDefaultProvider", "chain2payCallbackBaseUrl",
+        "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "divinityCoinStripePublishableKey",
         "autoPayouts",
         "recaptchaEnabled", "recaptchaSiteKey", "recaptchaSecretKey"
       ],
@@ -300,6 +298,7 @@ export async function PATCH(req: NextRequest) {
       stripeConnectWebhookSecret: settings.stripeConnectWebhookSecret ? "••••••••" : null,
       divinityCoinApiKey: settings.divinityCoinApiKey ? "••••••••" : null,
       divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
+      divinityCoinStripePublishableKey: settings.divinityCoinStripePublishableKey ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
@@ -322,7 +321,6 @@ export async function PATCH(req: NextRequest) {
       r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
       recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
-      chain2payMerchantWallet: settings.chain2payMerchantWallet ? "••••••••" : null,
     };
 
     return NextResponse.json({

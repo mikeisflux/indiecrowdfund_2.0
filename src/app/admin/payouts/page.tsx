@@ -604,9 +604,6 @@ export default function PayoutsPage() {
                             <div>
                               <div className="flex items-center gap-2">
                                 <p className="font-medium truncate max-w-[200px]">{project.title}</p>
-                                {project.paymentProcessor === "CHAIN2PAY" && (
-                                  <Badge variant="outline" className="text-xs text-blue-600 border-blue-600">Chain2Pay</Badge>
-                                )}
                                 {project.paymentProcessor === "DIVINITYCOIN" && (
                                   <Badge variant="outline" className="text-xs text-purple-600 border-purple-600">DivinityCoin</Badge>
                                 )}

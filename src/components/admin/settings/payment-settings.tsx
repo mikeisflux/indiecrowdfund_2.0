@@ -31,11 +31,7 @@ interface PaymentSettingsProps {
     divinityCoinWebhookSecret: string;
     divinityCoinPartnerId: string;
     divinityCoinSettlementFrequency: string;
-    // Chain2Pay - Crypto payment processor (USDC on Polygon)
-    chain2payEnabled: boolean;
-    chain2payMerchantWallet: string;
-    chain2payDefaultProvider: string;
-    chain2payCallbackBaseUrl: string;
+    divinityCoinStripePublishableKey: string;
     // reCAPTCHA settings
     recaptchaEnabled: boolean;
     recaptchaSiteKey: string;
@@ -234,6 +230,19 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label>DC Stripe Publishable Key</Label>
+            <SecureKeyInput
+              value={settings.divinityCoinStripePublishableKey}
+              onChange={(value) => onSettingsChange({ ...settings, divinityCoinStripePublishableKey: value })}
+              onSave={onSave}
+              hasExistingValue={settings.divinityCoinStripePublishableKey === "••••••••"}
+              placeholder="pk_live_... (DivinityCoin's Stripe key for card form)"
+              forceShowValue={showAllKeys}
+            />
+            <p className="text-xs text-zinc-500">DivinityCoin&apos;s Stripe publishable key used to render the card form on the pledge page. Card data goes directly to Stripe on DC&apos;s account.</p>
+          </div>
+
           <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
             <p className="font-medium">DivinityCoin Fee Structure:</p>
             <ul className="list-disc list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
@@ -243,92 +252,6 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
             </ul>
             <a href="https://divinitycoin.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               Learn more about DivinityCoin →
-            </a>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Chain2Pay Configuration</CardTitle>
-              <CardDescription>Crypto payment processor - accepts credit card &amp; crypto, settles in USDC on Polygon</CardDescription>
-            </div>
-            <Badge variant={settings.chain2payEnabled ? "default" : "secondary"}>
-              {settings.chain2payEnabled ? "Enabled" : "Disabled"}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label>Enable Chain2Pay</Label>
-              <p className="text-sm text-zinc-500">Accept payments via Chain2Pay (credit card &amp; crypto, USDC settlement)</p>
-            </div>
-            <Switch
-              checked={settings.chain2payEnabled}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ ...settings, chain2payEnabled: checked })
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Merchant Wallet Address (Polygon USDC)</Label>
-            <SecureKeyInput
-              value={settings.chain2payMerchantWallet}
-              onChange={(value) => onSettingsChange({ ...settings, chain2payMerchantWallet: value })}
-              onSave={onSave}
-              hasExistingValue={settings.chain2payMerchantWallet === "••••••••"}
-              placeholder="0x..."
-              forceShowValue={showAllKeys}
-            />
-            <p className="text-xs text-zinc-500">Your Polygon network wallet address for receiving USDC settlements</p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Default Provider</Label>
-              <Select
-                value={settings.chain2payDefaultProvider || "multihosted"}
-                onValueChange={(v) => onSettingsChange({ ...settings, chain2payDefaultProvider: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="multihosted">Multi-hosted (Default)</SelectItem>
-                  <SelectItem value="revolut">Revolut</SelectItem>
-                  <SelectItem value="mercuryo">Mercuryo</SelectItem>
-                  <SelectItem value="moonpay">MoonPay</SelectItem>
-                  <SelectItem value="wert">Wert</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-zinc-500">Payment gateway provider. Multi-hosted auto-selects the best option.</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Callback Base URL</Label>
-              <Input
-                value={settings.chain2payCallbackBaseUrl}
-                onChange={(e) => onSettingsChange({ ...settings, chain2payCallbackBaseUrl: e.target.value })}
-                placeholder="https://yourdomain.com"
-              />
-              <p className="text-xs text-zinc-500">Base URL for webhook callbacks. Leave blank to use current domain.</p>
-            </div>
-          </div>
-
-          <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
-            <p className="font-medium">Chain2Pay Details:</p>
-            <ul className="list-disc list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
-              <li>No API key required - rate limits apply per IP</li>
-              <li>Supports USD, EUR, GBP, CAD currencies</li>
-              <li>Settlements in USDC on the Polygon network</li>
-              <li>Min amounts vary by provider: Wert $1, Stripe $2, Ramp $4, Revolut €6, Mercuryo $30</li>
-              <li>Providers: Unlimit, Revolut, Mercuryo, MoonPay, Wert</li>
-            </ul>
-            <a href="https://chain2pay.cloud/developer-api" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              Chain2Pay Developer API →
             </a>
           </div>
         </CardContent>

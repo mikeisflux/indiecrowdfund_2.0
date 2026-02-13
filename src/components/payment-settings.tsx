@@ -52,8 +52,6 @@ interface PaymentSettingsProps {
   projectId?: string;
   /** Whether to show the DivinityCoin bank account section */
   showDivinityCoin?: boolean;
-  /** Whether to show the Chain2Pay bank account section */
-  showChain2Pay?: boolean;
   /** Custom title for the component */
   title?: string;
   /** Custom description */
@@ -69,7 +67,6 @@ interface PaymentSettingsProps {
 export function PaymentSettings({
   projectId,
   showDivinityCoin = true,
-  showChain2Pay = true,
   title = "Payment Settings",
   description = "Connect your Stripe account to receive payments",
   className,
@@ -102,21 +99,6 @@ export function PaymentSettings({
     lastFour: null,
   });
   const [isSavingBank, setIsSavingBank] = useState(false);
-
-  // Chain2Pay bank account state
-  const [chain2payBankAccount, setChain2payBankAccount] = useState({
-    bankName: "",
-    accountHolder: "",
-    accountNumber: "",
-    routingNumber: "",
-    accountType: "checking" as "checking" | "savings",
-  });
-  const [chain2payBankStatus, setChain2payBankStatus] = useState<BankAccountStatus>({
-    saved: false,
-    loading: true,
-    lastFour: null,
-  });
-  const [isSavingChain2payBank, setIsSavingChain2payBank] = useState(false);
 
   // Check Stripe connection status
   const checkStripeStatus = useCallback(async () => {
@@ -190,43 +172,10 @@ export function PaymentSettings({
     }
   }, [showDivinityCoin]);
 
-  // Check Chain2Pay bank account status
-  const checkChain2payBankStatus = useCallback(async () => {
-    if (!showChain2Pay) return;
-
-    try {
-      const response = await fetch("/api/creator/chain2pay-bank-account");
-      if (response.ok) {
-        const data = await response.json();
-        setChain2payBankStatus({
-          saved: data.exists,
-          loading: false,
-          lastFour: data.lastFour || null,
-          bankName: data.bankName,
-          accountHolder: data.accountHolder,
-          accountType: data.accountType,
-        });
-        if (data.exists) {
-          setChain2payBankAccount((prev) => ({
-            ...prev,
-            bankName: data.bankName || "",
-            accountHolder: data.accountHolder || "",
-            accountType: data.accountType || "checking",
-          }));
-        }
-      } else {
-        setChain2payBankStatus({ saved: false, loading: false, lastFour: null });
-      }
-    } catch {
-      setChain2payBankStatus({ saved: false, loading: false, lastFour: null });
-    }
-  }, [showChain2Pay]);
-
   useEffect(() => {
     checkStripeStatus();
     checkBankAccountStatus();
-    checkChain2payBankStatus();
-  }, [checkStripeStatus, checkBankAccountStatus, checkChain2payBankStatus]);
+  }, [checkStripeStatus, checkBankAccountStatus]);
 
   // Stripe Connect handlers
   const handleConnectStripe = async () => {
@@ -344,64 +293,6 @@ export function PaymentSettings({
       toast.error(error instanceof Error ? error.message : "Failed to save bank account");
     } finally {
       setIsSavingBank(false);
-    }
-  };
-
-  // Chain2Pay bank account handler
-  const handleSaveChain2payBank = async () => {
-    if (
-      !chain2payBankAccount.bankName ||
-      !chain2payBankAccount.accountHolder ||
-      !chain2payBankAccount.accountNumber ||
-      !chain2payBankAccount.routingNumber
-    ) {
-      toast.error("Please fill in all bank account fields");
-      return;
-    }
-
-    if (chain2payBankAccount.routingNumber.length !== 9) {
-      toast.error("Routing number must be 9 digits");
-      return;
-    }
-
-    if (chain2payBankAccount.accountNumber.length < 4 || chain2payBankAccount.accountNumber.length > 17) {
-      toast.error("Please enter a valid account number");
-      return;
-    }
-
-    setIsSavingChain2payBank(true);
-    try {
-      const response = await fetch("/api/creator/chain2pay-bank-account", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({ ...chain2payBankAccount, projectId }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to save bank account");
-      }
-
-      const data = await response.json();
-      setChain2payBankStatus({
-        saved: true,
-        loading: false,
-        lastFour: data.lastFour,
-        bankName: chain2payBankAccount.bankName,
-        accountHolder: chain2payBankAccount.accountHolder,
-        accountType: chain2payBankAccount.accountType,
-      });
-      setChain2payBankAccount((prev) => ({
-        ...prev,
-        accountNumber: "",
-        routingNumber: "",
-      }));
-      toast.success("Chain2Pay bank account saved securely!");
-    } catch (error) {
-      console.error("Failed to save Chain2Pay bank account:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to save bank account");
-    } finally {
-      setIsSavingChain2payBank(false);
     }
   };
 
@@ -744,192 +635,6 @@ export function PaymentSettings({
                     className="text-primary underline"
                   >
                     Learn more about DivinityCoin
-                  </a>
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Chain2Pay Bank Account Section */}
-      {showChain2Pay && (
-        <Card className={compact ? "bg-white/5 backdrop-blur-md border-white/10" : ""}>
-          <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", compact && "text-white")}>
-              <Banknote className="h-5 w-5" />
-              Chain2Pay Settlement Account
-            </CardTitle>
-            <CardDescription className={compact ? "text-white/60" : ""}>
-              Enter your bank account details for Chain2Pay settlements. All data is encrypted and stored securely.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {chain2payBankStatus.loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : chain2payBankStatus.saved ? (
-              <div className="space-y-4">
-                <div
-                  className={cn(
-                    "flex items-center justify-between p-4 border rounded-lg border-green-500",
-                    compact && "bg-white/5"
-                  )}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-green-500 flex items-center justify-center shrink-0">
-                      <CheckCircle className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <p className={cn("font-medium", compact && "text-white")}>Bank Account Connected</p>
-                      <p className={cn("text-sm", compact ? "text-white/60" : "text-muted-foreground")}>
-                        {chain2payBankStatus.bankName} • Account ending in {chain2payBankStatus.lastFour}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="default" className="bg-green-500">
-                    <Lock className="h-3 w-3 mr-1" />
-                    Secured
-                  </Badge>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setChain2payBankStatus((prev) => ({ ...prev, saved: false }))}
-                  className={compact ? "border-white/20 text-white hover:bg-white/10" : ""}
-                >
-                  Update Bank Account
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <Lock className="h-4 w-4" />
-                  <AlertTitle>Secure & Encrypted</AlertTitle>
-                  <AlertDescription>
-                    Your bank account information is encrypted using AES-256 encryption before storage. We never
-                    store unencrypted account numbers.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="c2p-bank-name" className={compact ? "text-white" : ""}>
-                      Bank Name
-                    </Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="c2p-bank-name"
-                        placeholder="e.g., Chase Bank"
-                        value={chain2payBankAccount.bankName}
-                        onChange={(e) => setChain2payBankAccount((prev) => ({ ...prev, bankName: e.target.value }))}
-                        className={cn("pl-10", compact && "bg-white/10 border-white/20 text-white placeholder:text-white/40")}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="c2p-account-holder" className={compact ? "text-white" : ""}>
-                      Account Holder Name
-                    </Label>
-                    <Input
-                      id="c2p-account-holder"
-                      placeholder="Name as it appears on account"
-                      value={chain2payBankAccount.accountHolder}
-                      onChange={(e) => setChain2payBankAccount((prev) => ({ ...prev, accountHolder: e.target.value }))}
-                      className={compact ? "bg-white/10 border-white/20 text-white placeholder:text-white/40" : ""}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="c2p-routing-number" className={compact ? "text-white" : ""}>
-                      Routing Number
-                    </Label>
-                    <Input
-                      id="c2p-routing-number"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={9}
-                      placeholder="9-digit routing number"
-                      value={chain2payBankAccount.routingNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 9);
-                        setChain2payBankAccount((prev) => ({ ...prev, routingNumber: value }));
-                      }}
-                      className={compact ? "bg-white/10 border-white/20 text-white placeholder:text-white/40" : ""}
-                    />
-                    <p className={cn("text-xs", compact ? "text-white/40" : "text-muted-foreground")}>
-                      9 digits, found on the bottom left of your checks
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="c2p-account-number" className={compact ? "text-white" : ""}>
-                      Account Number
-                    </Label>
-                    <Input
-                      id="c2p-account-number"
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={17}
-                      placeholder="Your account number"
-                      value={chain2payBankAccount.accountNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 17);
-                        setChain2payBankAccount((prev) => ({ ...prev, accountNumber: value }));
-                      }}
-                      className={compact ? "bg-white/10 border-white/20 text-white placeholder:text-white/40" : ""}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className={compact ? "text-white" : ""}>Account Type</Label>
-                  <Select
-                    value={chain2payBankAccount.accountType}
-                    onValueChange={(value: "checking" | "savings") =>
-                      setChain2payBankAccount((prev) => ({ ...prev, accountType: value }))
-                    }
-                  >
-                    <SelectTrigger className={cn("w-full sm:w-[200px]", compact && "bg-white/10 border-white/20 text-white")}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="checking">Checking</SelectItem>
-                      <SelectItem value="savings">Savings</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-3 pt-2">
-                  <Button onClick={handleSaveChain2payBank} disabled={isSavingChain2payBank} className="bg-[#3B82F6] hover:bg-[#2563EB]">
-                    {isSavingChain2payBank ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Encrypting & Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-4 w-4 mr-2" />
-                        Save Bank Account
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                <p className={cn("text-xs", compact ? "text-white/40" : "text-muted-foreground")}>
-                  Chain2Pay settlements are processed in USDC on Polygon and converted to bank transfers within 14 business days.{" "}
-                  <a
-                    href="https://chain2pay.cloud/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline"
-                  >
-                    Learn more about Chain2Pay
                   </a>
                 </p>
               </div>

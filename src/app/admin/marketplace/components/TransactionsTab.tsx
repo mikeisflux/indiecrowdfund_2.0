@@ -226,7 +226,7 @@ export function TransactionsTab({
                     </td>
                     <td className="px-4 py-3 text-center">
                       <Badge variant="outline" className="text-xs">
-                        {tx.paymentProcessor === "STRIPE" ? "Stripe" : tx.paymentProcessor === "DIVINITYCOIN" ? "DivinityCoin" : tx.paymentProcessor === "CHAIN2PAY" ? "Chain2Pay" : tx.paymentProcessor}
+                        {tx.paymentProcessor === "STRIPE" ? "Stripe" : tx.paymentProcessor === "DIVINITYCOIN" ? "DivinityCoin" : tx.paymentProcessor}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-center">

@@ -89,7 +89,10 @@ export type DivinityCoinEventType =
   | "test.ping"
   | "card.validate"
   | "card.redeem"
-  | "refund.request";
+  | "refund.request"
+  | "payment.succeeded"
+  | "payment.failed"
+  | "refund.completed";
 
 // Webhook request structure from DivinityCoin
 export interface DivinityCoinWebhookRequest {
@@ -103,6 +106,14 @@ export interface DivinityCoinWebhookRequest {
     reason?: string;
     originalTransactionId?: string; // DivinityCoin's transaction ID from when the card was redeemed
     originalCardCode?: string; // The card code that was redeemed
+    // Payment event fields (new seamless flow)
+    paymentId?: string; // DC's internal payment ID
+    pledgeId?: string; // IndieK's pledge ID
+    projectId?: string;
+    holdId?: string; // DC's hold ID for credits
+    stripePaymentIntentId?: string; // DC's Stripe PI ID
+    giftCardCode?: string; // Auto-generated gift card (for compliance)
+    email?: string;
     [key: string]: unknown;
   };
 }
@@ -592,13 +603,270 @@ async function notifyDivinityCoinRefundFailed(
   }
 }
 
+// Response for payment events
+export interface PaymentEventResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+/**
+ * Handle payment.succeeded webhook event
+ * DivinityCoin calls this when a payment (via their Stripe) has succeeded.
+ * This confirms the pledge and marks it as completed.
+ */
+export async function handlePaymentSucceeded(
+  data: NonNullable<DivinityCoinWebhookRequest["data"]>
+): Promise<PaymentEventResponse> {
+  const { pledgeId, paymentId, holdId, giftCardCode } = data;
+
+  if (!pledgeId) {
+    return { success: false, error: "pledgeId is required" };
+  }
+
+  console.log(
+    `[DivinityCoin] Payment succeeded: pledge=${pledgeId}, payment=${paymentId}, hold=${holdId}`
+  );
+
+  try {
+    const pledge = await db.pledge.findUnique({
+      where: { id: pledgeId },
+      select: { id: true, status: true, projectId: true, amount: true, userId: true },
+    });
+
+    if (!pledge) {
+      return { success: false, error: `Pledge ${pledgeId} not found` };
+    }
+
+    // Only process if the pledge is still PENDING
+    if (pledge.status !== "PENDING") {
+      console.log(`[DivinityCoin] Pledge ${pledgeId} already ${pledge.status}, skipping`);
+      return { success: true, message: `Pledge already ${pledge.status}` };
+    }
+
+    await db.$transaction(async (tx) => {
+      // Mark pledge as completed
+      await tx.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          status: "COMPLETED",
+          divinityCoinPaymentId: paymentId || null,
+          chargedImmediately: true,
+        },
+      });
+
+      // Update project stats
+      await tx.project.update({
+        where: { id: pledge.projectId },
+        data: {
+          currentAmount: { increment: pledge.amount },
+          backerCount: { increment: 1 },
+        },
+      });
+
+      // Record the transaction
+      await tx.divinityCoinTransaction.create({
+        data: {
+          userId: pledge.userId,
+          pledgeId: pledge.id,
+          amount: Number(pledge.amount),
+          type: "PAYMENT",
+          description: `Payment for pledge via DivinityCoin`,
+          metadata: JSON.stringify({
+            paymentId,
+            holdId,
+            giftCardCode: giftCardCode ? `${String(giftCardCode).substring(0, 4)}****` : null,
+            stripePaymentIntentId: data.stripePaymentIntentId,
+            processedAt: new Date().toISOString(),
+            source: "divinitycoin_webhook",
+          }),
+        },
+      });
+    });
+
+    console.log(`[DivinityCoin] Pledge ${pledgeId} marked as COMPLETED via payment webhook`);
+    return { success: true, message: "Pledge completed" };
+  } catch (error) {
+    console.error(`[DivinityCoin] Error handling payment.succeeded for pledge ${pledgeId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Handle payment.failed webhook event
+ * DivinityCoin calls this when a payment fails (e.g. card declined).
+ */
+export async function handlePaymentFailed(
+  data: NonNullable<DivinityCoinWebhookRequest["data"]>
+): Promise<PaymentEventResponse> {
+  const { pledgeId, paymentId, reason } = data;
+
+  if (!pledgeId) {
+    return { success: false, error: "pledgeId is required" };
+  }
+
+  console.log(
+    `[DivinityCoin] Payment failed: pledge=${pledgeId}, payment=${paymentId}, reason=${reason}`
+  );
+
+  try {
+    const pledge = await db.pledge.findUnique({
+      where: { id: pledgeId },
+      select: { id: true, status: true },
+    });
+
+    if (!pledge) {
+      return { success: false, error: `Pledge ${pledgeId} not found` };
+    }
+
+    if (pledge.status !== "PENDING") {
+      return { success: true, message: `Pledge already ${pledge.status}` };
+    }
+
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: {
+        status: "FAILED",
+        lastFailureReason: reason || "Payment failed via DivinityCoin",
+      },
+    });
+
+    console.log(`[DivinityCoin] Pledge ${pledgeId} marked as FAILED`);
+    return { success: true, message: "Pledge marked as failed" };
+  } catch (error) {
+    console.error(`[DivinityCoin] Error handling payment.failed for pledge ${pledgeId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Handle refund.completed webhook event
+ * DivinityCoin calls this when a refund has been processed on their end
+ * (e.g. Stripe refund completed for a card payment).
+ */
+export async function handleRefundCompleted(
+  data: NonNullable<DivinityCoinWebhookRequest["data"]>
+): Promise<PaymentEventResponse> {
+  const { pledgeId, paymentId, refundId, amount } = data;
+
+  if (!pledgeId) {
+    return { success: false, error: "pledgeId is required" };
+  }
+
+  console.log(
+    `[DivinityCoin] Refund completed: pledge=${pledgeId}, refund=${refundId}, amount=${amount}`
+  );
+
+  try {
+    const pledge = await db.pledge.findUnique({
+      where: { id: pledgeId },
+      select: { id: true, status: true, userId: true, projectId: true, amount: true },
+    });
+
+    if (!pledge) {
+      return { success: false, error: `Pledge ${pledgeId} not found` };
+    }
+
+    // If already refunded, skip
+    if (pledge.status === "REFUNDED") {
+      return { success: true, message: "Pledge already refunded" };
+    }
+
+    await db.$transaction(async (tx) => {
+      // Mark pledge as refunded
+      await tx.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          status: "REFUNDED",
+          lastFailureReason: "Refund completed via DivinityCoin",
+        },
+      });
+
+      // Record the refund transaction
+      await tx.divinityCoinTransaction.create({
+        data: {
+          userId: pledge.userId,
+          pledgeId: pledge.id,
+          amount: -(amount || Number(pledge.amount)),
+          type: "REFUND",
+          description: `Refund completed via DivinityCoin`,
+          metadata: JSON.stringify({
+            paymentId,
+            refundId,
+            processedAt: new Date().toISOString(),
+            source: "divinitycoin_webhook",
+          }),
+        },
+      });
+
+      // Only decrement project stats if pledge was COMPLETED
+      if (pledge.status === "COMPLETED") {
+        await tx.project.update({
+          where: { id: pledge.projectId },
+          data: {
+            backerCount: { decrement: 1 },
+            currentAmount: { decrement: pledge.amount },
+          },
+        });
+      }
+    });
+
+    console.log(`[DivinityCoin] Pledge ${pledgeId} marked as REFUNDED via webhook`);
+    return { success: true, message: "Refund recorded" };
+  } catch (error) {
+    console.error(`[DivinityCoin] Error handling refund.completed for pledge ${pledgeId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Call DivinityCoin Partner API
+ * Used for making outbound API calls to DC (refund, release, capture, etc.)
+ */
+export async function callDivinityCoinAPI(
+  action: string,
+  payload: Record<string, unknown>
+): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+  try {
+    const config = await getDivinityCoinConfig();
+
+    const response = await fetch(`${config.baseUrl}?action=${action}`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${config.apiKey}`,
+        "Content-Type": "application/json",
+        "X-Partner-ID": config.partnerId,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error(`[DivinityCoin API] ${action} failed:`, result);
+      return {
+        success: false,
+        error: result.error || `DC API ${action} failed with status ${response.status}`,
+      };
+    }
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error(`[DivinityCoin API] ${action} error:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "DivinityCoin API call failed",
+    };
+  }
+}
+
 /**
  * Main webhook event handler
  * Processes incoming webhook requests from DivinityCoin
  */
 export async function handleDivinityCoinWebhook(
   request: DivinityCoinWebhookRequest
-): Promise<TestPingResponse | CardValidateResponse | CardRedeemResponse | RefundRequestResponse> {
+): Promise<TestPingResponse | CardValidateResponse | CardRedeemResponse | RefundRequestResponse | PaymentEventResponse> {
   console.log(`[DivinityCoin Webhook] Received event: ${request.event}`);
 
   switch (request.event) {
@@ -659,6 +927,24 @@ export async function handleDivinityCoinWebhook(
         request.data.originalTransactionId,
         request.data.reason
       );
+
+    case "payment.succeeded":
+      if (!request.data) {
+        return { success: false, error: "Payment data is required" };
+      }
+      return handlePaymentSucceeded(request.data);
+
+    case "payment.failed":
+      if (!request.data) {
+        return { success: false, error: "Payment data is required" };
+      }
+      return handlePaymentFailed(request.data);
+
+    case "refund.completed":
+      if (!request.data) {
+        return { success: false, error: "Refund data is required" };
+      }
+      return handleRefundCompleted(request.data);
 
     default:
       console.warn(`[DivinityCoin Webhook] Unknown event type: ${request.event}`);

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 const paymentSchema = z.object({
   projectType: z.enum(["INDIVIDUAL", "BUSINESS", "NONPROFIT"]).optional(),
-  paymentProcessor: z.enum(["STRIPE", "DIVINITYCOIN", "CHAIN2PAY"]).optional(),
+  paymentProcessor: z.enum(["STRIPE", "DIVINITYCOIN"]).optional(),
   hasAdultContent: z.boolean().optional(),
   hasRiskyContent: z.boolean().optional(),
   promoContentSfw: z.boolean().optional(),
@@ -90,12 +90,12 @@ export async function POST(
     }
 
     // Automatically set payment processor based on content flags
-    // Adult or risky content cannot use Stripe - must use DivinityCoin or Chain2Pay
+    // Adult or risky content cannot use Stripe - must use DivinityCoin
     if (data.hasAdultContent !== undefined || data.hasRiskyContent !== undefined) {
       const hasAdult = data.hasAdultContent ?? false;
       const hasRisky = data.hasRiskyContent ?? false;
       if (hasAdult || hasRisky) {
-        // Only force-switch if currently on Stripe (leave CHAIN2PAY or DIVINITYCOIN as-is)
+        // Only force-switch if currently on Stripe (leave DIVINITYCOIN as-is)
         if (currentProject?.paymentProcessor === "STRIPE" && !updateData.paymentProcessor) {
           updateData.paymentProcessor = "DIVINITYCOIN";
         }

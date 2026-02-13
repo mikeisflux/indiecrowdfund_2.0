@@ -937,7 +937,7 @@ export async function DELETE(req: NextRequest) {
       // These will be auto-deleted due to onDelete: Cascade:
       // - Account, Session, DivinityCoinBankAccount, DivinityCoinRedemption,
       // - DivinityCoinTransaction, UserInterestProfile, UserPreference,
-      // - IDVerification, Notification, UserAchievement, RedemptionBonusLedger,
+      // - IDVerification, Notification, RedemptionBonusLedger,
       // - RedemptionBonusApplication, UserAddress, ProjectCollection,
       // - ProjectNotificationPreference
       // =====================================================

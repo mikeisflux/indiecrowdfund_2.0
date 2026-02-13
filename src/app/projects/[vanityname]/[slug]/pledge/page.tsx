@@ -23,7 +23,6 @@ import { PaymentStep } from "./components/PaymentStep";
 import { OrderSummary } from "./components/OrderSummary";
 import { FAQSection } from "./components/FAQSection";
 import { SuccessPage } from "./components/SuccessPage";
-import { DivinityCoinWallet } from "./components/DivinityCoinWallet";
 
 export default function PledgePage() {
   const params = useParams();
@@ -82,14 +81,11 @@ export default function PledgePage() {
 
   // Stripe state
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [dcStripePromise, setDcStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentType, setIntentType] = useState<"payment_intent" | "setup_intent">("setup_intent");
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [currentPledgeId, setCurrentPledgeId] = useState<string | null>(null);
-
-  // DivinityCoin payment state
-  const [divinityCoinBalance, setDivinityCoinBalance] = useState<number>(0);
-  const [divinityCoinReady, setDivinityCoinReady] = useState(false);
 
   // Handle success redirect (including after 3D Secure authentication)
   useEffect(() => {
@@ -114,7 +110,7 @@ export default function PledgePage() {
     handleSuccessRedirect();
   }, [successParam, pledgeIdParam]);
 
-  // Initialize Stripe
+  // Initialize Stripe (IndieK's Stripe account)
   useEffect(() => {
     async function initStripe() {
       try {
@@ -129,6 +125,24 @@ export default function PledgePage() {
     }
     initStripe();
   }, []);
+
+  // Initialize DivinityCoin's Stripe account (separate publishable key)
+  useEffect(() => {
+    if (project?.paymentProcessor === "DIVINITYCOIN") {
+      const initDcStripe = async () => {
+        try {
+          const res = await fetch("/api/divinitycoin/config");
+          const data = await res.json();
+          if (data.stripePublishableKey) {
+            setDcStripePromise(loadStripe(data.stripePublishableKey));
+          }
+        } catch (err) {
+          console.error("Failed to load DivinityCoin Stripe config:", err);
+        }
+      }
+      initDcStripe();
+    }
+  }, [project?.paymentProcessor]);
 
 
   // Calculate totals
@@ -178,8 +192,8 @@ export default function PledgePage() {
     try {
       const result = await createAdditionalItemsAPI(existingPledgeId, selectedAddons, addItemsTotal);
 
-      // Chain2Pay and DivinityCoin don't return a clientSecret - payment is handled by their own buttons
-      if (result.paymentMethod === "CHAIN2PAY" || result.paymentMethod === "DIVINITYCOIN") {
+      // DivinityCoin doesn't return a clientSecret - payment is handled by its own buttons
+      if (result.paymentMethod === "DIVINITYCOIN") {
         setCurrentPledgeId(result.pledgeId);
         setIsProcessing(false);
         return;
@@ -215,11 +229,8 @@ export default function PledgePage() {
 
       setCurrentPledgeId(result.pledgeId);
 
-      if (result.paymentMethod === "DIVINITYCOIN" || result.paymentMethod === "CHAIN2PAY") {
-        setIsProcessing(false);
-        return;
-      }
-
+      // DivinityCoin now returns clientSecret (from DC's Stripe account)
+      // Stripe projects also return clientSecret (from IndieK's Stripe account)
       if (!result.clientSecret) {
         throw new Error("Invalid payment response - missing client secret");
       }
@@ -381,25 +392,6 @@ export default function PledgePage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  useEffect(() => {
-    const fetchDivinityCoinBalance = async () => {
-      if (project?.paymentProcessor === "DIVINITYCOIN") {
-        try {
-          const response = await fetch("/api/divinitycoin/redeem");
-          if (response.ok) {
-            const data = await response.json();
-            setDivinityCoinBalance(data.balance || 0);
-          }
-          setDivinityCoinReady(true);
-        } catch (err) {
-          console.error("Failed to fetch DivinityCoin balance:", err);
-          setDivinityCoinReady(true);
-        }
-      }
-    };
-    fetchDivinityCoinBalance();
-  }, [project?.paymentProcessor]);
 
   const handleAddonToggle = (addonId: string) => {
     setSelectedAddons((prev) => {
@@ -646,17 +638,15 @@ export default function PledgePage() {
                 setPaymentError={setPaymentError}
                 setClientSecret={setClientSecret}
                 setIsProcessing={setIsProcessing}
-                divinityCoinReady={divinityCoinReady}
-                divinityCoinBalance={divinityCoinBalance}
                 total={total}
                 agreedToTerms={agreedToTerms}
                 currentPledgeId={currentPledgeId}
                 handlePaymentSuccess={handlePaymentSuccess}
                 handlePaymentError={handlePaymentError}
                 isProcessing={isProcessing}
-                setDivinityCoinBalance={setDivinityCoinBalance}
                 clientSecret={clientSecret}
                 stripePromise={stripePromise}
+                dcStripePromise={dcStripePromise}
                 intentType={intentType}
                 projectPath={projectPath}
               />
@@ -666,16 +656,6 @@ export default function PledgePage() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-6 space-y-6">
-              {/* DivinityCoin Wallet - only shown for DivinityCoin projects */}
-              {project.paymentProcessor === "DIVINITYCOIN" && (
-                <DivinityCoinWallet
-                  balance={divinityCoinBalance}
-                  total={isAddItemsMode ? addItemsTotal : total}
-                  onBalanceUpdate={setDivinityCoinBalance}
-                  isLoading={!divinityCoinReady}
-                />
-              )}
-
               <OrderSummary
                 step={step}
                 isAddItemsMode={isAddItemsMode}

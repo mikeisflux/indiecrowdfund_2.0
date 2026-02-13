@@ -87,10 +87,6 @@ model User {
   emailLogs         EmailLog[]
   stripeConfig      StripeConfig?
   divinityCoinBankAccount DivinityCoinBankAccount?
-  chain2payBankAccount    Chain2PayBankAccount?
-  divinityCoinBalance Decimal @default(0) @db.Decimal(10, 2)
-  divinityCoinRedemptions DivinityCoinRedemption[]
-  divinityCoinTransactions DivinityCoinTransaction[]
   idVerifications   IDVerification[]
   notifications     Notification[]
   bugReports        BugReport[]
@@ -99,10 +95,6 @@ model User {
   backerNotes       BackerNote[]
   emailCampaignClicks EmailCampaignClick[]
   uploadedDigitalFiles DigitalFile[]
-  achievements      UserAchievement[]
-  redemptionBonusLedgers RedemptionBonusLedger[]
-  redemptionBonusApplications RedemptionBonusApplication[]
-
   // Backer dashboard enhancements
   savedAddresses    UserAddress[]
   projectCollections ProjectCollection[]
@@ -257,9 +249,6 @@ model Project {
   // Stripe
   stripeAccountId       String?
 
-  // Chain2Pay
-  chain2payWallet       String?  // Polygon USDC wallet address for Chain2Pay settlements
-
   // Promotion
   prelaunchActive       Boolean         @default(false)
   prelaunchStatus       PrelaunchStatus @default(DRAFT)
@@ -304,7 +293,6 @@ model Project {
   followers             ProjectFollower[]
   retailerPledges       RetailerPledge[]
   divinityCoinSettlements DivinityCoinSettlement[]
-  chain2paySettlements  Chain2PaySettlement[]
   digitalFiles          DigitalFile[]
   collectionItems       ProjectCollectionItem[]
   notificationPrefs     ProjectNotificationPreference[]
@@ -372,7 +360,6 @@ enum PrelaunchStatus {
 enum PaymentProcessor {
   STRIPE
   DIVINITYCOIN
-  CHAIN2PAY
 }
 
 // ============================================
@@ -511,11 +498,6 @@ model Pledge {
   // DivinityCoin fields
   divinityCoinPaymentId String?      @unique
 
-  // Chain2Pay fields
-  chain2payOrderId      String?      @unique
-  chain2payIpnToken     String?
-  chain2payTxHash       String?      // Polygon transaction hash (proof of payment)
-
   // Payment retry tracking
   retryCount            Int          @default(0)
   nextRetryAt           DateTime?
@@ -547,8 +529,6 @@ model Pledge {
   addons                PledgeAddon[]
   modifierAssignments   PledgeModifierAssignment[]
   emailLogs             EmailLog[]
-  divinityCoinTransactions DivinityCoinTransaction[]
-
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
   deletedAt             DateTime?    // Soft delete timestamp
@@ -938,121 +918,6 @@ enum DivinityCoinSettlementStatus {
   COMPLETED   // Successfully delivered
   FAILED      // Failed to process
   CANCELLED   // Cancelled by admin
-}
-
-// Chain2Pay bank account for creator payouts (same structure as DivinityCoin)
-model Chain2PayBankAccount {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-
-  // Encrypted bank details (AES-256 encrypted)
-  bankNameEncrypted     String   @db.Text
-  accountHolderEncrypted String  @db.Text
-  accountNumberEncrypted String  @db.Text
-  routingNumberEncrypted String  @db.Text
-
-  // Non-sensitive display data
-  bankNameDisplay       String?  // e.g., "Chase Bank"
-  accountLastFour       String?  // e.g., "4567"
-  accountType           String   @default("checking") // checking or savings
-
-  // Verification status
-  isVerified            Boolean  @default(false)
-  verifiedAt            DateTime?
-  verificationMethod    String?  // e.g., "micro_deposits", "instant"
-
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  settlements           Chain2PaySettlement[]
-
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  @@index([userId])
-}
-
-// Chain2Pay settlement tracking for admin payouts
-model Chain2PaySettlement {
-  id                    String   @id @default(cuid())
-  bankAccountId         String
-
-  // Settlement details
-  amount                Decimal  @db.Decimal(10, 2) // Amount in USD
-  currency              String   @default("USD")
-  status                Chain2PaySettlementStatus @default(PENDING)
-
-  // Project reference (optional - for project-specific settlements)
-  projectId             String?
-  projectName           String?  // Denormalized for history
-
-  // Chain2Pay reference
-  chain2payTxId         String?  @unique // Polygon transaction hash
-  chain2payBatchId      String?  // Batch ID if part of a batch settlement
-
-  // Processing details
-  initiatedAt           DateTime?
-  processedAt           DateTime?
-  completedAt           DateTime?
-  failedAt              DateTime?
-  failureReason         String?
-
-  // Admin notes
-  adminNotes            String?  @db.Text
-  processedBy           String?  // Admin user ID who processed it
-
-  bankAccount           Chain2PayBankAccount @relation(fields: [bankAccountId], references: [id])
-  project               Project? @relation(fields: [projectId], references: [id])
-
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  @@index([bankAccountId])
-  @@index([projectId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-enum Chain2PaySettlementStatus {
-  PENDING     // Awaiting processing
-  INITIATED   // Wire transfer initiated
-  PROCESSING  // In progress
-  COMPLETED   // Successfully delivered
-  FAILED      // Failed to process
-  CANCELLED   // Cancelled by admin
-}
-
-// DivinityCoin credit redemption tracking
-model DivinityCoinRedemption {
-  id              String   @id @default(cuid())
-  code            String   @unique // The redemption code
-  userId          String
-  amount          Decimal  @db.Decimal(10, 2) // Amount in USD
-  redeemedAt      DateTime @default(now())
-
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([code])
-}
-
-// DivinityCoin transaction history with audit logging
-model DivinityCoinTransaction {
-  id              String   @id @default(cuid())
-  userId          String
-  pledgeId        String?
-  amount          Decimal  @db.Decimal(10, 2) // Positive for credits, negative for payments
-  type            String   // REDEMPTION, PAYMENT, REFUND
-  description     String?
-  metadata        String?  @db.Text // JSON audit data: requestId, IP, previous/new balance, timestamps
-
-  createdAt       DateTime @default(now())
-
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pledge          Pledge?  @relation(fields: [pledgeId], references: [id])
-
-  @@index([userId])
-  @@index([pledgeId])
-  @@index([createdAt])
-  @@index([type])
 }
 
 // ============================================
@@ -1763,12 +1628,7 @@ model PlatformSettings {
   divinityCoinWebhookSecret String?
   divinityCoinPartnerId String?
   divinityCoinSettlementFrequency String @default("weekly")
-
-  // Chain2Pay Settings - Crypto payment processor (USDC on Polygon)
-  chain2payEnabled      Boolean  @default(false)
-  chain2payMerchantWallet String? // Platform Polygon USDC wallet address
-  chain2payDefaultProvider String @default("multihosted") // mercuryo, moonpay, revolut, wert, multihosted
-  chain2payCallbackBaseUrl String? // Base URL for webhooks
+  divinityCoinStripePublishableKey String?  // DC's Stripe publishable key for rendering card form
 
   // Payout Settings
   autoPayouts           Boolean  @default(false)
@@ -2888,86 +2748,6 @@ enum DistributionRuleStatus {
 }
 
 // ============================================
-// ACHIEVEMENT BADGES & REDEMPTION BONUSES
-// ============================================
-
-model UserAchievement {
-  id          String      @id @default(cuid())
-  userId      String
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  badgeType   BadgeType
-  earnedAt    DateTime    @default(now())
-
-  // Metadata about how badge was earned
-  metadata    Json?       // { projectId, pledgeId, etc }
-
-  @@unique([userId, badgeType])
-  @@index([userId])
-}
-
-enum BadgeType {
-  FIRST_PLEDGE                // First pledge ever
-  SUPER_BACKER_10            // Backed 10+ projects
-  SUPER_BACKER_25            // Backed 25+ projects
-  SUPER_BACKER_50            // Backed 50+ projects
-  EARLY_BIRD                 // Pledged within first 24 hours
-  STRETCH_GOAL_CONTRIBUTOR   // Contributed to reaching stretch goal
-  PREMIUM_SUPPORTER          // Pledged $500+ total
-  SURVEY_CHAMPION            // Completed 10+ surveys promptly
-  SURVEY_COMPLETIONIST       // Completed all pending surveys
-  REFERRAL_MASTER            // Referred 5+ successful backers
-  ANNIVERSARY_BACKER         // Active backer for 1+ year
-}
-
-// Monthly redemption bonus tracking with Decimal for precision
-model RedemptionBonusLedger {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Month tracking (first day of month)
-  month           DateTime
-
-  // Bonus calculation (using Decimal for financial precision)
-  totalBadges     Int      @default(0)
-  rawBonusPercent Decimal  @db.Decimal(10, 6)  // Sum of badge bonuses before cap (e.g., 0.000500 for 0.05%)
-  appliedBonusPercent Decimal @db.Decimal(10, 6)  // After 0.03% cap applied
-
-  // Usage tracking
-  redemptionCount Int      @default(0)
-  totalBonusApplied Decimal @default(0) @db.Decimal(10, 2)  // Total $ saved from bonus
-
-  applications    RedemptionBonusApplication[]
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@unique([userId, month])
-  @@index([userId, month])
-}
-
-// Track individual bonus applications to redemptions
-model RedemptionBonusApplication {
-  id                    String   @id @default(cuid())
-  userId                String
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  redemptionId          String   // Link to DivinityCoinRedemption
-  bonusLedgerId         String
-  bonusLedger           RedemptionBonusLedger @relation(fields: [bonusLedgerId], references: [id], onDelete: Cascade)
-
-  bonusPercentApplied   Decimal  @db.Decimal(10, 6)
-  bonusAmountSaved      Decimal  @db.Decimal(10, 2)  // Actual $ saved
-
-  appliedAt             DateTime @default(now())
-
-  @@index([userId])
-  @@index([bonusLedgerId])
-  @@index([redemptionId])
-}
-
-// ============================================
 // BACKER DASHBOARD ENHANCEMENTS
 // ============================================
 
@@ -3240,10 +3020,6 @@ model MarketplacePurchase {
 
   // DivinityCoin fields
   divinityCoinPaymentId String?  @unique
-
-  // Chain2Pay fields
-  chain2payOrderId      String?  @unique
-  chain2payTxHash       String?
 
   // Status
   status            MarketplacePurchaseStatus @default(PENDING)

@@ -970,7 +970,7 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
         backerName={backer.name}
         backerEmail={backer.email}
         totalPaid={backer.balance?.pledgeAmount || 0}
-        paymentProcessor={backer.paymentProcessor}
+        paymentProcessor={backer.paymentProcessor as "STRIPE" | "DIVINITYCOIN"}
         onRefundComplete={() => {
           onOpenChange(false); // Close backer dialog after refund
         }}

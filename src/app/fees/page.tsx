@@ -22,7 +22,6 @@ import {
   Coins,
   ExternalLink,
   ArrowLeft,
-  Wallet,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
 
@@ -56,24 +55,8 @@ const divinityCoinFeeBreakdown = [
   },
 ];
 
-const chain2PayFeeBreakdown = [
-  {
-    title: "Platform Fee",
-    rate: "3%",
-    description: "IndieCrowdfund platform fee on successfully funded campaigns",
-    details: "Covers hosting, tools, customer support, and platform services. Same platform fee as Stripe campaigns.",
-  },
-  {
-    title: "Processing Fee",
-    rate: "2.5%",
-    description: "Chain2Pay payment processing fee",
-    details: "Chain2Pay handles fiat-to-crypto conversion via Revolut/Unlimit and blockchain settlement on Polygon. Lower processing fee than traditional card processing.",
-  },
-];
-
 const comparisonData = [
-  { platform: "IndieCrowdfund (Chain2Pay)", platformFee: "3%", paymentFee: "2.5%", total: "~5.5%", highlight: true },
-  { platform: "IndieCrowdfund (Stripe)", platformFee: "3%", paymentFee: "2.9% + $0.30", total: "~6%", highlight: false },
+  { platform: "IndieCrowdfund (Stripe)", platformFee: "3%", paymentFee: "2.9% + $0.30", total: "~6%", highlight: true },
   { platform: "IndieCrowdfund (DivinityCoin)", platformFee: "3%", paymentFee: "6% partner", total: "~9%", highlight: false },
   { platform: "Kickstarter", platformFee: "5%", paymentFee: "3% + $0.20", total: "~8%", highlight: false },
   { platform: "Indiegogo", platformFee: "5%", paymentFee: "2.9% + $0.30", total: "~8%", highlight: false },
@@ -121,23 +104,6 @@ function calculateStripeFees(amount: number, averagePledge: number = 50) {
   };
 }
 
-// Calculate fees for Chain2Pay payments
-function calculateChain2PayFees(amount: number) {
-  const platformFee = amount * 0.03; // 3% platform fee
-  const processingFee = amount * 0.025; // 2.5% Chain2Pay processing fee
-  const totalFees = platformFee + processingFee;
-  const youReceive = amount - totalFees;
-  const feePercentage = (totalFees / amount) * 100;
-
-  return {
-    platformFee,
-    processingFee,
-    totalFees,
-    youReceive,
-    feePercentage,
-  };
-}
-
 // Calculate fees for DivinityCoin payments
 function calculateDivinityCoinFees(amount: number) {
   // DivinityCoin takes 6% total partner fee from the funds
@@ -161,12 +127,11 @@ function calculateDivinityCoinFees(amount: number) {
 
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]); // Default to $50,000
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "divinitycoin" | "chain2pay">("stripe");
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "divinitycoin">("stripe");
   const amount = sliderValue[0];
   const stripeFees = calculateStripeFees(amount);
   const divinityFees = calculateDivinityCoinFees(amount);
-  const chain2payFees = calculateChain2PayFees(amount);
-  const fees = paymentMethod === "stripe" ? stripeFees : paymentMethod === "chain2pay" ? chain2payFees : divinityFees;
+  const fees = paymentMethod === "stripe" ? stripeFees : divinityFees;
 
   return (
     <div className="relative min-h-screen bg-background overflow-hidden">
@@ -224,19 +189,15 @@ export default function FeesPage() {
               Payment Options
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-              We offer three payment solutions to best fit your needs
+              We offer two payment solutions to best fit your needs
             </p>
           </div>
 
-          <Tabs defaultValue="stripe" className="w-full" onValueChange={(v) => setPaymentMethod(v as "stripe" | "divinitycoin" | "chain2pay")}>
-            <TabsList className="grid w-full max-w-lg mx-auto grid-cols-3 mb-8">
+          <Tabs defaultValue="stripe" className="w-full" onValueChange={(v) => setPaymentMethod(v as "stripe" | "divinitycoin")}>
+            <TabsList className="grid w-full max-w-lg mx-auto grid-cols-2 mb-8">
               <TabsTrigger value="stripe" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 Stripe
-              </TabsTrigger>
-              <TabsTrigger value="chain2pay" className="flex items-center gap-2">
-                <Wallet className="h-4 w-4" />
-                Chain2Pay
               </TabsTrigger>
               <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
                 <Coins className="h-4 w-4" />
@@ -273,77 +234,6 @@ export default function FeesPage() {
                   <Calculator className="h-5 w-5 text-emerald-600" />
                   <span className="font-medium text-emerald-700 dark:text-emerald-400">
                     Total fees with Stripe: approximately 6% of funds raised
-                  </span>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="chain2pay">
-              <div className="grid gap-8 md:grid-cols-2 lg:max-w-4xl lg:mx-auto">
-                {chain2PayFeeBreakdown.map((fee, index) => (
-                  <Card
-                    key={fee.title}
-                    className="glass-card border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
-                    style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
-                  >
-                    <CardHeader className="text-center pb-2">
-                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg mb-4">
-                        <Wallet className="h-8 w-8 text-white" />
-                      </div>
-                      <CardTitle className="text-2xl">{fee.title}</CardTitle>
-                      <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mt-2">{fee.rate}</div>
-                      <CardDescription className="text-base mt-2">{fee.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground text-center">
-                        {fee.details}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Chain2Pay Info Box */}
-              <Card className="mt-8 lg:max-w-4xl lg:mx-auto border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                      <Wallet className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is Chain2Pay?</h3>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
-                        Chain2Pay is a fiat-to-crypto payment gateway that allows backers to pay with traditional payment methods
-                        while settlements are processed in USDC on the Polygon blockchain for fast, low-cost transfers.
-                      </p>
-                      <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows:</h4>
-                      <ol className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1 list-decimal list-inside mb-4">
-                        <li>Backer pledges $100 to your campaign</li>
-                        <li>Chain2Pay processes the fiat payment via Revolut or Unlimit</li>
-                        <li>Payment is converted to USDC and settled on Polygon</li>
-                        <li>Chain2Pay deducts 2.5% processing fee ($2.50)</li>
-                        <li>IndieCrowdfund deducts 3% platform fee ($3.00)</li>
-                        <li>You receive $94.50 via bank transfer</li>
-                      </ol>
-                      <a
-                        href="https://chain2pay.cloud/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        Learn more about Chain2Pay
-                        <ExternalLink className="ml-1 h-3 w-3" />
-                      </a>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="mt-8 text-center">
-                <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 dark:bg-blue-900/20 px-6 py-3">
-                  <Calculator className="h-5 w-5 text-blue-600" />
-                  <span className="font-medium text-blue-700 dark:text-blue-400">
-                    Total fees with Chain2Pay: approximately 5.5% of funds raised — our lowest rate
                   </span>
                 </div>
               </div>
@@ -452,17 +342,6 @@ export default function FeesPage() {
                     Stripe
                   </button>
                   <button
-                    onClick={() => setPaymentMethod("chain2pay")}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      paymentMethod === "chain2pay"
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                        : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400"
-                    }`}
-                  >
-                    <Wallet className="inline h-4 w-4 mr-1" />
-                    Chain2Pay
-                  </button>
-                  <button
                     onClick={() => setPaymentMethod("divinitycoin")}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                       paymentMethod === "divinitycoin"
@@ -505,7 +384,7 @@ export default function FeesPage() {
                 {/* Fee Breakdown */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-zinc-900 dark:text-white mb-4">
-                    Fee Breakdown ({paymentMethod === "stripe" ? "Stripe" : paymentMethod === "chain2pay" ? "Chain2Pay" : "DivinityCoin"})
+                    Fee Breakdown ({paymentMethod === "stripe" ? "Stripe" : "DivinityCoin"})
                   </h3>
 
                   <div className="flex justify-between py-2 border-b">
@@ -522,17 +401,6 @@ export default function FeesPage() {
                       <div className="flex justify-between py-2 border-b">
                         <span className="text-zinc-600 dark:text-zinc-400">Stripe processing (2.9% + $0.30)</span>
                         <span className="text-red-500">-${stripeFees.processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                    </>
-                  ) : paymentMethod === "chain2pay" ? (
-                    <>
-                      <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-zinc-400">Platform fee (3%)</span>
-                        <span className="text-red-500">-${chain2payFees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-zinc-400">Chain2Pay processing (2.5%)</span>
-                        <span className="text-red-500">-${chain2payFees.processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </>
                   ) : (
@@ -561,34 +429,26 @@ export default function FeesPage() {
                 <div className={`flex flex-col justify-center items-center rounded-xl p-8 ${
                   paymentMethod === "stripe"
                     ? "bg-emerald-50 dark:bg-emerald-900/20"
-                    : paymentMethod === "chain2pay"
-                      ? "bg-blue-50 dark:bg-blue-900/20"
-                      : "bg-purple-50 dark:bg-purple-900/20"
+                    : "bg-purple-50 dark:bg-purple-900/20"
                 }`}>
                   <span className={`text-sm font-medium mb-2 ${
                     paymentMethod === "stripe"
                       ? "text-emerald-600 dark:text-emerald-400"
-                      : paymentMethod === "chain2pay"
-                        ? "text-blue-600 dark:text-blue-400"
-                        : "text-purple-600 dark:text-purple-400"
+                      : "text-purple-600 dark:text-purple-400"
                   }`}>
                     You receive
                   </span>
                   <span className={`text-5xl font-bold ${
                     paymentMethod === "stripe"
                       ? "text-emerald-600 dark:text-emerald-400"
-                      : paymentMethod === "chain2pay"
-                        ? "text-blue-600 dark:text-blue-400"
-                        : "text-purple-600 dark:text-purple-400"
+                      : "text-purple-600 dark:text-purple-400"
                   }`}>
                     ${fees.youReceive.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </span>
                   <span className={`text-sm mt-2 ${
                     paymentMethod === "stripe"
                       ? "text-emerald-600/70 dark:text-emerald-400/70"
-                      : paymentMethod === "chain2pay"
-                        ? "text-blue-600/70 dark:text-blue-400/70"
-                        : "text-purple-600/70 dark:text-purple-400/70"
+                      : "text-purple-600/70 dark:text-purple-400/70"
                   }`}>
                     {((fees.youReceive / amount) * 100).toFixed(1)}% of funds raised
                   </span>
@@ -598,11 +458,7 @@ export default function FeesPage() {
               {/* Quick comparison */}
               <div className="mt-8 pt-8 border-t">
                 <h4 className="text-sm font-medium text-zinc-500 mb-4">Compare with other platforms at ${amount.toLocaleString()}</h4>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <div className="text-xs text-zinc-500 mb-1">IndieCrowdfund (Chain2Pay)</div>
-                    <div className="font-bold text-blue-600">${chain2payFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                  </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
                     <div className="text-xs text-zinc-500 mb-1">IndieCrowdfund (Stripe)</div>
                     <div className="font-bold text-emerald-600">${stripeFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
@@ -618,9 +474,9 @@ export default function FeesPage() {
                     </div>
                   </div>
                   <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <div className="text-xs text-zinc-500 mb-1">Your savings (Chain2Pay vs Kickstarter)</div>
+                    <div className="text-xs text-zinc-500 mb-1">Your savings (Stripe vs Kickstarter)</div>
                     <div className="font-bold text-green-600">
-                      +${(chain2payFees.youReceive - (amount * 0.92)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      +${(stripeFees.youReceive - (amount * 0.92)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>
                   </div>
                 </div>
@@ -721,17 +577,15 @@ export default function FeesPage() {
               </p>
             </div>
             <div className="rounded-lg border p-6">
-              <h3 className="font-semibold text-zinc-900 dark:text-white">What&apos;s the difference between Stripe, Chain2Pay, and DivinityCoin?</h3>
+              <h3 className="font-semibold text-zinc-900 dark:text-white">What&apos;s the difference between Stripe and DivinityCoin?</h3>
               <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-                Stripe is traditional credit card processing (~6% total). Chain2Pay is a fiat-to-crypto gateway with our lowest fees (~5.5% — 3% platform + 2.5% processing) — backers pay normally,
-                but settlements are processed via USDC on Polygon. DivinityCoin is a prepaid credit system (~9%) that offers cross-platform purchasing power for backers.
+                Stripe is traditional credit card processing (~6% total). DivinityCoin is a prepaid credit system (~9%) that offers cross-platform purchasing power for backers.
               </p>
             </div>
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold text-zinc-900 dark:text-white">How quickly will I receive my funds?</h3>
               <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-                For Stripe payments, funds are typically transferred within 14 business days. For Chain2Pay, settlements are processed in USDC and converted to bank transfers
-                within 14 business days. For DivinityCoin, settlements occur weekly or monthly based on your settings.
+                For Stripe payments, funds are typically transferred within 14 business days. For DivinityCoin, settlements occur weekly or monthly based on your settings.
               </p>
             </div>
           </div>

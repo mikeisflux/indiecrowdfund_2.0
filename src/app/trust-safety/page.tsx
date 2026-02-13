@@ -392,7 +392,7 @@ export default function TrustSafetyPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
-                    Creators must connect a valid payment account (which requires identity verification), provide contact information, and pass our project review process. We support three PCI-compliant payment processors — Stripe (Level 1 PCI), Chain2Pay (SAQ A PCI, redirect-based checkout), and DivinityCoin (prepaid credits). All payment data is encrypted and we never store credit card numbers on our servers. We also check for patterns that might indicate fraud. Verified creators display a badge on their profile.
+                    Creators must connect a valid payment account (which requires identity verification), provide contact information, and pass our project review process. We support two PCI-compliant payment processors — Stripe (Level 1 PCI) and DivinityCoin. All payment data is encrypted and we never store credit card numbers on our servers. We also check for patterns that might indicate fraud. Verified creators display a badge on their profile.
                   </p>
                 </CardContent>
               </Card>

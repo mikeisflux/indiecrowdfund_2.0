@@ -63,7 +63,7 @@ export async function POST(
     const pendingItems = metadata?.pendingAdditionalItems;
 
     if (!pendingItems) {
-      // For Chain2Pay/DivinityCoin, items may already be processed by webhook/pay endpoint
+      // For DivinityCoin, items may already be processed by webhook/pay endpoint
       // Return success if no pending items remain
       return NextResponse.json({
         success: true,
@@ -86,7 +86,7 @@ export async function POST(
     const quantityMap = new Map(addonsWithQuantity.map(a => [a.id, a.quantity]));
 
     // For Stripe: verify payment via PaymentIntent
-    // For Chain2Pay/DivinityCoin: payment was already verified by webhook/pay endpoint
+    // For DivinityCoin: payment was already verified by webhook/pay endpoint
     const paymentMethod = pendingItems.paymentMethod || "STRIPE";
 
     if (paymentMethod === "STRIPE") {

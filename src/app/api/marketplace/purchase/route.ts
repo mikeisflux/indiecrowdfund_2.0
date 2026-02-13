@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
-import { notifyMarketplacePurchase, notifyMarketplaceSale } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -77,95 +76,6 @@ export async function POST(request: Request) {
         status: "PENDING",
       },
     });
-
-    // If using DivinityCoin, handle the payment immediately
-    if (paymentMethod === "divinitycoin") {
-      // Check user's DivinityCoin balance
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { divinityCoinBalance: true },
-      });
-
-      const bookPrice = Number(book.price);
-      const userBalance = user?.divinityCoinBalance || 0;
-
-      if (userBalance < bookPrice) {
-        // Delete the pending purchase
-        await prisma.marketplacePurchase.delete({
-          where: { id: purchase.id },
-        });
-        return NextResponse.json(
-          { error: "Insufficient DivinityCoin balance" },
-          { status: 400 }
-        );
-      }
-
-      // Calculate platform fee (3%) and creator payout (97%)
-      const platformFee = Math.round(bookPrice * 0.03 * 100) / 100; // Round to 2 decimal places
-      const creatorPayout = Math.round((bookPrice - platformFee) * 100) / 100;
-
-      // Deduct from buyer's balance
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: {
-          divinityCoinBalance: { decrement: bookPrice },
-        },
-      });
-
-      // Credit creator's DivinityCoin balance (97%)
-      await prisma.user.update({
-        where: { id: book.creator.id },
-        data: {
-          divinityCoinBalance: { increment: creatorPayout },
-        },
-      });
-
-      // Complete the purchase with fee details
-      const completedPurchase = await prisma.marketplacePurchase.update({
-        where: { id: purchase.id },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date(),
-          deliveredAt: new Date(),
-          divinityCoinPaymentId: `dc_${Date.now()}_${purchase.id}`,
-          platformFee,
-          creatorPayout,
-        },
-      });
-
-      // Update book purchase count
-      await prisma.marketplaceBook.update({
-        where: { id: bookId },
-        data: {
-          purchaseCount: { increment: 1 },
-        },
-      });
-
-      // Update company total sales if applicable
-      if (book.companyId) {
-        await prisma.companyProfile.update({
-          where: { id: book.companyId },
-          data: {
-            totalSales: { increment: 1 },
-          },
-        });
-      }
-
-      // Send notifications (don't await to avoid blocking the response)
-      notifyMarketplacePurchase(completedPurchase.id, "DIVINITYCOIN").catch((err) =>
-        console.error(`[MarketplacePurchase] Failed to notify purchase ${completedPurchase.id}:`, err)
-      );
-      notifyMarketplaceSale(completedPurchase.id, "DIVINITYCOIN").catch((err) =>
-        console.error(`[MarketplacePurchase] Failed to notify sale ${completedPurchase.id}:`, err)
-      );
-
-      return NextResponse.json({
-        success: true,
-        purchase: completedPurchase,
-        message: "Purchase completed! Your book has been delivered to your Digital Library.",
-        redirectUrl: "/dashboard/backer?tab=digital-library",
-      });
-    }
 
     // For Stripe payments, create a payment intent
     // This would integrate with Stripe's API

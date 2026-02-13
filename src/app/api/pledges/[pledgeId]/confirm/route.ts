@@ -220,7 +220,7 @@ export async function POST(
         projectUrlPath,
         Number(pledge.rewardAmount) || undefined,
         Number(pledge.shippingAmount) || undefined,
-        pledge.paymentProcessor as "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY"
+        pledge.paymentProcessor as "STRIPE" | "DIVINITYCOIN"
       );
       emailSent = emailResult.success;
 

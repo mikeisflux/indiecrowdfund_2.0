@@ -40,7 +40,7 @@ interface RefundDialogProps {
   backerName: string;
   backerEmail: string;
   totalPaid: number;
-  paymentProcessor?: "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY";
+  paymentProcessor?: "STRIPE" | "DIVINITYCOIN";
   onRefundComplete?: () => void;
 }
 
@@ -74,7 +74,6 @@ export function RefundDialog({
 
   const refundAmount = refundType === "full" ? totalPaid : parseFloat(amount) || 0;
   const isDivinityCoin = paymentProcessor === "DIVINITYCOIN";
-  const isChain2Pay = paymentProcessor === "CHAIN2PAY";
 
   const handleRefund = async () => {
     if (refundAmount <= 0) {
@@ -114,8 +113,6 @@ export function RefundDialog({
 
       if (isDivinityCoin) {
         toast.success(`$${refundAmount.toFixed(2)} refunded to backer's DivinityCoin wallet`);
-      } else if (isChain2Pay) {
-        toast.success(`$${refundAmount.toFixed(2)} refund initiated via Chain2Pay`);
       } else {
         toast.success(`$${refundAmount.toFixed(2)} refunded to backer's card`);
       }
@@ -151,7 +148,7 @@ export function RefundDialog({
             <div className="flex items-center justify-between mt-2">
               <span>Total Paid: <span className="font-medium">${totalPaid.toFixed(2)}</span></span>
               <Badge variant="outline" className="flex items-center gap-1">
-                {isDivinityCoin || isChain2Pay ? (
+                {isDivinityCoin ? (
                   <>
                     <Wallet className="h-3 w-3" />
                     DivinityCoin
@@ -260,8 +257,6 @@ export function RefundDialog({
             <p className="text-amber-800 dark:text-amber-200">
               {isDivinityCoin
                 ? "This action cannot be undone. The refund will be credited to the backer's DivinityCoin wallet."
-                : isChain2Pay
-                ? "This action cannot be undone. The refund will be processed via Chain2Pay."
                 : "This action cannot be undone. The refund will be processed to the original card on file."}
             </p>
           </div>

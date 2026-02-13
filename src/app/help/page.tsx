@@ -60,9 +60,9 @@ const categories = [
     color: "from-emerald-500 to-teal-500",
     articles: [
       "How fees are calculated",
-      "Stripe vs Chain2Pay vs DivinityCoin payments",
+      "Stripe vs DivinityCoin payments",
       "When funds are released",
-      "Accepted payment methods (Card, Chain2Pay, DivinityCoin)",
+      "Accepted payment methods (Card, DivinityCoin)",
     ],
     href: "/fees",
   },

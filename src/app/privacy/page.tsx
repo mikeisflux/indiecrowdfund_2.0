@@ -30,7 +30,7 @@ const sections = [
         subtitle: "Information You Provide",
         items: [
           "Account information: name, email address, password, profile picture",
-          "Payment information: processed securely through Stripe, Chain2Pay, or DivinityCoin (we never store card numbers)",
+          "Payment information: processed securely through Stripe or DivinityCoin (we never store card numbers)",
           "Project information: descriptions, images, videos, rewards, and updates you create",
           "Communication data: messages, comments, and support requests",
           "Shipping addresses for reward fulfillment",
@@ -101,7 +101,7 @@ const sections = [
       {
         subtitle: "With Service Providers",
         items: [
-          "Payment processors (Stripe, Chain2Pay, DivinityCoin) for secure transaction handling",
+          "Payment processors (Stripe, DivinityCoin) for secure transaction handling",
           "Cloud hosting and infrastructure providers",
           "Analytics services to help us understand usage",
           "Email service providers for communications",
@@ -128,7 +128,7 @@ const sections = [
         subtitle: "How We Protect Your Data",
         items: [
           "All data transmitted using TLS/SSL encryption",
-          "Payment information processed through PCI-DSS compliant systems (Stripe Level 1, Chain2Pay SAQ A)",
+          "Payment information processed through PCI-DSS compliant systems (Stripe Level 1)",
           "Regular security audits and vulnerability assessments",
           "Access controls and authentication requirements",
           "Secure data centers with physical security measures",

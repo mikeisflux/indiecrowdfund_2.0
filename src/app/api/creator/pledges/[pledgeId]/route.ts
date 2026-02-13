@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
+import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { sendEmail } from "@/lib/email";
 
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export const dynamic = "force-dynamic";
@@ -201,43 +201,43 @@ export async function PATCH(
 
       // Handle based on payment processor
       if (typedPledge.paymentProcessor === "DIVINITYCOIN") {
-        // DivinityCoin refund - credit back to user's wallet
+        // DivinityCoin refund - call DC API to process Stripe refund on their end
         try {
           const refundAmount = Number(typedPledge.amount);
-          const userId = typedPledge.user.id;
 
-          // Get current balance
-          const user = await db.user.findUnique({
-            where: { id: userId },
-            select: { divinityCoinBalance: true },
+          // Call DC's refund API - this processes the Stripe refund on DC's account
+          const dcResult = await callDivinityCoinAPI("refund", {
+            pledgeId: typedPledge.id,
+            paymentId: typedPledge.divinityCoinPaymentId,
+            amount: Math.round(refundAmount * 100), // cents
+            reason: reason || "Refunded by creator",
+            requestedBy: "creator",
           });
 
-          const previousBalance = Number(user?.divinityCoinBalance || 0);
-          const newBalance = previousBalance + refundAmount;
+          if (!dcResult.success) {
+            console.error(`[DivinityCoin Refund] DC API refund failed for pledge ${pledgeId}:`, dcResult.error);
+            return NextResponse.json(
+              { error: dcResult.error || "DivinityCoin refund failed" },
+              { status: 400 }
+            );
+          }
 
-          // Process refund in a transaction
+          // Update pledge and project in a transaction
           await db.$transaction(async (tx) => {
-            // Credit user's balance
-            await tx.user.update({
-              where: { id: userId },
-              data: { divinityCoinBalance: newBalance },
-            });
-
             // Create refund transaction record
             await tx.divinityCoinTransaction.create({
               data: {
-                userId,
+                userId: typedPledge.user.id,
                 pledgeId: typedPledge.id,
-                amount: refundAmount, // Positive because it's a credit back
+                amount: -refundAmount,
                 type: "REFUND",
                 description: `Refund for pledge on "${typedPledge.project.title}"`,
                 metadata: JSON.stringify({
                   creatorUserId: session.user.id,
                   reason: reason || "Refunded by creator",
-                  previousBalance,
-                  newBalance,
                   projectId: typedPledge.projectId,
                   divinityCoinPaymentId: typedPledge.divinityCoinPaymentId,
+                  dcRefundResult: dcResult.data,
                   processedAt: new Date().toISOString(),
                 }),
               },
@@ -262,7 +262,7 @@ export async function PATCH(
             });
           });
 
-          console.log(`[DivinityCoin Refund] Processed refund for pledge ${pledgeId}. User ${userId}: ${previousBalance} -> ${newBalance}`);
+          console.log(`[DivinityCoin Refund] Processed refund for pledge ${pledgeId} via DC API`);
 
           // Send refund notification email to backer
           if (typedPledge.user.email) {
@@ -277,13 +277,12 @@ export async function PATCH(
                     <p>Your refund for <strong>${typedPledge.project.title}</strong> has been successfully processed.</p>
                     <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
                       <p style="margin: 0 0 8px 0;"><strong>Refund Amount:</strong> $${refundAmount.toFixed(2)}</p>
-                      <p style="margin: 0 0 8px 0;"><strong>Refunded To:</strong> DivinityCoin Wallet</p>
-                      <p style="margin: 0;"><strong>New Wallet Balance:</strong> $${newBalance.toFixed(2)}</p>
+                      <p style="margin: 0;"><strong>Refunded To:</strong> Original payment method (credit/debit card)</p>
                     </div>
                     ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
-                    <p>You can use your DivinityCoin balance to back other projects on ${APP_NAME}.</p>
+                    <p>Please allow 5-10 business days for the refund to appear on your statement.</p>
                     <p style="margin-top: 20px;">
-                      <a href="${APP_URL}/dashboard/backer?tab=wallet" style="background: #0066FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View Your Wallet</a>
+                      <a href="${APP_URL}/dashboard/backer" style="background: #0066FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View Your Dashboard</a>
                     </p>
                     <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
                       If you have any questions, please contact the project creator or our support team.
@@ -300,8 +299,8 @@ export async function PATCH(
 
           return NextResponse.json({
             success: true,
-            message: "DivinityCoin refunded to backer's wallet successfully",
-            refundedTo: "wallet",
+            message: "Refund processed successfully via DivinityCoin",
+            refundedTo: "card",
             amount: refundAmount,
           });
         } catch (divinityError) {

@@ -13,10 +13,10 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    // Fetch user info including DivinityCoin balance
+    // Fetch user info
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { name: true, divinityCoinBalance: true },
+      select: { name: true },
     });
 
     // Fetch all backer data in parallel
@@ -328,7 +328,6 @@ export async function GET() {
     return NextResponse.json({
       user: {
         name: user?.name || null,
-        divinityCoinBalance: Number(user?.divinityCoinBalance || 0),
       },
       backedProjects,
       savedProjects: processedSavedProjects,

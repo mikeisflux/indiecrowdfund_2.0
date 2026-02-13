@@ -998,7 +998,7 @@ export async function sendPledgeConfirmationEmail(
   projectUrlPath?: string,
   rewardAmount?: number,
   shippingAmount?: number,
-  paymentMethod?: "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY"
+  paymentMethod?: "STRIPE" | "DIVINITYCOIN"
 ) {
   // Use provided projectUrlPath if available (for vanity URLs), otherwise fallback to legacy format
   const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/projects/${projectSlug}`;
@@ -1030,7 +1030,7 @@ export async function sendPledgeConfirmationEmail(
   `).join("") : "";
 
   // Payment method label
-  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : paymentMethod === "CHAIN2PAY" ? "Chain2Pay" : "Card";
+  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : "Card";
 
   // Build shipping HTML
   const hasShipping = shippingInfo && (shippingInfo.address || shippingInfo.city || shippingInfo.country);

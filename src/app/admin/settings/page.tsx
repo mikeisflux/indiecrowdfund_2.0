@@ -52,6 +52,7 @@ interface PlatformSettings {
   divinityCoinWebhookSecret: string | null;
   divinityCoinPartnerId: string | null;
   divinityCoinSettlementFrequency: string;
+  divinityCoinStripePublishableKey: string | null;
   emailProvider: string;
   smtpHost: string | null;
   smtpPort: number;
@@ -189,11 +190,7 @@ export default function SettingsPage() {
     divinityCoinWebhookSecret: "",
     divinityCoinPartnerId: "",
     divinityCoinSettlementFrequency: "weekly",
-    // Chain2Pay settings
-    chain2payEnabled: false,
-    chain2payMerchantWallet: "",
-    chain2payDefaultProvider: "multihosted",
-    chain2payCallbackBaseUrl: "",
+    divinityCoinStripePublishableKey: "",
     // reCAPTCHA settings
     recaptchaEnabled: false,
     recaptchaSiteKey: "",
@@ -373,14 +370,7 @@ export default function SettingsPage() {
         divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret || "",
         divinityCoinPartnerId: settings.divinityCoinPartnerId || "",
         divinityCoinSettlementFrequency: settings.divinityCoinSettlementFrequency || "weekly",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        chain2payEnabled: (settings as any).chain2payEnabled || false,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        chain2payMerchantWallet: (settings as any).chain2payMerchantWallet || "",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        chain2payDefaultProvider: (settings as any).chain2payDefaultProvider || "multihosted",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        chain2payCallbackBaseUrl: (settings as any).chain2payCallbackBaseUrl || "",
+        divinityCoinStripePublishableKey: settings.divinityCoinStripePublishableKey || "",
         autoPayouts: settings.autoPayouts || false,
         recaptchaEnabled: settings.recaptchaEnabled || false,
         recaptchaSiteKey: settings.recaptchaSiteKey || "",
@@ -644,10 +634,7 @@ export default function SettingsPage() {
             divinityCoinWebhookSecret: currentPaymentSettings.divinityCoinWebhookSecret,
             divinityCoinPartnerId: currentPaymentSettings.divinityCoinPartnerId,
             divinityCoinSettlementFrequency: currentPaymentSettings.divinityCoinSettlementFrequency,
-            chain2payEnabled: currentPaymentSettings.chain2payEnabled,
-            chain2payMerchantWallet: currentPaymentSettings.chain2payMerchantWallet,
-            chain2payDefaultProvider: currentPaymentSettings.chain2payDefaultProvider,
-            chain2payCallbackBaseUrl: currentPaymentSettings.chain2payCallbackBaseUrl,
+            divinityCoinStripePublishableKey: currentPaymentSettings.divinityCoinStripePublishableKey,
             autoPayouts: currentPaymentSettings.autoPayouts,
             recaptchaEnabled: currentPaymentSettings.recaptchaEnabled,
             recaptchaSiteKey: currentPaymentSettings.recaptchaSiteKey,

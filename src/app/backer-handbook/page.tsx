@@ -6,7 +6,6 @@ import {
   Heart,
   CreditCard,
   Coins,
-  Wallet,
   Gift,
   Package,
   Info,
@@ -22,7 +21,6 @@ const tabs = [
   { id: 'discover', label: 'Finding Projects', icon: Search },
   { id: 'backing', label: 'Making a Pledge', icon: Heart },
   { id: 'stripe', label: 'Paying with Card', icon: CreditCard },
-  { id: 'chain2pay', label: 'Chain2Pay', icon: Wallet },
   { id: 'divinitycoin', label: 'DivinityCoin', icon: Coins },
   { id: 'rewards', label: 'Rewards & Add-ons', icon: Gift },
   { id: 'after', label: 'After You Pledge', icon: Package },
@@ -71,19 +69,6 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
       { title: 'Confirm Your Pledge', description: 'Click "Pledge" to submit. You\'ll see confirmation and receive an email.', tip: 'Save your confirmation email.' },
       { title: 'What Happens at Campaign End', description: 'If successful, card is charged automatically. If not, nothing happens.', tip: 'Ensure sufficient funds when campaign ends.' },
       { title: 'Already-Funded Campaigns', description: 'If a campaign already reached its goal, your card is charged immediately.', tip: 'Immediate charges are clearly indicated before you confirm.' },
-    ]
-  },
-  'chain2pay': {
-    title: 'Paying with Chain2Pay',
-    description: 'A secure, low-fee payment option using redirect-based checkout.',
-    alert: { icon: Shield, title: 'SAQ A PCI Compliant — Maximum Security', text: 'Chain2Pay uses a redirect-based checkout. You enter your card details on Chain2Pay\'s hosted payment page — IndieCrowdfund never sees or handles your card data. This is the lowest PCI burden level (SAQ A), ensuring maximum security.', color: 'emerald' },
-    steps: [
-      { title: 'What is Chain2Pay?', description: 'Chain2Pay is a secure payment processor that accepts standard credit/debit cards. You pay in USD like normal — behind the scenes, Chain2Pay converts to USDC on Polygon for settlement, but you don\'t need any crypto knowledge or wallet.', tip: 'Chain2Pay offers creators lower total fees (~5.5%) compared to Stripe (~6%).' },
-      { title: 'Check Project Accepts Chain2Pay', description: 'Look for the "Chain2Pay" payment option on the project page. The creator chooses which processor to use.', tip: 'Projects with Chain2Pay often have lower fees passed on as savings.' },
-      { title: 'Secure Redirect Checkout', description: 'When you pledge, you\'re redirected to Chain2Pay\'s secure hosted checkout page. Enter your card details there — IndieCrowdfund never touches your card information.', tip: 'Look for the HTTPS lock icon on Chain2Pay\'s checkout page.' },
-      { title: 'CSRF & HTTPS Protection', description: 'Every payment initiation includes CSRF protection tokens. All communication between IndieCrowdfund and Chain2Pay is HTTPS-only, ensuring your data is encrypted in transit.', tip: 'These security measures happen automatically — no action needed from you.' },
-      { title: 'Payment Confirmation', description: 'After successful payment on Chain2Pay\'s page, you\'re redirected back to IndieCrowdfund with a confirmation. You\'ll receive an email receipt.', tip: 'Save your confirmation email for your records.' },
-      { title: 'Refunds for Failed Projects', description: 'If a campaign fails to reach its goal, your payment is refunded. Chain2Pay refunds are processed back to your original payment method.', tip: 'Refund processing times depend on your bank — typically 5-10 business days.' },
     ]
   },
   'divinitycoin': {

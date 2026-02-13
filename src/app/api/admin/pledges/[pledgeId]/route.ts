@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
+import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { sendPledgeConfirmationEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -104,7 +105,10 @@ export async function GET(
           quantity: a.quantity,
         })),
         canCancel: pledge.status === "PENDING",
-        canRefund: pledge.status === "COMPLETED" && !!pledge.stripePaymentIntentId,
+        canRefund: pledge.status === "COMPLETED" && (
+          !!pledge.stripePaymentIntentId ||
+          pledge.paymentProcessor === "DIVINITYCOIN"
+        ),
         isFunded,
       },
     });
@@ -282,6 +286,77 @@ export async function PATCH(
         );
       }
 
+      if (pledge.paymentProcessor === "DIVINITYCOIN") {
+        // DivinityCoin refund - call DC API to process Stripe refund on their end
+        try {
+          const refundAmount = Number(pledge.amount);
+
+          const dcResult = await callDivinityCoinAPI("refund", {
+            pledgeId: pledge.id,
+            paymentId: pledge.divinityCoinPaymentId,
+            amount: Math.round(refundAmount * 100), // cents
+            reason: reason || "Refunded by admin",
+            requestedBy: "admin",
+          });
+
+          if (!dcResult.success) {
+            console.error(`[Admin DivinityCoin Refund] DC API refund failed for pledge ${pledgeId}:`, dcResult.error);
+            return NextResponse.json(
+              { error: dcResult.error || "DivinityCoin refund failed" },
+              { status: 400 }
+            );
+          }
+
+          // Update pledge and project
+          await db.$transaction(async (tx) => {
+            await tx.divinityCoinTransaction.create({
+              data: {
+                userId: pledge.user.id,
+                pledgeId: pledge.id,
+                amount: -refundAmount,
+                type: "REFUND",
+                description: `Refund for pledge on "${pledge.project.title}" (admin)`,
+                metadata: JSON.stringify({
+                  adminUserId: session.user.id,
+                  reason: reason || "Refunded by admin",
+                  divinityCoinPaymentId: pledge.divinityCoinPaymentId,
+                  dcRefundResult: dcResult.data,
+                  processedAt: new Date().toISOString(),
+                }),
+              },
+            });
+
+            await tx.pledge.update({
+              where: { id: pledgeId },
+              data: {
+                status: "REFUNDED",
+                lastFailureReason: reason || "Refunded by admin",
+              },
+            });
+
+            await tx.project.update({
+              where: { id: pledge.projectId },
+              data: {
+                backerCount: { decrement: 1 },
+                currentAmount: { decrement: pledge.amount },
+              },
+            });
+          });
+
+          return NextResponse.json({
+            success: true,
+            message: "DivinityCoin refund processed successfully",
+          });
+        } catch (dcError) {
+          console.error("DivinityCoin admin refund error:", dcError);
+          return NextResponse.json(
+            { error: "Failed to process DivinityCoin refund" },
+            { status: 500 }
+          );
+        }
+      }
+
+      // Stripe refund
       if (!pledge.stripePaymentIntentId) {
         return NextResponse.json(
           { error: "No payment found to refund" },
