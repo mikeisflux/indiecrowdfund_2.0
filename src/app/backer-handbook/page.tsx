@@ -73,15 +73,15 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
   },
   'divinitycoin': {
     title: 'Paying with DivinityCoin',
-    description: 'Using DivinityCoin gift cards for pledges - like a store gift card, not crypto.',
-    alert: { icon: Coins, title: 'Gift Card System (Not Cryptocurrency)', text: '1 DivinityCoin = $1 USD, always. No crypto wallet needed - balance stored in your account. Refunds within 30 days at divinitycoin.com/dashboard.', color: 'amber' },
+    description: 'DivinityCoin is an alternative payment processor - pay with your credit or debit card, processed through DivinityCoin\'s secure system.',
+    alert: { icon: Coins, title: 'Seamless Card Payment (Not Cryptocurrency)', text: 'DivinityCoin is a payment sub-processor, not a cryptocurrency. Enter your card details at checkout and payment is handled securely through DivinityCoin\'s certified payment system. Supports all content types including NSFW/adult projects.', color: 'amber' },
     steps: [
-      { title: 'What is DivinityCoin?', description: 'A gift card system, NOT cryptocurrency. 1 coin = $1 USD. Simply platform credit.', tip: 'Learn more at our "What is DivinityCoin?" page.' },
-      { title: 'Getting DivinityCoin', description: 'Purchase from DivinityCoin.com, receive as rewards, or get refunds from cancelled projects.', tip: 'Redeem cards by entering your code in your account.' },
-      { title: 'Check Project Accepts DivinityCoin', description: 'Look for the "Accepts DivinityCoin" badge on project pages.', tip: 'Most projects accept it, but it\'s the creator\'s choice.' },
-      { title: 'Using at Checkout', description: 'Select "Pay with DivinityCoin." Use all or part of your balance.', tip: 'Check your balance anytime in your dashboard.' },
-      { title: 'Instant Balance Deduction', description: 'Unlike cards, DivinityCoin is deducted immediately when you pledge.', tip: 'Your confirmation shows exactly how much was used.' },
-      { title: 'Refunds for Failed Projects', description: 'If campaign fails, DivinityCoin is automatically returned to your wallet.', tip: 'Check transaction history for refund credits.' },
+      { title: 'What is DivinityCoin?', description: 'DivinityCoin is an alternative payment sub-processor used by some creators on IndieCrowdfund. It is NOT a cryptocurrency or wallet system. When a creator uses DivinityCoin, you simply pay with your credit or debit card at checkout.', tip: 'Learn more at our "What is DivinityCoin?" page.' },
+      { title: 'How It Works', description: 'At checkout, you\'ll see a secure card payment form. Enter your card details (Visa, Mastercard, Amex, Discover) and complete your pledge. DivinityCoin handles the payment processing behind the scenes.', tip: 'You\'ll see card brand logos (Visa, Mastercard, etc.) confirming accepted card types.' },
+      { title: 'Check if Project Uses DivinityCoin', description: 'Some creators choose DivinityCoin as their payment processor. You\'ll see the DivinityCoin indicator on the project page and at checkout.', tip: 'Creators choose their processor based on their needs - some content types require DivinityCoin.' },
+      { title: 'Secure Payment', description: 'Your card details are entered directly into a PCI-compliant payment form. IndieCrowdfund never sees or stores your card information. The payment is encrypted end-to-end.', tip: 'Look for the lock icon and "Secure Payment" header with card brand logos.' },
+      { title: 'Immediate Charge for Funded Projects', description: 'For campaigns that have already reached their goal, your card is charged immediately through DivinityCoin. For campaigns still in progress, charges may be held until the campaign funds.', tip: 'You\'ll see clear messaging about when you\'ll be charged before confirming.' },
+      { title: 'Refunds', description: 'If a campaign fails or your pledge is refunded, the refund is processed back to your original payment method through DivinityCoin.', tip: 'Refund processing times depend on your card issuer, typically 5-10 business days.' },
     ]
   },
   'rewards': {
@@ -115,7 +115,7 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
       { title: 'What is the Marketplace?', description: 'A storefront for completed digital works. Immediate purchase and instant download.', tip: 'Perfect for supporting creators and getting content right away.' },
       { title: 'Browsing', description: 'Explore Featured titles, Staff Picks, or all works. Use search for specific titles.', tip: 'Check out Staff Picks for hand-curated recommendations.' },
       { title: 'Understanding Pricing', description: 'Fixed prices in USD set by creators. You\'re directly supporting them.', tip: 'Digital often costs less than physical - no printing or shipping.' },
-      { title: 'Making a Purchase', description: 'Click "Purchase" to checkout. Pay with card via Stripe. Charged immediately.', tip: 'Unlike pledges, marketplace purchases are instant.' },
+      { title: 'Making a Purchase', description: 'Click "Purchase" to checkout. Pay with card via Stripe or DivinityCoin depending on the creator\'s chosen processor. Charged immediately.', tip: 'Unlike pledges, marketplace purchases are instant.' },
       { title: 'Your Digital Library', description: 'Purchases added to your Digital Library in your dashboard. Access anytime.', tip: 'Bookmark your Digital Library for quick access.' },
       { title: 'Reading and Downloads', description: 'Read in browser or download as PDF for offline reading.', tip: 'Downloaded files are yours to keep. Back them up!' },
     ]
@@ -124,7 +124,7 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
     title: 'Frequently Asked Questions',
     description: 'Common questions about backing projects.',
     steps: [
-      { title: 'What if project doesn\'t reach its goal?', description: 'No money changes hands. Your card is never charged. If you used DivinityCoin, you get a refund.', tip: 'All-or-nothing funding protects you.' },
+      { title: 'What if project doesn\'t reach its goal?', description: 'No money changes hands. Your card is never charged, regardless of whether the project uses Stripe or DivinityCoin.', tip: 'All-or-nothing funding protects you.' },
       { title: 'Can I get a refund after pledging?', description: 'Before campaign ends, cancel anytime in your dashboard. After, contact the creator directly.', tip: 'Refund policies are set by each creator.' },
       { title: 'Is my payment information secure?', description: 'Yes! Stripe processes all payments with PCI-DSS Level 1 certification. We never store full card numbers.', tip: 'Look for the Stripe badge for security.' },
       { title: 'What if my card is declined?', description: 'We retry automatically 3 times over 9 days. You\'ll get emails to update your card details.', tip: 'Keep card info updated to avoid failed payments.' },

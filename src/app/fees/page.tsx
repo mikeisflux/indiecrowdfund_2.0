@@ -45,13 +45,13 @@ const divinityCoinFeeBreakdown = [
     title: "DivinityCoin Partner Fee",
     rate: "6%",
     description: "Total fee deducted at settlement",
-    details: "Includes all processing fees (~2.9% + $0.30 Stripe + ~2.8% DivinityCoin platform). Credits are purchased in advance by backers.",
+    details: "Includes all payment processing fees handled by DivinityCoin. This covers secure card processing and compliance infrastructure.",
   },
   {
     title: "IndieCrowdfund Platform Fee",
     rate: "3%",
     description: "Deducted from creator payouts",
-    details: "Applied when we pay out your earnings from settled DivinityCoin credits. Creators receive ~91% of backer contributions.",
+    details: "Applied when we pay out your earnings from DivinityCoin settlements. Creators receive ~91% of backer contributions.",
   },
 ];
 
@@ -274,15 +274,15 @@ export default function FeesPage() {
                     <div>
                       <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is DivinityCoin?</h3>
                       <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
-                        DivinityCoin is a universal credit system that allows backers to purchase credits in advance and use them across multiple creator platforms.
-                        Backers buy credits in advance, then redeem them on your campaign.
+                        DivinityCoin is an alternative payment sub-processor that supports all content types including NSFW/adult projects.
+                        Backers enter their credit or debit card at checkout — the experience is seamless.
                       </p>
                       <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows:</h4>
                       <ol className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1 list-decimal list-inside mb-4">
-                        <li>Backer purchases $100 in DivinityCoin credits</li>
-                        <li>Backer redeems credits to back your campaign</li>
-                        <li>When your project funds, credits are captured</li>
-                        <li>DivinityCoin settles with IndieCrowdfund weekly/monthly ($94 after 6% fee)</li>
+                        <li>Backer enters their card at checkout on your campaign</li>
+                        <li>DivinityCoin securely processes the $100 payment</li>
+                        <li>When your project funds, payment is captured</li>
+                        <li>DivinityCoin settles with IndieCrowdfund ($94 after 6% fee)</li>
                         <li>You receive $91.18 after our 3% platform fee</li>
                       </ol>
                       <a
@@ -579,7 +579,7 @@ export default function FeesPage() {
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold text-zinc-900 dark:text-white">What&apos;s the difference between Stripe and DivinityCoin?</h3>
               <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-                Stripe is traditional credit card processing (~6% total). DivinityCoin is a prepaid credit system (~9%) that offers cross-platform purchasing power for backers.
+                Stripe is our default payment processor (~6% total). DivinityCoin is an alternative payment sub-processor (~9%) that supports all content types including NSFW/adult projects. Both accept credit and debit cards at checkout.
               </p>
             </div>
             <div className="rounded-lg border p-6">

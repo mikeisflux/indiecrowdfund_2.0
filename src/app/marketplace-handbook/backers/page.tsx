@@ -262,7 +262,7 @@ const faqs: FAQ[] = [
   },
   {
     question: 'Can I pay with DivinityCoin in the marketplace?',
-    answer: 'Currently, the marketplace accepts credit/debit cards and promo codes from creators. DivinityCoin is used for crowdfunding pledges. Check the payment options at checkout for the most current accepted methods.',
+    answer: 'Yes! If a creator has selected DivinityCoin as their payment processor for their marketplace listings, you can pay using DivinityCoin at checkout. You\'ll enter your credit or debit card details into DivinityCoin\'s secure payment form — the experience is the same seamless card payment as standard checkout. Look for the payment options when purchasing a book.',
   },
 ];
 

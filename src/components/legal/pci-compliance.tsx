@@ -34,7 +34,7 @@ export function PciComplianceContent() {
         <ul className="list-disc pl-6 mb-6 space-y-2">
           <li><strong>No storage of card data:</strong> We never store, process, or transmit full credit card numbers on our servers</li>
           <li><strong>Tokenization (Stripe):</strong> All Stripe payment information is securely tokenized before reaching our systems</li>
-          <li><strong>Pre-funded credits (DivinityCoin):</strong> DivinityCoin uses a prepaid credit system, so no card data is processed at the time of pledge</li>
+          <li><strong>Outsourced processing (DivinityCoin):</strong> DivinityCoin is an independent payment sub-processor with its own PCI-compliant infrastructure. Card data entered through DivinityCoin&apos;s payment forms never reaches our servers</li>
           <li><strong>Encrypted connections:</strong> All data transmission uses TLS 1.2+ encryption (HTTPS-only)</li>
           <li><strong>CSRF protection:</strong> All payment initiation endpoints are protected with CSRF tokens to prevent cross-site request forgery</li>
           <li><strong>Secure checkout:</strong> Payment forms are served directly from each processor's PCI-compliant infrastructure</li>
@@ -61,7 +61,7 @@ export function PciComplianceContent() {
 
         <h4 className="text-lg font-semibold mt-6 mb-3">DivinityCoin</h4>
         <p className="mb-6">
-          DivinityCoin uses a prepaid credit system where backers purchase credits in advance. Since credits are pre-funded, no credit card data is processed at the time of pledge, eliminating PCI scope for DivinityCoin transactions on our platform.
+          DivinityCoin is an independent payment sub-processor that maintains its own PCI DSS compliance. When backers pay through DivinityCoin, their card details are entered into DivinityCoin&apos;s own PCI-compliant payment infrastructure. IndieCrowdfund never receives, processes, or stores card data from DivinityCoin transactions, eliminating PCI scope for these transactions on our platform.
         </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">4. SAQ A Compliance</h3>
@@ -92,7 +92,7 @@ export function PciComplianceContent() {
           <li>Your payment card information is never stored on IndieCrowdfund servers</li>
           <li>All transactions are protected by bank-level security regardless of payment processor</li>
           <li>Stripe's fraud protection (Stripe Radar) helps prevent unauthorized charges on Stripe transactions</li>
-          <li>DivinityCoin credits are pre-funded, so no card data is involved at pledge time</li>
+          <li>DivinityCoin transactions use their own PCI-compliant payment infrastructure — your card data never reaches IndieCrowdfund</li>
           <li>You can manage saved payment methods securely through your account</li>
         </ul>
 
@@ -141,7 +141,7 @@ export function PciComplianceContent() {
         <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-6 mt-8">
           <h4 className="text-lg font-semibold mb-4">Summary</h4>
           <p className="mb-0">
-            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with Stripe (Level 1 PCI Service Provider) for tokenized card payments and DivinityCoin (prepaid credit system with no card data at pledge time). We never store credit card information on our servers, enforce CSRF protection on all payment endpoints, and communicate exclusively over HTTPS. This approach ensures the highest level of protection for all financial transactions on our platform.
+            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with Stripe (Level 1 PCI Service Provider) for tokenized card payments and DivinityCoin (independent PCI-compliant payment sub-processor). We never store credit card information on our servers, enforce CSRF protection on all payment endpoints, and communicate exclusively over HTTPS. This approach ensures the highest level of protection for all financial transactions on our platform.
           </p>
         </div>
       </div>
