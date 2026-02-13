@@ -24,10 +24,11 @@ import {
   FileSearch,
   Hash,
   Link2,
+  CalendarClock,
 } from "lucide-react";
 import { Project } from "./types";
 import { formatDuration } from "./utils";
-import { SetVanityUrlDialog } from "./dialogs";
+import { SetVanityUrlDialog, AdjustEndDateDialog } from "./dialogs";
 
 interface ActiveProjectPanelProps {
   project: Project | null;
@@ -53,7 +54,9 @@ export function ActiveProjectPanel({
   const [isReconciling, setIsReconciling] = useState(false);
   const [reconcileMessage, setReconcileMessage] = useState<string | null>(null);
   const [showVanityUrlDialog, setShowVanityUrlDialog] = useState(false);
+  const [showEndDateDialog, setShowEndDateDialog] = useState(false);
   const [currentVanityUrl, setCurrentVanityUrl] = useState<string | null>(null);
+  const [currentEndDate, setCurrentEndDate] = useState<string | null>(null);
 
   // Clear messages and update vanity URL when project changes
   useEffect(() => {
@@ -63,7 +66,8 @@ export function ActiveProjectPanel({
     setBackfillMessage(null);
     setReconcileMessage(null);
     setCurrentVanityUrl(project?.creator?.vanityUrl || null);
-  }, [project?.id, project?.creator?.vanityUrl]);
+    setCurrentEndDate(project?.endDate || null);
+  }, [project?.id, project?.creator?.vanityUrl, project?.endDate]);
 
   const handleProcessPledges = async () => {
     if (!project) return;
@@ -364,6 +368,14 @@ export function ActiveProjectPanel({
               )}
               {isReconciling ? "Reconciling..." : "Reconcile Pledges"}
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowEndDateDialog(true)}
+              className="flex-1"
+            >
+              <CalendarClock className="mr-2 h-4 w-4" />
+              Adjust End Date
+            </Button>
           </div>
           <div className="flex items-center gap-2 mb-2">
             <Button
@@ -471,6 +483,16 @@ export function ActiveProjectPanel({
         projectSlug={project.slug}
         projectTitle={project.title}
         onSuccess={(newVanityUrl) => setCurrentVanityUrl(newVanityUrl)}
+      />
+
+      {/* Adjust End Date Dialog */}
+      <AdjustEndDateDialog
+        open={showEndDateDialog}
+        onOpenChange={setShowEndDateDialog}
+        projectId={project.id}
+        projectTitle={project.title}
+        currentEndDate={currentEndDate}
+        onSuccess={(newEndDate) => setCurrentEndDate(newEndDate)}
       />
     </Card>
   );
