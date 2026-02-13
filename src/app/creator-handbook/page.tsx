@@ -96,8 +96,11 @@ const tabContent: Record<string, { title: string; description: string; fields: F
       { name: 'Contact Email', required: true, description: 'Verified email for important communications.', tips: 'Use email you check regularly.' },
       { name: 'Project Type', required: true, description: 'Individual or business/nonprofit.', tips: 'Affects tax reporting and verification.' },
       { name: 'Content Declarations', required: false, description: 'Declare adult or controversial content if applicable.', tips: 'May require additional review.' },
-      { name: 'Stripe Connect', required: true, description: 'Identity verification, bank account, payout schedule, tax info.', tips: 'Platform fee 3% + Stripe fees (2.9% + $0.30). Payouts within 14 business days.' },
-      { name: 'Bank Account', required: true, description: 'US checking account for fund deposits.', tips: 'Cannot change after submission. Double-check all numbers.' },
+      { name: 'Stripe Connect', required: true, description: 'Identity verification, bank account, payout schedule, tax info. Default payment processor for most campaigns.', tips: 'Platform fee 3% + Stripe fees (2.9% + $0.30) ≈ 6% total. Payouts within 14 business days. Not available for NSFW/adult content.' },
+      { name: 'Chain2Pay', required: false, description: 'Alternative payment processor with lower total fees than Stripe. Uses a redirect-based checkout — backers pay with card on Chain2Pay\'s hosted page, then funds settle as USDC on Polygon and are converted to fiat for creator payout.', tips: '3% platform fee + 2.5% Chain2Pay processing = ~5.5% total (lower than Stripe\'s ~6%). SAQ A PCI compliant — we never handle card data. Supports NSFW/adult content. Settlement to your bank account within 14 business days.' },
+      { name: 'DivinityCoin', required: false, description: 'Prepaid credit system where backers purchase DivinityCoin credits in advance. 1 DivinityCoin = $1 USD. Backers redeem credits to back your campaign — no crypto wallet needed.', tips: '3% platform fee + 6% partner fee ≈ 9% total. Credits are pre-funded so payment failures are rare. Supports NSFW/adult content. Settlement to your bank account within 14 business days.' },
+      { name: 'Payment Processor Selection', required: true, description: 'Choose your payment processor during project setup. You can switch processors even on live campaigns (NSFW projects cannot switch to Stripe).', tips: 'Compare fees: Stripe ~6%, Chain2Pay ~5.5%, DivinityCoin ~9%. Choose based on your needs and content type.' },
+      { name: 'Settlement Account', required: true, description: 'For Stripe, connect via Stripe Connect. For Chain2Pay or DivinityCoin, enter your US bank account details (bank name, account number, routing number). Details are AES-256 encrypted.', tips: 'Double-check all bank details. Settlement accounts can be configured in your IndieKit dashboard under Settings > Payments.' },
     ]
   },
   'promotion': {
@@ -121,7 +124,7 @@ const tabContent: Record<string, { title: string; description: string; fields: F
       { name: 'Physical Media Link', required: false, description: 'Link to where customers can order physical copies.', tips: 'Add if selling through own store, Amazon, or print-on-demand.' },
       { name: 'Uploading Books', required: true, description: 'Upload PDF with cover image, title, description, category, price.', tips: 'High-quality PDF optimized for digital reading.' },
       { name: 'Setting Price', required: true, description: 'Set your own USD price. Adjust anytime.', tips: 'Research similar products. Don\'t undervalue your work.' },
-      { name: 'Platform Fee: 3%', required: false, description: '3% platform fee + Stripe fees (~2.9% + $0.30).', tips: 'Example: $10 sale → you receive ~$9.11.' },
+      { name: 'Platform Fee', required: false, description: 'Marketplace uses Stripe: 3% platform fee + Stripe fees (~2.9% + $0.30).', tips: 'Example: $10 sale → you receive ~$9.11. Marketplace currently only supports Stripe for instant purchases.' },
       { name: 'Review Process', required: false, description: 'Brief review ensures content guidelines compliance.', tips: 'Typically 1-2 business days.' },
       { name: 'Sales & Analytics', required: false, description: 'Track performance, purchase history, revenue over time.', tips: 'Use analytics to inform pricing decisions.' },
     ]

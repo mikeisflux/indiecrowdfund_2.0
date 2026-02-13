@@ -694,14 +694,14 @@ export function PaymentStep() {
                 )}
               </div>
               <CardDescription>
-                Accept payments via credit card and crypto. Lowest fees available.
+                Accept payments via credit card and crypto. Lower fees than Stripe.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <Check className="h-3 w-3 text-green-500" />
-                  <span>Only 2.5% total platform fee — our lowest rate</span>
+                  <span>3% platform + 2.5% processing = ~5.5% total</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-3 w-3 text-green-500" />
@@ -813,8 +813,8 @@ export function PaymentStep() {
             <AlertTitle>Why Choose Chain2Pay?</AlertTitle>
             <AlertDescription className="mt-2 space-y-2 text-sm">
               <p>
-                <strong>Lowest Fees:</strong> Chain2Pay offers our lowest platform fee at just 2.5% with no additional
-                processing fees — significantly less than traditional card processing.
+                <strong>Lower Fees:</strong> Chain2Pay offers our lowest total fees at ~5.5% (3% platform fee + 2.5% Chain2Pay processing)
+                — lower than traditional card processing through Stripe (~6%).
               </p>
               <p>
                 <strong>Crypto & Card Payments:</strong> Accept both credit card and cryptocurrency payments from your backers,
@@ -837,24 +837,24 @@ export function PaymentStep() {
             </h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span>Platform fee (2.5%)</span>
-                <span className="font-medium">{formatCurrency(goalAmount * 0.025)}</span>
+                <span>Platform fee (3%)</span>
+                <span className="font-medium">{formatCurrency(goalAmount * 0.03)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Chain2Pay processing</span>
-                <span className="font-medium text-emerald-600">Included</span>
+                <span>Chain2Pay processing (2.5%)</span>
+                <span className="font-medium">{formatCurrency(goalAmount * 0.025)}</span>
               </div>
               <Separator className="my-2" />
               <div className="flex justify-between font-semibold">
                 <span>Total fees</span>
                 <span className="text-indigo-600">
-                  {formatCurrency(goalAmount * 0.025)}
+                  {formatCurrency(goalAmount * 0.055)}
                 </span>
               </div>
               <div className="flex justify-between font-semibold text-lg">
                 <span>You receive</span>
                 <span className="text-green-600">
-                  {formatCurrency(goalAmount - goalAmount * 0.025)}
+                  {formatCurrency(goalAmount - goalAmount * 0.055)}
                 </span>
               </div>
             </div>

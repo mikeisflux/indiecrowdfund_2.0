@@ -59,20 +59,20 @@ const divinityCoinFeeBreakdown = [
 const chain2PayFeeBreakdown = [
   {
     title: "Platform Fee",
-    rate: "2.5%",
-    description: "All-inclusive fee on successfully funded campaigns",
-    details: "Our lowest platform fee, covering hosting, tools, customer support, and payment processing. Chain2Pay settles in USDC on Polygon blockchain.",
+    rate: "3%",
+    description: "IndieCrowdfund platform fee on successfully funded campaigns",
+    details: "Covers hosting, tools, customer support, and platform services. Same platform fee as Stripe campaigns.",
   },
   {
     title: "Processing Fee",
-    rate: "0%",
-    description: "No additional processing fees",
-    details: "Chain2Pay handles fiat-to-crypto conversion and blockchain settlement at no extra cost to creators.",
+    rate: "2.5%",
+    description: "Chain2Pay payment processing fee",
+    details: "Chain2Pay handles fiat-to-crypto conversion via Revolut/Unlimit and blockchain settlement on Polygon. Lower processing fee than traditional card processing.",
   },
 ];
 
 const comparisonData = [
-  { platform: "IndieCrowdfund (Chain2Pay)", platformFee: "2.5%", paymentFee: "Included", total: "~2.5%", highlight: true },
+  { platform: "IndieCrowdfund (Chain2Pay)", platformFee: "3%", paymentFee: "2.5%", total: "~5.5%", highlight: true },
   { platform: "IndieCrowdfund (Stripe)", platformFee: "3%", paymentFee: "2.9% + $0.30", total: "~6%", highlight: false },
   { platform: "IndieCrowdfund (DivinityCoin)", platformFee: "3%", paymentFee: "6% partner", total: "~9%", highlight: false },
   { platform: "Kickstarter", platformFee: "5%", paymentFee: "3% + $0.20", total: "~8%", highlight: false },
@@ -123,13 +123,15 @@ function calculateStripeFees(amount: number, averagePledge: number = 50) {
 
 // Calculate fees for Chain2Pay payments
 function calculateChain2PayFees(amount: number) {
-  const platformFee = amount * 0.025; // 2.5% all-inclusive
-  const totalFees = platformFee;
+  const platformFee = amount * 0.03; // 3% platform fee
+  const processingFee = amount * 0.025; // 2.5% Chain2Pay processing fee
+  const totalFees = platformFee + processingFee;
   const youReceive = amount - totalFees;
   const feePercentage = (totalFees / amount) * 100;
 
   return {
     platformFee,
+    processingFee,
     totalFees,
     youReceive,
     feePercentage,
@@ -319,8 +321,9 @@ export default function FeesPage() {
                         <li>Backer pledges $100 to your campaign</li>
                         <li>Chain2Pay processes the fiat payment via Revolut or Unlimit</li>
                         <li>Payment is converted to USDC and settled on Polygon</li>
-                        <li>IndieCrowdfund deducts the 2.5% platform fee ($2.50)</li>
-                        <li>You receive $97.50 via bank transfer</li>
+                        <li>Chain2Pay deducts 2.5% processing fee ($2.50)</li>
+                        <li>IndieCrowdfund deducts 3% platform fee ($3.00)</li>
+                        <li>You receive $94.50 via bank transfer</li>
                       </ol>
                       <a
                         href="https://chain2pay.cloud/"
@@ -340,7 +343,7 @@ export default function FeesPage() {
                 <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 dark:bg-blue-900/20 px-6 py-3">
                   <Calculator className="h-5 w-5 text-blue-600" />
                   <span className="font-medium text-blue-700 dark:text-blue-400">
-                    Total fees with Chain2Pay: only 2.5% of funds raised — our lowest rate
+                    Total fees with Chain2Pay: approximately 5.5% of funds raised — our lowest rate
                   </span>
                 </div>
               </div>
@@ -524,12 +527,12 @@ export default function FeesPage() {
                   ) : paymentMethod === "chain2pay" ? (
                     <>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-zinc-400">Platform fee (2.5%)</span>
+                        <span className="text-zinc-600 dark:text-zinc-400">Platform fee (3%)</span>
                         <span className="text-red-500">-${chain2payFees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-zinc-400">Chain2Pay processing</span>
-                        <span className="text-emerald-500">Included</span>
+                        <span className="text-zinc-600 dark:text-zinc-400">Chain2Pay processing (2.5%)</span>
+                        <span className="text-red-500">-${chain2payFees.processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </>
                   ) : (
@@ -720,7 +723,7 @@ export default function FeesPage() {
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold text-zinc-900 dark:text-white">What&apos;s the difference between Stripe, Chain2Pay, and DivinityCoin?</h3>
               <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-                Stripe is traditional credit card processing (~6% total). Chain2Pay is a fiat-to-crypto gateway with our lowest fees (~2.5%) — backers pay normally,
+                Stripe is traditional credit card processing (~6% total). Chain2Pay is a fiat-to-crypto gateway with our lowest fees (~5.5% — 3% platform + 2.5% processing) — backers pay normally,
                 but settlements are processed via USDC on Polygon. DivinityCoin is a prepaid credit system (~9%) that offers cross-platform purchasing power for backers.
               </p>
             </div>

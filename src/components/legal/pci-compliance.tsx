@@ -17,7 +17,7 @@ export function PciComplianceContent() {
             <h3 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 m-0">Payment Security Status</h3>
           </div>
           <p className="text-emerald-700 dark:text-emerald-300 m-0">
-            IndieCrowdfund maintains PCI DSS compliance by partnering with Stripe, a <strong>Level 1 PCI Service Provider</strong>—the highest level of certification in the payment card industry.
+            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with <strong>Stripe</strong> (Level 1 PCI Service Provider) and <strong>Chain2Pay</strong> (redirect-based hosted checkout, SAQ A compliant). We never store, process, or transmit credit card data on our servers.
           </p>
         </div>
 
@@ -30,17 +30,22 @@ export function PciComplianceContent() {
         </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">2. Our Approach to Payment Security</h3>
-        <p className="mb-4">IndieCrowdfund takes a security-first approach to handling payment information:</p>
+        <p className="mb-4">IndieCrowdfund takes a security-first approach to handling payment information across all payment processors:</p>
         <ul className="list-disc pl-6 mb-6 space-y-2">
           <li><strong>No storage of card data:</strong> We never store, process, or transmit full credit card numbers on our servers</li>
-          <li><strong>Tokenization:</strong> All payment information is securely tokenized by Stripe before reaching our systems</li>
-          <li><strong>Encrypted connections:</strong> All data transmission uses TLS 1.2+ encryption</li>
-          <li><strong>Secure checkout:</strong> Payment forms are served directly from Stripe's PCI-compliant infrastructure</li>
+          <li><strong>Tokenization (Stripe):</strong> All Stripe payment information is securely tokenized before reaching our systems</li>
+          <li><strong>Redirect-based checkout (Chain2Pay):</strong> Chain2Pay payments use a hosted checkout page — backers enter card details directly on Chain2Pay's secure page, and IndieCrowdfund never handles card data</li>
+          <li><strong>Pre-funded credits (DivinityCoin):</strong> DivinityCoin uses a prepaid credit system, so no card data is processed at the time of pledge</li>
+          <li><strong>Encrypted connections:</strong> All data transmission uses TLS 1.2+ encryption (HTTPS-only)</li>
+          <li><strong>CSRF protection:</strong> All payment initiation endpoints are protected with CSRF tokens to prevent cross-site request forgery</li>
+          <li><strong>Secure checkout:</strong> Payment forms are served directly from each processor's PCI-compliant infrastructure</li>
         </ul>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">3. Our Payment Partner: Stripe</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">3. Our Payment Partners</h3>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">Stripe</h4>
         <p className="mb-4">
-          All payment processing on IndieCrowdfund is handled by Stripe, Inc. Stripe maintains the highest level of PCI compliance:
+          Stripe, Inc. is our primary payment processor and maintains the highest level of PCI compliance:
         </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li><strong>PCI DSS Level 1:</strong> The most rigorous level of certification, processing over 6 million transactions annually</li>
@@ -55,6 +60,23 @@ export function PciComplianceContent() {
           </a>
         </p>
 
+        <h4 className="text-lg font-semibold mt-6 mb-3">Chain2Pay</h4>
+        <p className="mb-4">
+          Chain2Pay is our alternative payment processor offering lower total fees (~5.5%: 3% platform + 2.5% processing). Chain2Pay uses a <strong>redirect-based hosted checkout flow</strong>, which provides SAQ A level PCI compliance:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li><strong>Hosted checkout page:</strong> All card data is entered on Chain2Pay's secure hosted payment page — IndieCrowdfund never sees, processes, or stores any credit card information</li>
+          <li><strong>SAQ A compliance:</strong> The lowest PCI burden level, because we have completely outsourced all cardholder data handling to Chain2Pay</li>
+          <li><strong>HTTPS-only communication:</strong> All API calls between IndieCrowdfund and Chain2Pay use encrypted HTTPS connections</li>
+          <li><strong>CSRF protection:</strong> Payment initiation endpoints are protected with CSRF tokens to prevent unauthorized payment requests</li>
+          <li><strong>Fiat-to-crypto settlement:</strong> Payments are accepted in fiat currency (USD) via Revolut/Unlimit and settled as USDC on Polygon — backers pay normally with their cards</li>
+        </ul>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">DivinityCoin</h4>
+        <p className="mb-6">
+          DivinityCoin uses a prepaid credit system where backers purchase credits in advance. Since credits are pre-funded, no credit card data is processed at the time of pledge, eliminating PCI scope for DivinityCoin transactions on our platform.
+        </p>
+
         <h3 className="text-xl font-semibold mt-8 mb-4">4. SAQ A Compliance</h3>
         <p className="mb-4">
           IndieCrowdfund qualifies for SAQ A (Self-Assessment Questionnaire A), which applies to merchants who:
@@ -62,7 +84,7 @@ export function PciComplianceContent() {
         <ul className="list-disc pl-6 mb-6 space-y-2">
           <li>Have completely outsourced all cardholder data functions to PCI DSS validated third-party service providers</li>
           <li>Do not electronically store, process, or transmit any cardholder data on their systems</li>
-          <li>Use only a PCI DSS compliant payment gateway (Stripe) for all transactions</li>
+          <li>Use only PCI DSS compliant payment gateways (Stripe and Chain2Pay) for all card transactions</li>
         </ul>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">5. Security Measures We Implement</h3>
@@ -81,15 +103,17 @@ export function PciComplianceContent() {
         <h4 className="text-lg font-semibold mt-6 mb-3">For Backers:</h4>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>Your payment card information is never stored on IndieCrowdfund servers</li>
-          <li>All transactions are protected by bank-level security</li>
-          <li>Stripe's fraud protection helps prevent unauthorized charges</li>
+          <li>All transactions are protected by bank-level security regardless of payment processor</li>
+          <li>Stripe's fraud protection (Stripe Radar) helps prevent unauthorized charges on Stripe transactions</li>
+          <li>Chain2Pay's redirect-based checkout means your card details are entered on their secure hosted page, never on IndieCrowdfund</li>
+          <li>DivinityCoin credits are pre-funded, so no card data is involved at pledge time</li>
           <li>You can manage saved payment methods securely through your account</li>
         </ul>
 
         <h4 className="text-lg font-semibold mt-6 mb-3">For Creators:</h4>
         <ul className="list-disc pl-6 mb-6 space-y-2">
-          <li>Funds are securely processed through Stripe Connect</li>
-          <li>Payout information is protected by Stripe's security infrastructure</li>
+          <li>Funds are securely processed through your chosen payment processor (Stripe Connect, Chain2Pay, or DivinityCoin)</li>
+          <li>Settlement account details (bank information) are encrypted with AES-256 encryption</li>
           <li>You never have direct access to backer payment card details</li>
           <li>Chargeback and dispute handling follows industry-standard procedures</li>
         </ul>
@@ -131,7 +155,7 @@ export function PciComplianceContent() {
         <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-6 mt-8">
           <h4 className="text-lg font-semibold mb-4">Summary</h4>
           <p className="mb-0">
-            IndieCrowdfund maintains PCI DSS compliance by partnering exclusively with Stripe, a Level 1 PCI Service Provider. We never store credit card information on our servers, and all payment transactions are processed through Stripe's secure, PCI-compliant infrastructure. This approach ensures the highest level of protection for all financial transactions on our platform.
+            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with Stripe (Level 1 PCI Service Provider) for tokenized card payments, Chain2Pay (SAQ A compliant redirect-based hosted checkout) for low-fee card payments, and DivinityCoin (prepaid credit system with no card data at pledge time). We never store credit card information on our servers, enforce CSRF protection on all payment endpoints, and communicate exclusively over HTTPS. This multi-processor approach ensures the highest level of protection for all financial transactions on our platform.
           </p>
         </div>
       </div>

@@ -128,8 +128,8 @@ export async function GET(request: NextRequest) {
         0
       );
 
-      // Calculate platform fee: 2.5% for Chain2Pay, 5% for DivinityCoin
-      const feeRate = isChain2Pay ? 0.025 : 0.05;
+      // Calculate total fee: 5.5% for Chain2Pay (3% platform + 2.5% processing), 5% for DivinityCoin
+      const feeRate = isChain2Pay ? 0.055 : 0.05;
       const platformFee = totalRaised * feeRate;
       const amountOwed = totalRaised - platformFee;
 
