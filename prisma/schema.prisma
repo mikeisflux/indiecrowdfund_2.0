@@ -87,6 +87,12 @@ model User {
   emailLogs         EmailLog[]
   stripeConfig      StripeConfig?
   divinityCoinBankAccount DivinityCoinBankAccount?
+  divinityCoinBalance Decimal @default(0) @db.Decimal(10, 2)
+  divinityCoinRedemptions DivinityCoinRedemption[]
+  divinityCoinTransactions DivinityCoinTransaction[]
+  achievements      UserAchievement[]
+  redemptionBonusLedgers RedemptionBonusLedger[]
+  redemptionBonusApplications RedemptionBonusApplication[]
   idVerifications   IDVerification[]
   notifications     Notification[]
   bugReports        BugReport[]
@@ -529,6 +535,7 @@ model Pledge {
   reward                Reward?      @relation(fields: [rewardId], references: [id])
   addons                PledgeAddon[]
   modifierAssignments   PledgeModifierAssignment[]
+  divinityCoinTransactions DivinityCoinTransaction[]
   emailLogs             EmailLog[]
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
@@ -3616,4 +3623,126 @@ model ChatPresence {
   joinedAt     DateTime @default(now())
 
   @@index([lastActiveAt])
+}
+
+// ============================================
+// DIVINITYCOIN CREDIT SYSTEM
+// ============================================
+
+// DivinityCoin credit redemption tracking
+model DivinityCoinRedemption {
+  id              String   @id @default(cuid())
+  code            String   @unique // The redemption code
+  userId          String
+  amount          Decimal  @db.Decimal(10, 2) // Amount in USD
+  redeemedAt      DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([code])
+}
+
+// DivinityCoin transaction history with audit logging
+model DivinityCoinTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  pledgeId        String?
+  amount          Decimal  @db.Decimal(10, 2) // Positive for credits, negative for payments
+  type            String   // REDEMPTION, PAYMENT, REFUND, REFUND_DEDUCTION
+  description     String?
+  metadata        String?  @db.Text // JSON audit data: requestId, IP, previous/new balance, timestamps
+
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pledge          Pledge?  @relation(fields: [pledgeId], references: [id])
+
+  @@index([userId])
+  @@index([pledgeId])
+  @@index([createdAt])
+}
+
+// ============================================
+// ACHIEVEMENT BADGES
+// ============================================
+
+model UserAchievement {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  badgeType   BadgeType
+  earnedAt    DateTime    @default(now())
+
+  // Metadata about how badge was earned
+  metadata    Json?       // { projectId, pledgeId, etc }
+
+  @@unique([userId, badgeType])
+  @@index([userId])
+}
+
+enum BadgeType {
+  FIRST_PLEDGE                // First pledge ever
+  SUPER_BACKER_10            // Backed 10+ projects
+  SUPER_BACKER_25            // Backed 25+ projects
+  SUPER_BACKER_50            // Backed 50+ projects
+  EARLY_BIRD                 // Pledged within first 24 hours
+  STRETCH_GOAL_CONTRIBUTOR   // Contributed to reaching stretch goal
+  PREMIUM_SUPPORTER          // Pledged $500+ total
+  SURVEY_CHAMPION            // Completed 10+ surveys promptly
+  SURVEY_COMPLETIONIST       // Completed all pending surveys
+  REFERRAL_MASTER            // Referred 5+ successful backers
+  ANNIVERSARY_BACKER         // Active backer for 1+ year
+}
+
+// ============================================
+// REDEMPTION BONUS SYSTEM
+// ============================================
+
+// Monthly redemption bonus tracking with Decimal for precision
+model RedemptionBonusLedger {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Month tracking (first day of month)
+  month           DateTime
+
+  // Bonus calculation (using Decimal for financial precision)
+  totalBadges     Int      @default(0)
+  rawBonusPercent Decimal  @db.Decimal(10, 6)  // Sum of badge bonuses before cap (e.g., 0.000500 for 0.05%)
+  appliedBonusPercent Decimal @db.Decimal(10, 6)  // After 0.03% cap applied
+
+  // Usage tracking
+  redemptionCount Int      @default(0)
+  totalBonusApplied Decimal @default(0) @db.Decimal(10, 2)  // Total $ saved from bonus
+
+  applications    RedemptionBonusApplication[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, month])
+  @@index([userId, month])
+}
+
+// Track individual bonus applications to redemptions
+model RedemptionBonusApplication {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  redemptionId          String   // Link to DivinityCoinRedemption
+  bonusLedgerId         String
+  bonusLedger           RedemptionBonusLedger @relation(fields: [bonusLedgerId], references: [id], onDelete: Cascade)
+
+  bonusPercentApplied   Decimal  @db.Decimal(10, 6)
+  bonusAmountSaved      Decimal  @db.Decimal(10, 2)  // Actual $ saved
+
+  appliedAt             DateTime @default(now())
+
+  @@index([userId])
+  @@index([bonusLedgerId])
+  @@index([redemptionId])
 }
