@@ -109,7 +109,7 @@ async function getPrelaunchProjects() {
       where: {
         prelaunchActive: true,
         status: {
-          not: "LIVE", // Exclude projects that are already live
+          notIn: ["LIVE", "FUNDED"], // Exclude projects that are already live or funded
         },
         // Hide test projects from home page
         NOT: {

@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     if (prelaunch) {
       // Show prelaunch projects (coming soon)
       where.prelaunchActive = true;
-      where.status = { not: "LIVE" }; // Exclude projects that are already live
+      where.status = { notIn: ["LIVE", "FUNDED"] }; // Exclude projects that are already live or funded
     } else if (status) {
       where.status = status;
     } else {
@@ -148,7 +148,7 @@ export async function GET(req: NextRequest) {
       }
 
       // Determine if this is a prelaunch project
-      const isPrelaunch = project.prelaunchActive && project.status !== "LIVE";
+      const isPrelaunch = project.prelaunchActive && project.status !== "LIVE" && project.status !== "FUNDED";
 
       // Build project URL - use vanity URL if creator has one
       // For prelaunch projects, link to the prelaunch page

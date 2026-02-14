@@ -114,6 +114,12 @@ export default function PrelaunchPage() {
 
         const data = await response.json();
 
+        // If project is LIVE or FUNDED, always redirect to the project page
+        if (data.project.status === "LIVE" || data.project.status === "FUNDED") {
+          window.location.href = projectPath;
+          return;
+        }
+
         // Check if user is admin or project owner
         const isAdmin = session?.user?.role === "SUPER_ADMIN" || session?.user?.role === "ADMIN";
         const isOwner = session?.user?.id === data.project.creator?.id;
@@ -121,11 +127,6 @@ export default function PrelaunchPage() {
 
         // Check if pre-launch is active (or user has permission to view)
         if (!data.project.prelaunchActive && !canViewUnpublished) {
-          // If project is live, redirect to main page
-          if (data.project.status === "LIVE") {
-            window.location.href = projectPath;
-            return;
-          }
           setError("Pre-launch page is not available");
           return;
         }
