@@ -116,9 +116,10 @@ export async function POST(
     }
 
     // Get the addons
-    const addons = await db.addon.findMany({
+    const addons = await db.reward.findMany({
       where: {
         id: { in: addonIds },
+        type: "ADDON",
       },
     });
 
@@ -168,7 +169,7 @@ export async function POST(
           quantityClaimed: number;
         }>>`
           SELECT id, "quantityAvailable", "quantityClaimed"
-          FROM "Addon"
+          FROM "Reward"
           WHERE id = ${addon.id}
           FOR UPDATE
         `;
@@ -181,7 +182,7 @@ export async function POST(
             : addonInfo.quantityAvailable - addonInfo.quantityClaimed;
 
           if (availableSlots >= quantity) {
-            await tx.addon.update({
+            await tx.reward.update({
               where: { id: addon.id },
               data: { quantityClaimed: { increment: quantity } },
             });

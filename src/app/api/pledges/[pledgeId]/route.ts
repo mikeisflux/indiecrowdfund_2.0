@@ -262,10 +262,11 @@ export async function PATCH(
 
       // Validate addons if provided
       if (addonIdList.length > 0) {
-        const validAddons = await db.addon.findMany({
+        const validAddons = await db.reward.findMany({
           where: {
             id: { in: addonIdList },
             projectId: pledge.projectId,
+            type: "ADDON",
           },
         });
 
@@ -303,8 +304,8 @@ export async function PATCH(
       // Create new addon associations with quantities
       if (addonsWithQuantity.length > 0) {
         // Get addon prices
-        const addonRecords = await db.addon.findMany({
-          where: { id: { in: addonIdList } },
+        const addonRecords = await db.reward.findMany({
+          where: { id: { in: addonIdList }, type: "ADDON" },
           select: { id: true, amount: true },
         });
         const addonPriceMap = new Map<string, number>(
