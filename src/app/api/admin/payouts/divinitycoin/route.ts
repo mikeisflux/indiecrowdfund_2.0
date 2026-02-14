@@ -432,37 +432,35 @@ export async function POST(request: NextRequest) {
     const partnerFee = grossAmount * 0.06;
     const platformFee = grossAmount * 0.03;
 
-    // Create the DivinityCoin settlement record
+    // Create the DivinityCoin settlement record as COMPLETED
     const settlement = await db.divinityCoinSettlement.create({
       data: {
         bankAccountId: bankAccount.id,
         projectId,
         projectName: project.title,
         amount,
-        status: "PENDING",
+        status: "COMPLETED",
+        completedAt: new Date(),
         adminNotes: adminNotes || null,
         processedBy: authResult.user.id,
       },
     });
 
-    // Send email notification to creator
-    try {
-      await sendPayoutCreatedEmail(
-        project.creator.email!,
-        project.creator.name || "Creator",
-        project.title,
-        `/projects/${project.slug}`,
-        grossAmount,
-        partnerFee,
-        platformFee,
-        Number(amount),
-        bankAccount.bankNameDisplay || "Bank Account",
-        bankAccount.accountLastFour || "****"
-      );
-    } catch (emailError) {
+    // Send email notification to creator (fire-and-forget, don't block response)
+    sendPayoutCreatedEmail(
+      project.creator.email!,
+      project.creator.name || "Creator",
+      project.title,
+      `/projects/${project.slug}`,
+      grossAmount,
+      partnerFee,
+      platformFee,
+      Number(amount),
+      bankAccount.bankNameDisplay || "Bank Account",
+      bankAccount.accountLastFour || "****"
+    ).catch((emailError) => {
       console.error("Failed to send payout created email:", emailError);
-      // Don't fail the settlement creation if email fails
-    }
+    });
 
     return NextResponse.json({
       success: true,
