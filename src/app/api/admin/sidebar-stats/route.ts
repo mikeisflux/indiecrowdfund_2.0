@@ -107,11 +107,19 @@ export async function GET() {
         },
       }),
 
-      // Pending payouts (funded DC projects - Stripe uses auto Connect payouts)
+      // Pending payouts (DC projects needing payout - FUNDED or LIVE with endDate passed & goal met)
+      // Stripe uses auto Connect payouts so only DC projects need manual payouts
       db.project.count({
         where: {
-          status: "FUNDED",
           paymentProcessor: "DIVINITYCOIN",
+          OR: [
+            { status: "FUNDED" },
+            {
+              status: "LIVE",
+              fundedAt: { not: null },
+              endDate: { lt: new Date() },
+            },
+          ],
         },
       }),
 

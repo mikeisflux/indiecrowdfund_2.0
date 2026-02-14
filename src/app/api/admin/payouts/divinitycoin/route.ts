@@ -39,17 +39,32 @@ export async function GET(request: NextRequest) {
 
     // Build where clause for DivinityCoin projects only
     // Stripe projects use Stripe Connect - payouts are automatic
+    // Include FUNDED/FAILED projects AND LIVE projects that ended with goal met
+    // (safety net for before the cron transitions status)
+    const now = new Date();
     const where: Record<string, unknown> = {
       paymentProcessor: "DIVINITYCOIN",
-      status: { in: ["FUNDED", "FAILED"] },
       deletedAt: null,
+      OR: [
+        { status: { in: ["FUNDED", "FAILED"] } },
+        {
+          status: "LIVE",
+          fundedAt: { not: null },
+          endDate: { lt: now },
+        },
+      ],
     };
 
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { creator: { name: { contains: search, mode: "insensitive" } } },
-        { creator: { email: { contains: search, mode: "insensitive" } } },
+      // Wrap existing OR + search in an AND to combine them properly
+      where.AND = [
+        {
+          OR: [
+            { title: { contains: search, mode: "insensitive" } },
+            { creator: { name: { contains: search, mode: "insensitive" } } },
+            { creator: { email: { contains: search, mode: "insensitive" } } },
+          ],
+        },
       ];
     }
 

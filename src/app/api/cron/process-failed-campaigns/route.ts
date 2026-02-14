@@ -3,12 +3,11 @@ import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 
 /**
- * Cron job endpoint for processing failed campaigns
+ * Cron job endpoint for processing ended campaigns
  *
- * This handles campaigns that have ended without reaching their funding goal:
- * - Refunds DivinityCoin pledges to backers
- * - Updates project status to FAILED
- * - Marks pledges as REFUNDED
+ * This handles campaigns whose endDate has passed:
+ * - FUNDED: Projects that met their goal → status set to FUNDED
+ * - FAILED: Projects that didn't meet goal → refund DC pledges, cancel Stripe pledges, status set to FAILED
  *
  * Schedule: Every hour
  * Vercel cron config: "schedule": "0 * * * *"
@@ -31,9 +30,8 @@ export async function GET(req: NextRequest) {
 
     const now = new Date();
 
-    // Find LIVE projects that have ended without reaching their goal
-    // endDate has passed AND currentAmount < goalAmount
-    const failedProjects = await db.project.findMany({
+    // Find all LIVE projects whose end date has passed
+    const endedProjects = await db.project.findMany({
       where: {
         status: "LIVE",
         endDate: {
@@ -49,27 +47,68 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Filter to only projects that actually failed (didn't reach goal)
-    const projectsToProcess = failedProjects.filter(
+    // Separate into funded (met goal) and failed (didn't meet goal)
+    const fundedProjects = endedProjects.filter(
+      (project) => Number(project.currentAmount) >= Number(project.goalAmount)
+    );
+    const failedProjects = endedProjects.filter(
       (project) => Number(project.currentAmount) < Number(project.goalAmount)
     );
 
     const results = {
-      projectsChecked: failedProjects.length,
-      projectsToProcess: projectsToProcess.length,
-      processed: [] as {
-        projectId: string;
-        projectTitle: string;
-        divinityCoinRefunds: number;
-        divinityCoinAmount: number;
-        stripePledgesCancelled: number;
-      }[],
+      projectsChecked: endedProjects.length,
+      funded: {
+        count: 0,
+        projects: [] as { id: string; title: string; amount: number }[],
+      },
+      failed: {
+        count: 0,
+        projects: [] as {
+          projectId: string;
+          projectTitle: string;
+          divinityCoinRefunds: number;
+          divinityCoinAmount: number;
+          stripePledgesCancelled: number;
+        }[],
+      },
       totalDivinityCoinRefunds: 0,
       totalDivinityCoinAmount: 0,
       totalStripePledgesCancelled: 0,
     };
 
-    for (const project of projectsToProcess) {
+    // --- Process FUNDED projects (met goal, campaign ended) ---
+    for (const project of fundedProjects) {
+      try {
+        await db.project.update({
+          where: { id: project.id },
+          data: {
+            status: "FUNDED",
+            fundedAt: project.currentAmount >= project.goalAmount
+              ? undefined // Keep existing fundedAt if already set
+              : now,
+          },
+        });
+
+        results.funded.count++;
+        results.funded.projects.push({
+          id: project.id,
+          title: project.title,
+          amount: Number(project.currentAmount),
+        });
+
+        console.log(
+          `[Cron Ended Campaigns] "${project.title}" → FUNDED ($${project.currentAmount}/$${project.goalAmount})`
+        );
+      } catch (error) {
+        console.error(
+          `[Cron Ended Campaigns] Error transitioning project ${project.id} to FUNDED:`,
+          error
+        );
+      }
+    }
+
+    // --- Process FAILED projects (didn't meet goal, campaign ended) ---
+    for (const project of failedProjects) {
       try {
         const projectResult = {
           projectId: project.id,
@@ -98,19 +137,20 @@ export async function GET(req: NextRequest) {
           },
         });
 
-        results.processed.push(projectResult);
+        results.failed.count++;
+        results.failed.projects.push(projectResult);
         results.totalDivinityCoinRefunds += projectResult.divinityCoinRefunds;
         results.totalDivinityCoinAmount += projectResult.divinityCoinAmount;
         results.totalStripePledgesCancelled += projectResult.stripePledgesCancelled;
 
         console.log(
-          `[Cron Failed Campaigns] Processed "${project.title}": ` +
-          `${projectResult.divinityCoinRefunds} DivinityCoin refunds ($${projectResult.divinityCoinAmount}), ` +
+          `[Cron Ended Campaigns] "${project.title}" → FAILED: ` +
+          `${projectResult.divinityCoinRefunds} DC refunds ($${projectResult.divinityCoinAmount}), ` +
           `${projectResult.stripePledgesCancelled} Stripe pledges cancelled`
         );
       } catch (error) {
         console.error(
-          `[Cron Failed Campaigns] Error processing project ${project.id}:`,
+          `[Cron Ended Campaigns] Error processing failed project ${project.id}:`,
           error
         );
       }
@@ -122,9 +162,9 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Process failed campaigns cron error:", error);
+    console.error("Process ended campaigns cron error:", error);
     return NextResponse.json(
-      { error: "Failed to process failed campaigns" },
+      { error: "Failed to process ended campaigns" },
       { status: 500 }
     );
   }
