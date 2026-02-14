@@ -42,7 +42,7 @@ export interface ProjectData {
   faqs: { question: string; answer: string }[];
   updates: ProjectUpdate[];
   comments: number;
-  paymentProcessor?: "STRIPE" | "DIVINITYCOIN" | "CHAIN2PAY";
+  paymentProcessor?: "STRIPE" | "DIVINITYCOIN";
 }
 
 export interface RewardItem {
