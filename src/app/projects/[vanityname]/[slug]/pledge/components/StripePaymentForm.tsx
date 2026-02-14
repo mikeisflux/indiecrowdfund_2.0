@@ -19,6 +19,15 @@ interface StripePaymentFormProps {
   returnUrl?: string;
 }
 
+// Fire-and-forget diagnostic report to PM2 logs
+function reportDiag(event: string, data: Record<string, unknown>) {
+  fetch("/api/diagnostics/payment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event, data }),
+  }).catch(() => { /* ignore */ });
+}
+
 function CardBrandLogos() {
   return (
     <div className="flex items-center gap-2">
@@ -75,26 +84,41 @@ export function StripePaymentForm({
   const stripe = useStripe();
   const elements = useElements();
 
-  // Log Stripe initialization status for diagnostics
+  // Report Stripe initialization status to server (PM2 logs)
   useEffect(() => {
-    if (!stripe) {
-      console.warn("[StripePaymentForm] Stripe instance not yet available");
-    }
-    if (!elements) {
-      console.warn("[StripePaymentForm] Elements instance not yet available");
-    }
     if (stripe && elements) {
-      console.log("[StripePaymentForm] Stripe Elements initialized successfully");
+      reportDiag("elements_ready", { pledgeId, intentType, total });
     }
-  }, [stripe, elements]);
+  }, [stripe, elements, pledgeId, intentType, total]);
+
+  // Report if Stripe/Elements stay null for too long (form can't load)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!stripe || !elements) {
+        reportDiag("elements_timeout", {
+          pledgeId,
+          intentType,
+          stripeLoaded: !!stripe,
+          elementsLoaded: !!elements,
+        });
+      }
+    }, 8000); // 8s is plenty for Stripe.js to initialize
+    return () => clearTimeout(timer);
+  }, [stripe, elements, pledgeId, intentType]);
 
   const handleSubmit = async () => {
     if (!stripe || !elements || !agreedToTerms) {
-      console.warn("[StripePaymentForm] Submit blocked:", { stripe: !!stripe, elements: !!elements, agreedToTerms });
+      reportDiag("submit_blocked", {
+        pledgeId,
+        stripe: !!stripe,
+        elements: !!elements,
+        agreedToTerms,
+      });
       return;
     }
 
     setIsProcessing(true);
+    reportDiag("confirm_started", { pledgeId, intentType, total });
 
     try {
       const return_url = returnUrl ||
@@ -123,15 +147,25 @@ export function StripePaymentForm({
       }
 
       if (error) {
-        console.error("[StripePaymentForm] Payment error:", error.type, error.message);
+        reportDiag("confirm_error", {
+          pledgeId,
+          intentType,
+          errorType: error.type,
+          errorCode: error.code,
+          errorMessage: error.message,
+        });
         onError(error.message || "Payment failed");
         setIsProcessing(false);
       } else {
-        console.log("[StripePaymentForm] Payment succeeded, calling onSuccess");
+        reportDiag("confirm_success", { pledgeId, intentType, total });
         onSuccess();
       }
     } catch (err) {
-      console.error("[StripePaymentForm] Unexpected error during payment:", err);
+      reportDiag("confirm_exception", {
+        pledgeId,
+        intentType,
+        error: err instanceof Error ? err.message : String(err),
+      });
       onError("An unexpected error occurred");
       setIsProcessing(false);
     }

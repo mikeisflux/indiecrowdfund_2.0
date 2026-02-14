@@ -261,19 +261,21 @@ export async function GET(request: NextRequest) {
     const creatorBalances = creatorsWithSales
       .map((creator) => {
         // Flatten all purchases across creator's books
-        const allPurchases = creator.marketplaceBooks.flatMap(book => book.purchases);
+        const allPurchases = creator.marketplaceBooks.flatMap(
+          (book: { purchases: { id: string; amount: number; creatorPayout: number }[] }) => book.purchases
+        );
 
         const totalMarketplaceSales = allPurchases.reduce(
-          (sum, s) => sum + Number(s.amount),
+          (sum: number, s: { amount: number }) => sum + Number(s.amount),
           0
         );
         const totalCreatorEarnings = allPurchases.reduce(
-          (sum, s) => sum + Number(s.creatorPayout),
+          (sum: number, s: { creatorPayout: number }) => sum + Number(s.creatorPayout),
           0
         );
 
         const projectEarnings = creator.createdProjects.reduce(
-          (sum, p) => sum + Number(p.currentAmount || 0),
+          (sum: number, p: { currentAmount: number | null }) => sum + Number(p.currentAmount || 0),
           0
         );
 
@@ -287,7 +289,7 @@ export async function GET(request: NextRequest) {
           balance: totalCreatorEarnings,
           projectCount: creator.createdProjects.length,
           projectEarnings,
-          projects: creator.createdProjects.map((p) => ({
+          projects: creator.createdProjects.map((p: { id: string; title: string; status: string; currentAmount: number | null }) => ({
             id: p.id,
             title: p.title,
             status: p.status,
