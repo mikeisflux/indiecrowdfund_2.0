@@ -524,6 +524,7 @@ model Pledge {
 
   // Email tracking
   confirmationEmailSent Boolean      @default(false)
+  metadata              Json?
 
   // Conversion tracking - which email campaign led to this pledge
   sourceCampaignId      String?
