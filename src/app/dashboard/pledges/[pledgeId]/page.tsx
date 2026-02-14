@@ -37,10 +37,8 @@ import {
   MessageSquare,
   ExternalLink,
   Clock,
-  Info,
   Loader2,
   Edit,
-  AlertTriangle,
   ShieldAlert,
 } from "lucide-react";
 

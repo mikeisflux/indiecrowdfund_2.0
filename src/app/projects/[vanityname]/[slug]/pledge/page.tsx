@@ -81,7 +81,7 @@ export default function PledgePage() {
   const [isModifyMode] = useState(!!modifyParam);
   const [modifyPledgeId] = useState<string | null>(modifyParam);
   const [existingPledgeId] = useState<string | null>(addItemsParam);
-  const [originalPledgeAmount, setOriginalPledgeAmount] = useState<number>(0);
+  const [, setOriginalPledgeAmount] = useState<number>(0);
 
   // Stripe state
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);

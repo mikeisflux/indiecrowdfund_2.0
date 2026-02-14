@@ -1643,7 +1643,6 @@ export async function sendPledgeModificationEmail(
   currency: string = "USD"
 ) {
   const dashboardUrl = `${APP_URL}/dashboard/backer`;
-  const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : dashboardUrl;
   const currencySymbol = currency === "USD" ? "$" : currency;
 
   const changeLabel = changeType === "upcharge"
