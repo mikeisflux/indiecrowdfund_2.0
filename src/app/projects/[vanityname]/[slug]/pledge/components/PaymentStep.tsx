@@ -133,6 +133,7 @@ export function PaymentStep({
             /* DivinityCoin Payment - Card form via DC's Stripe account */
             clientSecret && dcStripePromise ? (
               <Elements
+                key={clientSecret}
                 stripe={dcStripePromise}
                 options={{
                   clientSecret,
@@ -206,6 +207,7 @@ export function PaymentStep({
             /* Stripe Payment */
             clientSecret && stripePromise ? (
               <Elements
+                key={clientSecret}
                 stripe={stripePromise}
                 options={{
                   clientSecret,

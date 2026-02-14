@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Lock, ShieldCheck } from "lucide-react";
@@ -74,8 +75,24 @@ export function StripePaymentForm({
   const stripe = useStripe();
   const elements = useElements();
 
+  // Log Stripe initialization status for diagnostics
+  useEffect(() => {
+    if (!stripe) {
+      console.warn("[StripePaymentForm] Stripe instance not yet available");
+    }
+    if (!elements) {
+      console.warn("[StripePaymentForm] Elements instance not yet available");
+    }
+    if (stripe && elements) {
+      console.log("[StripePaymentForm] Stripe Elements initialized successfully");
+    }
+  }, [stripe, elements]);
+
   const handleSubmit = async () => {
-    if (!stripe || !elements || !agreedToTerms) return;
+    if (!stripe || !elements || !agreedToTerms) {
+      console.warn("[StripePaymentForm] Submit blocked:", { stripe: !!stripe, elements: !!elements, agreedToTerms });
+      return;
+    }
 
     setIsProcessing(true);
 
@@ -106,12 +123,15 @@ export function StripePaymentForm({
       }
 
       if (error) {
+        console.error("[StripePaymentForm] Payment error:", error.type, error.message);
         onError(error.message || "Payment failed");
         setIsProcessing(false);
       } else {
+        console.log("[StripePaymentForm] Payment succeeded, calling onSuccess");
         onSuccess();
       }
-    } catch {
+    } catch (err) {
+      console.error("[StripePaymentForm] Unexpected error during payment:", err);
       onError("An unexpected error occurred");
       setIsProcessing(false);
     }

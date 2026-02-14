@@ -5,7 +5,7 @@
  * and legacy URLs (/projects/[slug]/pledge via middleware rewrite to /projects/_/[slug]/pledge)
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
@@ -90,6 +90,10 @@ export default function PledgePage() {
   const [intentType, setIntentType] = useState<"payment_intent" | "setup_intent">("setup_intent");
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [currentPledgeId, setCurrentPledgeId] = useState<string | null>(null);
+
+  // Ref guard to prevent duplicate PaymentIntent creation (React state updates are async,
+  // so state-only guards can fail in rapid re-renders)
+  const creatingPaymentRef = useRef(false);
 
   // Load existing pledge data when in modify mode
   useEffect(() => {
@@ -189,6 +193,13 @@ export default function PledgePage() {
   const total = subtotal + totalShipping;
   const addItemsTotal = addonsTotal + addonsShipping;
 
+  // Reset the payment creation guard when error/client state is cleared (e.g., "Try Again" button)
+  useEffect(() => {
+    if (!clientSecret && !paymentError && !isProcessing) {
+      creatingPaymentRef.current = false;
+    }
+  }, [clientSecret, paymentError, isProcessing]);
+
   // Auto-create pledge when entering payment step
   useEffect(() => {
     if (isModifyMode) {
@@ -210,6 +221,9 @@ export default function PledgePage() {
   const createAdditionalItemsPurchase = async () => {
     if (!project || !existingPledgeId || Object.keys(selectedAddons).length === 0) return;
     if (clientSecret || currentPledgeId) return;
+    // Ref guard: prevent duplicate creation from rapid re-renders
+    if (creatingPaymentRef.current) return;
+    creatingPaymentRef.current = true;
 
     setIsProcessing(true);
     setPaymentError(null);
@@ -230,12 +244,15 @@ export default function PledgePage() {
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create additional items purchase");
       setIsProcessing(false);
+      creatingPaymentRef.current = false;
     }
   };
 
   const submitModifyPledge = async () => {
     if (!project || !modifyPledgeId) return;
     if (currentPledgeId) return;
+    if (creatingPaymentRef.current) return;
+    creatingPaymentRef.current = true;
 
     setIsProcessing(true);
     setPaymentError(null);
@@ -273,6 +290,7 @@ export default function PledgePage() {
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to modify pledge");
       setIsProcessing(false);
+      creatingPaymentRef.current = false;
     }
   };
 
@@ -280,6 +298,8 @@ export default function PledgePage() {
     if (!project || (!selectedReward && !pledgeWithoutReward)) return;
     if (clientSecret) return;
     if (currentPledgeId) return;
+    if (creatingPaymentRef.current) return;
+    creatingPaymentRef.current = true;
 
     setIsProcessing(true);
     setPaymentError(null);
@@ -313,6 +333,7 @@ export default function PledgePage() {
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create pledge");
       setIsProcessing(false);
+      creatingPaymentRef.current = false;
     }
   };
 
