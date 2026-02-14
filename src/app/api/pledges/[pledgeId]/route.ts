@@ -699,83 +699,166 @@ export async function PATCH(
 
       const additionalAmount = parseFloat(amount);
       const newTotal = Number(pledge.amount) + additionalAmount;
+      const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
+      const isCharged = pledge.status === "COMPLETED";
 
-      // If project is funded, charge immediately
-      if (isFunded && pledge.project.creator.stripeConfig?.stripeAccountId) {
-        // Create a payment intent for the additional amount
-        const amountInCents = Math.round(additionalAmount * 100);
-        const platformFee = Math.round(additionalAmount * 0.03 * 100);
-
-        try {
-          const stripeClient = await getStripeInstance();
-          const paymentIntent = await stripeClient.paymentIntents.create({
-            amount: amountInCents,
-            currency: "usd",
-            customer: pledge.stripeCustomerId || undefined,
-            payment_method: pledge.stripePaymentMethodId || undefined,
-            confirm: !!pledge.stripePaymentMethodId,
-            application_fee_amount: platformFee,
-            transfer_data: {
-              destination: pledge.project.creator.stripeConfig.stripeAccountId,
-            },
-            metadata: {
-              pledgeId: pledge.id,
-              projectId: pledge.projectId,
-              userId: session.user.id,
-              type: "pledge_increase",
-            },
-          });
-
-          if (paymentIntent.status === "succeeded") {
-            // Update pledge amount
-            await db.pledge.update({
-              where: { id: pledgeId },
-              data: { amount: newTotal },
+      // If pledge is already charged, collect the additional amount
+      if (isCharged) {
+        if (paymentProcessor === "DIVINITYCOIN") {
+          // DC: create upcharge payment intent for the additional amount
+          try {
+            const dcConfig = await getDivinityCoinConfig();
+            const userRecord = await db.user.findUnique({
+              where: { id: session.user.id },
+              select: { email: true, name: true },
             });
 
-            // Update project current amount
-            await db.project.update({
-              where: { id: pledge.projectId },
+            const dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${dcConfig.apiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                amount: Math.round(additionalAmount * 100),
+                currency: "usd",
+                platformUserId: session.user.id,
+                email: userRecord?.email || "",
+                name: userRecord?.name || "",
+                pledgeId: pledge.id,
+                projectId: pledge.projectId,
+                type: "upcharge",
+                originalPaymentId: pledge.divinityCoinPaymentId,
+              }),
+            });
+
+            const dcResult = await dcResponse.json();
+            if (!dcResponse.ok || !dcResult.success) {
+              console.error("[DivinityCoin Increase] Failed to create payment intent:", dcResult);
+              return NextResponse.json(
+                { error: dcResult.error || "Failed to initialize payment" },
+                { status: 502 }
+              );
+            }
+
+            // Store pending increase in metadata (applied after payment via confirm-modify)
+            const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+              ? pledge.metadata as Record<string, unknown>
+              : {};
+
+            await db.pledge.update({
+              where: { id: pledgeId },
               data: {
-                currentAmount: { increment: additionalAmount },
+                metadata: {
+                  ...currentMetadata,
+                  pendingModification: {
+                    paymentMethod: "DIVINITYCOIN",
+                    paymentIntentId: dcResult.paymentIntentId,
+                    rewardId: pledge.rewardId || null,
+                    addons: [], // No addon changes for simple increase
+                    newAmount: newTotal,
+                    oldAmount: Number(pledge.amount),
+                    amountDiff: additionalAmount,
+                    createdAt: new Date().toISOString(),
+                  },
+                },
               },
             });
 
             return NextResponse.json({
               success: true,
-              message: `Pledge increased by $${additionalAmount.toFixed(2)}`,
+              requiresPayment: true,
+              clientSecret: dcResult.clientSecret,
+              publishableKey: dcResult.publishableKey,
+              message: `Additional $${additionalAmount.toFixed(2)} payment required`,
               newTotal,
-              charged: true,
             });
-          } else {
-            return NextResponse.json({
-              success: false,
-              requiresAction: true,
-              clientSecret: paymentIntent.client_secret,
-              message: "Payment requires additional action",
-            });
+          } catch (dcError) {
+            console.error("[DivinityCoin Increase] API error:", dcError);
+            return NextResponse.json(
+              { error: "Failed to connect to payment processor" },
+              { status: 500 }
+            );
           }
-        } catch (stripeError) {
-          console.error("Stripe error:", stripeError);
-          return NextResponse.json(
-            { error: "Payment failed" },
-            { status: 400 }
-          );
         }
-      } else {
-        // Project not funded yet, just update the pledge amount
-        await db.pledge.update({
-          where: { id: pledgeId },
-          data: { amount: newTotal },
-        });
 
-        return NextResponse.json({
-          success: true,
-          message: `Pledge increased to $${newTotal.toFixed(2)}`,
-          newTotal,
-          charged: false,
-        });
+        // Stripe: charge immediately if creator has Stripe Connect
+        const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
+        if (stripeAccountId) {
+          const amountInCents = Math.round(additionalAmount * 100);
+          const platformFee = Math.round(additionalAmount * 0.03 * 100);
+
+          try {
+            const stripeClient = await getStripeInstance();
+            const paymentIntent = await stripeClient.paymentIntents.create({
+              amount: amountInCents,
+              currency: "usd",
+              customer: pledge.stripeCustomerId || undefined,
+              payment_method: pledge.stripePaymentMethodId || undefined,
+              confirm: !!pledge.stripePaymentMethodId,
+              application_fee_amount: platformFee,
+              transfer_data: {
+                destination: stripeAccountId,
+              },
+              metadata: {
+                pledgeId: pledge.id,
+                projectId: pledge.projectId,
+                userId: session.user.id,
+                type: "pledge_increase",
+              },
+            });
+
+            if (paymentIntent.status === "succeeded") {
+              // Update pledge amount
+              await db.pledge.update({
+                where: { id: pledgeId },
+                data: { amount: newTotal },
+              });
+
+              // Update project current amount
+              await db.project.update({
+                where: { id: pledge.projectId },
+                data: {
+                  currentAmount: { increment: additionalAmount },
+                },
+              });
+
+              return NextResponse.json({
+                success: true,
+                message: `Pledge increased by $${additionalAmount.toFixed(2)}`,
+                newTotal,
+                charged: true,
+              });
+            } else {
+              return NextResponse.json({
+                success: false,
+                requiresAction: true,
+                clientSecret: paymentIntent.client_secret,
+                message: "Payment requires additional action",
+              });
+            }
+          } catch (stripeError) {
+            console.error("Stripe error:", stripeError);
+            return NextResponse.json(
+              { error: "Payment failed" },
+              { status: 400 }
+            );
+          }
+        }
       }
+
+      // Not yet charged (PENDING) - just update the pledge amount
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: { amount: newTotal },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Pledge increased to $${newTotal.toFixed(2)}`,
+        newTotal,
+        charged: false,
+      });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
