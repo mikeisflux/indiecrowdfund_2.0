@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
         currentAmount: true,
         goalAmount: true,
         paymentProcessor: true,
+        fundedAt: true,
       },
     });
 
@@ -83,9 +84,7 @@ export async function GET(req: NextRequest) {
           where: { id: project.id },
           data: {
             status: "FUNDED",
-            fundedAt: project.currentAmount >= project.goalAmount
-              ? undefined // Keep existing fundedAt if already set
-              : now,
+            ...(project.fundedAt ? {} : { fundedAt: now }),
           },
         });
 
