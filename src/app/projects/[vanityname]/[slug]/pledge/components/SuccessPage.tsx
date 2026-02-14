@@ -10,6 +10,7 @@ import { SHIPPING_COUNTRIES } from "@/types";
 interface SuccessPageProps {
   project: ProjectData;
   isAddItemsMode: boolean;
+  isModifyMode?: boolean;
   pledgeWithoutReward: boolean;
   selectedReward: RewardData | null;
   customPledgeAmount: number;
@@ -26,6 +27,7 @@ interface SuccessPageProps {
 export function SuccessPage({
   project,
   isAddItemsMode,
+  isModifyMode,
   pledgeWithoutReward,
   selectedReward,
   customPledgeAmount,
@@ -103,7 +105,9 @@ export function SuccessPage({
 
           {/* Main message */}
           <h1 className="mb-3 text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
-            {isAddItemsMode
+            {isModifyMode
+              ? "Pledge updated successfully!"
+              : isAddItemsMode
               ? "Additional items added successfully!"
               : "Thank you for making this project come to life!"}
           </h1>
@@ -111,12 +115,14 @@ export function SuccessPage({
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-green-100 dark:bg-green-900/50 px-4 py-2 text-green-700 dark:text-green-300">
             <CheckCircle className="h-5 w-5" />
             <span className="font-medium">
-              {isAddItemsMode ? "Your purchase has been completed!" : "Your payment has been accepted!"}
+              {isModifyMode ? "Your pledge has been updated!" : isAddItemsMode ? "Your purchase has been completed!" : "Your payment has been accepted!"}
             </span>
           </div>
 
           <p className="mb-10 text-lg text-muted-foreground">
-            {isAddItemsMode ? (
+            {isModifyMode ? (
+              <>Your pledge selections have been updated. Any price difference has been handled automatically.</>
+            ) : isAddItemsMode ? (
               <>Your additional items have been added to your pledge. You&apos;ll receive a confirmation email shortly.</>
             ) : (
               <>Your support means the world to <span className="font-semibold text-foreground">{project?.creator?.name || 'the creator'}</span>.

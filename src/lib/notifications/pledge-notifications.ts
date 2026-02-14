@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { sendPledgeConfirmationEmail } from "@/lib/email";
+import { sendPledgeConfirmationEmail, sendPledgeModificationEmail, sendPledgeCancellationEmail } from "@/lib/email";
 import { createNotification } from "./core";
 import type { NotificationType } from "./types";
 
@@ -455,4 +455,179 @@ export async function processUnsentConfirmationEmails() {
   }
 
   return results;
+}
+
+/**
+ * Notify backer when their pledge is modified (addon/reward swap)
+ */
+export async function notifyPledgeModified(
+  pledgeId: string,
+  oldAmount: number,
+  newAmount: number,
+  changeType: "upcharge" | "refund" | "no_change"
+) {
+  try {
+    const pledge = await db.pledge.findUnique({
+      where: { id: pledgeId },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            currency: true,
+            creator: { select: { vanityUrl: true } },
+          },
+        },
+        reward: { select: { title: true } },
+        addons: {
+          include: {
+            addon: { select: { title: true, amount: true } },
+          },
+        },
+      },
+    });
+
+    if (!pledge?.user?.email) return;
+
+    const amountDiff = newAmount - oldAmount;
+    const projectUrlPath = pledge.project.creator?.vanityUrl
+      ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
+      : `/projects/${pledge.project.slug}`;
+
+    const addonsList = pledge.addons.map((a: { addon: { title: string; amount: number }; quantity: number }) => ({
+      title: a.addon.title,
+      quantity: a.quantity,
+      amount: Number(a.addon.amount),
+    }));
+
+    // In-app notification
+    const notifMessage = changeType === "upcharge"
+      ? `Your pledge for "${pledge.project.title}" was updated. Additional $${Math.abs(amountDiff).toFixed(2)} charged.`
+      : changeType === "refund"
+      ? `Your pledge for "${pledge.project.title}" was updated. $${Math.abs(amountDiff).toFixed(2)} refunded.`
+      : `Your pledge for "${pledge.project.title}" was updated.`;
+
+    await createNotification({
+      userId: pledge.user.id,
+      type: "PLEDGE_RECEIVED" as NotificationType, // Reuse existing type
+      title: "Pledge Updated",
+      message: notifMessage,
+      actionUrl: `/dashboard/pledges/${pledgeId}`,
+      projectId: pledge.project.id,
+    });
+
+    // Email notification
+    const emailResult = await sendPledgeModificationEmail(
+      pledge.user.email,
+      pledge.user.name || "Backer",
+      pledge.project.title,
+      oldAmount,
+      newAmount,
+      amountDiff,
+      changeType,
+      pledge.reward?.title || null,
+      addonsList,
+      projectUrlPath,
+      pledge.project.currency || "USD"
+    );
+
+    if (emailResult.success) {
+      await db.emailLog.create({
+        data: {
+          userId: pledge.user.id,
+          projectId: pledge.project.id,
+          pledgeId: pledge.id,
+          type: "PLEDGE_MODIFICATION",
+          subject: emailResult.subject,
+          recipientEmail: pledge.user.email,
+          htmlContent: emailResult.html,
+        },
+      });
+    }
+  } catch (error) {
+    console.error(`[notifyPledgeModified] Error for pledge ${pledgeId}:`, error);
+  }
+}
+
+/**
+ * Notify backer when their pledge is cancelled (with or without refund)
+ */
+export async function notifyPledgeCancelled(
+  pledgeId: string,
+  wasRefunded: boolean
+) {
+  try {
+    const pledge = await db.pledge.findUnique({
+      where: { id: pledgeId },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            currency: true,
+            creator: { select: { id: true, vanityUrl: true } },
+          },
+        },
+      },
+    });
+
+    if (!pledge?.user?.email) return;
+
+    const projectUrlPath = pledge.project.creator?.vanityUrl
+      ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
+      : `/projects/${pledge.project.slug}`;
+
+    // In-app notification for backer
+    await createNotification({
+      userId: pledge.user.id,
+      type: "PLEDGE_RECEIVED" as NotificationType,
+      title: wasRefunded ? "Pledge Cancelled & Refunded" : "Pledge Cancelled",
+      message: wasRefunded
+        ? `Your $${Number(pledge.amount).toFixed(2)} pledge for "${pledge.project.title}" has been cancelled and refunded.`
+        : `Your pledge for "${pledge.project.title}" has been cancelled.`,
+      actionUrl: `/dashboard/pledges/${pledgeId}`,
+      projectId: pledge.project.id,
+    });
+
+    // In-app notification for creator
+    await createNotification({
+      userId: pledge.project.creator.id,
+      type: "PLEDGE_RECEIVED" as NotificationType,
+      title: "Pledge Cancelled",
+      message: `${pledge.user.name || "A backer"} cancelled their $${Number(pledge.amount).toFixed(2)} pledge for "${pledge.project.title}".`,
+      actionUrl: projectUrlPath,
+      projectId: pledge.project.id,
+    });
+
+    // Email to backer
+    const emailResult = await sendPledgeCancellationEmail(
+      pledge.user.email,
+      pledge.user.name || "Backer",
+      pledge.project.title,
+      Number(pledge.amount),
+      wasRefunded,
+      projectUrlPath,
+      pledge.project.currency || "USD"
+    );
+
+    if (emailResult.success) {
+      await db.emailLog.create({
+        data: {
+          userId: pledge.user.id,
+          projectId: pledge.project.id,
+          pledgeId: pledge.id,
+          type: wasRefunded ? "PLEDGE_REFUND" : "PLEDGE_CANCELLATION",
+          subject: emailResult.subject,
+          recipientEmail: pledge.user.email,
+          htmlContent: emailResult.html,
+        },
+      });
+    }
+  } catch (error) {
+    console.error(`[notifyPledgeCancelled] Error for pledge ${pledgeId}:`, error);
+  }
 }

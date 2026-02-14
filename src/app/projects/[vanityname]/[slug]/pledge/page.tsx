@@ -15,7 +15,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { ProjectData, RewardData, AddonData, Step } from "./types";
 import { detectUserCountry } from "./constants";
-import { getShippingCost, createAdditionalItemsPurchase as createAdditionalItemsAPI, createPledgeForPayment as createPledgeAPI, confirmPayment } from "./utils";
+import { getShippingCost, createAdditionalItemsPurchase as createAdditionalItemsAPI, createPledgeForPayment as createPledgeAPI, confirmPayment, modifyPledge as modifyPledgeAPI } from "./utils";
 import { Breadcrumb } from "./components/Breadcrumb";
 import { RewardSelector } from "./components/RewardSelector";
 import { AddonSelector } from "./components/AddonSelector";
@@ -44,6 +44,7 @@ export default function PledgePage() {
   const amountParam = searchParams?.get("amount") ?? null;
   const successParam = searchParams?.get("success") ?? null;
   const addItemsParam = searchParams?.get("addItems") ?? null;
+  const modifyParam = searchParams?.get("modify") ?? null;
   const pledgeIdParam = searchParams?.get("pledgeId") ?? null;
 
   // Redirect to login if not authenticated
@@ -65,7 +66,7 @@ export default function PledgePage() {
   const [customPledgeAmount, setCustomPledgeAmount] = useState(amountParam ? parseInt(amountParam) : 10);
 
   // UI state
-  const [step, setStep] = useState<Step>(rewardId || addItemsParam ? "addons" : "rewards");
+  const [step, setStep] = useState<Step>(rewardId || addItemsParam || modifyParam ? "addons" : "rewards");
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
   const [bonusSupport, setBonusSupport] = useState<number>(0);
   const [shippingCountry, setShippingCountry] = useState(() => {
@@ -77,7 +78,10 @@ export default function PledgePage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddItemsMode] = useState(!!addItemsParam);
+  const [isModifyMode] = useState(!!modifyParam);
+  const [modifyPledgeId] = useState<string | null>(modifyParam);
   const [existingPledgeId] = useState<string | null>(addItemsParam);
+  const [originalPledgeAmount, setOriginalPledgeAmount] = useState<number>(0);
 
   // Stripe state
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
@@ -86,6 +90,38 @@ export default function PledgePage() {
   const [intentType, setIntentType] = useState<"payment_intent" | "setup_intent">("setup_intent");
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [currentPledgeId, setCurrentPledgeId] = useState<string | null>(null);
+
+  // Load existing pledge data when in modify mode
+  useEffect(() => {
+    async function loadExistingPledge() {
+      if (!modifyPledgeId) return;
+      try {
+        const res = await fetch(`/api/pledges/${modifyPledgeId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const existingPledge = data.pledge;
+        setOriginalPledgeAmount(existingPledge.amount);
+
+        // Pre-select the existing reward
+        if (existingPledge.reward) {
+          // Will be matched after project data loads
+          setSelectedReward(null); // Reset, will be set in fetchData
+        }
+
+        // Pre-select existing addons
+        if (existingPledge.addons?.length > 0) {
+          const addonMap: Record<string, number> = {};
+          for (const addon of existingPledge.addons) {
+            addonMap[addon.id] = addon.quantity;
+          }
+          setSelectedAddons(addonMap);
+        }
+      } catch (err) {
+        console.error("Failed to load existing pledge:", err);
+      }
+    }
+    loadExistingPledge();
+  }, [modifyPledgeId]);
 
   // Handle success redirect (including after 3D Secure authentication)
   useEffect(() => {
@@ -155,7 +191,11 @@ export default function PledgePage() {
 
   // Auto-create pledge when entering payment step
   useEffect(() => {
-    if (isAddItemsMode) {
+    if (isModifyMode) {
+      if (step === "payment" && !clientSecret && !currentPledgeId && !isProcessing && !paymentError && project && modifyPledgeId) {
+        submitModifyPledge();
+      }
+    } else if (isAddItemsMode) {
       if (step === "payment" && !clientSecret && !currentPledgeId && !isProcessing && !paymentError && project && Object.keys(selectedAddons).length > 0) {
         createAdditionalItemsPurchase();
       }
@@ -165,7 +205,7 @@ export default function PledgePage() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, currentPledgeId, isProcessing, paymentError, isAddItemsMode, selectedAddons]);
+  }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, currentPledgeId, isProcessing, paymentError, isAddItemsMode, isModifyMode, selectedAddons]);
 
   const createAdditionalItemsPurchase = async () => {
     if (!project || !existingPledgeId || Object.keys(selectedAddons).length === 0) return;
@@ -190,6 +230,49 @@ export default function PledgePage() {
       setIsProcessing(false);
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create additional items purchase");
+      setIsProcessing(false);
+    }
+  };
+
+  const submitModifyPledge = async () => {
+    if (!project || !modifyPledgeId) return;
+    if (currentPledgeId) return;
+
+    setIsProcessing(true);
+    setPaymentError(null);
+
+    try {
+      const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
+        id,
+        quantity,
+      }));
+
+      const result = await modifyPledgeAPI(
+        modifyPledgeId,
+        selectedReward?.id || "no-reward",
+        addonsWithQuantity,
+        total,
+        totalShipping,
+        shippingCountry
+      );
+
+      if (result.requiresPayment && result.clientSecret) {
+        // Price went up - need to collect additional payment
+        setClientSecret(result.clientSecret);
+        setIntentType("payment_intent");
+        setCurrentPledgeId(modifyPledgeId);
+        if (result.publishableKey && !dcStripePromise) {
+          setDcStripePromise(loadStripe(result.publishableKey));
+        }
+        setIsProcessing(false);
+      } else {
+        // No additional payment needed (same price or refund issued)
+        setCurrentPledgeId(modifyPledgeId);
+        setStep("success");
+        setIsProcessing(false);
+      }
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Failed to modify pledge");
       setIsProcessing(false);
     }
   };
@@ -231,6 +314,18 @@ export default function PledgePage() {
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create pledge");
       setIsProcessing(false);
+    }
+  };
+
+  // Helper to get existing pledge's reward ID
+  const getExistingPledgeRewardId = async (pledgeId: string): Promise<string | null> => {
+    try {
+      const res = await fetch(`/api/pledges/${pledgeId}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.pledge?.reward?.id || null;
+    } catch {
+      return null;
     }
   };
 
@@ -316,8 +411,11 @@ export default function PledgePage() {
       }));
       setAllRewards(formattedTiers);
 
-      if (rewardId) {
-        const reward = rewards.find((r: { id: string }) => r.id === rewardId);
+      // In modify mode, load existing pledge reward selection
+      const effectiveRewardId = rewardId || (modifyPledgeId ? await getExistingPledgeRewardId(modifyPledgeId) : null);
+
+      if (effectiveRewardId) {
+        const reward = rewards.find((r: { id: string }) => r.id === effectiveRewardId);
         if (reward) {
           const formattedReward: RewardData = {
             id: reward.id,
@@ -377,7 +475,8 @@ export default function PledgePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [slug, vanityname, isLegacyUrl, rewardId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, vanityname, isLegacyUrl, rewardId, modifyPledgeId]);
 
   useEffect(() => {
     fetchData();
@@ -433,7 +532,12 @@ export default function PledgePage() {
   const handlePaymentSuccess = async () => {
     if (currentPledgeId) {
       try {
-        await confirmPayment(currentPledgeId, isAddItemsMode);
+        if (isModifyMode) {
+          // For modify mode, confirm the modification payment
+          await confirmPayment(currentPledgeId, false, true);
+        } else {
+          await confirmPayment(currentPledgeId, isAddItemsMode);
+        }
         setStep("success");
       } catch (err) {
         console.error("Failed to confirm payment:", err);
@@ -532,6 +636,7 @@ export default function PledgePage() {
       <SuccessPage
         project={project}
         isAddItemsMode={isAddItemsMode}
+        isModifyMode={isModifyMode}
         pledgeWithoutReward={pledgeWithoutReward}
         selectedReward={selectedReward}
         customPledgeAmount={customPledgeAmount}
@@ -584,7 +689,7 @@ export default function PledgePage() {
               setStep={setStep}
               selectedReward={selectedReward}
               pledgeWithoutReward={pledgeWithoutReward}
-              isAddItemsMode={isAddItemsMode}
+              isAddItemsMode={isAddItemsMode || isModifyMode}
               selectedAddons={selectedAddons}
             />
           </div>

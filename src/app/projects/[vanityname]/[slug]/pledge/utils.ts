@@ -72,6 +72,51 @@ export async function createAdditionalItemsPurchase(
   };
 }
 
+// Modify an existing pledge (change reward/addons)
+export async function modifyPledge(
+  pledgeId: string,
+  rewardId: string,
+  addons: { id: string; quantity: number }[],
+  newAmount: number,
+  shippingAmount: number,
+  shippingCountry: string
+): Promise<{
+  success: boolean;
+  requiresPayment: boolean;
+  clientSecret?: string;
+  publishableKey?: string;
+  refundAmount?: number;
+  message: string;
+}> {
+  const response = await fetch(`/api/pledges/${pledgeId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+    body: JSON.stringify({
+      action: "modify",
+      rewardId,
+      addons,
+      newAmount,
+      shippingAmount,
+      shippingCountry,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to modify pledge");
+  }
+
+  return {
+    success: data.success,
+    requiresPayment: data.requiresPayment || false,
+    clientSecret: data.clientSecret,
+    publishableKey: data.publishableKey,
+    refundAmount: data.refundAmount,
+    message: data.message,
+  };
+}
+
 // Create new pledge for payment
 export async function createPledgeForPayment(
   projectId: string,
@@ -121,10 +166,15 @@ export async function createPledgeForPayment(
 }
 
 // Confirm payment after success
-export async function confirmPayment(pledgeId: string, isAddItemsMode: boolean): Promise<void> {
-  const endpoint = isAddItemsMode
-    ? `/api/pledges/${pledgeId}/confirm-add-items`
-    : `/api/pledges/${pledgeId}/confirm`;
+export async function confirmPayment(pledgeId: string, isAddItemsMode: boolean, isModifyMode?: boolean): Promise<void> {
+  let endpoint: string;
+  if (isModifyMode) {
+    endpoint = `/api/pledges/${pledgeId}/confirm-modify`;
+  } else if (isAddItemsMode) {
+    endpoint = `/api/pledges/${pledgeId}/confirm-add-items`;
+  } else {
+    endpoint = `/api/pledges/${pledgeId}/confirm`;
+  }
 
   const response = await fetch(endpoint, {
     method: "POST",

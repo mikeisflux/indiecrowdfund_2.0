@@ -2,8 +2,80 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
+import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { notifyPledgeModified, notifyPledgeCancelled } from "@/lib/notifications/pledge-notifications";
 
 export const dynamic = "force-dynamic";
+
+// Helper to apply modification changes (reward swap, addon swap, amount update)
+async function applyModificationChanges(
+  pledgeId: string,
+  pledge: { rewardId: string | null; projectId: string; amount: number | { toNumber?: () => number } },
+  rewardId: string | undefined,
+  addonsWithQuantity: { id: string; quantity: number }[],
+  addonIdList: string[],
+  newAmount: number,
+  amountDiff: number
+) {
+  // If changing reward, update claimed counts
+  if (pledge.rewardId && pledge.rewardId !== rewardId) {
+    await db.reward.update({
+      where: { id: pledge.rewardId },
+      data: { quantityClaimed: { decrement: 1 } },
+    });
+  }
+
+  if (rewardId && rewardId !== "no-reward" && pledge.rewardId !== rewardId) {
+    await db.reward.update({
+      where: { id: rewardId },
+      data: { quantityClaimed: { increment: 1 } },
+    });
+  }
+
+  // Delete old addon associations
+  await db.pledgeAddon.deleteMany({
+    where: { pledgeId },
+  });
+
+  // Create new addon associations with quantities
+  if (addonsWithQuantity.length > 0) {
+    const addonRecords = await db.reward.findMany({
+      where: { id: { in: addonIdList }, type: "ADDON" },
+      select: { id: true, amount: true },
+    });
+    const addonPriceMap = new Map<string, number>(
+      addonRecords.map((a: { id: string; amount: number }) => [a.id, Number(a.amount)])
+    );
+
+    await db.pledgeAddon.createMany({
+      data: addonsWithQuantity.map((addon) => ({
+        pledgeId,
+        addonId: addon.id,
+        quantity: addon.quantity,
+        amount: (addonPriceMap.get(addon.id) ?? 0) * addon.quantity,
+      })),
+    });
+  }
+
+  // Update the pledge
+  await db.pledge.update({
+    where: { id: pledgeId },
+    data: {
+      rewardId: rewardId === "no-reward" ? null : rewardId || null,
+      amount: newAmount,
+    },
+  });
+
+  // Update project current amount
+  if (amountDiff !== 0) {
+    await db.project.update({
+      where: { id: pledge.projectId },
+      data: {
+        currentAmount: { increment: amountDiff },
+      },
+    });
+  }
+}
 
 // GET - Get pledge details
 export async function GET(
@@ -103,7 +175,9 @@ export async function GET(
           amount: Number(a.addon.amount),
           quantity: a.quantity,
         })),
-        canCancel: !isFunded && pledge.status === "PENDING",
+        canCancel: (!isFunded && pledge.status === "PENDING") || pledge.status === "COMPLETED",
+        canRefund: pledge.status === "COMPLETED",
+        canModify: pledge.project.status === "LIVE" && (pledge.status === "PENDING" || pledge.status === "COMPLETED"),
         canIncrease: pledge.project.status === "LIVE",
         isFunded,
       },
@@ -142,9 +216,12 @@ export async function PATCH(
         project: {
           select: {
             id: true,
+            title: true,
             status: true,
             currentAmount: true,
             goalAmount: true,
+            paymentProcessor: true,
+            stripeAccountId: true,
             creator: {
               include: {
                 stripeConfig: true,
@@ -162,17 +239,103 @@ export async function PATCH(
     const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
 
     if (action === "cancel") {
-      // Can only cancel if NOT funded and pledge is pending
-      if (isFunded) {
+      const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
+
+      // COMPLETED pledges: cancel with refund
+      if (pledge.status === "COMPLETED") {
+        if (paymentProcessor === "DIVINITYCOIN") {
+          try {
+            const dcResult = await callDivinityCoinAPI("refund", {
+              pledgeId: pledge.id,
+              paymentId: pledge.divinityCoinPaymentId,
+              amount: Math.round(Number(pledge.amount) * 100),
+              reason: body.reason || "Cancelled by backer",
+              requestedBy: "user",
+            });
+
+            if (!dcResult.success) {
+              return NextResponse.json(
+                { error: dcResult.error || "Refund failed" },
+                { status: 400 }
+              );
+            }
+          } catch (dcError) {
+            console.error("DivinityCoin refund error:", dcError);
+            return NextResponse.json(
+              { error: "Failed to process refund" },
+              { status: 500 }
+            );
+          }
+        } else {
+          // Stripe refund
+          if (!pledge.stripePaymentIntentId) {
+            return NextResponse.json(
+              { error: "No payment found to refund" },
+              { status: 400 }
+            );
+          }
+
+          try {
+            const stripe = await getStripeInstance();
+            await stripe.refunds.create({
+              payment_intent: pledge.stripePaymentIntentId,
+              reason: "requested_by_customer",
+              metadata: {
+                pledgeId: pledge.id,
+                cancelledBy: session.user.id,
+                reason: body.reason || "Cancelled by backer",
+              },
+            });
+          } catch (stripeError) {
+            console.error("Stripe refund error:", stripeError);
+            return NextResponse.json(
+              { error: "Failed to process refund" },
+              { status: 400 }
+            );
+          }
+        }
+
+        // Update pledge status to REFUNDED
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            status: "REFUNDED",
+            lastFailureReason: body.reason || "Cancelled by backer",
+          },
+        });
+
+        // Decrement project stats
+        await db.project.update({
+          where: { id: pledge.projectId },
+          data: {
+            backerCount: { decrement: 1 },
+            currentAmount: { decrement: pledge.amount },
+          },
+        });
+
+        // Send cancellation + refund notification (async, don't block response)
+        notifyPledgeCancelled(pledgeId, true).catch(err =>
+          console.error("[Cancel] Failed to send refund notification:", err)
+        );
+
+        return NextResponse.json({
+          success: true,
+          refunded: true,
+          message: "Pledge cancelled and refund processed",
+        });
+      }
+
+      // PENDING pledges: cancel (no charge has been made)
+      if (pledge.status !== "PENDING") {
         return NextResponse.json(
-          { error: "Cannot cancel pledge after project is funded" },
+          { error: "Can only cancel pending or completed pledges" },
           { status: 400 }
         );
       }
 
-      if (pledge.status !== "PENDING") {
+      if (isFunded) {
         return NextResponse.json(
-          { error: "Can only cancel pending pledges" },
+          { error: "Cannot cancel pending pledge after project is funded. Your payment is being processed." },
           { status: 400 }
         );
       }
@@ -193,8 +356,6 @@ export async function PATCH(
       });
 
       // Only decrement project stats if pledge was actually confirmed
-      // (stats are only incremented when confirmationEmailSent = true)
-      // This prevents negative values from incomplete checkouts being cancelled
       if (pledge.confirmationEmailSent) {
         await db.project.update({
           where: { id: pledge.projectId },
@@ -205,31 +366,31 @@ export async function PATCH(
         });
       }
 
+      // Send cancellation notification (async, don't block response)
+      notifyPledgeCancelled(pledgeId, false).catch(err =>
+        console.error("[Cancel] Failed to send cancellation notification:", err)
+      );
+
       return NextResponse.json({
         success: true,
+        refunded: false,
         message: "Pledge cancelled successfully",
       });
     }
 
     if (action === "modify") {
-      // Can only modify reward/addons for PENDING pledges when project is not funded
-      if (isFunded) {
-        return NextResponse.json(
-          { error: "Cannot modify pledge after project is funded" },
-          { status: 400 }
-        );
-      }
-
-      if (pledge.status !== "PENDING") {
-        return NextResponse.json(
-          { error: "Can only modify pending pledges" },
-          { status: 400 }
-        );
-      }
-
+      // Can only modify while project is live
       if (pledge.project.status !== "LIVE") {
         return NextResponse.json(
           { error: "Can only modify pledge while project is live" },
+          { status: 400 }
+        );
+      }
+
+      // Allow modify for PENDING (unfunded) and COMPLETED pledges
+      if (pledge.status !== "PENDING" && pledge.status !== "COMPLETED") {
+        return NextResponse.json(
+          { error: "Can only modify pending or completed pledges" },
           { status: 400 }
         );
       }
@@ -275,74 +436,202 @@ export async function PATCH(
         }
       }
 
-      // Calculate old contribution for project update
-      const oldAmount = pledge.amount;
+      // Calculate price difference
+      const oldAmount = Number(pledge.amount);
       const amountDiff = newAmount - oldAmount;
+      const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
+      const isAlreadyCharged = pledge.status === "COMPLETED";
 
-      // If changing reward, update claimed counts
-      if (pledge.rewardId && pledge.rewardId !== rewardId) {
-        // Decrement old reward's claimed count
-        await db.reward.update({
-          where: { id: pledge.rewardId },
-          data: { quantityClaimed: { decrement: 1 } },
-        });
-      }
+      // If pledge is already charged (COMPLETED) and price changed, handle payment diff
+      if (isAlreadyCharged && amountDiff > 0) {
+        // Price went UP - need to collect additional payment
+        const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
 
-      if (rewardId && rewardId !== "no-reward" && pledge.rewardId !== rewardId) {
-        // Increment new reward's claimed count
-        await db.reward.update({
-          where: { id: rewardId },
-          data: { quantityClaimed: { increment: 1 } },
-        });
-      }
+        if (paymentProcessor === "DIVINITYCOIN") {
+          // Store pending modification in metadata for DC to handle
+          const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+            ? pledge.metadata as Record<string, unknown>
+            : {};
 
-      // Delete old addon associations
-      await db.pledgeAddon.deleteMany({
-        where: { pledgeId },
-      });
+          await db.pledge.update({
+            where: { id: pledgeId },
+            data: {
+              metadata: {
+                ...currentMetadata,
+                pendingModification: {
+                  paymentMethod: "DIVINITYCOIN",
+                  rewardId: rewardId || null,
+                  addons: addonsWithQuantity,
+                  newAmount,
+                  oldAmount,
+                  amountDiff,
+                  createdAt: new Date().toISOString(),
+                },
+              },
+            },
+          });
 
-      // Create new addon associations with quantities
-      if (addonsWithQuantity.length > 0) {
-        // Get addon prices
-        const addonRecords = await db.reward.findMany({
-          where: { id: { in: addonIdList }, type: "ADDON" },
-          select: { id: true, amount: true },
-        });
-        const addonPriceMap = new Map<string, number>(
-          addonRecords.map((a: { id: string; amount: number }) => [a.id, Number(a.amount)])
-        );
+          // Update reward/addon associations now (payment collected separately)
+          await applyModificationChanges(pledgeId, pledge, rewardId, addonsWithQuantity, addonIdList, newAmount, amountDiff);
 
-        await db.pledgeAddon.createMany({
-          data: addonsWithQuantity.map((addon) => ({
-            pledgeId,
-            addonId: addon.id,
-            quantity: addon.quantity,
-            amount: (addonPriceMap.get(addon.id) ?? 0) * addon.quantity,
-          })),
-        });
-      }
+          return NextResponse.json({
+            success: true,
+            requiresPayment: false,
+            message: `Pledge updated. Additional $${amountDiff.toFixed(2)} will be collected.`,
+            newAmount,
+          });
+        }
 
-      // Update the pledge
-      await db.pledge.update({
-        where: { id: pledgeId },
-        data: {
-          rewardId: rewardId === "no-reward" ? null : rewardId || null,
-          amount: newAmount,
-        },
-      });
+        // Stripe: Create PaymentIntent for the difference
+        const stripe = await getStripeInstance();
+        if (!stripe) {
+          return NextResponse.json({ error: "Payment system unavailable" }, { status: 500 });
+        }
 
-      // Update project current amount
-      if (amountDiff !== 0) {
-        await db.project.update({
-          where: { id: pledge.projectId },
+        const amountInCents = Math.round(amountDiff * 100);
+        const platformFee = Math.round(amountDiff * 0.05 * 100); // 5% platform fee
+
+        const paymentIntentParams: Record<string, unknown> = {
+          amount: amountInCents,
+          currency: "usd",
+          metadata: {
+            pledgeId: pledge.id,
+            projectId: pledge.projectId,
+            userId: session.user.id,
+            type: "pledge_modification_upcharge",
+            rewardId: rewardId || "",
+            addons: JSON.stringify(addonsWithQuantity),
+            newAmount: String(newAmount),
+          },
+        };
+
+        if (stripeAccountId) {
+          paymentIntentParams.application_fee_amount = platformFee;
+          paymentIntentParams.transfer_data = { destination: stripeAccountId };
+        }
+
+        const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams as Parameters<typeof stripe.paymentIntents.create>[0]);
+
+        // Store pending modification in metadata
+        const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+          ? pledge.metadata as Record<string, unknown>
+          : {};
+
+        await db.pledge.update({
+          where: { id: pledgeId },
           data: {
-            currentAmount: { increment: amountDiff },
+            metadata: {
+              ...currentMetadata,
+              pendingModification: {
+                paymentMethod: "STRIPE",
+                paymentIntentId: paymentIntent.id,
+                rewardId: rewardId || null,
+                addons: addonsWithQuantity,
+                newAmount,
+                oldAmount,
+                amountDiff,
+                createdAt: new Date().toISOString(),
+              },
+            },
           },
         });
+
+        return NextResponse.json({
+          success: true,
+          requiresPayment: true,
+          clientSecret: paymentIntent.client_secret,
+          message: `Additional $${amountDiff.toFixed(2)} payment required`,
+          newAmount,
+        });
       }
+
+      if (isAlreadyCharged && amountDiff < 0) {
+        // Price went DOWN - issue a refund for the difference
+        const refundAmount = Math.abs(amountDiff);
+        const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
+
+        if (paymentProcessor === "DIVINITYCOIN") {
+          try {
+            const dcResult = await callDivinityCoinAPI("refund", {
+              pledgeId: pledge.id,
+              paymentId: pledge.divinityCoinPaymentId,
+              amount: Math.round(refundAmount * 100),
+              reason: "Pledge modification - price decreased",
+              requestedBy: "user",
+              partial: true,
+            });
+
+            if (!dcResult.success) {
+              return NextResponse.json(
+                { error: dcResult.error || "Refund failed" },
+                { status: 400 }
+              );
+            }
+          } catch (dcError) {
+            console.error("DivinityCoin partial refund error:", dcError);
+            return NextResponse.json(
+              { error: "Failed to process refund" },
+              { status: 500 }
+            );
+          }
+        } else {
+          // Stripe partial refund
+          if (!pledge.stripePaymentIntentId) {
+            return NextResponse.json(
+              { error: "No payment found to refund" },
+              { status: 400 }
+            );
+          }
+
+          try {
+            const stripe = await getStripeInstance();
+            await stripe.refunds.create({
+              payment_intent: pledge.stripePaymentIntentId,
+              amount: Math.round(refundAmount * 100), // Partial refund in cents
+              reason: "requested_by_customer",
+              metadata: {
+                pledgeId: pledge.id,
+                type: "pledge_modification_refund",
+                stripeAccountId: stripeAccountId || "",
+              },
+            });
+          } catch (stripeError) {
+            console.error("Stripe partial refund error:", stripeError);
+            return NextResponse.json(
+              { error: "Failed to process refund" },
+              { status: 400 }
+            );
+          }
+        }
+
+        // Apply the modification changes (addons, rewards, amounts)
+        await applyModificationChanges(pledgeId, pledge, rewardId, addonsWithQuantity, addonIdList, newAmount, amountDiff);
+
+        // Send refund notification
+        notifyPledgeModified(pledgeId, oldAmount, newAmount, "refund").catch(err =>
+          console.error("[Modify] Failed to send refund notification:", err)
+        );
+
+        return NextResponse.json({
+          success: true,
+          requiresPayment: false,
+          refundAmount,
+          message: `Pledge updated. $${refundAmount.toFixed(2)} has been refunded.`,
+          newAmount,
+        });
+      }
+
+      // No price change, or PENDING pledge (not yet charged) - just update directly
+      await applyModificationChanges(pledgeId, pledge, rewardId, addonsWithQuantity, addonIdList, newAmount, amountDiff);
+
+      // Send modification notification
+      notifyPledgeModified(pledgeId, oldAmount, newAmount, "no_change").catch(err =>
+        console.error("[Modify] Failed to send modification notification:", err)
+      );
 
       return NextResponse.json({
         success: true,
+        requiresPayment: false,
         message: "Pledge modified successfully",
         newAmount,
       });

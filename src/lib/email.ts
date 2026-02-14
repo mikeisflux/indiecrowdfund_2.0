@@ -1625,3 +1625,176 @@ export async function addToCreatorEmailList(options: {
     return { success: false, isNew: false };
   }
 }
+
+/**
+ * Send pledge modification email (price change / addon swap)
+ */
+export async function sendPledgeModificationEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  oldAmount: number,
+  newAmount: number,
+  amountDifference: number,
+  changeType: "upcharge" | "refund" | "no_change",
+  newRewardTitle: string | null,
+  newAddons: Array<{ title: string; quantity: number; amount: number }>,
+  projectUrlPath?: string,
+  currency: string = "USD"
+) {
+  const dashboardUrl = `${APP_URL}/dashboard/backer`;
+  const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : dashboardUrl;
+  const currencySymbol = currency === "USD" ? "$" : currency;
+
+  const changeLabel = changeType === "upcharge"
+    ? `An additional charge of <strong>${currencySymbol}${Math.abs(amountDifference).toFixed(2)}</strong> has been applied to your payment method.`
+    : changeType === "refund"
+    ? `A refund of <strong>${currencySymbol}${Math.abs(amountDifference).toFixed(2)}</strong> has been issued to your original payment method. This typically takes 5-10 business days to appear.`
+    : "Your selections have been updated with no price change.";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Pledge Updated</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Pledge Updated</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">Your pledge for "${projectTitle}" has been modified</p>
+        </div>
+
+        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <p style="font-size: 16px;">Hi ${backerName || "Backer"},</p>
+
+          <p>Your pledge selections have been updated successfully.</p>
+
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #666;">Previous Amount</td>
+                <td style="padding: 8px 0; text-align: right; text-decoration: line-through; color: #999;">${currencySymbol}${oldAmount.toFixed(2)}</td>
+              </tr>
+              <tr style="border-top: 1px solid #e0e0e0;">
+                <td style="padding: 8px 0; font-weight: bold;">New Amount</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold; font-size: 18px; color: #10b981;">${currencySymbol}${newAmount.toFixed(2)}</td>
+              </tr>
+              ${amountDifference !== 0 ? `
+              <tr style="border-top: 1px solid #e0e0e0;">
+                <td style="padding: 8px 0; color: ${changeType === "refund" ? "#10b981" : "#f59e0b"};">${changeType === "refund" ? "Refund" : "Additional Charge"}</td>
+                <td style="padding: 8px 0; text-align: right; color: ${changeType === "refund" ? "#10b981" : "#f59e0b"}; font-weight: bold;">${changeType === "refund" ? "-" : "+"}${currencySymbol}${Math.abs(amountDifference).toFixed(2)}</td>
+              </tr>
+              ` : ""}
+            </table>
+          </div>
+
+          ${newRewardTitle ? `
+          <div style="margin: 15px 0;">
+            <p style="font-weight: bold; margin-bottom: 5px;">Reward Tier:</p>
+            <p style="color: #666; margin: 0;">${newRewardTitle}</p>
+          </div>
+          ` : ""}
+
+          ${newAddons.length > 0 ? `
+          <div style="margin: 15px 0;">
+            <p style="font-weight: bold; margin-bottom: 5px;">Add-ons:</p>
+            ${newAddons.map(a => `<p style="color: #666; margin: 2px 0;">${a.title} x${a.quantity} — ${currencySymbol}${(a.amount * a.quantity).toFixed(2)}</p>`).join("")}
+          </div>
+          ` : ""}
+
+          <div style="background: ${changeType === "refund" ? "#ecfdf5" : changeType === "upcharge" ? "#fffbeb" : "#f0fdf4"}; border-left: 4px solid ${changeType === "refund" ? "#10b981" : changeType === "upcharge" ? "#f59e0b" : "#22c55e"}; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
+            <p style="margin: 0; font-size: 14px;">${changeLabel}</p>
+          </div>
+
+          <div style="text-align: center; margin-top: 25px;">
+            <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold;">View My Dashboard</a>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because you modified your pledge on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const subject = changeType === "refund"
+    ? `Pledge updated — ${currencySymbol}${Math.abs(amountDifference).toFixed(2)} refund for "${projectTitle}"`
+    : changeType === "upcharge"
+    ? `Pledge updated — ${currencySymbol}${Math.abs(amountDifference).toFixed(2)} additional charge for "${projectTitle}"`
+    : `Your pledge for "${projectTitle}" has been updated`;
+
+  const result = await sendEmail({ to: email, subject, html });
+  return { ...result, subject, html };
+}
+
+/**
+ * Send pledge cancellation/refund email
+ */
+export async function sendPledgeCancellationEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  amount: number,
+  wasRefunded: boolean,
+  projectUrlPath?: string,
+  currency: string = "USD"
+) {
+  const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/discover`;
+  const currencySymbol = currency === "USD" ? "$" : currency;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Pledge Cancelled</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Pledge Cancelled</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">"${projectTitle}"</p>
+        </div>
+
+        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <p style="font-size: 16px;">Hi ${backerName || "Backer"},</p>
+
+          <p>Your pledge of <strong>${currencySymbol}${amount.toFixed(2)}</strong> for "${projectTitle}" has been cancelled.</p>
+
+          ${wasRefunded ? `
+          <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
+            <p style="margin: 0; font-weight: bold; color: #065f46;">Refund Processed</p>
+            <p style="margin: 5px 0 0; font-size: 14px; color: #047857;">A full refund of <strong>${currencySymbol}${amount.toFixed(2)}</strong> has been issued to your original payment method. This typically takes 5-10 business days to appear on your statement.</p>
+          </div>
+          ` : `
+          <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
+            <p style="margin: 0; font-size: 14px; color: #166534;">No payment was collected for this pledge, so no refund is necessary. Your payment authorization has been released.</p>
+          </div>
+          `}
+
+          <p style="color: #666; font-size: 14px;">If you cancelled by mistake or change your mind, you can always back this project again while the campaign is still active.</p>
+
+          <div style="text-align: center; margin-top: 25px;">
+            <a href="${projectUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold;">Discover Projects</a>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because your pledge on ${APP_NAME} was cancelled.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const subject = wasRefunded
+    ? `Pledge cancelled — ${currencySymbol}${amount.toFixed(2)} refund for "${projectTitle}"`
+    : `Your pledge for "${projectTitle}" has been cancelled`;
+
+  const result = await sendEmail({ to: email, subject, html });
+  return { ...result, subject, html };
+}

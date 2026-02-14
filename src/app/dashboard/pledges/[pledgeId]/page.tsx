@@ -73,6 +73,8 @@ interface PledgeDetails {
     quantity: number;
   }>;
   canCancel: boolean;
+  canRefund: boolean;
+  canModify: boolean;
   canIncrease: boolean;
   isFunded: boolean;
 }
@@ -109,13 +111,13 @@ export default function ManagePledgePage() {
     }
   }, [pledgeId]);
 
-  const handleCancelPledge = async () => {
+  const handleCancelPledge = async (reason?: string) => {
     setIsProcessing(true);
     try {
       const response = await fetch(`/api/pledges/${pledgeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({ action: "cancel" }),
+        body: JSON.stringify({ action: "cancel", reason }),
       });
 
       const data = await response.json();
@@ -124,7 +126,11 @@ export default function ManagePledgePage() {
         throw new Error(data.error || "Failed to cancel pledge");
       }
 
-      toast.success("Pledge cancelled successfully");
+      if (data.refunded) {
+        toast.success("Pledge cancelled and refund processed. It may take 5-10 business days to appear.");
+      } else {
+        toast.success("Pledge cancelled successfully");
+      }
       router.push("/dashboard/backer");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to cancel pledge");
@@ -197,6 +203,13 @@ export default function ManagePledgePage() {
           <Badge variant="destructive">
             <AlertCircle className="w-3 h-3 mr-1" />
             Failed
+          </Badge>
+        );
+      case "REFUNDED":
+        return (
+          <Badge variant="outline" className="text-blue-500 border-blue-500/50">
+            <DollarSign className="w-3 h-3 mr-1" />
+            Refunded
           </Badge>
         );
       default:
@@ -443,7 +456,7 @@ export default function ManagePledgePage() {
                     <AlertDialogFooter>
                       <AlertDialogCancel>Keep My Pledge</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={handleCancelPledge}
+                        onClick={() => handleCancelPledge()}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
                         {isProcessing ? (
@@ -505,7 +518,7 @@ export default function ManagePledgePage() {
         </Card>
       )}
 
-      {/* COMPLETED: Payment processed, add-only + strong refund messaging */}
+      {/* COMPLETED: Payment processed */}
       {isCompleted && (
         <Card className="mb-6">
           <CardHeader>
@@ -518,6 +531,24 @@ export default function ManagePledgePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Change Reward / Addons - show if campaign is still live */}
+            {pledge.canModify && (
+              <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <Label className="text-sm font-medium mb-2 block text-blue-700 dark:text-blue-300">
+                  Change Your Reward or Add-ons
+                </Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Want to swap your cover or change your add-ons? If the new selection costs more, you&apos;ll be charged the difference. If it costs less, you&apos;ll receive a refund.
+                </p>
+                <Link href={`${pledge.project.projectUrl}/pledge?modify=${pledge.id}`}>
+                  <Button variant="outline" className="w-full border-blue-300 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Change Reward or Add-ons
+                  </Button>
+                </Link>
+              </div>
+            )}
+
             {/* Add Additional Items - only show if campaign is still live */}
             {isCampaignLive && (
               <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
@@ -575,42 +606,79 @@ export default function ManagePledgePage() {
 
             <Separator />
 
-            {/* Strong Refund Policy Messaging */}
-            <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertTitle className="text-amber-700 dark:text-amber-300">About Refunds</AlertTitle>
-              <AlertDescription className="text-amber-600 dark:text-amber-400 space-y-3">
-                <p>
-                  <strong>Your payment has been processed and the creator has received the funds.</strong>
+            {/* Cancel Pledge with Refund */}
+            {pledge.canRefund && (
+              <div className="p-4 rounded-lg border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20">
+                <Label className="text-sm font-medium mb-2 block text-red-700 dark:text-red-300">
+                  Cancel Pledge &amp; Request Refund
+                </Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  If you&apos;ve changed your mind, you can cancel your pledge and receive a full refund. Refunds typically take 5-10 business days to process.
                 </p>
-                <p>
-                  If you need a refund, you must contact the project creator directly. IndieCrowdfund does not process refunds on behalf of creators.
-                </p>
-                <p className="font-medium">
-                  Please note: Refunds are at the sole discretion of the creator and are not guaranteed. Each creator sets their own refund policy.
-                </p>
-              </AlertDescription>
-            </Alert>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full" disabled={isProcessing}>
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Cancel Pledge &amp; Refund
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancel Pledge &amp; Request Refund?</AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-2">
+                        <p>
+                          Are you sure you want to cancel your ${Number(pledge.amount).toFixed(2)} pledge to &quot;{pledge.project.title}&quot;?
+                        </p>
+                        <p>
+                          A full refund of <strong>${Number(pledge.amount).toFixed(2)}</strong> will be processed to your original payment method. This typically takes 5-10 business days.
+                        </p>
+                        <p className="font-medium text-destructive">
+                          This action cannot be undone.
+                        </p>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep My Pledge</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleCancelPledge("Cancelled by backer")}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isProcessing ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        Yes, Cancel &amp; Refund
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
 
-            <div className="p-4 rounded-lg border bg-muted/30">
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <Info className="h-4 w-4 text-muted-foreground" />
-                How to Request a Refund
-              </h4>
-              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                <li>Contact the creator through the project&apos;s message system</li>
-                <li>Explain your reason for requesting a refund</li>
-                <li>The creator will review your request and respond directly</li>
-                <li>If approved, the creator will process the refund through their payment system</li>
-              </ol>
-            </div>
-
+            {/* Contact Creator */}
             <Link href={`/dashboard/messages?projectId=${pledge.project.id}&recipientId=${pledge.project.creatorId}`}>
               <Button variant="outline" className="w-full">
                 <MessageSquare className="h-4 w-4 mr-2" />
-                Contact Creator About Refund
+                Contact Creator
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Refunded Pledge */}
+      {pledge.status === "REFUNDED" && (
+        <Card className="mb-6">
+          <CardContent className="py-8 text-center">
+            <DollarSign className="h-12 w-12 mx-auto mb-4 text-blue-500" />
+            <h3 className="text-lg font-semibold mb-2">Pledge Refunded</h3>
+            <p className="text-muted-foreground mb-4">
+              Your pledge of ${Number(pledge.amount).toFixed(2)} has been refunded. It may take 5-10 business days for the refund to appear on your statement.
+            </p>
+            {pledge.project.status === "LIVE" && (
+              <Link href={`${pledge.project.projectUrl}/pledge`}>
+                <Button>Back This Project Again</Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       )}
