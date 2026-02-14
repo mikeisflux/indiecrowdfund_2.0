@@ -1,30 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import crypto from "crypto";
+import { decrypt } from "@/lib/encryption";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
-
-// Decryption helper (must match the encryption used when storing)
-function decrypt(encryptedText: string): string {
-  const encryptionKey = process.env.DIVINITYCOIN_ENCRYPTION_KEY;
-  if (!encryptionKey) {
-    throw new Error("Encryption key not configured");
-  }
-
-  try {
-    const [ivHex, encrypted] = encryptedText.split(":");
-    const iv = Buffer.from(ivHex, "hex");
-    const key = crypto.scryptSync(encryptionKey, "salt", 32);
-    const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
-    let decrypted = decipher.update(encrypted, "hex", "utf8");
-    decrypted += decipher.final("utf8");
-    return decrypted;
-  } catch {
-    return "[Unable to decrypt]";
-  }
-}
 
 // Helper to check admin role
 async function requireAdmin() {
