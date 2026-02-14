@@ -53,6 +53,7 @@ import {
   Megaphone,
   Coins,
   MapPin,
+  ArrowLeftRight,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -105,6 +106,7 @@ const navigation: NavSection[] = [
       { name: "Marketplace", href: "/admin/marketplace", icon: BookOpen },
       { name: "PDF File Manager", href: "/admin/marketplace?tab=pdf-management", icon: HardDrive },
       { name: "Payouts", href: "/admin/payouts", icon: DollarSign, badgeKey: "payouts" },
+      { name: "Transactions", href: "/admin/transactions", icon: ArrowLeftRight },
       { name: "DC Redemptions", href: "/admin/divinitycoin-redemptions", icon: Coins },
       { name: "LCS Locator", href: "/admin/lcs-locator", icon: MapPin },
       { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "moderation" },
