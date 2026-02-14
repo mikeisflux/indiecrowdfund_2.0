@@ -433,3 +433,95 @@ export async function sendMarketplaceSaleEmail(
     html,
   });
 }
+
+/**
+ * Send payout created email to creator when an admin initiates a settlement
+ */
+export async function sendPayoutCreatedEmail(
+  email: string,
+  creatorName: string,
+  projectTitle: string,
+  projectUrlPath: string,
+  totalRaised: number,
+  partnerFee: number,
+  platformFee: number,
+  payoutAmount: number,
+  bankName: string,
+  accountLastFour: string
+) {
+  const projectUrl = `${APP_URL}${projectUrlPath}`;
+  const formatAmount = (amt: number) => `$${amt.toFixed(2)}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payout Initiated!</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #028858 0%, #10b981 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <h2 style="margin-top: 0; color: white; text-align: center;">Payout Initiated!</h2>
+
+          <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
+            <h3 style="margin: 0 0 10px 0; color: white;">${projectTitle}</h3>
+            <p style="margin: 0; color: rgba(255,255,255,0.9);">A payout has been initiated for your campaign</p>
+          </div>
+
+          <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 15px; margin-top: 20px;">
+            <table style="width: 100%; color: white;">
+              <tr>
+                <td style="padding: 5px 0;">Total Raised:</td>
+                <td style="text-align: right; padding: 5px 0;">${formatAmount(totalRaised)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0;">DivinityCoin Partner Fee (6%):</td>
+                <td style="text-align: right; padding: 5px 0;">-${formatAmount(partnerFee)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0;">Platform Fee (3%):</td>
+                <td style="text-align: right; padding: 5px 0;">-${formatAmount(platformFee)}</td>
+              </tr>
+              <tr style="border-top: 1px solid rgba(255,255,255,0.3);">
+                <td style="padding: 10px 0 5px 0;"><strong>Payout Amount:</strong></td>
+                <td style="text-align: right; padding: 10px 0 5px 0;"><strong>${formatAmount(payoutAmount)}</strong></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 10px 0;"><strong>Bank Account:</strong></p>
+          <p style="margin: 0; color: #666;">${bankName} ending in ****${accountLastFour}</p>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 15px 0;"><strong>What happens next?</strong></p>
+          <p style="margin: 0; color: #666;">Your payout is being processed and will be sent to your bank account via wire transfer. This typically takes 3-5 business days. You will receive a confirmation once the transfer is complete.</p>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${projectUrl}" style="display: inline-block; background: #028858; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            View Project
+          </a>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>You received this email because a payout was initiated for your campaign on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Payout initiated for "${projectTitle}" - ${formatAmount(payoutAmount)}`,
+    html,
+  });
+}

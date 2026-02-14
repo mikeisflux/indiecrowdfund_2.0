@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendPayoutCreatedEmail } from "@/lib/notifications/email-templates";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -121,10 +122,15 @@ export async function GET(request: NextRequest) {
         0
       );
 
-      // DivinityCoin fee: 5% total (3% platform + 2% processing)
-      const feeRate = 0.05;
-      const platformFee = totalRaised * feeRate;
-      const amountOwed = totalRaised - platformFee;
+      // DivinityCoin Partner Fee: 6% (DC's processing fee)
+      // IndieCrowdfund Platform Fee: 3%
+      // Total: 9% (creators receive 91%)
+      const partnerFeeRate = 0.06;
+      const platformFeeRate = 0.03;
+      const partnerFee = totalRaised * partnerFeeRate;
+      const platformFee = totalRaised * platformFeeRate;
+      const totalFees = partnerFee + platformFee;
+      const amountOwed = totalRaised - totalFees;
 
       const settlements = project.divinityCoinSettlements || [];
 
@@ -156,8 +162,9 @@ export async function GET(request: NextRequest) {
         paymentProcessor: "DIVINITYCOIN",
         fundedAt: project.fundedAt,
         totalRaised,
+        partnerFee,
         platformFee,
-        feeLabel: "5%",
+        totalFees,
         amountOwed,
         amountSettled,
         remainingAmount,
@@ -412,6 +419,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Calculate fee breakdown for the email
+    const totalRaised = await db.pledge.aggregate({
+      where: {
+        projectId,
+        status: "COMPLETED",
+        deletedAt: null,
+      },
+      _sum: { amount: true },
+    });
+    const grossAmount = Number(totalRaised._sum.amount || 0);
+    const partnerFee = grossAmount * 0.06;
+    const platformFee = grossAmount * 0.03;
+
     // Create the DivinityCoin settlement record
     const settlement = await db.divinityCoinSettlement.create({
       data: {
@@ -424,6 +444,25 @@ export async function POST(request: NextRequest) {
         processedBy: authResult.user.id,
       },
     });
+
+    // Send email notification to creator
+    try {
+      await sendPayoutCreatedEmail(
+        project.creator.email!,
+        project.creator.name || "Creator",
+        project.title,
+        `/projects/${project.slug}`,
+        grossAmount,
+        partnerFee,
+        platformFee,
+        Number(amount),
+        bankAccount.bankNameDisplay || "Bank Account",
+        bankAccount.accountLastFour || "****"
+      );
+    } catch (emailError) {
+      console.error("Failed to send payout created email:", emailError);
+      // Don't fail the settlement creation if email fails
+    }
 
     return NextResponse.json({
       success: true,

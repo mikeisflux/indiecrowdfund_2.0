@@ -64,7 +64,9 @@ interface CreatorProject {
   paymentProcessor?: string;
   fundedAt: string | null;
   totalRaised: number;
+  partnerFee: number;
   platformFee: number;
+  totalFees: number;
   amountOwed: number;
   amountSettled: number;
   remainingAmount: number;
@@ -384,14 +386,16 @@ export default function PayoutsPage() {
   // Export as CSV
   const exportCSV = () => {
     const csv = [
-      ["Project", "Creator", "Email", "Total Raised", "Platform Fee", "Amount Owed", "Amount Settled", "Remaining", "Has Bank", "Status"].join(","),
+      ["Project", "Creator", "Email", "Total Raised", "DC Partner Fee (6%)", "Platform Fee (3%)", "Total Fees", "Amount Owed", "Amount Settled", "Remaining", "Has Bank", "Status"].join(","),
       ...projects.map((p) =>
         [
           `"${p.title}"`,
           `"${p.creator.name || "Unknown"}"`,
           p.creator.email,
           p.totalRaised,
+          p.partnerFee,
           p.platformFee,
+          p.totalFees,
           p.amountOwed,
           p.amountSettled,
           p.remainingAmount,
@@ -929,7 +933,11 @@ export default function PayoutsPage() {
                       <span className="font-medium">{formatCurrency(selectedProject.totalRaised)}</span>
                     </div>
                     <div className="flex justify-between text-zinc-500">
-                      <span>Platform Fee (5%)</span>
+                      <span>DivinityCoin Partner Fee (6%)</span>
+                      <span className="text-red-500">-{formatCurrency(selectedProject.partnerFee)}</span>
+                    </div>
+                    <div className="flex justify-between text-zinc-500">
+                      <span>Platform Fee (3%)</span>
                       <span className="text-red-500">-{formatCurrency(selectedProject.platformFee)}</span>
                     </div>
                     <div className="border-t pt-2 flex justify-between font-bold">
