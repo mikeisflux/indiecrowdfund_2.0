@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
+import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { notifyPledgeModified } from "@/lib/notifications/pledge-notifications";
 
 /**
@@ -77,6 +78,20 @@ export async function POST(
 
       const paymentIntent = await stripe.paymentIntents.retrieve(pending.paymentIntentId);
       if (paymentIntent.status !== "succeeded") {
+        return NextResponse.json(
+          { error: "Payment not yet completed" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Verify DivinityCoin payment if applicable
+    if (pending.paymentMethod === "DIVINITYCOIN" && pending.paymentIntentId) {
+      const verifyResult = await callDivinityCoinAPI("verify-payment", {
+        paymentIntentId: pending.paymentIntentId,
+      });
+
+      if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
         return NextResponse.json(
           { error: "Payment not yet completed" },
           { status: 400 }

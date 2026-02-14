@@ -217,16 +217,15 @@ export default function PledgePage() {
     try {
       const result = await createAdditionalItemsAPI(existingPledgeId, selectedAddons, addItemsTotal);
 
-      // DivinityCoin doesn't return a clientSecret - payment is handled by its own buttons
-      if (result.paymentMethod === "DIVINITYCOIN") {
-        setCurrentPledgeId(result.pledgeId);
-        setIsProcessing(false);
-        return;
+      setCurrentPledgeId(result.pledgeId);
+
+      // DivinityCoin returns publishableKey from DC's Stripe account
+      if (result.publishableKey && !dcStripePromise) {
+        setDcStripePromise(loadStripe(result.publishableKey));
       }
 
       setClientSecret(result.clientSecret!);
       setIntentType((result.type || "payment_intent") as "payment_intent" | "setup_intent");
-      setCurrentPledgeId(result.pledgeId);
       setIsProcessing(false);
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create additional items purchase");

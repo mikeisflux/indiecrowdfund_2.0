@@ -637,14 +637,51 @@ export async function handlePaymentSucceeded(
   try {
     const pledge = await db.pledge.findUnique({
       where: { id: pledgeId },
-      select: { id: true, status: true, projectId: true, amount: true, userId: true },
+      select: { id: true, status: true, projectId: true, amount: true, userId: true, metadata: true },
     });
 
     if (!pledge) {
       return { success: false, error: `Pledge ${pledgeId} not found` };
     }
 
-    // Only process if the pledge is still PENDING
+    const paymentType = data.type as string | undefined;
+
+    // Handle upcharge payments for COMPLETED pledges (pledge modification or add-items)
+    if (pledge.status === "COMPLETED" && paymentType === "upcharge") {
+      console.log(`[DivinityCoin] Upcharge payment for COMPLETED pledge ${pledgeId}`);
+
+      const metadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+        ? pledge.metadata as Record<string, unknown>
+        : {};
+
+      // Record the upcharge transaction (actual modification is applied via confirm-modify/confirm-add-items)
+      await db.divinityCoinTransaction.create({
+        data: {
+          userId: pledge.userId,
+          pledgeId: pledge.id,
+          amount: data.amount ? Number(data.amount) / 100 : 0, // DC sends cents
+          type: "PAYMENT",
+          description: `Upcharge payment for pledge modification via DivinityCoin`,
+          metadata: JSON.stringify({
+            paymentId,
+            holdId,
+            type: "upcharge",
+            originalPaymentId: data.originalPaymentId,
+            giftCardCode: giftCardCode ? `${String(giftCardCode).substring(0, 4)}****` : null,
+            stripePaymentIntentId: data.stripePaymentIntentId,
+            hasPendingModification: !!metadata.pendingModification,
+            hasPendingAdditionalItems: !!metadata.pendingAdditionalItems,
+            processedAt: new Date().toISOString(),
+            source: "divinitycoin_webhook",
+          }),
+        },
+      });
+
+      console.log(`[DivinityCoin] Upcharge payment recorded for pledge ${pledgeId}`);
+      return { success: true, message: "Upcharge payment recorded" };
+    }
+
+    // Only process initial payments if the pledge is still PENDING
     if (pledge.status !== "PENDING") {
       console.log(`[DivinityCoin] Pledge ${pledgeId} already ${pledge.status}, skipping`);
       return { success: true, message: `Pledge already ${pledge.status}` };

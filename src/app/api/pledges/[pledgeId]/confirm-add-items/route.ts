@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
+import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm-add-items
@@ -85,8 +86,7 @@ export async function POST(
     const addonIds = addonsWithQuantity.map(a => a.id);
     const quantityMap = new Map(addonsWithQuantity.map(a => [a.id, a.quantity]));
 
-    // For Stripe: verify payment via PaymentIntent
-    // For DivinityCoin: payment was already verified by webhook/pay endpoint
+    // Verify payment based on payment method
     const paymentMethod = pendingItems.paymentMethod || "STRIPE";
 
     if (paymentMethod === "STRIPE") {
@@ -108,6 +108,24 @@ export async function POST(
       const paymentIntent = await stripe.paymentIntents.retrieve(pendingItems.paymentIntentId);
 
       if (paymentIntent.status !== "succeeded") {
+        return NextResponse.json(
+          { error: "Payment not yet completed" },
+          { status: 400 }
+        );
+      }
+    } else if (paymentMethod === "DIVINITYCOIN") {
+      if (!pendingItems.paymentIntentId) {
+        return NextResponse.json(
+          { error: "Missing payment intent ID" },
+          { status: 400 }
+        );
+      }
+
+      const verifyResult = await callDivinityCoinAPI("verify-payment", {
+        paymentIntentId: pendingItems.paymentIntentId,
+      });
+
+      if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
         return NextResponse.json(
           { error: "Payment not yet completed" },
           { status: 400 }

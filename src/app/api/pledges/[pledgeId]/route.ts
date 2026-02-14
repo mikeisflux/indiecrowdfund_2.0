@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import Stripe from "stripe";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
-import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { callDivinityCoinAPI, getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { notifyPledgeModified, notifyPledgeCancelled } from "@/lib/notifications/pledge-notifications";
 
 export const dynamic = "force-dynamic";
@@ -449,38 +449,81 @@ export async function PATCH(
         const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
 
         if (paymentProcessor === "DIVINITYCOIN") {
-          // Store pending modification in metadata for DC to handle
-          const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-            ? pledge.metadata as Record<string, unknown>
-            : {};
+          // Call DC's create-payment-intent for the upcharge amount
+          try {
+            const dcConfig = await getDivinityCoinConfig();
+            const userRecord = await db.user.findUnique({
+              where: { id: session.user.id },
+              select: { email: true, name: true },
+            });
 
-          await db.pledge.update({
-            where: { id: pledgeId },
-            data: {
-              metadata: {
-                ...currentMetadata,
-                pendingModification: {
-                  paymentMethod: "DIVINITYCOIN",
-                  rewardId: rewardId || null,
-                  addons: addonsWithQuantity,
-                  newAmount,
-                  oldAmount,
-                  amountDiff,
-                  createdAt: new Date().toISOString(),
+            const dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${dcConfig.apiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                amount: Math.round(amountDiff * 100), // difference in cents
+                currency: "usd",
+                platformUserId: session.user.id,
+                email: userRecord?.email || "",
+                name: userRecord?.name || "",
+                pledgeId: pledge.id,
+                projectId: pledge.projectId,
+                type: "upcharge",
+                originalPaymentId: pledge.divinityCoinPaymentId,
+              }),
+            });
+
+            const dcResult = await dcResponse.json();
+            if (!dcResponse.ok || !dcResult.success) {
+              console.error("[DivinityCoin Modify] Failed to create upcharge payment intent:", dcResult);
+              return NextResponse.json(
+                { error: dcResult.error || "Failed to initialize upcharge payment" },
+                { status: 502 }
+              );
+            }
+
+            // Store pending modification in metadata (DON'T apply changes yet - wait for payment)
+            const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+              ? pledge.metadata as Record<string, unknown>
+              : {};
+
+            await db.pledge.update({
+              where: { id: pledgeId },
+              data: {
+                metadata: {
+                  ...currentMetadata,
+                  pendingModification: {
+                    paymentMethod: "DIVINITYCOIN",
+                    paymentIntentId: dcResult.paymentIntentId,
+                    rewardId: rewardId || null,
+                    addons: addonsWithQuantity,
+                    newAmount,
+                    oldAmount,
+                    amountDiff,
+                    createdAt: new Date().toISOString(),
+                  },
                 },
               },
-            },
-          });
+            });
 
-          // Update reward/addon associations now (payment collected separately)
-          await applyModificationChanges(pledgeId, pledge, rewardId, addonsWithQuantity, addonIdList, newAmount, amountDiff);
-
-          return NextResponse.json({
-            success: true,
-            requiresPayment: false,
-            message: `Pledge updated. Additional $${amountDiff.toFixed(2)} will be collected.`,
-            newAmount,
-          });
+            return NextResponse.json({
+              success: true,
+              requiresPayment: true,
+              clientSecret: dcResult.clientSecret,
+              publishableKey: dcResult.publishableKey,
+              message: `Additional $${amountDiff.toFixed(2)} payment required`,
+              newAmount,
+            });
+          } catch (dcError) {
+            console.error("[DivinityCoin Modify] API error:", dcError);
+            return NextResponse.json(
+              { error: "Failed to connect to payment processor" },
+              { status: 500 }
+            );
+          }
         }
 
         // Stripe: Create PaymentIntent for the difference

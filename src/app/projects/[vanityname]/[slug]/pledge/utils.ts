@@ -28,6 +28,7 @@ export async function createAdditionalItemsPurchase(
   addItemsTotal: number
 ): Promise<{
   clientSecret?: string;
+  publishableKey?: string;
   type?: string;
   pledgeId: string;
   paymentMethod?: string;
@@ -52,20 +53,13 @@ export async function createAdditionalItemsPurchase(
     throw new Error(data.error || "Failed to create additional items purchase");
   }
 
-  // DivinityCoin doesn't return a clientSecret - payment is handled separately
-  if (data.paymentMethod === "DIVINITYCOIN") {
-    return {
-      pledgeId: existingPledgeId,
-      paymentMethod: data.paymentMethod,
-    };
-  }
-
   if (!data.clientSecret) {
     throw new Error("Invalid payment response - missing client secret");
   }
 
   return {
     clientSecret: data.clientSecret,
+    publishableKey: data.publishableKey,
     type: data.type || "payment_intent",
     pledgeId: existingPledgeId,
     paymentMethod: data.paymentMethod || "STRIPE",

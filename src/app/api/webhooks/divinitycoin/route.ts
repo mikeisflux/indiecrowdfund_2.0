@@ -121,13 +121,15 @@ export async function GET() {
         },
         {
           event: "payment.succeeded",
-          description: "Payment completed via DC's Stripe account. Confirms the pledge.",
+          description: "Payment completed via DC's Stripe account. Confirms the pledge or records upcharge.",
           payloadRequired: true,
           payloadFormat: {
             pledgeId: "string (required)",
             paymentId: "string (DC payment ID)",
             holdId: "string (DC hold ID)",
             amount: "number",
+            type: "string ('initial' | 'upcharge')",
+            originalPaymentId: "string (for upcharges, the original DC payment ID)",
             giftCardCode: "string (auto-generated card code)",
             stripePaymentIntentId: "string (DC's Stripe PI)",
           },

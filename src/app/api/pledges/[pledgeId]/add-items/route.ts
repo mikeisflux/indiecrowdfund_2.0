@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, assignBackerNumber } from "@/lib/payments/stripe";
+import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 
 export const dynamic = "force-dynamic";
 
@@ -197,34 +198,80 @@ export async function POST(
 
     const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
 
-    // DivinityCoin: store pending items in metadata, payment handled separately
+    // DivinityCoin: create payment intent via DC's API, then store pending items
     if (paymentProcessor === "DIVINITYCOIN") {
-      // Store pending additional items in pledge metadata for processing after payment
-      const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-        ? pledge.metadata as Record<string, unknown>
-        : {};
+      try {
+        const dcConfig = await getDivinityCoinConfig();
+        const userRecord = await db.user.findUnique({
+          where: { id: session.user.id },
+          select: { email: true, name: true },
+        });
 
-      await db.pledge.update({
-        where: { id: pledgeId },
-        data: {
-          metadata: {
-            ...currentMetadata,
-            pendingAdditionalItems: {
-              paymentMethod: paymentProcessor,
-              addons: addonsWithQuantity,
-              amount,
-              createdAt: new Date().toISOString(),
+        const dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${dcConfig.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: Math.round(amount * 100), // cents
+            currency: "usd",
+            platformUserId: session.user.id,
+            email: userRecord?.email || "",
+            name: userRecord?.name || "",
+            pledgeId: pledge.id,
+            projectId: pledge.projectId,
+            type: "upcharge",
+            originalPaymentId: pledge.divinityCoinPaymentId,
+          }),
+        });
+
+        const dcResult = await dcResponse.json();
+        if (!dcResponse.ok || !dcResult.success) {
+          console.error("[AddItems DC] Failed to create payment intent:", dcResult);
+          return NextResponse.json(
+            { error: dcResult.error || "Failed to initialize payment" },
+            { status: 502 }
+          );
+        }
+
+        // Store pending additional items in pledge metadata
+        const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+          ? pledge.metadata as Record<string, unknown>
+          : {};
+
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            metadata: {
+              ...currentMetadata,
+              pendingAdditionalItems: {
+                paymentMethod: paymentProcessor,
+                paymentIntentId: dcResult.paymentIntentId,
+                addons: addonsWithQuantity,
+                amount,
+                createdAt: new Date().toISOString(),
+              },
             },
           },
-        },
-      });
+        });
 
-      console.log(`[AddItems] Stored pending items for ${paymentProcessor} pledge ${pledgeId}: ${addonsWithQuantity.length} addons, $${amount}`);
+        console.log(`[AddItems DC] Created payment intent for pledge ${pledgeId}: ${addonsWithQuantity.length} addons, $${amount}`);
 
-      return NextResponse.json({
-        paymentMethod: paymentProcessor,
-        pledgeId: pledge.id,
-      });
+        return NextResponse.json({
+          paymentMethod: paymentProcessor,
+          type: "payment_intent",
+          clientSecret: dcResult.clientSecret,
+          publishableKey: dcResult.publishableKey,
+          pledgeId: pledge.id,
+        });
+      } catch (dcError) {
+        console.error("[AddItems DC] API error:", dcError);
+        return NextResponse.json(
+          { error: "Failed to connect to payment processor" },
+          { status: 500 }
+        );
+      }
     }
 
     // Stripe: Create PaymentIntent for immediate charge
