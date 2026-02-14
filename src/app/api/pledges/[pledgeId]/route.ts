@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import Stripe from "stripe";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { notifyPledgeModified, notifyPledgeCancelled } from "@/lib/notifications/pledge-notifications";
@@ -491,7 +492,7 @@ export async function PATCH(
         const amountInCents = Math.round(amountDiff * 100);
         const platformFee = Math.round(amountDiff * 0.05 * 100); // 5% platform fee
 
-        const paymentIntentParams: Record<string, unknown> = {
+        const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
           amount: amountInCents,
           currency: "usd",
           metadata: {
@@ -510,7 +511,7 @@ export async function PATCH(
           paymentIntentParams.transfer_data = { destination: stripeAccountId };
         }
 
-        const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams as Parameters<typeof stripe.paymentIntents.create>[0]);
+        const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
 
         // Store pending modification in metadata
         const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
