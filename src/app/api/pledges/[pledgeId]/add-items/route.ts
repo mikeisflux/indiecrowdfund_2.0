@@ -99,6 +99,7 @@ export async function POST(
           select: {
             id: true,
             status: true,
+            endDate: true,
             creatorId: true,
             paymentProcessor: true,
             stripeAccountId: true,
@@ -141,10 +142,11 @@ export async function POST(
       }
     }
 
-    // Verify project is still live
-    if (pledge.project.status !== "LIVE") {
+    // Verify project is still live and campaign hasn't ended
+    const campaignEnded = pledge.project.endDate && new Date(pledge.project.endDate) < new Date();
+    if (pledge.project.status !== "LIVE" || campaignEnded) {
       return NextResponse.json(
-        { error: "Can only add items while the campaign is live" },
+        { error: "This campaign has ended. Adding items is no longer available." },
         { status: 400 }
       );
     }

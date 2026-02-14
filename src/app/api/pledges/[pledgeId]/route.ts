@@ -103,6 +103,7 @@ export async function GET(
             title: true,
             slug: true,
             status: true,
+            endDate: true,
             currentAmount: true,
             goalAmount: true,
             creatorId: true,
@@ -141,6 +142,8 @@ export async function GET(
     }
 
     const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
+    const campaignActive = pledge.project.status === "LIVE" &&
+      !(pledge.project.endDate && new Date(pledge.project.endDate) < new Date());
 
     // Build project URL with vanity URL if available
     const projectUrl = pledge.project.creator.vanityUrl
@@ -178,8 +181,8 @@ export async function GET(
         })),
         canCancel: (!isFunded && pledge.status === "PENDING") || pledge.status === "COMPLETED",
         canRefund: pledge.status === "COMPLETED",
-        canModify: pledge.project.status === "LIVE" && (pledge.status === "PENDING" || pledge.status === "COMPLETED"),
-        canIncrease: pledge.project.status === "LIVE",
+        canModify: campaignActive && (pledge.status === "PENDING" || pledge.status === "COMPLETED"),
+        canIncrease: campaignActive,
         isFunded,
       },
     });
@@ -219,6 +222,7 @@ export async function PATCH(
             id: true,
             title: true,
             status: true,
+            endDate: true,
             currentAmount: true,
             goalAmount: true,
             paymentProcessor: true,
@@ -238,6 +242,7 @@ export async function PATCH(
     }
 
     const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
+    const campaignEnded = pledge.project.endDate && new Date(pledge.project.endDate) < new Date();
 
     if (action === "cancel") {
       const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
@@ -380,10 +385,10 @@ export async function PATCH(
     }
 
     if (action === "modify") {
-      // Can only modify while project is live
-      if (pledge.project.status !== "LIVE") {
+      // Can only modify while project is live and campaign hasn't ended
+      if (pledge.project.status !== "LIVE" || campaignEnded) {
         return NextResponse.json(
-          { error: "Can only modify pledge while project is live" },
+          { error: "This campaign has ended. Pledge modifications are no longer available." },
           { status: 400 }
         );
       }
@@ -682,10 +687,10 @@ export async function PATCH(
     }
 
     if (action === "increase") {
-      // Can always increase pledge amount while project is live
-      if (pledge.project.status !== "LIVE") {
+      // Can only increase pledge amount while project is live and campaign hasn't ended
+      if (pledge.project.status !== "LIVE" || campaignEnded) {
         return NextResponse.json(
-          { error: "Can only increase pledge while project is live" },
+          { error: "This campaign has ended. Pledge increases are no longer available." },
           { status: 400 }
         );
       }
@@ -705,81 +710,12 @@ export async function PATCH(
       // If pledge is already charged, collect the additional amount
       if (isCharged) {
         if (paymentProcessor === "DIVINITYCOIN") {
-          // DC: create upcharge payment intent for the additional amount
-          try {
-            const dcConfig = await getDivinityCoinConfig();
-            const userRecord = await db.user.findUnique({
-              where: { id: session.user.id },
-              select: { email: true, name: true },
-            });
-
-            const dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${dcConfig.apiKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                amount: Math.round(additionalAmount * 100),
-                currency: "usd",
-                platformUserId: session.user.id,
-                email: userRecord?.email || "",
-                name: userRecord?.name || "",
-                pledgeId: pledge.id,
-                projectId: pledge.projectId,
-                type: "upcharge",
-                originalPaymentId: pledge.divinityCoinPaymentId,
-              }),
-            });
-
-            const dcResult = await dcResponse.json();
-            if (!dcResponse.ok || !dcResult.success) {
-              console.error("[DivinityCoin Increase] Failed to create payment intent:", dcResult);
-              return NextResponse.json(
-                { error: dcResult.error || "Failed to initialize payment" },
-                { status: 502 }
-              );
-            }
-
-            // Store pending increase in metadata (applied after payment via confirm-modify)
-            const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-              ? pledge.metadata as Record<string, unknown>
-              : {};
-
-            await db.pledge.update({
-              where: { id: pledgeId },
-              data: {
-                metadata: {
-                  ...currentMetadata,
-                  pendingModification: {
-                    paymentMethod: "DIVINITYCOIN",
-                    paymentIntentId: dcResult.paymentIntentId,
-                    rewardId: pledge.rewardId || null,
-                    addons: [], // No addon changes for simple increase
-                    newAmount: newTotal,
-                    oldAmount: Number(pledge.amount),
-                    amountDiff: additionalAmount,
-                    createdAt: new Date().toISOString(),
-                  },
-                },
-              },
-            });
-
-            return NextResponse.json({
-              success: true,
-              requiresPayment: true,
-              clientSecret: dcResult.clientSecret,
-              publishableKey: dcResult.publishableKey,
-              message: `Additional $${additionalAmount.toFixed(2)} payment required`,
-              newTotal,
-            });
-          } catch (dcError) {
-            console.error("[DivinityCoin Increase] API error:", dcError);
-            return NextResponse.json(
-              { error: "Failed to connect to payment processor" },
-              { status: 500 }
-            );
-          }
+          // DC pledges require a payment form for upcharges - the dashboard doesn't have one.
+          // Direct users to "Change Reward or Add-ons" which has full payment support.
+          return NextResponse.json(
+            { error: "To increase your pledge amount, please use 'Change Reward or Add-ons' from your pledge dashboard." },
+            { status: 400 }
+          );
         }
 
         // Stripe: charge immediately if creator has Stripe Connect
