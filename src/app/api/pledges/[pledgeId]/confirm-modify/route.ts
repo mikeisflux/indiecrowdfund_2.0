@@ -66,13 +66,20 @@ export async function POST(
       });
     }
 
-    // Verify Stripe payment if applicable
-    if (pending.paymentMethod === "STRIPE" && pending.paymentIntentId) {
+    // Verify payment based on payment method
+    if (pending.paymentMethod === "STRIPE") {
       const stripe = await getStripeInstance();
       if (!stripe) {
         return NextResponse.json(
           { error: "Payment system unavailable" },
           { status: 500 }
+        );
+      }
+
+      if (!pending.paymentIntentId) {
+        return NextResponse.json(
+          { error: "Missing payment intent ID" },
+          { status: 400 }
         );
       }
 
@@ -83,10 +90,14 @@ export async function POST(
           { status: 400 }
         );
       }
-    }
+    } else if (pending.paymentMethod === "DIVINITYCOIN") {
+      if (!pending.paymentIntentId) {
+        return NextResponse.json(
+          { error: "Missing payment intent ID" },
+          { status: 400 }
+        );
+      }
 
-    // Verify DivinityCoin payment if applicable
-    if (pending.paymentMethod === "DIVINITYCOIN" && pending.paymentIntentId) {
       const verifyResult = await callDivinityCoinAPI("verify-payment", {
         paymentIntentId: pending.paymentIntentId,
       });
