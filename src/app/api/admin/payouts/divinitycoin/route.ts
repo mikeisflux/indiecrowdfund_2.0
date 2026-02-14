@@ -25,7 +25,7 @@ async function requireAdmin() {
   return { user: session.user };
 }
 
-// GET - Fetch DivinityCoin projects that need payouts
+// GET - Fetch DivinityCoin projects that need payouts + creator marketplace balances
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAdmin();
@@ -35,9 +35,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
-    const status = searchParams.get("status"); // pending, settled, all
+    const status = searchParams.get("status"); // pending, settled, processing, all
 
-    // Build where clause for DivinityCoin projects that are funded/failed
+    // Build where clause for DivinityCoin projects only
+    // Stripe projects use Stripe Connect - payouts are automatic
     const where: Record<string, unknown> = {
       paymentProcessor: "DIVINITYCOIN",
       status: { in: ["FUNDED", "FAILED"] },
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Fetch DivinityCoin projects with creator and bank account info
+    // Fetch DC projects with creator info and bank accounts
     const projects = await db.project.findMany({
       where,
       include: {
@@ -77,13 +78,11 @@ export async function GET(request: NextRequest) {
         pledges: {
           where: {
             status: "COMPLETED",
-            paymentProcessor: "DIVINITYCOIN",
             deletedAt: null,
           },
           select: {
             id: true,
             amount: true,
-            paymentProcessor: true,
           },
         },
         divinityCoinSettlements: {
@@ -103,16 +102,16 @@ export async function GET(request: NextRequest) {
     const formattedProjects = projects.map((project) => {
       // Calculate total raised from completed pledges
       const totalRaised = project.pledges.reduce(
-        (sum: number, pledge: { id: string; amount: unknown; paymentProcessor: string }) => sum + Number(pledge.amount),
+        (sum: number, pledge: { id: string; amount: unknown }) => sum + Number(pledge.amount),
         0
       );
 
-      // Calculate total fee: 5% for DivinityCoin (3% platform + 2% processing)
+      // DivinityCoin fee: 5% total (3% platform + 2% processing)
       const feeRate = 0.05;
       const platformFee = totalRaised * feeRate;
       const amountOwed = totalRaised - platformFee;
 
-      const settlements = project.divinityCoinSettlements;
+      const settlements = project.divinityCoinSettlements || [];
 
       // Calculate amount already settled
       const completedSettlements = settlements.filter(
@@ -127,6 +126,7 @@ export async function GET(request: NextRequest) {
       const pendingSettlements = settlements.filter(
         (s: { status: string }) => s.status === "PENDING" || s.status === "PROCESSING" || s.status === "INITIATED"
       );
+      const hasPendingSettlement = pendingSettlements.length > 0;
 
       const remainingAmount = amountOwed - amountSettled;
 
@@ -138,18 +138,19 @@ export async function GET(request: NextRequest) {
         slug: project.slug,
         imageUrl: project.imageUrl,
         status: project.status,
-        paymentProcessor: project.paymentProcessor,
+        paymentProcessor: "DIVINITYCOIN",
         fundedAt: project.fundedAt,
         totalRaised,
         platformFee,
+        feeLabel: "5%",
         amountOwed,
         amountSettled,
         remainingAmount,
         backerCount: project.pledges.length,
         hasBank: !!bankAccount,
         bankVerified: bankAccount?.isVerified || false,
-        hasPendingSettlement: pendingSettlements.length > 0,
-        settlementStatus: pendingSettlements.length > 0
+        hasPendingSettlement,
+        settlementStatus: hasPendingSettlement
           ? "processing"
           : remainingAmount <= 0
           ? "settled"
@@ -201,14 +202,134 @@ export async function GET(request: NextRequest) {
       projectsWithoutBank: filteredProjects.filter((p) => !p.hasBank).length,
     };
 
+    // Fetch creator balances from marketplace sales (via books → purchases)
+    const creatorsWithSales = await db.user.findMany({
+      where: {
+        marketplaceBooks: {
+          some: {
+            purchases: {
+              some: {
+                status: "COMPLETED",
+              },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        divinityCoinBankAccount: {
+          select: {
+            id: true,
+            bankNameDisplay: true,
+            accountLastFour: true,
+            accountType: true,
+            isVerified: true,
+          },
+        },
+        createdProjects: {
+          where: {
+            deletedAt: null,
+            status: { in: ["FUNDED", "LIVE"] },
+          },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            currentAmount: true,
+          },
+        },
+        marketplaceBooks: {
+          select: {
+            purchases: {
+              where: {
+                status: "COMPLETED",
+              },
+              select: {
+                id: true,
+                amount: true,
+                creatorPayout: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const creatorBalances = creatorsWithSales
+      .map((creator) => {
+        // Flatten all purchases across creator's books
+        const allPurchases = creator.marketplaceBooks.flatMap(book => book.purchases);
+
+        const totalMarketplaceSales = allPurchases.reduce(
+          (sum, s) => sum + Number(s.amount),
+          0
+        );
+        const totalCreatorEarnings = allPurchases.reduce(
+          (sum, s) => sum + Number(s.creatorPayout),
+          0
+        );
+
+        const projectEarnings = creator.createdProjects.reduce(
+          (sum, p) => sum + Number(p.currentAmount || 0),
+          0
+        );
+
+        const bankAccount = creator.divinityCoinBankAccount;
+
+        return {
+          id: creator.id,
+          name: creator.name,
+          email: creator.email,
+          image: creator.image,
+          balance: totalCreatorEarnings,
+          projectCount: creator.createdProjects.length,
+          projectEarnings,
+          projects: creator.createdProjects.map((p) => ({
+            id: p.id,
+            title: p.title,
+            status: p.status,
+            amount: Number(p.currentAmount || 0),
+          })),
+          marketplaceSales: {
+            totalAmount: totalMarketplaceSales,
+            creatorEarnings: totalCreatorEarnings,
+            count: allPurchases.length,
+          },
+          hasBank: !!bankAccount,
+          bankVerified: bankAccount?.isVerified || false,
+          bankAccount: bankAccount
+            ? {
+                id: bankAccount.id,
+                bankName: bankAccount.bankNameDisplay,
+                accountLastFour: bankAccount.accountLastFour,
+                accountType: bankAccount.accountType,
+                isVerified: bankAccount.isVerified,
+              }
+            : null,
+          settlements: [],
+        };
+      })
+      .filter((c) => c.balance > 0);
+
+    const balanceStats = {
+      totalCreatorsWithBalance: creatorBalances.length,
+      totalBalance: creatorBalances.reduce((sum, c) => sum + c.balance, 0),
+      creatorsWithoutBank: creatorBalances.filter((c) => !c.hasBank).length,
+    };
+
     return NextResponse.json({
       projects: filteredProjects,
       stats,
+      creatorBalances,
+      balanceStats,
     });
   } catch (error) {
-    console.error("Error fetching DivinityCoin payouts:", error);
+    console.error("Error fetching payouts:", error);
     return NextResponse.json(
-      { error: "Failed to fetch DivinityCoin payouts" },
+      { error: "Failed to fetch payouts" },
       { status: 500 }
     );
   }
@@ -260,7 +381,7 @@ export async function POST(request: NextRequest) {
 
     if (project.paymentProcessor !== "DIVINITYCOIN") {
       return NextResponse.json(
-        { error: "Project is not using DivinityCoin payment processor" },
+        { error: "This endpoint only handles DivinityCoin project payouts. Stripe projects use Stripe Connect." },
         { status: 400 }
       );
     }
@@ -269,12 +390,12 @@ export async function POST(request: NextRequest) {
 
     if (!bankAccount) {
       return NextResponse.json(
-        { error: "Creator has no DivinityCoin bank account on file" },
+        { error: "Creator has no bank account on file" },
         { status: 400 }
       );
     }
 
-    // Create the settlement record
+    // Create the DivinityCoin settlement record
     const settlement = await db.divinityCoinSettlement.create({
       data: {
         bankAccountId: bankAccount.id,
@@ -293,7 +414,7 @@ export async function POST(request: NextRequest) {
       type: "PROJECT_PAYOUT",
     });
   } catch (error) {
-    console.error("Error creating DivinityCoin settlement:", error);
+    console.error("Error creating settlement:", error);
     return NextResponse.json(
       { error: "Failed to create settlement" },
       { status: 500 }
