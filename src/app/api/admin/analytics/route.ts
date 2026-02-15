@@ -85,22 +85,34 @@ export async function GET(req: NextRequest) {
             timestamp: { gte: previousStartDate, lt: startDate }
           }
         }),
-        // Pledges current period (exclude deleted)
+        // Pledges current period - include COMPLETED + committed PENDING
         db.pledge.aggregate({
           where: {
             deletedAt: null,
-            status: "COMPLETED",
-            createdAt: { gte: startDate }
+            createdAt: { gte: startDate },
+            project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+            OR: [
+              { status: "COMPLETED" },
+              { status: "PENDING", stripePaymentMethodId: { not: null } },
+              { status: "PENDING", stripeSetupIntentId: { not: null } },
+              { status: "PENDING", confirmationEmailSent: true },
+            ],
           },
           _sum: { amount: true },
           _count: true
         }),
-        // Pledges previous period (exclude deleted)
+        // Pledges previous period - include COMPLETED + committed PENDING
         db.pledge.aggregate({
           where: {
             deletedAt: null,
-            status: "COMPLETED",
-            createdAt: { gte: previousStartDate, lt: startDate }
+            createdAt: { gte: previousStartDate, lt: startDate },
+            project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+            OR: [
+              { status: "COMPLETED" },
+              { status: "PENDING", stripePaymentMethodId: { not: null } },
+              { status: "PENDING", stripeSetupIntentId: { not: null } },
+              { status: "PENDING", confirmationEmailSent: true },
+            ],
           },
           _sum: { amount: true },
           _count: true
@@ -116,7 +128,7 @@ export async function GET(req: NextRequest) {
         // Projects by category (exclude deleted)
         db.project.groupBy({
           by: ["category"],
-          where: { deletedAt: null, status: { in: ["LIVE", "FUNDED"] } },
+          where: { deletedAt: null, status: { in: ["LIVE", "FUNDED", "FAILED"] } },
           _count: true,
           _sum: { currentAmount: true }
         })

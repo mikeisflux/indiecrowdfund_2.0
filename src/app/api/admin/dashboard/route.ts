@@ -51,9 +51,10 @@ export async function GET() {
       pendingProjects,
       projectsThisMonth,
 
-      // Revenue stats (from pledges)
+      // Revenue stats - sum project currentAmounts for accurate totals
+      // (COMPLETED pledge sums can include pledges from cancelled projects)
       totalPledges,
-      completedPledges,
+      activeProjects,
       pledgesThisMonth,
       pledgesPrevMonth,
 
@@ -77,10 +78,12 @@ export async function GET() {
 
       // Pledges (exclude deleted)
       db.pledge.count({ where: { deletedAt: null } }),
-      db.pledge.aggregate({
-        where: { deletedAt: null, status: "COMPLETED" },
-        _sum: { amount: true },
-        _count: true
+      db.project.findMany({
+        where: {
+          status: { in: ["LIVE", "FUNDED", "FAILED"] },
+          deletedAt: null,
+        },
+        select: { currentAmount: true },
       }),
       db.pledge.aggregate({
         where: {
@@ -180,8 +183,8 @@ export async function GET() {
         pendingProjects,
         projectsThisMonth,
         totalPledges,
-        completedPledgeCount: completedPledges._count,
-        totalRevenue: Number(completedPledges._sum.amount || 0),
+        completedPledgeCount: totalPledges,
+        totalRevenue: activeProjects.reduce((sum: number, p: { currentAmount: unknown }) => sum + Number(p.currentAmount), 0),
         revenueThisMonth,
         revenueGrowth: Number(revenueGrowth),
         pendingReports,
