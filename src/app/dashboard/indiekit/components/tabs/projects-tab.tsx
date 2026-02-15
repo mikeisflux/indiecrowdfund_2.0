@@ -35,6 +35,7 @@ interface ConnectedProject {
   imageUrl?: string;
   totalRaised?: number;
   backerCount?: number;
+  vanityUrl?: string | null;
 }
 
 interface ProjectsTabProps {
@@ -69,20 +70,25 @@ export function ProjectsTab({
     }
   };
 
-  const handleViewProject = (slug: string | undefined) => {
-    if (slug) {
-      window.open(`/project/${slug}`, "_blank");
+  const handleViewProject = (project: ConnectedProject) => {
+    if (project.slug) {
+      const vanity = project.vanityUrl || project.id;
+      window.open(`/projects/${vanity}/${project.slug}`, "_blank");
     }
   };
 
   const handleViewAnalytics = (projectId: string) => {
-    // Navigate to the project's analytics page
-    window.location.href = `/dashboard/project/${projectId}?tab=analytics`;
+    // Navigate to the project's survey responses (analytics)
+    window.open(`/dashboard/projects/${projectId}/survey/responses`, "_blank");
   };
 
   const handleOpenSettings = (projectId: string) => {
-    // Navigate to the project's settings page
-    window.location.href = `/dashboard/project/${projectId}?tab=settings`;
+    // Navigate to the project's edit page
+    const project = projects.find(p => p.id === projectId);
+    if (project?.slug) {
+      const vanity = project.vanityUrl || project.id;
+      window.open(`/projects/${vanity}/${project.slug}/edit`, "_blank");
+    }
   };
 
   if (!hasActiveCampaign) {
@@ -221,7 +227,7 @@ export function ProjectsTab({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleViewProject(project.slug)}
+                    onClick={() => handleViewProject(project)}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>

@@ -34,6 +34,7 @@ const responseSchema = z.object({
   })).optional(),
   backerResponses: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(),
   shippingAddress: addressSchemaPartial.optional().nullable(),
+  selectedAddons: z.record(z.string(), z.number().int().min(0)).optional(), // { addonId: quantity }
   submit: z.boolean().default(false), // If true, mark as complete
 });
 
@@ -55,7 +56,7 @@ export async function GET(
       where: { id: pledgeId },
       include: {
         project: {
-          select: { id: true, title: true, imageUrl: true },
+          select: { id: true, title: true, imageUrl: true, paymentProcessor: true, slug: true },
         },
         reward: {
           select: { id: true, title: true },
@@ -146,6 +147,41 @@ export async function GET(
       }
     );
 
+    // Get available addons for this project that the backer can purchase
+    const availableAddons = await db.reward.findMany({
+      where: {
+        projectId: pledge.projectId,
+        type: "ADDON",
+        isEnded: false,
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        amount: true,
+        quantityAvailable: true,
+        quantityClaimed: true,
+        imageUrl: true,
+      },
+      orderBy: { amount: "asc" },
+    });
+
+    // Filter out sold out addons and format for frontend
+    const purchasableAddons = availableAddons
+      .filter(addon => {
+        if (addon.quantityAvailable === null) return true; // Unlimited
+        return addon.quantityClaimed < addon.quantityAvailable;
+      })
+      .map(addon => ({
+        id: addon.id,
+        title: addon.title,
+        description: addon.description,
+        price: Number(addon.amount),
+        imageUrl: addon.imageUrl,
+        quantityAvailable: addon.quantityAvailable ? addon.quantityAvailable - addon.quantityClaimed : null,
+        alreadyPurchased: addonIds.includes(addon.id),
+      }));
+
     return NextResponse.json({
       survey: {
         id: survey.id,
@@ -157,8 +193,11 @@ export async function GET(
       },
       pledge: {
         id: pledge.id,
+        projectId: pledge.projectId,
         projectTitle: pledge.project.title,
         projectImage: pledge.project.imageUrl,
+        projectSlug: pledge.project.slug,
+        paymentProcessor: pledge.project.paymentProcessor || "STRIPE",
         rewardTitle: pledge.reward?.title || "No Reward",
         addons: pledge.addons.map((a: { addon: { id: string; title: string } }) => ({
           id: a.addon.id,
@@ -167,12 +206,14 @@ export async function GET(
       },
       itemQuestions: [...relevantItemQuestions, ...addonItemQuestions],
       backerQuestions: relevantBackerQuestions,
+      availableAddons: purchasableAddons,
       response: {
         itemResponses: response.itemResponses,
         backerResponses: response.backerResponses,
         shippingAddress: response.shippingAddress,
         isComplete: response.isComplete,
         addressLocked: response.addressLocked,
+        selectedAddons: {},
       },
     });
   } catch (error) {
@@ -345,6 +386,10 @@ export async function POST(
       }
     }
 
+    // Note: Addon purchases are handled separately via the add-items payment flow
+    // (POST /api/pledges/[pledgeId]/add-items → payment → confirm-add-items)
+    // The survey page submits selectedAddons info so we can return it for the frontend payment step
+
     // Update response
     const updatedResponse = await db.surveyResponse.update({
       where: { pledgeId },
@@ -372,6 +417,7 @@ export async function POST(
           },
         },
       });
+
     }
 
     return NextResponse.json({

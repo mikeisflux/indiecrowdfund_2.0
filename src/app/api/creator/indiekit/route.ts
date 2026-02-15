@@ -37,6 +37,9 @@ export async function GET(req: NextRequest) {
         backerCount: true,
         prelaunchActive: true,
         imageUrl: true,
+        creator: {
+          select: { vanityUrl: true },
+        },
       },
     });
 
@@ -59,6 +62,9 @@ export async function GET(req: NextRequest) {
             currentAmount: true,
             backerCount: true,
             imageUrl: true,
+            creator: {
+              select: { vanityUrl: true },
+            },
           },
         },
       },
@@ -262,10 +268,19 @@ export async function GET(req: NextRequest) {
         orderBy: { amount: "asc" },
       }),
 
-      // Get addons for this project (type: ADDON)
+      // Get addons for this project (type: ADDON) - include all for admin view
       db.reward.findMany({
         where: { projectId: selectedProjectId, type: "ADDON" },
-        select: { id: true, title: true, amount: true },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          amount: true,
+          imageUrl: true,
+          quantityAvailable: true,
+          quantityClaimed: true,
+          isEnded: true,
+        },
         orderBy: { amount: "asc" },
       }),
     ]);
@@ -850,6 +865,7 @@ export async function GET(req: NextRequest) {
         imageUrl: (p as { imageUrl?: string }).imageUrl || null,
         backerCount: (p as { backerCount?: number }).backerCount || 0,
         totalRaised: Number((p as { currentAmount?: number | string }).currentAmount) || 0,
+        vanityUrl: (p as { creator?: { vanityUrl?: string | null } }).creator?.vanityUrl || null,
       })),
       stats,
       backers: processedBackers,
@@ -865,6 +881,16 @@ export async function GET(req: NextRequest) {
       userEmail: session.user.email || "",
       rewards: projectRewards.map((r: { id: string; title: string; amount: unknown }) => ({ id: r.id, name: r.title, amount: Number(r.amount) })),
       addons: projectAddons.map((a: { id: string; title: string; amount: unknown }) => ({ id: a.id, name: a.title, price: Number(a.amount) })),
+      surveyAddons: projectAddons.map((a: { id: string; title: string; description?: string; amount: unknown; imageUrl?: string | null; quantityAvailable?: number | null; quantityClaimed?: number; isEnded?: boolean }) => ({
+        id: a.id,
+        name: a.title,
+        description: a.description || "",
+        price: Number(a.amount),
+        imageUrl: a.imageUrl || undefined,
+        available: !a.isEnded,
+        quantityLimit: a.quantityAvailable || undefined,
+        purchasedCount: a.quantityClaimed || 0,
+      })),
     });
   } catch (error) {
     console.error("IndieKit API error:", error);

@@ -2,7 +2,7 @@
 
 import { getCSRFHeaders } from "@/lib/csrf";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -31,8 +31,25 @@ import {
   ChevronLeft,
   Lock,
   ArrowLeft,
+  ShoppingBag,
+  Plus,
+  Minus,
+  CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { loadStripe, Stripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+interface AvailableAddon {
+  id: string;
+  title: string;
+  description?: string;
+  price: number;
+  imageUrl?: string;
+  quantityAvailable: number | null;
+  alreadyPurchased: boolean;
+}
 
 interface SurveyData {
   survey: {
@@ -45,8 +62,11 @@ interface SurveyData {
   };
   pledge: {
     id: string;
+    projectId: string;
     projectTitle: string;
     projectImage?: string;
+    projectSlug?: string;
+    paymentProcessor: string;
     rewardTitle: string;
     addons: { id: string; title: string }[];
   };
@@ -78,6 +98,7 @@ interface SurveyData {
     options: string[];
     isRequired: boolean;
   }[];
+  availableAddons?: AvailableAddon[];
   response: {
     itemResponses?: Record<string, { variants?: Record<string, string>; customAnswers?: Record<string, string | string[]> }>;
     backerResponses?: Record<string, string | string[]>;
@@ -93,10 +114,11 @@ interface SurveyData {
     };
     isComplete: boolean;
     addressLocked: boolean;
+    selectedAddons?: Record<string, number>;
   };
 }
 
-type Step = "intro" | "items" | "questions" | "address" | "review";
+type Step = "intro" | "items" | "questions" | "addons" | "address" | "review" | "payment";
 
 export default function BackerSurveyPage() {
   const params = useParams();
@@ -123,6 +145,16 @@ export default function BackerSurveyPage() {
     phone: "",
   });
 
+  // Addon selection state
+  const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
+
+  // Payment state
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const creatingPaymentRef = useRef(false);
+
   const fetchSurvey = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -147,6 +179,9 @@ export default function BackerSurveyPage() {
               phone: surveyData.response.shippingAddress.phone || "",
             });
           }
+          if (surveyData.response.selectedAddons) {
+            setSelectedAddons(surveyData.response.selectedAddons);
+          }
         }
       } else {
         const err = await response.json();
@@ -164,7 +199,16 @@ export default function BackerSurveyPage() {
     fetchSurvey();
   }, [fetchSurvey]);
 
-  const saveProgress = async (submit = false) => {
+  // Calculate addon totals
+  const addonsTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
+    if (qty <= 0) return sum;
+    const addon = data?.availableAddons?.find(a => a.id === id);
+    return sum + (addon?.price || 0) * qty;
+  }, 0);
+
+  const hasNewAddons = Object.values(selectedAddons).some(qty => qty > 0);
+
+  const saveProgress = async (submit = false): Promise<boolean> => {
     setIsSaving(true);
     setError(null);
     try {
@@ -174,7 +218,6 @@ export default function BackerSurveyPage() {
         body: JSON.stringify({
           itemResponses,
           backerResponses,
-          // Only send address if it has content (at least name filled in)
           shippingAddress: data?.survey.collectAddresses && shippingAddress.name.trim()
             ? shippingAddress
             : null,
@@ -183,32 +226,130 @@ export default function BackerSurveyPage() {
       });
 
       if (response.ok) {
-        if (submit) {
-          router.push("/dashboard/backer?tab=wallet");
-        }
+        return true;
       } else {
         const err = await response.json();
         setError(err.error || "Failed to save");
+        return false;
       }
     } catch (err) {
       console.error("Error saving survey:", err);
       setError("Failed to save survey");
+      return false;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Submit survey: if addons selected, submit then go to payment; otherwise submit and redirect
+  const handleSubmit = async () => {
+    const saved = await saveProgress(true);
+    if (!saved) return;
+
+    if (hasNewAddons) {
+      // Go to payment step - survey is saved, now we need to charge for addons
+      setCurrentStep("payment");
+    } else {
+      router.push("/dashboard/backer?tab=wallet");
+    }
+  };
+
+  // Create payment intent for addon purchase via existing add-items API
+  const createAddonPayment = useCallback(async () => {
+    if (!data || !hasNewAddons || clientSecret) return;
+    if (creatingPaymentRef.current) return;
+    creatingPaymentRef.current = true;
+
+    setIsProcessingPayment(true);
+    setPaymentError(null);
+
+    try {
+      const addonsWithQuantity = Object.entries(selectedAddons)
+        .filter(([, qty]) => qty > 0)
+        .map(([id, quantity]) => ({ id, quantity }));
+
+      const response = await fetch(`/api/pledges/${pledgeId}/add-items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          addons: addonsWithQuantity,
+          amount: addonsTotal,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create payment");
+      }
+
+      // Load appropriate Stripe instance
+      if (result.paymentMethod === "DIVINITYCOIN" && result.publishableKey) {
+        setStripePromise(loadStripe(result.publishableKey));
+      } else if (!stripePromise) {
+        // Load platform Stripe key
+        const configRes = await fetch("/api/stripe/config");
+        const configData = await configRes.json();
+        if (configData.publishableKey) {
+          setStripePromise(loadStripe(configData.publishableKey));
+        }
+      }
+
+      setClientSecret(result.clientSecret);
+      setIsProcessingPayment(false);
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Failed to create payment");
+      setIsProcessingPayment(false);
+      creatingPaymentRef.current = false;
+    }
+  }, [data, hasNewAddons, clientSecret, selectedAddons, pledgeId, addonsTotal, stripePromise]);
+
+  // Auto-create payment intent when entering payment step
+  useEffect(() => {
+    if (currentStep === "payment" && !clientSecret && !isProcessingPayment && !paymentError) {
+      createAddonPayment();
+    }
+  }, [currentStep, clientSecret, isProcessingPayment, paymentError, createAddonPayment]);
+
+  // Handle successful addon payment
+  const handlePaymentSuccess = async () => {
+    try {
+      // Confirm the add-items purchase
+      const response = await fetch(`/api/pledges/${pledgeId}/confirm-add-items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        console.error("Failed to confirm add-items:", err);
+      }
+    } catch (err) {
+      console.error("Error confirming add-items:", err);
+    }
+
+    // Redirect to dashboard
+    router.push("/dashboard/backer?tab=wallet");
+  };
+
+  const handlePaymentError = (message: string) => {
+    setPaymentError(message);
+    setIsProcessingPayment(false);
   };
 
   const getSteps = (): Step[] => {
     const steps: Step[] = ["intro"];
     if (data?.itemQuestions && data.itemQuestions.length > 0) steps.push("items");
     if (data?.backerQuestions && data.backerQuestions.length > 0) steps.push("questions");
+    if (data?.availableAddons && data.availableAddons.length > 0) steps.push("addons");
     if (data?.survey.collectAddresses) steps.push("address");
     steps.push("review");
+    // Payment step is only shown dynamically after submit if addons selected
     return steps;
   };
 
   const steps = getSteps();
-  const currentStepIndex = steps.indexOf(currentStep);
+  const currentStepIndex = currentStep === "payment" ? steps.length : steps.indexOf(currentStep);
 
   const nextStep = () => {
     const nextIndex = currentStepIndex + 1;
@@ -219,10 +360,34 @@ export default function BackerSurveyPage() {
   };
 
   const prevStep = () => {
+    if (currentStep === "payment") {
+      // Go back to review from payment
+      setCurrentStep("review");
+      setClientSecret(null);
+      setPaymentError(null);
+      creatingPaymentRef.current = false;
+      return;
+    }
     const prevIndex = currentStepIndex - 1;
     if (prevIndex >= 0) {
       setCurrentStep(steps[prevIndex]);
     }
+  };
+
+  // Addon quantity helpers
+  const updateAddonQuantity = (addonId: string, delta: number) => {
+    setSelectedAddons(prev => {
+      const current = prev[addonId] || 0;
+      const addon = data?.availableAddons?.find(a => a.id === addonId);
+      const maxQty = addon?.quantityAvailable ?? 99;
+      const newQty = Math.max(0, Math.min(current + delta, maxQty));
+      if (newQty === 0) {
+        const next = { ...prev };
+        delete next[addonId];
+        return next;
+      }
+      return { ...prev, [addonId]: newQty };
+    });
   };
 
   if (isLoading) {
@@ -296,7 +461,7 @@ export default function BackerSurveyPage() {
 
       {/* Progress */}
       <div className="flex items-center gap-2">
-        {steps.map((step, index) => (
+        {[...steps, ...(currentStep === "payment" ? ["payment" as const] : [])].map((step, index) => (
           <div key={step} className="flex items-center">
             <div
               className={`h-2 w-8 rounded ${
@@ -476,6 +641,115 @@ export default function BackerSurveyPage() {
         </div>
       )}
 
+      {/* Addons Step */}
+      {currentStep === "addons" && data.availableAddons && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5" />
+            Add-ons
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Want to add more to your pledge? Select any additional items below. These will be charged separately.
+          </p>
+
+          {data.availableAddons.map((addon) => {
+            const qty = selectedAddons[addon.id] || 0;
+            const isAlreadyPurchased = addon.alreadyPurchased;
+
+            return (
+              <Card key={addon.id} className={qty > 0 ? "ring-2 ring-emerald-500 border-emerald-500" : ""}>
+                <CardContent className="py-4">
+                  <div className="flex gap-4">
+                    {addon.imageUrl && (
+                      <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-zinc-100 shrink-0">
+                        <Image
+                          src={addon.imageUrl}
+                          alt={addon.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h3 className="font-semibold">{addon.title}</h3>
+                          {addon.description && (
+                            <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{addon.description}</p>
+                          )}
+                          <p className="text-lg font-semibold text-emerald-600 mt-2">
+                            ${addon.price.toFixed(2)}
+                          </p>
+                          {addon.quantityAvailable !== null && (
+                            <p className="text-xs text-zinc-400 mt-1">
+                              {addon.quantityAvailable} remaining
+                            </p>
+                          )}
+                          {isAlreadyPurchased && (
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              Already in your pledge
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateAddonQuantity(addon.id, -1)}
+                            disabled={qty === 0}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="w-8 text-center font-medium">{qty}</span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateAddonQuantity(addon.id, 1)}
+                            disabled={addon.quantityAvailable !== null && qty >= addon.quantityAvailable}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+
+          {/* Addon Total */}
+          {hasNewAddons && (
+            <Card className="bg-emerald-50 border-emerald-200">
+              <CardContent className="py-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Add-on Total</span>
+                  <span className="text-lg font-semibold text-emerald-700">
+                    ${addonsTotal.toFixed(2)}
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-600 mt-1">
+                  This amount will be charged after you submit your survey.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={prevStep}>
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <Button onClick={nextStep} className="flex-1">
+              {hasNewAddons ? `Continue with $${addonsTotal.toFixed(2)} in add-ons` : "Skip Add-ons"}
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Address Step */}
       {currentStep === "address" && (
         <div className="space-y-4">
@@ -572,7 +846,6 @@ export default function BackerSurveyPage() {
                       <SelectItem value="AU">Australia</SelectItem>
                       <SelectItem value="DE">Germany</SelectItem>
                       <SelectItem value="FR">France</SelectItem>
-                      {/* Add more countries as needed */}
                     </SelectContent>
                   </Select>
                 </div>
@@ -649,6 +922,38 @@ export default function BackerSurveyPage() {
                 );
               })}
 
+              {/* Selected Addons */}
+              {hasNewAddons && data.availableAddons && (
+                <div className="border-b pb-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4" />
+                    Additional Add-ons
+                  </h4>
+                  <div className="mt-2 space-y-2">
+                    {Object.entries(selectedAddons)
+                      .filter(([, qty]) => qty > 0)
+                      .map(([id, qty]) => {
+                        const addon = data.availableAddons?.find(a => a.id === id);
+                        if (!addon) return null;
+                        return (
+                          <div key={id} className="flex justify-between text-sm">
+                            <span className="text-zinc-600">
+                              {addon.title} x{qty}
+                            </span>
+                            <span className="font-medium">
+                              ${(addon.price * qty).toFixed(2)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    <div className="flex justify-between text-sm font-semibold pt-2 border-t">
+                      <span>Add-on Total</span>
+                      <span className="text-emerald-600">${addonsTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Address */}
               {data.survey.collectAddresses && shippingAddress.name && (
                 <div>
@@ -671,15 +976,211 @@ export default function BackerSurveyPage() {
               Back
             </Button>
             <Button
-              onClick={() => saveProgress(true)}
+              onClick={handleSubmit}
               className="flex-1"
               disabled={isSaving}
             >
-              {isSaving ? "Submitting..." : "Submit Survey"}
+              {isSaving ? "Submitting..." : hasNewAddons ? (
+                <>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Submit & Continue to Payment
+                </>
+              ) : "Submit Survey"}
             </Button>
           </div>
         </div>
       )}
+
+      {/* Payment Step */}
+      {currentStep === "payment" && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Complete Payment
+          </h2>
+
+          <p className="text-sm text-muted-foreground">
+            Your survey has been submitted. Complete your payment below to finalize your add-on purchases.
+          </p>
+
+          {/* Order Summary */}
+          <Card className="bg-zinc-50">
+            <CardContent className="py-4">
+              <h3 className="font-medium mb-3">Order Summary</h3>
+              {data.availableAddons && Object.entries(selectedAddons)
+                .filter(([, qty]) => qty > 0)
+                .map(([id, qty]) => {
+                  const addon = data.availableAddons?.find(a => a.id === id);
+                  if (!addon) return null;
+                  return (
+                    <div key={id} className="flex justify-between text-sm py-1">
+                      <span>{addon.title} x{qty}</span>
+                      <span>${(addon.price * qty).toFixed(2)}</span>
+                    </div>
+                  );
+                })}
+              <div className="flex justify-between font-semibold text-lg pt-3 mt-3 border-t">
+                <span>Total</span>
+                <span className="text-emerald-600">${addonsTotal.toFixed(2)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment Error */}
+          {paymentError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600 mb-2">{paymentError}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setPaymentError(null);
+                  setClientSecret(null);
+                  setIsProcessingPayment(false);
+                  creatingPaymentRef.current = false;
+                }}
+              >
+                Try Again
+              </Button>
+            </div>
+          )}
+
+          {/* Stripe Payment Form */}
+          <Card>
+            <CardContent className="py-5">
+              {clientSecret && stripePromise ? (
+                <Elements
+                  key={clientSecret}
+                  stripe={stripePromise}
+                  options={{
+                    clientSecret,
+                    appearance: {
+                      theme: "stripe",
+                      variables: {
+                        colorPrimary: "#028858",
+                        fontFamily: "system-ui, -apple-system, sans-serif",
+                        borderRadius: "8px",
+                        spacingUnit: "5px",
+                      },
+                      rules: {
+                        ".Tab": { borderRadius: "8px", boxShadow: "none" },
+                        ".Tab--selected": { borderColor: "#028858", boxShadow: "0 0 0 1.5px #028858" },
+                        ".Input": { borderRadius: "8px", boxShadow: "none", padding: "10px 12px" },
+                        ".Input:focus": { borderColor: "#028858", boxShadow: "0 0 0 1.5px #028858" },
+                        ".Label": { fontWeight: "500", fontSize: "14px", marginBottom: "6px" },
+                      },
+                    },
+                  }}
+                >
+                  <SurveyPaymentForm
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                    isProcessing={isProcessingPayment}
+                    setIsProcessing={setIsProcessingPayment}
+                    total={addonsTotal}
+                  />
+                </Elements>
+              ) : !paymentError ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">Loading payment form...</p>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={prevStep}>
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back to Review
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Stripe Payment Form for Survey Addons
+function SurveyPaymentForm({
+  onSuccess,
+  onError,
+  isProcessing,
+  setIsProcessing,
+  total,
+}: {
+  onSuccess: () => void;
+  onError: (message: string) => void;
+  isProcessing: boolean;
+  setIsProcessing: (val: boolean) => void;
+  total: number;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const handleSubmit = async () => {
+    if (!stripe || !elements) return;
+
+    setIsProcessing(true);
+
+    try {
+      const result = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/dashboard/backer?tab=wallet`,
+        },
+        redirect: "if_required",
+      });
+
+      if (result.error) {
+        onError(result.error.message || "Payment failed");
+        setIsProcessing(false);
+      } else {
+        onSuccess();
+      }
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "An unexpected error occurred");
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Secure payment header */}
+      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground pb-3 border-b">
+        <Lock className="h-4 w-4 text-emerald-600" />
+        <span>Secure Payment</span>
+      </div>
+
+      <PaymentElement
+        options={{
+          layout: { type: "tabs", defaultCollapsed: false },
+        }}
+      />
+
+      <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+        <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+        <span>Your payment information is encrypted and secure.</span>
+      </div>
+
+      <Button
+        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-12 text-base"
+        size="lg"
+        onClick={handleSubmit}
+        disabled={!stripe || !elements || isProcessing}
+      >
+        {isProcessing ? (
+          <span className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5 animate-spin" />
+            Processing...
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            <Lock className="h-4 w-4" />
+            Pay ${total.toFixed(2)}
+          </span>
+        )}
+      </Button>
     </div>
   );
 }

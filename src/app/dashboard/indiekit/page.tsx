@@ -275,6 +275,7 @@ export default function IndieKitPage() {
       setProducts(data.products || []);
       setRewards(data.rewards || []);
       setAddons(data.addons || []);
+      setSurveyAddons(data.surveyAddons || []);
       setTimeline(data.timeline || []);
 
       // Only set default project if none selected and no saved preference

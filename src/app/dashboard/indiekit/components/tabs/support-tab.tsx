@@ -204,15 +204,15 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
   };
 
   const handleViewAsBacker = (backer: Backer) => {
-    // Open survey page for this backer in a new tab
-    if (projectId) {
-      window.open(`/survey/${projectId}/${backer.id}`, "_blank");
+    // Open survey page for this backer in a new tab (backer.id is pledgeId)
+    if (backer.id) {
+      window.open(`/dashboard/pledges/${backer.id}/survey`, "_blank");
     }
   };
 
   const handleCopySurveyLink = (backer: Backer) => {
-    if (projectId) {
-      const surveyLink = `${window.location.origin}/survey/${projectId}/${backer.id}`;
+    if (backer.id) {
+      const surveyLink = `${window.location.origin}/dashboard/pledges/${backer.id}/survey`;
       navigator.clipboard.writeText(surveyLink);
       toast.success("Survey link copied to clipboard!");
     }
@@ -486,10 +486,10 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => {
                           setSelectedBacker(backer);
-                          window.open(`/dashboard/project/${projectId}/backer/${backer.id}/changelog`, "_blank");
+                          window.open(`/dashboard/indiekit/survey/${backer.id}`, "_blank");
                         }}>
                           <History className="h-4 w-4 mr-2" />
-                          View Changelog
+                          View Survey Response
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -543,9 +543,7 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => {
-                  if (selectedBacker && projectId) {
-                    window.open(`/dashboard/project/${projectId}/backer/${selectedBacker.id}/refund`, "_blank");
-                  }
+                  toast.info("Refund functionality coming soon. Please process refunds through your Stripe dashboard.");
                 }}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refund Order
@@ -555,12 +553,12 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
                   Edit Shipping Address
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
-                  if (selectedBacker && projectId) {
-                    window.open(`/dashboard/project/${projectId}/backer/${selectedBacker.id}/changelog`, "_blank");
+                  if (selectedBacker) {
+                    window.open(`/dashboard/indiekit/survey/${selectedBacker.id}`, "_blank");
                   }
                 }}>
                   <History className="h-4 w-4 mr-2" />
-                  View Full Changelog
+                  View Survey Response
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

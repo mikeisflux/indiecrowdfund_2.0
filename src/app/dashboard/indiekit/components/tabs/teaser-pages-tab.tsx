@@ -82,11 +82,15 @@ export function TeaserPagesTab({ hasActiveCampaign = false }: TeaserPagesTabProp
   }, [fetchPages]);
 
   const handleCreatePage = () => {
-    window.location.href = "/dashboard/indiekit/teaser/new";
+    window.location.href = "/projects/new";
   };
 
   const handleEditPage = (pageId: string) => {
-    window.location.href = `/dashboard/indiekit/teaser/${pageId}/edit`;
+    const page = pages.find(p => p.id === pageId);
+    if (page) {
+      const vanity = page.vanityUrl || pageId;
+      window.location.href = `/projects/${vanity}/${page.slug}/edit`;
+    }
   };
 
   const handleUnpublish = async (page: PrelaunchPage) => {
