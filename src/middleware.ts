@@ -294,6 +294,11 @@ export function middleware(req: NextRequest) {
   // Check if IP is blocked (fast in-memory check)
   if (isIPBlockedFast(clientIP)) {
     console.log(`[Bot Blocker] Blocked request from ${clientIP} to ${pathname}`);
+    // Use JSON response for server action requests to prevent Next.js internal TypeError
+    const hasActionHeader = !!req.headers.get("Next-Action");
+    if (hasActionHeader || pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     return new NextResponse("Forbidden", { status: 403 });
   }
 
@@ -327,11 +332,11 @@ export function middleware(req: NextRequest) {
       );
 
       if (shouldBlock) {
-        return new NextResponse("Forbidden", { status: 403 });
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
-      // Return 400 Bad Request for invalid action IDs
-      return new NextResponse("Bad Request - Invalid action ID", { status: 400 });
+      // Return 400 Bad Request for invalid action IDs (use JSON to prevent Next.js TypeError)
+      return NextResponse.json({ error: "Bad Request - Invalid action ID" }, { status: 400 });
     }
 
     // Rate limit server action requests per IP (catches brute-force action ID guessing)
@@ -343,9 +348,9 @@ export function middleware(req: NextRequest) {
         { actionId: serverActionId, path: pathname, userAgent }
       );
       if (shouldBlock) {
-        return new NextResponse("Forbidden", { status: 403 });
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-      return new NextResponse("Too Many Requests", { status: 429 });
+      return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
     }
 
     // Detect suspicious server action patterns:
@@ -362,9 +367,9 @@ export function middleware(req: NextRequest) {
         { actionId: serverActionId, path: pathname, userAgent }
       );
       if (shouldBlock) {
-        return new NextResponse("Forbidden", { status: 403 });
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-      return new NextResponse("Bad Request", { status: 400 });
+      return NextResponse.json({ error: "Bad Request" }, { status: 400 });
     }
   }
 

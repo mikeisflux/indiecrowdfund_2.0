@@ -99,8 +99,12 @@ export async function POST(request: Request) {
             platformUserId: session.user.id,
             email: userRecord?.email || "",
             name: userRecord?.name || "",
+            // DC API requires pledgeId/projectId — map from marketplace context
+            pledgeId: purchase.id,
+            projectId: book.id,
             purchaseId: purchase.id,
             bookId: book.id,
+            type: "marketplace",
             statement_descriptor: "INDIECROWDFUND",
           }),
         });
