@@ -356,7 +356,7 @@ export default function CreatorDashboard() {
               </TabsContent>
 
               <TabsContent value="rewards" className="space-y-6">
-                <RewardStats rewardStats={data.rewardStats} />
+                <RewardStats rewardStats={data.rewardStats} projectUrl={project.projectUrl} />
               </TabsContent>
 
               <TabsContent value="backers" className="space-y-6">

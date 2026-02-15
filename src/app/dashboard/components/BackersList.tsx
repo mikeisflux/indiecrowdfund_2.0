@@ -7,7 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Users, Download, XCircle, RefreshCw, Trash2, MessageSquare } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Users, Download, XCircle, RefreshCw, Trash2, MessageSquare, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -357,22 +363,25 @@ export function BackersList({
           )}
           {backers.length > 0 ? (
             <div className="rounded-xl border border-border/50 overflow-x-auto">
-              <div className="grid grid-cols-7 gap-4 border-b border-border/50 bg-muted/30 p-3 text-sm font-medium min-w-[900px]">
-                <div className="w-8"></div>
+              <div
+                className="grid gap-3 border-b border-border/50 bg-muted/30 p-3 text-sm font-medium min-w-[700px]"
+                style={{ gridTemplateColumns: '2.5rem 1.5fr 1fr 5rem 6rem 7rem 2.5rem' }}
+              >
+                <div></div>
                 <div>Backer</div>
                 <div>Reward</div>
                 <div>Amount</div>
                 <div>Status</div>
                 <div>Date</div>
-                <div>Actions</div>
+                <div></div>
               </div>
               {backers.map((backer, index) => (
                 <div
                   key={backer.id}
-                  className="grid grid-cols-7 gap-4 border-b border-border/50 p-3 text-sm last:border-0 min-w-[900px] items-center hover:bg-muted/20 transition-colors animate-in fade-in"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  className="grid gap-3 border-b border-border/50 p-3 text-sm last:border-0 min-w-[700px] items-center hover:bg-muted/20 transition-colors animate-in fade-in"
+                  style={{ gridTemplateColumns: '2.5rem 1.5fr 1fr 5rem 6rem 7rem 2.5rem', animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="w-8">
+                  <div>
                     {backer.status === "PENDING" && (
                       <Checkbox
                         checked={selectedPledges.has(backer.id)}
@@ -380,25 +389,26 @@ export function BackersList({
                       />
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Avatar className="h-6 w-6 shrink-0">
                       {backer.image && <AvatarImage src={backer.image} />}
                       <AvatarFallback className="text-xs">
                         {backer.name[0]?.toUpperCase() || "?"}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <div>{backer.name}</div>
+                    <div className="min-w-0">
+                      <div className="truncate">{backer.name}</div>
                       {backer.email && (
-                        <div className="text-xs text-muted-foreground">{backer.email}</div>
+                        <div className="text-xs text-muted-foreground truncate">{backer.email}</div>
                       )}
                     </div>
                   </div>
-                  <div>{backer.reward}</div>
+                  <div className="truncate">{backer.reward}</div>
                   <div className="font-bold text-primary">${backer.amount}</div>
                   <div>
                     <Badge
                       className={cn(
+                        "text-xs",
                         backer.status === "COMPLETED" && "bg-emerald-500/20 text-emerald-500 border-emerald-500/30",
                         backer.status === "PENDING" && "bg-amber-500/20 text-amber-500 border-amber-500/30",
                         backer.status === "REFUNDED" && "bg-muted text-muted-foreground",
@@ -408,57 +418,53 @@ export function BackersList({
                       {backer.status}
                     </Badge>
                   </div>
-                  <div className="text-muted-foreground">{backer.time}</div>
-                  <div className="flex gap-2">
-                    <Link href={`/dashboard/messages?projectId=${projectId}&recipientId=${backer.userId}`}>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                      >
-                        <MessageSquare className="h-3 w-3 mr-1" />
-                        Message
-                      </Button>
-                    </Link>
-                    {backer.status === "PENDING" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-amber-600 border-amber-200 hover:bg-amber-50"
-                        onClick={() => setCancelConfirm({ open: true, pledgeId: backer.id })}
-                        disabled={cancellingPledge === backer.id}
-                      >
-                        <XCircle className="h-3 w-3 mr-1" />
-                        {cancellingPledge === backer.id ? "..." : "Cancel"}
-                      </Button>
-                    )}
-                    {backer.status === "COMPLETED" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-orange-600 border-orange-200 hover:bg-orange-50"
-                        onClick={() => setRefundConfirm({ open: true, pledgeId: backer.id })}
-                        disabled={refundingPledge === backer.id}
-                      >
-                        <RefreshCw className={`h-3 w-3 mr-1 ${refundingPledge === backer.id ? "animate-spin" : ""}`} />
-                        {refundingPledge === backer.id ? "..." : "Refund"}
-                      </Button>
-                    )}
-                    {backer.status === "CANCELLED" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-rose-600 border-rose-200 hover:bg-rose-50"
-                        onClick={() => setDeleteConfirm({ open: true, pledgeId: backer.id })}
-                        disabled={deletingPledge === backer.id}
-                      >
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        {deletingPledge === backer.id ? "..." : "Delete"}
-                      </Button>
-                    )}
-                    {backer.status === "REFUNDED" && (
-                      <span className="text-xs text-muted-foreground">-</span>
-                    )}
+                  <div className="text-muted-foreground truncate">{backer.time}</div>
+                  <div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/messages?projectId=${projectId}&recipientId=${backer.userId}`}>
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Message
+                          </Link>
+                        </DropdownMenuItem>
+                        {backer.status === "PENDING" && (
+                          <DropdownMenuItem
+                            onClick={() => setCancelConfirm({ open: true, pledgeId: backer.id })}
+                            disabled={cancellingPledge === backer.id}
+                            className="text-amber-600 focus:text-amber-600"
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            {cancellingPledge === backer.id ? "Cancelling..." : "Cancel Pledge"}
+                          </DropdownMenuItem>
+                        )}
+                        {backer.status === "COMPLETED" && (
+                          <DropdownMenuItem
+                            onClick={() => setRefundConfirm({ open: true, pledgeId: backer.id })}
+                            disabled={refundingPledge === backer.id}
+                            className="text-orange-600 focus:text-orange-600"
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${refundingPledge === backer.id ? "animate-spin" : ""}`} />
+                            {refundingPledge === backer.id ? "Refunding..." : "Refund Pledge"}
+                          </DropdownMenuItem>
+                        )}
+                        {backer.status === "CANCELLED" && (
+                          <DropdownMenuItem
+                            onClick={() => setDeleteConfirm({ open: true, pledgeId: backer.id })}
+                            disabled={deletingPledge === backer.id}
+                            className="text-rose-600 focus:text-rose-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {deletingPledge === backer.id ? "Deleting..." : "Delete Pledge"}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}

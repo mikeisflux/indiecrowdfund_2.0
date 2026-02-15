@@ -1,15 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gift, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Gift, MoreHorizontal, Pencil, Eye, Copy } from "lucide-react";
+import { toast } from "sonner";
 import type { RewardStat } from "../types";
 
 interface RewardStatsProps {
   rewardStats: RewardStat[];
+  projectUrl: string;
 }
 
-export function RewardStats({ rewardStats }: RewardStatsProps) {
+export function RewardStats({ rewardStats, projectUrl }: RewardStatsProps) {
   return (
     <Card className="bg-card/50 backdrop-blur border-border/50">
       <CardHeader>
@@ -54,9 +63,36 @@ export function RewardStats({ rewardStats }: RewardStatsProps) {
                       </p>
                     </div>
                   )}
-                  <Button variant="ghost" size="icon" className="hover:bg-primary/10">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`${projectUrl}/edit?tab=rewards`}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit Reward
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={projectUrl}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Project
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${reward.title} — $${reward.amount}`);
+                          toast.success("Reward info copied");
+                        }}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Reward Info
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             ))}
