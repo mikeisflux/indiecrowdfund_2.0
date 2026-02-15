@@ -92,19 +92,42 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
       ? Math.round((successfulEndedProjects / totalEndedProjects) * 100)
       : 0;
 
-    // Get total active users (exclude deleted and banned/locked users)
-    const totalUsers = await db.user.count({
+    // Get count of unique backers (users who have made a committed pledge)
+    const backers = await db.pledge.findMany({
       where: {
         deletedAt: null,
-        lockedAt: null,
+        user: {
+          deletedAt: null,
+          lockedAt: null,
+        },
+        OR: [
+          { status: "COMPLETED" },
+          {
+            status: "PENDING",
+            stripePaymentMethodId: { not: null },
+          },
+          {
+            status: "PENDING",
+            stripeSetupIntentId: { not: null },
+          },
+          {
+            status: "PENDING",
+            confirmationEmailSent: true,
+          },
+        ],
       },
+      select: {
+        userId: true,
+      },
+      distinct: ["userId"],
     });
+    const totalBackers = backers.length;
 
     return {
       totalPledged,
       projectsFunded: projectsFundedCount,
       successRate,
-      backerPool: totalUsers,
+      backerPool: totalBackers,
     };
   } catch (error) {
     console.error("Error fetching platform stats:", error);
