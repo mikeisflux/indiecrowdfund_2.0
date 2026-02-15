@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,21 @@ import {
   Bug,
   FileText,
   MessageCircle,
+  Loader2,
+  ArrowRight,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { MobileProfileLinks } from "@/components/mobile-profile-links";
 import { ThemeToggle } from "@/components/theme-toggle";
+
+interface SearchSuggestion {
+  id: string;
+  title: string;
+  imageUrl: string;
+  projectUrl: string;
+  category: string;
+  creator: { name: string };
+}
 
 // Paths where the site header should NOT be shown
 const HIDDEN_PATH_PREFIXES = [
@@ -52,6 +63,61 @@ export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const searchContainerRef = useRef<HTMLFormElement>(null);
+
+  const fetchSuggestions = useCallback(async (query: string) => {
+    if (query.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    setLoadingSuggestions(true);
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        scope: "all",
+        limit: "5",
+      });
+      const res = await fetch(`/api/projects?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSuggestions(data.projects || []);
+      }
+    } catch {
+      // Silently fail for search suggestions
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  }, []);
+
+  // Debounced search as user types
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (searchQuery.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    debounceRef.current = setTimeout(() => {
+      fetchSuggestions(searchQuery);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchQuery, fetchSuggestions]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Hide on admin, auth, and retailer portal pages
   const shouldHide = HIDDEN_PATH_PREFIXES.some((prefix) => pathname?.startsWith(prefix));
@@ -106,21 +172,91 @@ export function SiteHeader() {
         </div>
         <div className="flex items-center gap-4">
           <form
+            ref={searchContainerRef}
             className="hidden md:flex relative group"
             onSubmit={(e) => {
               e.preventDefault();
               if (searchQuery.trim()) {
+                setShowSuggestions(false);
                 router.push(`/discover?q=${encodeURIComponent(searchQuery.trim())}&scope=all`);
               }
             }}
           >
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
             <Input
               placeholder="Search all projects..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => {
+                if (searchQuery.trim().length >= 2) setShowSuggestions(true);
+              }}
               className="w-64 pl-10 bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all"
             />
+
+            {/* Search Suggestions Dropdown */}
+            {showSuggestions && searchQuery.trim().length >= 2 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-xl shadow-xl overflow-hidden z-50">
+                {loadingSuggestions && suggestions.length === 0 ? (
+                  <div className="flex items-center justify-center py-6 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm">Searching...</span>
+                  </div>
+                ) : suggestions.length > 0 ? (
+                  <>
+                    {suggestions.map((project) => (
+                      <Link
+                        key={project.id}
+                        href={project.projectUrl}
+                        onClick={() => {
+                          setShowSuggestions(false);
+                          setSearchQuery("");
+                        }}
+                        className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="relative w-12 h-8 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                          {project.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={project.imageUrl}
+                              alt={project.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Sparkles className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{project.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {project.category} &middot; by {project.creator.name}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                    <Link
+                      href={`/discover?q=${encodeURIComponent(searchQuery.trim())}&scope=all`}
+                      onClick={() => {
+                        setShowSuggestions(false);
+                        setSearchQuery("");
+                      }}
+                      className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm text-primary hover:bg-primary/5 transition-colors border-t border-border"
+                    >
+                      View all results
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </>
+                ) : (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    No projects found for &ldquo;{searchQuery}&rdquo;
+                  </div>
+                )}
+              </div>
+            )}
           </form>
           <ThemeToggle />
           <div className="hidden sm:block">
