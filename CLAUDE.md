@@ -73,6 +73,11 @@
   - `PledgeAddon` - join table between pledges and addon rewards
   - `DigitalFile` - digital download files
 
+## Database Commands
+- When the user needs to run database queries or fixes, **ALWAYS** provide ready-to-run one-shot commands (e.g. `psql -c "..."` or `PGPASSWORD=... psql -h ... -c "..."`)
+- Never give raw SQL without wrapping it in a runnable shell command
+- Never give multi-step instructions when a single command will do
+
 ## Pre-Commit Checklist
 1. All imports are used
 2. No unused function parameters
