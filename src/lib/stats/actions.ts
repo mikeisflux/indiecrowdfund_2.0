@@ -45,10 +45,16 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
       return DEFAULT_PLATFORM_STATS;
     }
 
-    // Get total pledged amount from completed pledges
+    // Get total pledged amount from completed pledges only
+    // Exclude soft-deleted pledges and pledges from deleted/banned users
     const pledgeStats = await db.pledge.aggregate({
       where: {
         status: "COMPLETED",
+        deletedAt: null,
+        user: {
+          deletedAt: null,
+          lockedAt: null,
+        },
       },
       _sum: {
         amount: true,
@@ -56,12 +62,13 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
     });
 
     // Get all projects that have been LIVE or FUNDED to check funding status
-    // Projects funded = projects where currentAmount >= goalAmount
+    // Exclude soft-deleted projects
     const allActiveProjects = await db.project.findMany({
       where: {
         status: {
           in: ["LIVE", "FUNDED"],
         },
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -93,8 +100,13 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
       ? Math.round((successfulEndedProjects / totalEndedProjects) * 100)
       : 0;
 
-    // Get total registered users (backer pool)
-    const totalUsers = await db.user.count();
+    // Get total active users (exclude deleted and banned/locked users)
+    const totalUsers = await db.user.count({
+      where: {
+        deletedAt: null,
+        lockedAt: null,
+      },
+    });
 
     return {
       totalPledged: Number(pledgeStats._sum.amount || 0),
