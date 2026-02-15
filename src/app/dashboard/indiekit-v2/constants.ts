@@ -21,4 +21,5 @@ export const PHASES: { id: FulfillmentPhase; label: string; description: string 
   },
 ];
 
-export const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project_v2";
+// Use the same key as v1 so project selection is shared between versions
+export const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";

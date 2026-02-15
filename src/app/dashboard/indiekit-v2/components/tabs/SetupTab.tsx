@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BoxIcon, Link2, FormInput, ShoppingCart } from "lucide-react";
+import { toast } from "sonner";
 
 // Import existing tabs from v1
 import { ProductsTab } from "../../../indiekit/components/tabs";
@@ -82,7 +83,7 @@ export function SetupTab({
             backers={backers}
             surveyAddons={surveyAddons}
             onOpenAddonDialog={onOpenAddonDialog}
-            onOpenImportDialog={() => {}}
+            onOpenImportDialog={() => toast.info("Import from Kickstarter/Gamefound coming soon")}
             projectId={projectId}
             onRefresh={onRefresh}
             onEditAddon={onEditAddon}
