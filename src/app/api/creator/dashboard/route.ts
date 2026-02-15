@@ -266,10 +266,6 @@ export async function GET(req: NextRequest) {
               },
             },
           },
-          pledges: {
-            where: { status: "COMPLETED" },
-            select: { amount: true },
-          },
         },
         orderBy: { amount: "asc" },
       }),
@@ -407,8 +403,10 @@ export async function GET(req: NextRequest) {
     });
 
     // Process reward stats
+    // Total = reward price * backer count (not pledge.amount which includes addons/extras)
     const processedRewardStats = rewardStats.map((reward) => {
-      const totalPledged = reward.pledges.reduce((sum: number, p: { amount: number }) => sum + Number(p.amount), 0);
+      const backerCount = reward._count.pledges;
+      const rewardPrice = Number(reward.amount);
       const remaining = reward.quantityAvailable !== null
         ? reward.quantityAvailable - reward.quantityClaimed
         : null;
@@ -416,9 +414,9 @@ export async function GET(req: NextRequest) {
       return {
         id: reward.id,
         title: reward.title,
-        amount: Number(reward.amount),
-        backers: reward._count.pledges,
-        total: Math.round(totalPledged * 100) / 100,
+        amount: rewardPrice,
+        backers: backerCount,
+        total: Math.round(rewardPrice * backerCount * 100) / 100,
         remaining,
       };
     });
