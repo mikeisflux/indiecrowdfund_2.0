@@ -69,7 +69,8 @@ export async function GET(req: NextRequest) {
         previousPledges,
         currentUsers,
         previousUsers,
-        projectsByCategory
+        projectsByCategory,
+        activeProjects,
       ] = await Promise.all([
         // Page views current period
         db.userBehavior.count({
@@ -131,7 +132,15 @@ export async function GET(req: NextRequest) {
           where: { deletedAt: null, status: { in: ["LIVE", "FUNDED", "FAILED"] } },
           _count: true,
           _sum: { currentAmount: true }
-        })
+        }),
+        // Total revenue from active project currentAmounts (cumulative, not period-based)
+        db.project.findMany({
+          where: {
+            status: { in: ["LIVE", "FUNDED", "FAILED"] },
+            deletedAt: null,
+          },
+          select: { currentAmount: true },
+        }),
       ]);
 
       // Calculate growth percentages
@@ -155,7 +164,7 @@ export async function GET(req: NextRequest) {
             growth: visitGrowth.toFixed(1)
           },
           revenue: {
-            current: Number(currentPledges._sum.amount) || 0,
+            current: activeProjects.reduce((sum: number, p: { currentAmount: unknown }) => sum + Number(p.currentAmount), 0),
             previous: Number(previousPledges._sum.amount) || 0,
             growth: revenueGrowth.toFixed(1),
             count: currentPledges._count
