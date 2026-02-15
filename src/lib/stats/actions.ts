@@ -41,32 +41,16 @@ const DEFAULT_RETAILER_STATS: RetailerStats = {
 async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
   try {
     // Check if db is available (it returns empty object during build)
-    if (!db.pledge || typeof db.pledge.aggregate !== 'function') {
+    if (!db.project || typeof db.project.findMany !== 'function') {
       return DEFAULT_PLATFORM_STATS;
     }
 
-    // Get total pledged amount from completed pledges only
-    // Exclude soft-deleted pledges and pledges from deleted/banned users
-    const pledgeStats = await db.pledge.aggregate({
-      where: {
-        status: "COMPLETED",
-        deletedAt: null,
-        user: {
-          deletedAt: null,
-          lockedAt: null,
-        },
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    // Get all projects that have been LIVE or FUNDED to check funding status
+    // Get all projects that have been LIVE, FUNDED, or FAILED
     // Exclude soft-deleted projects
     const allActiveProjects = await db.project.findMany({
       where: {
         status: {
-          in: ["LIVE", "FUNDED"],
+          in: ["LIVE", "FUNDED", "FAILED"],
         },
         deletedAt: null,
       },
@@ -78,6 +62,14 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
         status: true,
       },
     });
+
+    // Total pledged = sum of all project currentAmounts
+    // This matches what project pages display and is kept in sync
+    // by the auto-sync mechanism in project stats endpoints
+    const totalPledged = allActiveProjects.reduce(
+      (sum, p) => sum + Number(p.currentAmount),
+      0
+    );
 
     // Count projects that met their funding goal
     const projectsFundedCount = allActiveProjects.filter(
@@ -109,7 +101,7 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
     });
 
     return {
-      totalPledged: Number(pledgeStats._sum.amount || 0),
+      totalPledged,
       projectsFunded: projectsFundedCount,
       successRate,
       backerPool: totalUsers,
