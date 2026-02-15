@@ -164,7 +164,7 @@ export async function POST(
             where: { id: existingAddon.id },
             data: {
               quantity: existingAddon.quantity + quantity,
-              amount: (existingAddon.quantity + quantity) * addon.amount,
+              amount: (existingAddon.quantity + quantity) * Number(addon.amount),
             },
           });
         } else {
@@ -215,7 +215,7 @@ export async function POST(
       await tx.pledge.update({
         where: { id: pledge.id },
         data: {
-          amount: pledge.amount + pendingItems.amount,
+          amount: Number(pledge.amount) + pendingItems.amount,
           // Clear the pending items from metadata
           metadata: {
             ...(typeof pledge.metadata === "object" && pledge.metadata !== null
