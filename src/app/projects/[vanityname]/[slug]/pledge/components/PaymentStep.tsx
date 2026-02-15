@@ -11,6 +11,8 @@ import { StripePaymentForm } from "./StripePaymentForm";
 interface PaymentStepProps {
   project: ProjectData | null;
   isAddItemsMode: boolean;
+  isModifyMode?: boolean;
+  modifyChargeAmount?: number | null;
   paymentError: string | null;
   setPaymentError: (val: string | null) => void;
   setClientSecret: (val: string | null) => void;
@@ -31,6 +33,8 @@ interface PaymentStepProps {
 export function PaymentStep({
   project,
   isAddItemsMode,
+  isModifyMode = false,
+  modifyChargeAmount,
   paymentError,
   setPaymentError,
   setClientSecret,
@@ -47,12 +51,20 @@ export function PaymentStep({
   intentType,
   projectPath,
 }: PaymentStepProps) {
+  // In modify mode, show the charge amount (difference), not the full total
+  const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
   return (
     <div className="space-y-8">
       {/* Confirm payment method heading */}
       <div>
         <h2 className="text-xl font-semibold mb-3">Confirm your payment method</h2>
-        {isAddItemsMode ? (
+        {isModifyMode ? (
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            You&apos;re modifying your pledge. Only the additional amount of{" "}
+            <span className="font-semibold text-foreground">${displayTotal.toFixed(2)}</span>{" "}
+            will be charged to your payment method.
+          </p>
+        ) : isAddItemsMode ? (
           // Add-items mode - always charged immediately
           <p className="text-sm text-muted-foreground leading-relaxed">
             Your payment method will be charged immediately for these additional items.
@@ -143,7 +155,7 @@ export function PaymentStep({
                       colorPrimary: "#028858",
                       fontFamily: "system-ui, -apple-system, sans-serif",
                       borderRadius: "8px",
-                      spacingUnit: "4px",
+                      spacingUnit: "5px",
                     },
                     rules: {
                       ".Tab": {
@@ -157,10 +169,16 @@ export function PaymentStep({
                       ".Input": {
                         borderRadius: "8px",
                         boxShadow: "none",
+                        padding: "10px 12px",
                       },
                       ".Input:focus": {
                         borderColor: "#028858",
                         boxShadow: "0 0 0 1.5px #028858",
+                      },
+                      ".Label": {
+                        fontWeight: "500",
+                        fontSize: "14px",
+                        marginBottom: "6px",
                       },
                     },
                   },
@@ -172,10 +190,11 @@ export function PaymentStep({
                   agreedToTerms={agreedToTerms}
                   isProcessing={isProcessing}
                   setIsProcessing={setIsProcessing}
-                  total={total}
+                  total={displayTotal}
                   intentType="payment_intent"
                   pledgeId={currentPledgeId}
                   projectPath={projectPath}
+                  buttonLabel={isModifyMode ? `Pay Additional $${displayTotal.toFixed(2)}` : undefined}
                 />
               </Elements>
             ) : (
@@ -217,7 +236,7 @@ export function PaymentStep({
                       colorPrimary: "#028858",
                       fontFamily: "system-ui, -apple-system, sans-serif",
                       borderRadius: "8px",
-                      spacingUnit: "4px",
+                      spacingUnit: "5px",
                     },
                     rules: {
                       ".Tab": {
@@ -231,10 +250,16 @@ export function PaymentStep({
                       ".Input": {
                         borderRadius: "8px",
                         boxShadow: "none",
+                        padding: "10px 12px",
                       },
                       ".Input:focus": {
                         borderColor: "#028858",
                         boxShadow: "0 0 0 1.5px #028858",
+                      },
+                      ".Label": {
+                        fontWeight: "500",
+                        fontSize: "14px",
+                        marginBottom: "6px",
                       },
                     },
                   },
@@ -246,10 +271,11 @@ export function PaymentStep({
                   agreedToTerms={agreedToTerms}
                   isProcessing={isProcessing}
                   setIsProcessing={setIsProcessing}
-                  total={total}
+                  total={displayTotal}
                   intentType={intentType}
                   pledgeId={currentPledgeId}
                   projectPath={projectPath}
+                  buttonLabel={isModifyMode ? `Pay Additional $${displayTotal.toFixed(2)}` : undefined}
                 />
               </Elements>
             ) : (

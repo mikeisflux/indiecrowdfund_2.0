@@ -13,6 +13,9 @@ import { Step, RewardData, AddonData, ProjectData } from "../types";
 interface OrderSummaryProps {
   step: Step;
   isAddItemsMode: boolean;
+  isModifyMode?: boolean;
+  originalPledgeAmount?: number;
+  modifyChargeAmount?: number | null;
   selectedReward: RewardData | null;
   pledgeWithoutReward: boolean;
   customPledgeAmount: number;
@@ -35,6 +38,9 @@ interface OrderSummaryProps {
 export function OrderSummary({
   step,
   isAddItemsMode,
+  isModifyMode = false,
+  originalPledgeAmount = 0,
+  modifyChargeAmount,
   selectedReward,
   pledgeWithoutReward,
   customPledgeAmount,
@@ -109,6 +115,98 @@ export function OrderSummary({
               disabled={Object.keys(selectedAddons).length === 0}
             >
               Continue to Payment
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Order Summary for Add-ons step - Modify Mode
+  if (step === "addons" && isModifyMode && (selectedReward || pledgeWithoutReward)) {
+    const additionalCharge = Math.max(0, total - originalPledgeAmount);
+    return (
+      <Card className="glass-card rounded-2xl border-border/50">
+        <CardContent className="p-5">
+          {/* Previous pledge */}
+          <div className="pb-4 border-b">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Previous Pledge</p>
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Original amount</span>
+              <span>${originalPledgeAmount.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* Selected reward */}
+          <div className="py-4 border-b">
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Updated pledge</p>
+            {pledgeWithoutReward ? (
+              <div className="flex justify-between">
+                <span className="font-medium">No reward</span>
+                <span className="font-semibold">${customPledgeAmount}</span>
+              </div>
+            ) : selectedReward && (
+              <div className="flex justify-between">
+                <span className="font-medium">{selectedReward.title}</span>
+                <span className="font-semibold">${selectedReward.amount}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Add-ons */}
+          {Object.keys(selectedAddons).length > 0 && (
+            <div className="py-4 border-b">
+              <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Add-ons</p>
+              {Object.entries(selectedAddons).map(([id, qty]) => {
+                const addon = addons.find(a => a.id === id);
+                if (!addon) return null;
+                return (
+                  <div key={id} className="flex justify-between text-sm">
+                    <span>{addon.title} x{qty}</span>
+                    <span>${Number(addon.amount) * qty}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Shipping */}
+          {totalShipping > 0 && (
+            <div className="py-4 border-b">
+              <div className="flex justify-between text-sm">
+                <span>Shipping to {currentCountry?.name}</span>
+                <span>${totalShipping}</span>
+              </div>
+            </div>
+          )}
+
+          {/* New total */}
+          <div className="py-3 border-b">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">New total</span>
+              <span className="font-medium">${total}</span>
+            </div>
+          </div>
+
+          {/* Additional charge */}
+          <div className="pt-4">
+            <div className="flex justify-between items-center">
+              <span className="font-semibold">Additional charge</span>
+              <span className="text-xl font-bold text-primary">${additionalCharge.toFixed(2)}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Only the difference will be charged.
+            </p>
+          </div>
+
+          {/* Continue button */}
+          <div className="mt-4">
+            <Button
+              className="w-full bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white font-medium shadow-lg shadow-[#028858]/20"
+              size="lg"
+              onClick={() => setStep("payment")}
+            >
+              Continue
             </Button>
           </div>
         </CardContent>
@@ -282,6 +380,115 @@ export function OrderSummary({
               , and{" "}
               <Link href="/privacy" className="underline">Privacy Policy</Link>
               , and for our payment processor, Stripe, to charge your payment method.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Payment step sidebar - Modify Mode
+  if (step === "payment" && isModifyMode && (selectedReward || pledgeWithoutReward)) {
+    const additionalCharge = modifyChargeAmount ?? Math.max(0, total - originalPledgeAmount);
+    return (
+      <Card className="glass-card rounded-2xl border-border/50">
+        <CardContent className="p-5">
+          {/* Previous pledge */}
+          <div className="pb-4 border-b">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Previous Pledge</p>
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Original amount</span>
+              <span>${originalPledgeAmount.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* New pledge breakdown */}
+          <div className="py-4 border-b">
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Updated Pledge</p>
+            {/* Reward */}
+            <div className="flex justify-between text-sm">
+              <span className="font-medium">
+                {pledgeWithoutReward ? "No reward" : selectedReward?.title}
+              </span>
+              <span>${pledgeWithoutReward ? customPledgeAmount : selectedReward?.amount}.00</span>
+            </div>
+
+            {/* Add-ons */}
+            {Object.keys(selectedAddons).length > 0 && (
+              <div className="mt-2">
+                {Object.entries(selectedAddons).map(([id, qty]) => {
+                  const addon = addons.find(a => a.id === id);
+                  if (!addon) return null;
+                  return (
+                    <div key={id} className="flex justify-between text-sm py-0.5">
+                      <span className="text-muted-foreground">{addon.title} x{qty}</span>
+                      <span>${(Number(addon.amount) * qty).toFixed(2)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Shipping */}
+          {totalShipping > 0 && (
+            <div className="py-4 border-b">
+              <div className="flex justify-between text-sm">
+                <span>Shipping to {currentCountry?.name}</span>
+                <span>${totalShipping.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* New total */}
+          <div className="py-3 border-b">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">New total</span>
+              <span className="font-medium">${total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* Additional charge - this is what will actually be charged */}
+          <div className="py-4 border-b">
+            <div className="flex justify-between items-center">
+              <span className="font-semibold">Additional charge</span>
+              <span className="text-xl font-bold text-primary">${additionalCharge.toFixed(2)}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Only the difference will be charged to your payment method.
+            </p>
+          </div>
+
+          {/* Disclaimer */}
+          <div className="py-4">
+            <div className="flex items-start gap-3 mb-4">
+              <Checkbox
+                id="terms-modify"
+                checked={agreedToTerms}
+                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+              />
+              <Label htmlFor="terms-modify" className="text-xs leading-relaxed text-muted-foreground">
+                I understand that rewards or reimbursements aren&apos;t guaranteed by either IndieCrowdfund or the creator.
+              </Label>
+            </div>
+
+            {!clientSecret ? (
+              <div className="flex items-center justify-center gap-2 py-2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Setting up payment...</span>
+              </div>
+            ) : (
+              <p className="text-xs text-center text-muted-foreground">
+                Enter your card details above to complete the modification.
+              </p>
+            )}
+
+            <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
+              By submitting, you agree to IndieCrowdfund&apos;s{" "}
+              <Link href="/terms" className="underline">Terms of Use</Link>
+              {" "}and{" "}
+              <Link href="/privacy" className="underline">Privacy Policy</Link>
+              .
             </p>
           </div>
         </CardContent>

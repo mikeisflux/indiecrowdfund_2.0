@@ -81,7 +81,8 @@ export default function PledgePage() {
   const [isModifyMode] = useState(!!modifyParam);
   const [modifyPledgeId] = useState<string | null>(modifyParam);
   const [existingPledgeId] = useState<string | null>(addItemsParam);
-  const [, setOriginalPledgeAmount] = useState<number>(0);
+  const [originalPledgeAmount, setOriginalPledgeAmount] = useState<number>(0);
+  const [modifyChargeAmount, setModifyChargeAmount] = useState<number | null>(null);
 
   // Stripe state
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
@@ -274,6 +275,8 @@ export default function PledgePage() {
 
       if (result.requiresPayment && result.clientSecret) {
         // Price went up - need to collect additional payment
+        const chargeAmount = total - originalPledgeAmount;
+        setModifyChargeAmount(chargeAmount > 0 ? chargeAmount : null);
         setClientSecret(result.clientSecret);
         setIntentType("payment_intent");
         setCurrentPledgeId(modifyPledgeId);
@@ -749,6 +752,8 @@ export default function PledgePage() {
               <PaymentStep
                 project={project}
                 isAddItemsMode={isAddItemsMode}
+                isModifyMode={isModifyMode}
+                modifyChargeAmount={modifyChargeAmount}
                 paymentError={paymentError}
                 setPaymentError={setPaymentError}
                 setClientSecret={setClientSecret}
@@ -774,6 +779,9 @@ export default function PledgePage() {
               <OrderSummary
                 step={step}
                 isAddItemsMode={isAddItemsMode}
+                isModifyMode={isModifyMode}
+                originalPledgeAmount={originalPledgeAmount}
+                modifyChargeAmount={modifyChargeAmount}
                 selectedReward={selectedReward}
                 pledgeWithoutReward={pledgeWithoutReward}
                 customPledgeAmount={customPledgeAmount}
