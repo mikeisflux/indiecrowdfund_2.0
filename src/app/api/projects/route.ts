@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("q");
     const sort = searchParams.get("sort") || "trending";
     const staffPicks = searchParams.get("staffPicks") === "true";
+    const scope = searchParams.get("scope"); // "all" to search across all public statuses
     // Validate pagination parameters
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "12") || 12));
     const offset = Math.max(0, parseInt(searchParams.get("offset") || "0") || 0);
@@ -50,8 +51,18 @@ export async function GET(req: NextRequest) {
       where.category = category;
     }
 
-    // Handle prelaunch vs live projects
-    if (prelaunch) {
+    // Handle scope=all - search across all public project statuses
+    if (scope === "all") {
+      // Show all publicly visible projects (live, funded, approved with prelaunch)
+      // Exclude drafts, submitted, cancelled, failed (internal statuses)
+      andConditions.push({
+        OR: [
+          { status: "LIVE" },
+          { status: "FUNDED" },
+          { status: "APPROVED", prelaunchActive: true },
+        ],
+      });
+    } else if (prelaunch) {
       // Show prelaunch projects (coming soon)
       where.prelaunchActive = true;
       where.status = { notIn: ["LIVE", "FUNDED"] }; // Exclude projects that are already live or funded

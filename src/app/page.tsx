@@ -167,9 +167,17 @@ async function getPastCampaigns() {
     const now = new Date();
     const projects = await db.project.findMany({
       where: {
-        status: "LIVE",
-        // Only include projects that have ended
-        endDate: { lte: now },
+        OR: [
+          {
+            // Live projects that have ended
+            status: "LIVE",
+            endDate: { lte: now },
+          },
+          {
+            // Funded projects
+            status: "FUNDED",
+          },
+        ],
         // Hide test projects from home page
         NOT: {
           title: { contains: "test", mode: "insensitive" },
@@ -540,68 +548,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* How It Works */}
-      <section className="relative py-8 md:py-12 overflow-hidden">
-        <div className="absolute inset-0 hero-gradient opacity-50" />
-        <div className="container relative">
-          <div className="mb-6 text-center">
-            <h2 className="text-2xl font-bold md:text-3xl mb-2">How It Works</h2>
-            <p className="text-muted-foreground">
-              Three simple steps to fund your creative vision
-            </p>
-          </div>
-
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="glass-card glass-card-hover rounded-2xl p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0s' }}>
-              <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-emerald-500/20 group-hover:glow-pulse transition-all">
-                <Rocket className="h-10 w-10 text-primary" />
-                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-emerald-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                  1
-                </div>
-              </div>
-              <h3 className="mb-3 text-lg font-semibold">Create Your Project</h3>
-              <p className="text-sm text-muted-foreground">
-                Set up your campaign with a compelling story, reward tiers, and funding goal.
-              </p>
-            </div>
-            <div className="glass-card glass-card-hover rounded-2xl p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 group-hover:glow-pulse-cyan transition-all">
-                <Heart className="h-10 w-10 text-cyan-500" />
-                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                  2
-                </div>
-              </div>
-              <h3 className="mb-3 text-lg font-semibold">Share & Get Backed</h3>
-              <p className="text-sm text-muted-foreground">
-                Share your project with the world and build a community of backers.
-              </p>
-            </div>
-            <div className="glass-card glass-card-hover rounded-2xl p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 group-hover:glow-pulse-purple transition-all">
-                <Zap className="h-10 w-10 text-purple-500" />
-                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                  3
-                </div>
-              </div>
-              <h3 className="mb-3 text-lg font-semibold">Make It Real</h3>
-              <p className="text-sm text-muted-foreground">
-                Receive your funds and bring your creative project to life.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-12 text-center">
-            <Link href="/projects/new">
-              <Button size="lg" className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/25 group btn-glow">
-                Start Your Project
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Past Campaigns */}
+      {/* Past Projects */}
       {pastCampaigns.length > 0 && (
         <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-muted/20 to-transparent" />
@@ -612,7 +559,7 @@ export default async function HomePage() {
                   <div className="p-2 rounded-lg bg-gradient-to-br from-zinc-500/20 to-slate-500/20">
                     <Archive className="h-5 w-5 text-zinc-500" />
                   </div>
-                  <h2 className="text-2xl font-bold md:text-3xl">Past Campaigns</h2>
+                  <h2 className="text-2xl font-bold md:text-3xl">Past Projects</h2>
                 </div>
                 <p className="text-muted-foreground">Recently completed campaigns</p>
               </div>
@@ -692,6 +639,67 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* How It Works */}
+      <section className="relative py-8 md:py-12 overflow-hidden">
+        <div className="absolute inset-0 hero-gradient opacity-50" />
+        <div className="container relative">
+          <div className="mb-6 text-center">
+            <h2 className="text-2xl font-bold md:text-3xl mb-2">How It Works</h2>
+            <p className="text-muted-foreground">
+              Three simple steps to fund your creative vision
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-3">
+            <div className="glass-card glass-card-hover rounded-2xl p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0s' }}>
+              <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-emerald-500/20 group-hover:glow-pulse transition-all">
+                <Rocket className="h-10 w-10 text-primary" />
+                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-emerald-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                  1
+                </div>
+              </div>
+              <h3 className="mb-3 text-lg font-semibold">Create Your Project</h3>
+              <p className="text-sm text-muted-foreground">
+                Set up your campaign with a compelling story, reward tiers, and funding goal.
+              </p>
+            </div>
+            <div className="glass-card glass-card-hover rounded-2xl p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 group-hover:glow-pulse-cyan transition-all">
+                <Heart className="h-10 w-10 text-cyan-500" />
+                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                  2
+                </div>
+              </div>
+              <h3 className="mb-3 text-lg font-semibold">Share & Get Backed</h3>
+              <p className="text-sm text-muted-foreground">
+                Share your project with the world and build a community of backers.
+              </p>
+            </div>
+            <div className="glass-card glass-card-hover rounded-2xl p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 group-hover:glow-pulse-purple transition-all">
+                <Zap className="h-10 w-10 text-purple-500" />
+                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                  3
+                </div>
+              </div>
+              <h3 className="mb-3 text-lg font-semibold">Make It Real</h3>
+              <p className="text-sm text-muted-foreground">
+                Receive your funds and bring your creative project to life.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
+            <Link href="/projects/new">
+              <Button size="lg" className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/25 group btn-glow">
+                Start Your Project
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* CTA Section */}
       <section className="relative py-12 md:py-16 overflow-hidden">

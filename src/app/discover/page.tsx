@@ -79,6 +79,7 @@ const SORT_OPTIONS = [
 ];
 
 const PROJECT_TYPE_OPTIONS = [
+  { value: "all", label: "All Projects" },
   { value: "live", label: "Live Projects" },
   { value: "upcoming", label: "Upcoming Projects" },
 ];
@@ -127,6 +128,7 @@ function DiscoverContent() {
   const [category, setCategory] = useState(searchParams?.get("category") || "");
   const [sort, setSort] = useState(searchParams?.get("sort") || "trending");
   const [projectType, setProjectType] = useState(
+    searchParams?.get("scope") === "all" ? "all" :
     searchParams?.get("prelaunch") === "true" ? "upcoming" : "live"
   );
   const [showStaffPicks, setShowStaffPicks] = useState(
@@ -149,7 +151,8 @@ function DiscoverContent() {
       if (search) params.set("q", search);
       if (category) params.set("category", category);
       if (sort) params.set("sort", sort);
-      if (projectType === "upcoming") params.set("prelaunch", "true");
+      if (projectType === "all") params.set("scope", "all");
+      else if (projectType === "upcoming") params.set("prelaunch", "true");
       if (showStaffPicks) params.set("staffPicks", "true");
       params.set("limit", "12");
       params.set("offset", reset ? "0" : String(offset));
@@ -227,7 +230,7 @@ function DiscoverContent() {
   const activeFilterCount =
     (search ? 1 : 0) +
     (category ? 1 : 0) +
-    (projectType === "upcoming" ? 1 : 0) +
+    (projectType !== "live" ? 1 : 0) +
     (showStaffPicks ? 1 : 0) +
     (!showFunded ? 1 : 0);
 
@@ -297,7 +300,10 @@ function DiscoverContent() {
               value={projectType}
               onValueChange={(value) => {
                 setProjectType(value);
-                updateFilters({ prelaunch: value === "upcoming" ? "true" : null });
+                updateFilters({
+                  prelaunch: value === "upcoming" ? "true" : null,
+                  scope: value === "all" ? "all" : null,
+                });
               }}
             >
               <SelectTrigger className="w-[170px]">
@@ -475,6 +481,19 @@ function DiscoverContent() {
                     onClick={() => {
                       setProjectType("live");
                       updateFilters({ prelaunch: null });
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {projectType === "all" && (
+                <Badge variant="secondary" className="gap-1">
+                  All projects
+                  <button
+                    onClick={() => {
+                      setProjectType("live");
+                      updateFilters({ scope: null });
                     }}
                   >
                     <X className="h-3 w-3" />

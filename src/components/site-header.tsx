@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -49,6 +50,8 @@ const HIDDEN_PATH_PREFIXES = [
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Hide on admin, auth, and retailer portal pages
   const shouldHide = HIDDEN_PATH_PREFIXES.some((prefix) => pathname?.startsWith(prefix));
@@ -102,13 +105,23 @@ export function SiteHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex relative group">
+          <form
+            className="hidden md:flex relative group"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (searchQuery.trim()) {
+                router.push(`/discover?q=${encodeURIComponent(searchQuery.trim())}&scope=all`);
+              }
+            }}
+          >
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
-              placeholder="Search projects..."
+              placeholder="Search all projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-64 pl-10 bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all"
             />
-          </div>
+          </form>
           <ThemeToggle />
           <div className="hidden sm:block">
             <UserProfileDropdown />
