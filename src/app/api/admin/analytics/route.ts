@@ -180,11 +180,18 @@ export async function GET(req: NextRequest) {
     if (tab === "revenue") {
       // Get revenue breakdown
       const [completedPledges, topProjects, pledgesByStatus] = await Promise.all([
-        // Get all completed pledges in the period for grouping by day
+        // Get committed pledges in the period for grouping by day
         db.pledge.findMany({
           where: {
-            status: "COMPLETED",
-            createdAt: { gte: startDate }
+            deletedAt: null,
+            createdAt: { gte: startDate },
+            project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+            OR: [
+              { status: "COMPLETED" },
+              { status: "PENDING", stripePaymentMethodId: { not: null } },
+              { status: "PENDING", stripeSetupIntentId: { not: null } },
+              { status: "PENDING", confirmationEmailSent: true },
+            ],
           },
           select: {
             amount: true,
@@ -195,7 +202,8 @@ export async function GET(req: NextRequest) {
         // Top projects by revenue
         db.project.findMany({
           where: {
-            status: { in: ["LIVE", "FUNDED"] }
+            status: { in: ["LIVE", "FUNDED", "FAILED"] },
+            deletedAt: null,
           },
           orderBy: { currentAmount: "desc" },
           take: 10,
@@ -344,7 +352,7 @@ export async function GET(req: NextRequest) {
         }),
         // Funding progress distribution
         db.project.findMany({
-          where: { status: { in: ["LIVE", "FUNDED"] } },
+          where: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
           select: {
             goalAmount: true,
             currentAmount: true

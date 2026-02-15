@@ -29,37 +29,42 @@ export async function GET() {
       },
     }).catch(() => 0);
 
-    // Get total raised (sum of currentAmount for funded projects)
+    // Get total raised (sum of currentAmount for active projects)
     const fundedProjects = await db.project.aggregate({
       _sum: {
         currentAmount: true,
       },
       where: {
         status: {
-          in: ["FUNDED", "LIVE"],
+          in: ["LIVE", "FUNDED", "FAILED"],
         },
+        deletedAt: null,
       },
     }).catch(() => ({ _sum: { currentAmount: 0 } }));
     const totalRaised = Number(fundedProjects?._sum?.currentAmount) || 0;
 
-    // Get total backers (unique users who have pledged)
+    // Committed pledge filter - COMPLETED + PENDING with confirmed checkout
+    const committedPledgeFilter = {
+      deletedAt: null,
+      project: { status: { in: ["LIVE", "FUNDED", "FAILED"] as const }, deletedAt: null },
+      OR: [
+        { status: "COMPLETED" as const },
+        { status: "PENDING" as const, stripePaymentMethodId: { not: null } },
+        { status: "PENDING" as const, stripeSetupIntentId: { not: null } },
+        { status: "PENDING" as const, confirmationEmailSent: true },
+      ],
+    };
+
+    // Get total backers (unique users who have made committed pledges)
     const totalBackers = await db.pledge.groupBy({
       by: ["userId"],
-      where: {
-        status: {
-          in: ["COMPLETED", "PENDING"],
-        },
-      },
+      where: committedPledgeFilter,
     }).catch(() => []);
     const uniqueBackersCount = totalBackers?.length || 0;
 
-    // Get total pledges
+    // Get total committed pledges
     const totalPledges = await db.pledge.count({
-      where: {
-        status: {
-          in: ["COMPLETED", "PENDING"],
-        },
-      },
+      where: committedPledgeFilter,
     }).catch(() => 0);
 
     // Get total creators (users who have created at least one project)

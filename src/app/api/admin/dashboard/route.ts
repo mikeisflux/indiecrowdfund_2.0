@@ -76,8 +76,20 @@ export async function GET() {
       db.project.count({ where: { deletedAt: null, status: "SUBMITTED" } }),
       db.project.count({ where: { deletedAt: null, createdAt: { gte: thirtyDaysAgo } } }),
 
-      // Pledges (exclude deleted)
-      db.pledge.count({ where: { deletedAt: null } }),
+      // Pledges - count committed pledges only
+      db.pledge.count({
+        where: {
+          deletedAt: null,
+          project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", stripePaymentMethodId: { not: null } },
+            { status: "PENDING", stripeSetupIntentId: { not: null } },
+            { status: "PENDING", confirmationEmailSent: true },
+          ],
+        },
+      }),
+      // Total revenue from active project currentAmounts
       db.project.findMany({
         where: {
           status: { in: ["LIVE", "FUNDED", "FAILED"] },
@@ -85,20 +97,34 @@ export async function GET() {
         },
         select: { currentAmount: true },
       }),
+      // Revenue this month - committed pledges from active projects
       db.pledge.aggregate({
         where: {
           deletedAt: null,
-          status: "COMPLETED",
-          createdAt: { gte: thirtyDaysAgo }
+          createdAt: { gte: thirtyDaysAgo },
+          project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", stripePaymentMethodId: { not: null } },
+            { status: "PENDING", stripeSetupIntentId: { not: null } },
+            { status: "PENDING", confirmationEmailSent: true },
+          ],
         },
         _sum: { amount: true },
         _count: true
       }),
+      // Revenue previous month - committed pledges from active projects
       db.pledge.aggregate({
         where: {
           deletedAt: null,
-          status: "COMPLETED",
-          createdAt: { gte: previousThirtyDays, lt: thirtyDaysAgo }
+          createdAt: { gte: previousThirtyDays, lt: thirtyDaysAgo },
+          project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", stripePaymentMethodId: { not: null } },
+            { status: "PENDING", stripeSetupIntentId: { not: null } },
+            { status: "PENDING", confirmationEmailSent: true },
+          ],
         },
         _sum: { amount: true },
         _count: true
