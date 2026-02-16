@@ -611,6 +611,40 @@ export interface PaymentEventResponse {
 }
 
 /**
+ * Safely extract a string identifier from a webhook field that may be:
+ * - a string (return as-is)
+ * - an object with an `id` field (return the id)
+ * - an object without `id` (return JSON stringified)
+ * - null/undefined (return undefined)
+ */
+function extractId(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.id === "string") return obj.id;
+    // Return first string-valued field as fallback
+    for (const key of Object.keys(obj)) {
+      if (typeof obj[key] === "string") return obj[key];
+    }
+  }
+  return String(value);
+}
+
+/**
+ * Safely serialize a webhook field for logging/metadata.
+ * Objects get JSON stringified, strings pass through.
+ */
+function serializeField(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    try { return JSON.stringify(value); } catch { return "[unserializable]"; }
+  }
+  return String(value);
+}
+
+/**
  * Handle payment.succeeded webhook event
  * DivinityCoin calls this when a payment (via their Stripe) has succeeded.
  * This confirms the pledge or marketplace purchase and marks it as completed.
@@ -622,14 +656,16 @@ export async function handlePaymentSucceeded(
   const pledgeId = data.pledgeId || (data.pledge_id as string | undefined);
   const paymentId = data.paymentId || (data.payment_id as string | undefined)
     || (data.paymentIntentId as string | undefined); // DC sends this
+  // DC sends "hold" as an object { id, amount, ... }, not a string
   const holdId = data.holdId || (data.hold_id as string | undefined)
-    || (data.hold as string | undefined); // DC sends "hold" not "holdId"
+    || extractId(data.hold);
   const giftCardCode = data.giftCardCode || (data.gift_card_code as string | undefined)
-    || (data.giftCard as string | undefined); // DC sends "giftCard" not "giftCardCode"
+    || extractId(data.giftCard); // DC sends "giftCard" — may be string or object
   const purchaseId = (data.purchaseId || data.purchase_id) as string | undefined;
   const stripePI = data.stripePaymentIntentId || (data.stripe_payment_intent_id as string | undefined)
     || (data.paymentIntentId as string | undefined); // DC uses paymentIntentId for Stripe PI
-  const paymentMethod = data.paymentMethod as string | undefined;
+  // DC sends "paymentMethod" as an object { type, card, ... }, not a string
+  const paymentMethodStr = serializeField(data.paymentMethod);
 
   // Log full payload keys for debugging when no payment reference was resolved
   if (!paymentId && !holdId && !stripePI) {
@@ -650,7 +686,7 @@ export async function handlePaymentSucceeded(
   // Use best available payment reference
   const paymentRef = paymentId || stripePI || "none";
   console.log(
-    `[DivinityCoin] Payment succeeded: pledge=${pledgeId}, payment=${paymentRef}${holdId ? `, hold=${holdId}` : ""}${paymentMethod ? `, method=${paymentMethod}` : ""}`
+    `[DivinityCoin] Payment succeeded: pledge=${pledgeId}, payment=${paymentRef}${holdId ? `, hold=${holdId}` : ""}${paymentMethodStr ? `, method=${paymentMethodStr}` : ""}`
   );
 
   try {
@@ -688,7 +724,8 @@ export async function handlePaymentSucceeded(
             originalPaymentId: data.originalPaymentId || null,
             giftCardCode: giftCardCode ? `${String(giftCardCode).substring(0, 4)}****` : null,
             stripePaymentIntentId: stripePI || null,
-            paymentMethod: paymentMethod || null,
+            paymentMethod: paymentMethodStr || null,
+            holdRaw: serializeField(data.hold),
             hasPendingModification: !!metadata.pendingModification,
             hasPendingAdditionalItems: !!metadata.pendingAdditionalItems,
             processedAt: new Date().toISOString(),
@@ -740,7 +777,8 @@ export async function handlePaymentSucceeded(
             holdId: holdId || null,
             giftCardCode: giftCardCode ? `${String(giftCardCode).substring(0, 4)}****` : null,
             stripePaymentIntentId: stripePI || null,
-            paymentMethod: paymentMethod || null,
+            paymentMethod: paymentMethodStr || null,
+            holdRaw: serializeField(data.hold),
             processedAt: new Date().toISOString(),
             source: "divinitycoin_webhook",
           }),
@@ -764,13 +802,13 @@ async function handleMarketplacePaymentSucceeded(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>,
   purchaseId: string
 ): Promise<PaymentEventResponse> {
-  // DC uses varying field names — check all known variants
+  // DC uses varying field names — check all known variants (hold/giftCard may be objects)
   const paymentId = data.paymentId || (data.payment_id as string | undefined)
     || (data.paymentIntentId as string | undefined);
   const holdId = data.holdId || (data.hold_id as string | undefined)
-    || (data.hold as string | undefined);
+    || extractId(data.hold);
   const giftCardCode = data.giftCardCode || (data.gift_card_code as string | undefined)
-    || (data.giftCard as string | undefined);
+    || extractId(data.giftCard);
   const stripePI = data.stripePaymentIntentId || (data.stripe_payment_intent_id as string | undefined)
     || (data.paymentIntentId as string | undefined);
 
@@ -826,7 +864,9 @@ async function handleMarketplacePaymentSucceeded(
             paymentId,
             holdId,
             giftCardCode: giftCardCode ? `${String(giftCardCode).substring(0, 4)}****` : null,
-            stripePaymentIntentId: data.stripePaymentIntentId,
+            stripePaymentIntentId: stripePI || null,
+            holdRaw: serializeField(data.hold),
+            paymentMethod: serializeField(data.paymentMethod),
             processedAt: new Date().toISOString(),
             source: "divinitycoin_webhook",
           }),
