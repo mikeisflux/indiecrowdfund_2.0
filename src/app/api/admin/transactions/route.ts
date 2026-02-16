@@ -83,44 +83,76 @@ export async function GET(request: NextRequest) {
     }
 
     const results: UnifiedTransaction[] = [];
+    const queryErrors: string[] = [];
 
-    // Query each type based on filter
+    // Query each type based on filter — each wrapped in its own try/catch
+    // so one failing query doesn't break the entire endpoint
     const shouldQuery = (t: string) => type === "all" || type === t;
 
     // 1. PLEDGES
     if (shouldQuery("pledge")) {
-      const pledges = await queryPledges(search, status, processor, dateFilter);
-      results.push(...pledges);
+      try {
+        const pledges = await queryPledges(search, status, processor, dateFilter);
+        results.push(...pledges);
+      } catch (err) {
+        console.error("Error querying pledges:", err);
+        queryErrors.push("pledges");
+      }
     }
 
     // 2. MARKETPLACE PURCHASES
     if (shouldQuery("marketplace")) {
-      const purchases = await queryMarketplacePurchases(search, status, processor, dateFilter);
-      results.push(...purchases);
+      try {
+        const purchases = await queryMarketplacePurchases(search, status, processor, dateFilter);
+        results.push(...purchases);
+      } catch (err) {
+        console.error("Error querying marketplace purchases:", err);
+        queryErrors.push("marketplace");
+      }
     }
 
     // 3. DIVINITYCOIN TRANSACTIONS
     if (shouldQuery("dc_transaction")) {
-      const dcTxns = await queryDCTransactions(search, dateFilter);
-      results.push(...dcTxns);
+      try {
+        const dcTxns = await queryDCTransactions(search, dateFilter);
+        results.push(...dcTxns);
+      } catch (err) {
+        console.error("Error querying DC transactions:", err);
+        queryErrors.push("dc_transactions");
+      }
     }
 
     // 4. DIVINITYCOIN REDEMPTIONS
     if (shouldQuery("dc_redemption")) {
-      const redemptions = await queryDCRedemptions(search, dateFilter);
-      results.push(...redemptions);
+      try {
+        const redemptions = await queryDCRedemptions(search, dateFilter);
+        results.push(...redemptions);
+      } catch (err) {
+        console.error("Error querying DC redemptions:", err);
+        queryErrors.push("dc_redemptions");
+      }
     }
 
     // 5. PAYOUTS
     if (shouldQuery("payout")) {
-      const payouts = await queryPayouts(search, status, dateFilter);
-      results.push(...payouts);
+      try {
+        const payouts = await queryPayouts(search, status, dateFilter);
+        results.push(...payouts);
+      } catch (err) {
+        console.error("Error querying payouts:", err);
+        queryErrors.push("payouts");
+      }
     }
 
     // 6. DC SETTLEMENTS
     if (shouldQuery("settlement")) {
-      const settlements = await querySettlements(search, status, dateFilter);
-      results.push(...settlements);
+      try {
+        const settlements = await querySettlements(search, status, dateFilter);
+        results.push(...settlements);
+      } catch (err) {
+        console.error("Error querying settlements:", err);
+        queryErrors.push("settlements");
+      }
     }
 
     // Sort by date descending
@@ -142,6 +174,7 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(totalCount / limit),
       },
       stats,
+      ...(queryErrors.length > 0 ? { queryErrors } : {}),
     });
   } catch (error) {
     console.error("Error fetching unified transactions:", error);
@@ -295,7 +328,22 @@ async function queryMarketplacePurchases(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {};
 
-  if (status !== "all") where.status = status;
+  if (status !== "all") {
+    where.status = status;
+  } else {
+    // When showing all statuses, filter out abandoned PENDING purchases:
+    // PENDING with no payment identifiers and older than 1 hour are abandoned checkouts
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    where.NOT = {
+      AND: [
+        { status: "PENDING" },
+        { stripePaymentIntentId: null },
+        { divinityCoinPaymentId: null },
+        { transactionId: null },
+        { createdAt: { lt: oneHourAgo } },
+      ],
+    };
+  }
   if (processor !== "all") where.paymentProcessor = processor;
   if (dateFilter.gte || dateFilter.lte) where.createdAt = dateFilter;
 

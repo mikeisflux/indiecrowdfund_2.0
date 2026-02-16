@@ -194,6 +194,9 @@ export default function TransactionsPage() {
       setTransactions(data.transactions);
       setStats(data.stats);
       setPagination(data.pagination);
+      if (data.queryErrors && data.queryErrors.length > 0) {
+        toast.error(`Some queries failed: ${data.queryErrors.join(", ")}. Data may be incomplete.`);
+      }
     } catch (error) {
       console.error("Error fetching transactions:", error);
       toast.error("Failed to load transactions");
