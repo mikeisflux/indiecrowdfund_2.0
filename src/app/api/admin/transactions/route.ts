@@ -546,8 +546,8 @@ async function queryPayouts(
   if (search) {
     where.OR = [
       { project: { title: { contains: search, mode: "insensitive" } } },
-      { project: { user: { name: { contains: search, mode: "insensitive" } } } },
-      { project: { user: { email: { contains: search, mode: "insensitive" } } } },
+      { project: { creator: { name: { contains: search, mode: "insensitive" } } } },
+      { project: { creator: { email: { contains: search, mode: "insensitive" } } } },
       { payoutId: { contains: search, mode: "insensitive" } },
       { id: { contains: search, mode: "insensitive" } },
     ];
@@ -560,7 +560,7 @@ async function queryPayouts(
         select: {
           id: true,
           title: true,
-          user: { select: { id: true, name: true, email: true, image: true } },
+          creator: { select: { id: true, name: true, email: true, image: true } },
         },
       },
     },
@@ -571,10 +571,10 @@ async function queryPayouts(
   return payouts.map((p: typeof payouts[number]) => ({
     id: p.id,
     type: "PAYOUT" as const,
-    userId: p.project.user.id,
-    userName: p.project.user.name,
-    userEmail: p.project.user.email,
-    userImage: p.project.user.image,
+    userId: p.project.creator.id,
+    userName: p.project.creator.name,
+    userEmail: p.project.creator.email,
+    userImage: p.project.creator.image,
     projectId: p.projectId,
     projectName: p.project.title,
     itemDescription: `${p.type} Payout - ${p.project.title}`,
