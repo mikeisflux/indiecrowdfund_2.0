@@ -178,7 +178,7 @@ export function CommentsTab({
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={comment.avatarUrl || undefined} />
                       <AvatarFallback className="bg-muted text-muted-foreground">
-                        {comment.author[0]}
+                        {comment.author?.[0] || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -286,7 +286,7 @@ export function CommentsTab({
                             <Avatar className="h-6 w-6">
                               <AvatarImage src={reply.avatarUrl || undefined} />
                               <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                                {reply.author[0]}
+                                {reply.author?.[0] || "U"}
                               </AvatarFallback>
                             </Avatar>
                             <span className="font-medium text-sm">{reply.author}</span>

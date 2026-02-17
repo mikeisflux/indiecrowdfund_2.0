@@ -17,7 +17,7 @@ export function CreatorTab({ creator }: CreatorTabProps) {
             <Avatar className="h-20 w-20">
               <AvatarImage src={creator.image} />
               <AvatarFallback className="bg-black text-white text-2xl">
-                {creator.name[0]}
+                {creator?.name?.[0] || "C"}
               </AvatarFallback>
             </Avatar>
             <div>

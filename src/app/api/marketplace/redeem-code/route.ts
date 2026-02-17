@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
         title: true,
         price: true,
         creatorId: true,
+        companyId: true,
         status: true,
         pdfFileUrl: true,
       },
@@ -166,6 +167,16 @@ export async function POST(request: NextRequest) {
           purchaseCount: { increment: 1 },
         },
       });
+
+      // Update company total sales if applicable
+      if (book.companyId) {
+        await tx.companyProfile.update({
+          where: { id: book.companyId },
+          data: {
+            totalSales: { increment: 1 },
+          },
+        });
+      }
 
       return { purchase, redemption };
     });

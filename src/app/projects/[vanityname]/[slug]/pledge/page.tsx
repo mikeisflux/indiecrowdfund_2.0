@@ -508,8 +508,8 @@ export default function PledgePage() {
   const handleAddonToggle = (addonId: string) => {
     setSelectedAddons((prev) => {
       if (prev[addonId]) {
-        const { [addonId]: _, ...rest } = prev;
-        void _; // Indicate intentionally unused
+        const { [addonId]: _removed, ...rest } = prev;
+        void _removed;
         return rest;
       }
       return { ...prev, [addonId]: 1 };
@@ -522,8 +522,8 @@ export default function PledgePage() {
       const newQty = Math.max(0, currentQty + delta);
 
       if (newQty === 0) {
-        const { [addonId]: _, ...rest } = prev;
-        void _; // Indicate intentionally unused
+        const { [addonId]: _removed, ...rest } = prev;
+        void _removed;
         return rest;
       }
 

@@ -134,7 +134,7 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
               <Avatar className="h-12 w-12">
                 <AvatarImage src={project.creator.image} />
                 <AvatarFallback className="bg-black text-white">
-                  {project.creator.name[0]}
+                  {project.creator?.name?.[0] || "C"}
                 </AvatarFallback>
               </Avatar>
               <div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -151,11 +152,12 @@ export function ProjectsTab({
               {/* Project Image */}
               <div className="h-32 bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center relative">
                 {project.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={project.imageUrl}
                     alt={project.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="200px"
                   />
                 ) : (
                   <span className="text-teal-600 font-medium">Project Image</span>

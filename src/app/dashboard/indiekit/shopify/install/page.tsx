@@ -72,7 +72,7 @@ export default async function ShopifyInstallPage({ searchParams }: PageProps) {
     // User not logged in - redirect to sign in with return URL
     // Use this install page as callback so we can continue the flow
     const callbackUrl = `/dashboard/indiekit/shopify/install?shop=${encodeURIComponent(shop)}`;
-    redirect(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+    redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
 
   // User is logged in - check if they have Shopify credentials

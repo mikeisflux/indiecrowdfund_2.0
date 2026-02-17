@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -215,8 +216,7 @@ export default async function SuccessStoriesPage() {
                   <div className={index % 2 === 1 ? "lg:col-start-2" : ""}>
                     <div className="relative aspect-video overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800">
                       {story.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={story.image} alt={story.title} className="object-cover w-full h-full" />
+                        <Image src={story.image} alt={story.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="text-center">

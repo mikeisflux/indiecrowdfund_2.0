@@ -1,6 +1,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
+import Image from "next/image";
 
 import { useState, useEffect, useCallback } from "react";
 import { sanitizeEmailHtml } from "@/lib/utils/sanitize";
@@ -839,11 +840,13 @@ export default function EmailPage() {
               <X className="h-6 w-6" />
             </Button>
             {expandedImage && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={expandedImage}
                 alt="Expanded email image"
+                width={800}
+                height={600}
                 className="max-w-full max-h-[80vh] object-contain"
+                unoptimized
               />
             )}
           </div>

@@ -6,6 +6,7 @@
 
 import { Suspense, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -636,11 +637,12 @@ function ProjectCard({ project }: { project: Project }) {
       <Card className={`project-card h-full overflow-hidden glass-card glass-card-hover rounded-2xl border-border/50 ${isPrelaunch ? "border-amber-300/50 dark:border-amber-700/50" : ""}`}>
         <div className="aspect-video bg-muted relative overflow-hidden group">
           {project.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={project.imageUrl}
               alt={project.title}
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
@@ -675,8 +677,7 @@ function ProjectCard({ project }: { project: Project }) {
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-muted">
               {project.creator.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={project.creator.image} alt="" className="w-full h-full rounded-full object-cover" />
+                <Image src={project.creator.image} alt="" width={20} height={20} className="rounded-full object-cover" />
               ) : (
                 <span className="text-[10px] font-medium">{project.creator.name?.charAt(0)}</span>
               )}
@@ -752,11 +753,12 @@ function ProjectListItem({ project }: { project: Project }) {
         <div className="flex flex-col sm:flex-row group">
           <div className="aspect-video w-full sm:w-56 flex-shrink-0 bg-muted relative overflow-hidden">
             {project.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={project.imageUrl}
                 alt={project.title}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 640px) 100vw, 224px"
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
@@ -820,8 +822,7 @@ function ProjectListItem({ project }: { project: Project }) {
               <p className="text-sm text-muted-foreground flex items-center gap-1.5">
                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-muted">
                   {project.creator.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={project.creator.image} alt="" className="w-full h-full rounded-full object-cover" />
+                    <Image src={project.creator.image} alt="" width={20} height={20} className="rounded-full object-cover" />
                   ) : (
                     <span className="text-[10px] font-medium">{project.creator.name?.charAt(0)}</span>
                   )}

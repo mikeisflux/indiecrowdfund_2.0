@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -254,11 +255,12 @@ function SurveyPreviewContent() {
                   <CardContent className="pt-6 space-y-4">
                     <div className="flex items-start gap-4">
                       {item.imageUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={item.imageUrl}
                           alt={item.itemName}
-                          className="w-20 h-20 object-cover rounded-lg"
+                          width={80}
+                          height={80}
+                          className="object-cover rounded-lg"
                         />
                       )}
                       <div>
