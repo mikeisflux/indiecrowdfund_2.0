@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         id: projectId,
         OR: [
           { creatorId: session.user.id },
-          { collaborators: { some: { userId: session.user.id } } },
+          { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
         ],
       },
       select: { id: true, title: true },
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         id: projectId,
         OR: [
           { creatorId: session.user.id },
-          { collaborators: { some: { userId: session.user.id } } },
+          { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
         ],
       },
     });

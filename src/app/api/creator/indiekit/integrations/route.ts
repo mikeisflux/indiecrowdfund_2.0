@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
           id: projectId,
           OR: [
             { creatorId: session.user.id },
-            { collaborators: { some: { userId: session.user.id } } },
+            { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
           ],
         },
         select: {

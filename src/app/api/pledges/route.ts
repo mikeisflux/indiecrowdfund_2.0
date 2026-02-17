@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     // Get project to determine payment processor
     const project = await db.project.findUnique({
-      where: { id: data.projectId },
+      where: { id: data.projectId, deletedAt: null },
       include: {
         creator: {
           include: {

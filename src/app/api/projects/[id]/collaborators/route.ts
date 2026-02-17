@@ -136,7 +136,7 @@ export async function POST(
 
 // Get all collaborators for a project
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {

@@ -37,7 +37,7 @@ export async function createStripePayment({
 
   // Get project and creator's Stripe account
   const project = await db.project.findUnique({
-    where: { id: projectId },
+    where: { id: projectId, deletedAt: null },
     include: {
       creator: {
         include: {
