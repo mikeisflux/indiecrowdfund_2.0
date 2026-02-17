@@ -114,68 +114,66 @@ const getFeaturedProjects = unstable_cache(
 );
 
 // Fetch projects in prelaunch from database
-const getPrelaunchProjects = unstable_cache(
-  async () => {
-    try {
-      const projects = await db.project.findMany({
-        where: {
-          prelaunchActive: true,
-          deletedAt: null,
-          status: {
-            notIn: ["LIVE", "FUNDED"], // Exclude projects that are already live or funded
-          },
-          // Hide test projects from home page
-          NOT: {
-            title: { contains: "test", mode: "insensitive" },
+// Note: Not wrapped in unstable_cache because Date serialization in the cache
+// can cause stale empty results. The page is already dynamic due to auth().
+async function getPrelaunchProjects() {
+  try {
+    const projects = await db.project.findMany({
+      where: {
+        prelaunchActive: true,
+        deletedAt: null,
+        status: {
+          notIn: ["LIVE", "FUNDED"], // Exclude projects that are already live or funded
+        },
+        // Hide test projects from home page
+        NOT: {
+          title: { contains: "test", mode: "insensitive" },
+        },
+      },
+      include: {
+        creator: {
+          select: {
+            name: true,
+            vanityUrl: true,
           },
         },
-        include: {
-          creator: {
-            select: {
-              name: true,
-              vanityUrl: true,
-            },
-          },
-          _count: {
-            select: {
-              followers: true,
-            },
+        _count: {
+          select: {
+            followers: true,
           },
         },
-        orderBy: [
-          { launchDate: "asc" }, // Soonest launch date first
-          { createdAt: "desc" }, // Fallback for projects without launch date
-        ],
-        take: 6,
-      });
+      },
+      orderBy: [
+        { launchDate: "asc" }, // Soonest launch date first
+        { createdAt: "desc" }, // Fallback for projects without launch date
+      ],
+      take: 6,
+    });
 
-      return projects.map((project) => {
-        // Build project URL - use vanity URL if creator has one
-        const projectUrl = project.creator.vanityUrl
-          ? `/projects/${project.creator.vanityUrl}/${project.slug}/prelaunch`
-          : `/projects/${project.slug}/prelaunch`;
+    return projects.map((project) => {
+      // Build project URL - use vanity URL if creator has one
+      const projectUrl = project.creator.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}/prelaunch`
+        : `/projects/${project.slug}/prelaunch`;
 
-        return {
-          id: project.id,
-          slug: project.slug,
-          title: project.title,
-          subtitle: project.subtitle || "",
-          category: project.category,
-          imageUrl: project.imageUrl || "",
-          creator: project.creator.name || "Creator",
-          followerCount: project._count.followers,
-          launchDate: project.launchDate,
-          projectUrl,
-        };
-      });
-    } catch (error) {
-      console.error("Error fetching prelaunch projects:", error);
-      return [];
-    }
-  },
-  ["homepage-prelaunch-projects"],
-  { revalidate: 60 } // Cache for 1 minute
-);
+      return {
+        id: project.id,
+        slug: project.slug,
+        title: project.title,
+        subtitle: project.subtitle || "",
+        category: project.category,
+        imageUrl: project.imageUrl || "",
+        creator: project.creator.name || "Creator",
+        followerCount: project._count.followers,
+        launchDate: project.launchDate,
+        projectUrl,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching prelaunch projects:", error);
+    return [];
+  }
+}
 
 // Fetch past/closed campaigns from database
 const getPastCampaigns = unstable_cache(
