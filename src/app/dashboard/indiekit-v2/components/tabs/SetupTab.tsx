@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BoxIcon, Link2, FormInput, ShoppingCart } from "lucide-react";
-import { toast } from "sonner";
 
 // Import existing tabs from v1
 import { ProductsTab } from "../../../indiekit/components/tabs";
 import { SkuMappingTab } from "../../../indiekit/components/tabs";
 import { SurveyBuilderTab } from "../../../indiekit/components/tabs";
 import { AddonsTab } from "../../../indiekit/components/tabs";
+import { ImportAddonFromProjectDialog } from "../../../indiekit/components/dialogs/import-addon-from-project-dialog";
 
 import type { FulfillmentStats, Backer, SurveyAddon } from "../../types";
 
@@ -42,6 +42,7 @@ export function SetupTab({
   onEditAddon,
 }: SetupTabProps) {
   const [subTab, setSubTab] = useState("products");
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -83,13 +84,21 @@ export function SetupTab({
             backers={backers}
             surveyAddons={surveyAddons}
             onOpenAddonDialog={onOpenAddonDialog}
-            onOpenImportDialog={() => toast.info("Import from Kickstarter/Gamefound coming soon")}
+            onOpenImportDialog={() => setIsImportDialogOpen(true)}
             projectId={projectId}
             onRefresh={onRefresh}
             onEditAddon={onEditAddon}
           />
         </TabsContent>
       </Tabs>
+
+      <ImportAddonFromProjectDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        projectId={projectId}
+        existingAddonIds={surveyAddons.map((a) => a.id)}
+        onImported={onRefresh}
+      />
     </div>
   );
 }

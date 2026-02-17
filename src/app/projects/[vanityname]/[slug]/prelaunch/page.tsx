@@ -95,6 +95,11 @@ export default function PrelaunchPage() {
   // Build the project path - use slug-only format for legacy URLs
   const projectPath = isLegacyUrl ? `/projects/${slug}` : `/projects/${vanityname}/${slug}`;
 
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     const fetchProject = async () => {
       try {

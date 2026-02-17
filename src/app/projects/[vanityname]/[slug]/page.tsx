@@ -90,6 +90,11 @@ export default function ProjectPage() {
   // Check if this is a legacy slug-only URL (vanityname = "_" from middleware rewrite)
   const isLegacyUrl = vanityname === "_";
 
+  // Scroll to top on mount (ensures page starts at top when navigating from homepage)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Handle URL params for tab selection and deep linking
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
