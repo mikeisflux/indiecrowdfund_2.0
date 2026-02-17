@@ -28,6 +28,7 @@ import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
 import { formatTimeRemaining } from "@/lib/utils";
 import { auth } from "@/lib/auth";
+import { unstable_cache } from "next/cache";
 
 // Force dynamic rendering to ensure database is available
 export const dynamic = "force-dynamic";
@@ -37,201 +38,216 @@ export const dynamic = "force-dynamic";
  */
 
 // Fetch featured/live projects from database (excludes closed campaigns)
-async function getFeaturedProjects() {
-  try {
-    const now = new Date();
-    const projects = await db.project.findMany({
-      where: {
-        status: "LIVE",
-        // Only include projects that haven't ended yet
-        OR: [
-          { endDate: null },
-          { endDate: { gt: now } },
-        ],
-        // Hide test projects from home page
-        NOT: {
-          title: { contains: "test", mode: "insensitive" },
-        },
-      },
-      include: {
-        creator: {
-          select: {
-            name: true,
-            vanityUrl: true,
+const getFeaturedProjects = unstable_cache(
+  async () => {
+    try {
+      const now = new Date();
+      const projects = await db.project.findMany({
+        where: {
+          status: "LIVE",
+          deletedAt: null,
+          // Only include projects that haven't ended yet
+          OR: [
+            { endDate: null },
+            { endDate: { gt: now } },
+          ],
+          // Hide test projects from home page
+          NOT: {
+            title: { contains: "test", mode: "insensitive" },
           },
         },
-      },
-      orderBy: {
-        currentAmount: "desc",
-      },
-      take: 6,
-    });
+        include: {
+          creator: {
+            select: {
+              name: true,
+              vanityUrl: true,
+            },
+          },
+        },
+        orderBy: {
+          currentAmount: "desc",
+        },
+        take: 6,
+      });
 
-    return projects.map((project) => {
-      // Calculate days remaining
-      let daysRemaining = 0;
-      if (project.endDate) {
-        const now = new Date();
-        const end = new Date(project.endDate);
-        daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-      }
+      return projects.map((project) => {
+        // Calculate days remaining
+        let daysRemaining = 0;
+        if (project.endDate) {
+          const now = new Date();
+          const end = new Date(project.endDate);
+          daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+        }
 
-      // Build project URL - use vanity URL if creator has one
-      const projectUrl = project.creator.vanityUrl
-        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
-        : `/projects/${project.slug}`;
+        // Build project URL - use vanity URL if creator has one
+        const projectUrl = project.creator.vanityUrl
+          ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+          : `/projects/${project.slug}`;
 
-      return {
-        id: project.id,
-        slug: project.slug,
-        title: project.title,
-        subtitle: project.subtitle || "",
-        category: project.category,
-        imageUrl: project.imageUrl || "",
-        creator: project.creator.name || "Creator",
-        goalAmount: project.goalAmount,
-        currentAmount: project.currentAmount,
-        backerCount: project.backerCount,
-        daysRemaining,
-        endDate: project.endDate?.toISOString() || null,
-        projectUrl,
-      };
-    });
-  } catch (error) {
-    console.error("Error fetching featured projects:", error);
-    return [];
-  }
-}
+        return {
+          id: project.id,
+          slug: project.slug,
+          title: project.title,
+          subtitle: project.subtitle || "",
+          category: project.category,
+          imageUrl: project.imageUrl || "",
+          creator: project.creator.name || "Creator",
+          goalAmount: project.goalAmount,
+          currentAmount: project.currentAmount,
+          backerCount: project.backerCount,
+          daysRemaining,
+          endDate: project.endDate?.toISOString() || null,
+          projectUrl,
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching featured projects:", error);
+      return [];
+    }
+  },
+  ["homepage-featured-projects"],
+  { revalidate: 60 } // Cache for 1 minute
+);
 
 // Fetch projects in prelaunch from database
-async function getPrelaunchProjects() {
-  try {
-    const projects = await db.project.findMany({
-      where: {
-        prelaunchActive: true,
-        status: {
-          notIn: ["LIVE", "FUNDED"], // Exclude projects that are already live or funded
-        },
-        // Hide test projects from home page
-        NOT: {
-          title: { contains: "test", mode: "insensitive" },
-        },
-      },
-      include: {
-        creator: {
-          select: {
-            name: true,
-            vanityUrl: true,
+const getPrelaunchProjects = unstable_cache(
+  async () => {
+    try {
+      const projects = await db.project.findMany({
+        where: {
+          prelaunchActive: true,
+          deletedAt: null,
+          status: {
+            notIn: ["LIVE", "FUNDED"], // Exclude projects that are already live or funded
+          },
+          // Hide test projects from home page
+          NOT: {
+            title: { contains: "test", mode: "insensitive" },
           },
         },
-        _count: {
-          select: {
-            followers: true,
+        include: {
+          creator: {
+            select: {
+              name: true,
+              vanityUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              followers: true,
+            },
           },
         },
-      },
-      orderBy: [
-        { launchDate: "asc" }, // Soonest launch date first
-        { createdAt: "desc" }, // Fallback for projects without launch date
-      ],
-      take: 6,
-    });
+        orderBy: [
+          { launchDate: "asc" }, // Soonest launch date first
+          { createdAt: "desc" }, // Fallback for projects without launch date
+        ],
+        take: 6,
+      });
 
-    return projects.map((project) => {
-      // Build project URL - use vanity URL if creator has one
-      const projectUrl = project.creator.vanityUrl
-        ? `/projects/${project.creator.vanityUrl}/${project.slug}/prelaunch`
-        : `/projects/${project.slug}/prelaunch`;
+      return projects.map((project) => {
+        // Build project URL - use vanity URL if creator has one
+        const projectUrl = project.creator.vanityUrl
+          ? `/projects/${project.creator.vanityUrl}/${project.slug}/prelaunch`
+          : `/projects/${project.slug}/prelaunch`;
 
-      return {
-        id: project.id,
-        slug: project.slug,
-        title: project.title,
-        subtitle: project.subtitle || "",
-        category: project.category,
-        imageUrl: project.imageUrl || "",
-        creator: project.creator.name || "Creator",
-        followerCount: project._count.followers,
-        launchDate: project.launchDate,
-        projectUrl,
-      };
-    });
-  } catch (error) {
-    console.error("Error fetching prelaunch projects:", error);
-    return [];
-  }
-}
+        return {
+          id: project.id,
+          slug: project.slug,
+          title: project.title,
+          subtitle: project.subtitle || "",
+          category: project.category,
+          imageUrl: project.imageUrl || "",
+          creator: project.creator.name || "Creator",
+          followerCount: project._count.followers,
+          launchDate: project.launchDate,
+          projectUrl,
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching prelaunch projects:", error);
+      return [];
+    }
+  },
+  ["homepage-prelaunch-projects"],
+  { revalidate: 60 } // Cache for 1 minute
+);
 
 // Fetch past/closed campaigns from database
-async function getPastCampaigns() {
-  try {
-    const now = new Date();
-    const projects = await db.project.findMany({
-      where: {
-        OR: [
-          {
-            // Live projects that have ended
-            status: "LIVE",
-            endDate: { lte: now },
-          },
-          {
-            // Funded projects
-            status: "FUNDED",
-          },
-        ],
-        // Hide test projects from home page
-        NOT: {
-          title: { contains: "test", mode: "insensitive" },
-        },
-      },
-      include: {
-        creator: {
-          select: {
-            name: true,
-            vanityUrl: true,
+const getPastCampaigns = unstable_cache(
+  async () => {
+    try {
+      const now = new Date();
+      const projects = await db.project.findMany({
+        where: {
+          deletedAt: null,
+          OR: [
+            {
+              // Live projects that have ended
+              status: "LIVE",
+              endDate: { lte: now },
+            },
+            {
+              // Funded projects
+              status: "FUNDED",
+            },
+          ],
+          // Hide test projects from home page
+          NOT: {
+            title: { contains: "test", mode: "insensitive" },
           },
         },
-      },
-      orderBy: {
-        endDate: "desc",
-      },
-      take: 6,
-    });
+        include: {
+          creator: {
+            select: {
+              name: true,
+              vanityUrl: true,
+            },
+          },
+        },
+        orderBy: {
+          endDate: "desc",
+        },
+        take: 6,
+      });
 
-    return projects.map((project) => {
-      // Calculate funding percentage
-      const fundingPercentage = Number(project.goalAmount) > 0
-        ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)
-        : 0;
-      const wasSuccessful = fundingPercentage >= 100;
+      return projects.map((project) => {
+        // Calculate funding percentage
+        const fundingPercentage = Number(project.goalAmount) > 0
+          ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)
+          : 0;
+        const wasSuccessful = fundingPercentage >= 100;
 
-      // Build project URL - use vanity URL if creator has one
-      const projectUrl = project.creator.vanityUrl
-        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
-        : `/projects/${project.slug}`;
+        // Build project URL - use vanity URL if creator has one
+        const projectUrl = project.creator.vanityUrl
+          ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+          : `/projects/${project.slug}`;
 
-      return {
-        id: project.id,
-        slug: project.slug,
-        title: project.title,
-        subtitle: project.subtitle || "",
-        category: project.category,
-        imageUrl: project.imageUrl || "",
-        creator: project.creator.name || "Creator",
-        goalAmount: project.goalAmount,
-        currentAmount: project.currentAmount,
-        backerCount: project.backerCount,
-        fundingPercentage,
-        wasSuccessful,
-        endDate: project.endDate?.toISOString() || null,
-        projectUrl,
-      };
-    });
-  } catch (error) {
-    console.error("Error fetching past campaigns:", error);
-    return [];
-  }
-}
+        return {
+          id: project.id,
+          slug: project.slug,
+          title: project.title,
+          subtitle: project.subtitle || "",
+          category: project.category,
+          imageUrl: project.imageUrl || "",
+          creator: project.creator.name || "Creator",
+          goalAmount: project.goalAmount,
+          currentAmount: project.currentAmount,
+          backerCount: project.backerCount,
+          fundingPercentage,
+          wasSuccessful,
+          endDate: project.endDate?.toISOString() || null,
+          projectUrl,
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching past campaigns:", error);
+      return [];
+    }
+  },
+  ["homepage-past-campaigns"],
+  { revalidate: 60 } // Cache for 1 minute
+);
 
 // Get user's followed project IDs
 async function getUserFollowedProjectIds(userId: string | undefined): Promise<Set<string>> {
@@ -250,42 +266,46 @@ async function getUserFollowedProjectIds(userId: string | undefined): Promise<Se
 }
 
 // Fetch active hero slides
-async function getHeroSlides() {
-  try {
-    const slides = await db.heroSlide.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-      select: {
-        id: true,
-        title: true,
-        subtitle: true,
-        description: true,
-        buttonText: true,
-        buttonLink: true,
-        showPrimaryButton: true,
-        secondaryButtonText: true,
-        secondaryButtonLink: true,
-        showSecondaryButton: true,
-        mediaType: true,
-        imageUrl: true,
-        videoUrl: true,
-        videoThumbnail: true,
-        videoAutoplay: true,
-        videoMuted: true,
-        videoLoop: true,
-        textAlignment: true,
-        overlayOpacity: true,
-        textColor: true,
-        showSubtitle: true,
-        showDescription: true,
-      },
-    });
-    return slides;
-  } catch (error) {
-    console.error("Error fetching hero slides:", error);
-    return [];
-  }
-}
+const getHeroSlides = unstable_cache(
+  async () => {
+    try {
+      const slides = await db.heroSlide.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          title: true,
+          subtitle: true,
+          description: true,
+          buttonText: true,
+          buttonLink: true,
+          showPrimaryButton: true,
+          secondaryButtonText: true,
+          secondaryButtonLink: true,
+          showSecondaryButton: true,
+          mediaType: true,
+          imageUrl: true,
+          videoUrl: true,
+          videoThumbnail: true,
+          videoAutoplay: true,
+          videoMuted: true,
+          videoLoop: true,
+          textAlignment: true,
+          overlayOpacity: true,
+          textColor: true,
+          showSubtitle: true,
+          showDescription: true,
+        },
+      });
+      return slides;
+    } catch (error) {
+      console.error("Error fetching hero slides:", error);
+      return [];
+    }
+  },
+  ["homepage-hero-slides"],
+  { revalidate: 300 } // Cache for 5 minutes
+);
 
 export default async function HomePage() {
   const session = await auth();

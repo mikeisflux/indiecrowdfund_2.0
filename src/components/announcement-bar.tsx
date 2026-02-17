@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 
@@ -102,25 +102,34 @@ function SingleAnnouncementBar({ announcement }: { announcement: AnnouncementBar
   );
 }
 
-export function AnnouncementBar({ initialAnnouncements = [] }: AnnouncementBarProps) {
+export function AnnouncementBar({ initialAnnouncements }: AnnouncementBarProps) {
   const pathname = usePathname();
-  const [announcements, setAnnouncements] = useState<AnnouncementBarData[]>(initialAnnouncements);
-  const [isLoading, setIsLoading] = useState(initialAnnouncements.length === 0);
+  const [announcements, setAnnouncements] = useState<AnnouncementBarData[]>(initialAnnouncements || []);
+  const [isLoading, setIsLoading] = useState(!initialAnnouncements);
+  const hasFetched = useRef(false);
 
   // Don't show on admin pages
   const isAdminPage = pathname?.startsWith("/admin");
 
-  // Fetch announcements if not provided
+  // Fetch announcements only once if not provided via props
   useEffect(() => {
-    if (initialAnnouncements.length > 0) {
-      setAnnouncements(initialAnnouncements);
-      setIsLoading(false);
+    if (initialAnnouncements || hasFetched.current) {
       return;
     }
+    hasFetched.current = true;
 
     async function fetchAnnouncements() {
       try {
         const response = await fetch("/api/announcement-bar");
+        if (!response.ok) {
+          console.error("Announcement bar API returned", response.status);
+          return;
+        }
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("Announcement bar API returned non-JSON response");
+          return;
+        }
         const data = await response.json();
         setAnnouncements(data.announcements || []);
       } catch (error) {
