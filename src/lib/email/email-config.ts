@@ -591,6 +591,21 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
           error: result.error || "Unknown error",
         },
       });
+
+      // Remove blocked addresses from all subscriber lists so they don't appear in future campaigns
+      if (isPermanentFailure) {
+        try {
+          const removed = await db.emailListSubscriber.deleteMany({
+            where: { email: queueEntry.toEmail.toLowerCase().trim() },
+          });
+          if (removed.count > 0) {
+            console.log(`[Email Queue] Removed ${removed.count} subscriber records for blocked address: ${queueEntry.toEmail}`);
+          }
+        } catch (cleanupError) {
+          console.error(`[Email Queue] Failed to clean up subscriber for ${queueEntry.toEmail}:`, cleanupError);
+        }
+      }
+
       console.error(`[Email Queue] Failed to send queued email: ${queueEntry.id}`, result.error);
       errors = 1;
     }
