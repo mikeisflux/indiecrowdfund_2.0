@@ -120,6 +120,7 @@ export default function NotificationsPage() {
     try {
       await fetch(`/api/user/notifications?id=${id}`, {
         method: "DELETE",
+        headers: getCSRFHeaders(),
       });
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       setPagination((prev) => ({ ...prev, total: prev.total - 1 }));

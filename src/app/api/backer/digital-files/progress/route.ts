@@ -21,6 +21,7 @@ export async function GET() {
       where: {
         userId: session.user.id,
         status: { in: ["PENDING", "COMPLETED"] },
+        deletedAt: null,
       },
       select: {
         id: true,

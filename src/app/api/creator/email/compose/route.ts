@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
       where: {
         id: projectId,
         creatorId: session.user.id,
+        deletedAt: null,
         OR: [
           { status: "LIVE" },
           { prelaunchActive: true },

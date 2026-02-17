@@ -78,6 +78,7 @@ export async function GET(request: Request) {
       ? await db.user.findMany({
           where: {
             id: { in: followedCreatorIds },
+            deletedAt: null,
           },
           select: {
             id: true,
@@ -93,6 +94,7 @@ export async function GET(request: Request) {
             createdProjects: {
               where: {
                 status: { in: ["LIVE", "FUNDED"] },
+                deletedAt: null,
               },
               select: {
                 id: true,
@@ -162,7 +164,7 @@ export async function POST(request: Request) {
 
     // Verify the project exists
     const project = await db.project.findUnique({
-      where: { id: projectId },
+      where: { id: projectId, deletedAt: null },
       select: { id: true, title: true, prelaunchActive: true, status: true },
     });
 

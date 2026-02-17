@@ -142,7 +142,7 @@ export async function GET(
     if (!isCreator) {
       const collaborator = await db.projectCollaborator.findFirst({
         where: {
-          projectId: reward.id,
+          projectId: reward.projectId,
           userId: session.user.id,
           status: "ACCEPTED",
         },

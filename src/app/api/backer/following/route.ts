@@ -34,6 +34,7 @@ export async function GET() {
             createdProjects: {
               where: {
                 status: { in: ["LIVE", "FUNDED"] },
+                deletedAt: null,
               },
               select: {
                 id: true,
@@ -54,7 +55,7 @@ export async function GET() {
             _count: {
               select: {
                 createdProjects: {
-                  where: { status: { in: ["LIVE", "FUNDED"] } },
+                  where: { status: { in: ["LIVE", "FUNDED"] }, deletedAt: null },
                 },
               },
             },
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
 
     // Verify creator exists
     const creator = await db.user.findUnique({
-      where: { id: creatorId },
+      where: { id: creatorId, deletedAt: null },
       select: { id: true, name: true },
     });
 

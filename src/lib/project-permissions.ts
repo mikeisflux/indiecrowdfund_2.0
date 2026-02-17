@@ -17,7 +17,7 @@ export async function checkProjectEditPermission(
   userId: string
 ): Promise<{ allowed: false; error: string; status: number } | { allowed: true; permission: ProjectPermission }> {
   const project = await db.project.findUnique({
-    where: { id: projectId },
+    where: { id: projectId, deletedAt: null },
     select: { creatorId: true, status: true, prelaunchStatus: true },
   });
 

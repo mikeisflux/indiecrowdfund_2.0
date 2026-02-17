@@ -10,6 +10,7 @@ async function hasSuccessfulCampaign(userId: string): Promise<boolean> {
   const fundedProjects = await db.project.findMany({
     where: {
       creatorId: userId,
+      deletedAt: null,
       OR: [
         { status: "FUNDED" },
         // Also check projects that reached their goal but may still be LIVE

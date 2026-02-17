@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     // Get the project
     const project = await db.project.findUnique({
-      where: { id: projectId },
+      where: { id: projectId, deletedAt: null },
       include: {
         creator: {
           select: {

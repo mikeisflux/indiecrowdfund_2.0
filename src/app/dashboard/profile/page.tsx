@@ -226,7 +226,7 @@ export default function ProfilePage() {
       setProfile({
         ...profile,
         socialLinks: {
-          ...profile.socialLinks,
+          ...(profile.socialLinks || {}),
           [platform]: value,
         },
       });

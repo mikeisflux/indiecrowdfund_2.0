@@ -167,6 +167,10 @@ export async function POST(
 
     if (!emailResult.success) {
       console.error("Failed to send reply email:", emailResult.error);
+      return NextResponse.json(
+        { error: emailResult.error || "Failed to send email" },
+        { status: 500 }
+      );
     }
 
     // Create the reply message record

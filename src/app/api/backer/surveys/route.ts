@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const pledges = await db.pledge.findMany({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         OR: [
           { status: "COMPLETED" },
           {

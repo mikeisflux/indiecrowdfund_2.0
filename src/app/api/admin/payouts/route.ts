@@ -173,10 +173,10 @@ export async function POST(request: NextRequest) {
 
     // Get the project with funding info
     const project = await db.project.findUnique({
-      where: { id: projectId },
+      where: { id: projectId, deletedAt: null },
       include: {
         pledges: {
-          where: { status: "COMPLETED" },
+          where: { status: "COMPLETED", deletedAt: null },
           select: { amount: true },
         },
       },

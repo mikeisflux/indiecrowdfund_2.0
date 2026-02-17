@@ -157,7 +157,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const project = await db.project.findUnique({
-      where: { id: projectId },
+      where: { id: projectId, deletedAt: null },
       select: {
         id: true,
         title: true,
