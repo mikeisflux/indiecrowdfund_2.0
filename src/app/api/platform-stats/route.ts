@@ -10,6 +10,7 @@ export async function GET() {
     const fundedProjectsCount = await db.project.count({
       where: {
         status: "FUNDED",
+        deletedAt: null,
       },
     }).catch(() => 0);
 
@@ -17,6 +18,7 @@ export async function GET() {
     const liveProjectsCount = await db.project.count({
       where: {
         status: "LIVE",
+        deletedAt: null,
       },
     }).catch(() => 0);
 
@@ -26,6 +28,7 @@ export async function GET() {
         status: {
           not: "DRAFT",
         },
+        deletedAt: null,
       },
     }).catch(() => 0);
 
@@ -74,6 +77,7 @@ export async function GET() {
         status: {
           not: "DRAFT",
         },
+        deletedAt: null,
       },
     }).catch(() => []);
     const uniqueCreatorsCount = totalCreators?.length || 0;
@@ -91,6 +95,7 @@ export async function GET() {
         status: {
           in: ["LIVE", "FUNDED"],
         },
+        deletedAt: null,
       },
       orderBy: {
         _count: {

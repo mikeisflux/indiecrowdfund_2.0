@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId: session.user.id,
         status: "COMPLETED",
+        deletedAt: null,
         ...(projectId ? { projectId } : {}),
       },
       include: {

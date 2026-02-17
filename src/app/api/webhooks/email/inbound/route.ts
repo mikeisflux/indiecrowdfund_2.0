@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
 
       // Extract actual attachment files
       const attachmentFiles: AttachmentFile[] = [];
-      const attachmentCountNum = parseInt(attachmentCount, 10);
+      const attachmentCountNum = Math.min(Math.max(parseInt(attachmentCount, 10) || 0, 0), 50);
 
       // Mailgun sends attachments as attachment-1, attachment-2, etc.
       // SendGrid sends them as attachment1, attachment2, etc. or just numbered

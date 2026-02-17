@@ -38,6 +38,7 @@ export async function GET() {
       where: {
         userId,
         status: { in: ["PENDING", "COMPLETED"] },
+        deletedAt: null,
       },
       select: { projectId: true },
       distinct: ["projectId"],
@@ -59,6 +60,7 @@ export async function GET() {
     const pledges = await db.pledge.findMany({
       where: {
         userId,
+        deletedAt: null,
         OR: [
           { status: "COMPLETED" },
           {
@@ -186,6 +188,7 @@ export async function GET() {
         where: {
           id: { in: relevantProjectIds },
           fundedAt: { not: null },
+          deletedAt: null,
         },
         select: {
           id: true,

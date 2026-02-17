@@ -425,6 +425,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Find recent emails sent to this recipient for AdminEmail tracking
+    if (!email) {
+      console.log("[Mailgun] No recipient email in event data, skipping AdminEmail tracking");
+      return NextResponse.json({ success: true, action: "no_recipient" });
+    }
+
     const recentEmails = await db.adminEmail.findMany({
       where: {
         toEmail: email,

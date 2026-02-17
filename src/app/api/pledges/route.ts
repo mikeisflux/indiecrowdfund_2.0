@@ -348,8 +348,8 @@ export async function GET(req: NextRequest) {
     const projectId = searchParams.get("projectId");
 
     const where = projectId
-      ? { userId: session.user.id, projectId }
-      : { userId: session.user.id };
+      ? { userId: session.user.id, projectId, deletedAt: null }
+      : { userId: session.user.id, deletedAt: null };
 
     const pledges = await db.pledge.findMany({
       where,

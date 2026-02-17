@@ -190,6 +190,7 @@ export default function EmailPage() {
     try {
       const response = await fetch(`/api/admin/mailboxes/${mailbox.id}?force=true`, {
         method: "DELETE",
+        headers: getCSRFHeaders(),
       });
       if (response.ok) {
         await fetchMailboxes();
@@ -225,6 +226,7 @@ export default function EmailPage() {
     try {
       await fetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`, {
         method: "DELETE",
+        headers: getCSRFHeaders(),
       });
       setEmails(emails.filter(e => e.id !== email.id));
       if (selectedEmail?.id === email.id) {

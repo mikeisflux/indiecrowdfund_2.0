@@ -119,7 +119,8 @@ export async function POST(request: NextRequest) {
           errors.push(`${recipientEmail}: ${result.error}`);
         }
       } catch (err) {
-        errors.push(`${recipientEmail}: ${err}`);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        errors.push(`${recipientEmail}: ${errMsg}`);
       }
     }
 
