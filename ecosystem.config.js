@@ -2,10 +2,11 @@ module.exports = {
   apps: [
     {
       name: 'indiecrowdfund',
-      script: 'npm',
-      args: 'start',
+      script: 'node_modules/.bin/next',
+      args: 'start -p 3000',
       cwd: '/root/indiecrowdfund_2.0',
-      instances: 1,
+      instances: 4,
+      exec_mode: 'cluster',
       autorestart: true,
       watch: false,
       max_memory_restart: '1G',
