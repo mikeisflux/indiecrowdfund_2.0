@@ -63,11 +63,11 @@ echo "📋 Step 6: Copying new build to production..."
 rm -rf "$REPO_DIR/.next"
 cp -r "$BUILD_DIR/.next" "$REPO_DIR/.next"
 
-# Step 7: Restart PM2
+# Step 7: Reload PM2 (rolling restart for zero-downtime in cluster mode)
 echo ""
-echo "🔄 Step 7: Restarting PM2..."
+echo "🔄 Step 7: Reloading PM2 (zero-downtime rolling restart)..."
 cd "$REPO_DIR"
-pm2 restart all --update-env
+pm2 reload all --update-env
 
 echo ""
 echo "=================================="

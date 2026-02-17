@@ -136,19 +136,19 @@ else
     exit 1
 fi
 
-# Step 7: Restart PM2
+# Step 7: Reload PM2 (rolling restart for zero-downtime in cluster mode)
 echo ""
-echo "🔄 Step 7: Restarting PM2..."
-if pm2 restart all --update-env 2>&1; then
-    echo -e "${GREEN}   PM2 restarted${NC}"
+echo "🔄 Step 7: Reloading PM2 (zero-downtime rolling restart)..."
+if pm2 reload all --update-env 2>&1; then
+    echo -e "${GREEN}   PM2 reloaded${NC}"
 else
-    echo -e "${RED}❌ ERROR: PM2 restart failed!${NC}"
+    echo -e "${RED}❌ ERROR: PM2 reload failed!${NC}"
     echo "   Attempting rollback..."
     LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
     if [ -n "$LATEST_BACKUP" ]; then
         rm -rf .next
         mv "$LATEST_BACKUP" .next
-        pm2 restart all --update-env
+        pm2 reload all --update-env
         echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
     fi
     exit 1
