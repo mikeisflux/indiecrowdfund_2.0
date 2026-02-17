@@ -15,13 +15,13 @@ export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
-// GET - Get active announcement bar (public)
+// GET - Get all active announcement bars (public)
 export async function GET() {
   try {
     const now = new Date();
 
-    // Find the first active announcement that's within its date range
-    const announcement = await db.announcementBar.findFirst({
+    // Find all active announcements that are within their date range
+    const announcements = await db.announcementBar.findMany({
       where: {
         isActive: true,
         OR: [
@@ -59,9 +59,9 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ announcement }, { headers: corsHeaders });
+    return NextResponse.json({ announcements }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error fetching announcement bar:", error);
-    return NextResponse.json({ announcement: null }, { headers: corsHeaders });
+    console.error("Error fetching announcement bars:", error);
+    return NextResponse.json({ announcements: [] }, { headers: corsHeaders });
   }
 }

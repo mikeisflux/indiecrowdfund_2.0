@@ -15,75 +15,47 @@ interface AnnouncementBarData {
 }
 
 interface AnnouncementBarProps {
-  initialAnnouncement?: AnnouncementBarData | null;
+  initialAnnouncements?: AnnouncementBarData[];
 }
 
 const DISMISSED_KEY_PREFIX = "announcement_dismissed_";
 
-export function AnnouncementBar({ initialAnnouncement = null }: AnnouncementBarProps) {
-  const pathname = usePathname();
-  const [announcement, setAnnouncement] = useState<AnnouncementBarData | null>(initialAnnouncement);
+function isDismissedInStorage(id: string): boolean {
+  try {
+    const dismissedTime = localStorage.getItem(`${DISMISSED_KEY_PREFIX}${id}`);
+    if (dismissedTime) {
+      const dismissedAt = parseInt(dismissedTime, 10);
+      const now = Date.now();
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+      if (now - dismissedAt < twentyFourHours) {
+        return true;
+      }
+      localStorage.removeItem(`${DISMISSED_KEY_PREFIX}${id}`);
+    }
+  } catch {
+    // localStorage may not be available
+  }
+  return false;
+}
+
+function SingleAnnouncementBar({ announcement }: { announcement: AnnouncementBarData }) {
   const [isDismissed, setIsDismissed] = useState(false);
-  const [isLoading, setIsLoading] = useState(!initialAnnouncement);
 
-  // Don't show on admin pages
-  const isAdminPage = pathname?.startsWith("/admin");
-
-  // Check if announcement was previously dismissed
   useEffect(() => {
-    if (announcement?.id) {
-      const dismissedTime = localStorage.getItem(`${DISMISSED_KEY_PREFIX}${announcement.id}`);
-      if (dismissedTime) {
-        // Check if dismissal was within the last 24 hours
-        const dismissedAt = parseInt(dismissedTime, 10);
-        const now = Date.now();
-        const twentyFourHours = 24 * 60 * 60 * 1000;
-        if (now - dismissedAt < twentyFourHours) {
-          setIsDismissed(true);
-        } else {
-          // Clear expired dismissal
-          localStorage.removeItem(`${DISMISSED_KEY_PREFIX}${announcement.id}`);
-        }
-      }
+    if (announcement.id) {
+      setIsDismissed(isDismissedInStorage(announcement.id));
     }
-  }, [announcement?.id]);
-
-  // Fetch announcement if not provided
-  useEffect(() => {
-    if (initialAnnouncement) {
-      setAnnouncement(initialAnnouncement);
-      setIsLoading(false);
-      return;
-    }
-
-    async function fetchAnnouncement() {
-      try {
-        const response = await fetch("/api/announcement-bar");
-        const data = await response.json();
-        setAnnouncement(data.announcement);
-      } catch (error) {
-        console.error("Failed to fetch announcement:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchAnnouncement();
-  }, [initialAnnouncement]);
+  }, [announcement.id]);
 
   const handleDismiss = useCallback(() => {
-    if (announcement?.id) {
-      localStorage.setItem(`${DISMISSED_KEY_PREFIX}${announcement.id}`, Date.now().toString());
-      setIsDismissed(true);
-    }
-  }, [announcement?.id]);
+    localStorage.setItem(`${DISMISSED_KEY_PREFIX}${announcement.id}`, Date.now().toString());
+    setIsDismissed(true);
+  }, [announcement.id]);
 
-  // Don't render anything while loading, if dismissed, on admin pages, or if no announcement
-  if (isLoading || isDismissed || isAdminPage || !announcement) {
+  if (isDismissed) {
     return null;
   }
 
-  // Render the link text inline with the main text
   const renderContent = () => {
     if (announcement.linkUrl) {
       return (
@@ -127,5 +99,49 @@ export function AnnouncementBar({ initialAnnouncement = null }: AnnouncementBarP
         )}
       </div>
     </div>
+  );
+}
+
+export function AnnouncementBar({ initialAnnouncements = [] }: AnnouncementBarProps) {
+  const pathname = usePathname();
+  const [announcements, setAnnouncements] = useState<AnnouncementBarData[]>(initialAnnouncements);
+  const [isLoading, setIsLoading] = useState(initialAnnouncements.length === 0);
+
+  // Don't show on admin pages
+  const isAdminPage = pathname?.startsWith("/admin");
+
+  // Fetch announcements if not provided
+  useEffect(() => {
+    if (initialAnnouncements.length > 0) {
+      setAnnouncements(initialAnnouncements);
+      setIsLoading(false);
+      return;
+    }
+
+    async function fetchAnnouncements() {
+      try {
+        const response = await fetch("/api/announcement-bar");
+        const data = await response.json();
+        setAnnouncements(data.announcements || []);
+      } catch (error) {
+        console.error("Failed to fetch announcements:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchAnnouncements();
+  }, [initialAnnouncements]);
+
+  if (isLoading || isAdminPage || announcements.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      {announcements.map((announcement) => (
+        <SingleAnnouncementBar key={announcement.id} announcement={announcement} />
+      ))}
+    </>
   );
 }
