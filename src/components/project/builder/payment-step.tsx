@@ -4,25 +4,20 @@ import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { CreditCard, Check, ExternalLink, Store, Info, AlertTriangle, CheckCircle, RefreshCw, Loader2, Save, Banknote, Lock, Building2 } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+
+import {
+  ContactEmailSection,
+  ProjectTypeSection,
+  ContentDeclarationSection,
+  PaymentProcessorSection,
+  StripeConnectSection,
+  DivinityCoinBankSection,
+  RetailerAccessSection,
+  ChargebackCardSection,
+} from "./payment-sections";
 
 export function PaymentStep() {
   const { payment, updatePayment, basics, projectId } = useProjectStore();
@@ -35,8 +30,6 @@ export function PaymentStep() {
   }>({ connected: false, onboarded: false, loading: true, error: null });
   const [connectError, setConnectError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
-  const [isSavingEmail, setIsSavingEmail] = useState(false);
-  const [emailSaved, setEmailSaved] = useState(false);
 
   // DivinityCoin bank account state
   const [bankAccount, setBankAccount] = useState({
@@ -77,47 +70,6 @@ export function PaymentStep() {
     expYear: number | null;
   }>({ saved: false, loading: true, lastFour: null, brand: null, expMonth: null, expYear: null });
   const [isSavingCard, setIsSavingCard] = useState(false);
-
-  // Save contact email to database immediately
-  const handleSaveContactEmail = async () => {
-    if (!projectId) {
-      toast.error("Please save your project first before setting the contact email");
-      return;
-    }
-
-    if (!payment.contactEmail || !payment.contactEmail.includes("@")) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-
-    setIsSavingEmail(true);
-    try {
-      // Use dedicated contact-email endpoint for reliable saving
-      const response = await fetch(`/api/projects/${projectId}/contact-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({ contactEmail: payment.contactEmail }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to save email");
-      }
-
-      setEmailSaved(true);
-      updatePayment({ contactEmailConfirmed: true });
-      toast.success("Contact email saved!");
-
-      // Reset the saved indicator after 3 seconds
-      setTimeout(() => setEmailSaved(false), 3000);
-    } catch (error) {
-      console.error("Failed to save contact email:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to save email");
-    } finally {
-      setIsSavingEmail(false);
-    }
-  };
 
   // Save DivinityCoin bank account
   const handleSaveBankAccount = async () => {
@@ -171,26 +123,6 @@ export function PaymentStep() {
       setIsSavingBank(false);
     }
   };
-
-  // Load current contact email from database on mount
-  useEffect(() => {
-    async function loadContactEmail() {
-      if (!projectId) return;
-      try {
-        const response = await fetch(`/api/projects/${projectId}/contact-email`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.contactEmail && data.contactEmail !== payment.contactEmail) {
-            updatePayment({ contactEmail: data.contactEmail, contactEmailConfirmed: true });
-            setEmailSaved(true);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load contact email:", error);
-      }
-    }
-    loadContactEmail();
-  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check DivinityCoin bank account status on mount
   useEffect(() => {
@@ -426,1034 +358,89 @@ export function PaymentStep() {
   return (
     <div className="space-y-8">
       {/* Contact Email */}
-      <div className="space-y-2">
-        <Label htmlFor="contactEmail">
-          Contact Email <span className="text-destructive">*</span>
-        </Label>
-        <div className="flex items-center gap-3">
-          <Input
-            id="contactEmail"
-            type="email"
-            placeholder="your@email.com"
-            value={payment.contactEmail || ""}
-            onChange={(e) => {
-              updatePayment({ contactEmail: e.target.value, contactEmailConfirmed: false });
-              setEmailSaved(false);
-            }}
-            className="flex-1"
-          />
-          <Button
-            type="button"
-            variant={emailSaved ? "default" : "outline"}
-            size="sm"
-            onClick={handleSaveContactEmail}
-            disabled={isSavingEmail || !payment.contactEmail || emailSaved}
-            className={emailSaved ? "bg-green-600 hover:bg-green-600" : ""}
-          >
-            {isSavingEmail ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                Saving...
-              </>
-            ) : emailSaved ? (
-              <>
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Saved
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-1" />
-                Save Email
-              </>
-            )}
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {projectId
-            ? "Click 'Save Email' to commit this email to your project. This email will receive important notifications about your campaign."
-            : "Save your project first (click Next on any step), then you can save your contact email."}
-        </p>
-      </div>
+      <ContactEmailSection
+        payment={payment}
+        updatePayment={updatePayment}
+        projectId={projectId}
+      />
 
       {/* Project Type */}
-      <div className="space-y-2">
-        <Label>Project Type</Label>
-        <Select
-          value={payment.projectType || "INDIVIDUAL"}
-          onValueChange={(value) =>
-            updatePayment({ projectType: value as "INDIVIDUAL" | "BUSINESS" | "NONPROFIT" })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="INDIVIDUAL">
-              Individual (raising funds in your own name)
-            </SelectItem>
-            <SelectItem value="BUSINESS">
-              Business (raising on behalf of a company)
-            </SelectItem>
-            <SelectItem value="NONPROFIT">
-              Nonprofit (raising for a nonprofit organization)
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <ProjectTypeSection
+        payment={payment}
+        updatePayment={updatePayment}
+      />
 
       <Separator />
 
       {/* Content Declaration */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="font-semibold">Content Declaration</h3>
-          <p className="text-sm text-muted-foreground">
-            Please indicate if your project contains sensitive content
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="adult-content"
-              checked={payment.hasAdultContent || false}
-              onCheckedChange={(checked) =>
-                updatePayment({ hasAdultContent: checked as boolean })
-              }
-            />
-            <Label htmlFor="adult-content" className="font-normal">
-              My project contains adult content but is used to further the narrative of the story and not in an explicit way.
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="risky-content"
-              checked={payment.hasRiskyContent || false}
-              onCheckedChange={(checked) =>
-                updatePayment({ hasRiskyContent: checked as boolean })
-              }
-            />
-            <Label htmlFor="risky-content" className="font-normal">
-              My project contains controversial or violent content but is used to further the narrative of the story and not in an explicit way.
-            </Label>
-          </div>
-
-          {/* SFW promo agreement - mandatory */}
-          <div className="mt-4 p-4 rounded-lg border bg-amber-50/50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="promo-sfw"
-                checked={payment.promoContentSfw || false}
-                onCheckedChange={(checked) =>
-                  updatePayment({ promoContentSfw: checked as boolean })
-                }
-                required
-              />
-              <div className="space-y-1">
-                <Label htmlFor="promo-sfw" className="font-medium cursor-pointer">
-                  I agree that no NSFW content will be used in my project&apos;s promotional video, image, or project title <span className="text-destructive">*</span>
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  This allows your project to be displayed publicly on the platform. Users will need to verify their age before viewing the full project content.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {hasAdultContent && (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>I agree that no NSFW content will be used in my project&apos;s promotional video, image, or project title</AlertTitle>
-            <AlertDescription>
-              Projects with controversial or violent content but is used to further the narrative require additional review before launch.
-              Please ensure your promotional materials are safe for work.
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
+      <ContentDeclarationSection
+        payment={payment}
+        updatePayment={updatePayment}
+        hasAdultContent={hasAdultContent}
+      />
 
       <Separator />
 
       {/* Payment Processor Selection */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="font-semibold">Payment Processing</h3>
-          <p className="text-sm text-muted-foreground">
-            Select how you want to receive payments from backers
-          </p>
-        </div>
-
-        {mustUseAltProcessor && (
-          <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
-            <AlertTriangle className="h-4 w-4 text-[#0066FF]" />
-            <AlertTitle>Alternative Processor Required</AlertTitle>
-            <AlertDescription>
-              Projects with adult or controversial content must use DivinityCoin for payment processing.
-              Stripe does not process payments for this type of content.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Stripe Option */}
-          <Card
-            className={`cursor-pointer transition-all ${
-              payment.paymentProcessor === "STRIPE" ? "border-2 border-primary" : "border"
-            } ${mustUseAltProcessor ? "opacity-50 cursor-not-allowed" : ""}`}
-            onClick={() => !mustUseAltProcessor && updatePayment({ paymentProcessor: "STRIPE" })}
-          >
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-[#635BFF] flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-white" />
-                  </div>
-                  Stripe
-                  {!mustUseAltProcessor && (
-                    <Badge variant="secondary" className="ml-2">Recommended</Badge>
-                  )}
-                </CardTitle>
-                {payment.paymentProcessor === "STRIPE" && (
-                  <CheckCircle className="h-5 w-5 text-primary" />
-                )}
-              </div>
-              <CardDescription>
-                {mustUseAltProcessor
-                  ? "Not available for adult/controversial content"
-                  : "Industry-leading payment processing"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Check className="h-3 w-3 text-green-500" />
-                  <span>~6% total fees (2.9% + $0.30 + 3% platform)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-3 w-3 text-green-500" />
-                  <span>Fast payouts via Stripe Connect</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-3 w-3 text-green-500" />
-                  <span>All major cards + Apple/Google Pay</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* DivinityCoin Option */}
-          <Card
-            className={`cursor-pointer transition-all ${
-              payment.paymentProcessor === "DIVINITYCOIN" ? "border-2 border-primary" : "border"
-            }`}
-            onClick={() => updatePayment({ paymentProcessor: "DIVINITYCOIN" })}
-          >
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-[#0066FF] flex items-center justify-center">
-                    <Banknote className="h-5 w-5 text-white" />
-                  </div>
-                  DivinityCoin
-                  {mustUseAltProcessor && (
-                    <Badge variant="default" className="ml-2 bg-[#0066FF]">Required</Badge>
-                  )}
-                </CardTitle>
-                {payment.paymentProcessor === "DIVINITYCOIN" && (
-                  <CheckCircle className="h-5 w-5 text-primary" />
-                )}
-              </div>
-              <CardDescription>
-                Universal credit system for all content types
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Check className="h-3 w-3 text-green-500" />
-                  <span>~9% total fees (6% partner + 3% platform)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-3 w-3 text-green-500" />
-                  <span>Settlements within 14 business days</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-3 w-3 text-green-500" />
-                  <span>Supports adult/controversial content</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-        </div>
-
-        {/* Fee Calculator */}
-        {payment.paymentProcessor === "STRIPE" && (
-          <div className="rounded-lg bg-muted/50 p-4 border">
-            <h4 className="font-medium mb-3">
-              Stripe Fee Breakdown for {formatCurrency(goalAmount)} Goal
-            </h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Stripe processing fee (~2.9% + $0.30/txn)</span>
-                <span className="font-medium">{formatCurrency(stripeFee)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Platform fee (3%)</span>
-                <span className="font-medium">{formatCurrency(platformFee)}</span>
-              </div>
-              <Separator className="my-2" />
-              <div className="flex justify-between font-semibold">
-                <span>Total fees</span>
-                <span className="text-amber-600">{formatCurrency(totalFees)}</span>
-              </div>
-              <div className="flex justify-between font-semibold text-lg">
-                <span>You receive</span>
-                <span className="text-green-600">{formatCurrency(netAmount)}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {payment.paymentProcessor === "DIVINITYCOIN" && (
-          <>
-          <Alert className="bg-gradient-to-r from-blue-50/80 to-sky-50/80 dark:from-blue-900/20 dark:to-sky-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
-            <Banknote className="h-4 w-4 text-[#0066FF]" />
-            <AlertTitle>Why Choose DivinityCoin?</AlertTitle>
-            <AlertDescription className="mt-2 space-y-2 text-sm">
-              <p>
-                <strong>Content Freedom:</strong> Unlike traditional payment processors, DivinityCoin has no content restrictions.
-                Your campaign cannot be taken down or have payments frozen due to adult, mature, or controversial content in your project.
-              </p>
-              <p>
-                <strong>Protection from Processor Policies:</strong> Stripe and other traditional processors can refuse service
-                or freeze funds at any time based on their content policies. With DivinityCoin, your funds are secure and protected
-                from arbitrary policy changes.
-              </p>
-              <p>
-                <strong>Pre-funded Payments:</strong> Backers purchase DivinityCoin credits in advance, meaning when they pledge
-                to your campaign, the funds are already secured. This eliminates failed payment issues common with traditional
-                card processing.
-              </p>
-              <a
-                href="https://divinitycoin.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[#0066FF] hover:text-[#0052CC] hover:underline font-medium"
-              >
-                Learn more about DivinityCoin <ExternalLink className="h-3 w-3" />
-              </a>
-            </AlertDescription>
-          </Alert>
-
-          <div className="rounded-lg bg-muted/50 p-4 border">
-            <h4 className="font-medium mb-3">
-              DivinityCoin Fee Breakdown for {formatCurrency(goalAmount)} Goal
-            </h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>DivinityCoin partner fee (6%)</span>
-                <span className="font-medium">{formatCurrency(goalAmount * 0.06)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Platform fee (3%)</span>
-                <span className="font-medium">{formatCurrency((goalAmount - goalAmount * 0.06) * 0.03)}</span>
-              </div>
-              <Separator className="my-2" />
-              <div className="flex justify-between font-semibold">
-                <span>Total fees</span>
-                <span className="text-[#0066FF]">
-                  {formatCurrency(goalAmount * 0.06 + (goalAmount - goalAmount * 0.06) * 0.03)}
-                </span>
-              </div>
-              <div className="flex justify-between font-semibold text-lg">
-                <span>You receive</span>
-                <span className="text-green-600">
-                  {formatCurrency(goalAmount - goalAmount * 0.06 - (goalAmount - goalAmount * 0.06) * 0.03)}
-                </span>
-              </div>
-            </div>
-          </div>
-          </>
-        )}
-
-      </div>
+      <PaymentProcessorSection
+        payment={payment}
+        updatePayment={updatePayment}
+        mustUseAltProcessor={mustUseAltProcessor}
+        goalAmount={goalAmount}
+        stripeFee={stripeFee}
+        platformFee={platformFee}
+        totalFees={totalFees}
+        netAmount={netAmount}
+      />
 
       <Separator />
 
       {/* Connect Stripe Account - Only show when Stripe is selected */}
       {payment.paymentProcessor === "STRIPE" && (
-      <div className="space-y-4">
-        <h3 className="font-semibold">Connect Your Stripe Account</h3>
-
-        {/* Show errors if any */}
-        {(stripeStatus.error || connectError) && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Stripe Connection Issue</AlertTitle>
-            <AlertDescription className="space-y-3">
-              <span>{stripeStatus.error || connectError}</span>
-              {connectError?.includes("already connected") && (
-                <div className="flex flex-col gap-2">
-                  <span>
-                    If you previously connected a Stripe account but never completed onboarding,
-                    you can reset your connection and try again.
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowResetConfirm(true)}
-                    disabled={isResetting}
-                    className="w-fit"
-                  >
-                    {isResetting ? (
-                      <>
-                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                        Resetting...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Reset Stripe Connection
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <Card className={stripeStatus.onboarded ? "border-green-500" : ""}>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-start gap-4">
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
-                  stripeStatus.onboarded ? "bg-green-500" : "bg-[#635BFF]"
-                }`}>
-                  {stripeStatus.onboarded ? (
-                    <CheckCircle className="h-6 w-6 text-white" />
-                  ) : (
-                    <CreditCard className="h-6 w-6 text-white" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium">
-                    {stripeStatus.onboarded ? "Stripe Connected" : "Stripe Connect"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {stripeStatus.loading ? (
-                      "Checking connection status..."
-                    ) : stripeStatus.onboarded ? (
-                      "Your Stripe account is connected and ready to receive payments."
-                    ) : stripeStatus.connected ? (
-                      "Your Stripe account is connected but onboarding is incomplete. Click to continue setup."
-                    ) : (
-                      "Connect or create a Stripe account to receive payouts. You'll complete identity verification through Stripe's secure process."
-                    )}
-                  </p>
-                </div>
-              </div>
-              {stripeStatus.onboarded ? (
-                <div className="flex items-center gap-2">
-                  <Badge variant="default" className="bg-green-500">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Connected
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowResetConfirm(true)}
-                    disabled={isResetting}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    {isResetting ? "Disconnecting..." : "Disconnect"}
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  onClick={handleConnectStripe}
-                  disabled={isConnecting || stripeStatus.loading}
-                >
-                  {stripeStatus.loading ? "Checking..." : isConnecting ? "Connecting..." : stripeStatus.connected ? "Complete Setup" : "Connect Stripe"}
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {!stripeStatus.onboarded && (
-          <p className="text-xs text-muted-foreground">
-            Don&apos;t have a Stripe account?{" "}
-            <a
-              href="https://stripe.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline"
-            >
-              Sign up for free
-            </a>
-            {" "}&bull; It only takes a few minutes to get started
-          </p>
-        )}
-      </div>
+        <StripeConnectSection
+          stripeStatus={stripeStatus}
+          connectError={connectError}
+          isConnecting={isConnecting}
+          isResetting={isResetting}
+          handleConnectStripe={handleConnectStripe}
+          setShowResetConfirm={setShowResetConfirm}
+        />
       )}
 
       {/* DivinityCoin Bank Account for Settlements - Only show when DivinityCoin is selected */}
       {payment.paymentProcessor === "DIVINITYCOIN" && (
-      <>
-      <Separator />
+        <>
+          <Separator />
 
-      <div className="space-y-4">
-        <div>
-          <h3 className="font-semibold flex items-center gap-2">
-            <Banknote className="h-5 w-5" />
-            DivinityCoin Settlement Account
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Enter your bank account details for DivinityCoin settlements. All data is encrypted and stored securely.
-          </p>
-        </div>
-
-        <Card className={bankAccountStatus.saved ? "border-green-500" : ""}>
-          <CardContent className="pt-6">
-            {bankAccountStatus.loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : bankAccountStatus.saved ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-green-500 flex items-center justify-center shrink-0">
-                      <CheckCircle className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Bank Account Connected</p>
-                      <p className="text-sm text-muted-foreground">
-                        {bankAccount.bankName} • Account ending in {bankAccountStatus.lastFour}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="default" className="bg-green-500">
-                    <Lock className="h-3 w-3 mr-1" />
-                    Secured
-                  </Badge>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setBankAccountStatus(prev => ({ ...prev, saved: false }))}
-                >
-                  Update Bank Account
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <Lock className="h-4 w-4" />
-                  <AlertTitle>Secure & Encrypted</AlertTitle>
-                  <AlertDescription>
-                    Your bank account information is encrypted using AES-256 encryption before storage.
-                    We never store unencrypted account numbers.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-name">Bank Name</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="bank-name"
-                        placeholder="e.g., Chase Bank, Bank of America"
-                        value={bankAccount.bankName}
-                        onChange={(e) => setBankAccount(prev => ({ ...prev, bankName: e.target.value }))}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="account-holder">Account Holder Name</Label>
-                    <Input
-                      id="account-holder"
-                      placeholder="Name as it appears on account"
-                      value={bankAccount.accountHolder}
-                      onChange={(e) => setBankAccount(prev => ({ ...prev, accountHolder: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="routing-number">Routing Number</Label>
-                    <Input
-                      id="routing-number"
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={9}
-                      placeholder="9-digit routing number"
-                      value={bankAccount.routingNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 9);
-                        setBankAccount(prev => ({ ...prev, routingNumber: value }));
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      9 digits, found on the bottom left of your checks
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="account-number">Account Number</Label>
-                    <Input
-                      id="account-number"
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={17}
-                      placeholder="Your account number"
-                      value={bankAccount.accountNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 17);
-                        setBankAccount(prev => ({ ...prev, accountNumber: value }));
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Account Type</Label>
-                  <Select
-                    value={bankAccount.accountType}
-                    onValueChange={(value: "checking" | "savings") =>
-                      setBankAccount(prev => ({ ...prev, accountType: value }))
-                    }
-                  >
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="checking">Checking</SelectItem>
-                      <SelectItem value="savings">Savings</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-3 pt-2">
-                  <Button
-                    onClick={handleSaveBankAccount}
-                    disabled={isSavingBank}
-                  >
-                    {isSavingBank ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Encrypting & Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-4 w-4 mr-2" />
-                        Save Bank Account
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  DivinityCoin settlements are processed within 14 business days after your campaign ends.{" "}
-                  <a
-                    href="https://divinitycoin.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline"
-                  >
-                    Learn more about DivinityCoin
-                  </a>
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      </>
+          <DivinityCoinBankSection
+            bankAccount={bankAccount}
+            setBankAccount={setBankAccount}
+            bankAccountStatus={bankAccountStatus}
+            setBankAccountStatus={setBankAccountStatus}
+            isSavingBank={isSavingBank}
+            handleSaveBankAccount={handleSaveBankAccount}
+          />
+        </>
       )}
 
       <Separator />
 
       {/* Retailer Access */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="font-semibold flex items-center gap-2">
-            <Store className="h-5 w-5" />
-            Retailer Access (LCS Program)
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Allow certified retailers to purchase your products at wholesale pricing
-          </p>
-        </div>
-
-        <Card className={payment.allowRetailerPledges ? "border-primary" : ""}>
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="allow-retailers"
-                checked={payment.allowRetailerPledges || false}
-                onCheckedChange={(checked) =>
-                  updatePayment({ allowRetailerPledges: checked as boolean })
-                }
-              />
-              <div className="flex-1">
-                <Label htmlFor="allow-retailers" className="font-medium">
-                  Enable retailer wholesale orders
-                </Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Certified retailers (comic shops, bookstores, etc.) will be able to place bulk orders
-                  at a discounted wholesale price. This can help increase your project&apos;s reach and
-                  get your product into physical stores.
-                </p>
-              </div>
-            </div>
-
-            {payment.allowRetailerPledges && (
-              <div className="mt-6 space-y-4 border-t pt-4">
-                <Alert className="bg-primary/5 border-primary/20">
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    Your project will be visible to all certified retailers in our LCS Program.
-                    Retailers must place orders that meet your minimum quantity requirement.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="retailer-discount">Wholesale Discount (%)</Label>
-                    <Select
-                      value={String(payment.retailerDiscount || 50)}
-                      onValueChange={(value) =>
-                        updatePayment({ retailerDiscount: parseInt(value) })
-                      }
-                    >
-                      <SelectTrigger id="retailer-discount">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="40">40% off retail</SelectItem>
-                        <SelectItem value="45">45% off retail</SelectItem>
-                        <SelectItem value="50">50% off retail (recommended)</SelectItem>
-                        <SelectItem value="55">55% off retail</SelectItem>
-                        <SelectItem value="60">60% off retail</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Industry standard is 50% wholesale discount
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="min-quantity">Minimum Order Quantity</Label>
-                    <Input
-                      id="min-quantity"
-                      type="number"
-                      min={1}
-                      value={payment.retailerMinQuantity || 5}
-                      onChange={(e) =>
-                        updatePayment({ retailerMinQuantity: parseInt(e.target.value) || 5 })
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Minimum units per wholesale order
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="max-quantity">Maximum Order Quantity</Label>
-                    <Input
-                      id="max-quantity"
-                      type="number"
-                      min={0}
-                      placeholder="No limit"
-                      value={payment.retailerMaxQuantity || ""}
-                      onChange={(e) =>
-                        updatePayment({
-                          retailerMaxQuantity: e.target.value
-                            ? parseInt(e.target.value)
-                            : undefined,
-                        })
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Leave empty for no limit
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-lg bg-muted p-4">
-                  <h4 className="font-medium mb-2">Retailer Pricing Preview</h4>
-                  <div className="text-sm space-y-1">
-                    <p>
-                      If your reward tier is priced at <span className="font-medium">{formatCurrency(25)}</span>,
-                      retailers will pay{" "}
-                      <span className="font-medium text-green-600">
-                        {formatCurrency(25 * (1 - (payment.retailerDiscount || 50) / 100))}
-                      </span>{" "}
-                      per unit ({payment.retailerDiscount || 50}% discount)
-                    </p>
-                    <p className="text-muted-foreground">
-                      For a minimum order of {payment.retailerMinQuantity || 5} units, that&apos;s{" "}
-                      {formatCurrency(
-                        25 * (1 - (payment.retailerDiscount || 50) / 100) * (payment.retailerMinQuantity || 5)
-                      )}{" "}
-                      wholesale
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <RetailerAccessSection
+        payment={payment}
+        updatePayment={updatePayment}
+      />
 
       {/* Chargeback Protection Card */}
-      <div className="space-y-4 pt-6">
-        <Separator />
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Chargeback Protection Card
-            </CardTitle>
-            <CardDescription>
-              A valid credit or debit card is required for each project. This card will be kept on file and may be
-              charged in the event of chargebacks, fraud, or disputes related to this campaign. This is a standard
-              requirement for all creators on our platform.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {chargebackCardStatus.loading ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Checking card status...</span>
-              </div>
-            ) : chargebackCardStatus.saved ? (
-              <div className="space-y-4">
-                <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertTitle className="text-green-700 dark:text-green-400">Card on file</AlertTitle>
-                  <AlertDescription className="text-green-600 dark:text-green-500">
-                    {chargebackCardStatus.brand} ending in {chargebackCardStatus.lastFour}
-                    {chargebackCardStatus.expMonth && chargebackCardStatus.expYear && (
-                      <> &middot; Expires {String(chargebackCardStatus.expMonth).padStart(2, "0")}/{chargebackCardStatus.expYear}</>
-                    )}
-                  </AlertDescription>
-                </Alert>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setChargebackCardStatus(prev => ({ ...prev, saved: false }))}
-                >
-                  Update Card
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <AlertTitle className="text-amber-700 dark:text-amber-400">Required</AlertTitle>
-                  <AlertDescription className="text-amber-600 dark:text-amber-500">
-                    A chargeback protection card must be on file before your project can be launched.
-                  </AlertDescription>
-                </Alert>
-
-                {/* Card Details */}
-                <div className="grid gap-4">
-                  <div>
-                    <Label htmlFor="cb-card-number">Card Number</Label>
-                    <Input
-                      id="cb-card-number"
-                      placeholder="1234 5678 9012 3456"
-                      value={chargebackCard.cardNumber}
-                      onChange={(e) => {
-                        // Format with spaces every 4 digits
-                        const raw = e.target.value.replace(/\D/g, "").slice(0, 19);
-                        const formatted = raw.replace(/(\d{4})(?=\d)/g, "$1 ");
-                        setChargebackCard(prev => ({ ...prev, cardNumber: formatted }));
-                      }}
-                      maxLength={23}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <Label htmlFor="cb-exp-month">Exp Month</Label>
-                      <Select
-                        value={chargebackCard.expMonth}
-                        onValueChange={(v) => setChargebackCard(prev => ({ ...prev, expMonth: v }))}
-                      >
-                        <SelectTrigger id="cb-exp-month">
-                          <SelectValue placeholder="MM" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 12 }, (_, i) => (
-                            <SelectItem key={i + 1} value={String(i + 1)}>
-                              {String(i + 1).padStart(2, "0")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="cb-exp-year">Exp Year</Label>
-                      <Select
-                        value={chargebackCard.expYear}
-                        onValueChange={(v) => setChargebackCard(prev => ({ ...prev, expYear: v }))}
-                      >
-                        <SelectTrigger id="cb-exp-year">
-                          <SelectValue placeholder="YYYY" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 10 }, (_, i) => {
-                            const year = new Date().getFullYear() + i;
-                            return (
-                              <SelectItem key={year} value={String(year)}>
-                                {year}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="cb-cvc">CVC</Label>
-                      <Input
-                        id="cb-cvc"
-                        placeholder="123"
-                        value={chargebackCard.cvc}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-                          setChargebackCard(prev => ({ ...prev, cvc: v }));
-                        }}
-                        maxLength={4}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Billing Address */}
-                <div className="space-y-3 pt-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Billing Address</Label>
-                  <div className="grid gap-3">
-                    <div>
-                      <Label htmlFor="cb-billing-name">Name on Card</Label>
-                      <Input
-                        id="cb-billing-name"
-                        placeholder="Full name as it appears on card"
-                        value={chargebackCard.billingName}
-                        onChange={(e) => setChargebackCard(prev => ({ ...prev, billingName: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cb-billing-line1">Address Line 1</Label>
-                      <Input
-                        id="cb-billing-line1"
-                        placeholder="Street address"
-                        value={chargebackCard.billingLine1}
-                        onChange={(e) => setChargebackCard(prev => ({ ...prev, billingLine1: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cb-billing-line2">Address Line 2 (optional)</Label>
-                      <Input
-                        id="cb-billing-line2"
-                        placeholder="Apt, suite, etc."
-                        value={chargebackCard.billingLine2}
-                        onChange={(e) => setChargebackCard(prev => ({ ...prev, billingLine2: e.target.value }))}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label htmlFor="cb-billing-city">City</Label>
-                        <Input
-                          id="cb-billing-city"
-                          placeholder="City"
-                          value={chargebackCard.billingCity}
-                          onChange={(e) => setChargebackCard(prev => ({ ...prev, billingCity: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="cb-billing-state">State</Label>
-                        <Input
-                          id="cb-billing-state"
-                          placeholder="State"
-                          value={chargebackCard.billingState}
-                          onChange={(e) => setChargebackCard(prev => ({ ...prev, billingState: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label htmlFor="cb-billing-zip">ZIP / Postal Code</Label>
-                        <Input
-                          id="cb-billing-zip"
-                          placeholder="12345"
-                          value={chargebackCard.billingZip}
-                          onChange={(e) => setChargebackCard(prev => ({ ...prev, billingZip: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="cb-billing-country">Country</Label>
-                        <Select
-                          value={chargebackCard.billingCountry}
-                          onValueChange={(v) => setChargebackCard(prev => ({ ...prev, billingCountry: v }))}
-                        >
-                          <SelectTrigger id="cb-billing-country">
-                            <SelectValue placeholder="Country" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="US">United States</SelectItem>
-                            <SelectItem value="CA">Canada</SelectItem>
-                            <SelectItem value="GB">United Kingdom</SelectItem>
-                            <SelectItem value="AU">Australia</SelectItem>
-                            <SelectItem value="DE">Germany</SelectItem>
-                            <SelectItem value="FR">France</SelectItem>
-                            <SelectItem value="JP">Japan</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Lock className="h-3 w-3" />
-                  <span>Card details are encrypted with AES-256 and stored securely.</span>
-                </div>
-
-                <Button
-                  onClick={handleSaveChargebackCard}
-                  disabled={isSavingCard || !projectId}
-                  className="w-full"
-                >
-                  {isSavingCard ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving card...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Chargeback Protection Card
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <ChargebackCardSection
+        chargebackCard={chargebackCard}
+        setChargebackCard={setChargebackCard}
+        chargebackCardStatus={chargebackCardStatus}
+        setChargebackCardStatus={setChargebackCardStatus}
+        isSavingCard={isSavingCard}
+        handleSaveChargebackCard={handleSaveChargebackCard}
+        projectId={projectId}
+      />
 
       <ConfirmDialog
         open={showResetConfirm}

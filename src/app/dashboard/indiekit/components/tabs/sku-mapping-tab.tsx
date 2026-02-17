@@ -4,81 +4,28 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Link2,
   Loader2,
   CheckCircle,
   Package,
-  Trash2,
   Save,
   Store,
-  XCircle,
   Info,
-  Plus,
-  SkipForward,
-  Undo2,
-  Layers,
-  ArrowRight,
-  Sparkles,
 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-
-interface SkuMapping {
-  id: string;
-  sourceType: string;
-  sourceId: string;
-  sourceName: string;
-  shopifySku: string;
-  shopifyProductName?: string;
-  quantity: number;
-}
-
-interface UnmappedItem {
-  sourceType: string;
-  sourceId: string;
-  sourceName: string;
-  amount?: number;
-  quantityClaimed?: number;
-}
-
-interface SkuValidationState {
-  status: "idle" | "validating" | "valid" | "invalid";
-  productName?: string;
-  error?: string;
-}
-
-interface SkippedItem {
-  id: string;
-  sourceType: string;
-  sourceId: string;
-  sourceName: string;
-}
-
-interface ModifierAddon {
-  id: string;
-  title: string;
-}
-
-interface TierReward {
-  id: string;
-  title: string;
-}
-
-interface ModifierSkuMapping {
-  id: string;
-  baseRewardId: string;
-  modifierAddonId: string;
-  shopifySku: string;
-  shopifyProductName?: string;
-}
-
-interface SkuMappingTabProps {
-  projectId?: string;
-}
+import { SkuItemRow, ModifierCombinationsCard } from "./sku-mapping-sections";
+import type {
+  SkuMapping,
+  UnmappedItem,
+  SkuValidationState,
+  SkippedItem,
+  ModifierAddon,
+  TierReward,
+  ModifierSkuMapping,
+  SkuMappingTabProps,
+} from "./sku-mapping-sections";
 
 export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   const searchParams = useSearchParams();
@@ -446,8 +393,8 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
       }
 
       // Check additional inputs
-      const additionalCount = additionalSkuCount[baseKey] || 0;
-      for (let i = 1; i <= additionalCount; i++) {
+      const addlCount = additionalSkuCount[baseKey] || 0;
+      for (let i = 1; i <= addlCount; i++) {
         const inputKey = `${baseKey}-${i}`;
         const sku = skuInputs[inputKey]?.trim();
         if (sku) {
@@ -564,8 +511,8 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
       }
 
       // Check additional inputs
-      const additionalCount = additionalSkuCount[baseKey] || 0;
-      for (let i = 1; i <= additionalCount; i++) {
+      const addlCount = additionalSkuCount[baseKey] || 0;
+      for (let i = 1; i <= addlCount; i++) {
         const inputKey = `${baseKey}-${i}`;
         const sku = skuInputs[inputKey]?.trim();
         if (sku) {
@@ -875,11 +822,6 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     }
   };
 
-  // Get existing modifier mapping for a combination
-  const getModifierMapping = (baseRewardId: string, modifierAddonId: string) => {
-    return modifierSkuMappings.find(m => m.baseRewardId === baseRewardId && m.modifierAddonId === modifierAddonId);
-  };
-
   // Get all unique source items that have at least one mapping or are in unmapped list
   const getAllSourceItems = () => {
     const itemMap = new Map<string, UnmappedItem>();
@@ -936,6 +878,36 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
 
     // When Shopify not connected, allow save as long as there's input
     return true;
+  };
+
+  // Handle SKU input change (passed to SkuItemRow)
+  const handleSkuInputChange = (key: string, value: string) => {
+    setSkuInputs(prev => ({
+      ...prev,
+      [key]: value
+    }));
+    if (shopifyStatus.connected && skuValidation[key]?.status !== "idle") {
+      setSkuValidation(prev => ({
+        ...prev,
+        [key]: { status: "idle" }
+      }));
+      delete validatedValuesRef.current[key];
+    }
+  };
+
+  // Handle SKU input blur (passed to SkuItemRow)
+  const handleSkuInputBlur = (key: string, value: string) => {
+    if (shopifyStatus.connected && value?.trim()) {
+      validateSku(key, value);
+    }
+  };
+
+  // Handle modifier input change
+  const handleModifierInputChange = (key: string, value: string) => {
+    setModifierSkuInputs(prev => ({
+      ...prev,
+      [key]: value
+    }));
   };
 
   // Show loading state
@@ -1013,7 +985,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                 <p className="font-medium">Manual Mode</p>
                 <p className="text-sm opacity-80">
                   SKUs are saved without validation. To enable automatic validation against your Shopify inventory,
-                  go to Settings → Shopify API Key to connect your store.
+                  go to Settings &rarr; Shopify API Key to connect your store.
                 </p>
               </div>
             </div>
@@ -1030,7 +1002,7 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-medium text-muted-foreground">
-                      Items ({getAllSourceItems().length}) • SKUs ({skuMappings.length})
+                      Items ({getAllSourceItems().length}) &bull; SKUs ({skuMappings.length})
                     </h4>
                     {getPendingSkuCount() > 0 && (
                       <Button
@@ -1055,349 +1027,33 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
                   <div className="space-y-4">
                     {getAllSourceItems().map((item) => {
                       const baseKey = `${item.sourceType}-${item.sourceId}`;
-                      const itemMappings = getMappingsForItem(item.sourceType, item.sourceId);
-                      const additionalCount = additionalSkuCount[baseKey] || 0;
-                      const hasMappings = itemMappings.length > 0;
-                      const isSkipped = isItemSkipped(item.sourceType, item.sourceId);
 
                       return (
-                        <div
+                        <SkuItemRow
                           key={baseKey}
-                          className={cn(
-                            "p-4 border rounded-lg",
-                            isSkipped
-                              ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800"
-                              : hasMappings
-                                ? "bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
-                                : "border-border"
-                          )}
-                        >
-                          {/* Item Header */}
-                          <div className="flex items-start gap-3 mb-3">
-                            <div className={cn(
-                              "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-                              isSkipped
-                                ? "bg-amber-100 dark:bg-amber-900/30"
-                                : hasMappings
-                                  ? "bg-green-100 dark:bg-green-900/30"
-                                  : "bg-muted"
-                            )}>
-                              {isSkipped ? (
-                                <SkipForward className="h-5 w-5 text-amber-600" />
-                              ) : (
-                                <Package className={cn(
-                                  "h-5 w-5",
-                                  hasMappings ? "text-green-600" : "text-muted-foreground"
-                                )} />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={cn("font-medium truncate", isSkipped && "text-amber-700 dark:text-amber-400")}>
-                                {item.sourceName}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                <Badge variant="outline" className="text-xs">
-                                  {item.sourceType === "ADDON" ? "Add-on" :
-                                   item.sourceType === "REWARD" ? "Reward" : "Item"}
-                                </Badge>
-                                {isSkipped ? (
-                                  <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
-                                    Skipped
-                                  </Badge>
-                                ) : hasMappings && (
-                                  <span className="text-sm text-green-600">
-                                    {itemMappings.length} SKU{itemMappings.length !== 1 ? "s" : ""} mapped
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {/* Mark as Modifier Button (only for add-ons) */}
-                            {item.sourceType === "ADDON" && !isSkipped && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleMarkAsModifier(item)}
-                                disabled={isMarkingAsModifier === item.sourceId}
-                                className="shrink-0 border-purple-300 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
-                                title="This is a modifier (like 'Upgrade to Metal') - move to Modifier SKU Combinations"
-                              >
-                                {isMarkingAsModifier === item.sourceId ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <Sparkles className="h-4 w-4 mr-1" />
-                                    Modifier
-                                  </>
-                                )}
-                              </Button>
-                            )}
-                            {/* Skip/Unskip Button */}
-                            <Button
-                              variant={isSkipped ? "outline" : "ghost"}
-                              size="sm"
-                              onClick={() => isSkipped ? handleUnskipItem(item) : handleSkipItem(item)}
-                              disabled={isSkipping === baseKey}
-                              className={cn(
-                                "shrink-0",
-                                isSkipped && "border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
-                              )}
-                              title={isSkipped ? "Restore for fulfillment" : "Skip from fulfillment"}
-                            >
-                              {isSkipping === baseKey ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : isSkipped ? (
-                                <>
-                                  <Undo2 className="h-4 w-4 mr-1" />
-                                  Restore
-                                </>
-                              ) : (
-                                <>
-                                  <SkipForward className="h-4 w-4 mr-1" />
-                                  Skip
-                                </>
-                              )}
-                            </Button>
-                          </div>
-
-                          {/* Existing SKU Mappings (hidden when skipped) */}
-                          {!isSkipped && itemMappings.length > 0 && (
-                            <div className="space-y-2 mb-3 ml-13 pl-3 border-l-2 border-green-200 dark:border-green-800">
-                              {itemMappings.map((mapping) => (
-                                <div
-                                  key={mapping.id}
-                                  className="flex items-center justify-between py-2"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-                                    <span className="font-mono text-sm">{mapping.shopifySku}</span>
-                                    {mapping.shopifyProductName && (
-                                      <span className="text-sm text-muted-foreground">
-                                        → {mapping.shopifyProductName}
-                                      </span>
-                                    )}
-                                    {mapping.quantity > 1 && (
-                                      <Badge variant="secondary" className="text-xs">
-                                        ×{mapping.quantity}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteSkuMapping(mapping)}
-                                    disabled={isSavingSkuMapping === mapping.id}
-                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                  >
-                                    {isSavingSkuMapping === mapping.id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-3 w-3" />
-                                    )}
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* New SKU Input Fields (hidden when skipped) */}
-                          {!isSkipped && (
-                          <div className="space-y-2 ml-13">
-                            {/* Primary input (always shown if no mappings, or as additional) */}
-                            {(() => {
-                              const inputKey = `${baseKey}-0`;
-                              const validation = skuValidation[inputKey];
-                              const inputValue = skuInputs[inputKey] || "";
-
-                              return (
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <div className="relative flex-1 max-w-[200px]">
-                                      <Input
-                                        placeholder={shopifyStatus.connected ? "Add SKU" : "Add SKU"}
-                                        className={cn(
-                                          "h-9",
-                                          shopifyStatus.connected && "pr-8",
-                                          getInputClassName(inputKey)
-                                        )}
-                                        value={inputValue}
-                                        onChange={(e) => {
-                                          const newValue = e.target.value;
-                                          setSkuInputs(prev => ({
-                                            ...prev,
-                                            [inputKey]: newValue
-                                          }));
-                                          if (shopifyStatus.connected && skuValidation[inputKey]?.status !== "idle") {
-                                            setSkuValidation(prev => ({
-                                              ...prev,
-                                              [inputKey]: { status: "idle" }
-                                            }));
-                                            delete validatedValuesRef.current[inputKey];
-                                          }
-                                        }}
-                                        onBlur={() => {
-                                          if (shopifyStatus.connected && inputValue?.trim()) {
-                                            validateSku(inputKey, inputValue);
-                                          }
-                                        }}
-                                      />
-                                      {shopifyStatus.connected && (
-                                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                          {validation?.status === "validating" && (
-                                            <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
-                                          )}
-                                          {validation?.status === "valid" && (
-                                            <CheckCircle className="h-4 w-4 text-green-500" />
-                                          )}
-                                          {validation?.status === "invalid" && (
-                                            <XCircle className="h-4 w-4 text-red-500" />
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleSaveSkuMapping(item, inputKey)}
-                                      disabled={
-                                        isSavingSkuMapping === inputKey ||
-                                        !canSave(inputKey, inputValue) ||
-                                        (shopifyStatus.connected && validation?.status === "validating")
-                                      }
-                                      className={cn(
-                                        "h-9",
-                                        shopifyStatus.connected && validation?.status === "valid"
-                                          ? "bg-green-600 hover:bg-green-700"
-                                          : "bg-[#95BF47] hover:bg-[#7a9e3a]"
-                                      )}
-                                    >
-                                      {isSavingSkuMapping === inputKey ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <Save className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => addSkuField(item.sourceType, item.sourceId)}
-                                      className="h-9"
-                                      title="Add another SKU"
-                                    >
-                                      <Plus className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                  {shopifyStatus.connected && validation?.status === "valid" && validation.productName && (
-                                    <p className="text-xs text-green-600 truncate">
-                                      → {validation.productName}
-                                    </p>
-                                  )}
-                                  {shopifyStatus.connected && validation?.status === "invalid" && (
-                                    <p className="text-xs text-red-600">
-                                      {validation.error || "SKU not found"}
-                                    </p>
-                                  )}
-                                </div>
-                              );
-                            })()}
-
-                            {/* Additional input fields */}
-                            {Array.from({ length: additionalCount }).map((_, idx) => {
-                              const inputKey = `${baseKey}-${idx + 1}`;
-                              const validation = skuValidation[inputKey];
-                              const inputValue = skuInputs[inputKey] || "";
-
-                              return (
-                                <div key={inputKey} className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <div className="relative flex-1 max-w-[200px]">
-                                      <Input
-                                        placeholder={shopifyStatus.connected ? "Add SKU" : "Add SKU"}
-                                        className={cn(
-                                          "h-9",
-                                          shopifyStatus.connected && "pr-8",
-                                          getInputClassName(inputKey)
-                                        )}
-                                        value={inputValue}
-                                        onChange={(e) => {
-                                          const newValue = e.target.value;
-                                          setSkuInputs(prev => ({
-                                            ...prev,
-                                            [inputKey]: newValue
-                                          }));
-                                          if (shopifyStatus.connected && skuValidation[inputKey]?.status !== "idle") {
-                                            setSkuValidation(prev => ({
-                                              ...prev,
-                                              [inputKey]: { status: "idle" }
-                                            }));
-                                            delete validatedValuesRef.current[inputKey];
-                                          }
-                                        }}
-                                        onBlur={() => {
-                                          if (shopifyStatus.connected && inputValue?.trim()) {
-                                            validateSku(inputKey, inputValue);
-                                          }
-                                        }}
-                                      />
-                                      {shopifyStatus.connected && (
-                                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                          {validation?.status === "validating" && (
-                                            <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
-                                          )}
-                                          {validation?.status === "valid" && (
-                                            <CheckCircle className="h-4 w-4 text-green-500" />
-                                          )}
-                                          {validation?.status === "invalid" && (
-                                            <XCircle className="h-4 w-4 text-red-500" />
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleSaveSkuMapping(item, inputKey)}
-                                      disabled={
-                                        isSavingSkuMapping === inputKey ||
-                                        !canSave(inputKey, inputValue) ||
-                                        (shopifyStatus.connected && validation?.status === "validating")
-                                      }
-                                      className={cn(
-                                        "h-9",
-                                        shopifyStatus.connected && validation?.status === "valid"
-                                          ? "bg-green-600 hover:bg-green-700"
-                                          : "bg-[#95BF47] hover:bg-[#7a9e3a]"
-                                      )}
-                                    >
-                                      {isSavingSkuMapping === inputKey ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <Save className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => removeSkuField(item.sourceType, item.sourceId, idx + 1)}
-                                      className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
-                                      title="Remove this field"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                  {shopifyStatus.connected && validation?.status === "valid" && validation.productName && (
-                                    <p className="text-xs text-green-600 truncate">
-                                      → {validation.productName}
-                                    </p>
-                                  )}
-                                  {shopifyStatus.connected && validation?.status === "invalid" && (
-                                    <p className="text-xs text-red-600">
-                                      {validation.error || "SKU not found"}
-                                    </p>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          )}
-                        </div>
+                          item={item}
+                          itemMappings={getMappingsForItem(item.sourceType, item.sourceId)}
+                          isSkipped={isItemSkipped(item.sourceType, item.sourceId)}
+                          additionalCount={additionalSkuCount[baseKey] || 0}
+                          baseKey={baseKey}
+                          shopifyConnected={shopifyStatus.connected}
+                          skuInputs={skuInputs}
+                          skuValidation={skuValidation}
+                          isSavingSkuMapping={isSavingSkuMapping}
+                          isSkipping={isSkipping}
+                          isMarkingAsModifier={isMarkingAsModifier}
+                          onSaveSkuMapping={handleSaveSkuMapping}
+                          onDeleteSkuMapping={handleDeleteSkuMapping}
+                          onSkipItem={handleSkipItem}
+                          onUnskipItem={handleUnskipItem}
+                          onMarkAsModifier={handleMarkAsModifier}
+                          onAddSkuField={addSkuField}
+                          onRemoveSkuField={removeSkuField}
+                          onInputChange={handleSkuInputChange}
+                          onInputBlur={handleSkuInputBlur}
+                          canSave={canSave}
+                          getInputClassName={getInputClassName}
+                        />
                       );
                     })}
                   </div>
@@ -1425,8 +1081,8 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
 
                 const allItemsReady = allItems.every(item => {
                   const hasMappings = getMappingsForItem(item.sourceType, item.sourceId).length > 0;
-                  const isSkipped = isItemSkipped(item.sourceType, item.sourceId);
-                  return hasMappings || isSkipped;
+                  const itemSkipped = isItemSkipped(item.sourceType, item.sourceId);
+                  return hasMappings || itemSkipped;
                 });
 
                 const mappedCount = allItems.filter(item =>
@@ -1458,175 +1114,21 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
 
       {/* Modifier Addon SKU Combinations */}
       {modifierAddons.length > 0 && tierRewards.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Layers className="h-5 w-5 text-purple-600" />
-              <CardTitle className="text-base">Modifier SKU Combinations</CardTitle>
-            </div>
-            <CardDescription>
-              When a backer applies an upgrade addon (like &quot;Upgrade to Metal&quot;) to a base reward,
-              map the combined result to a specific SKU. This determines which product to fulfill when
-              a modifier is applied.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isLoadingModifiers ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Group by modifier addon */}
-                {modifierAddons.map((modifier) => (
-                  <div key={modifier.id} className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-purple-100 text-purple-700 border-purple-200">
-                        {modifier.title}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">modifier</span>
-                    </div>
-
-                    <div className="space-y-2 ml-4 border-l-2 border-purple-200 pl-4">
-                      {tierRewards.map((reward) => {
-                        const existingMapping = getModifierMapping(reward.id, modifier.id);
-                        const inputKey = `${reward.id}-${modifier.id}`;
-                        const inputValue = modifierSkuInputs[inputKey] || "";
-                        const isSkipped = skippedModifierCombos.has(inputKey);
-
-                        return (
-                          <div
-                            key={`${reward.id}-${modifier.id}`}
-                            className={cn(
-                              "p-3 rounded-lg border",
-                              isSkipped
-                                ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200"
-                                : existingMapping
-                                  ? "bg-green-50/50 dark:bg-green-900/10 border-green-200"
-                                  : "bg-muted/30"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              {/* Base Reward */}
-                              <div className="flex-1 min-w-0">
-                                <p className={cn("text-sm font-medium truncate", isSkipped && "text-amber-700 dark:text-amber-400")}>
-                                  {reward.title}
-                                </p>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <span>Base reward</span>
-                                  <ArrowRight className="h-3 w-3" />
-                                  <span className={isSkipped ? "text-amber-600" : "text-purple-600"}>{modifier.title}</span>
-                                  {isSkipped && (
-                                    <Badge variant="outline" className="ml-2 text-xs bg-amber-100 text-amber-700 border-amber-300">
-                                      Skipped
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Skipped state - show restore button */}
-                              {isSkipped ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleUnskipModifierCombo(reward.id, modifier.id)}
-                                  disabled={isSkippingModifier === inputKey}
-                                  className="border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
-                                >
-                                  {isSkippingModifier === inputKey ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <>
-                                      <Undo2 className="h-4 w-4 mr-1" />
-                                      Restore
-                                    </>
-                                  )}
-                                </Button>
-                              ) : existingMapping ? (
-                                /* Existing mapping - show SKU and delete button */
-                                <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-2">
-                                    <CheckCircle className="h-4 w-4 text-green-500" />
-                                    <span className="font-mono text-sm">{existingMapping.shopifySku}</span>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteModifierSku(existingMapping.id)}
-                                    disabled={isSavingModifierSku === existingMapping.id}
-                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                  >
-                                    {isSavingModifierSku === existingMapping.id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-3 w-3" />
-                                    )}
-                                  </Button>
-                                </div>
-                              ) : (
-                                /* No mapping - show input and skip button */
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    placeholder="Combined SKU"
-                                    className="h-8 w-36"
-                                    value={inputValue}
-                                    onChange={(e) => {
-                                      setModifierSkuInputs(prev => ({
-                                        ...prev,
-                                        [inputKey]: e.target.value
-                                      }));
-                                    }}
-                                  />
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleSaveModifierSku(reward.id, modifier.id)}
-                                    disabled={isSavingModifierSku === inputKey || !inputValue.trim()}
-                                    className="h-8 bg-purple-600 hover:bg-purple-700"
-                                  >
-                                    {isSavingModifierSku === inputKey ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Save className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleSkipModifierCombo(reward.id, modifier.id, reward.title, modifier.title)}
-                                    disabled={isSkippingModifier === inputKey}
-                                    className="h-8"
-                                    title="Skip this combination"
-                                  >
-                                    {isSkippingModifier === inputKey ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <SkipForward className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Info about no modifier addons */}
-                {modifierAddons.length === 0 && (
-                  <div className="text-center py-8">
-                    <Layers className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No modifier addons configured. To set up modifier combinations,
-                      mark add-ons as &quot;modifiers&quot; in your project settings.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <ModifierCombinationsCard
+          modifierAddons={modifierAddons}
+          tierRewards={tierRewards}
+          modifierSkuMappings={modifierSkuMappings}
+          modifierSkuInputs={modifierSkuInputs}
+          isLoadingModifiers={isLoadingModifiers}
+          isSavingModifierSku={isSavingModifierSku}
+          isSkippingModifier={isSkippingModifier}
+          skippedModifierCombos={skippedModifierCombos}
+          onModifierInputChange={handleModifierInputChange}
+          onSaveModifierSku={handleSaveModifierSku}
+          onDeleteModifierSku={handleDeleteModifierSku}
+          onSkipModifierCombo={handleSkipModifierCombo}
+          onUnskipModifierCombo={handleUnskipModifierCombo}
+        />
       )}
     </div>
   );
