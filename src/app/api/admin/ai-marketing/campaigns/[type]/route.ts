@@ -58,7 +58,7 @@ export async function GET(
 
         // Get backer user IDs to exclude
         const backerPledges = await db.pledge.findMany({
-          where: { status: "COMPLETED" },
+          where: { status: "COMPLETED", deletedAt: null },
           select: { userId: true },
           distinct: ["userId"],
         });
@@ -80,7 +80,7 @@ export async function GET(
 
         // Get backer emails for filtering newsletter subscribers
         const backerEmails = await db.user.findMany({
-          where: { id: { in: Array.from(backerUserIdSet) } },
+          where: { id: { in: Array.from(backerUserIdSet) }, deletedAt: null },
           select: { email: true },
         });
         const backerEmailSet = new Set(backerEmails.map(b => b.email.toLowerCase()));
@@ -117,7 +117,7 @@ export async function GET(
       case "backer":
         // Previous backers - users who have made pledges (excluding retailers)
         const backerIds = await db.pledge.findMany({
-          where: { status: "COMPLETED" },
+          where: { status: "COMPLETED", deletedAt: null },
           select: { userId: true },
           distinct: ["userId"],
         });
@@ -134,7 +134,7 @@ export async function GET(
         const retailerEmailSetForBackers = new Set(retailerEmailsForBackers.map((r: { email: string }) => r.email.toLowerCase()));
 
         const allBackerUsers = await db.user.findMany({
-          where: { id: { in: backerUserIds } },
+          where: { id: { in: backerUserIds }, deletedAt: null },
           select: { id: true, email: true, name: true },
         });
 
@@ -149,12 +149,13 @@ export async function GET(
         recipients = await db.user.findMany({
           where: {
             createdProjects: { some: {} },
+            deletedAt: null,
           },
           select: { id: true, email: true, name: true },
           take: 100,
         });
         recipientCount = await db.user.count({
-          where: { createdProjects: { some: {} } },
+          where: { createdProjects: { some: {} }, deletedAt: null },
         });
         description = "Notify project creators about platform updates and tips";
         break;
@@ -188,7 +189,7 @@ export async function GET(
 
     // Get recommended projects for this audience
     const projects = await db.project.findMany({
-      where: { status: "LIVE" },
+      where: { status: "LIVE", deletedAt: null },
       take: 10,
       orderBy: { createdAt: "desc" },
       select: {
@@ -294,20 +295,20 @@ export async function POST(
 
         // Get backer IDs and emails to exclude
         const backerPledgesForSub = await db.pledge.findMany({
-          where: { status: "COMPLETED" },
+          where: { status: "COMPLETED", deletedAt: null },
           select: { userId: true },
           distinct: ["userId"],
         });
         const backerUserIdSetForSub = new Set(backerPledgesForSub.map(p => p.userId));
         const backerEmailsForSub = await db.user.findMany({
-          where: { id: { in: Array.from(backerUserIdSetForSub) } },
+          where: { id: { in: Array.from(backerUserIdSetForSub) }, deletedAt: null },
           select: { email: true },
         });
         const backerEmailSetForSub = new Set(backerEmailsForSub.map(b => b.email.toLowerCase()));
 
         const [subscriberUsers, nlSubscribers] = await Promise.all([
           db.user.findMany({
-            where: { emailVerified: { not: null } },
+            where: { emailVerified: { not: null }, deletedAt: null },
             select: { id: true, email: true },
           }),
           db.newsletterSubscriber.findMany({
@@ -335,7 +336,7 @@ export async function POST(
       case "backer":
         // Get backers (excluding retailers)
         const backersForPost = await db.pledge.findMany({
-          where: { status: "COMPLETED" },
+          where: { status: "COMPLETED", deletedAt: null },
           select: { userId: true },
           distinct: ["userId"],
         });
@@ -352,7 +353,7 @@ export async function POST(
 
         // Get backer user emails and filter out retailers
         const backerUsersForPost = await db.user.findMany({
-          where: { id: { in: backersForPost.map(b => b.userId) } },
+          where: { id: { in: backersForPost.map(b => b.userId) }, deletedAt: null },
           select: { id: true, email: true },
         });
 
@@ -363,7 +364,7 @@ export async function POST(
 
       case "creator":
         const creators = await db.user.findMany({
-          where: { createdProjects: { some: {} } },
+          where: { createdProjects: { some: {} }, deletedAt: null },
           select: { id: true },
         });
         recipientUserIds = creators.map((c) => c.id);
@@ -395,8 +396,8 @@ export async function POST(
 
     // Get selected projects or default to recent live projects
     const projectWhere = projectIds?.length > 0
-      ? { id: { in: projectIds } }
-      : { status: "LIVE" as const };
+      ? { id: { in: projectIds }, deletedAt: null }
+      : { status: "LIVE" as const, deletedAt: null };
 
     const projects = await db.project.findMany({
       where: projectWhere,

@@ -538,7 +538,7 @@ export async function PATCH(
         }
 
         const amountInCents = Math.round(amountDiff * 100);
-        const platformFee = Math.round(amountDiff * 0.05 * 100); // 5% platform fee
+        const platformFee = Math.round(amountDiff * 0.03 * 100); // 3% platform fee (matches charges.ts)
 
         const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
           amount: amountInCents,

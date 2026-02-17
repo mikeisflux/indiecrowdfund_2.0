@@ -143,7 +143,7 @@ export async function GET(request: Request) {
     // Get project titles for top projects
     const projectIds = topProjects.map(p => p.projectId).filter(Boolean) as string[];
     const projects = await db.project.findMany({
-      where: { id: { in: projectIds } },
+      where: { id: { in: projectIds }, deletedAt: null },
       select: { id: true, title: true },
     });
     const projectMap = new Map(projects.map(p => [p.id, p.title]));

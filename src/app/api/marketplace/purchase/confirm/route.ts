@@ -56,24 +56,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // Mark purchase as completed
-    await prisma.$transaction(async (tx) => {
-      await tx.marketplacePurchase.update({
-        where: { id: purchaseId },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date(),
-          deliveredAt: new Date(),
-        },
-      });
+    // Mark purchase as completed atomically - use updateMany with status guard
+    // to prevent race condition where two concurrent requests both increment purchaseCount
+    const updated = await prisma.marketplacePurchase.updateMany({
+      where: { id: purchaseId, status: "PENDING" },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+        deliveredAt: new Date(),
+      },
+    });
 
-      // Increment purchase count on the book
-      await tx.marketplaceBook.update({
-        where: { id: purchase.bookId },
-        data: {
-          purchaseCount: { increment: 1 },
-        },
-      });
+    if (updated.count === 0) {
+      // Another request already confirmed this purchase
+      return NextResponse.json({ success: true, message: "Purchase already completed" });
+    }
+
+    // Only increment purchase count if we actually flipped the status
+    await prisma.marketplaceBook.update({
+      where: { id: purchase.bookId },
+      data: {
+        purchaseCount: { increment: 1 },
+      },
     });
 
     console.log(

@@ -207,7 +207,7 @@ export function ProjectDetailPanel({
             <AccordionContent className="px-4 pb-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 font-semibold text-zinc-600">
-                  {(project.creator.name || project.creator.email).charAt(0).toUpperCase()}
+                  {(project.creator.name || project.creator.email || "?").charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">

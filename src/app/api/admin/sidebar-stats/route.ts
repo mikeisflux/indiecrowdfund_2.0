@@ -94,11 +94,11 @@ export async function GET() {
       pendingRetailers,
       pendingPrelaunch,
     ] = await Promise.all([
-      // Total users count
-      db.user.count(),
+      // Total users count (exclude soft-deleted)
+      db.user.count({ where: { deletedAt: null } }),
 
-      // Total projects count
-      db.project.count(),
+      // Total projects count (exclude soft-deleted)
+      db.project.count({ where: { deletedAt: null } }),
 
       // Pending moderation (reports needing action)
       db.report.count({

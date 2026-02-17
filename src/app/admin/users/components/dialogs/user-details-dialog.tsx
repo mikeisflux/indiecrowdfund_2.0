@@ -93,7 +93,7 @@ export function UserDetailsDialog({
           <TabsContent value="overview" className="py-4">
             <div className="flex items-start gap-6">
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold text-zinc-600">
-                {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                {user.name?.charAt(0) || (user.email?.charAt(0) || "U").toUpperCase()}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3">

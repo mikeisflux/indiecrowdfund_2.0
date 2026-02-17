@@ -214,6 +214,7 @@ export async function POST(request: NextRequest) {
 
     const platformFees = Math.round(grossAmount * platformFeeRate * 100) / 100;
     const processorFees = Math.round(((grossAmount * stripePercentRate) + (pledgeCount * stripeFixedFee)) * 100) / 100;
+    // Derive net as exact remainder so fees + net always equal gross (no accumulated rounding)
     const netAmount = Math.round((grossAmount - platformFees - processorFees) * 100) / 100;
 
     // Create the payout record

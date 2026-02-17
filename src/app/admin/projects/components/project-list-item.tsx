@@ -96,11 +96,11 @@ export function ProjectListItem({
                 <div className="h-2 bg-zinc-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-600 rounded-full"
-                    style={{ width: `${Math.min(100, (Number(project.currentAmount) / Number(project.goalAmount)) * 100)}%` }}
+                    style={{ width: `${Math.min(100, Number(project.goalAmount) > 0 ? (Number(project.currentAmount) / Number(project.goalAmount)) * 100 : 0)}%` }}
                   />
                 </div>
                 <p className="text-xs text-zinc-500 mt-1">
-                  {Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)}% funded
+                  {Number(project.goalAmount) > 0 ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100) : 0}% funded
                 </p>
               </div>
             )}

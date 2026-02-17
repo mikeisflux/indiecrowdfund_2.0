@@ -315,7 +315,7 @@ export async function POST(
 
     // If creator has Stripe Connect, send funds directly to them
     if (stripeAccountId) {
-      const feePercent = 0.05; // 5% platform fee
+      const feePercent = 0.03; // 3% platform fee (matches charges.ts)
       const applicationFee = Math.round(amount * 100 * feePercent);
       paymentIntentParams.application_fee_amount = applicationFee;
       paymentIntentParams.transfer_data = {

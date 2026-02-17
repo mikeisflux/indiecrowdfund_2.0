@@ -95,11 +95,8 @@ export async function POST(request: Request) {
     // Calculate platform fee (3%) and creator payout (97%)
     const bookPrice = Number(book.price);
     const platformFeeAmount = Math.round(bookPrice * 0.03 * 100) / 100;
+    // Derive payout as exact remainder so fee + payout always equals price
     const creatorPayoutAmount = Math.round((bookPrice - platformFeeAmount) * 100) / 100;
-    // Verify fee + payout = price (guard against rounding drift)
-    if (Math.abs((platformFeeAmount + creatorPayoutAmount) - bookPrice) > 0.01) {
-      console.error("Fee rounding mismatch:", { bookPrice, platformFeeAmount, creatorPayoutAmount });
-    }
 
     if (!purchase) {
       purchase = await prisma.marketplacePurchase.create({

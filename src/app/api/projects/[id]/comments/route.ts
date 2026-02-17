@@ -28,6 +28,7 @@ async function getSuperbakerStatus(userIds: string[]): Promise<Map<string, boole
     where: {
       userId: { in: uniqueUserIds },
       status: "COMPLETED",
+      deletedAt: null,
     },
     _count: { id: true },
   });

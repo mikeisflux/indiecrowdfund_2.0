@@ -68,18 +68,18 @@ async function getRecipientCountByAudience(audience: string, segments?: string[]
             NOT: { source: { contains: "retailer", mode: "insensitive" } },
           },
         }),
-        db.user.count({ where: { emailVerified: { not: null } } }),
+        db.user.count({ where: { emailVerified: { not: null }, deletedAt: null } }),
       ]);
       return nlSubCount + verifiedCount;
     case "backers":
       const backerIds = await db.pledge.findMany({
-        where: { status: "COMPLETED" },
+        where: { status: "COMPLETED", deletedAt: null },
         select: { userId: true },
         distinct: ["userId"],
       });
       return backerIds.length;
     case "creators":
-      return db.user.count({ where: { createdProjects: { some: {} } } });
+      return db.user.count({ where: { createdProjects: { some: {} }, deletedAt: null } });
     case "retailer":
       return db.newsletterSubscriber.count({
         where: {
@@ -89,7 +89,7 @@ async function getRecipientCountByAudience(audience: string, segments?: string[]
       });
     case "all":
     default:
-      return db.user.count({ where: { emailVerified: { not: null } } });
+      return db.user.count({ where: { emailVerified: { not: null }, deletedAt: null } });
   }
 }
 
@@ -162,8 +162,9 @@ export async function POST(request: Request) {
     const aiSettings = await getAISettings();
 
     // Get projects matching the category filter
-    const projectWhere: { status: string; category?: string } = {
+    const projectWhere: { status: string; category?: string; deletedAt: null } = {
       status: "LIVE",
+      deletedAt: null,
     };
 
     if (projectCategory && projectCategory !== "all") {
@@ -198,12 +199,12 @@ export async function POST(request: Request) {
     switch (targetAudience) {
       case "all":
         recipientCount = await db.user.count({
-          where: { emailVerified: { not: null } }
+          where: { emailVerified: { not: null }, deletedAt: null }
         });
         break;
       case "backers":
         const backerIds = await db.pledge.findMany({
-          where: { status: "COMPLETED" },
+          where: { status: "COMPLETED", deletedAt: null },
           select: { userId: true },
           distinct: ["userId"],
         });
@@ -212,7 +213,7 @@ export async function POST(request: Request) {
       case "high-value":
         const highValueBackers = await db.pledge.groupBy({
           by: ["userId"],
-          where: { status: "COMPLETED" },
+          where: { status: "COMPLETED", deletedAt: null },
           _sum: { amount: true },
           having: { amount: { _sum: { gt: 100 } } },
         });
@@ -330,7 +331,7 @@ export async function POST(request: Request) {
     if (aiSettings.sendTimeOptimization && !scheduleFor) {
       // Get sample of recipient user IDs for optimization
       const sampleUsers = await db.user.findMany({
-        where: { emailVerified: { not: null } },
+        where: { emailVerified: { not: null }, deletedAt: null },
         take: 100,
         select: { id: true },
       });

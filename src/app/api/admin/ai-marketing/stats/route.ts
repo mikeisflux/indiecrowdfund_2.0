@@ -60,19 +60,21 @@ export async function GET() {
       projectsWithTagsData,
     ] = await Promise.all([
       // Total projects
-      db.project.count(),
+      db.project.count({ where: { deletedAt: null } }),
 
       // Projects with tags assigned
       db.project.count({
         where: {
-          tags: { isEmpty: false }
+          tags: { isEmpty: false },
+          deletedAt: null,
         }
       }),
 
       // Projects with category assigned
       db.project.count({
         where: {
-          category: { not: "" }
+          category: { not: "" },
+          deletedAt: null,
         }
       }),
 
@@ -85,15 +87,16 @@ export async function GET() {
       }),
 
       // Total users
-      db.user.count(),
+      db.user.count({ where: { deletedAt: null } }),
 
       // Total pledges
       db.pledge.count({
-        where: { status: "COMPLETED" }
+        where: { status: "COMPLETED", deletedAt: null }
       }),
 
       // Recent projects with their categories and tags
       db.project.findMany({
+        where: { deletedAt: null },
         take: 10,
         orderBy: { createdAt: "desc" },
         select: {
@@ -116,7 +119,7 @@ export async function GET() {
         // High-value backers (pledged > $100 total)
         db.pledge.groupBy({
           by: ['userId'],
-          where: { status: "COMPLETED" },
+          where: { status: "COMPLETED", deletedAt: null },
           _sum: { amount: true },
           having: { amount: { _sum: { gt: 100 } } }
         }),
@@ -124,7 +127,7 @@ export async function GET() {
         // Repeat backers (2+ pledges)
         db.pledge.groupBy({
           by: ['userId'],
-          where: { status: "COMPLETED" },
+          where: { status: "COMPLETED", deletedAt: null },
           _count: { id: true },
           having: { id: { _count: { gte: 2 } } }
         }),
@@ -135,7 +138,7 @@ export async function GET() {
 
       // Get all projects with tags to count total tags
       db.project.findMany({
-        where: { tags: { isEmpty: false } },
+        where: { tags: { isEmpty: false }, deletedAt: null },
         select: { tags: true }
       }),
     ]);
@@ -160,6 +163,7 @@ export async function GET() {
     const pledgesFromEmails = await db.pledge.count({
       where: {
         status: "COMPLETED",
+        deletedAt: null,
         // Pledges from users who received marketing emails
         user: {
           emailLogs: { some: {} }
@@ -224,20 +228,20 @@ export async function GET() {
                 NOT: { source: { contains: "retailer", mode: "insensitive" } },
               },
             }),
-            db.user.count({ where: { emailVerified: { not: null } } }),
+            db.user.count({ where: { emailVerified: { not: null }, deletedAt: null } }),
           ]);
           return nlSubCount + verifiedCount;
         }
         case "backers": {
           const backerIds = await db.pledge.findMany({
-            where: { status: "COMPLETED" },
+            where: { status: "COMPLETED", deletedAt: null },
             select: { userId: true },
             distinct: ["userId"],
           });
           return backerIds.length;
         }
         case "creators":
-          return db.user.count({ where: { createdProjects: { some: {} } } });
+          return db.user.count({ where: { createdProjects: { some: {} }, deletedAt: null } });
         case "retailer":
           return db.newsletterSubscriber.count({
             where: {
@@ -247,7 +251,7 @@ export async function GET() {
           });
         case "all":
         default:
-          return db.user.count({ where: { emailVerified: { not: null } } });
+          return db.user.count({ where: { emailVerified: { not: null }, deletedAt: null } });
       }
     };
 
@@ -278,7 +282,7 @@ export async function GET() {
       const repeatBackerIds = repeatBackers.map(r => r.userId);
       const repeatBackerTotals = await db.pledge.groupBy({
         by: ['userId'],
-        where: { userId: { in: repeatBackerIds }, status: "COMPLETED" },
+        where: { userId: { in: repeatBackerIds }, status: "COMPLETED", deletedAt: null },
         _sum: { amount: true },
       });
       const totalRepeatSpend = repeatBackerTotals.reduce((sum, r) => sum + Number(r._sum.amount || 0), 0);
@@ -289,13 +293,13 @@ export async function GET() {
     let allUserAvgSpend = "0";
     if (totalPledges > 0) {
       const totalPledgeAmount = await db.pledge.aggregate({
-        where: { status: "COMPLETED" },
+        where: { status: "COMPLETED", deletedAt: null },
         _sum: { amount: true },
         _count: true,
       });
       const uniqueBackers = await db.pledge.groupBy({
         by: ['userId'],
-        where: { status: "COMPLETED" },
+        where: { status: "COMPLETED", deletedAt: null },
       });
       if (uniqueBackers.length > 0 && totalPledgeAmount._sum.amount) {
         allUserAvgSpend = (Number(totalPledgeAmount._sum.amount) / uniqueBackers.length / 100).toFixed(2);
@@ -350,11 +354,11 @@ export async function GET() {
       }),
       // Recent pledges
       db.pledge.count({
-        where: { status: "COMPLETED", createdAt: { gte: thirtyDaysAgo } }
+        where: { status: "COMPLETED", deletedAt: null, createdAt: { gte: thirtyDaysAgo } }
       }),
       // Previous pledges
       db.pledge.count({
-        where: { status: "COMPLETED", createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo } }
+        where: { status: "COMPLETED", deletedAt: null, createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo } }
       }),
     ]);
 
