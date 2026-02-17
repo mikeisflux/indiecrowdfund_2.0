@@ -7,17 +7,20 @@ import { TrackingProvider } from "@/components/tracking-provider";
 import { AnnouncementBar } from "@/components/announcement-bar";
 import { SiteHeader } from "@/components/site-header";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import "./globals.css";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
   weight: "100 900",
+  display: "swap",
 });
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -31,13 +34,41 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Wrap auth call in try-catch to prevent RSC prefetch failures
+  // Fetch auth and announcements in parallel to minimize TTFB
   let session = null;
+  let announcements: { id: string; text: string; linkUrl: string | null; linkText: string | null; backgroundColor: string; textColor: string; dismissible: boolean }[] = [];
+
   try {
-    session = await auth();
+    const now = new Date();
+    [session, announcements] = await Promise.all([
+      auth().catch((error) => {
+        console.error("Layout auth error:", error);
+        return null;
+      }),
+      db.announcementBar.findMany({
+        where: {
+          isActive: true,
+          OR: [
+            { startDate: null, endDate: null },
+            { startDate: { lte: now }, endDate: null },
+            { startDate: null, endDate: { gte: now } },
+            { startDate: { lte: now }, endDate: { gte: now } },
+          ],
+        },
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          text: true,
+          linkUrl: true,
+          linkText: true,
+          backgroundColor: true,
+          textColor: true,
+          dismissible: true,
+        },
+      }).catch(() => []),
+    ]);
   } catch (error) {
-    console.error("Layout auth error:", error);
-    // Continue with null session - auth components will handle gracefully
+    console.error("Layout data fetch error:", error);
   }
 
   return (
@@ -53,7 +84,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <TrackingProvider>
-              <AnnouncementBar />
+              <AnnouncementBar initialAnnouncements={announcements} />
               <SiteHeader />
               {children}
             </TrackingProvider>

@@ -30,8 +30,12 @@ import { formatTimeRemaining } from "@/lib/utils";
 import { auth } from "@/lib/auth";
 import { unstable_cache } from "next/cache";
 
-// Force dynamic rendering to ensure database is available
-export const dynamic = "force-dynamic";
+// Revalidate homepage every 60 seconds.
+// Note: auth() uses cookies() which opts into dynamic rendering at request time,
+// but the underlying DB queries are wrapped in unstable_cache (60s TTL) which
+// still avoids hitting the DB on every request — a significant TTFB improvement
+// over the previous force-dynamic approach.
+export const revalidate = 60;
 
 /*
  * #MANDATORY ANY CHANGES MADE ON THIS PAGE SHOULD BE ADAPTED TO MOBILE AS WELL OR YOU WILL CREATE A BREAK IN THE CODE#
@@ -420,6 +424,7 @@ export default async function HomePage() {
                         fill
                         sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         className="project-card-image object-cover"
+                        priority={index < 3}
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-cyan-500/10">

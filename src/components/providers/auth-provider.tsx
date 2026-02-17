@@ -35,8 +35,14 @@ export function AuthProvider({ children, session: initialSession }: AuthProvider
     initialSession ? "authenticated" : "loading"
   );
 
-  // Always verify session on mount to handle SSR/client mismatches
+  // Only verify session client-side when none was provided from the server.
+  // When initialSession is present, trust the server-rendered value to avoid
+  // an extra fetch that blocks FCP/LCP.
   useEffect(() => {
+    if (initialSession) {
+      // Server already provided a validated session — skip redundant fetch
+      return;
+    }
     fetch("/api/auth/session")
       .then((res) => res.json())
       .then((data) => {
@@ -52,7 +58,7 @@ export function AuthProvider({ children, session: initialSession }: AuthProvider
         setSession(null);
         setStatus("unauthenticated");
       });
-  }, []);
+  }, [initialSession]);
 
   const refreshSession = async () => {
     try {
