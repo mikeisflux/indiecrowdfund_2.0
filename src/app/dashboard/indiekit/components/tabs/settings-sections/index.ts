@@ -1,0 +1,9 @@
+export { GeneralSection } from "./general-section";
+export { SurveySection } from "./survey-section";
+export { ShippingSection } from "./shipping-section";
+export { PaymentsSection } from "./payments-section";
+export { NotificationsSection } from "./notifications-section";
+export { IntegrationsSection } from "./integrations-section";
+export { ShopifyCredentialsSection } from "./shopify-credentials-section";
+export { ShippingProvidersSection } from "./shipping-providers-section";
+export { TeamSection } from "./team-section";

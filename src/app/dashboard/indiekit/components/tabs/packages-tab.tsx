@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,17 +26,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Plus,
   RefreshCw,
-  MoreHorizontal,
   Send,
   ArrowRight,
   ArrowLeft,
@@ -47,20 +36,23 @@ import {
   RotateCcw,
   RefreshCcw,
   Search,
-  FileSpreadsheet,
   ExternalLink,
   CheckCircle2,
-  Info,
   Loader2,
-  Link2,
-  Save,
-  Trash2,
-  Package,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
 import type { PackageGroup } from "../../types";
+import {
+  InstructionsContent,
+  PackageGroupCard,
+  SkuMappingContent,
+  ConnectServiceDialog,
+  CreateGroupDialog,
+  ViewGroupDialog,
+  EditCustomsDialog,
+} from "./packages-sections";
 
 interface ConnectedService {
   id: string;
@@ -92,11 +84,6 @@ export function PackagesTab({
   const [searchGroupId, setSearchGroupId] = useState("");
   const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleString());
   const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<string>("shopify");
-  const [apiKey, setApiKey] = useState("");
-  const [apiSecret, setApiSecret] = useState("");
-  const [shopDomain, setShopDomain] = useState("");
-  const [isConnecting, setIsConnecting] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
   const [fulfillmentMethod, setFulfillmentMethod] = useState("shipstation");
   const [isSyncingStatus, setIsSyncingStatus] = useState(false);
@@ -104,193 +91,8 @@ export function PackagesTab({
   const [isSearching, setIsSearching] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
-  const [newGroupType, setNewGroupType] = useState<string>("domestic");
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [viewingGroup, setViewingGroup] = useState<PackageGroup | null>(null);
   const [editingCustomsItem, setEditingCustomsItem] = useState<{ groupId: string; itemName: string } | null>(null);
-  const [customsDescription, setCustomsDescription] = useState("");
-  const [customsValue, setCustomsValue] = useState("");
-  const [customsCountry, setCustomsCountry] = useState("US");
-  const [isSavingCustoms, setIsSavingCustoms] = useState(false);
-
-  // SKU Mapping state
-  interface SkuMapping {
-    id: string;
-    sourceType: string;
-    sourceId: string;
-    sourceName: string;
-    shopifySku: string;
-    shopifyProductId?: string;
-    shopifyVariantId?: string;
-    shopifyProductName?: string;
-    quantity: number;
-  }
-
-  interface UnmappedItem {
-    sourceType: string;
-    sourceId: string;
-    sourceName: string;
-    amount?: number;
-    quantityClaimed?: number;
-  }
-
-  const [skuMappings, setSkuMappings] = useState<SkuMapping[]>([]);
-  const [unmappedItems, setUnmappedItems] = useState<UnmappedItem[]>([]);
-  const [isLoadingSkuMappings, setIsLoadingSkuMappings] = useState(false);
-  const [isSavingSkuMapping, setIsSavingSkuMapping] = useState(false);
-  const [editingSkuMapping, setEditingSkuMapping] = useState<{
-    sourceType: string;
-    sourceId: string;
-    sourceName: string;
-    shopifySku: string;
-    quantity: number;
-  } | null>(null);
-
-  // Fetch SKU mappings when Shopify is selected
-  const fetchSkuMappings = useCallback(async () => {
-    if (!projectId || fulfillmentMethod !== "shopify") return;
-
-    setIsLoadingSkuMappings(true);
-    try {
-      const res = await fetch(
-        `/api/creator/indiekit/shopify/sku-mapping?projectId=${projectId}`,
-        { headers: getCSRFHeaders() }
-      );
-
-      if (res.ok) {
-        const data = await res.json();
-        setSkuMappings(data.mappings || []);
-        setUnmappedItems(data.unmappedItems || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch SKU mappings:", error);
-    } finally {
-      setIsLoadingSkuMappings(false);
-    }
-  }, [projectId, fulfillmentMethod]);
-
-  useEffect(() => {
-    if (fulfillmentMethod === "shopify" && projectId) {
-      fetchSkuMappings();
-    }
-  }, [fulfillmentMethod, projectId, fetchSkuMappings]);
-
-  const handleSaveSkuMapping = async () => {
-    if (!projectId || !editingSkuMapping) return;
-
-    setIsSavingSkuMapping(true);
-    try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          action: "save",
-          ...editingSkuMapping,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save");
-      }
-
-      toast.success("SKU mapping saved");
-      setEditingSkuMapping(null);
-      fetchSkuMappings();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save SKU mapping");
-    } finally {
-      setIsSavingSkuMapping(false);
-    }
-  };
-
-  const handleDeleteSkuMapping = async (mappingId: string) => {
-    if (!projectId) return;
-
-    try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          action: "delete",
-          mappingId,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete");
-      }
-
-      toast.success("SKU mapping deleted");
-      fetchSkuMappings();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete SKU mapping");
-    }
-  };
-
-  const handleConnect = async () => {
-    if (selectedService === "shopify") {
-      if (!shopDomain.trim() || !apiKey.trim()) {
-        toast.error("Please enter your Shopify store domain and access token");
-        return;
-      }
-    } else {
-      if (!apiKey.trim() || !apiSecret.trim()) {
-        toast.error("Please enter both API key and secret");
-        return;
-      }
-    }
-
-    setIsConnecting(true);
-    try {
-      // Use Shopify-specific endpoint for Shopify connections
-      const endpoint = selectedService === "shopify"
-        ? "/api/creator/indiekit/shopify"
-        : "/api/creator/indiekit/integrations";
-
-      const bodyData = selectedService === "shopify"
-        ? {
-            projectId,
-            action: "connect",
-            shopDomain: shopDomain.trim(),
-            accessToken: apiKey.trim(),
-          }
-        : {
-            projectId,
-            service: selectedService,
-            apiKey,
-            apiSecret,
-          };
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify(bodyData),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to connect");
-      }
-
-      const data = await res.json();
-      toast.success(data.message || `Connected to ${selectedService.charAt(0).toUpperCase() + selectedService.slice(1)}`);
-      setIsConnectDialogOpen(false);
-      setApiKey("");
-      setApiSecret("");
-      setShopDomain("");
-      setFulfillmentMethod(selectedService);
-      onRefresh?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Connection failed");
-    } finally {
-      setIsConnecting(false);
-    }
-  };
 
   const handlePushOrders = async (groupId?: string) => {
     if (!projectId) {
@@ -300,7 +102,6 @@ export function PackagesTab({
 
     setIsPushing(true);
     try {
-      // Use Shopify endpoint if Shopify is selected
       const endpoint = fulfillmentMethod === "shopify"
         ? "/api/creator/indiekit/shopify"
         : "/api/creator/indiekit/fulfillment";
@@ -373,10 +174,7 @@ export function PackagesTab({
         throw new Error(data.error || "Failed to get connection details");
       }
 
-      const data = await res.json();
-      setSelectedService(service.name.toLowerCase());
-      setApiKey(data.apiKey || "");
-      setApiSecret("");
+      toast.info(`Updating ${service.name} connection...`);
       setIsConnectDialogOpen(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update connection");
@@ -388,7 +186,6 @@ export function PackagesTab({
 
     setIsSyncingStatus(true);
     try {
-      // Use Shopify endpoint if Shopify is selected
       const endpoint = fulfillmentMethod === "shopify"
         ? "/api/creator/indiekit/shopify"
         : "/api/creator/indiekit/fulfillment";
@@ -478,7 +275,6 @@ export function PackagesTab({
 
     setIsPushing(true);
     try {
-      // Use Shopify endpoint if Shopify is selected
       const endpoint = fulfillmentMethod === "shopify"
         ? "/api/creator/indiekit/shopify"
         : "/api/creator/indiekit/fulfillment";
@@ -545,42 +341,6 @@ export function PackagesTab({
     }
   };
 
-  const handleCreateGroup = async () => {
-    if (!projectId || !newGroupName.trim()) {
-      toast.error("Please enter a group name");
-      return;
-    }
-
-    setIsCreatingGroup(true);
-    try {
-      const res = await fetch("/api/creator/indiekit/fulfillment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          action: "create_group",
-          name: newGroupName,
-          type: newGroupType,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to create group");
-      }
-
-      toast.success(`Created package group "${newGroupName}"`);
-      setShowCreateGroupDialog(false);
-      setNewGroupName("");
-      setNewGroupType("domestic");
-      onRefresh?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create group");
-    } finally {
-      setIsCreatingGroup(false);
-    }
-  };
-
   const handleExport = async (groupId: string, format: "csv" | "excel" | "packing_slips" | "shipping_labels") => {
     if (!projectId) return;
 
@@ -610,45 +370,6 @@ export function PackagesTab({
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Export failed");
-    }
-  };
-
-  const handleSaveCustoms = async () => {
-    if (!projectId || !editingCustomsItem) return;
-
-    setIsSavingCustoms(true);
-    try {
-      const res = await fetch("/api/creator/indiekit/fulfillment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          action: "update_customs",
-          groupId: editingCustomsItem.groupId,
-          itemName: editingCustomsItem.itemName,
-          customs: {
-            description: customsDescription,
-            value: parseFloat(customsValue) || 0,
-            countryOfOrigin: customsCountry,
-          },
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update customs info");
-      }
-
-      toast.success("Customs information updated");
-      setEditingCustomsItem(null);
-      setCustomsDescription("");
-      setCustomsValue("");
-      setCustomsCountry("US");
-      onRefresh?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update customs");
-    } finally {
-      setIsSavingCustoms(false);
     }
   };
 
@@ -705,7 +426,7 @@ export function PackagesTab({
         </div>
       </div>
 
-      {/* Process Tabs - Now includes Instructions and Connect */}
+      {/* Process Tabs */}
       <Tabs defaultValue="by-group">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="instructions">Instructions</TabsTrigger>
@@ -722,96 +443,7 @@ export function PackagesTab({
 
         {/* Instructions Tab */}
         <TabsContent value="instructions" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>How Fulfillment Integration Works</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-4">
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold">
-                      1
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Connect Your Shipping Service</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Link your ShipStation, EasyPost, or other fulfillment account to enable automatic order syncing.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold">
-                      2
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Set Up Package Groups</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Organize orders by shipping destination, product type, or custom criteria for efficient processing.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold">
-                      3
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Push Orders</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Send orders to your shipping service individually by group, or all at once with Process All.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold">
-                      4
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Track Status</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Monitor push status and shipping progress in real-time. Handle any errors that occur.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold">
-                      5
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Update Order Status</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Sync shipping status back from your fulfillment service to mark orders as shipped.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-muted/50 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <Info className="h-5 w-5 text-teal-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold mb-1">Before You Begin</h4>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• Ensure all product weights are set correctly for accurate shipping rates</li>
-                      <li>• Configure customs information for international shipments</li>
-                      <li>• Verify backer addresses are complete before pushing orders</li>
-                      <li>• Test with a small batch first before bulk processing</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-center">
-                <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setIsConnectDialogOpen(true)}>
-                  Get Started - Connect Service
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <InstructionsContent onGetStarted={() => setIsConnectDialogOpen(true)} />
         </TabsContent>
 
         {/* Connect Tab */}
@@ -874,188 +506,7 @@ export function PackagesTab({
 
         {/* SKU Mapping Tab (Shopify only) */}
         <TabsContent value="sku-mapping" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Link2 className="h-5 w-5" />
-                SKU Mapping
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {fulfillmentMethod !== "shopify" ? (
-                <div className="text-center py-8">
-                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Shopify Required</h3>
-                  <p className="text-muted-foreground">
-                    SKU mapping is only available when using Shopify for fulfillment.
-                    Switch to Shopify to map your rewards and add-ons to SKUs.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Info className="h-5 w-5 text-teal-600 mt-0.5" />
-                      <div>
-                        <h4 className="font-semibold mb-1">Why Map SKUs?</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Shopify uses SKUs to identify products in your store. Map your campaign rewards and add-ons
-                          to Shopify SKUs so that orders are created with the correct products. This allows Shopify
-                          to manage inventory and fulfillment for each item.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {isLoadingSkuMappings ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-                    </div>
-                  ) : (
-                    <>
-                      {/* Unmapped Items */}
-                      {unmappedItems.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold mb-3 flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4 text-amber-500" />
-                            Items Needing SKU Mapping ({unmappedItems.length})
-                          </h4>
-                          <div className="rounded-lg border overflow-hidden">
-                            <Table>
-                              <TableHeader>
-                                <TableRow className="bg-amber-50">
-                                  <TableHead>Type</TableHead>
-                                  <TableHead>Name</TableHead>
-                                  <TableHead>Amount</TableHead>
-                                  <TableHead>Claimed</TableHead>
-                                  <TableHead className="w-32"></TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {unmappedItems.map((item) => (
-                                  <TableRow key={`${item.sourceType}-${item.sourceId}`}>
-                                    <TableCell>
-                                      <Badge variant="outline" className="text-xs">
-                                        {item.sourceType === "REWARD" ? "Reward" : item.sourceType === "ADDON" ? "Add-on" : "Item"}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell className="font-medium">{item.sourceName}</TableCell>
-                                    <TableCell>{item.amount ? `$${item.amount}` : "-"}</TableCell>
-                                    <TableCell>{item.quantityClaimed ?? "-"}</TableCell>
-                                    <TableCell>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setEditingSkuMapping({
-                                          sourceType: item.sourceType,
-                                          sourceId: item.sourceId,
-                                          sourceName: item.sourceName,
-                                          shopifySku: "",
-                                          quantity: 1,
-                                        })}
-                                      >
-                                        <Link2 className="h-3 w-3 mr-1" />
-                                        Map SKU
-                                      </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Existing Mappings */}
-                      <div>
-                        <h4 className="font-semibold mb-3 flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          Mapped SKUs ({skuMappings.length})
-                        </h4>
-                        {skuMappings.length === 0 ? (
-                          <div className="text-center py-8 bg-muted/30 rounded-lg">
-                            <p className="text-muted-foreground">No SKU mappings yet. Map your rewards and add-ons above.</p>
-                          </div>
-                        ) : (
-                          <div className="rounded-lg border overflow-hidden">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Type</TableHead>
-                                  <TableHead>Campaign Item</TableHead>
-                                  <TableHead>Shopify SKU</TableHead>
-                                  <TableHead>Qty</TableHead>
-                                  <TableHead className="w-24"></TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {skuMappings.map((mapping) => (
-                                  <TableRow key={mapping.id}>
-                                    <TableCell>
-                                      <Badge variant="outline" className="text-xs">
-                                        {mapping.sourceType === "REWARD" ? "Reward" : mapping.sourceType === "ADDON" ? "Add-on" : "Item"}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell className="font-medium">{mapping.sourceName}</TableCell>
-                                    <TableCell>
-                                      <code className="bg-muted px-2 py-1 rounded text-sm">{mapping.shopifySku}</code>
-                                    </TableCell>
-                                    <TableCell>{mapping.quantity}</TableCell>
-                                    <TableCell>
-                                      <div className="flex gap-1">
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          className="h-8 w-8"
-                                          onClick={() => setEditingSkuMapping({
-                                            sourceType: mapping.sourceType,
-                                            sourceId: mapping.sourceId,
-                                            sourceName: mapping.sourceName,
-                                            shopifySku: mapping.shopifySku,
-                                            quantity: mapping.quantity,
-                                          })}
-                                        >
-                                          <ExternalLink className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          className="h-8 w-8 text-red-600 hover:text-red-700"
-                                          onClick={() => handleDeleteSkuMapping(mapping.id)}
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Refresh Button */}
-                      <div className="flex justify-end">
-                        <Button
-                          variant="outline"
-                          onClick={fetchSkuMappings}
-                          disabled={isLoadingSkuMappings}
-                        >
-                          {isLoadingSkuMappings ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                          )}
-                          Refresh Mappings
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <SkuMappingContent projectId={projectId} fulfillmentMethod={fulfillmentMethod} />
         </TabsContent>
 
         {/* Process All Tab */}
@@ -1078,7 +529,6 @@ export function PackagesTab({
 
           {/* Service Box, Add New Orders Box, Search Box Row */}
           <div className="grid gap-4 md:grid-cols-3">
-            {/* Service Box */}
             <Card>
               <CardContent className="pt-6">
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
@@ -1090,8 +540,6 @@ export function PackagesTab({
                 </Button>
               </CardContent>
             </Card>
-
-            {/* Add New Orders Box */}
             <Card>
               <CardContent className="pt-6">
                 <Button className="bg-teal-600 hover:bg-teal-700 w-full mb-2" onClick={handleRefreshPackageGroups} disabled={isRefreshing}>
@@ -1107,8 +555,6 @@ export function PackagesTab({
                 </p>
               </CardContent>
             </Card>
-
-            {/* Search Box */}
             <Card>
               <CardContent className="pt-6">
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Search Package Group</h4>
@@ -1223,7 +669,6 @@ export function PackagesTab({
 
           {/* Service Box, Add New Orders Box, Search Box Row */}
           <div className="grid gap-4 md:grid-cols-3">
-            {/* Service Box */}
             <Card>
               <CardContent className="pt-6">
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
@@ -1235,8 +680,6 @@ export function PackagesTab({
                 </Button>
               </CardContent>
             </Card>
-
-            {/* Add New Orders Box */}
             <Card>
               <CardContent className="pt-6">
                 <Button className="bg-teal-600 hover:bg-teal-700 w-full mb-2" onClick={handleRefreshPackageGroups} disabled={isRefreshing}>
@@ -1252,8 +695,6 @@ export function PackagesTab({
                 </p>
               </CardContent>
             </Card>
-
-            {/* Search Box */}
             <Card>
               <CardContent className="pt-6">
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Search Package Group</h4>
@@ -1327,533 +768,53 @@ export function PackagesTab({
             {packageGroups
               .filter(g => packageGroupFilter === "all" || g.type === packageGroupFilter)
               .map((group) => (
-              <Card key={group.id}>
-                <CardContent className="pt-6">
-                  {/* Group Header with ID */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <h4 className="font-semibold">Package Group #{group.id}</h4>
-                        <p className="text-sm text-muted-foreground">{group.name}</p>
-                      </div>
-                      <Badge className="bg-teal-100 text-teal-700">
-                        {group.type.charAt(0).toUpperCase() + group.type.slice(1)}
-                      </Badge>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setViewingGroup(group)}>View This Group</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExport(group.id, "csv")}>Export Orders</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExport(group.id, "excel")}>Export Reports</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  {/* Status Flow */}
-                  <div className="flex items-center justify-between py-3 mb-4 border-y">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-gray-400" />
-                      <span className="text-sm">{group.statusCounts.notPushed}</span>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-300" />
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-amber-500" />
-                      <span className="text-sm">{group.statusCounts.pushErrored}</span>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-300" />
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-amber-500" />
-                      <span className="text-sm">{group.statusCounts.pushed}</span>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-300" />
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      <span className="text-sm">{group.statusCounts.shipped}</span>
-                    </div>
-                  </div>
-
-                  {/* Send Button */}
-                  <div className="mb-4">
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Group Last Sent: {group.lastSentAt || "Never"}
-                    </p>
-                    <Button
-                      size="sm"
-                      className="bg-teal-600 hover:bg-teal-700 w-full"
-                      disabled={group.statusCounts.notPushed === 0 || isPushing}
-                      onClick={() => handlePushOrders(group.id)}
-                    >
-                      {isPushing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                      {isPushing ? "Sending..." : `Send ${group.statusCounts.notPushed} to ${fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod === "shipstation" ? "ShipStation" : "Fulfillment"}`}
-                    </Button>
-                  </div>
-
-                  {/* Items Table */}
-                  <div className="rounded-lg border overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="w-12">Qty.</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead className="text-right w-24">Weight</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {group.items.map((item, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell className="font-medium">{item.quantity}</TableCell>
-                            <TableCell>
-                              <div>
-                                <p className="text-sm">{item.name}</p>
-                                {!item.customsValid && (
-                                  <p className="text-xs text-red-600 flex items-center gap-1">
-                                    <AlertCircle className="h-3 w-3" />
-                                    Not Valid for Customs
-                                    <button className="text-teal-600 underline ml-1" onClick={() => setEditingCustomsItem({ groupId: group.id, itemName: item.name })}>edit</button>
-                                  </p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right text-sm text-muted-foreground">
-                              {item.weight.lbs} lb {item.weight.oz.toFixed(1)} oz
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-muted/30">
-                          <TableCell colSpan={2} className="text-right font-medium">
-                            {group.items.length} items
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {group.totalWeight.lbs} lb {group.totalWeight.oz.toFixed(1)} oz
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* View Group Link */}
-                  <div className="mt-4 text-center">
-                    <Button variant="link" className="text-teal-600" onClick={() => setViewingGroup(group)}>
-                      View This Group
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-
-                  {/* Export Reports Dropdown */}
-                  <div className="mt-2 pt-2 border-t">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
-                          <FileSpreadsheet className="h-4 w-4 mr-2" />
-                          Export reports for this group
-                          <ChevronRight className="h-4 w-4 ml-auto" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-48">
-                        <DropdownMenuItem onClick={() => handleExport(group.id, "csv")}>Export as CSV</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExport(group.id, "excel")}>Export as Excel</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExport(group.id, "packing_slips")}>Export Packing Slips</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExport(group.id, "shipping_labels")}>Export Shipping Labels</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
+              <PackageGroupCard
+                key={group.id}
+                group={group}
+                fulfillmentMethod={fulfillmentMethod}
+                isPushing={isPushing}
+                onPushOrders={handlePushOrders}
+                onViewGroup={setViewingGroup}
+                onExport={handleExport}
+                onEditCustoms={(groupId, itemName) => setEditingCustomsItem({ groupId, itemName })}
+              />
             ))}
           </div>
         </TabsContent>
       </Tabs>
 
-      {/* Connect Service Dialog */}
-      <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Connect Fulfillment Service</DialogTitle>
-            <DialogDescription>
-              Connect to a shipping service to push orders directly for fulfillment
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="service">Select Service</Label>
-              <Select value={selectedService} onValueChange={setSelectedService}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a service" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="shopify">Shopify</SelectItem>
-                  <SelectItem value="shipstation">ShipStation</SelectItem>
-                  <SelectItem value="easyship">Easyship</SelectItem>
-                  <SelectItem value="shippo">Shippo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedService === "shopify" ? (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="shopDomain">Shopify Store Domain</Label>
-                  <Input
-                    id="shopDomain"
-                    placeholder="your-store.myshopify.com"
-                    value={shopDomain}
-                    onChange={(e) => setShopDomain(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Your store&apos;s myshopify.com domain (e.g., your-store.myshopify.com)
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="apiKey">Access Token</Label>
-                  <Input
-                    id="apiKey"
-                    type="password"
-                    placeholder="Enter your Shopify access token"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                  />
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground space-y-2">
-                  <p className="font-medium">To get your Shopify access token:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-xs">
-                    <li>Go to your Shopify Admin &rarr; Settings &rarr; Apps and sales channels</li>
-                    <li>Click &quot;Develop apps&quot; &rarr; Create an app</li>
-                    <li>Configure Admin API scopes: <code className="bg-muted px-1 rounded">write_orders, read_orders, write_fulfillments, read_fulfillments</code></li>
-                    <li>Install the app and copy the Admin API access token</li>
-                  </ol>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="apiKey">API Key</Label>
-                  <Input
-                    id="apiKey"
-                    type="password"
-                    placeholder="Enter your API key"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="apiSecret">API Secret</Label>
-                  <Input
-                    id="apiSecret"
-                    type="password"
-                    placeholder="Enter your API secret"
-                    value={apiSecret}
-                    onChange={(e) => setApiSecret(e.target.value)}
-                  />
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-                  <p>You can find your API credentials in your {selectedService.charAt(0).toUpperCase() + selectedService.slice(1)} account settings.</p>
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConnectDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-teal-600 hover:bg-teal-700"
-              onClick={handleConnect}
-              disabled={isConnecting}
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                "Connect Service"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dialogs */}
+      <ConnectServiceDialog
+        open={isConnectDialogOpen}
+        onOpenChange={setIsConnectDialogOpen}
+        projectId={projectId}
+        onConnected={(service) => {
+          setFulfillmentMethod(service);
+          onRefresh?.();
+        }}
+      />
 
-      {/* Create Group Dialog */}
-      <Dialog open={showCreateGroupDialog} onOpenChange={setShowCreateGroupDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create Package Group</DialogTitle>
-            <DialogDescription>
-              Create a new package group to organize orders for fulfillment
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="groupName">Group Name</Label>
-              <Input
-                id="groupName"
-                placeholder="e.g., US Domestic Orders"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="groupType">Group Type</Label>
-              <Select value={newGroupType} onValueChange={setNewGroupType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="domestic">Domestic</SelectItem>
-                  <SelectItem value="international">International</SelectItem>
-                  <SelectItem value="incomplete">Incomplete</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateGroupDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-teal-600 hover:bg-teal-700"
-              onClick={handleCreateGroup}
-              disabled={isCreatingGroup}
-            >
-              {isCreatingGroup ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Group"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateGroupDialog
+        open={showCreateGroupDialog}
+        onOpenChange={setShowCreateGroupDialog}
+        projectId={projectId}
+        onRefresh={onRefresh}
+      />
 
-      {/* View Group Dialog */}
-      <Dialog open={!!viewingGroup} onOpenChange={(open) => !open && setViewingGroup(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Package Group #{viewingGroup?.id}</DialogTitle>
-            <DialogDescription>
-              {viewingGroup?.name}
-            </DialogDescription>
-          </DialogHeader>
-          {viewingGroup && (
-            <div className="space-y-4 py-4">
-              <div className="flex items-center justify-between py-3 px-4 bg-muted/30 rounded-lg">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Not Pushed</p>
-                  <p className="text-xl font-bold">{viewingGroup.statusCounts.notPushed}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-300" />
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Errored</p>
-                  <p className="text-xl font-bold">{viewingGroup.statusCounts.pushErrored}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-300" />
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Pushed</p>
-                  <p className="text-xl font-bold">{viewingGroup.statusCounts.pushed}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-300" />
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Shipped</p>
-                  <p className="text-xl font-bold">{viewingGroup.statusCounts.shipped}</p>
-                </div>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">Qty.</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead className="text-right w-24">Weight</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {viewingGroup.items.map((item, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell className="font-medium">{item.quantity}</TableCell>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell className="text-right text-sm text-muted-foreground">
-                        {item.weight.lbs} lb {item.weight.oz.toFixed(1)} oz
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewingGroup(null)}>
-              Close
-            </Button>
-            <Button
-              className="bg-teal-600 hover:bg-teal-700"
-              onClick={() => {
-                if (viewingGroup) handlePushOrders(viewingGroup.id);
-              }}
-              disabled={!viewingGroup || viewingGroup.statusCounts.notPushed === 0 || isPushing}
-            >
-              {isPushing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send to {fulfillmentMethod === "shopify" ? "Shopify" : fulfillmentMethod === "shipstation" ? "ShipStation" : "Fulfillment"}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ViewGroupDialog
+        group={viewingGroup}
+        onClose={() => setViewingGroup(null)}
+        fulfillmentMethod={fulfillmentMethod}
+        isPushing={isPushing}
+        onPushOrders={handlePushOrders}
+      />
 
-      {/* Edit Customs Dialog */}
-      <Dialog open={!!editingCustomsItem} onOpenChange={(open) => !open && setEditingCustomsItem(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Customs Information</DialogTitle>
-            <DialogDescription>
-              Update customs details for {editingCustomsItem?.itemName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="customsDescription">Description</Label>
-              <Input
-                id="customsDescription"
-                placeholder="Brief description of the item"
-                value={customsDescription}
-                onChange={(e) => setCustomsDescription(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customsValue">Declared Value (USD)</Label>
-              <Input
-                id="customsValue"
-                type="number"
-                placeholder="0.00"
-                value={customsValue}
-                onChange={(e) => setCustomsValue(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customsCountry">Country of Origin</Label>
-              <Select value={customsCountry} onValueChange={setCustomsCountry}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select country" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="US">United States</SelectItem>
-                  <SelectItem value="CN">China</SelectItem>
-                  <SelectItem value="UK">United Kingdom</SelectItem>
-                  <SelectItem value="DE">Germany</SelectItem>
-                  <SelectItem value="JP">Japan</SelectItem>
-                  <SelectItem value="KR">South Korea</SelectItem>
-                  <SelectItem value="TW">Taiwan</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingCustomsItem(null)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-teal-600 hover:bg-teal-700"
-              onClick={handleSaveCustoms}
-              disabled={isSavingCustoms}
-            >
-              {isSavingCustoms ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Customs Info"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* SKU Mapping Dialog */}
-      <Dialog open={!!editingSkuMapping} onOpenChange={(open) => !open && setEditingSkuMapping(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingSkuMapping?.shopifySku ? "Edit SKU Mapping" : "Map to Shopify SKU"}
-            </DialogTitle>
-            <DialogDescription>
-              Map &quot;{editingSkuMapping?.sourceName}&quot; to a Shopify product SKU.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Campaign Item</Label>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">
-                  {editingSkuMapping?.sourceType === "REWARD" ? "Reward" : editingSkuMapping?.sourceType === "ADDON" ? "Add-on" : "Item"}
-                </Badge>
-                <span className="font-medium">{editingSkuMapping?.sourceName}</span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="shopifySku">Shopify SKU *</Label>
-              <Input
-                id="shopifySku"
-                placeholder="Enter the Shopify product SKU"
-                value={editingSkuMapping?.shopifySku || ""}
-                onChange={(e) => setEditingSkuMapping(prev => prev ? { ...prev, shopifySku: e.target.value } : null)}
-              />
-              <p className="text-xs text-muted-foreground">
-                The SKU must match exactly with a product variant in your Shopify store.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity per Order</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                placeholder="1"
-                value={editingSkuMapping?.quantity || 1}
-                onChange={(e) => setEditingSkuMapping(prev => prev ? { ...prev, quantity: parseInt(e.target.value) || 1 } : null)}
-              />
-              <p className="text-xs text-muted-foreground">
-                How many of this SKU should be added per backer order (default: 1).
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingSkuMapping(null)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-teal-600 hover:bg-teal-700"
-              onClick={handleSaveSkuMapping}
-              disabled={isSavingSkuMapping || !editingSkuMapping?.shopifySku}
-            >
-              {isSavingSkuMapping ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Mapping
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditCustomsDialog
+        editingItem={editingCustomsItem}
+        onClose={() => setEditingCustomsItem(null)}
+        projectId={projectId}
+        onRefresh={onRefresh}
+      />
     </div>
   );
 }
