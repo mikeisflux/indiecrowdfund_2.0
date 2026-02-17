@@ -1,7 +1,6 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { unstable_cache } from "next/cache";
 
 export interface PlatformStats {
   totalPledged: number;
@@ -113,13 +112,10 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
 }
 
 /**
- * Cached version of platform stats - revalidates every 5 minutes
+ * Fetch platform stats directly (no unstable_cache — it caches stale empty
+ * results after deploys; the homepage is already dynamic due to auth()).
  */
-export const getPlatformStats = unstable_cache(
-  fetchPlatformStatsUncached,
-  ["platform-stats"],
-  { revalidate: 300 } // 5 minutes
-);
+export const getPlatformStats = fetchPlatformStatsUncached;
 
 /**
  * Fetch retailer-specific statistics for the retailer page
@@ -200,10 +196,6 @@ async function fetchRetailerStatsUncached(): Promise<RetailerStats> {
 }
 
 /**
- * Cached version of retailer stats - revalidates every 5 minutes
+ * Fetch retailer stats directly (no unstable_cache — same reason as above).
  */
-export const getRetailerStats = unstable_cache(
-  fetchRetailerStatsUncached,
-  ["retailer-stats"],
-  { revalidate: 300 } // 5 minutes
-);
+export const getRetailerStats = fetchRetailerStatsUncached;

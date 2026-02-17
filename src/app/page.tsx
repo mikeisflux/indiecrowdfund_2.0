@@ -28,13 +28,11 @@ import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
 import { formatTimeRemaining } from "@/lib/utils";
 import { auth } from "@/lib/auth";
-import { unstable_cache } from "next/cache";
 
 // Revalidate homepage every 60 seconds.
-// Note: auth() uses cookies() which opts into dynamic rendering at request time,
-// but the underlying DB queries are wrapped in unstable_cache (60s TTL) which
-// still avoids hitting the DB on every request — a significant TTFB improvement
-// over the previous force-dynamic approach.
+// Note: auth() uses cookies() which opts into dynamic rendering at request time.
+// DB queries are NOT wrapped in unstable_cache because it caches stale empty
+// results after deployments, breaking the homepage.
 export const revalidate = 60;
 
 /*
@@ -42,76 +40,74 @@ export const revalidate = 60;
  */
 
 // Fetch featured/live projects from database (excludes closed campaigns)
-const getFeaturedProjects = unstable_cache(
-  async () => {
-    try {
-      const now = new Date();
-      const projects = await db.project.findMany({
-        where: {
-          status: "LIVE",
-          deletedAt: null,
-          // Only include projects that haven't ended yet
-          OR: [
-            { endDate: null },
-            { endDate: { gt: now } },
-          ],
-          // Hide test projects from home page
-          NOT: {
-            title: { contains: "test", mode: "insensitive" },
+// Not wrapped in unstable_cache — it caches stale empty results after deploys.
+// The page is already dynamic due to auth(), so direct queries are fine.
+async function getFeaturedProjects() {
+  try {
+    const now = new Date();
+    const projects = await db.project.findMany({
+      where: {
+        status: "LIVE",
+        deletedAt: null,
+        // Only include projects that haven't ended yet
+        OR: [
+          { endDate: null },
+          { endDate: { gt: now } },
+        ],
+        // Hide test projects from home page
+        NOT: {
+          title: { contains: "test", mode: "insensitive" },
+        },
+      },
+      include: {
+        creator: {
+          select: {
+            name: true,
+            vanityUrl: true,
           },
         },
-        include: {
-          creator: {
-            select: {
-              name: true,
-              vanityUrl: true,
-            },
-          },
-        },
-        orderBy: {
-          currentAmount: "desc",
-        },
-        take: 6,
-      });
+      },
+      orderBy: {
+        currentAmount: "desc",
+      },
+      take: 6,
+    });
 
-      return projects.map((project) => {
-        // Calculate days remaining
-        let daysRemaining = 0;
-        if (project.endDate) {
-          const now = new Date();
-          const end = new Date(project.endDate);
-          daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-        }
+    return projects.map((project) => {
+      // Calculate days remaining
+      let daysRemaining = 0;
+      if (project.endDate) {
+        const now = new Date();
+        const end = new Date(project.endDate);
+        daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      }
 
-        // Build project URL - use vanity URL if creator has one
-        const projectUrl = project.creator.vanityUrl
-          ? `/projects/${project.creator.vanityUrl}/${project.slug}`
-          : `/projects/${project.slug}`;
+      // Build project URL - use vanity URL if creator has one
+      const projectUrl = project.creator.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+        : `/projects/${project.slug}`;
 
-        return {
-          id: project.id,
-          slug: project.slug,
-          title: project.title,
-          subtitle: project.subtitle || "",
-          category: project.category,
-          imageUrl: project.imageUrl || "",
-          creator: project.creator.name || "Creator",
-          goalAmount: project.goalAmount,
-          currentAmount: project.currentAmount,
-          backerCount: project.backerCount,
-          daysRemaining,
-          endDate: project.endDate?.toISOString() || null,
-          projectUrl,
-        };
-      });
-    } catch (error) {
-      console.error("Error fetching featured projects:", error);
-      return [];
-    }
-  },
-  ["homepage-featured-projects"],
-  { revalidate: 60 } // Cache for 1 minute
-);
+      return {
+        id: project.id,
+        slug: project.slug,
+        title: project.title,
+        subtitle: project.subtitle || "",
+        category: project.category,
+        imageUrl: project.imageUrl || "",
+        creator: project.creator.name || "Creator",
+        goalAmount: project.goalAmount,
+        currentAmount: project.currentAmount,
+        backerCount: project.backerCount,
+        daysRemaining,
+        endDate: project.endDate?.toISOString() || null,
+        projectUrl,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching featured projects:", error);
+    return [];
+  }
+}
 
 // Fetch projects in prelaunch from database
 // Note: Not wrapped in unstable_cache because Date serialization in the cache
@@ -176,80 +172,77 @@ async function getPrelaunchProjects() {
 }
 
 // Fetch past/closed campaigns from database
-const getPastCampaigns = unstable_cache(
-  async () => {
-    try {
-      const now = new Date();
-      const projects = await db.project.findMany({
-        where: {
-          deletedAt: null,
-          OR: [
-            {
-              // Live projects that have ended
-              status: "LIVE",
-              endDate: { lte: now },
-            },
-            {
-              // Funded projects
-              status: "FUNDED",
-            },
-          ],
-          // Hide test projects from home page
-          NOT: {
-            title: { contains: "test", mode: "insensitive" },
+// Not wrapped in unstable_cache — it caches stale empty results after deploys.
+async function getPastCampaigns() {
+  try {
+    const now = new Date();
+    const projects = await db.project.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          {
+            // Live projects that have ended
+            status: "LIVE",
+            endDate: { lte: now },
+          },
+          {
+            // Funded projects
+            status: "FUNDED",
+          },
+        ],
+        // Hide test projects from home page
+        NOT: {
+          title: { contains: "test", mode: "insensitive" },
+        },
+      },
+      include: {
+        creator: {
+          select: {
+            name: true,
+            vanityUrl: true,
           },
         },
-        include: {
-          creator: {
-            select: {
-              name: true,
-              vanityUrl: true,
-            },
-          },
-        },
-        orderBy: {
-          endDate: "desc",
-        },
-        take: 6,
-      });
+      },
+      orderBy: {
+        endDate: "desc",
+      },
+      take: 6,
+    });
 
-      return projects.map((project) => {
-        // Calculate funding percentage
-        const fundingPercentage = Number(project.goalAmount) > 0
-          ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)
-          : 0;
-        const wasSuccessful = fundingPercentage >= 100;
+    return projects.map((project) => {
+      // Calculate funding percentage
+      const fundingPercentage = Number(project.goalAmount) > 0
+        ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)
+        : 0;
+      const wasSuccessful = fundingPercentage >= 100;
 
-        // Build project URL - use vanity URL if creator has one
-        const projectUrl = project.creator.vanityUrl
-          ? `/projects/${project.creator.vanityUrl}/${project.slug}`
-          : `/projects/${project.slug}`;
+      // Build project URL - use vanity URL if creator has one
+      const projectUrl = project.creator.vanityUrl
+        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+        : `/projects/${project.slug}`;
 
-        return {
-          id: project.id,
-          slug: project.slug,
-          title: project.title,
-          subtitle: project.subtitle || "",
-          category: project.category,
-          imageUrl: project.imageUrl || "",
-          creator: project.creator.name || "Creator",
-          goalAmount: project.goalAmount,
-          currentAmount: project.currentAmount,
-          backerCount: project.backerCount,
-          fundingPercentage,
-          wasSuccessful,
-          endDate: project.endDate?.toISOString() || null,
-          projectUrl,
-        };
-      });
-    } catch (error) {
-      console.error("Error fetching past campaigns:", error);
-      return [];
-    }
-  },
-  ["homepage-past-campaigns"],
-  { revalidate: 60 } // Cache for 1 minute
-);
+      return {
+        id: project.id,
+        slug: project.slug,
+        title: project.title,
+        subtitle: project.subtitle || "",
+        category: project.category,
+        imageUrl: project.imageUrl || "",
+        creator: project.creator.name || "Creator",
+        goalAmount: project.goalAmount,
+        currentAmount: project.currentAmount,
+        backerCount: project.backerCount,
+        fundingPercentage,
+        wasSuccessful,
+        endDate: project.endDate?.toISOString() || null,
+        projectUrl,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching past campaigns:", error);
+    return [];
+  }
+}
 
 // Get user's followed project IDs
 async function getUserFollowedProjectIds(userId: string | undefined): Promise<Set<string>> {
@@ -268,46 +261,43 @@ async function getUserFollowedProjectIds(userId: string | undefined): Promise<Se
 }
 
 // Fetch active hero slides
-const getHeroSlides = unstable_cache(
-  async () => {
-    try {
-      const slides = await db.heroSlide.findMany({
-        where: { isActive: true },
-        orderBy: { sortOrder: "asc" },
-        select: {
-          id: true,
-          title: true,
-          subtitle: true,
-          description: true,
-          buttonText: true,
-          buttonLink: true,
-          showPrimaryButton: true,
-          secondaryButtonText: true,
-          secondaryButtonLink: true,
-          showSecondaryButton: true,
-          mediaType: true,
-          imageUrl: true,
-          videoUrl: true,
-          videoThumbnail: true,
-          videoAutoplay: true,
-          videoMuted: true,
-          videoLoop: true,
-          textAlignment: true,
-          overlayOpacity: true,
-          textColor: true,
-          showSubtitle: true,
-          showDescription: true,
-        },
-      });
-      return slides;
-    } catch (error) {
-      console.error("Error fetching hero slides:", error);
-      return [];
-    }
-  },
-  ["homepage-hero-slides"],
-  { revalidate: 300 } // Cache for 5 minutes
-);
+// Not wrapped in unstable_cache — it caches stale empty results after deploys.
+async function getHeroSlides() {
+  try {
+    const slides = await db.heroSlide.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        title: true,
+        subtitle: true,
+        description: true,
+        buttonText: true,
+        buttonLink: true,
+        showPrimaryButton: true,
+        secondaryButtonText: true,
+        secondaryButtonLink: true,
+        showSecondaryButton: true,
+        mediaType: true,
+        imageUrl: true,
+        videoUrl: true,
+        videoThumbnail: true,
+        videoAutoplay: true,
+        videoMuted: true,
+        videoLoop: true,
+        textAlignment: true,
+        overlayOpacity: true,
+        textColor: true,
+        showSubtitle: true,
+        showDescription: true,
+      },
+    });
+    return slides;
+  } catch (error) {
+    console.error("Error fetching hero slides:", error);
+    return [];
+  }
+}
 
 export default async function HomePage() {
   const session = await auth();
