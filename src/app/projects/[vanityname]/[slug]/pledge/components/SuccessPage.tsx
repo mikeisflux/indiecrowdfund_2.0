@@ -5,7 +5,6 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
 import { ProjectData, RewardData, AddonData } from "../types";
-import { SHIPPING_COUNTRIES } from "@/types";
 
 interface SuccessPageProps {
   project: ProjectData;
@@ -17,7 +16,6 @@ interface SuccessPageProps {
   selectedAddons: Record<string, number>;
   addons: AddonData[];
   bonusSupport: number;
-  shippingCountry: string;
   totalShipping: number;
   addonsShipping: number;
   total: number;
@@ -34,14 +32,11 @@ export function SuccessPage({
   selectedAddons,
   addons,
   bonusSupport,
-  shippingCountry,
   totalShipping,
   addonsShipping,
   total,
   addItemsTotal,
 }: SuccessPageProps) {
-  const currentCountry = SHIPPING_COUNTRIES.find((c) => c.code === shippingCountry);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-background dark:from-green-950/20 dark:to-background overflow-hidden relative">
       {/* Confetti Animation */}
@@ -215,7 +210,7 @@ export function SuccessPage({
                 {/* Shipping */}
                 {(isAddItemsMode ? addonsShipping : totalShipping) > 0 && (
                   <div className="flex justify-between text-sm pt-2 border-t">
-                    <span>Shipping to {currentCountry?.name}</span>
+                    <span>Shipping from {project.creator?.location || "creator"}</span>
                     <span className="font-medium">${(isAddItemsMode ? addonsShipping : totalShipping).toFixed(2)}</span>
                   </div>
                 )}

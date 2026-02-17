@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Info, Loader2 } from "lucide-react";
-import { SHIPPING_COUNTRIES } from "@/types";
 import { Step, RewardData, AddonData, ProjectData } from "../types";
 
 interface OrderSummaryProps {
@@ -23,7 +22,6 @@ interface OrderSummaryProps {
   addons: AddonData[];
   bonusSupport: number;
   setBonusSupport: (val: number) => void;
-  shippingCountry: string;
   totalShipping: number;
   addonsShipping: number;
   total: number;
@@ -48,7 +46,6 @@ export function OrderSummary({
   addons,
   bonusSupport,
   setBonusSupport,
-  shippingCountry,
   totalShipping,
   addonsShipping,
   total,
@@ -59,8 +56,6 @@ export function OrderSummary({
   clientSecret,
   project,
 }: OrderSummaryProps) {
-  const currentCountry = SHIPPING_COUNTRIES.find((c) => c.code === shippingCountry);
-
   // Order Summary for Add-ons step - Add Items Mode
   if (step === "addons" && isAddItemsMode) {
     return (
@@ -92,7 +87,7 @@ export function OrderSummary({
           {addonsShipping > 0 && (
             <div className="py-4 border-b">
               <div className="flex justify-between text-sm">
-                <span>Shipping to {currentCountry?.name}</span>
+                <span>Shipping from {project?.creator?.location || "creator"}</span>
                 <span>${addonsShipping}</span>
               </div>
             </div>
@@ -174,7 +169,7 @@ export function OrderSummary({
           {totalShipping > 0 && (
             <div className="py-4 border-b">
               <div className="flex justify-between text-sm">
-                <span>Shipping to {currentCountry?.name}</span>
+                <span>Shipping from {project?.creator?.location || "creator"}</span>
                 <span>${totalShipping}</span>
               </div>
             </div>
@@ -277,7 +272,7 @@ export function OrderSummary({
           {totalShipping > 0 && (
             <div className="py-4 border-b">
               <div className="flex justify-between text-sm">
-                <span>Shipping to {currentCountry?.name}</span>
+                <span>Shipping from {project?.creator?.location || "creator"}</span>
                 <span>${totalShipping}</span>
               </div>
             </div>
@@ -331,7 +326,7 @@ export function OrderSummary({
           {addonsShipping > 0 && (
             <div className="py-4 border-b">
               <div className="flex justify-between text-sm">
-                <span>Shipping to {currentCountry?.name}</span>
+                <span>Shipping from {project?.creator?.location || "creator"}</span>
                 <span>${addonsShipping}.00</span>
               </div>
             </div>
@@ -434,7 +429,7 @@ export function OrderSummary({
           {totalShipping > 0 && (
             <div className="py-4 border-b">
               <div className="flex justify-between text-sm">
-                <span>Shipping to {currentCountry?.name}</span>
+                <span>Shipping from {project?.creator?.location || "creator"}</span>
                 <span>${totalShipping.toFixed(2)}</span>
               </div>
             </div>
@@ -532,7 +527,7 @@ export function OrderSummary({
           <div className="py-4 border-b">
             <p className="text-xs font-medium text-muted-foreground mb-1">Shipping</p>
             <div className="flex justify-between text-sm">
-              <span>{currentCountry?.name}</span>
+              <span>From {project?.creator?.location || "creator"}</span>
               <span>${totalShipping}.00</span>
             </div>
           </div>

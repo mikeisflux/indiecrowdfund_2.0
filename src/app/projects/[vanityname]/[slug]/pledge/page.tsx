@@ -666,7 +666,6 @@ export default function PledgePage() {
         selectedAddons={selectedAddons}
         addons={addons}
         bonusSupport={bonusSupport}
-        shippingCountry={shippingCountry}
         totalShipping={totalShipping}
         addonsShipping={addonsShipping}
         total={total}
@@ -789,7 +788,6 @@ export default function PledgePage() {
                 addons={addons}
                 bonusSupport={bonusSupport}
                 setBonusSupport={setBonusSupport}
-                shippingCountry={shippingCountry}
                 totalShipping={totalShipping}
                 addonsShipping={addonsShipping}
                 total={total}
