@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-            <div style="white-space: pre-wrap;">${htmlContent.replace(/\n/g, "<br>")}</div>
+            <div style="white-space: pre-wrap;">${escapeHtmlForEmail(htmlContent).replace(/\n/g, "<br>")}</div>
           </div>
           <div style="text-align: center; color: #999; font-size: 12px; margin-top: 20px;">
             <p style="margin: 0;">This is a test email sent from IndieCrowdfund.</p>

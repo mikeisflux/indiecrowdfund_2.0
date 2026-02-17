@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -134,12 +134,12 @@ export async function POST(request: NextRequest) {
 
           <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
             <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">
-              Message from <strong>${senderName}</strong>${project ? ` about "${project.title}"` : ""}
+              Message from <strong>${escapeHtmlForEmail(senderName)}</strong>${project ? ` about "${escapeHtmlForEmail(project.title)}"` : ""}
             </p>
           </div>
 
           <div style="padding: 20px 0;">
-            ${content.trim().replace(/\n/g, '<br>')}
+            ${escapeHtmlForEmail(content.trim()).replace(/\n/g, '<br>')}
           </div>
 
           <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; text-align: center; color: #999; font-size: 12px;">

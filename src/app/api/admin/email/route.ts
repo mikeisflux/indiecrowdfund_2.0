@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
           </head>
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            ${emailBody.replace(/\n/g, '<br>')}
+            ${escapeHtmlForEmail(emailBody).replace(/\n/g, '<br>')}
           </body>
         </html>
       `;

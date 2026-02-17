@@ -1692,6 +1692,7 @@ model PlatformSettings {
   sendgridWebhookVerificationKey String?  // ECDSA public key for verifying SendGrid event webhooks
   mailgunApiKey         String?
   mailgunDomain         String?
+  mailgunWebhookSigningKey String?  // Mailgun webhook signing key for verifying event webhooks
   emailVerificationRequired Boolean @default(false)
   welcomeEmailEnabled   Boolean  @default(true)
   pledgeConfirmationEnabled Boolean @default(true)

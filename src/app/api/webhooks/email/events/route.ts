@@ -1,7 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
+
+// Verify Mailgun webhook signature using HMAC-SHA256
+// See: https://documentation.mailgun.com/docs/mailgun/user-manual/tracking-messages/#securing-webhooks
+async function verifyMailgunSignature(
+  timestamp: string,
+  token: string,
+  signature: string
+): Promise<boolean> {
+  try {
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { mailgunWebhookSigningKey: true },
+    });
+
+    const signingKey = settings?.mailgunWebhookSigningKey;
+    if (!signingKey) {
+      // No signing key configured - allow through but log warning
+      console.warn("[Webhook] Mailgun webhook signing key not configured - skipping verification");
+      return true;
+    }
+
+    const encodedToken = crypto
+      .createHmac("sha256", signingKey)
+      .update(timestamp.concat(token))
+      .digest("hex");
+
+    return encodedToken === signature;
+  } catch (error) {
+    console.error("[Webhook] Error verifying Mailgun signature:", error);
+    return false;
+  }
+}
+
+// Verify SendGrid webhook signature using ECDSA
+// See: https://docs.sendgrid.com/for-developers/tracking-events/getting-started-event-webhook-security-features
+async function verifySendGridSignature(
+  publicKey: string,
+  payload: string,
+  signature: string,
+  timestamp: string
+): Promise<boolean> {
+  try {
+    const timestampPayload = timestamp + payload;
+    const decodedSignature = Buffer.from(signature, "base64");
+
+    const verifier = crypto.createVerify("sha256");
+    verifier.update(timestampPayload);
+    verifier.end();
+
+    return verifier.verify(
+      `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`,
+      decodedSignature
+    );
+  } catch (error) {
+    console.error("[Webhook] Error verifying SendGrid signature:", error);
+    return false;
+  }
+}
 
 // Mailgun Event Types
 type MailgunEventType =
@@ -194,14 +253,53 @@ export async function POST(request: NextRequest) {
     let sendGridEvents: SendGridEventData[] | null = null;
 
     if (contentType.includes("application/json")) {
-      const payload = await request.json();
+      // Read raw body for SendGrid signature verification
+      const rawBody = await request.text();
+      const payload = JSON.parse(rawBody);
 
       // Check if it's a SendGrid webhook (array of events)
       if (Array.isArray(payload)) {
+        // Verify SendGrid webhook signature if verification key is configured
+        const sgSignature = request.headers.get("x-twilio-email-event-webhook-signature");
+        const sgTimestamp = request.headers.get("x-twilio-email-event-webhook-timestamp");
+
+        if (sgSignature && sgTimestamp) {
+          const settings = await db.platformSettings.findUnique({
+            where: { id: "default" },
+            select: { sendgridWebhookVerificationKey: true },
+          });
+
+          if (settings?.sendgridWebhookVerificationKey) {
+            const isValid = await verifySendGridSignature(
+              settings.sendgridWebhookVerificationKey,
+              rawBody,
+              sgSignature,
+              sgTimestamp
+            );
+
+            if (!isValid) {
+              console.error("[Webhook] SendGrid signature verification failed");
+              return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+            }
+          }
+        }
+
         sendGridEvents = payload as SendGridEventData[];
       } else {
-        // Mailgun JSON format
+        // Mailgun JSON format - verify signature if present
         const mailgunPayload = payload as MailgunWebhookPayload;
+
+        if (mailgunPayload.signature) {
+          const { timestamp, token, signature } = mailgunPayload.signature;
+          if (timestamp && token && signature) {
+            const isValid = await verifyMailgunSignature(timestamp, token, signature);
+            if (!isValid) {
+              console.error("[Webhook] Mailgun signature verification failed");
+              return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+            }
+          }
+        }
+
         if (mailgunPayload["event-data"]) {
           eventData = mailgunPayload["event-data"];
         } else if (mailgunPayload.event && mailgunPayload.recipient) {
@@ -216,6 +314,19 @@ export async function POST(request: NextRequest) {
     } else if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
       // Mailgun Form data format
       const formData = await request.formData();
+
+      // Verify Mailgun signature from form data if present
+      const mgTimestamp = formData.get("timestamp") as string;
+      const mgToken = formData.get("token") as string;
+      const mgSignature = formData.get("signature") as string;
+
+      if (mgTimestamp && mgToken && mgSignature) {
+        const isValid = await verifyMailgunSignature(mgTimestamp, mgToken, mgSignature);
+        if (!isValid) {
+          console.error("[Webhook] Mailgun form signature verification failed");
+          return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+        }
+      }
 
       // Try to get event-data as JSON string first
       const eventDataStr = formData.get("event-data") as string;

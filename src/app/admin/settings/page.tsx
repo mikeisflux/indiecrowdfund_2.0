@@ -63,6 +63,7 @@ interface PlatformSettings {
   sendgridApiKey: string | null;
   mailgunApiKey: string | null;
   mailgunDomain: string | null;
+  mailgunWebhookSigningKey: string | null;
   // Social profile URLs
   twitterHandle: string | null;
   facebookUrl: string | null;
@@ -220,6 +221,7 @@ export default function SettingsPage() {
     sendgridApiKey: "",
     mailgunApiKey: "",
     mailgunDomain: "",
+    mailgunWebhookSigningKey: "",
     // SendGrid webhook verification
     sendgridWebhookVerificationKey: "",
     // Local UI settings (not in DB)
@@ -390,6 +392,7 @@ export default function SettingsPage() {
         sendgridWebhookVerificationKey: (settings as unknown as Record<string, unknown>).sendgridWebhookVerificationKey as string || "",
         mailgunApiKey: settings.mailgunApiKey || "",
         mailgunDomain: settings.mailgunDomain || "",
+        mailgunWebhookSigningKey: (settings as unknown as Record<string, unknown>).mailgunWebhookSigningKey as string || "",
         emailVerificationRequired: settings.emailVerificationRequired || false,
         welcomeEmailEnabled: settings.welcomeEmailEnabled !== false,
         pledgeConfirmationEnabled: settings.pledgeConfirmationEnabled !== false,
@@ -655,6 +658,7 @@ export default function SettingsPage() {
             sendgridWebhookVerificationKey: emailSettings.sendgridWebhookVerificationKey,
             mailgunApiKey: emailSettings.mailgunApiKey,
             mailgunDomain: emailSettings.mailgunDomain,
+            mailgunWebhookSigningKey: emailSettings.mailgunWebhookSigningKey,
             emailVerificationRequired: emailSettings.emailVerificationRequired,
             welcomeEmailEnabled: emailSettings.welcomeEmailEnabled,
             pledgeConfirmationEnabled: emailSettings.pledgeConfirmationEnabled,

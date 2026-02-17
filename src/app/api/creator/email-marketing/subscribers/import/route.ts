@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       (await db.emailBlocklist.findMany({
         where: { type: "EMAIL", isActive: true },
         select: { value: true },
-      })).map((b) => b.value)
+      })).map((b: { value: string }) => b.value)
     );
 
     let imported = 0;

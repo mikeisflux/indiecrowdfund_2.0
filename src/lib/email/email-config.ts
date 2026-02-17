@@ -8,6 +8,16 @@ import { db } from "@/lib/db";
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+// Escape HTML special characters to prevent XSS/injection in email bodies
+export function escapeHtmlForEmail(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Email priority levels for the queue
 // Higher priority = processed first
 export const EMAIL_PRIORITY = {
@@ -523,39 +533,44 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
   let errors = 0;
 
   try {
-    // Get next pending email (highest priority first, then oldest)
-    const queueEntry = await db.emailQueue.findFirst({
-      where: {
-        status: "PENDING",
-      },
-      orderBy: [
-        { priority: "desc" },
-        { createdAt: "asc" },
-      ],
-    });
+    // Atomically claim the next pending email to prevent race conditions
+    // Uses UPDATE ... RETURNING to find and claim in a single query
+    const claimed = await db.$queryRaw<Array<{
+      id: string;
+      toEmail: string;
+      subject: string;
+      bodyHtml: string;
+      bodyText: string | null;
+      fromEmail: string | null;
+      fromName: string | null;
+      replyTo: string | null;
+      isCreatorEmail: boolean;
+      attempts: number;
+      maxAttempts: number;
+      priority: number;
+    }>>`
+      UPDATE "EmailQueue"
+      SET "status" = 'PROCESSING',
+          "processedAt" = NOW(),
+          "attempts" = "attempts" + 1
+      WHERE "id" = (
+        SELECT "id" FROM "EmailQueue"
+        WHERE "status" = 'PENDING'
+          AND "attempts" < "maxAttempts"
+        ORDER BY "priority" DESC, "createdAt" ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING "id", "toEmail", "subject", "bodyHtml", "bodyText",
+                "fromEmail", "fromName", "replyTo", "isCreatorEmail",
+                "attempts", "maxAttempts", "priority"
+    `;
 
-    if (!queueEntry) {
+    if (!claimed || claimed.length === 0) {
       return { processed: 0, errors: 0 };
     }
 
-    // Skip if already at max attempts
-    if (queueEntry.attempts >= queueEntry.maxAttempts) {
-      await db.emailQueue.update({
-        where: { id: queueEntry.id },
-        data: { status: "FAILED", error: "Max attempts reached" },
-      });
-      return { processed: 0, errors: 1 };
-    }
-
-    // Mark as processing
-    await db.emailQueue.update({
-      where: { id: queueEntry.id },
-      data: {
-        status: "PROCESSING",
-        processedAt: new Date(),
-        attempts: { increment: 1 },
-      },
-    });
+    const queueEntry = claimed[0];
 
     // Send the email
     const result = await sendEmail({
@@ -581,7 +596,7 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
       processed = 1;
     } else {
       // If the email is permanently blocked (espblock, bounce, etc.), fail immediately - no retries
-      const isPermanentFailure = result.blocked === true;
+      const isPermanentFailure = "blocked" in result && result.blocked === true;
       const newAttempts = queueEntry.attempts + 1;
       const shouldFail = isPermanentFailure || newAttempts >= queueEntry.maxAttempts;
       await db.emailQueue.update({

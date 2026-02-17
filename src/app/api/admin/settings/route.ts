@@ -87,6 +87,7 @@ export async function GET() {
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
       mailgunApiKey: settings.mailgunApiKey ? "••••••••" : null,
+      mailgunWebhookSigningKey: settings.mailgunWebhookSigningKey ? "••••••••" : null,
       openaiApiKey: settings.openaiApiKey ? "••••••••" : null,
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
       googlePlacesApiKey: settings.googlePlacesApiKey ? "••••••••" : null,
@@ -160,7 +161,7 @@ export async function PATCH(req: NextRequest) {
     const secretFields = [
       'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret', 'stripeConnectWebhookSecret',
       'divinityCoinApiKey', 'divinityCoinWebhookSecret', 'divinityCoinStripePublishableKey',
-      'smtpPassword', 'sendgridApiKey', 'sendgridWebhookVerificationKey', 'mailgunApiKey',
+      'smtpPassword', 'sendgridApiKey', 'sendgridWebhookVerificationKey', 'mailgunApiKey', 'mailgunWebhookSigningKey',
       'openaiApiKey', 'anthropicApiKey', 'googlePlacesApiKey',
       'facebookAppSecret', 'facebookPageAccessToken',
       'youtubeClientSecret', 'youtubeApiKey',
@@ -200,7 +201,7 @@ export async function PATCH(req: NextRequest) {
         "emailProvider", "smtpHost", "smtpPort", "smtpUser", "smtpPassword",
         "smtpFromEmail", "smtpFromName", "smtpReplyToEmail",
         "sendgridApiKey", "sendgridWebhookVerificationKey",
-        "mailgunApiKey", "mailgunDomain",
+        "mailgunApiKey", "mailgunDomain", "mailgunWebhookSigningKey",
         "emailVerificationRequired", "welcomeEmailEnabled", "pledgeConfirmationEnabled", "projectUpdateNotifications"
       ],
       social: [
@@ -303,6 +304,7 @@ export async function PATCH(req: NextRequest) {
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
       mailgunApiKey: settings.mailgunApiKey ? "••••••••" : null,
+      mailgunWebhookSigningKey: settings.mailgunWebhookSigningKey ? "••••••••" : null,
       openaiApiKey: settings.openaiApiKey ? "••••••••" : null,
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
       googlePlacesApiKey: settings.googlePlacesApiKey ? "••••••••" : null,

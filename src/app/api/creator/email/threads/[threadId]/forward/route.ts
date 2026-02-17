@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -130,7 +130,7 @@ export async function POST(
           </div>
 
           <div style="padding: 20px 0;">
-            ${fullContent.replace(/\n/g, '<br>')}
+            ${escapeHtmlForEmail(fullContent).replace(/\n/g, '<br>')}
           </div>
 
           <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; text-align: center; color: #999; font-size: 12px;">

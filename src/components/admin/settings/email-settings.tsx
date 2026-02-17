@@ -33,6 +33,7 @@ interface EmailSettingsProps {
     sendgridWebhookVerificationKey: string;
     mailgunApiKey: string;
     mailgunDomain: string;
+    mailgunWebhookSigningKey: string;
     replyToEmail: string;
     emailVerificationRequired: boolean;
     welcomeEmailEnabled: boolean;
@@ -153,6 +154,91 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
           </div>
         </CardContent>
       </Card>
+
+      {/* Mailgun Webhook Security */}
+      {settings.provider === "mailgun" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Mailgun Event Webhook
+            </CardTitle>
+            <CardDescription>
+              Configure webhook to track email delivery, opens, clicks, bounces, and spam reports
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Webhook URL */}
+            <div className="space-y-2">
+              <Label>Webhook URL</Label>
+              <div className="flex gap-2">
+                <div className="flex-1 flex items-center rounded-md border bg-muted px-3 py-2">
+                  <Webhook className="h-4 w-4 text-muted-foreground mr-2" />
+                  <code className="text-sm flex-1 truncate">{webhookUrl}</code>
+                </div>
+                <Button variant="outline" size="icon" onClick={copyWebhookUrl}>
+                  {copiedWebhook ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Add this URL in Mailgun under Sending → Webhooks for your domain
+              </p>
+            </div>
+
+            {/* Webhook Signing Key */}
+            <div className="space-y-2">
+              <Label>Webhook Signing Key</Label>
+              <SecureKeyInput
+                value={settings.mailgunWebhookSigningKey}
+                onChange={(value) => onSettingsChange({ ...settings, mailgunWebhookSigningKey: value })}
+                onSave={onSave}
+                hasExistingValue={settings.mailgunWebhookSigningKey === "••••••••"}
+                placeholder="key-xxx..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Find this in Mailgun → Settings → API Keys → HTTP Webhook Signing Key (starts with &quot;key-&quot;)
+              </p>
+            </div>
+
+            {/* Tracked Events */}
+            <div className="space-y-2">
+              <Label>Tracked Events</Label>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">Delivered</Badge>
+                <Badge variant="secondary">Opened</Badge>
+                <Badge variant="secondary">Clicked</Badge>
+                <Badge variant="secondary">Permanent Fail</Badge>
+                <Badge variant="secondary">Temporary Fail</Badge>
+                <Badge variant="secondary">Complained</Badge>
+                <Badge variant="secondary">Unsubscribed</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enable these events in Mailgun when configuring your webhooks
+              </p>
+            </div>
+
+            {/* Setup Instructions */}
+            <Alert>
+              <Shield className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Security:</strong> The webhook signing key ensures requests are genuinely from Mailgun.
+                Without it, your webhook endpoint could be vulnerable to spoofed requests.
+                <Button
+                  variant="link"
+                  className="p-0 h-auto ml-1"
+                  onClick={() => window.open("https://documentation.mailgun.com/docs/mailgun/user-manual/tracking-messages/#webhooks", "_blank")}
+                >
+                  Learn more <ExternalLink className="h-3 w-3 ml-1" />
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      )}
 
       {/* SendGrid Webhook Security */}
       {settings.provider === "sendgrid" && (
