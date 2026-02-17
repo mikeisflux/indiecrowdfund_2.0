@@ -171,8 +171,8 @@ export default function AdminLayout({
   useEffect(() => {
     if (session?.user?.role === "SUPER_ADMIN") {
       fetchStats();
-      // Refresh stats every 30 seconds
-      const interval = setInterval(fetchStats, 30000);
+      // Refresh stats every 60 seconds
+      const interval = setInterval(fetchStats, 60000);
       return () => clearInterval(interval);
     }
   }, [session, fetchStats]);
@@ -242,7 +242,7 @@ export default function AdminLayout({
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-border px-4">
-          <Link href="/admin" prefetch={false} className="flex items-center gap-2">
+          <Link href="/admin" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
               <Zap className="h-5 w-5 text-white" />
             </div>
@@ -282,7 +282,6 @@ export default function AdminLayout({
                       <Link
                         key={item.name}
                         href={item.href}
-                        prefetch={false}
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                           isActive

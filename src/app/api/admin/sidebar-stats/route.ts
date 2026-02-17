@@ -163,7 +163,7 @@ export async function GET() {
       return count.toString();
     };
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       users: formatCount(totalUsers),
       usersRaw: totalUsers,
       projects: formatCount(totalProjects),
@@ -177,6 +177,11 @@ export async function GET() {
       retailers: pendingRetailers,
       prelaunch: pendingPrelaunch,
     });
+
+    // Cache for 30 seconds to avoid hammering the DB on every navigation
+    response.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60");
+
+    return response;
   } catch (error) {
     console.error("Error fetching sidebar stats:", error);
     return NextResponse.json(
