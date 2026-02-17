@@ -127,10 +127,10 @@ export async function GET(request: NextRequest) {
       // Total: 9% (creators receive 91%)
       const partnerFeeRate = 0.06;
       const platformFeeRate = 0.03;
-      const partnerFee = totalRaised * partnerFeeRate;
-      const platformFee = totalRaised * platformFeeRate;
-      const totalFees = partnerFee + platformFee;
-      const amountOwed = totalRaised - totalFees;
+      const partnerFee = Math.round(totalRaised * partnerFeeRate * 100) / 100;
+      const platformFee = Math.round(totalRaised * platformFeeRate * 100) / 100;
+      const totalFees = Math.round((partnerFee + platformFee) * 100) / 100;
+      const amountOwed = Math.round((totalRaised - totalFees) * 100) / 100;
 
       const settlements = project.divinityCoinSettlements || [];
 
@@ -429,8 +429,8 @@ export async function POST(request: NextRequest) {
       _sum: { amount: true },
     });
     const grossAmount = Number(totalRaised._sum.amount || 0);
-    const partnerFee = grossAmount * 0.06;
-    const platformFee = grossAmount * 0.03;
+    const partnerFee = Math.round(grossAmount * 0.06 * 100) / 100;
+    const platformFee = Math.round(grossAmount * 0.03 * 100) / 100;
 
     // Create the DivinityCoin settlement record as COMPLETED
     const settlement = await db.divinityCoinSettlement.create({

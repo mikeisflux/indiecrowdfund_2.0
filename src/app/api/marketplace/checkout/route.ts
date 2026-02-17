@@ -116,9 +116,9 @@ export async function POST(request: Request) {
     const stripe = await getStripeInstance();
     const baseUrl = getSecureAppUrl();
 
-    // Calculate platform fee in cents for Stripe
+    // Calculate in cents for Stripe - derive from the already-rounded dollar amounts
     const amountInCents = Math.round(bookPrice * 100);
-    const platformFee = Math.round(amountInCents * 0.03); // 3% platform fee
+    const platformFee = Math.round(platformFeeAmount * 100); // must match DB fee exactly
 
     // Ensure image URL is absolute (Stripe requires absolute URLs)
     let imageUrl: string | null = book.coverImageUrl || book.pdfCoverImageUrl || null;

@@ -212,9 +212,9 @@ export async function POST(request: NextRequest) {
     const stripePercentRate = 0.029; // 2.9% per transaction
     const stripeFixedFee = 0.30; // $0.30 per transaction
 
-    const platformFees = grossAmount * platformFeeRate;
-    const processorFees = (grossAmount * stripePercentRate) + (pledgeCount * stripeFixedFee);
-    const netAmount = grossAmount - platformFees - processorFees;
+    const platformFees = Math.round(grossAmount * platformFeeRate * 100) / 100;
+    const processorFees = Math.round(((grossAmount * stripePercentRate) + (pledgeCount * stripeFixedFee)) * 100) / 100;
+    const netAmount = Math.round((grossAmount - platformFees - processorFees) * 100) / 100;
 
     // Create the payout record
     const payout = await db.payout.create({

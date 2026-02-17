@@ -122,12 +122,22 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // Mark as confirmed FIRST (before updating stats)
-    // This ensures this pledge is included when checking for pending pledges to process
-    await db.pledge.update({
-      where: { id: pledgeId },
+    // Atomically mark as confirmed using conditional update to prevent race conditions.
+    // If two requests pass the check above simultaneously, only one will match the
+    // WHERE clause (confirmationEmailSent: false) and actually update.
+    const confirmResult = await db.pledge.updateMany({
+      where: { id: pledgeId, confirmationEmailSent: false },
       data: { confirmationEmailSent: true },
     });
+
+    if (confirmResult.count === 0) {
+      // Another request already confirmed this pledge
+      return NextResponse.json({
+        success: true,
+        message: "Pledge already confirmed",
+        alreadyConfirmed: true,
+      });
+    }
 
     // Update project stats (only for SetupIntent pledges - PaymentIntent pledges update stats in webhook)
     let updatedProject = pledge.project;

@@ -72,6 +72,30 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Stripe Connect Webhook] Received event: ${event.type} (${event.id})`);
 
+    // Check for duplicate event (idempotency)
+    const existingEvent = await db.processedWebhookEvent.findUnique({
+      where: { eventId: event.id },
+    });
+
+    if (existingEvent) {
+      console.log(`[Stripe Connect Webhook] Duplicate event ignored: ${event.id}`);
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+
+    // Record event BEFORE handling to prevent race conditions with retries
+    try {
+      await db.processedWebhookEvent.create({
+        data: {
+          eventId: event.id,
+          eventType: event.type,
+          source: "stripe_connect",
+        },
+      });
+    } catch {
+      console.log(`[Stripe Connect Webhook] Event already being processed: ${event.id}`);
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+
     // Handle Connect-specific events
     switch (event.type) {
       case "account.updated":

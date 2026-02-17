@@ -30,6 +30,10 @@ interface PlatformSettingsCache {
   sendgridApiKey: string | null;
   smtpFromEmail: string | null;
   emailProvider: string | null;
+  r2AccessKeyId: string | null;
+  r2SecretAccessKey: string | null;
+  r2BucketName: string | null;
+  r2AccountId: string | null;
 }
 
 // Simple health check endpoint for maintenance page and admin dashboard
@@ -72,6 +76,10 @@ export async function GET() {
             sendgridApiKey: true,
             smtpFromEmail: true,
             emailProvider: true,
+            r2AccessKeyId: true,
+            r2SecretAccessKey: true,
+            r2BucketName: true,
+            r2AccountId: true,
           },
         }),
       ]);
@@ -95,7 +103,7 @@ export async function GET() {
   const emailCheck = checkEmailConfig(platformSettings);
   checks.push(emailCheck);
 
-  const storageCheck = checkStorageConfig();
+  const storageCheck = checkStorageConfig(platformSettings);
   checks.push(storageCheck);
 
   // Downgrade to degraded if any non-critical service is unhealthy
@@ -211,11 +219,12 @@ function checkEmailConfig(settings: PlatformSettingsCache | null): HealthCheck {
   }
 }
 
-function checkStorageConfig(): HealthCheck {
-  const hasAccessKey = !!process.env.S3_ACCESS_KEY_ID;
-  const hasSecretKey = !!process.env.S3_SECRET_ACCESS_KEY;
-  const hasBucket = !!process.env.S3_BUCKET_NAME;
-  const hasEndpoint = !!process.env.S3_ENDPOINT;
+function checkStorageConfig(settings: PlatformSettingsCache | null): HealthCheck {
+  // Check database settings first (Cloudflare R2), then fall back to env vars (S3-compatible)
+  const hasAccessKey = !!(settings?.r2AccessKeyId || process.env.S3_ACCESS_KEY_ID);
+  const hasSecretKey = !!(settings?.r2SecretAccessKey || process.env.S3_SECRET_ACCESS_KEY);
+  const hasBucket = !!(settings?.r2BucketName || process.env.S3_BUCKET_NAME);
+  const hasEndpoint = !!(settings?.r2AccountId || process.env.S3_ENDPOINT);
 
   if (hasAccessKey && hasSecretKey && hasBucket && hasEndpoint) {
     return { name: "storage", status: "healthy" };
@@ -229,7 +238,7 @@ function checkStorageConfig(): HealthCheck {
     return {
       name: "storage",
       status: "unhealthy",
-      error: "S3 storage not configured",
+      error: "Storage not configured",
     };
   }
 }
