@@ -171,6 +171,21 @@ export async function POST(request: NextRequest) {
 
     const emailLower = email.toLowerCase().trim();
 
+    // Check if email is on the blocklist (bounced, spam reported, etc.)
+    const blocked = await db.emailBlocklist.findFirst({
+      where: {
+        type: "EMAIL",
+        value: emailLower,
+        isActive: true,
+      },
+    });
+    if (blocked) {
+      return NextResponse.json(
+        { error: "This email address has been blocked due to a previous bounce or spam complaint" },
+        { status: 400 }
+      );
+    }
+
     // Check if already exists in creator's email list
     const existing = await db.emailListSubscriber.findUnique({
       where: {

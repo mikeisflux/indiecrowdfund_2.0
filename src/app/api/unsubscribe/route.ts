@@ -111,16 +111,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle JSON API requests
+    // Handle JSON API requests - token is always required for security
     if (contentType.includes("application/json")) {
       const body = await request.json();
-      const { token, email } = body;
+      const { token } = body;
 
       if (token) {
         targetEmail = verifyUnsubscribeToken(token);
-      } else if (email) {
-        // Direct email unsubscribe (for admin use)
-        targetEmail = email;
       }
     }
 
@@ -203,12 +200,24 @@ async function unsubscribeEmail(email: string): Promise<{ success: boolean; erro
   }
 }
 
+// Escape HTML special characters to prevent XSS
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /**
  * Render a simple HTML page for unsubscribe confirmation
  */
 function renderUnsubscribePage(success: boolean, message: string): string {
   const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const safeMessage = escapeHtml(message);
+  const safeAppName = escapeHtml(APP_NAME);
 
   return `
     <!DOCTYPE html>
@@ -216,7 +225,7 @@ function renderUnsubscribePage(success: boolean, message: string): string {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${success ? "Unsubscribed" : "Error"} - ${APP_NAME}</title>
+        <title>${success ? "Unsubscribed" : "Error"} - ${safeAppName}</title>
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -261,12 +270,12 @@ function renderUnsubscribePage(success: boolean, message: string): string {
         </style>
       </head>
       <body>
-        <h2>${APP_NAME}</h2>
+        <h2>${safeAppName}</h2>
         <div class="container">
           <div class="icon">${success ? "✓" : "✕"}</div>
           <h1>${success ? "Unsubscribed" : "Error"}</h1>
-          <p class="message">${message}</p>
-          <a href="${APP_URL}" class="link">Return to ${APP_NAME}</a>
+          <p class="message">${safeMessage}</p>
+          <a href="${APP_URL}" class="link">Return to ${safeAppName}</a>
         </div>
       </body>
     </html>

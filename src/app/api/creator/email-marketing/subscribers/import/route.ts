@@ -87,7 +87,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Pre-fetch blocklist to avoid N+1 queries during import
+    const blockedEmails = new Set(
+      (await db.emailBlocklist.findMany({
+        where: { type: "EMAIL", isActive: true },
+        select: { value: true },
+      })).map((b) => b.value)
+    );
+
     let imported = 0;
+    let skippedBlocked = 0;
     let failed = 0;
     const errors: string[] = [];
 
@@ -95,6 +104,12 @@ export async function POST(request: NextRequest) {
       try {
         if (!row.email) {
           failed++;
+          continue;
+        }
+
+        // Skip blocked emails (bounced, spam reported, etc.)
+        if (blockedEmails.has(row.email)) {
+          skippedBlocked++;
           continue;
         }
 
@@ -141,6 +156,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       imported,
       failed,
+      skippedBlocked,
       total: rows.length,
       errors,
     });

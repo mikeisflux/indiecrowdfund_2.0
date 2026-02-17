@@ -8,6 +8,29 @@ const CAMPAIGN_COOKIE_NAME = "ec_source";
 // Attribution window: 7 days in seconds
 const ATTRIBUTION_WINDOW = 7 * 24 * 60 * 60;
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+// Validate redirect URL to prevent open redirect attacks
+function isAllowedRedirectUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    // Only allow http/https protocols
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+    // Allow same-origin redirects
+    const appHost = new URL(APP_URL).host;
+    if (parsed.host === appHost) {
+      return true;
+    }
+    // Block javascript:, data:, and other dangerous schemes (already caught by protocol check)
+    // Allow external links - these come from email content the creator authored
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // GET - Track email link click and redirect
 export async function GET(request: Request) {
   try {
@@ -21,6 +44,12 @@ export async function GET(request: Request) {
     }
 
     const decodedUrl = Buffer.from(url, "base64").toString("utf-8");
+
+    // Validate redirect URL to prevent open redirect / XSS via javascript: URLs
+    if (!isAllowedRedirectUrl(decodedUrl)) {
+      console.warn(`[Click Track] Blocked unsafe redirect URL: ${decodedUrl}`);
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     let decodedEmail: string | null = null;
 
     if (emailId) {

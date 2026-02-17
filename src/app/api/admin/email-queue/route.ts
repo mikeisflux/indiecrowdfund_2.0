@@ -91,14 +91,20 @@ export async function POST(request: NextRequest) {
         enabled: false,
       });
     } else if (action === "retry-failed") {
-      // Reset failed emails to pending for retry
+      // Reset failed emails to pending for retry, but skip permanently blocked ones
+      // Emails blocked by ESP (espblock, bounce, spam) should not be retried
       const result = await db.emailQueue.updateMany({
-        where: { status: "FAILED" },
+        where: {
+          status: "FAILED",
+          error: {
+            not: { contains: "blocked" },
+          },
+        },
         data: { status: "PENDING", attempts: 0, error: null },
       });
       return NextResponse.json({
         success: true,
-        message: `Reset ${result.count} failed emails for retry`,
+        message: `Reset ${result.count} failed emails for retry (skipped permanently blocked)`,
         count: result.count,
       });
     } else if (action === "clear-sent") {
