@@ -207,11 +207,13 @@ export async function POST(request: NextRequest) {
 
     // Calculate amounts
     const grossAmount = project.pledges.reduce((sum: number, p: { amount: number }) => sum + Number(p.amount), 0);
+    const pledgeCount = project.pledges.length;
     const platformFeeRate = 0.03; // 3% platform fee
-    const processorFeeRate = 0.029 + 0.30; // 2.9% + $0.30 per transaction (Stripe standard)
+    const stripePercentRate = 0.029; // 2.9% per transaction
+    const stripeFixedFee = 0.30; // $0.30 per transaction
 
     const platformFees = grossAmount * platformFeeRate;
-    const processorFees = grossAmount * processorFeeRate;
+    const processorFees = (grossAmount * stripePercentRate) + (pledgeCount * stripeFixedFee);
     const netAmount = grossAmount - platformFees - processorFees;
 
     // Create the payout record

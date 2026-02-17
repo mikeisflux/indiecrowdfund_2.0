@@ -367,15 +367,26 @@ export async function PATCH(
       // Process refund via Stripe
       try {
         const stripeClient = await getStripeInstance();
-        await stripeClient.refunds.create({
+
+        // Check for existing refunds to prevent duplicates
+        const existingRefunds = await stripeClient.refunds.list({
           payment_intent: pledge.stripePaymentIntentId,
-          reason: "requested_by_customer",
-          metadata: {
-            pledgeId: pledge.id,
-            adminUserId: session.user.id,
-            reason: reason || "Refunded by admin",
-          },
+          limit: 1,
         });
+
+        if (existingRefunds.data.length === 0) {
+          await stripeClient.refunds.create({
+            payment_intent: pledge.stripePaymentIntentId,
+            reason: "requested_by_customer",
+            metadata: {
+              pledgeId: pledge.id,
+              adminUserId: session.user.id,
+              reason: reason || "Refunded by admin",
+            },
+          });
+        } else {
+          console.log(`[Admin Refund] Pledge ${pledge.id} already has existing refund(s) in Stripe`);
+        }
       } catch (stripeError) {
         console.error("Stripe refund error:", stripeError);
         return NextResponse.json(

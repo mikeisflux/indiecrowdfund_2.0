@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as fs from "fs";
 import * as path from "path";
@@ -64,6 +65,15 @@ function parseCSV(content: string): ShopRow[] {
 
 export async function POST() {
   try {
+    // Require SUPER_ADMIN authentication
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if ((session.user as { role?: string }).role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const csvPath = path.join(process.cwd(), "future-upgrades/completed.csv");
 
     if (!fs.existsSync(csvPath)) {

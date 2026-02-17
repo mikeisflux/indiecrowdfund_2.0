@@ -12,19 +12,30 @@ export const dynamic = "force-dynamic";
 
 // Check if request is from localhost (middleware runs on same server)
 function isLocalhost(req: NextRequest): boolean {
+  // Check for internal API secret first (most secure method)
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (internalSecret) {
+    const authHeader = req.headers.get("x-internal-secret");
+    if (authHeader === internalSecret) {
+      return true;
+    }
+  }
+
   const forwarded = req.headers.get("x-forwarded-for");
   const realIp = req.headers.get("x-real-ip");
-
-  // If behind a proxy, check the original IP
   const clientIp = forwarded?.split(",")[0]?.trim() || realIp || "";
 
-  // Allow localhost requests only
-  // When called from middleware on same server, there's no x-forwarded-for
-  // so we also check if the header is absent (internal request)
-  const isInternal = !forwarded && !realIp;
+  // Only allow explicit loopback IPs - do NOT treat missing headers as internal
+  // since external requests without a proxy also lack these headers
   const isLoopback = clientIp === "127.0.0.1" || clientIp === "::1" || clientIp === "localhost";
 
-  return isInternal || isLoopback;
+  // When no proxy headers AND no internal secret, check Host header as last resort
+  if (!forwarded && !realIp && !internalSecret) {
+    const host = req.headers.get("host") || "";
+    return host.startsWith("localhost") || host.startsWith("127.0.0.1");
+  }
+
+  return isLoopback;
 }
 
 // GET - Retrieve all currently blocked IPs

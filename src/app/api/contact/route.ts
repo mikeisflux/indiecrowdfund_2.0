@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     // Get support email from settings or use default
     let supportEmail = "support@indiecrowdfund.com";
     try {
-      const settings = await db.siteSettings.findFirst();
+      const settings = await db.platformSettings.findUnique({ where: { id: "default" } });
       if (settings?.supportEmail) {
         supportEmail = settings.supportEmail;
       }

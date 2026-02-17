@@ -322,15 +322,32 @@ export async function PATCH(
         // Process refund via Stripe
         try {
           const stripeClient = await getStripeInstance();
-          await stripeClient.refunds.create({
+
+          // Check for existing refunds to prevent duplicates
+          const existingRefunds = await stripeClient.refunds.list({
             payment_intent: typedPledge.stripePaymentIntentId,
-            reason: "requested_by_customer",
-            metadata: {
-              pledgeId: typedPledge.id,
-              creatorUserId: session.user.id,
-              reason: reason || "Refunded by creator",
-            },
+            limit: 1,
           });
+
+          if (existingRefunds.data.length > 0) {
+            const totalRefunded = existingRefunds.data.reduce((sum, r) => sum + r.amount, 0);
+            if (totalRefunded > 0) {
+              console.log(`[Refund] Pledge ${typedPledge.id} already has refund(s) totaling ${totalRefunded} cents`);
+              // Still update pledge status below even if already refunded in Stripe
+            }
+          }
+
+          if (existingRefunds.data.length === 0) {
+            await stripeClient.refunds.create({
+              payment_intent: typedPledge.stripePaymentIntentId,
+              reason: "requested_by_customer",
+              metadata: {
+                pledgeId: typedPledge.id,
+                creatorUserId: session.user.id,
+                reason: reason || "Refunded by creator",
+              },
+            });
+          }
         } catch (stripeError) {
           console.error("Stripe refund error:", stripeError);
           return NextResponse.json(

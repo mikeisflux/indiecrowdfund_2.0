@@ -66,7 +66,7 @@ export async function GET(
 
         const [verifiedUsers, newsletterSubs] = await Promise.all([
           db.user.findMany({
-            where: { emailVerified: { not: null } },
+            where: { emailVerified: { not: null }, deletedAt: null },
             select: { id: true, email: true, name: true },
           }),
           db.newsletterSubscriber.findMany({

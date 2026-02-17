@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     if (projectIds && projectIds.length > 0) {
       // Tag specific projects
       projectsToTag = await db.project.findMany({
-        where: { id: { in: projectIds } },
+        where: { id: { in: projectIds }, deletedAt: null },
         select: {
           id: true,
           title: true,
@@ -60,6 +60,7 @@ export async function POST(request: Request) {
       // Tag projects with no tags or few tags
       projectsToTag = await db.project.findMany({
         where: {
+          deletedAt: null,
           OR: [
             { tags: { isEmpty: true } },
             { tags: { equals: [] } }
