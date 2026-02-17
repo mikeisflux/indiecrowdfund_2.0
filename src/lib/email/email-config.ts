@@ -580,11 +580,14 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
       console.log(`[Email Queue] Successfully sent queued email: ${queueEntry.id}`);
       processed = 1;
     } else {
+      // If the email is permanently blocked (espblock, bounce, etc.), fail immediately - no retries
+      const isPermanentFailure = result.blocked === true;
       const newAttempts = queueEntry.attempts + 1;
+      const shouldFail = isPermanentFailure || newAttempts >= queueEntry.maxAttempts;
       await db.emailQueue.update({
         where: { id: queueEntry.id },
         data: {
-          status: newAttempts >= queueEntry.maxAttempts ? "FAILED" : "PENDING",
+          status: shouldFail ? "FAILED" : "PENDING",
           error: result.error || "Unknown error",
         },
       });
