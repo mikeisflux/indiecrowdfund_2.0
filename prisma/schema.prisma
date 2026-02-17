@@ -3569,6 +3569,25 @@ model AnnouncementBar {
 }
 
 // ============================================
+// PROMOTIONAL POPUP
+// ============================================
+
+model PromoPopup {
+  id              String    @id @default(cuid())
+
+  // Settings
+  isActive        Boolean   @default(true)
+  showFrequency   String    @default("once_per_session") // once_per_session, once_per_day, every_visit
+
+  // Slides stored as JSON array
+  // Each slide: { title, subtitle, features[], iconName, gradientFrom, gradientTo }
+  slides          Json      @default("[]")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
 // WEBHOOK EVENT DEDUPLICATION
 // ============================================
 

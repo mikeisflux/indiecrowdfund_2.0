@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { TrackingProvider } from "@/components/tracking-provider";
 import { AnnouncementBar } from "@/components/announcement-bar";
+import { PromoPopup } from "@/components/promo-popup";
 import { SiteHeader } from "@/components/site-header";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -85,6 +86,7 @@ export default async function RootLayout({
           >
             <TrackingProvider>
               <AnnouncementBar initialAnnouncements={announcements} />
+              <PromoPopup />
               <SiteHeader />
               {children}
             </TrackingProvider>

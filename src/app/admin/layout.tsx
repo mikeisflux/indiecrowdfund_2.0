@@ -54,6 +54,7 @@ import {
   Coins,
   MapPin,
   ArrowLeftRight,
+  Sparkles,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -128,6 +129,7 @@ const navigation: NavSection[] = [
       { name: "Themes & Styles", href: "/admin/themes", icon: Palette },
       { name: "Hero Slider", href: "/admin/hero-slider", icon: SlidersHorizontal },
       { name: "Announcement Bar", href: "/admin/announcement-bar", icon: Megaphone },
+      { name: "Promo Popup", href: "/admin/promo-popup", icon: Sparkles },
       { name: "Media Library", href: "/admin/media", icon: Image, badgeKey: "media" },
     ],
   },
