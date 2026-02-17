@@ -97,11 +97,11 @@ async function getPledgeDetail(id: string) {
           title: true,
           slug: true,
           status: true,
-          fundingGoal: true,
-          currentFunding: true,
+          goalAmount: true,
+          currentAmount: true,
           fundedAt: true,
           paymentProcessor: true,
-          user: { select: { id: true, name: true, email: true } },
+          creator: { select: { id: true, name: true, email: true } },
         },
       },
       reward: {
@@ -163,10 +163,10 @@ async function getPledgeDetail(id: string) {
     },
     project: {
       ...pledge.project,
-      fundingGoal: Number(pledge.project.fundingGoal),
-      currentFunding: Number(pledge.project.currentFunding),
+      fundingGoal: Number(pledge.project.goalAmount),
+      currentFunding: Number(pledge.project.currentAmount),
       fundedAt: pledge.project.fundedAt?.toISOString() || null,
-      creator: pledge.project.user,
+      creator: pledge.project.creator,
     },
     reward: pledge.reward
       ? {
@@ -484,10 +484,10 @@ async function getPayoutDetail(id: string) {
           title: true,
           slug: true,
           status: true,
-          fundingGoal: true,
-          currentFunding: true,
+          goalAmount: true,
+          currentAmount: true,
           paymentProcessor: true,
-          user: { select: { id: true, name: true, email: true, image: true } },
+          creator: { select: { id: true, name: true, email: true, image: true } },
         },
       },
     },
@@ -513,10 +513,10 @@ async function getPayoutDetail(id: string) {
     },
     project: {
       ...payout.project,
-      fundingGoal: Number(payout.project.fundingGoal),
-      currentFunding: Number(payout.project.currentFunding),
+      fundingGoal: Number(payout.project.goalAmount),
+      currentFunding: Number(payout.project.currentAmount),
     },
-    creator: payout.project.user,
+    creator: payout.project.creator,
   };
 }
 

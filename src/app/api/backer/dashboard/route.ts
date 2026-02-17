@@ -265,6 +265,7 @@ export async function GET() {
         title: pledge.project.title,
         slug: pledge.project.slug,
         imageUrl: pledge.project.imageUrl,
+        creatorId: pledge.project.creator.id,
         creator: {
           name: pledge.project.creator.name || "Unknown Creator",
           avatar: pledge.project.creator.image,

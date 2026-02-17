@@ -62,6 +62,7 @@ interface BackedProject {
   title: string;
   slug: string;
   imageUrl: string | null;
+  creatorId: string;
   creator: { name: string; avatar: string | null };
   status: string;
   goalAmount: number;
@@ -710,7 +711,7 @@ export default function BackerDashboard() {
                                   Manage Pledge
                                 </Button>
                               </Link>
-                              <Link href="/dashboard/messages" className="hidden sm:block">
+                              <Link href={`/dashboard/messages?projectId=${project.id}&recipientId=${project.creatorId}`} className="hidden sm:block">
                                 <Button variant="outline" size="sm" className="hover:border-primary/50">
                                   <MessageSquare className="mr-2 h-3 w-3" />
                                   Message Creator
