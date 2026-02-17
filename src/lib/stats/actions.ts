@@ -92,36 +92,13 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
       ? Math.round((successfulEndedProjects / totalEndedProjects) * 100)
       : 0;
 
-    // Get count of unique backers (users who have made a committed pledge)
-    const backers = await db.pledge.findMany({
+    // Backer pool = total registered users (excluding deleted/locked accounts)
+    const totalBackers = await db.user.count({
       where: {
         deletedAt: null,
-        user: {
-          deletedAt: null,
-          lockedAt: null,
-        },
-        OR: [
-          { status: "COMPLETED" },
-          {
-            status: "PENDING",
-            stripePaymentMethodId: { not: null },
-          },
-          {
-            status: "PENDING",
-            stripeSetupIntentId: { not: null },
-          },
-          {
-            status: "PENDING",
-            confirmationEmailSent: true,
-          },
-        ],
+        lockedAt: null,
       },
-      select: {
-        userId: true,
-      },
-      distinct: ["userId"],
     });
-    const totalBackers = backers.length;
 
     return {
       totalPledged,

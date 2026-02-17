@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -393,11 +394,12 @@ export default async function HomePage() {
                 <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
                   <div className="aspect-video bg-muted relative overflow-hidden">
                     {project.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={project.imageUrl}
                         alt={project.title}
-                        className="project-card-image absolute inset-0 w-full h-full object-cover"
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="project-card-image object-cover"
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-cyan-500/10">
@@ -493,11 +495,12 @@ export default async function HomePage() {
                   <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-amber-500/20">
                     <div className="aspect-video bg-muted relative overflow-hidden">
                       {project.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={project.imageUrl}
                           alt={project.title}
-                          className="project-card-image absolute inset-0 w-full h-full object-cover"
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="project-card-image object-cover"
                         />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-amber-500/10 to-orange-500/10">
@@ -577,11 +580,12 @@ export default async function HomePage() {
                   <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
                     <div className="aspect-video bg-muted relative overflow-hidden">
                       {project.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={project.imageUrl}
                           alt={project.title}
-                          className="project-card-image absolute inset-0 w-full h-full object-cover grayscale-[20%]"
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="project-card-image object-cover grayscale-[20%]"
                         />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-500/10 to-slate-500/10">
