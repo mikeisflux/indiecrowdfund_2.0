@@ -33,6 +33,7 @@ import {
   AlertCircle,
   Home,
   Building2,
+  Shield,
   Package,
   Loader2,
 } from "lucide-react";
@@ -262,6 +263,26 @@ export function AddressManagementTab() {
           Add Address
         </Button>
       </div>
+
+      {/* Info Notice */}
+      <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
+        <CardContent className="py-4">
+          <div className="flex gap-3">
+            <Shield className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+            <div className="space-y-2 text-sm">
+              <p className="font-medium text-blue-900 dark:text-blue-100">
+                Why we ask for your shipping address
+              </p>
+              <p className="text-blue-800/80 dark:text-blue-200/80">
+                To serve our growing international community, we use your saved address to calculate accurate shipping costs at checkout. This ensures you are charged the correct rate based on your actual location. You will still be asked to confirm your full shipping details during the creator&apos;s fulfillment survey after a campaign ends.
+              </p>
+              <p className="text-blue-800/80 dark:text-blue-200/80">
+                Your address information is private and will never be shared with other users. Only project creators you&apos;ve backed will receive your shipping details during fulfillment.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Addresses List */}
       {addresses.length === 0 ? (

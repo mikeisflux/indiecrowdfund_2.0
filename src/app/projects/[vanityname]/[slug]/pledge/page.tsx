@@ -11,7 +11,7 @@ import Image from "next/image";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, MapPin } from "lucide-react";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { ProjectData, RewardData, AddonData, Step } from "./types";
 import { detectUserCountry } from "./constants";
@@ -55,6 +55,33 @@ export default function PledgePage() {
     }
   }, [authStatus, router, projectPath, rewardId]);
 
+  // Fetch saved address to set correct shipping country
+  useEffect(() => {
+    if (authStatus !== "authenticated") return;
+    async function fetchSavedAddress() {
+      try {
+        const res = await fetch("/api/backer/addresses");
+        if (!res.ok) return;
+        const data = await res.json();
+        const addresses = data.addresses || [];
+        if (addresses.length > 0) {
+          setHasSavedAddress(true);
+          // Use the default address country, or the first address
+          const defaultAddr = addresses.find((a: { isDefault: boolean }) => a.isDefault) || addresses[0];
+          if (defaultAddr?.country) {
+            setShippingCountry(defaultAddr.country);
+          }
+        } else {
+          setHasSavedAddress(false);
+        }
+      } catch {
+        // Fall back to timezone detection (already set)
+        setHasSavedAddress(false);
+      }
+    }
+    fetchSavedAddress();
+  }, [authStatus]);
+
   // Data state
   const [project, setProject] = useState<ProjectData | null>(null);
   const [allRewards, setAllRewards] = useState<RewardData[]>([]);
@@ -75,6 +102,7 @@ export default function PledgePage() {
     }
     return "US";
   });
+  const [hasSavedAddress, setHasSavedAddress] = useState<boolean | null>(null); // null = still loading
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddItemsMode] = useState(!!addItemsParam);
@@ -722,6 +750,29 @@ export default function PledgePage() {
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Address requirement notice */}
+            {hasSavedAddress === false && allRewards.some(r => r.shippingType !== "NO_SHIPPING") && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 p-4">
+                <div className="flex gap-3">
+                  <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-amber-900 dark:text-amber-100">
+                      Shipping address required
+                    </p>
+                    <p className="text-sm text-amber-800/80 dark:text-amber-200/80 mt-1">
+                      Please add a shipping address to your account so we can calculate accurate shipping costs for your location. Without one, shipping may default to an incorrect region.
+                    </p>
+                    <Link href="/dashboard/backer?tab=addresses" target="_blank">
+                      <Button size="sm" className="mt-3 bg-amber-600 hover:bg-amber-700 text-white">
+                        <MapPin className="h-3.5 w-3.5 mr-2" />
+                        Add Shipping Address
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {step === "rewards" && (
               <RewardSelector
                 allRewards={allRewards}
