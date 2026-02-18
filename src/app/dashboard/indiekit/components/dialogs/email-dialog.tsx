@@ -409,6 +409,7 @@ export function EmailDialog({
                       onChange={setEmailBody}
                       placeholder="Compose your email..."
                       minHeight="250px"
+                      uploadUrl="/api/creator/media/upload"
                     />
                   </div>
                 </div>

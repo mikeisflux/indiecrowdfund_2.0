@@ -232,6 +232,7 @@ export function EmailComposerDialog({
               onChange={setBody}
               placeholder="Write your message..."
               minHeight="200px"
+              uploadUrl="/api/creator/media/upload"
             />
           </div>
 

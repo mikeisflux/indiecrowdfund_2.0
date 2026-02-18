@@ -421,6 +421,7 @@ export default function EmailCampaignEditPage() {
                   onChange={setHtmlContent}
                   placeholder="Write your email content here..."
                   minHeight="400px"
+                  uploadUrl="/api/creator/media/upload"
                 />
               </CardContent>
             </Card>

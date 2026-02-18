@@ -68,6 +68,7 @@ interface EmailEditorProps {
   placeholder?: string;
   className?: string;
   minHeight?: string;
+  uploadUrl?: string;
 }
 
 export function EmailEditor({
@@ -76,6 +77,7 @@ export function EmailEditor({
   placeholder = "Compose your email...",
   className,
   minHeight = "300px",
+  uploadUrl = "/api/admin/media/upload",
 }: EmailEditorProps) {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +89,7 @@ export function EmailEditor({
       formData.append("file", file);
       formData.append("folder", "email-campaigns");
 
-      const response = await fetch("/api/admin/media/upload", {
+      const response = await fetch(uploadUrl, {
         method: "POST",
         headers: { ...getCSRFHeaders() },
         body: formData,
