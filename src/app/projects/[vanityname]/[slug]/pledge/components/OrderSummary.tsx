@@ -346,13 +346,14 @@ export function OrderSummary({
               This purchase will be charged immediately to your payment method.
             </p>
 
-            <div className="flex items-start gap-3 mb-4">
+            <div className="flex items-start gap-3 mb-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3">
               <Checkbox
                 id="terms-add-items"
                 checked={agreedToTerms}
                 onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                className="mt-0.5 h-5 w-5 border-2"
               />
-              <Label htmlFor="terms-add-items" className="text-xs leading-relaxed text-muted-foreground">
+              <Label htmlFor="terms-add-items" className="text-sm leading-relaxed cursor-pointer">
                 I understand that rewards or reimbursements aren&apos;t guaranteed by either IndieCrowdfund or the creator.
               </Label>
             </div>
@@ -456,13 +457,14 @@ export function OrderSummary({
 
           {/* Disclaimer */}
           <div className="py-4">
-            <div className="flex items-start gap-3 mb-4">
+            <div className="flex items-start gap-3 mb-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3">
               <Checkbox
                 id="terms-modify"
                 checked={agreedToTerms}
                 onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                className="mt-0.5 h-5 w-5 border-2"
               />
-              <Label htmlFor="terms-modify" className="text-xs leading-relaxed text-muted-foreground">
+              <Label htmlFor="terms-modify" className="text-sm leading-relaxed cursor-pointer">
                 I understand that rewards or reimbursements aren&apos;t guaranteed by either IndieCrowdfund or the creator.
               </Label>
             </div>
@@ -546,13 +548,14 @@ export function OrderSummary({
               Backing means supporting a creative project, regardless of the outcome.
             </p>
 
-            <div className="flex items-start gap-3 mb-4">
+            <div className="flex items-start gap-3 mb-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3">
               <Checkbox
                 id="terms"
                 checked={agreedToTerms}
                 onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                className="mt-0.5 h-5 w-5 border-2"
               />
-              <Label htmlFor="terms" className="text-xs leading-relaxed text-muted-foreground">
+              <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
                 I understand that rewards or reimbursements aren&apos;t guaranteed by either IndieCrowdfund or the creator.
               </Label>
             </div>
