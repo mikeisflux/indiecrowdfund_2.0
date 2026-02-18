@@ -24,7 +24,6 @@ import {
   MessageSquare,
   Activity,
   ChevronRight,
-  Coins,
 } from "lucide-react";
 
 interface ProjectSummary {
@@ -154,10 +153,6 @@ export function UserProfileDropdown() {
                 <Link href="/dashboard/messages" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
                   <MessageSquare className="h-4 w-4 md:hidden" />
                   <span>Messages</span>
-                </Link>
-                <Link href="/dashboard/backer?tab=wallet" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent text-[#0066FF]">
-                  <Coins className="h-4 w-4 md:hidden" />
-                  <span>Redeem DivinityCoin</span>
                 </Link>
               </div>
 
