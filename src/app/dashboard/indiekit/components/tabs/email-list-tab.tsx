@@ -43,6 +43,7 @@ import {
   Mail,
   Loader2,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { ImportEmailDialog, ExportDialog } from "../dialogs";
 import { toast } from "sonner";
@@ -77,6 +78,8 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberName, setNewMemberName] = useState("");
   const [isAddingMember, setIsAddingMember] = useState(false);
+  const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   // Data state
   const [members, setMembers] = useState<Member[]>([]);
@@ -192,6 +195,31 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
     toast.success("Import complete!");
   };
 
+  const handleDeleteAll = async () => {
+    if (!projectId) return;
+
+    setIsDeletingAll(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/members?deleteAll=true`, {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Deleted ${data.deleted} email${data.deleted === 1 ? "" : "s"}`);
+        setIsDeleteAllDialogOpen(false);
+        fetchMembers();
+      } else {
+        toast.error("Failed to delete emails");
+      }
+    } catch {
+      toast.error("Failed to delete emails");
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
   if (!hasActiveCampaign) {
     return (
       <Card>
@@ -222,6 +250,12 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
           <Button variant="outline" size="icon" onClick={fetchMembers} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           </Button>
+          {totalMembers > 0 && (
+            <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setIsDeleteAllDialogOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete All
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Import
@@ -399,6 +433,43 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
           toast.success(`Exporting ${totalMembers} emails as ${options.format.toUpperCase()}...`);
         }}
       />
+
+      {/* Delete All Confirmation Dialog */}
+      <Dialog open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Delete All Emails
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete all {totalMembers.toLocaleString()} email{totalMembers === 1 ? "" : "s"} from your list. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteAllDialogOpen(false)} disabled={isDeletingAll}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAll}
+              disabled={isDeletingAll}
+            >
+              {isDeletingAll ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete All
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Member Dialog */}
       <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>

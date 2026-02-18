@@ -210,16 +210,28 @@ export async function DELETE(
     const { id: projectId } = await params;
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get("memberId");
-
-    if (!memberId) {
-      return NextResponse.json({ error: "Member ID is required" }, { status: 400 });
-    }
+    const deleteAll = searchParams.get("deleteAll") === "true";
 
     // Verify user has access to this project
     const project = await verifyProjectAccess(projectId, session.user.id);
 
     if (!project) {
       return NextResponse.json({ error: "Project not found or you don't have access" }, { status: 404 });
+    }
+
+    // Delete all members for this creator
+    if (deleteAll) {
+      const result = await db.emailListSubscriber.deleteMany({
+        where: {
+          creatorId: session.user.id,
+        },
+      });
+
+      return NextResponse.json({ success: true, deleted: result.count });
+    }
+
+    if (!memberId) {
+      return NextResponse.json({ error: "Member ID is required" }, { status: 400 });
     }
 
     // Verify the member belongs to this creator before deleting
