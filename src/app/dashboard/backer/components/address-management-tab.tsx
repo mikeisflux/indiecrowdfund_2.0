@@ -38,6 +38,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SHIPPING_COUNTRIES } from "@/types";
+
+// Filter out the "Worldwide" entry since it's not a real country for addresses
+const ADDRESS_COUNTRIES = SHIPPING_COUNTRIES.filter(c => c.code !== "WW");
 
 interface UserAddress {
   id: string;
@@ -53,17 +57,6 @@ interface UserAddress {
   phone?: string;
   isValidated: boolean;
 }
-
-const COUNTRIES = [
-  { code: "US", name: "United States" },
-  { code: "CA", name: "Canada" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "AU", name: "Australia" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "JP", name: "Japan" },
-  // Add more countries as needed
-];
 
 const LABEL_ICONS: Record<string, React.ElementType> = {
   Home: Home,
@@ -348,7 +341,7 @@ export function AddressManagementTab() {
                         {address.city}, {address.state} {address.postalCode}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {COUNTRIES.find(c => c.code === address.country)?.name || address.country}
+                        {ADDRESS_COUNTRIES.find(c => c.code === address.country)?.name || address.country}
                       </p>
                       {address.phone && (
                         <p className="text-sm text-muted-foreground mt-1">{address.phone}</p>
@@ -450,11 +443,11 @@ export function AddressManagementTab() {
             </div>
 
             <div className="space-y-2">
-              <Label>Address Line 2</Label>
+              <Label>Address Line 2 (optional)</Label>
               <Input
                 value={formData.line2}
                 onChange={(e) => setFormData({ ...formData, line2: e.target.value })}
-                placeholder="Apt 4B (optional)"
+                placeholder="Apt, Suite, Room, Unit, etc."
               />
             </div>
 
@@ -479,7 +472,7 @@ export function AddressManagementTab() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Postal Code *</Label>
+                <Label>Zip / Postal Code *</Label>
                 <Input
                   value={formData.postalCode}
                   onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
@@ -496,7 +489,7 @@ export function AddressManagementTab() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {COUNTRIES.map((country) => (
+                    {ADDRESS_COUNTRIES.map((country) => (
                       <SelectItem key={country.code} value={country.code}>
                         {country.name}
                       </SelectItem>
