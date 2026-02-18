@@ -36,6 +36,7 @@ import {
 import { toast } from "sonner";
 import { useSession } from "@/components/providers/auth-provider";
 import { getCSRFHeaders } from "@/lib/csrf";
+import { AddressManagementTab } from "@/app/dashboard/backer/components/address-management-tab";
 
 interface SocialLinks {
   twitter?: string;
@@ -415,9 +416,10 @@ export default function ProfilePage() {
         )}
 
         <Tabs defaultValue="basic" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="links">Links & Social</TabsTrigger>
+            <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -585,6 +587,11 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Addresses Tab */}
+          <TabsContent value="addresses" className="space-y-6">
+            <AddressManagementTab />
           </TabsContent>
 
           {/* Settings Tab */}

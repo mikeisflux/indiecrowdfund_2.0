@@ -24,6 +24,7 @@ import {
   MessageSquare,
   Activity,
   ChevronRight,
+  MapPin,
 } from "lucide-react";
 
 interface ProjectSummary {
@@ -153,6 +154,10 @@ export function UserProfileDropdown() {
                 <Link href="/dashboard/messages" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
                   <MessageSquare className="h-4 w-4 md:hidden" />
                   <span>Messages</span>
+                </Link>
+                <Link href="/dashboard/backer?tab=addresses" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                  <MapPin className="h-4 w-4 md:hidden" />
+                  <span>Shipping Addresses</span>
                 </Link>
               </div>
 
