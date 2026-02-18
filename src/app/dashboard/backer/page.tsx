@@ -40,6 +40,7 @@ import {
   BellRing,
   Users,
   Library,
+  Shield,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { formatTimeRemaining } from "@/lib/utils";
@@ -137,6 +138,7 @@ export default function BackerDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasAddress, setHasAddress] = useState<boolean | null>(null);
 
   // Auto-scroll to tabs section on mobile when tab param is present
   // Also handle scrollTo parameter for deep linking to specific content
@@ -231,6 +233,22 @@ export default function BackerDashboard() {
     }
 
     fetchUnreadMessages();
+  }, []);
+
+  // Check if user has a saved shipping address
+  useEffect(() => {
+    async function checkAddress() {
+      try {
+        const response = await fetch("/api/backer/addresses");
+        if (response.ok) {
+          const data = await response.json();
+          setHasAddress((data.addresses || []).length > 0);
+        }
+      } catch {
+        // Silently fail — don't block dashboard
+      }
+    }
+    checkAddress();
   }, []);
 
   const getStatusBadge = (status: string) => {
@@ -508,6 +526,33 @@ export default function BackerDashboard() {
             pulse={analytics.rewardsPending > 0}
           />
         </div>
+
+        {/* Shipping address reminder */}
+        {hasAddress === false && (
+          <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50/80 dark:border-amber-700 dark:bg-amber-950/30 p-5">
+            <div className="flex gap-4">
+              <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/40 h-fit">
+                <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-900 dark:text-amber-100">
+                  Set up your shipping address
+                </h3>
+                <p className="text-sm text-amber-800/80 dark:text-amber-200/80 mt-1">
+                  Adding a shipping address ensures you&apos;re charged the correct shipping rate when backing projects. This is especially important for international backers. Your address is private and will never be shared with other users.
+                </p>
+                <Button
+                  size="sm"
+                  className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={() => setActiveTab("addresses")}
+                >
+                  <MapPin className="h-3.5 w-3.5 mr-2" />
+                  Add Shipping Address
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}

@@ -752,15 +752,20 @@ export default function PledgePage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Address requirement notice */}
             {hasSavedAddress === false && allRewards.some(r => r.shippingType !== "NO_SHIPPING") && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 p-4">
-                <div className="flex gap-3">
-                  <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="rounded-xl border-2 border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-950/30 p-5 shadow-sm">
+                <div className="flex gap-4">
+                  <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/40 h-fit">
+                    <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
                   <div className="flex-1">
-                    <p className="font-medium text-amber-900 dark:text-amber-100">
-                      Shipping address required
+                    <p className="font-semibold text-amber-900 dark:text-amber-100">
+                      Please add your shipping address before pledging
                     </p>
-                    <p className="text-sm text-amber-800/80 dark:text-amber-200/80 mt-1">
-                      Please add a shipping address to your account so we can calculate accurate shipping costs for your location. Without one, shipping may default to an incorrect region.
+                    <p className="text-sm text-amber-800/80 dark:text-amber-200/80 mt-1.5">
+                      To ensure you&apos;re charged the correct shipping rate at checkout, we need your shipping address on file. This is especially important for our international backers, as shipping costs vary by region. Without a saved address, your shipping may be calculated based on an incorrect location.
+                    </p>
+                    <p className="text-sm text-amber-800/60 dark:text-amber-200/60 mt-1.5">
+                      Your address is kept private and is never shared with other users. You will still be asked to confirm your full shipping details during the creator&apos;s fulfillment survey after a campaign ends.
                     </p>
                     <Link href="/dashboard/backer?tab=addresses" target="_blank">
                       <Button size="sm" className="mt-3 bg-amber-600 hover:bg-amber-700 text-white">
