@@ -96,17 +96,19 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete" && addonId) {
-      const existing = await db.reward.findUnique({
-        where: { id: addonId },
-        select: { id: true, quantityClaimed: true },
+      // Check for PledgeAddon references
+      const pledgeAddonCount = await db.pledgeAddon.count({
+        where: { addonId },
       });
 
-      if (existing?.quantityClaimed && existing.quantityClaimed > 0) {
+      if (pledgeAddonCount > 0) {
+        // Soft delete - has pledge references
         await db.reward.update({
           where: { id: addonId },
           data: { isEnded: true, endedAt: new Date(), visibility: "HIDDEN" },
         });
       } else {
+        // No pledge references, safe to hard delete
         await db.reward.delete({
           where: { id: addonId },
         });
@@ -159,33 +161,36 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete-all") {
-      // Get all addons for this project
+      // Get all addons for this project with their pledge references
       const allAddons = await db.reward.findMany({
         where: { projectId, type: "ADDON" },
-        select: { id: true, quantityClaimed: true },
+        select: {
+          id: true,
+          _count: { select: { selectedAddons: true } },
+        },
       });
 
-      // Hard delete those with no purchases, soft delete the rest
-      const noPurchases = allAddons.filter(a => !a.quantityClaimed || a.quantityClaimed === 0);
-      const hasPurchases = allAddons.filter(a => a.quantityClaimed && a.quantityClaimed > 0);
+      // Split into those with pledge references vs those without
+      const canHardDelete = allAddons.filter(a => a._count.selectedAddons === 0);
+      const mustSoftDelete = allAddons.filter(a => a._count.selectedAddons > 0);
 
-      if (noPurchases.length > 0) {
+      if (canHardDelete.length > 0) {
         await db.reward.deleteMany({
-          where: { id: { in: noPurchases.map(a => a.id) } },
+          where: { id: { in: canHardDelete.map(a => a.id) } },
         });
       }
 
-      if (hasPurchases.length > 0) {
+      if (mustSoftDelete.length > 0) {
         await db.reward.updateMany({
-          where: { id: { in: hasPurchases.map(a => a.id) } },
+          where: { id: { in: mustSoftDelete.map(a => a.id) } },
           data: { isEnded: true, endedAt: new Date(), visibility: "HIDDEN" },
         });
       }
 
       return NextResponse.json({
         success: true,
-        deleted: noPurchases.length,
-        hidden: hasPurchases.length,
+        deleted: canHardDelete.length,
+        hidden: mustSoftDelete.length,
       });
     }
 
@@ -216,24 +221,19 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Check if addon has any purchases before hard deleting
-    const addon = await db.reward.findUnique({
-      where: { id: addonId },
-      select: { id: true, quantityClaimed: true },
+    // Check for PledgeAddon references before hard deleting
+    const pledgeAddonCount = await db.pledgeAddon.count({
+      where: { addonId },
     });
 
-    if (!addon) {
-      return NextResponse.json({ error: "Addon not found" }, { status: 404 });
-    }
-
-    if (addon.quantityClaimed && addon.quantityClaimed > 0) {
-      // Soft delete if there are purchases (preserve data integrity)
+    if (pledgeAddonCount > 0) {
+      // Soft delete - has pledge references
       await db.reward.update({
         where: { id: addonId },
         data: { isEnded: true, endedAt: new Date(), visibility: "HIDDEN" },
       });
     } else {
-      // Hard delete if no purchases
+      // No pledge references, safe to hard delete
       await db.reward.delete({
         where: { id: addonId },
       });
