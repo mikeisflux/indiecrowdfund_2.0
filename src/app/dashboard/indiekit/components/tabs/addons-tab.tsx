@@ -161,7 +161,11 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
         throw new Error(data.error || "Failed to delete addons");
       }
 
-      toast.success(`Removed ${data.removed} add-on${data.removed !== 1 ? "s" : ""} from survey`);
+      const parts = [`Removed ${data.removed} add-on${data.removed !== 1 ? "s" : ""} from survey`];
+      if (data.duplicatesDeleted > 0) {
+        parts.push(`${data.duplicatesDeleted} duplicate${data.duplicatesDeleted !== 1 ? "s" : ""} cleaned up`);
+      }
+      toast.success(parts.join(", "));
       setConfirmDeleteAll(false);
       onRefresh?.();
     } catch (error) {

@@ -149,15 +149,72 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete-all") {
-      // Hide all addons from survey form - does not permanently delete the rewards
-      const result = await db.reward.updateMany({
-        where: { projectId, type: "ADDON", visibility: { not: "HIDDEN" } },
-        data: { visibility: "HIDDEN" },
+      // Get all ADDON rewards for this project
+      const allAddons = await db.reward.findMany({
+        where: { projectId, type: "ADDON" },
+        select: { id: true, title: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
       });
+
+      // Group by title to find originals vs copies
+      const byTitle = new Map<string, typeof allAddons>();
+      for (const addon of allAddons) {
+        const existing = byTitle.get(addon.title) || [];
+        existing.push(addon);
+        byTitle.set(addon.title, existing);
+      }
+
+      // For each title, keep the oldest (original), delete newer copies
+      const copyIds: string[] = [];
+      const originalIds: string[] = [];
+      for (const [, addons] of byTitle) {
+        originalIds.push(addons[0].id); // oldest = original
+        for (let i = 1; i < addons.length; i++) {
+          copyIds.push(addons[i].id); // newer = copies
+        }
+      }
+
+      // Hard-delete copies that have no pledge references
+      let deletedCount = 0;
+      if (copyIds.length > 0) {
+        // Check which copies have pledge references
+        const copiesWithPledges = await db.pledgeAddon.findMany({
+          where: { addonId: { in: copyIds } },
+          select: { addonId: true },
+        });
+        const pledgeAddonIds = new Set(copiesWithPledges.map(p => p.addonId));
+
+        const safeToDelete = copyIds.filter(id => !pledgeAddonIds.has(id));
+        const mustHide = copyIds.filter(id => pledgeAddonIds.has(id));
+
+        if (safeToDelete.length > 0) {
+          await db.reward.deleteMany({
+            where: { id: { in: safeToDelete } },
+          });
+          deletedCount = safeToDelete.length;
+        }
+
+        // Hide copies that have pledge references (can't delete)
+        if (mustHide.length > 0) {
+          await db.reward.updateMany({
+            where: { id: { in: mustHide } },
+            data: { visibility: "HIDDEN" },
+          });
+        }
+      }
+
+      // Hide originals from survey (they still exist on the project)
+      if (originalIds.length > 0) {
+        await db.reward.updateMany({
+          where: { id: { in: originalIds } },
+          data: { visibility: "HIDDEN" },
+        });
+      }
 
       return NextResponse.json({
         success: true,
-        removed: result.count,
+        removed: originalIds.length,
+        duplicatesDeleted: deletedCount,
       });
     }
 
