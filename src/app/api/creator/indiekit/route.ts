@@ -281,6 +281,7 @@ export async function GET(req: NextRequest) {
           quantityClaimed: true,
           isEnded: true,
           visibility: true,
+          showInSurvey: true,
         },
         orderBy: { amount: "asc" },
       }),
@@ -882,7 +883,7 @@ export async function GET(req: NextRequest) {
       userEmail: session.user.email || "",
       rewards: projectRewards.map((r: { id: string; title: string; amount: unknown }) => ({ id: r.id, name: r.title, amount: Number(r.amount) })),
       addons: projectAddons.filter((a: { visibility?: string }) => a.visibility !== "HIDDEN").map((a: { id: string; title: string; amount: unknown }) => ({ id: a.id, name: a.title, price: Number(a.amount) })),
-      surveyAddons: projectAddons.filter((a: { visibility?: string }) => a.visibility !== "HIDDEN").map((a: { id: string; title: string; description?: string; amount: unknown; imageUrl?: string | null; quantityAvailable?: number | null; quantityClaimed?: number; isEnded?: boolean }) => ({
+      surveyAddons: projectAddons.filter((a: { showInSurvey?: boolean }) => a.showInSurvey).map((a: { id: string; title: string; description?: string; amount: unknown; imageUrl?: string | null; quantityAvailable?: number | null; quantityClaimed?: number; isEnded?: boolean }) => ({
         id: a.id,
         name: a.title,
         description: a.description || "",

@@ -425,6 +425,9 @@ model Reward {
   isModifier        Boolean      @default(false)  // True if this addon modifies a base reward instead of being standalone
   modifiesRewardIds String[]                      // Which reward IDs this can modify (empty = all tiers in project)
 
+  // Survey integration - whether this addon appears in the IndieKit survey
+  showInSurvey      Boolean      @default(false)
+
   // Tracking if copied
   copiedFromId      String?
 

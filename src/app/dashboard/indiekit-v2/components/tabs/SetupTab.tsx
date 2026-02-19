@@ -96,7 +96,7 @@ export function SetupTab({
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
         projectId={projectId}
-        existingAddonNames={surveyAddons.map((a) => a.name)}
+        existingAddonIds={surveyAddons.map((a) => a.id)}
         onImported={onRefresh}
       />
     </div>

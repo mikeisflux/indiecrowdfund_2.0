@@ -25,11 +25,10 @@ import {
   Tag,
   Edit,
   MoreHorizontal,
-  Copy,
   Check,
   X,
-  Trash2,
-  Download,
+  Unlink,
+  Link as LinkIcon,
   Loader2,
   AlertTriangle,
 } from "lucide-react";
@@ -49,44 +48,11 @@ interface AddonsTabProps {
 }
 
 export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onOpenImportDialog, projectId, onRefresh, onEditAddon }: AddonsTabProps) {
-  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [confirmDeleteAddon, setConfirmDeleteAddon] = useState<SurveyAddon | null>(null);
-  const [isDeletingAddon, setIsDeletingAddon] = useState(false);
-  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
-  const [isDeletingAll, setIsDeletingAll] = useState(false);
-
-  const handleDuplicateAddon = async (addon: SurveyAddon) => {
-    if (!projectId) {
-      toast.error("No project selected");
-      return;
-    }
-
-    setDuplicatingId(addon.id);
-    try {
-      const res = await fetch("/api/creator/indiekit/addons", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
-          projectId,
-          action: "duplicate",
-          addonId: addon.id,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to duplicate addon");
-      }
-
-      toast.success(`Duplicated "${addon.name}"`);
-      onRefresh?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to duplicate addon");
-    } finally {
-      setDuplicatingId(null);
-    }
-  };
+  const [confirmUnlinkAddon, setConfirmUnlinkAddon] = useState<SurveyAddon | null>(null);
+  const [isUnlinking, setIsUnlinking] = useState(false);
+  const [confirmUnlinkAll, setConfirmUnlinkAll] = useState(false);
+  const [isUnlinkingAll, setIsUnlinkingAll] = useState(false);
 
   const handleToggleAddon = async (addon: SurveyAddon) => {
     if (!projectId) return;
@@ -117,57 +83,62 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
     }
   };
 
-  const handleDeleteAddon = async (addon: SurveyAddon) => {
+  const handleUnlinkAddon = async (addon: SurveyAddon) => {
     if (!projectId) return;
 
-    setIsDeletingAddon(true);
-    try {
-      const res = await fetch(`/api/creator/indiekit/addons?projectId=${projectId}&addonId=${addon.id}`, {
-        method: "DELETE",
-        headers: getCSRFHeaders(),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete addon");
-      }
-
-      toast.success(`Deleted "${addon.name}"`);
-      setConfirmDeleteAddon(null);
-      onRefresh?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete addon");
-    } finally {
-      setIsDeletingAddon(false);
-    }
-  };
-
-  const handleDeleteAll = async () => {
-    if (!projectId) return;
-
-    setIsDeletingAll(true);
+    setIsUnlinking(true);
     try {
       const res = await fetch("/api/creator/indiekit/addons", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           projectId,
-          action: "delete-all",
+          action: "unlink",
+          addonId: addon.id,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to unlink addon");
+      }
+
+      toast.success(`Unlinked "${addon.name}" from survey`);
+      setConfirmUnlinkAddon(null);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to unlink addon");
+    } finally {
+      setIsUnlinking(false);
+    }
+  };
+
+  const handleUnlinkAll = async () => {
+    if (!projectId) return;
+
+    setIsUnlinkingAll(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/addons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "unlink-all",
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to delete addons");
+        throw new Error(data.error || "Failed to unlink addons");
       }
 
-      toast.success(`Deleted ${data.deleted} add-on${data.deleted !== 1 ? "s" : ""}`);
-      setConfirmDeleteAll(false);
+      toast.success(`Unlinked ${data.unlinked} add-on${data.unlinked !== 1 ? "s" : ""} from survey`);
+      setConfirmUnlinkAll(false);
       onRefresh?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete addons");
+      toast.error(error instanceof Error ? error.message : "Failed to unlink addons");
     } finally {
-      setIsDeletingAll(false);
+      setIsUnlinkingAll(false);
     }
   };
 
@@ -178,25 +149,25 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
         <div>
           <h3 className="text-lg font-semibold">Survey Add-ons</h3>
           <p className="text-sm text-muted-foreground">
-            Configure add-ons that backers can purchase during their survey
+            Link add-ons from your project to offer during the survey. Sales count toward campaign totals.
           </p>
         </div>
         <div className="flex items-center gap-2">
           {surveyAddons.length > 0 && (
-            <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setConfirmDeleteAll(true)}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Remove All
+            <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setConfirmUnlinkAll(true)}>
+              <Unlink className="h-4 w-4 mr-2" />
+              Unlink All
             </Button>
           )}
           {onOpenImportDialog && (
             <Button variant="outline" onClick={onOpenImportDialog}>
-              <Download className="h-4 w-4 mr-2" />
-              Import Add-on
+              <LinkIcon className="h-4 w-4 mr-2" />
+              Link Add-on
             </Button>
           )}
           <Button onClick={onOpenAddonDialog} className="bg-teal-600 hover:bg-teal-700">
             <Plus className="h-4 w-4 mr-2" />
-            Add New Add-on
+            Create New Add-on
           </Button>
         </div>
       </div>
@@ -239,7 +210,7 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
       {/* Add-ons List */}
       <Card>
         <CardHeader>
-          <CardTitle>Available Add-ons</CardTitle>
+          <CardTitle>Linked Add-ons</CardTitle>
           <CardDescription>
             These add-ons will be offered to backers when they complete their survey
           </CardDescription>
@@ -281,17 +252,6 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onClick={() => handleDuplicateAddon(addon)}
-                        disabled={duplicatingId === addon.id}
-                      >
-                        {duplicatingId === addon.id ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Copy className="h-4 w-4 mr-2" />
-                        )}
-                        {duplicatingId === addon.id ? "Duplicating..." : "Duplicate"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
                         onClick={() => handleToggleAddon(addon)}
                         disabled={togglingId === addon.id}
                       >
@@ -304,9 +264,9 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
                         )}
                         {togglingId === addon.id ? "Updating..." : addon.available ? "Deactivate" : "Activate"}
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600" onClick={() => setConfirmDeleteAddon(addon)}>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
+                      <DropdownMenuItem className="text-red-600" onClick={() => setConfirmUnlinkAddon(addon)}>
+                        <Unlink className="h-4 w-4 mr-2" />
+                        Unlink from Survey
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -318,15 +278,15 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
           {surveyAddons.length === 0 && (
             <div className="text-center py-12">
               <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">No add-ons configured</h3>
+              <h3 className="font-semibold mb-2">No add-ons linked</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Create add-ons to offer additional products during the survey
+                Link add-ons from your project to offer them during the survey
               </p>
               <div className="flex items-center justify-center gap-2">
                 {onOpenImportDialog && (
                   <Button variant="outline" onClick={onOpenImportDialog}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Import Add-on
+                    <LinkIcon className="h-4 w-4 mr-2" />
+                    Link Add-on
                   </Button>
                 )}
                 <Button onClick={onOpenAddonDialog}>
@@ -378,82 +338,77 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
                 <span className="text-xs font-medium text-teal-700">4</span>
               </div>
               <div>
-                <p className="text-sm font-medium">Add-ons added to their order</p>
-                <p className="text-xs text-muted-foreground">Items included in fulfillment</p>
+                <p className="text-sm font-medium">Sales added to campaign totals</p>
+                <p className="text-xs text-muted-foreground">Same add-ons as your project, so all revenue counts toward your campaign</p>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Confirm Delete Dialog */}
-      <Dialog open={!!confirmDeleteAddon} onOpenChange={(open) => !open && setConfirmDeleteAddon(null)}>
+      {/* Confirm Unlink Dialog */}
+      <Dialog open={!!confirmUnlinkAddon} onOpenChange={(open) => !open && setConfirmUnlinkAddon(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Delete Add-on?
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Unlink Add-on?
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{confirmDeleteAddon?.name}&quot;?
-              {confirmDeleteAddon && confirmDeleteAddon.purchasedCount > 0 && (
-                <span className="block mt-2 text-amber-600">
-                  Warning: This add-on has been purchased {confirmDeleteAddon.purchasedCount} time{confirmDeleteAddon.purchasedCount !== 1 ? 's' : ''}.
-                </span>
-              )}
+              This will remove &quot;{confirmUnlinkAddon?.name}&quot; from the survey. The add-on still exists in your project and can be re-linked later.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDeleteAddon(null)}>
+            <Button variant="outline" onClick={() => setConfirmUnlinkAddon(null)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() => confirmDeleteAddon && handleDeleteAddon(confirmDeleteAddon)}
-              disabled={isDeletingAddon}
+              onClick={() => confirmUnlinkAddon && handleUnlinkAddon(confirmUnlinkAddon)}
+              disabled={isUnlinking}
             >
-              {isDeletingAddon ? (
+              {isUnlinking ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
+                  Unlinking...
                 </>
               ) : (
-                "Delete"
+                "Unlink"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Confirm Delete All Dialog */}
-      <Dialog open={confirmDeleteAll} onOpenChange={(open) => !open && setConfirmDeleteAll(false)}>
+      {/* Confirm Unlink All Dialog */}
+      <Dialog open={confirmUnlinkAll} onOpenChange={(open) => !open && setConfirmUnlinkAll(false)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Remove All Add-ons?
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Unlink All Add-ons?
             </DialogTitle>
             <DialogDescription>
-              This will permanently delete all {surveyAddons.length} add-on{surveyAddons.length !== 1 ? "s" : ""} from the survey.
-              You can re-import them from your project afterwards.
+              This will remove all {surveyAddons.length} add-on{surveyAddons.length !== 1 ? "s" : ""} from the survey.
+              They still exist in your project and can be re-linked later.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDeleteAll(false)}>
+            <Button variant="outline" onClick={() => setConfirmUnlinkAll(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDeleteAll}
-              disabled={isDeletingAll}
+              onClick={handleUnlinkAll}
+              disabled={isUnlinkingAll}
             >
-              {isDeletingAll ? (
+              {isUnlinkingAll ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Removing...
+                  Unlinking...
                 </>
               ) : (
-                "Remove All"
+                "Unlink All"
               )}
             </Button>
           </DialogFooter>

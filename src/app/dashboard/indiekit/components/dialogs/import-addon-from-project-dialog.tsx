@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
 
@@ -21,15 +21,14 @@ interface ProjectReward {
   description: string;
   amount: number;
   type: "TIER" | "ADDON";
-  quantityAvailable: number | null;
-  isEnded: boolean;
+  showInSurvey: boolean;
 }
 
 interface ImportAddonFromProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
-  existingAddonNames: string[];
+  existingAddonIds: string[];
   onImported: () => void;
 }
 
@@ -37,7 +36,7 @@ export function ImportAddonFromProjectDialog({
   open,
   onOpenChange,
   projectId,
-  existingAddonNames,
+  existingAddonIds,
   onImported,
 }: ImportAddonFromProjectDialogProps) {
   const [rewards, setRewards] = useState<ProjectReward[]>([]);
@@ -55,14 +54,13 @@ export function ImportAddonFromProjectDialog({
 
       const data = await response.json();
       const projectRewards: ProjectReward[] = (data.rewards || []).map(
-        (r: { id: string; title: string; description?: string; amount: number; type?: string; quantityAvailable?: number | null; isEnded?: boolean }) => ({
+        (r: { id: string; title: string; description?: string; amount: number; type?: string; showInSurvey?: boolean }) => ({
           id: r.id,
           title: r.title,
           description: r.description || "",
           amount: Number(r.amount),
           type: r.type || "TIER",
-          quantityAvailable: r.quantityAvailable ?? null,
-          isEnded: r.isEnded || false,
+          showInSurvey: r.showInSurvey || false,
         })
       );
 
@@ -96,61 +94,51 @@ export function ImportAddonFromProjectDialog({
 
   const handleImport = async () => {
     if (selectedIds.size === 0) {
-      toast.error("Select at least one reward to import");
+      toast.error("Select at least one add-on to link");
       return;
     }
 
     setIsImporting(true);
     try {
-      const selected = rewards.filter((r) => selectedIds.has(r.id));
-      let successCount = 0;
+      const res = await fetch("/api/creator/indiekit/addons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "link",
+          addonIds: Array.from(selectedIds),
+        }),
+      });
 
-      for (const reward of selected) {
-        const res = await fetch("/api/creator/indiekit/addons", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-          body: JSON.stringify({
-            projectId,
-            action: "create",
-            title: reward.title,
-            description: reward.description,
-            amount: reward.amount,
-            quantityAvailable: reward.quantityAvailable,
-          }),
-        });
-
-        if (res.ok) {
-          successCount++;
-        }
-      }
-
-      if (successCount > 0) {
-        toast.success(`Imported ${successCount} add-on${successCount !== 1 ? "s" : ""}`);
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Linked ${data.linked} add-on${data.linked !== 1 ? "s" : ""} to survey`);
         onImported();
         onOpenChange(false);
       } else {
-        toast.error("Failed to import add-ons");
+        toast.error("Failed to link add-ons");
       }
     } catch (error) {
       console.error("Import error:", error);
-      toast.error("Failed to import add-ons");
+      toast.error("Failed to link add-ons");
     } finally {
       setIsImporting(false);
     }
   };
 
-  // Only show add-ons (not reward tiers), and filter out already imported ones by title
+  // Only show add-ons not already linked to the survey
+  const existingSet = new Set(existingAddonIds);
   const availableRewards = rewards.filter(
-    (r) => r.type === "ADDON" && !existingAddonNames.includes(r.title)
+    (r) => r.type === "ADDON" && !existingSet.has(r.id)
   );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Import Add-ons from Project</DialogTitle>
+          <DialogTitle>Link Add-ons to Survey</DialogTitle>
           <DialogDescription>
-            Select add-ons from your project to import as survey add-ons.
+            Select add-ons from your project to show in the survey. Sales will count toward your campaign totals.
           </DialogDescription>
         </DialogHeader>
 
@@ -158,14 +146,14 @@ export function ImportAddonFromProjectDialog({
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">Loading rewards...</span>
+              <span className="ml-2 text-sm text-muted-foreground">Loading add-ons...</span>
             </div>
           ) : availableRewards.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-muted-foreground">
                 {rewards.filter((r) => r.type === "ADDON").length === 0
                   ? "No add-ons found in this project. Create add-ons in your project first."
-                  : "All add-ons have already been imported."}
+                  : "All add-ons are already linked to the survey."}
               </p>
             </div>
           ) : (
@@ -207,12 +195,12 @@ export function ImportAddonFromProjectDialog({
             {isImporting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Importing...
+                Linking...
               </>
             ) : (
               <>
-                <Download className="h-4 w-4 mr-2" />
-                Import {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
+                <LinkIcon className="h-4 w-4 mr-2" />
+                Link {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
               </>
             )}
           </Button>

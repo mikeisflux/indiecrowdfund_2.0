@@ -16,11 +16,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
     }
 
-    // Get addons (rewards with type ADDON) for this project - include soft-deleted for admin view
+    // Get addons linked to the survey (showInSurvey = true)
     const addons = await db.reward.findMany({
       where: {
         projectId,
         type: "ADDON",
+        showInSurvey: true,
       },
       orderBy: { amount: "asc" },
     });
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { projectId, action, addonId, title, description, amount, quantityAvailable } = body;
+    const { projectId, action, addonId, addonIds, title, description, amount, quantityAvailable } = body;
 
     if (!projectId) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
+    // Create a new addon and auto-link to survey
     if (action === "create") {
       const addon = await db.reward.create({
         data: {
@@ -75,12 +77,14 @@ export async function POST(req: NextRequest) {
           quantityAvailable,
           shippingType: "NO_SHIPPING",
           shippingCountries: [],
+          showInSurvey: true,
         },
       });
 
       return NextResponse.json({ addon });
     }
 
+    // Update an existing addon
     if (action === "update" && addonId) {
       const addon = await db.reward.update({
         where: { id: addonId },
@@ -95,37 +99,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ addon });
     }
 
-    if (action === "delete" && addonId) {
-      // Delete any pledge addon references first (no cascade on this FK)
-      await db.pledgeAddon.deleteMany({ where: { addonId } });
-      await db.reward.delete({ where: { id: addonId } });
+    // Link existing addon(s) to the survey
+    if (action === "link" && addonIds?.length) {
+      const result = await db.reward.updateMany({
+        where: {
+          id: { in: addonIds },
+          projectId,
+          type: "ADDON",
+        },
+        data: { showInSurvey: true },
+      });
+
+      return NextResponse.json({ success: true, linked: result.count });
+    }
+
+    // Unlink a single addon from the survey
+    if (action === "unlink" && addonId) {
+      await db.reward.update({
+        where: { id: addonId },
+        data: { showInSurvey: false },
+      });
 
       return NextResponse.json({ success: true });
     }
 
-    if (action === "duplicate" && addonId) {
-      const source = await db.reward.findUnique({ where: { id: addonId } });
-      if (!source || source.projectId !== projectId) {
-        return NextResponse.json({ error: "Addon not found" }, { status: 404 });
-      }
-
-      const addon = await db.reward.create({
-        data: {
-          projectId,
-          type: "ADDON",
-          title: `Copy of ${source.title}`,
-          description: source.description,
-          amount: source.amount,
-          imageUrl: source.imageUrl,
-          quantityAvailable: source.quantityAvailable,
-          shippingType: source.shippingType,
-          shippingCountries: source.shippingCountries,
-          shippingCost: source.shippingCost || {},
-          copiedFromId: source.id,
-        },
+    // Unlink all addons from the survey
+    if (action === "unlink-all") {
+      const result = await db.reward.updateMany({
+        where: { projectId, type: "ADDON", showInSurvey: true },
+        data: { showInSurvey: false },
       });
 
-      return NextResponse.json({ addon });
+      return NextResponse.json({ success: true, unlinked: result.count });
     }
 
     if (action === "activate" && addonId) {
@@ -144,28 +149,6 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json({ addon });
-    }
-
-    if (action === "delete-all") {
-      // Get all ADDON reward IDs for this project
-      const addonIds = (
-        await db.reward.findMany({
-          where: { projectId, type: "ADDON" },
-          select: { id: true },
-        })
-      ).map((a) => a.id);
-
-      if (addonIds.length > 0) {
-        // Delete pledge addon references first (no cascade on this FK)
-        await db.pledgeAddon.deleteMany({
-          where: { addonId: { in: addonIds } },
-        });
-        await db.reward.deleteMany({
-          where: { id: { in: addonIds } },
-        });
-      }
-
-      return NextResponse.json({ success: true, deleted: addonIds.length });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
@@ -195,9 +178,11 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Delete pledge addon references first (no cascade on this FK)
-    await db.pledgeAddon.deleteMany({ where: { addonId } });
-    await db.reward.delete({ where: { id: addonId } });
+    // Unlink from survey (same as POST unlink)
+    await db.reward.update({
+      where: { id: addonId },
+      data: { showInSurvey: false },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

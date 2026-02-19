@@ -971,7 +971,7 @@ export default function IndieKitPage() {
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
         projectId={selectedProjectId}
-        existingAddonNames={surveyAddons.map((a) => a.name)}
+        existingAddonIds={surveyAddons.map((a) => a.id)}
         onImported={() => {
           fetchData();
           setIsImportDialogOpen(false);
