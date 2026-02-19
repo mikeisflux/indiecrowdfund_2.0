@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -353,6 +354,9 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
               </DropdownMenu>
             </DialogTitle>
           </div>
+          <DialogDescription className="sr-only">
+            View and manage backer details, order status, and fulfillment
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

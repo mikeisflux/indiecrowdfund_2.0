@@ -4,6 +4,7 @@ import { useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -159,6 +160,9 @@ export function KeyboardShortcutsDialog({
             <Command className="h-5 w-5" />
             Keyboard Shortcuts
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Available keyboard shortcuts for navigation
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
           {Object.entries(groupedShortcuts).map(([category, categoryShortcuts]) => (

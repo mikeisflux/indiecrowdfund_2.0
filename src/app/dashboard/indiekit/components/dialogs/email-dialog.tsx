@@ -9,6 +9,7 @@ import { EmailEditor } from "@/components/ui/email-editor";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -231,6 +232,7 @@ export function EmailDialog({
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
         <VisuallyHidden>
           <DialogTitle>Email Campaign Composer</DialogTitle>
+          <DialogDescription>Create and send email campaigns to your backers</DialogDescription>
         </VisuallyHidden>
         {/* Header */}
         <div className="px-6 py-4 border-b">

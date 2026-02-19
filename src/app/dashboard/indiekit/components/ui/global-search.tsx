@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogTitle,
 } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -153,6 +156,10 @@ export function GlobalSearch({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden">
+        <VisuallyHidden>
+          <DialogTitle>Search</DialogTitle>
+          <DialogDescription>Search backers, orders, and settings</DialogDescription>
+        </VisuallyHidden>
         {/* Search Input */}
         <div className="flex items-center border-b px-4">
           <Search className="h-5 w-5 text-muted-foreground" />
