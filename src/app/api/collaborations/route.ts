@@ -43,17 +43,19 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      collaborations: collaborations.map((c) => ({
-        id: c.id,
-        title: c.title,
-        email: c.email,
-        canEditProject: c.canEditProject,
-        canManageCommunity: c.canManageCommunity,
-        canCoordinateFulfillment: c.canCoordinateFulfillment,
-        canConfigurePledgeManager: c.canConfigurePledgeManager,
-        acceptedAt: c.acceptedAt,
-        project: c.project,
-      })),
+      collaborations: collaborations.map(
+        (c: (typeof collaborations)[number]) => ({
+          id: c.id,
+          title: c.title,
+          email: c.email,
+          canEditProject: c.canEditProject,
+          canManageCommunity: c.canManageCommunity,
+          canCoordinateFulfillment: c.canCoordinateFulfillment,
+          canConfigurePledgeManager: c.canConfigurePledgeManager,
+          acceptedAt: c.acceptedAt,
+          project: c.project,
+        })
+      ),
     });
   } catch (error) {
     console.error("Error fetching collaborations:", error);
