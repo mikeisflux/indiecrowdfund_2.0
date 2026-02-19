@@ -29,7 +29,7 @@ interface ImportAddonFromProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
-  existingAddonIds: string[];
+  existingAddonNames: string[];
   onImported: () => void;
 }
 
@@ -37,7 +37,7 @@ export function ImportAddonFromProjectDialog({
   open,
   onOpenChange,
   projectId,
-  existingAddonIds,
+  existingAddonNames,
   onImported,
 }: ImportAddonFromProjectDialogProps) {
   const [rewards, setRewards] = useState<ProjectReward[]>([]);
@@ -139,9 +139,9 @@ export function ImportAddonFromProjectDialog({
     }
   };
 
-  // Only show add-ons (not reward tiers), and filter out already imported ones
+  // Only show add-ons (not reward tiers), and filter out already imported ones by title
   const availableRewards = rewards.filter(
-    (r) => r.type === "ADDON" && !existingAddonIds.includes(r.id)
+    (r) => r.type === "ADDON" && !existingAddonNames.includes(r.title)
   );
 
   return (

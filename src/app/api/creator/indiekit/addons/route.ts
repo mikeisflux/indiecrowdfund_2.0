@@ -96,23 +96,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete" && addonId) {
-      // Check for PledgeAddon references
-      const pledgeAddonCount = await db.pledgeAddon.count({
-        where: { addonId },
+      // Hide from survey form - does not permanently delete the reward
+      await db.reward.update({
+        where: { id: addonId },
+        data: { visibility: "HIDDEN" },
       });
-
-      if (pledgeAddonCount > 0) {
-        // Soft delete - has pledge references
-        await db.reward.update({
-          where: { id: addonId },
-          data: { isEnded: true, endedAt: new Date(), visibility: "HIDDEN" },
-        });
-      } else {
-        // No pledge references, safe to hard delete
-        await db.reward.delete({
-          where: { id: addonId },
-        });
-      }
 
       return NextResponse.json({ success: true });
     }
@@ -161,36 +149,15 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete-all") {
-      // Get all addons for this project with their pledge references
-      const allAddons = await db.reward.findMany({
-        where: { projectId, type: "ADDON" },
-        select: {
-          id: true,
-          _count: { select: { selectedAddons: true } },
-        },
+      // Hide all addons from survey form - does not permanently delete the rewards
+      const result = await db.reward.updateMany({
+        where: { projectId, type: "ADDON", visibility: { not: "HIDDEN" } },
+        data: { visibility: "HIDDEN" },
       });
-
-      // Split into those with pledge references vs those without
-      const canHardDelete = allAddons.filter(a => a._count.selectedAddons === 0);
-      const mustSoftDelete = allAddons.filter(a => a._count.selectedAddons > 0);
-
-      if (canHardDelete.length > 0) {
-        await db.reward.deleteMany({
-          where: { id: { in: canHardDelete.map(a => a.id) } },
-        });
-      }
-
-      if (mustSoftDelete.length > 0) {
-        await db.reward.updateMany({
-          where: { id: { in: mustSoftDelete.map(a => a.id) } },
-          data: { isEnded: true, endedAt: new Date(), visibility: "HIDDEN" },
-        });
-      }
 
       return NextResponse.json({
         success: true,
-        deleted: canHardDelete.length,
-        hidden: mustSoftDelete.length,
+        removed: result.count,
       });
     }
 
@@ -221,23 +188,11 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Check for PledgeAddon references before hard deleting
-    const pledgeAddonCount = await db.pledgeAddon.count({
-      where: { addonId },
+    // Hide from survey form - does not permanently delete the reward
+    await db.reward.update({
+      where: { id: addonId },
+      data: { visibility: "HIDDEN" },
     });
-
-    if (pledgeAddonCount > 0) {
-      // Soft delete - has pledge references
-      await db.reward.update({
-        where: { id: addonId },
-        data: { isEnded: true, endedAt: new Date(), visibility: "HIDDEN" },
-      });
-    } else {
-      // No pledge references, safe to hard delete
-      await db.reward.delete({
-        where: { id: addonId },
-      });
-    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

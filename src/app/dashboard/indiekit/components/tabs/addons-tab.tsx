@@ -161,7 +161,7 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
         throw new Error(data.error || "Failed to delete addons");
       }
 
-      toast.success(`Removed all add-ons (${data.deleted} deleted${data.hidden > 0 ? `, ${data.hidden} archived` : ""})`);
+      toast.success(`Removed ${data.removed} add-on${data.removed !== 1 ? "s" : ""} from survey`);
       setConfirmDeleteAll(false);
       onRefresh?.();
     } catch (error) {
@@ -434,9 +434,8 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
               Remove All Add-ons?
             </DialogTitle>
             <DialogDescription>
-              This will remove all {surveyAddons.length} add-on{surveyAddons.length !== 1 ? "s" : ""} from this project.
-              Add-ons that have been purchased will be archived instead of deleted.
-              This action cannot be undone.
+              This will remove all {surveyAddons.length} add-on{surveyAddons.length !== 1 ? "s" : ""} from the survey form.
+              The add-ons will still exist in your project and can be re-imported.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
