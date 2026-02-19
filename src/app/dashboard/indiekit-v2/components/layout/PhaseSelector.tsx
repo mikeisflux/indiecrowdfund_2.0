@@ -37,13 +37,14 @@ const PHASE_CONFIG = [
 interface PhaseSelectorProps {
   activePhase: FulfillmentPhase;
   onPhaseChange: (phase: FulfillmentPhase) => void;
+  isPhaseActive?: boolean;
 }
 
-export function PhaseSelector({ activePhase, onPhaseChange }: PhaseSelectorProps) {
+export function PhaseSelector({ activePhase, onPhaseChange, isPhaseActive = true }: PhaseSelectorProps) {
   return (
     <div className="flex items-center gap-2">
       {PHASE_CONFIG.map((phase, index) => {
-        const isActive = activePhase === phase.id;
+        const isSelected = activePhase === phase.id && isPhaseActive;
         const Icon = phase.icon;
 
         return (
@@ -52,14 +53,14 @@ export function PhaseSelector({ activePhase, onPhaseChange }: PhaseSelectorProps
               onClick={() => onPhaseChange(phase.id)}
               className={cn(
                 "flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all",
-                isActive
+                isSelected
                   ? cn(phase.activeBg, "ring-2", phase.activeRing, "shadow-sm")
                   : "border-border bg-card hover:bg-muted/50"
               )}
             >
-              <Icon className={cn("h-4 w-4", isActive ? phase.color : "text-muted-foreground")} />
+              <Icon className={cn("h-4 w-4", isSelected ? phase.color : "text-muted-foreground")} />
               <div className="text-left">
-                <p className={cn("text-sm font-medium leading-none", isActive ? "text-foreground" : "text-muted-foreground")}>
+                <p className={cn("text-sm font-medium leading-none", isSelected ? "text-foreground" : "text-muted-foreground")}>
                   {phase.label}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">{phase.sublabel}</p>

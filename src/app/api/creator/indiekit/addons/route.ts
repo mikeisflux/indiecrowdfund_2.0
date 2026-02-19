@@ -96,11 +96,21 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete" && addonId) {
-      // Soft delete by marking as ended
-      await db.reward.update({
+      const existing = await db.reward.findUnique({
         where: { id: addonId },
-        data: { isEnded: true, endedAt: new Date() },
+        select: { id: true, quantityClaimed: true },
       });
+
+      if (existing?.quantityClaimed && existing.quantityClaimed > 0) {
+        await db.reward.update({
+          where: { id: addonId },
+          data: { isEnded: true, endedAt: new Date(), visibility: "HIDDEN" },
+        });
+      } else {
+        await db.reward.delete({
+          where: { id: addonId },
+        });
+      }
 
       return NextResponse.json({ success: true });
     }
@@ -148,6 +158,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ addon });
     }
 
+    if (action === "delete-all") {
+      // Get all addons for this project
+      const allAddons = await db.reward.findMany({
+        where: { projectId, type: "ADDON" },
+        select: { id: true, quantityClaimed: true },
+      });
+
+      // Hard delete those with no purchases, soft delete the rest
+      const noPurchases = allAddons.filter(a => !a.quantityClaimed || a.quantityClaimed === 0);
+      const hasPurchases = allAddons.filter(a => a.quantityClaimed && a.quantityClaimed > 0);
+
+      if (noPurchases.length > 0) {
+        await db.reward.deleteMany({
+          where: { id: { in: noPurchases.map(a => a.id) } },
+        });
+      }
+
+      if (hasPurchases.length > 0) {
+        await db.reward.updateMany({
+          where: { id: { in: hasPurchases.map(a => a.id) } },
+          data: { isEnded: true, endedAt: new Date(), visibility: "HIDDEN" },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        deleted: noPurchases.length,
+        hidden: hasPurchases.length,
+      });
+    }
+
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
     console.error("Addons POST error:", error);
@@ -175,11 +216,28 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Soft delete the addon by marking as ended
-    await db.reward.update({
+    // Check if addon has any purchases before hard deleting
+    const addon = await db.reward.findUnique({
       where: { id: addonId },
-      data: { isEnded: true, endedAt: new Date() },
+      select: { id: true, quantityClaimed: true },
     });
+
+    if (!addon) {
+      return NextResponse.json({ error: "Addon not found" }, { status: 404 });
+    }
+
+    if (addon.quantityClaimed && addon.quantityClaimed > 0) {
+      // Soft delete if there are purchases (preserve data integrity)
+      await db.reward.update({
+        where: { id: addonId },
+        data: { isEnded: true, endedAt: new Date(), visibility: "HIDDEN" },
+      });
+    } else {
+      // Hard delete if no purchases
+      await db.reward.delete({
+        where: { id: addonId },
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

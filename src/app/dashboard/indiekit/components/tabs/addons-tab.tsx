@@ -53,6 +53,8 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [confirmDeleteAddon, setConfirmDeleteAddon] = useState<SurveyAddon | null>(null);
   const [isDeletingAddon, setIsDeletingAddon] = useState(false);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   const handleDuplicateAddon = async (addon: SurveyAddon) => {
     if (!projectId) {
@@ -140,6 +142,35 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (!projectId) return;
+
+    setIsDeletingAll(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/addons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          projectId,
+          action: "delete-all",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete addons");
+      }
+
+      toast.success(`Removed all add-ons (${data.deleted} deleted${data.hidden > 0 ? `, ${data.hidden} archived` : ""})`);
+      setConfirmDeleteAll(false);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete addons");
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Add-ons Header */}
@@ -151,6 +182,12 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {surveyAddons.length > 0 && (
+            <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setConfirmDeleteAll(true)}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Remove All
+            </Button>
+          )}
           {onOpenImportDialog && (
             <Button variant="outline" onClick={onOpenImportDialog}>
               <Download className="h-4 w-4 mr-2" />
@@ -382,6 +419,42 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
                 </>
               ) : (
                 "Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Delete All Dialog */}
+      <Dialog open={confirmDeleteAll} onOpenChange={(open) => !open && setConfirmDeleteAll(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Remove All Add-ons?
+            </DialogTitle>
+            <DialogDescription>
+              This will remove all {surveyAddons.length} add-on{surveyAddons.length !== 1 ? "s" : ""} from this project.
+              Add-ons that have been purchased will be archived instead of deleted.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteAll(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAll}
+              disabled={isDeletingAll}
+            >
+              {isDeletingAll ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                "Remove All"
               )}
             </Button>
           </DialogFooter>

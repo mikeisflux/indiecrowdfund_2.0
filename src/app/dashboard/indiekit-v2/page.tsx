@@ -546,8 +546,8 @@ export default function IndieKitV2Page() {
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors",
                       isActive
-                        ? "bg-background shadow-sm font-medium text-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                        ? "bg-background shadow-sm font-medium text-foreground border border-foreground/20"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/50 border border-transparent"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -559,7 +559,7 @@ export default function IndieKitV2Page() {
 
             {/* Phase Selector & Phase Tabs */}
             <div className="mb-4 space-y-3">
-              <PhaseSelector activePhase={activePhase} onPhaseChange={handlePhaseChange} />
+              <PhaseSelector activePhase={activePhase} onPhaseChange={handlePhaseChange} isPhaseActive={activeSection === "phase"} />
 
               {/* Phase Sub-tabs */}
               <div className="flex gap-1 p-1.5 rounded-lg bg-muted/30 border border-border">
