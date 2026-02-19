@@ -96,9 +96,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete" && addonId) {
-      await db.reward.delete({
-        where: { id: addonId },
-      });
+      // Delete any pledge addon references first (no cascade on this FK)
+      await db.pledgeAddon.deleteMany({ where: { addonId } });
+      await db.reward.delete({ where: { id: addonId } });
 
       return NextResponse.json({ success: true });
     }
@@ -147,12 +147,25 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete-all") {
-      // Hard delete all ADDON rewards for this project
-      const result = await db.reward.deleteMany({
-        where: { projectId, type: "ADDON" },
-      });
+      // Get all ADDON reward IDs for this project
+      const addonIds = (
+        await db.reward.findMany({
+          where: { projectId, type: "ADDON" },
+          select: { id: true },
+        })
+      ).map((a) => a.id);
 
-      return NextResponse.json({ success: true, deleted: result.count });
+      if (addonIds.length > 0) {
+        // Delete pledge addon references first (no cascade on this FK)
+        await db.pledgeAddon.deleteMany({
+          where: { addonId: { in: addonIds } },
+        });
+        await db.reward.deleteMany({
+          where: { id: { in: addonIds } },
+        });
+      }
+
+      return NextResponse.json({ success: true, deleted: addonIds.length });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
@@ -182,9 +195,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    await db.reward.delete({
-      where: { id: addonId },
-    });
+    // Delete pledge addon references first (no cascade on this FK)
+    await db.pledgeAddon.deleteMany({ where: { addonId } });
+    await db.reward.delete({ where: { id: addonId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
