@@ -96,10 +96,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete" && addonId) {
-      // Hide from survey form - does not permanently delete the reward
-      await db.reward.update({
+      await db.reward.delete({
         where: { id: addonId },
-        data: { visibility: "HIDDEN" },
       });
 
       return NextResponse.json({ success: true });
@@ -149,73 +147,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete-all") {
-      // Get all ADDON rewards for this project
-      const allAddons = await db.reward.findMany({
+      // Hard delete all ADDON rewards for this project
+      const result = await db.reward.deleteMany({
         where: { projectId, type: "ADDON" },
-        select: { id: true, title: true, createdAt: true },
-        orderBy: { createdAt: "asc" },
       });
 
-      // Group by title to find originals vs copies
-      const byTitle = new Map<string, typeof allAddons>();
-      for (const addon of allAddons) {
-        const existing = byTitle.get(addon.title) || [];
-        existing.push(addon);
-        byTitle.set(addon.title, existing);
-      }
-
-      // For each title, keep the oldest (original), delete newer copies
-      const copyIds: string[] = [];
-      const originalIds: string[] = [];
-      for (const [, addons] of byTitle) {
-        originalIds.push(addons[0].id); // oldest = original
-        for (let i = 1; i < addons.length; i++) {
-          copyIds.push(addons[i].id); // newer = copies
-        }
-      }
-
-      // Hard-delete copies that have no pledge references
-      let deletedCount = 0;
-      if (copyIds.length > 0) {
-        // Check which copies have pledge references
-        const copiesWithPledges = await db.pledgeAddon.findMany({
-          where: { addonId: { in: copyIds } },
-          select: { addonId: true },
-        });
-        const pledgeAddonIds = new Set(copiesWithPledges.map(p => p.addonId));
-
-        const safeToDelete = copyIds.filter(id => !pledgeAddonIds.has(id));
-        const mustHide = copyIds.filter(id => pledgeAddonIds.has(id));
-
-        if (safeToDelete.length > 0) {
-          await db.reward.deleteMany({
-            where: { id: { in: safeToDelete } },
-          });
-          deletedCount = safeToDelete.length;
-        }
-
-        // Hide copies that have pledge references (can't delete)
-        if (mustHide.length > 0) {
-          await db.reward.updateMany({
-            where: { id: { in: mustHide } },
-            data: { visibility: "HIDDEN" },
-          });
-        }
-      }
-
-      // Hide originals from survey (they still exist on the project)
-      if (originalIds.length > 0) {
-        await db.reward.updateMany({
-          where: { id: { in: originalIds } },
-          data: { visibility: "HIDDEN" },
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        removed: originalIds.length,
-        duplicatesDeleted: deletedCount,
-      });
+      return NextResponse.json({ success: true, deleted: result.count });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
@@ -245,10 +182,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Hide from survey form - does not permanently delete the reward
-    await db.reward.update({
+    await db.reward.delete({
       where: { id: addonId },
-      data: { visibility: "HIDDEN" },
     });
 
     return NextResponse.json({ success: true });

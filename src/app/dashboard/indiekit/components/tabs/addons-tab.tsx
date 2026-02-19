@@ -161,11 +161,7 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
         throw new Error(data.error || "Failed to delete addons");
       }
 
-      const parts = [`Removed ${data.removed} add-on${data.removed !== 1 ? "s" : ""} from survey`];
-      if (data.duplicatesDeleted > 0) {
-        parts.push(`${data.duplicatesDeleted} duplicate${data.duplicatesDeleted !== 1 ? "s" : ""} cleaned up`);
-      }
-      toast.success(parts.join(", "));
+      toast.success(`Deleted ${data.deleted} add-on${data.deleted !== 1 ? "s" : ""}`);
       setConfirmDeleteAll(false);
       onRefresh?.();
     } catch (error) {
@@ -438,8 +434,8 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
               Remove All Add-ons?
             </DialogTitle>
             <DialogDescription>
-              This will remove all {surveyAddons.length} add-on{surveyAddons.length !== 1 ? "s" : ""} from the survey form.
-              The add-ons will still exist in your project and can be re-imported.
+              This will permanently delete all {surveyAddons.length} add-on{surveyAddons.length !== 1 ? "s" : ""} from the survey.
+              You can re-import them from your project afterwards.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
