@@ -79,16 +79,16 @@ export function AddonDialog({
     setIsSaving(true);
     try {
       const res = await fetch("/api/creator/indiekit/addons", {
-        method: isEditing ? "PATCH" : "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           projectId,
+          action: isEditing ? "update" : "create",
           ...(isEditing && { addonId: editingAddon.id }),
-          name: name.trim(),
+          title: name.trim(),
           description: description.trim(),
-          price: parseFloat(price),
-          quantityLimit: quantityLimit ? parseInt(quantityLimit) : null,
-          available: isActive,
+          amount: parseFloat(price),
+          quantityAvailable: quantityLimit ? parseInt(quantityLimit) : null,
         }),
       });
 
