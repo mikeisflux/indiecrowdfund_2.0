@@ -94,6 +94,10 @@ export default function EmailPage() {
   const [isDeletingMailbox, setIsDeletingMailbox] = useState(false);
   const [isDeletingEmail, setIsDeletingEmail] = useState(false);
 
+  // Empty folder confirmation
+  const [emptyFolderConfirm, setEmptyFolderConfirm] = useState(false);
+  const [isEmptyingFolder, setIsEmptyingFolder] = useState(false);
+
   // Image lightbox state
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
@@ -328,6 +332,30 @@ export default function EmailPage() {
     setIsComposing(true);
   };
 
+  const handleEmptyFolder = async () => {
+    if (!selectedMailbox) return;
+
+    setIsEmptyingFolder(true);
+    try {
+      const response = await fetch(
+        `/api/admin/mailboxes/${selectedMailbox.id}/emails?folder=${selectedFolder}`,
+        { method: "DELETE", headers: getCSRFHeaders() }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`Emptied ${data.deletedCount} emails from ${selectedFolder}`);
+        setEmails([]);
+        setSelectedEmail(null);
+        // Refresh mailbox folder counts
+        await fetchMailboxes();
+      }
+    } catch (error) {
+      console.error("Error emptying folder:", error);
+    } finally {
+      setIsEmptyingFolder(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -530,6 +558,17 @@ export default function EmailPage() {
                 >
                   <RefreshCw className={`h-4 w-4 ${isLoadingEmails ? "animate-spin" : ""}`} />
                 </Button>
+                {selectedMailbox && (selectedMailbox.folders?.[selectedFolder] || 0) > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                    onClick={() => setEmptyFolderConfirm(true)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    Empty
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-hidden p-0">
@@ -823,6 +862,18 @@ export default function EmailPage() {
         variant="destructive"
         onConfirm={handleDeleteSelectedEmail}
         loading={isDeletingEmail}
+      />
+
+      {/* Empty Folder Confirmation */}
+      <ConfirmDialog
+        open={emptyFolderConfirm}
+        onOpenChange={setEmptyFolderConfirm}
+        title={`Empty ${FOLDER_LABELS[selectedFolder] || selectedFolder}?`}
+        description={`This will permanently delete all ${(selectedMailbox?.folders?.[selectedFolder] || 0).toLocaleString()} emails in ${FOLDER_LABELS[selectedFolder]?.toLowerCase() || selectedFolder}. This action cannot be undone.`}
+        confirmText="Empty Folder"
+        variant="destructive"
+        onConfirm={handleEmptyFolder}
+        loading={isEmptyingFolder}
       />
 
       {/* Image Lightbox */}

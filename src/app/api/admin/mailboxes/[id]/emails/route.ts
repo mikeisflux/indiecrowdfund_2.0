@@ -292,3 +292,65 @@ export async function POST(
     );
   }
 }
+
+// DELETE - Bulk delete all emails in a folder
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = await requireAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+    const url = new URL(request.url);
+    const folder = url.searchParams.get("folder") as EmailFolder | null;
+
+    if (!folder) {
+      return NextResponse.json(
+        { error: "Folder parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    const validFolders: EmailFolder[] = ["INBOX", "SENT", "DRAFTS", "TRASH", "SPAM", "ARCHIVE"];
+    if (!validFolders.includes(folder)) {
+      return NextResponse.json(
+        { error: "Invalid folder" },
+        { status: 400 }
+      );
+    }
+
+    // Verify mailbox exists
+    const mailbox = await db.mailbox.findUnique({
+      where: { id },
+    });
+
+    if (!mailbox) {
+      return NextResponse.json({ error: "Mailbox not found" }, { status: 404 });
+    }
+
+    // Permanently delete all emails in the specified folder
+    const result = await db.adminEmail.deleteMany({
+      where: {
+        mailboxId: id,
+        folder,
+      },
+    });
+
+    console.log(`[Admin Email] Emptied folder ${folder} for mailbox ${mailbox.name}: ${result.count} emails deleted`);
+
+    return NextResponse.json({
+      success: true,
+      deletedCount: result.count,
+    });
+  } catch (error) {
+    console.error("Error emptying folder:", error);
+    return NextResponse.json(
+      { error: "Failed to empty folder" },
+      { status: 500 }
+    );
+  }
+}
