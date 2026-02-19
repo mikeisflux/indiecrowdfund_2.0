@@ -246,6 +246,7 @@ export default function IndieKitV2Page() {
       setProducts(data.products || []);
       setRewards(data.rewards || []);
       setAddons(data.addons || []);
+      setSurveyAddons(data.surveyAddons || []);
       setTimeline(data.timeline || []);
       setSurveyQuestions(data.surveyQuestions || []);
 
