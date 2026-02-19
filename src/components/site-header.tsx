@@ -46,6 +46,7 @@ interface SearchSuggestion {
 // Paths where the site header should NOT be shown
 const HIDDEN_PATH_PREFIXES = [
   "/admin",
+  "/dashboard",
   "/login",
   "/register",
   "/forgot-password",

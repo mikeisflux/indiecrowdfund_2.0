@@ -387,15 +387,17 @@ export default function IndieKitPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Dashboard</span>
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <Button variant="ghost" size="icon">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
             </Link>
-            <div className="hidden sm:block h-6 w-px bg-border" />
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-teal-600" />
-              <h1 className="text-base sm:text-lg font-semibold">IndieKit</h1>
+              <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-teal-500 to-cyan-500 bg-clip-text text-transparent">
+                IndieKit
+              </h1>
               <Badge variant="secondary" className="hidden sm:inline-flex">Fulfillment</Badge>
             </div>
           </div>

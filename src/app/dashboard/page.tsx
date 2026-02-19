@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import {
   Loader2,
   XCircle,
@@ -20,6 +19,7 @@ import {
   FileText,
   ShoppingCart,
   ArrowLeft,
+  Handshake,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
@@ -37,6 +37,7 @@ import { QuickStats } from "./components/QuickStats";
 import { RewardStats } from "./components/RewardStats";
 import { BackersList } from "./components/BackersList";
 import { FulfillmentView } from "./components/FulfillmentView";
+import { CollaborationsTab } from "./components/CollaborationsTab";
 
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
@@ -145,21 +146,17 @@ export default function CreatorDashboard() {
 
         <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
           <div className="container flex h-16 items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Link href="/">
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-                IndieCrowdfund
-              </Link>
-              <Badge variant="outline" className="border-primary/30 text-primary hidden sm:flex">
-                <Sparkles className="w-3 h-3 mr-1" />
+              <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
                 Creator Dashboard
-              </Badge>
+              </h1>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <NotificationsDropdown />
               <Link href="/dashboard/settings">
                 <Button variant="ghost" size="icon">
@@ -190,6 +187,11 @@ export default function CreatorDashboard() {
               </Button>
             </Link>
           </div>
+
+          {/* Show collaborations even when user has no own projects */}
+          <div className="mt-16 max-w-3xl mx-auto">
+            <CollaborationsTab />
+          </div>
         </div>
       </div>
     );
@@ -213,19 +215,15 @@ export default function CreatorDashboard() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Link href="/">
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-              IndieCrowdfund
-            </Link>
-            <Badge variant="outline" className="border-primary/30 text-primary hidden sm:flex">
-              <Sparkles className="w-3 h-3 mr-1" />
+            <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
               Creator Dashboard
-            </Badge>
+            </h1>
           </div>
           <div className="flex items-center gap-2">
             <NotificationsDropdown />
@@ -339,6 +337,10 @@ export default function CreatorDashboard() {
                       </div>
                     </TabsTrigger>
                   </Link>
+                  <TabsTrigger value="collaborations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                    <Handshake className="mr-2 h-4 w-4" />
+                    Collaborations
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
@@ -392,6 +394,10 @@ export default function CreatorDashboard() {
 
               <TabsContent value="fulfillment" className="space-y-6">
                 <FulfillmentView fulfillmentStats={data.fulfillmentStats} />
+              </TabsContent>
+
+              <TabsContent value="collaborations" className="space-y-6">
+                <CollaborationsTab />
               </TabsContent>
             </Tabs>
           </>
