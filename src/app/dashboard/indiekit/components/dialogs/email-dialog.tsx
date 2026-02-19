@@ -354,9 +354,10 @@ export function EmailDialog({
                         </p>
                       </div>
                       <hr />
-                      <div className="text-sm whitespace-pre-wrap text-muted-foreground">
-                        {emailBody}
-                      </div>
+                      <div
+                        className="text-sm text-muted-foreground prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ __html: emailBody }}
+                      />
                     </div>
                   </div>
 
