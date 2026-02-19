@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -140,8 +139,10 @@ export function ImportAddonFromProjectDialog({
     }
   };
 
-  // Filter out rewards that are already imported as addons
-  const availableRewards = rewards.filter((r) => !existingAddonIds.includes(r.id));
+  // Only show add-ons (not reward tiers), and filter out already imported ones
+  const availableRewards = rewards.filter(
+    (r) => r.type === "ADDON" && !existingAddonIds.includes(r.id)
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -149,7 +150,7 @@ export function ImportAddonFromProjectDialog({
         <DialogHeader>
           <DialogTitle>Import Add-ons from Project</DialogTitle>
           <DialogDescription>
-            Select rewards from your project to import as survey add-ons.
+            Select add-ons from your project to import as survey add-ons.
           </DialogDescription>
         </DialogHeader>
 
@@ -162,9 +163,9 @@ export function ImportAddonFromProjectDialog({
           ) : availableRewards.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-muted-foreground">
-                {rewards.length === 0
-                  ? "No rewards found in this project. Create rewards in your project first."
-                  : "All rewards have already been imported as add-ons."}
+                {rewards.filter((r) => r.type === "ADDON").length === 0
+                  ? "No add-ons found in this project. Create add-ons in your project first."
+                  : "All add-ons have already been imported."}
               </p>
             </div>
           ) : (
@@ -182,9 +183,6 @@ export function ImportAddonFromProjectDialog({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium truncate">{reward.title}</p>
-                      <Badge variant="secondary" className="text-xs shrink-0">
-                        {reward.type === "ADDON" ? "Add-on" : "Reward Tier"}
-                      </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5">${reward.amount.toFixed(2)}</p>
                     {reward.description && (
