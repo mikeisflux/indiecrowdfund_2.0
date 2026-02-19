@@ -93,6 +93,7 @@ import {
   DistributionDialog,
   NPSFeedbackDialog,
 } from "./components/dialogs";
+import { ImportAddonFromProjectDialog } from "./components/dialogs/import-addon-from-project-dialog";
 import {
   OverviewTab,
   BackersTab,
@@ -161,6 +162,7 @@ export default function IndieKitPage() {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [emailTemplate, setEmailTemplate] = useState<{ subject?: string; body?: string; name?: string } | null>(null);
   const [isAddonDialogOpen, setIsAddonDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingAddon, setEditingAddon] = useState<SurveyAddon | null>(null);
   const [isDistributionDialogOpen, setIsDistributionDialogOpen] = useState(false);
   const [isNPSDialogOpen, setIsNPSDialogOpen] = useState(false);
@@ -777,7 +779,7 @@ export default function IndieKitPage() {
                   backers={backers}
                   surveyAddons={surveyAddons}
                   onOpenAddonDialog={() => setIsAddonDialogOpen(true)}
-                  onOpenImportDialog={() => toast.info("Import from Kickstarter/Gamefound coming soon")}
+                  onOpenImportDialog={() => setIsImportDialogOpen(true)}
                   projectId={selectedProjectId}
                   onRefresh={fetchData}
                   onEditAddon={(addon) => {
@@ -962,6 +964,17 @@ export default function IndieKitPage() {
           fetchData();
           setIsAddonDialogOpen(false);
           setEditingAddon(null);
+        }}
+      />
+
+      <ImportAddonFromProjectDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        projectId={selectedProjectId}
+        existingAddonIds={surveyAddons.map((a) => a.id)}
+        onImported={() => {
+          fetchData();
+          setIsImportDialogOpen(false);
         }}
       />
 
