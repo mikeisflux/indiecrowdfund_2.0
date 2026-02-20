@@ -285,7 +285,7 @@ export default function SocialHubPage() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+            <Link href={`/dashboard?project=${searchParams?.get("project") || ""}`} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
             </Link>
@@ -325,7 +325,7 @@ export default function SocialHubPage() {
             </div>
           ))}
           {disconnectedPlatforms.length > 0 && (
-            <Button variant="outline" size="sm" className="ml-2">
+            <Button variant="outline" size="sm" className="ml-2" onClick={() => setActiveTab("accounts")}>
               <Plus className="mr-1 h-3 w-3" />
               Connect More
             </Button>

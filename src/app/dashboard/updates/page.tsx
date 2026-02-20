@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +73,7 @@ interface ProjectUpdate {
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
 export default function UpdatesPage() {
+  const searchParams = useSearchParams();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
@@ -102,10 +104,12 @@ export default function UpdatesPage() {
         const data = await res.json();
         setProjects(data.projects || []);
 
-        // Set selected project from localStorage or first project
-        const savedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
+        // Set selected project from URL param, localStorage, or first project
+        const urlProject = searchParams?.get("project");
+        const savedProjectId = urlProject || localStorage.getItem(SELECTED_PROJECT_KEY);
         if (savedProjectId && data.projects.some((p: Project) => p.id === savedProjectId)) {
           setSelectedProjectId(savedProjectId);
+          localStorage.setItem(SELECTED_PROJECT_KEY, savedProjectId);
         } else if (data.projects.length > 0) {
           setSelectedProjectId(data.projects[0].id);
         }
@@ -116,7 +120,7 @@ export default function UpdatesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [searchParams]);
 
   // Fetch updates for selected project
   const fetchUpdates = useCallback(async () => {
@@ -337,7 +341,7 @@ export default function UpdatesPage() {
       {/* Sub Navigation */}
       <div className="border-b bg-background/60 backdrop-blur-sm">
         <div className="container flex items-center gap-4 py-3 h-14">
-          <Link href="/dashboard">
+          <Link href={`/dashboard?project=${selectedProjectId}`}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard

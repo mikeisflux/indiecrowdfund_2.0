@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -337,6 +338,7 @@ function StatsCard({
 }
 
 export default function CreatorMarketplaceDashboard() {
+  const searchParams = useSearchParams();
   const [books, setBooks] = useState<MarketplaceBook[]>([]);
   const [company, setCompany] = useState<CompanyProfile | null>(null);
   const [stats, setStats] = useState<MarketplaceStats | null>(null);
@@ -581,7 +583,7 @@ export default function CreatorMarketplaceDashboard() {
       <div className="border-b border-border bg-muted/50 backdrop-blur-sm">
         <div className="container flex items-center justify-between py-3">
           <Link
-            href="/dashboard"
+            href={`/dashboard?project=${searchParams?.get("project") || ""}`}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

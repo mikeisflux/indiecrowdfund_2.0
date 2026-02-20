@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,6 +43,7 @@ import { CollaborationsTab } from "./components/CollaborationsTab";
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
 export default function CreatorDashboard() {
+  const searchParams = useSearchParams();
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [timeRange, setTimeRange] = useState("30");
   const [data, setData] = useState<DashboardData | null>(null);
@@ -82,11 +84,13 @@ export default function CreatorDashboard() {
   }, [selectedProjectId, timeRange]);
 
   useEffect(() => {
-    const savedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
+    const urlProject = searchParams?.get("project");
+    const savedProjectId = urlProject || localStorage.getItem(SELECTED_PROJECT_KEY);
     if (savedProjectId) {
       setSelectedProjectId(savedProjectId);
+      localStorage.setItem(SELECTED_PROJECT_KEY, savedProjectId);
     }
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -297,7 +301,7 @@ export default function CreatorDashboard() {
                     <Truck className="mr-2 h-4 w-4" />
                     Fulfillment
                   </TabsTrigger>
-                  <Link href="/dashboard/updates">
+                  <Link href={`/dashboard/updates?project=${selectedProjectId}`}>
                     <TabsTrigger value="updates" asChild>
                       <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
                         <FileText className="mr-2 h-4 w-4" />
@@ -305,7 +309,7 @@ export default function CreatorDashboard() {
                       </div>
                     </TabsTrigger>
                   </Link>
-                  <Link href="/dashboard/social">
+                  <Link href={`/dashboard/social?project=${selectedProjectId}`}>
                     <TabsTrigger value="social" asChild>
                       <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
                         <Sparkles className="mr-2 h-4 w-4" />
@@ -313,7 +317,7 @@ export default function CreatorDashboard() {
                       </div>
                     </TabsTrigger>
                   </Link>
-                  <Link href="/dashboard/indiekit">
+                  <Link href={`/dashboard/indiekit?project=${selectedProjectId}`}>
                     <TabsTrigger value="indiekit" asChild>
                       <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
                         <Package className="mr-2 h-4 w-4" />
@@ -321,7 +325,7 @@ export default function CreatorDashboard() {
                       </div>
                     </TabsTrigger>
                   </Link>
-                  <Link href="/dashboard/indiekit-v2">
+                  <Link href={`/dashboard/indiekit-v2?project=${selectedProjectId}`}>
                     <TabsTrigger value="indiekit-v2" asChild>
                       <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
                         <Sparkles className="mr-2 h-4 w-4 text-teal-500" />
@@ -329,7 +333,7 @@ export default function CreatorDashboard() {
                       </div>
                     </TabsTrigger>
                   </Link>
-                  <Link href="/dashboard/marketplace">
+                  <Link href={`/dashboard/marketplace?project=${selectedProjectId}`}>
                     <TabsTrigger value="marketplace" asChild>
                       <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
                         <ShoppingCart className="mr-2 h-4 w-4" />

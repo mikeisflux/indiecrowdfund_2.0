@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -125,6 +126,7 @@ import { WhatsNextBanner } from "./components/whats-next-banner";
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
 export default function IndieKitPage() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -302,15 +304,17 @@ export default function IndieKitPage() {
     }
   }, [selectedProjectId]);
 
-  // Load selected project from localStorage on mount and mark as initialized
+  // Load selected project from URL param or localStorage on mount and mark as initialized
   useEffect(() => {
-    const savedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
+    const urlProject = searchParams?.get("project");
+    const savedProjectId = urlProject || localStorage.getItem(SELECTED_PROJECT_KEY);
     if (savedProjectId) {
       setSelectedProjectId(savedProjectId);
+      localStorage.setItem(SELECTED_PROJECT_KEY, savedProjectId);
     }
-    // Mark as initialized after reading localStorage (even if no saved project)
+    // Mark as initialized after reading (even if no saved project)
     setIsInitialized(true);
-  }, []);
+  }, [searchParams]);
 
   // Only fetch data after initialization from localStorage is complete
   useEffect(() => {
@@ -390,7 +394,7 @@ export default function IndieKitPage() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/dashboard">
+            <Link href={`/dashboard?project=${selectedProjectId}`}>
               <Button variant="ghost" size="icon">
                 <ChevronLeft className="h-4 w-4" />
               </Button>

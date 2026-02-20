@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -149,6 +150,7 @@ const POST_FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementT
 ];
 
 export default function IndieKitV2Page() {
+  const searchParams = useSearchParams();
   // Navigation state
   const [activeSection, setActiveSection] = useState<"always" | "phase">("always");
   const [activeAlwaysTab, setActiveAlwaysTab] = useState<AlwaysAvailableTab>("dashboard");
@@ -272,12 +274,14 @@ export default function IndieKitV2Page() {
   }, [selectedProjectId]);
 
   useEffect(() => {
-    const savedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
+    const urlProject = searchParams?.get("project");
+    const savedProjectId = urlProject || localStorage.getItem(SELECTED_PROJECT_KEY);
     if (savedProjectId) {
       setSelectedProjectId(savedProjectId);
+      localStorage.setItem(SELECTED_PROJECT_KEY, savedProjectId);
     }
     setIsInitialized(true);
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (isInitialized) {
@@ -431,7 +435,7 @@ export default function IndieKitV2Page() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+            <Link href={`/dashboard?project=${selectedProjectId}`} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
             </Link>
