@@ -73,6 +73,8 @@ interface BackerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   backer: Backer | null;
+  availableAddons?: { id: string; name: string; price: number }[];
+  onRefresh?: () => void;
 }
 
 interface SurveyData {
@@ -108,7 +110,7 @@ interface SurveyData {
   } | null;
 }
 
-export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) {
+export function BackerDialog({ open, onOpenChange, backer, availableAddons = [], onRefresh }: BackerDialogProps) {
   const [activeTab, setActiveTab] = useState("order");
   const [showAddressValidation, setShowAddressValidation] = useState(false);
   const [showBalanceEditor, setShowBalanceEditor] = useState(false);
@@ -942,18 +944,14 @@ export function BackerDialog({ open, onOpenChange, backer }: BackerDialogProps) 
       <EditOrderDialog
         open={showEditOrder}
         onOpenChange={setShowEditOrder}
-        orderId={backer.id}
+        pledgeId={backer.id}
+        projectId={backer.projectId || ""}
         backerName={backer.name}
-        items={backer.items?.map(item => ({
-          id: String(Math.random()),
-          name: item.name,
-          quantity: item.quantity,
-          price: 25,
-        })) || []}
+        reward={backer.reward ? { name: backer.reward, amount: backer.rewardAmount } : null}
+        currentAddons={backer.addons || []}
+        availableAddons={availableAddons}
         shippingAmount={backer.balance?.shippingAmount || 0}
-        onSave={(updates) => {
-          console.log("Order updated:", updates);
-        }}
+        onSaved={onRefresh}
       />
 
       <TrackingDialog

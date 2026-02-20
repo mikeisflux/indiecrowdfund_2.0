@@ -933,6 +933,8 @@ export default function IndieKitPage() {
         open={isBackerDialogOpen}
         onOpenChange={setIsBackerDialogOpen}
         backer={selectedBacker}
+        availableAddons={addons}
+        onRefresh={fetchData}
       />
 
       <UploadDialog
