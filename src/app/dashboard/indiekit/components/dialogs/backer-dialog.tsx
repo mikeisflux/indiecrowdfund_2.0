@@ -117,6 +117,8 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
   const [showEditOrder, setShowEditOrder] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
   const [showRefund, setShowRefund] = useState(false);
+  const [refundSuggestedAmount, setRefundSuggestedAmount] = useState<number | undefined>(undefined);
+  const [refundSuggestedReason, setRefundSuggestedReason] = useState<string | undefined>(undefined);
   const [showNotes, setShowNotes] = useState(false);
   const [showEmailComposer, setShowEmailComposer] = useState(false);
   const [showCancelOrder, setShowCancelOrder] = useState(false);
@@ -486,12 +488,56 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                       <span>${Number(backer.balance?.shippingAmount || 0).toFixed(2)}</span>
                     </div>
                     <div className="border-t pt-2 mt-2 font-medium">
-                      <div className="flex justify-between">
-                        <span>Balance</span>
-                        <span className={backer.balance?.balanceDue === 0 ? "text-green-600" : "text-red-600"}>
-                          ${Number(backer.balance?.balanceDue || 0).toFixed(2)}
-                        </span>
-                      </div>
+                      {(() => {
+                        const totalCharged = Number(backer.balance?.pledgeAmount || 0);
+                        const currentOrderTotal = Number(backer.balance?.pledgeLevelAmount || 0) + Number(backer.balance?.addonsAmount || 0) + Number(backer.balance?.shippingAmount || 0);
+                        const diff = currentOrderTotal - totalCharged;
+                        if (diff < -0.005) {
+                          // Credit owed to customer (order total is less than what they paid)
+                          const creditAmount = Math.abs(diff);
+                          return (
+                            <>
+                              <div className="flex justify-between">
+                                <span>Credit (Refund Owed)</span>
+                                <span className="text-green-600">
+                                  ${creditAmount.toFixed(2)}
+                                </span>
+                              </div>
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="text-teal-600 p-0 h-auto text-xs mt-1"
+                                onClick={() => {
+                                  setRefundSuggestedAmount(creditAmount);
+                                  setRefundSuggestedReason("overcharge");
+                                  setShowRefund(true);
+                                }}
+                              >
+                                <Undo2 className="h-3 w-3 mr-1" />
+                                Issue Refund
+                              </Button>
+                            </>
+                          );
+                        } else if (diff > 0.005) {
+                          // Balance due from customer
+                          return (
+                            <div className="flex justify-between">
+                              <span>Balance Due</span>
+                              <span className="text-red-600">
+                                ${diff.toFixed(2)}
+                              </span>
+                            </div>
+                          );
+                        } else {
+                          // Balanced
+                          return (
+                            <div className="flex justify-between">
+                              <span>Balance</span>
+                              <span className="text-green-600">$0.00</span>
+                            </div>
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -952,6 +998,11 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         availableAddons={availableAddons}
         shippingAmount={backer.balance?.shippingAmount || 0}
         onSaved={onRefresh}
+        onRefundNeeded={(amount) => {
+          setRefundSuggestedAmount(amount);
+          setRefundSuggestedReason("overcharge");
+          setShowRefund(true);
+        }}
       />
 
       <TrackingDialog
@@ -967,13 +1018,25 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
 
       <RefundDialog
         open={showRefund}
-        onOpenChange={setShowRefund}
+        onOpenChange={(open) => {
+          setShowRefund(open);
+          if (!open) {
+            // Clear suggested amount when dialog closes
+            setRefundSuggestedAmount(undefined);
+            setRefundSuggestedReason(undefined);
+          }
+        }}
         pledgeId={backer.id}
         backerName={backer.name}
         backerEmail={backer.email}
         totalPaid={backer.balance?.pledgeAmount || 0}
         paymentProcessor={backer.paymentProcessor as "STRIPE" | "DIVINITYCOIN"}
+        suggestedAmount={refundSuggestedAmount}
+        suggestedReason={refundSuggestedReason}
         onRefundComplete={() => {
+          setRefundSuggestedAmount(undefined);
+          setRefundSuggestedReason(undefined);
+          onRefresh?.();
           onOpenChange(false); // Close backer dialog after refund
         }}
       />

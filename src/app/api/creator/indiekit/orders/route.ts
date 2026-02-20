@@ -99,6 +99,14 @@ export async function PATCH(req: NextRequest) {
       newAddonsAmount += Number(reward.amount) * addon.quantity;
     }
 
+    // Calculate the financial diff: what the original total was vs new total
+    const originalTotal = Number(pledge.amount);
+    const rewardAmount = Number(pledge.rewardAmount);
+    const newShipping = shippingAmount !== undefined ? shippingAmount : Number(pledge.shippingAmount);
+    const newTotal = rewardAmount + newAddonsAmount + newShipping;
+    // Negative = we owe the customer (refund), Positive = customer owes more
+    const balanceChange = newTotal - originalTotal;
+
     // Perform all changes in a transaction
     await db.$transaction(async (tx) => {
       // Remove addons that have quantity 0 or aren't in the new list
@@ -150,22 +158,36 @@ export async function PATCH(req: NextRequest) {
       }
 
       // Recalculate total amount
-      const rewardAmount = Number(pledge.rewardAmount);
-      const shipping = shippingAmount !== undefined ? shippingAmount : Number(pledge.shippingAmount);
-      updateData.amount = rewardAmount + newAddonsAmount + shipping;
+      updateData.amount = newTotal;
 
       await tx.pledge.update({
         where: { id: pledgeId },
         data: updateData,
       });
 
-      // Log the activity
+      // Log the activity with financial details
+      const balanceNote = balanceChange < 0
+        ? ` Credit of $${Math.abs(balanceChange).toFixed(2)} owed to backer.`
+        : balanceChange > 0
+          ? ` Additional $${balanceChange.toFixed(2)} owed by backer.`
+          : "";
+
       await tx.fulfillmentActivity.create({
         data: {
           projectId,
           type: "BALANCE_ADJUSTED",
           title: "Order Edited",
-          description: `Add-ons updated for pledge ${pledgeId}. New add-ons total: $${newAddonsAmount.toFixed(2)}${shippingAmount !== undefined ? `, Shipping: $${shippingAmount.toFixed(2)}` : ""}`,
+          description: `Add-ons updated for pledge ${pledgeId}. New add-ons total: $${newAddonsAmount.toFixed(2)}${shippingAmount !== undefined ? `, Shipping: $${newShipping.toFixed(2)}` : ""}.${balanceNote}`,
+          pledgeId,
+          metadata: {
+            previousTotal: originalTotal,
+            newTotal,
+            balanceChange,
+            previousAddonsAmount: Number(pledge.addonsAmount),
+            newAddonsAmount,
+            previousShipping: Number(pledge.shippingAmount),
+            newShipping,
+          },
         },
       });
     });
@@ -206,6 +228,10 @@ export async function PATCH(req: NextRequest) {
         addonsAmount: Number(updatedPledge?.addonsAmount || 0),
         shippingAmount: Number(updatedPledge?.shippingAmount || 0),
       },
+      // Financial diff: negative means refund owed, positive means additional charge needed
+      balanceChange,
+      previousTotal: originalTotal,
+      newTotal,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

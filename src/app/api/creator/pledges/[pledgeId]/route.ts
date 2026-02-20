@@ -134,7 +134,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { action, reason } = body;
+    const { action, reason, amount: refundRequestAmount } = body;
 
     const typedPledge = pledge as {
       id: string;
@@ -199,17 +199,31 @@ export async function PATCH(
         );
       }
 
+      // Determine refund amount: use explicit amount if provided (partial), otherwise full
+      const totalPaid = Number(typedPledge.amount);
+      const refundAmount = refundRequestAmount != null
+        ? Math.min(parseFloat(refundRequestAmount), totalPaid)
+        : totalPaid;
+
+      if (refundAmount <= 0) {
+        return NextResponse.json(
+          { error: "Refund amount must be greater than zero" },
+          { status: 400 }
+        );
+      }
+
+      const isPartialRefund = refundAmount < totalPaid;
+      const refundAmountCents = Math.round(refundAmount * 100);
+
       // Handle based on payment processor
       if (typedPledge.paymentProcessor === "DIVINITYCOIN") {
         // DivinityCoin refund - call DC API to process Stripe refund on their end
         try {
-          const refundAmount = Number(typedPledge.amount);
-
           // Call DC's refund API - this processes the Stripe refund on DC's account
           const dcResult = await callDivinityCoinAPI("refund", {
             pledgeId: typedPledge.id,
             paymentId: typedPledge.divinityCoinPaymentId,
-            amount: Math.round(refundAmount * 100), // cents
+            amount: refundAmountCents, // cents
             reason: reason || "Refunded by creator",
             requestedBy: "creator",
           });
@@ -231,38 +245,68 @@ export async function PATCH(
                 pledgeId: typedPledge.id,
                 amount: -refundAmount,
                 type: "REFUND",
-                description: `Refund for pledge on "${typedPledge.project.title}"`,
+                description: isPartialRefund
+                  ? `Partial refund ($${refundAmount.toFixed(2)} of $${totalPaid.toFixed(2)}) for pledge on "${typedPledge.project.title}"`
+                  : `Refund for pledge on "${typedPledge.project.title}"`,
                 metadata: JSON.stringify({
                   creatorUserId: session.user.id,
                   reason: reason || "Refunded by creator",
                   projectId: typedPledge.projectId,
                   divinityCoinPaymentId: typedPledge.divinityCoinPaymentId,
                   dcRefundResult: dcResult.data,
+                  isPartialRefund,
+                  refundAmount,
+                  totalPaid,
                   processedAt: new Date().toISOString(),
                 }),
               },
             });
 
-            // Update pledge status
-            await tx.pledge.update({
-              where: { id: pledgeId },
-              data: {
-                status: "REFUNDED",
-                lastFailureReason: reason || "Refunded by creator",
-              },
-            });
+            if (isPartialRefund) {
+              // Partial refund: keep pledge COMPLETED, don't decrement project stats
+              // Log the partial refund in fulfillment activity
+              await tx.fulfillmentActivity.create({
+                data: {
+                  projectId: typedPledge.projectId,
+                  type: "REFUND_ISSUED",
+                  title: "Partial Refund Issued",
+                  description: `$${refundAmount.toFixed(2)} refunded to backer via DivinityCoin. Reason: ${reason || "Order adjustment"}`,
+                  pledgeId: typedPledge.id,
+                  metadata: { refundAmount, totalPaid, isPartialRefund: true, processor: "DIVINITYCOIN" },
+                },
+              });
+            } else {
+              // Full refund: update pledge status and decrement project stats
+              await tx.pledge.update({
+                where: { id: pledgeId },
+                data: {
+                  status: "REFUNDED",
+                  lastFailureReason: reason || "Refunded by creator",
+                },
+              });
 
-            // Update project backer count and amount
-            await tx.project.update({
-              where: { id: typedPledge.projectId },
-              data: {
-                backerCount: { decrement: 1 },
-                currentAmount: { decrement: typedPledge.amount },
-              },
-            });
+              await tx.project.update({
+                where: { id: typedPledge.projectId },
+                data: {
+                  backerCount: { decrement: 1 },
+                  currentAmount: { decrement: typedPledge.amount },
+                },
+              });
+
+              await tx.fulfillmentActivity.create({
+                data: {
+                  projectId: typedPledge.projectId,
+                  type: "REFUND_ISSUED",
+                  title: "Full Refund Issued",
+                  description: `$${refundAmount.toFixed(2)} refunded to backer via DivinityCoin. Reason: ${reason || "Refunded by creator"}`,
+                  pledgeId: typedPledge.id,
+                  metadata: { refundAmount, totalPaid, isPartialRefund: false, processor: "DIVINITYCOIN" },
+                },
+              });
+            }
           });
 
-          console.log(`[DivinityCoin Refund] Processed refund for pledge ${pledgeId} via DC API`);
+          console.log(`[DivinityCoin Refund] Processed ${isPartialRefund ? "partial" : "full"} refund ($${refundAmount.toFixed(2)}) for pledge ${pledgeId} via DC API`);
 
           // Send refund notification email to backer
           if (typedPledge.user.email) {
@@ -274,7 +318,7 @@ export async function PATCH(
                   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #16a34a;">Refund Processed</h2>
                     <p>Hi ${typedPledge.user.name || "there"},</p>
-                    <p>Your refund for <strong>${typedPledge.project.title}</strong> has been successfully processed.</p>
+                    <p>Your ${isPartialRefund ? "partial " : ""}refund for <strong>${typedPledge.project.title}</strong> has been successfully processed.</p>
                     <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
                       <p style="margin: 0 0 8px 0;"><strong>Refund Amount:</strong> $${refundAmount.toFixed(2)}</p>
                       <p style="margin: 0;"><strong>Refunded To:</strong> Original payment method (credit/debit card)</p>
@@ -299,9 +343,10 @@ export async function PATCH(
 
           return NextResponse.json({
             success: true,
-            message: "Refund processed successfully via DivinityCoin",
+            message: `${isPartialRefund ? "Partial refund" : "Refund"} processed successfully via DivinityCoin`,
             refundedTo: "card",
             amount: refundAmount,
+            isPartialRefund,
           });
         } catch (divinityError) {
           console.error("DivinityCoin refund error:", divinityError);
@@ -323,31 +368,35 @@ export async function PATCH(
         try {
           const stripeClient = await getStripeInstance();
 
-          // Check for existing refunds to prevent duplicates
+          // Check for existing refunds to prevent duplicates and calculate remaining refundable
           const existingRefunds = await stripeClient.refunds.list({
             payment_intent: typedPledge.stripePaymentIntentId,
-            limit: 1,
+            limit: 100,
           });
 
-          if (existingRefunds.data.length > 0) {
-            const totalRefunded = existingRefunds.data.reduce((sum, r) => sum + r.amount, 0);
-            if (totalRefunded > 0) {
-              console.log(`[Refund] Pledge ${typedPledge.id} already has refund(s) totaling ${totalRefunded} cents`);
-              // Still update pledge status below even if already refunded in Stripe
-            }
+          const totalAlreadyRefunded = existingRefunds.data
+            .filter((r: { status: string }) => r.status !== "canceled" && r.status !== "failed")
+            .reduce((sum: number, r: { amount: number }) => sum + r.amount, 0);
+          const maxRefundableCents = Math.round(totalPaid * 100) - totalAlreadyRefunded;
+
+          if (refundAmountCents > maxRefundableCents) {
+            return NextResponse.json(
+              { error: `Cannot refund $${refundAmount.toFixed(2)}. Maximum refundable: $${(maxRefundableCents / 100).toFixed(2)} (already refunded: $${(totalAlreadyRefunded / 100).toFixed(2)})` },
+              { status: 400 }
+            );
           }
 
-          if (existingRefunds.data.length === 0) {
-            await stripeClient.refunds.create({
-              payment_intent: typedPledge.stripePaymentIntentId,
-              reason: "requested_by_customer",
-              metadata: {
-                pledgeId: typedPledge.id,
-                creatorUserId: session.user.id,
-                reason: reason || "Refunded by creator",
-              },
-            });
-          }
+          await stripeClient.refunds.create({
+            payment_intent: typedPledge.stripePaymentIntentId,
+            amount: refundAmountCents, // Stripe accepts amount in cents for partial refunds
+            reason: "requested_by_customer",
+            metadata: {
+              pledgeId: typedPledge.id,
+              creatorUserId: session.user.id,
+              reason: reason || "Refunded by creator",
+              isPartialRefund: isPartialRefund ? "true" : "false",
+            },
+          });
         } catch (stripeError) {
           console.error("Stripe refund error:", stripeError);
           return NextResponse.json(
@@ -356,28 +405,54 @@ export async function PATCH(
           );
         }
 
-        // Update pledge status
-        await db.pledge.update({
-          where: { id: pledgeId },
-          data: {
-            status: "REFUNDED",
-            lastFailureReason: reason || "Refunded by creator",
-          },
-        });
+        // Update pledge and log activity in a transaction
+        await db.$transaction(async (tx) => {
+          if (isPartialRefund) {
+            // Partial refund: keep pledge COMPLETED, log activity
+            await tx.fulfillmentActivity.create({
+              data: {
+                projectId: typedPledge.projectId,
+                type: "REFUND_ISSUED",
+                title: "Partial Refund Issued",
+                description: `$${refundAmount.toFixed(2)} refunded to backer via Stripe. Reason: ${reason || "Order adjustment"}`,
+                pledgeId: typedPledge.id,
+                metadata: { refundAmount, totalPaid, isPartialRefund: true, processor: "STRIPE" },
+              },
+            });
+          } else {
+            // Full refund: update pledge status and decrement project stats
+            await tx.pledge.update({
+              where: { id: pledgeId },
+              data: {
+                status: "REFUNDED",
+                lastFailureReason: reason || "Refunded by creator",
+              },
+            });
 
-        // Update project backer count and amount
-        await db.project.update({
-          where: { id: typedPledge.projectId },
-          data: {
-            backerCount: { decrement: 1 },
-            currentAmount: { decrement: typedPledge.amount },
-          },
+            await tx.project.update({
+              where: { id: typedPledge.projectId },
+              data: {
+                backerCount: { decrement: 1 },
+                currentAmount: { decrement: typedPledge.amount },
+              },
+            });
+
+            await tx.fulfillmentActivity.create({
+              data: {
+                projectId: typedPledge.projectId,
+                type: "REFUND_ISSUED",
+                title: "Full Refund Issued",
+                description: `$${refundAmount.toFixed(2)} refunded to backer via Stripe. Reason: ${reason || "Refunded by creator"}`,
+                pledgeId: typedPledge.id,
+                metadata: { refundAmount, totalPaid, isPartialRefund: false, processor: "STRIPE" },
+              },
+            });
+          }
         });
 
         // Send refund notification email to backer
         if (typedPledge.user.email) {
           try {
-            const refundAmount = Number(typedPledge.amount);
             await sendEmail({
               to: typedPledge.user.email,
               subject: `Your refund for "${typedPledge.project.title}" has been processed`,
@@ -385,7 +460,7 @@ export async function PATCH(
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                   <h2 style="color: #16a34a;">Refund Processed</h2>
                   <p>Hi ${typedPledge.user.name || "there"},</p>
-                  <p>Your refund for <strong>${typedPledge.project.title}</strong> has been successfully processed.</p>
+                  <p>Your ${isPartialRefund ? "partial " : ""}refund for <strong>${typedPledge.project.title}</strong> has been successfully processed.</p>
                   <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
                     <p style="margin: 0 0 8px 0;"><strong>Refund Amount:</strong> $${refundAmount.toFixed(2)}</p>
                     <p style="margin: 0;"><strong>Refunded To:</strong> Original payment method</p>
@@ -410,8 +485,10 @@ export async function PATCH(
 
         return NextResponse.json({
           success: true,
-          message: "Stripe refund processed successfully",
+          message: `${isPartialRefund ? "Partial refund" : "Stripe refund"} processed successfully`,
           refundedTo: "card",
+          amount: refundAmount,
+          isPartialRefund,
         });
       }
     }

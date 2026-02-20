@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,8 @@ interface RefundDialogProps {
   backerEmail: string;
   totalPaid: number;
   paymentProcessor?: "STRIPE" | "DIVINITYCOIN";
+  suggestedAmount?: number;
+  suggestedReason?: string;
   onRefundComplete?: () => void;
 }
 
@@ -62,15 +64,30 @@ export function RefundDialog({
   backerEmail,
   totalPaid,
   paymentProcessor = "STRIPE",
+  suggestedAmount,
+  suggestedReason,
   onRefundComplete,
 }: RefundDialogProps) {
-  const [refundType, setRefundType] = useState<"full" | "partial">("full");
-  const [amount, setAmount] = useState(totalPaid.toString());
-  const [reason, setReason] = useState("");
+  const hasSuggestion = suggestedAmount != null && suggestedAmount > 0 && suggestedAmount < totalPaid;
+  const [refundType, setRefundType] = useState<"full" | "partial">(hasSuggestion ? "partial" : "full");
+  const [amount, setAmount] = useState(hasSuggestion ? suggestedAmount.toFixed(2) : totalPaid.toString());
+  const [reason, setReason] = useState(suggestedReason || "");
   const [notes, setNotes] = useState("");
   const [notifyBacker, setNotifyBacker] = useState(true);
   const [cancelOrder, setCancelOrder] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Reset state when dialog opens with new suggestion
+  useEffect(() => {
+    if (open) {
+      const suggestion = suggestedAmount != null && suggestedAmount > 0 && suggestedAmount < totalPaid;
+      setRefundType(suggestion ? "partial" : "full");
+      setAmount(suggestion ? suggestedAmount.toFixed(2) : totalPaid.toString());
+      setReason(suggestedReason || "");
+      setNotes("");
+      setCancelOrder(false);
+    }
+  }, [open, suggestedAmount, suggestedReason, totalPaid]);
 
   const refundAmount = refundType === "full" ? totalPaid : parseFloat(amount) || 0;
   const isDivinityCoin = paymentProcessor === "DIVINITYCOIN";
@@ -94,11 +111,13 @@ export function RefundDialog({
     setIsProcessing(true);
 
     try {
+      const isPartial = refundType === "partial";
       const res = await fetch(`/api/creator/pledges/${pledgeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           action: "refund",
+          amount: isPartial ? refundAmount : undefined, // Only send amount for partial refunds
           reason: `${reason}${notes ? `: ${notes}` : ""}`,
           notifyBacker,
           cancelOrder,
@@ -198,6 +217,11 @@ export function RefundDialog({
                   className="pl-9"
                 />
               </div>
+              {hasSuggestion && (
+                <p className="text-xs text-blue-600">
+                  Suggested refund based on order edit: ${suggestedAmount!.toFixed(2)}
+                </p>
+              )}
             </div>
           )}
 

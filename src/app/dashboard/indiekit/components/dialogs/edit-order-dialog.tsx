@@ -31,6 +31,9 @@ import {
   Truck,
   Save,
   Loader2,
+  AlertTriangle,
+  DollarSign,
+  Undo2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -60,6 +63,7 @@ interface EditOrderDialogProps {
   availableAddons: AvailableAddon[];
   shippingAmount: number;
   onSaved?: () => void;
+  onRefundNeeded?: (amount: number) => void;
 }
 
 export function EditOrderDialog({
@@ -73,17 +77,22 @@ export function EditOrderDialog({
   availableAddons,
   shippingAmount: initialShipping,
   onSaved,
+  onRefundNeeded,
 }: EditOrderDialogProps) {
   const [addons, setAddons] = useState<AddonEntry[]>([]);
   const [shippingAmount, setShippingAmount] = useState(initialShipping);
   const [addonToAdd, setAddonToAdd] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showRefundPrompt, setShowRefundPrompt] = useState(false);
+  const [refundOwed, setRefundOwed] = useState(0);
 
   // Reset state when dialog opens with new data
   const resetState = useCallback(() => {
     setAddons(currentAddons.map(a => ({ ...a })));
     setShippingAmount(initialShipping);
     setAddonToAdd("");
+    setShowRefundPrompt(false);
+    setRefundOwed(0);
   }, [currentAddons, initialShipping]);
 
   useEffect(() => {
@@ -187,15 +196,35 @@ export function EditOrderDialog({
         throw new Error(data.error || "Failed to update order");
       }
 
+      const data = await res.json();
       toast.success("Order updated successfully");
       onSaved?.();
-      onOpenChange(false);
+
+      // Check if items were removed resulting in a credit owed to the backer
+      if (data.balanceChange < 0) {
+        const creditAmount = Math.abs(data.balanceChange);
+        setRefundOwed(creditAmount);
+        setShowRefundPrompt(true);
+      } else {
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error("Save order error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to update order");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleIssueRefund = () => {
+    setShowRefundPrompt(false);
+    onOpenChange(false);
+    onRefundNeeded?.(refundOwed);
+  };
+
+  const handleSkipRefund = () => {
+    setShowRefundPrompt(false);
+    onOpenChange(false);
   };
 
   return (
@@ -401,22 +430,56 @@ export function EditOrderDialog({
           </div>
         </div>
 
+        {/* Refund Prompt - shown after save when items were removed */}
+        {showRefundPrompt && (
+          <div className="rounded-lg border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-4 mt-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-amber-800 dark:text-amber-200">
+                  Credit Owed to Backer
+                </p>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                  This order change results in a <strong>${refundOwed.toFixed(2)}</strong> credit owed to {backerName}. Would you like to issue a refund now?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={handleSkipRefund}>
+                Skip for Now
+              </Button>
+              <Button
+                size="sm"
+                className="bg-teal-600 hover:bg-teal-700"
+                onClick={handleIssueRefund}
+              >
+                <Undo2 className="h-3 w-3 mr-1" />
+                Issue Refund (${refundOwed.toFixed(2)})
+              </Button>
+            </div>
+          </div>
+        )}
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancel
-          </Button>
-          <Button
-            className="bg-teal-600 hover:bg-teal-700"
-            onClick={handleSave}
-            disabled={saving || !hasChanges()}
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
+          {showRefundPrompt ? null : (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-teal-600 hover:bg-teal-700"
+                onClick={handleSave}
+                disabled={saving || !hasChanges()}
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
