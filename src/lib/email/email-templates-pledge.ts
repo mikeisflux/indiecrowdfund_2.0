@@ -172,6 +172,7 @@ export async function sendPledgeConfirmationEmail(
     to: email,
     subject,
     html,
+    skipUnsubscribeCheck: true, // Transactional: always send pledge confirmations
   });
 
   // Return both the result and the email content for logging

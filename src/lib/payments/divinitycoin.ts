@@ -1,5 +1,9 @@
 import { db } from "@/lib/db";
 import crypto from "crypto";
+import {
+  notifyPledgeReceived,
+  notifyBackerPledgeConfirmed,
+} from "@/lib/notifications";
 
 // DivinityCoin API configuration
 interface DivinityCoinConfig {
@@ -692,7 +696,11 @@ export async function handlePaymentSucceeded(
   try {
     const pledge = await db.pledge.findUnique({
       where: { id: pledgeId },
-      select: { id: true, status: true, projectId: true, amount: true, userId: true, metadata: true },
+      select: {
+        id: true, status: true, projectId: true, amount: true, userId: true, metadata: true,
+        project: { select: { creatorId: true } },
+        user: { select: { name: true } },
+      },
     });
 
     if (!pledge) {
@@ -787,6 +795,26 @@ export async function handlePaymentSucceeded(
     });
 
     console.log(`[DivinityCoin] Pledge ${pledgeId} marked as COMPLETED via payment webhook`);
+
+    // Notify creator of new pledge (non-blocking)
+    try {
+      await notifyPledgeReceived(
+        pledge.projectId,
+        pledge.project.creatorId,
+        pledge.user?.name || "A backer",
+        Number(pledge.amount)
+      );
+    } catch (notifyError) {
+      console.error(`[DivinityCoin] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
+    }
+
+    // Send confirmation email to backer (non-blocking)
+    try {
+      await notifyBackerPledgeConfirmed(pledge.id, true);
+    } catch (emailError) {
+      console.error(`[DivinityCoin] Failed to send confirmation email for pledge ${pledgeId}:`, emailError);
+    }
+
     return { success: true, message: "Pledge completed" };
   } catch (error) {
     console.error(`[DivinityCoin] Error handling payment.succeeded for pledge ${pledgeId}:`, error);
