@@ -1,5 +1,7 @@
 // OAuth provider configurations for social sharing
 
+import { db } from "@/lib/db";
+
 export type OAuthProvider = "youtube" | "facebook" | "twitter" | "instagram";
 
 export interface OAuthConfig {
@@ -64,16 +66,48 @@ export function getOAuthConfig(provider: OAuthProvider): OAuthConfig | null {
   return OAUTH_CONFIGS[provider] || null;
 }
 
-export function getClientCredentials(provider: OAuthProvider): { clientId: string; clientSecret: string } | null {
+// Database field mapping for each provider's OAuth credentials
+const DB_CREDENTIAL_MAP: Record<OAuthProvider, { clientIdField: string; clientSecretField: string }> = {
+  twitter: { clientIdField: "twitterApiKey", clientSecretField: "twitterApiSecret" },
+  facebook: { clientIdField: "facebookAppId", clientSecretField: "facebookAppSecret" },
+  instagram: { clientIdField: "facebookAppId", clientSecretField: "facebookAppSecret" },
+  youtube: { clientIdField: "youtubeClientId", clientSecretField: "youtubeClientSecret" },
+};
+
+export async function getClientCredentials(provider: OAuthProvider): Promise<{ clientId: string; clientSecret: string } | null> {
   const config = OAUTH_CONFIGS[provider];
   if (!config) return null;
 
-  const clientId = process.env[config.clientIdEnv];
-  const clientSecret = process.env[config.clientSecretEnv];
+  // First try environment variables
+  const envClientId = process.env[config.clientIdEnv];
+  const envClientSecret = process.env[config.clientSecretEnv];
+  if (envClientId && envClientSecret) {
+    return { clientId: envClientId, clientSecret: envClientSecret };
+  }
 
-  if (!clientId || !clientSecret) return null;
+  // Fall back to database settings
+  const dbMap = DB_CREDENTIAL_MAP[provider];
+  if (!dbMap) return null;
 
-  return { clientId, clientSecret };
+  try {
+    const settings = await db.platformSettings.findFirst({
+      select: {
+        [dbMap.clientIdField]: true,
+        [dbMap.clientSecretField]: true,
+      },
+    });
+
+    if (!settings) return null;
+
+    const dbClientId = (settings as Record<string, unknown>)[dbMap.clientIdField] as string | null;
+    const dbClientSecret = (settings as Record<string, unknown>)[dbMap.clientSecretField] as string | null;
+
+    if (!dbClientId || !dbClientSecret) return null;
+    return { clientId: dbClientId, clientSecret: dbClientSecret };
+  } catch (error) {
+    console.error(`Failed to read OAuth credentials from database for ${provider}:`, error);
+    return null;
+  }
 }
 
 // Generate a random state for CSRF protection
@@ -116,7 +150,7 @@ export async function buildAuthorizationUrl(
   codeVerifier?: string
 ): Promise<string | null> {
   const config = getOAuthConfig(provider);
-  const credentials = getClientCredentials(provider);
+  const credentials = await getClientCredentials(provider);
 
   if (!config || !credentials) return null;
 
@@ -154,7 +188,7 @@ export async function exchangeCodeForTokens(
   scope?: string;
 } | null> {
   const config = getOAuthConfig(provider);
-  const credentials = getClientCredentials(provider);
+  const credentials = await getClientCredentials(provider);
 
   if (!config || !credentials) return null;
 

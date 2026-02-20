@@ -42,10 +42,10 @@ export async function GET(
 
   // Check if credentials are configured
   const config = getOAuthConfig(provider);
-  const credentials = getClientCredentials(provider);
+  const credentials = await getClientCredentials(provider);
   if (!config || !credentials) {
     return NextResponse.json(
-      { error: `${provider} OAuth is not configured. Please add the required environment variables.` },
+      { error: `${provider} OAuth is not configured. Please add API credentials in admin settings.` },
       { status: 500 }
     );
   }
