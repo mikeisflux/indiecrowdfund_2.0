@@ -114,6 +114,7 @@ export default function SocialHubPage() {
   const [isLoadingConnections, setIsLoadingConnections] = useState(true);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState<string | null>(null);
+  const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
 
   // Fetch connection status
   const fetchConnections = useCallback(async () => {
@@ -325,7 +326,7 @@ export default function SocialHubPage() {
             </div>
           ))}
           {disconnectedPlatforms.length > 0 && (
-            <Button variant="outline" size="sm" className="ml-2" onClick={() => setActiveTab("accounts")}>
+            <Button variant="outline" size="sm" className="ml-2" onClick={() => setIsConnectDialogOpen(true)}>
               <Plus className="mr-1 h-3 w-3" />
               Connect More
             </Button>
@@ -859,6 +860,58 @@ export default function SocialHubPage() {
               Schedule
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Connect More Dialog */}
+      <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect an Account</DialogTitle>
+            <DialogDescription>
+              Choose a platform to connect to your Social Hub.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {disconnectedPlatforms.map((platform) => {
+              const isOAuthSupported = OAUTH_PLATFORMS.includes(platform.id);
+              const isConnecting = connectingPlatform === platform.id;
+              return (
+                <div
+                  key={platform.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "flex h-9 w-9 items-center justify-center rounded-lg text-white",
+                        platform.color
+                      )}
+                    >
+                      <platform.icon className="h-4 w-4" />
+                    </div>
+                    <span className="font-medium">{platform.name}</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => connectPlatform(platform.id)}
+                    disabled={!isOAuthSupported || isConnecting}
+                  >
+                    {isConnecting ? (
+                      <>
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : isOAuthSupported ? (
+                      "Connect"
+                    ) : (
+                      "Coming Soon"
+                    )}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
