@@ -127,6 +127,8 @@ export default function ProfilePage() {
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           name: profile.name,
+          image: profile.image,
+          heroImage: profile.heroImage,
           bio: profile.bio,
           location: profile.location,
           vanityUrl: profile.vanityUrl,
