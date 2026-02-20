@@ -274,6 +274,7 @@ export default function BackerSurveyPage() {
         body: JSON.stringify({
           addons: addonsWithQuantity,
           amount: addonsTotal,
+          source: "survey",
         }),
       });
 

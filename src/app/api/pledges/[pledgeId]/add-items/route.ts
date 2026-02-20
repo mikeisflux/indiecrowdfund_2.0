@@ -143,12 +143,28 @@ export async function POST(
     }
 
     // Verify project is still live and campaign hasn't ended
+    // Exception: allow add-on purchases during survey completion (surveys are sent after campaigns close)
     const campaignEnded = pledge.project.endDate && new Date(pledge.project.endDate) < new Date();
     if (pledge.project.status !== "LIVE" || campaignEnded) {
-      return NextResponse.json(
-        { error: "This campaign has ended. Adding items is no longer available." },
-        { status: 400 }
-      );
+      const isSurveyPurchase = body.source === "survey";
+      if (isSurveyPurchase) {
+        // Verify there's actually an active survey for this project
+        const survey = await db.survey.findUnique({
+          where: { projectId: pledge.projectId },
+          select: { id: true, status: true },
+        });
+        if (!survey || survey.status === "DRAFT") {
+          return NextResponse.json(
+            { error: "No active survey found for this project." },
+            { status: 400 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: "This campaign has ended. Adding items is no longer available." },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate addons exist and belong to this project (addons are rewards with type ADDON)
