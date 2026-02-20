@@ -280,6 +280,13 @@ export async function POST(
       );
     }
 
+    if (survey.status === "LOCKED") {
+      return NextResponse.json(
+        { error: "This survey has been locked by the creator and can no longer be edited." },
+        { status: 400 }
+      );
+    }
+
     // Get existing response
     const existingResponse = await db.surveyResponse.findUnique({
       where: { pledgeId },

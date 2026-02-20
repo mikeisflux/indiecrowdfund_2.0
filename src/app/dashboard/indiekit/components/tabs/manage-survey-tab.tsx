@@ -83,6 +83,10 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [isDeletingBacker, setIsDeletingBacker] = useState(false);
 
+  // Lock survey
+  const [lockConfirm, setLockConfirm] = useState(false);
+  const [isLocking, setIsLocking] = useState(false);
+
   const fetchSurvey = useCallback(async () => {
     if (!projectId) return;
 
@@ -166,6 +170,32 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
     } finally {
       setIsDeletingBacker(false);
       setDeleteBackerConfirm({ open: false, questionId: "" });
+    }
+  };
+
+  const lockSurvey = async () => {
+    if (!projectId) return;
+
+    setIsLocking(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/survey/lock`, {
+        method: "POST",
+        headers: getCSRFHeaders(),
+      });
+
+      if (response.ok) {
+        toast.success("Survey locked successfully. Backers can no longer edit their responses.");
+        fetchSurvey();
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to lock survey");
+      }
+    } catch (error) {
+      console.error("Error locking survey:", error);
+      toast.error("Failed to lock survey");
+    } finally {
+      setIsLocking(false);
+      setLockConfirm(false);
     }
   };
 
@@ -264,7 +294,7 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
             </div>
           )}
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex gap-2 flex-wrap">
             <Link href={`/dashboard/projects/${projectId}/survey/responses`}>
               <Button variant="outline">
                 <Eye className="h-4 w-4 mr-2" />
@@ -275,6 +305,16 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
+            {survey.status === "SENT" && (
+              <Button
+                variant="outline"
+                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                onClick={() => setLockConfirm(true)}
+              >
+                <Lock className="h-4 w-4 mr-2" />
+                Lock Survey
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -440,6 +480,17 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
         variant="destructive"
         onConfirm={deleteBackerQuestion}
         loading={isDeletingBacker}
+      />
+
+      <ConfirmDialog
+        open={lockConfirm}
+        onOpenChange={setLockConfirm}
+        title="Lock Survey?"
+        description="This will lock the survey and all backer responses. Backers will no longer be able to edit their survey responses or shipping addresses. This is typically done when you're ready to go to print or begin fulfillment. This action cannot be easily undone."
+        confirmText="Lock Survey"
+        variant="destructive"
+        onConfirm={lockSurvey}
+        loading={isLocking}
       />
     </div>
   );
