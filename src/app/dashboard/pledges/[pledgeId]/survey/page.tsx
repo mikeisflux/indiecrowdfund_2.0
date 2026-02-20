@@ -734,66 +734,64 @@ export default function BackerSurveyPage() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-semibold">{addon.title}</h3>
-                          {addon.description && (
-                            <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{addon.description}</p>
-                          )}
-                          <p className="text-lg font-semibold text-emerald-600 mt-2">
-                            ${addon.price.toFixed(2)}
-                          </p>
-                          {addon.quantityAvailable !== null && (
-                            <p className="text-xs text-zinc-400 mt-1">
-                              {addon.quantityAvailable} remaining
-                            </p>
-                          )}
-                          {isAlreadyPurchased && (
-                            <Badge variant="outline" className="mt-1 text-xs">
-                              Already in your pledge
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => updateAddonQuantity(addon.id, -1)}
-                              disabled={qty === 0}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-8 text-center font-medium">{qty}</span>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => updateAddonQuantity(addon.id, 1)}
-                              disabled={addon.quantityAvailable !== null && qty >= addon.quantityAvailable}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          {qty > 0 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 px-2 text-xs"
-                              onClick={() => setSelectedAddons(prev => {
-                                const next = { ...prev };
-                                delete next[addon.id];
-                                return next;
-                              })}
-                            >
-                              <Trash2 className="h-3 w-3 mr-1" />
-                              Remove
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                      <h3 className="font-semibold">{addon.title}</h3>
+                      {addon.description && (
+                        <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{addon.description}</p>
+                      )}
+                      <p className="text-lg font-semibold text-emerald-600 mt-2">
+                        ${addon.price.toFixed(2)}
+                      </p>
+                      {addon.quantityAvailable !== null && (
+                        <p className="text-xs text-zinc-400 mt-1">
+                          {addon.quantityAvailable} remaining
+                        </p>
+                      )}
+                      {isAlreadyPurchased && (
+                        <Badge variant="outline" className="mt-1 text-xs">
+                          Already in your pledge
+                        </Badge>
+                      )}
                     </div>
+                  </div>
+
+                  {/* Quantity controls and remove - always visible on mobile */}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => updateAddonQuantity(addon.id, -1)}
+                        disabled={qty === 0}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-8 text-center font-semibold text-lg">{qty}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => updateAddonQuantity(addon.id, 1)}
+                        disabled={addon.quantityAvailable !== null && qty >= addon.quantityAvailable}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {qty > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-9 px-3 text-sm gap-1.5"
+                        onClick={() => setSelectedAddons(prev => {
+                          const next = { ...prev };
+                          delete next[addon.id];
+                          return next;
+                        })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remove
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
