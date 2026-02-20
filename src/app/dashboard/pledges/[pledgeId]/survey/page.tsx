@@ -36,6 +36,7 @@ import {
   Minus,
   CreditCard,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
@@ -753,26 +754,43 @@ export default function BackerSurveyPage() {
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateAddonQuantity(addon.id, -1)}
-                            disabled={qty === 0}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-8 text-center font-medium">{qty}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateAddonQuantity(addon.id, 1)}
-                            disabled={addon.quantityAvailable !== null && qty >= addon.quantityAvailable}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateAddonQuantity(addon.id, -1)}
+                              disabled={qty === 0}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center font-medium">{qty}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateAddonQuantity(addon.id, 1)}
+                              disabled={addon.quantityAvailable !== null && qty >= addon.quantityAvailable}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          {qty > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 px-2 text-xs"
+                              onClick={() => setSelectedAddons(prev => {
+                                const next = { ...prev };
+                                delete next[addon.id];
+                                return next;
+                              })}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Remove
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -998,13 +1016,27 @@ export default function BackerSurveyPage() {
                         const addon = data.availableAddons?.find(a => a.id === id);
                         if (!addon) return null;
                         return (
-                          <div key={id} className="flex justify-between text-sm">
+                          <div key={id} className="flex items-center justify-between text-sm">
                             <span className="text-zinc-600">
                               {addon.title} x{qty}
                             </span>
-                            <span className="font-medium">
-                              ${(addon.price * qty).toFixed(2)}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">
+                                ${(addon.price * qty).toFixed(2)}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                onClick={() => setSelectedAddons(prev => {
+                                  const next = { ...prev };
+                                  delete next[id];
+                                  return next;
+                                })}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         );
                       })}
