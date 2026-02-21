@@ -12,6 +12,7 @@ export interface User {
   pledgeCount: number;
   lockedAt: string | null;
   lockedReason: string | null;
+  divinityCoinBalance: number;
 }
 
 export interface UserStats {

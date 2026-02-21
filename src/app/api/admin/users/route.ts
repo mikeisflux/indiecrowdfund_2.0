@@ -86,6 +86,7 @@ export async function GET(req: NextRequest) {
           emailVerified: true,
           lockedAt: true,
           lockedReason: true,
+          divinityCoinBalance: true,
           _count: {
             select: {
               createdProjects: true,
@@ -117,6 +118,7 @@ export async function GET(req: NextRequest) {
       pledgeCount: user._count.pledges,
       lockedAt: user.lockedAt,
       lockedReason: user.lockedReason,
+      divinityCoinBalance: Number(user.divinityCoinBalance),
     }));
 
     // roleCounts: [USER, COOL_KIDS, ADMIN, SUPER_ADMIN]

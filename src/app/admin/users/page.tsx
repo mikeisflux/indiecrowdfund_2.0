@@ -72,6 +72,7 @@ export default function UsersPage() {
   const [cancellingPledge, setCancellingPledge] = useState<string | null>(null);
   const [refundingPledge, setRefundingPledge] = useState<string | null>(null);
   const [resendingReceipt, setResendingReceipt] = useState<string | null>(null);
+  const [zeroingWallet, setZeroingWallet] = useState(false);
 
   // Pledge action confirmation dialogs
   const [cancelPledgeConfirm, setCancelPledgeConfirm] = useState<{ open: boolean; pledgeId: string }>({
@@ -382,6 +383,44 @@ export default function UsersPage() {
 
   const handleDownloadEmail = async (emailId: string) => {
     window.open(`/api/admin/emails/${emailId}?download=true`, "_blank");
+  };
+
+  const handleZeroWalletBalance = async (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    const confirmed = window.confirm(
+      `Are you sure you want to zero out the DivinityCoin wallet balance for ${user?.name || user?.email || "this user"}? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setZeroingWallet(true);
+    try {
+      const res = await fetch("/api/admin/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to zero wallet balance");
+
+      if (data.previousBalance > 0) {
+        toast.success(`Wallet balance zeroed (was $${Number(data.previousBalance).toFixed(2)})`);
+      } else {
+        toast.info("Wallet balance was already zero");
+      }
+
+      // Refresh users list to update the balance in the UI
+      fetchUsers();
+      // Update the selected user's balance locally for immediate feedback
+      if (selectedUser && selectedUser.id === userId) {
+        setSelectedUser({ ...selectedUser, divinityCoinBalance: 0 });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to zero wallet balance");
+      console.error("Zero wallet balance error:", error);
+    } finally {
+      setZeroingWallet(false);
+    }
   };
 
   // ============ User Handlers ============
@@ -902,6 +941,8 @@ export default function UsersPage() {
         onViewEmail={handleViewEmail}
         onDownloadEmail={handleDownloadEmail}
         onEditUser={handleEditUser}
+        onZeroWalletBalance={handleZeroWalletBalance}
+        zeroingWallet={zeroingWallet}
       />
 
       <EmailPreviewDialog

@@ -23,6 +23,8 @@ import {
   ExternalLink,
   DollarSign,
   Trash2,
+  Wallet,
+  Loader2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { User, UserPledge, EmailLogEntry } from "../types";
@@ -48,6 +50,8 @@ interface UserDetailsDialogProps {
   onViewEmail: (email: EmailLogEntry) => void;
   onDownloadEmail: (emailId: string) => void;
   onEditUser: (user: User) => void;
+  onZeroWalletBalance?: (userId: string) => void;
+  zeroingWallet?: boolean;
 }
 
 export function UserDetailsDialog({
@@ -70,6 +74,8 @@ export function UserDetailsDialog({
   onViewEmail,
   onDownloadEmail,
   onEditUser,
+  onZeroWalletBalance,
+  zeroingWallet,
 }: UserDetailsDialogProps) {
   if (!user) return null;
 
@@ -128,6 +134,31 @@ export function UserDetailsDialog({
                 </CardContent>
               </Card>
             </div>
+
+            {/* DivinityCoin Wallet */}
+            {user.divinityCoinBalance > 0 && (
+              <div className="mt-6 flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <p className="text-sm text-zinc-500">DivinityCoin Wallet Balance</p>
+                  <p className="text-lg font-bold text-emerald-600">
+                    ${user.divinityCoinBalance.toFixed(2)}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => onZeroWalletBalance?.(user.id)}
+                  disabled={zeroingWallet}
+                >
+                  {zeroingWallet ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Wallet className="h-4 w-4 mr-2" />
+                  )}
+                  Zero DivinitCoin Wallet Balance
+                </Button>
+              </div>
+            )}
 
             <div className="mt-6 flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => onTabChange("emails")}>
