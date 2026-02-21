@@ -148,17 +148,14 @@ export async function PATCH(req: NextRequest) {
         }
       }
 
-      // Update pledge amounts
-      const updateData: { addonsAmount: number; shippingAmount?: number; amount?: number } = {
+      // Update pledge addon/shipping amounts (NOT the pledge.amount which is the original charged amount)
+      const updateData: { addonsAmount: number; shippingAmount?: number } = {
         addonsAmount: newAddonsAmount,
       };
 
       if (shippingAmount !== undefined) {
         updateData.shippingAmount = shippingAmount;
       }
-
-      // Recalculate total amount
-      updateData.amount = newTotal;
 
       await tx.pledge.update({
         where: { id: pledgeId },
@@ -223,7 +220,7 @@ export async function PATCH(req: NextRequest) {
       success: true,
       addons: updatedAddons,
       balance: {
-        pledgeAmount: Number(updatedPledge?.amount || 0),
+        pledgeAmount: originalTotal, // Original charged amount (not the new order total)
         pledgeLevelAmount: Number(updatedPledge?.rewardAmount || 0),
         addonsAmount: Number(updatedPledge?.addonsAmount || 0),
         shippingAmount: Number(updatedPledge?.shippingAmount || 0),

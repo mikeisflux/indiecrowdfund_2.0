@@ -130,11 +130,7 @@ export function RefundDialog({
         throw new Error(data.error || "Failed to process refund");
       }
 
-      if (isDivinityCoin) {
-        toast.success(`$${refundAmount.toFixed(2)} refunded to backer's DivinityCoin wallet`);
-      } else {
-        toast.success(`$${refundAmount.toFixed(2)} refunded to backer's card`);
-      }
+      toast.success(`$${refundAmount.toFixed(2)} refunded to backer's original payment method`);
 
       onRefundComplete?.();
       onOpenChange(false);
@@ -279,9 +275,7 @@ export function RefundDialog({
           <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm dark:bg-amber-950/30 dark:border-amber-800">
             <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
             <p className="text-amber-800 dark:text-amber-200">
-              {isDivinityCoin
-                ? "This action cannot be undone. The refund will be credited to the backer's DivinityCoin wallet."
-                : "This action cannot be undone. The refund will be processed to the original card on file."}
+              This action cannot be undone. The refund will be processed to the backer&apos;s original payment method.
             </p>
           </div>
         </div>
