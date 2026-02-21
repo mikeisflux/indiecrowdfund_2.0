@@ -375,8 +375,8 @@ export async function PATCH(
           });
 
           const totalAlreadyRefunded = existingRefunds.data
-            .filter((r: { status: string }) => r.status !== "canceled" && r.status !== "failed")
-            .reduce((sum: number, r: { amount: number }) => sum + r.amount, 0);
+            .filter((r) => r.status !== "canceled" && r.status !== "failed")
+            .reduce((sum, r) => sum + r.amount, 0);
           const maxRefundableCents = Math.round(totalPaid * 100) - totalAlreadyRefunded;
 
           if (refundAmountCents > maxRefundableCents) {
