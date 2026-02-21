@@ -96,13 +96,16 @@ export async function GET(req: NextRequest) {
     const selectedProjectId = projectId || projects[0].id;
     const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
 
-    // Compute post-campaign sales across ALL creator projects
+    // Compute post-campaign sales across creator projects that have ENDED (FUNDED status)
     // Post-campaign = add-ons purchased via IndieKit survey after the campaign closed
+    // LIVE projects are still in their funding period and should NOT be included
     // Tracked in pledge.metadata.completedAdditionalItems array
-    const allProjectIds = projects.map(p => p.id);
-    const postCampaignPledges = await db.pledge.findMany({
+    const endedProjectIds = projects
+      .filter(p => p.status === "FUNDED")
+      .map(p => p.id);
+    const postCampaignPledges = endedProjectIds.length > 0 ? await db.pledge.findMany({
       where: {
-        projectId: { in: allProjectIds },
+        projectId: { in: endedProjectIds },
         status: "COMPLETED",
         metadata: {
           path: ["completedAdditionalItems"],
@@ -113,7 +116,7 @@ export async function GET(req: NextRequest) {
         projectId: true,
         metadata: true,
       },
-    });
+    }) : [];
 
     // Sum up post-campaign sales per project
     const postCampaignByProject = new Map<string, number>();

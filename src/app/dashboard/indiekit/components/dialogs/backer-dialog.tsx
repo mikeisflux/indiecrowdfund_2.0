@@ -48,6 +48,7 @@ import {
   Loader2,
   Layers,
   ArrowRight,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Backer } from "../../types";
@@ -132,6 +133,9 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
   // Modifier assignment state
   const [modifierAssignmentSaving, setModifierAssignmentSaving] = useState(false);
   const [pendingAssignments, setPendingAssignments] = useState<Record<string, string>>({});
+
+  // Zero wallet state
+  const [zeroingWallet, setZeroingWallet] = useState(false);
 
   // Fetch survey data when switching to survey tab
   const fetchSurveyData = useCallback(async () => {
@@ -263,6 +267,42 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
     }
   };
 
+  const handleZeroWalletBalance = async () => {
+    if (!backer?.projectId) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to zero out the DivinityCoin wallet balance for ${backer.name}? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setZeroingWallet(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          pledgeId: backer.id,
+          projectId: backer.projectId,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to zero wallet balance");
+
+      if (data.previousBalance > 0) {
+        toast.success(`Wallet balance zeroed for ${backer.name} (was $${Number(data.previousBalance).toFixed(2)})`);
+      } else {
+        toast.info("Wallet balance was already zero");
+      }
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to zero wallet balance");
+      console.error("Zero wallet balance error:", error);
+    } finally {
+      setZeroingWallet(false);
+    }
+  };
+
   // Get modifier addons from the backer's addons
   const modifierAddons = backer?.addons?.filter(addon => addon.isModifier) || [];
   const hasModifierAddons = modifierAddons.length > 0;
@@ -337,6 +377,16 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                     <Undo2 className="h-4 w-4 mr-2" />
                     Issue Refund
                   </DropdownMenuItem>
+                  {backer.paymentProcessor === "DIVINITYCOIN" && (
+                    <DropdownMenuItem onClick={handleZeroWalletBalance} disabled={zeroingWallet}>
+                      {zeroingWallet ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Wallet className="h-4 w-4 mr-2" />
+                      )}
+                      Zero DivinitCoin Wallet Balance
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setShowTracking(true)}>
                     <Truck className="h-4 w-4 mr-2" />
