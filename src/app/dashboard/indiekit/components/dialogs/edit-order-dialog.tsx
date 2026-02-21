@@ -32,7 +32,6 @@ import {
   Save,
   Loader2,
   AlertTriangle,
-  DollarSign,
   Undo2,
 } from "lucide-react";
 import { toast } from "sonner";
