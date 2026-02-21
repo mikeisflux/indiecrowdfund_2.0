@@ -100,15 +100,17 @@ export function OverviewTab({ stats, backers, timeline = [], projectId, onSwitch
   const surveysPending = stats?.surveysPending || 0;
   const notShipped = backers.filter(b => b.status !== "shipped").length;
 
-  // Calculate raised amounts from stats
-  const campaignRaised = stats?.totalRaised || 0;
-  const preOrderRaised = stats?.preOrderRevenue || 0;
-  const totalRaised = campaignRaised + preOrderRaised;
+  // Calculate post-campaign raised amounts across all projects
+  const postCampaignTotal = stats?.postCampaignTotalRaised || 0;
+  const postCampaignPerProject = stats?.postCampaignPerProject || [];
 
-  const raisedChartData = totalRaised > 0 ? [
-    { label: "Campaign", amount: campaignRaised, color: "bg-teal-600" },
-    { label: "Pre-orders", amount: preOrderRaised, color: "bg-teal-400" },
-  ].filter(d => d.amount > 0) : [];
+  // Color palette for per-project chart segments
+  const projectColors = ["bg-teal-600", "bg-teal-400", "bg-emerald-500", "bg-cyan-500", "bg-sky-500", "bg-indigo-400"];
+  const raisedChartData = postCampaignPerProject.map((p, idx) => ({
+    label: p.projectTitle,
+    amount: p.amount,
+    color: projectColors[idx % projectColors.length],
+  }));
 
   // Get recent activity (last 5 entries)
   const recentActivity = timeline.slice(0, 5);
@@ -160,22 +162,22 @@ export function OverviewTab({ stats, backers, timeline = [], projectId, onSwitch
         </div>
       </div>
 
-      {/* Raised in IndieKit Card with Chart */}
+      {/* Post-Campaign Sales Card with Chart */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-teal-600" />
-            Raised in IndieKit
+            Post-Campaign Sales
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {totalRaised > 0 ? (
+          {postCampaignTotal > 0 ? (
             <div className="grid gap-6 md:grid-cols-2">
               {/* Chart Side */}
               <div className="space-y-4">
                 <div className="text-center">
-                  <p className="text-4xl font-bold">${totalRaised.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Total Raised</p>
+                  <p className="text-4xl font-bold">${postCampaignTotal.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">Total Post-Campaign Sales</p>
                 </div>
 
                 {/* Horizontal stacked bar chart */}
@@ -184,15 +186,15 @@ export function OverviewTab({ stats, backers, timeline = [], projectId, onSwitch
                     <div
                       key={idx}
                       className={cn(item.color, "flex items-center justify-center text-white text-xs font-medium")}
-                      style={{ width: `${(Number(item.amount) / totalRaised) * 100}%` }}
+                      style={{ width: `${(Number(item.amount) / postCampaignTotal) * 100}%` }}
                     >
-                      {(Number(item.amount) / totalRaised) * 100 > 15 && `$${(Number(item.amount) / 1000).toFixed(1)}k`}
+                      {(Number(item.amount) / postCampaignTotal) * 100 > 15 && `$${(Number(item.amount) / 1000).toFixed(1)}k`}
                     </div>
                   ))}
                 </div>
 
                 {/* Legend */}
-                <div className="flex justify-center gap-6">
+                <div className="flex flex-wrap justify-center gap-4">
                   {raisedChartData.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <div className={cn("w-3 h-3 rounded-sm", item.color)} />
@@ -215,15 +217,15 @@ export function OverviewTab({ stats, backers, timeline = [], projectId, onSwitch
                 ))}
                 <div className="flex justify-between items-center pt-2 border-t-2">
                   <span className="font-semibold">Total</span>
-                  <span className="text-lg font-bold">${totalRaised.toLocaleString()}</span>
+                  <span className="text-lg font-bold">${postCampaignTotal.toLocaleString()}</span>
                 </div>
               </div>
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No revenue data yet</p>
-              <p className="text-sm">Revenue will appear here once your campaign processes payments</p>
+              <p>No post-campaign sales yet</p>
+              <p className="text-sm">Sales from survey add-on purchases will appear here after your campaign closes</p>
             </div>
           )}
         </CardContent>

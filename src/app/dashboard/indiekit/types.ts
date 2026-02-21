@@ -41,6 +41,10 @@ export interface FulfillmentStats {
   surveyStatusBreakdown?: CountBreakdown[];
   shippingRegionBreakdown?: CountBreakdown[];
   paymentStatusBreakdown?: CountBreakdown[];
+  // Post-campaign sales (from IndieKit survey purchases across all projects)
+  postCampaignTotalRaised?: number;
+  postCampaignAddonSales?: number;
+  postCampaignPerProject?: { projectId: string; projectTitle: string; amount: number }[];
 }
 
 export interface WorkflowStep {

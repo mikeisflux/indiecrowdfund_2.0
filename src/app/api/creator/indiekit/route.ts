@@ -96,6 +96,53 @@ export async function GET(req: NextRequest) {
     const selectedProjectId = projectId || projects[0].id;
     const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
 
+    // Compute post-campaign sales across ALL creator projects
+    // Post-campaign = add-ons purchased via IndieKit survey after the campaign closed
+    // Tracked in pledge.metadata.completedAdditionalItems array
+    const allProjectIds = projects.map(p => p.id);
+    const postCampaignPledges = await db.pledge.findMany({
+      where: {
+        projectId: { in: allProjectIds },
+        status: "COMPLETED",
+        metadata: {
+          path: ["completedAdditionalItems"],
+          not: { equals: null },
+        },
+      },
+      select: {
+        projectId: true,
+        metadata: true,
+      },
+    });
+
+    // Sum up post-campaign sales per project
+    const postCampaignByProject = new Map<string, number>();
+    let postCampaignTotal = 0;
+
+    for (const pledge of postCampaignPledges) {
+      const meta = pledge.metadata as Record<string, unknown> | null;
+      const completedItems = (meta?.completedAdditionalItems as Array<{ amount?: number }>) || [];
+      for (const item of completedItems) {
+        const amount = Number(item.amount || 0);
+        if (amount > 0) {
+          postCampaignTotal += amount;
+          postCampaignByProject.set(
+            pledge.projectId,
+            (postCampaignByProject.get(pledge.projectId) || 0) + amount
+          );
+        }
+      }
+    }
+
+    // Build per-project breakdown for the chart
+    const postCampaignPerProject = projects
+      .map(p => ({
+        projectId: p.id,
+        projectTitle: p.title,
+        amount: postCampaignByProject.get(p.id) || 0,
+      }))
+      .filter(p => p.amount > 0);
+
     // Fetch all IndieKit data in parallel
     const [
       pledges,
@@ -412,6 +459,10 @@ export async function GET(req: NextRequest) {
       surveyStatusBreakdown,
       shippingRegionBreakdown,
       paymentStatusBreakdown,
+      // Post-campaign sales (from IndieKit survey add-on purchases across ALL projects)
+      postCampaignTotalRaised: postCampaignTotal,
+      postCampaignAddonSales: postCampaignTotal, // All post-campaign sales are addon sales
+      postCampaignPerProject,
     };
 
     // Deduplicate pledges by ID (in case of data issues)

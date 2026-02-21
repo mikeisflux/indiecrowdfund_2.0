@@ -599,9 +599,9 @@ export default function IndieKitPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Total Raised</span>
+                    <span className="text-sm text-muted-foreground">Post-Campaign Sales</span>
                   </div>
-                  <p className="text-2xl font-bold mt-1">${(stats?.totalRaised || 0).toLocaleString()}</p>
+                  <p className="text-2xl font-bold mt-1">${(stats?.postCampaignTotalRaised || 0).toLocaleString()}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -619,7 +619,7 @@ export default function IndieKitPage() {
                     <Package className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Add-on Sales</span>
                   </div>
-                  <p className="text-2xl font-bold mt-1">${(stats?.addOnPurchases || 0).toLocaleString()}</p>
+                  <p className="text-2xl font-bold mt-1">${(stats?.postCampaignAddonSales || 0).toLocaleString()}</p>
                 </CardContent>
               </Card>
               <Card>
