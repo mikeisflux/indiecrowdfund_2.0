@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FolderKanban, User, DollarSign, Calendar } from "lucide-react";
+import { FolderKanban, User, DollarSign, Calendar, Package } from "lucide-react";
 import { Project } from "./types";
 import { getFlags, getFlagBadge, formatDate } from "./utils";
 
@@ -102,6 +102,44 @@ export function ProjectListItem({
                 <p className="text-xs text-zinc-500 mt-1">
                   {Number(project.goalAmount) > 0 ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100) : 0}% funded
                 </p>
+              </div>
+            )}
+
+            {/* Fulfillment Status */}
+            {project.fulfillment && project.fulfillment.total > 0 && (
+              <div className="mt-2">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Package className="h-3 w-3 text-zinc-400" />
+                  <span className="text-xs text-zinc-500">
+                    Fulfillment: {Math.round(((project.fulfillment.shipped + project.fulfillment.delivered) / project.fulfillment.total) * 100)}%
+                  </span>
+                </div>
+                <div className="h-2 bg-zinc-200 rounded-full overflow-hidden flex">
+                  {project.fulfillment.delivered > 0 && (
+                    <div
+                      className="h-full bg-emerald-500"
+                      style={{ width: `${(project.fulfillment.delivered / project.fulfillment.total) * 100}%` }}
+                    />
+                  )}
+                  {project.fulfillment.shipped > 0 && (
+                    <div
+                      className="h-full bg-blue-500"
+                      style={{ width: `${(project.fulfillment.shipped / project.fulfillment.total) * 100}%` }}
+                    />
+                  )}
+                  {project.fulfillment.inProgress > 0 && (
+                    <div
+                      className="h-full bg-amber-400"
+                      style={{ width: `${(project.fulfillment.inProgress / project.fulfillment.total) * 100}%` }}
+                    />
+                  )}
+                </div>
+                <div className="flex gap-3 mt-1 text-[10px] text-zinc-400">
+                  {project.fulfillment.delivered > 0 && <span className="flex items-center gap-0.5"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />{project.fulfillment.delivered} delivered</span>}
+                  {project.fulfillment.shipped > 0 && <span className="flex items-center gap-0.5"><span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />{project.fulfillment.shipped} shipped</span>}
+                  {project.fulfillment.inProgress > 0 && <span className="flex items-center gap-0.5"><span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />{project.fulfillment.inProgress} in progress</span>}
+                  {project.fulfillment.notStarted > 0 && <span className="flex items-center gap-0.5"><span className="inline-block h-1.5 w-1.5 rounded-full bg-zinc-300" />{project.fulfillment.notStarted} pending</span>}
+                </div>
               </div>
             )}
 

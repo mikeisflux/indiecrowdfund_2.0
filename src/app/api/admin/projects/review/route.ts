@@ -345,6 +345,42 @@ export async function GET(req: NextRequest) {
       db.project.count({ where }),
     ]);
 
+    // Get fulfillment stats for each project
+    const projectIds = projects.map((p: { id: string }) => p.id);
+    const fulfillmentStats = projectIds.length > 0
+      ? await db.pledge.groupBy({
+          by: ["projectId", "fulfillmentStatus"],
+          where: {
+            projectId: { in: projectIds },
+            status: "COMPLETED",
+            deletedAt: null,
+          },
+          _count: true,
+        })
+      : [];
+
+    // Build fulfillment map: projectId -> { total, shipped, delivered, inProgress, notStarted }
+    const fulfillmentMap = new Map<string, { total: number; notStarted: number; inProgress: number; shipped: number; delivered: number }>();
+    for (const row of fulfillmentStats) {
+      if (!fulfillmentMap.has(row.projectId)) {
+        fulfillmentMap.set(row.projectId, { total: 0, notStarted: 0, inProgress: 0, shipped: 0, delivered: 0 });
+      }
+      const entry = fulfillmentMap.get(row.projectId)!;
+      entry.total += row._count;
+      switch (row.fulfillmentStatus) {
+        case "NOT_STARTED": entry.notStarted += row._count; break;
+        case "IN_PROGRESS": entry.inProgress += row._count; break;
+        case "SHIPPED": entry.shipped += row._count; break;
+        case "DELIVERED": entry.delivered += row._count; break;
+      }
+    }
+
+    // Merge fulfillment data into projects
+    const projectsWithFulfillment = projects.map((p: { id: string }) => ({
+      ...p,
+      fulfillment: fulfillmentMap.get(p.id) || { total: 0, notStarted: 0, inProgress: 0, shipped: 0, delivered: 0 },
+    }));
+
     // Get review stats
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -365,7 +401,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     return NextResponse.json({
-      projects,
+      projects: projectsWithFulfillment,
       pagination: {
         page,
         limit,

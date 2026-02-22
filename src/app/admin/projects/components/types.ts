@@ -41,6 +41,13 @@ export interface Project {
     pledges: number;
     followers?: number;
   };
+  fulfillment?: {
+    total: number;
+    notStarted: number;
+    inProgress: number;
+    shipped: number;
+    delivered: number;
+  };
 }
 
 export interface ReviewHistory {
