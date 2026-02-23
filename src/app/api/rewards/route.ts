@@ -225,9 +225,11 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await db.reward.delete({
-      where: { id: rewardId },
-    });
+    await db.$transaction([
+      db.pledgeAddon.deleteMany({ where: { addonId: rewardId } }),
+      db.rewardItem.deleteMany({ where: { rewardId } }),
+      db.reward.delete({ where: { id: rewardId } }),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

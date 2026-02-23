@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
         description: true,
         shortDescription: true,
         category: true,
-        fundingGoal: true,
+        goalAmount: true,
         endDate: true,
       },
     });

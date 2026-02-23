@@ -516,8 +516,9 @@ export async function DELETE(
       );
     }
 
-    // Delete reward items first, then reward
+    // Delete pledge addons, reward items, then reward
     await db.$transaction([
+      db.pledgeAddon.deleteMany({ where: { addonId: rewardId } }),
       db.rewardItem.deleteMany({ where: { rewardId } }),
       db.reward.delete({ where: { id: rewardId } }),
     ]);

@@ -671,6 +671,7 @@ export async function PATCH(
 
           // Delete rewards that are no longer in the list (only if no pledges)
           for (const reward of rewardsToDelete) {
+            await tx.pledgeAddon.deleteMany({ where: { addonId: reward.id } });
             await tx.rewardItem.deleteMany({ where: { rewardId: reward.id } });
             await tx.reward.delete({ where: { id: reward.id } });
           }
@@ -874,17 +875,17 @@ export async function DELETE(
         where: { file: { projectId } },
       });
 
+      // Delete pledge addons (must come before rewards due to FK constraint)
+      await tx.pledgeAddon.deleteMany({
+        where: { pledge: { projectId } },
+      });
+
       // Delete rewards and their related items
       await tx.rewardItem.deleteMany({
         where: { reward: { projectId } },
       });
       await tx.reward.deleteMany({
         where: { projectId },
-      });
-
-      // Delete pledge addons
-      await tx.pledgeAddon.deleteMany({
-        where: { pledge: { projectId } },
       });
 
       // Delete pledges
