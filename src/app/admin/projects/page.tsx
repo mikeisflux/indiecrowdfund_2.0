@@ -110,10 +110,20 @@ export default function ProjectsPage() {
         status: "APPROVED",
         ...(categoryFilter !== "all" && { category: categoryFilter }),
       });
+      const fundedParams = new URLSearchParams({
+        status: "FUNDED",
+        ...(categoryFilter !== "all" && { category: categoryFilter }),
+      });
+      const failedParams = new URLSearchParams({
+        status: "FAILED",
+        ...(categoryFilter !== "all" && { category: categoryFilter }),
+      });
 
-      const [liveResponse, approvedResponse] = await Promise.all([
+      const [liveResponse, approvedResponse, fundedResponse, failedResponse] = await Promise.all([
         fetchWithRetry(`/api/admin/projects/review?${liveParams}`),
         fetchWithRetry(`/api/admin/projects/review?${approvedParams}`),
+        fetchWithRetry(`/api/admin/projects/review?${fundedParams}`),
+        fetchWithRetry(`/api/admin/projects/review?${failedParams}`),
       ]);
 
       const allProjects: Project[] = [];
@@ -126,19 +136,33 @@ export default function ProjectsPage() {
         allProjects.push(...(approvedData.projects || []));
       }
 
-      // Filter out projects whose endDate has passed (closed campaigns)
+      // Closed campaigns: FUNDED and FAILED status projects
+      const closedCampaigns: Project[] = [];
+      if (fundedResponse.ok) {
+        const fundedData = await fundedResponse.json();
+        closedCampaigns.push(...(fundedData.projects || []));
+      }
+      if (failedResponse.ok) {
+        const failedData = await failedResponse.json();
+        closedCampaigns.push(...(failedData.projects || []));
+      }
+
+      // Also check LIVE/APPROVED projects whose endDate has passed
       const now = new Date();
       const activeOnly = allProjects.filter((project) => {
         if (!project.endDate) return true; // No end date = still active
         return new Date(project.endDate) > now;
       });
-      const closed = allProjects.filter((project) => {
+      const expiredActive = allProjects.filter((project) => {
         if (!project.endDate) return false;
         return new Date(project.endDate) <= now;
       });
 
+      // Combine all closed campaigns
+      const allClosed = [...closedCampaigns, ...expiredActive];
+
       setActiveProjects(activeOnly);
-      setClosedProjects(closed);
+      setClosedProjects(allClosed);
       setStats((prev) => ({
         ...prev,
         activeCampaigns: activeOnly.length,
