@@ -354,3 +354,95 @@ export async function sendPledgeCancellationEmail(
   const result = await sendEmail({ to: email, subject, html });
   return { ...result, subject, html };
 }
+
+/**
+ * Send survey completion confirmation email to backer
+ */
+export async function sendSurveyCompletionEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  rewardTitle: string | null,
+  projectSlug: string,
+  projectUrlPath?: string,
+) {
+  const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/projects/${projectSlug}`;
+  const dashboardUrl = `${APP_URL}/dashboard/backer`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Survey Completed</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #028858 0%, #10b981 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <div style="text-align: center; margin-bottom: 15px;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; line-height: 60px; font-size: 28px;">
+              &#10003;
+            </div>
+          </div>
+          <h2 style="margin-top: 0; color: white; text-align: center;">Survey Completed!</h2>
+          <p style="text-align: center; margin-bottom: 0; color: rgba(255,255,255,0.9);">
+            Hi ${backerName || "there"}, we've received your survey response for <strong>${projectTitle}</strong>.
+          </p>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin-top: 0;">Your Response Has Been Recorded</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; color: #666;">Project</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 500;">${projectTitle}</td>
+            </tr>
+            ${rewardTitle ? `
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; color: #666;">Reward Tier</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 500;">${rewardTitle}</td>
+            </tr>
+            ` : ""}
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Status</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #028858;">&#10003; Complete</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 10px 0;"><strong>What happens next?</strong></p>
+          <p style="margin: 0; color: #666;">The creator now has everything they need to prepare your rewards. You'll receive another email when your order ships. If you need to make any changes, reach out to the project creator.</p>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${projectUrl}" style="display: inline-block; background: #028858; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500; margin-right: 10px;">
+            View Project
+          </a>
+          <a href="${dashboardUrl}" style="display: inline-block; background: #333; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            My Dashboard
+          </a>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because you completed a survey on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const subject = `Survey completed for "${projectTitle}"`;
+  const result = await sendEmail({
+    to: email,
+    subject,
+    html,
+    skipUnsubscribeCheck: true,
+  });
+
+  return { ...result, subject, html };
+}

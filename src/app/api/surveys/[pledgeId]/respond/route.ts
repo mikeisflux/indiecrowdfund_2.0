@@ -425,6 +425,36 @@ export async function POST(
         },
       });
 
+      // Send survey completion confirmation email
+      try {
+        const pledgeWithDetails = await db.pledge.findUnique({
+          where: { id: pledgeId },
+          select: {
+            user: { select: { email: true, name: true } },
+            project: { select: { title: true, slug: true, creator: { select: { vanityUrl: true } } } },
+            reward: { select: { title: true } },
+          },
+        });
+
+        if (pledgeWithDetails?.user.email) {
+          const { sendSurveyCompletionEmail } = await import("@/lib/email/email-templates-pledge");
+          const projectUrlPath = pledgeWithDetails.project.creator.vanityUrl
+            ? `/${pledgeWithDetails.project.creator.vanityUrl}/${pledgeWithDetails.project.slug}`
+            : undefined;
+
+          await sendSurveyCompletionEmail(
+            pledgeWithDetails.user.email,
+            pledgeWithDetails.user.name || "",
+            pledgeWithDetails.project.title,
+            pledgeWithDetails.reward?.title || null,
+            pledgeWithDetails.project.slug,
+            projectUrlPath,
+          );
+        }
+      } catch (emailError) {
+        console.error("Failed to send survey completion email:", emailError);
+        // Don't fail the survey submission if email fails
+      }
     }
 
     return NextResponse.json({
