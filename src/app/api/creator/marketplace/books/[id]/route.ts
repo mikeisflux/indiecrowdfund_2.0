@@ -46,6 +46,7 @@ export async function GET(
         coverImage: book.coverImageUrl || book.pdfCoverImageUrl,
         promoVideoUrl: book.promoVideoUrl,
         pdfFileUrl: book.pdfFileUrl,
+        pdfFileSize: book.pdfFileSize,
         isNsfw: book.hasAdultContent,
         tags: book.tags,
         status: book.status,

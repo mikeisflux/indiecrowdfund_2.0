@@ -143,9 +143,18 @@ export async function GET(request: NextRequest) {
             (books as PdfBookRecord[])
               .filter((b: PdfBookRecord) => b.pdfFileUrl)
               .map(async (book: PdfBookRecord) => {
-                const match = book.pdfFileUrl?.match(/\/api\/r2\/serve\/(.+)$/);
+                // Decode URL-encoded paths (some books have %2F instead of /)
+                const decodedUrl = decodeURIComponent(book.pdfFileUrl || "");
+                const match = decodedUrl.match(/\/api\/r2\/serve\/(.+)$/);
                 if (match) {
-                  const exists = await r2.fileExists(match[1]);
+                  let exists = await r2.fileExists(match[1]);
+                  // Fallback: try original encoded path
+                  if (!exists) {
+                    const originalMatch = (book.pdfFileUrl || "").match(/\/api\/r2\/serve\/(.+)$/);
+                    if (originalMatch && originalMatch[1] !== match[1]) {
+                      exists = await r2.fileExists(originalMatch[1]);
+                    }
+                  }
                   return { id: book.id, exists };
                 }
                 return { id: book.id, exists: null }; // Non-R2 URL
@@ -331,8 +340,11 @@ export async function PATCH() {
 
     for (const book of booksToFix) {
       try {
+        // Decode URL-encoded paths (some books have %2F instead of /)
+        const decodedUrl = decodeURIComponent(book.pdfFileUrl || "");
+
         // Extract R2 key from URL
-        const match = book.pdfFileUrl?.match(/\/api\/r2\/serve\/(.+)$/);
+        const match = decodedUrl.match(/\/api\/r2\/serve\/(.+)$/);
         if (!match) {
           results.push({ id: book.id, status: "skipped - non-R2 URL" });
           failed++;
@@ -340,7 +352,15 @@ export async function PATCH() {
         }
 
         const r2Key = match[1];
-        const metadata = await r2.getFileMetadata(r2Key);
+        let metadata = await r2.getFileMetadata(r2Key);
+
+        // If not found with decoded path, try the original URL-encoded path
+        if (!metadata) {
+          const originalMatch = (book.pdfFileUrl || "").match(/\/api\/r2\/serve\/(.+)$/);
+          if (originalMatch && originalMatch[1] !== r2Key) {
+            metadata = await r2.getFileMetadata(originalMatch[1]);
+          }
+        }
 
         if (metadata && metadata.size > 0) {
           await prisma.marketplaceBook.update({

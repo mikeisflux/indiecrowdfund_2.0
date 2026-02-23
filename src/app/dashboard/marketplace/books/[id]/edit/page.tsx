@@ -61,6 +61,7 @@ interface BookFormData {
   pdfFileUrl: string;
   pdfFileName: string;
   pdfStorageKey: string;
+  pdfFileSize: number | null;
   isNsfw: boolean;
   tags: string[];
 }
@@ -77,6 +78,7 @@ interface BookData {
   coverImage: string | null;
   promoVideoUrl: string | null;
   pdfFileUrl: string;
+  pdfFileSize: number | null;
   isNsfw: boolean;
   tags: string[];
   status: string;
@@ -164,7 +166,7 @@ function PDFFilePicker({
   currentFileName,
   currentStorageKey,
 }: {
-  onSelect: (url: string, fileName: string, storageKey: string) => void;
+  onSelect: (url: string, fileName: string, storageKey: string, fileSize?: number) => void;
   currentUrl: string;
   currentFileName: string;
   currentStorageKey: string;
@@ -199,7 +201,7 @@ function PDFFilePicker({
   const handleSelectExisting = (file: ExistingFile) => {
     // Don't encode slashes in the path
     const publicUrl = `/api/r2/serve/${file.key}`;
-    onSelect(publicUrl, file.name, file.key);
+    onSelect(publicUrl, file.name, file.key, file.size);
     toast.success(`Selected: ${file.name}`);
   };
 
@@ -245,12 +247,12 @@ function PDFFilePicker({
 
       setUploadProgress(90);
 
-      const { publicUrl, storageKey, fileName: returnedFileName, isDuplicate } = result;
+      const { publicUrl, storageKey, fileName: returnedFileName, fileSize: returnedFileSize, isDuplicate } = result;
 
       setUploadProgress(100);
 
       // Use returned filename (handles duplicates with different original names)
-      onSelect(publicUrl, returnedFileName || file.name, storageKey);
+      onSelect(publicUrl, returnedFileName || file.name, storageKey, returnedFileSize || file.size);
 
       if (isDuplicate) {
         toast.info("This file was already uploaded. Using existing copy.");
@@ -608,6 +610,7 @@ export default function EditBookPage() {
     pdfFileUrl: "",
     pdfFileName: "",
     pdfStorageKey: "",
+    pdfFileSize: null,
     isNsfw: false,
     tags: [],
   });
@@ -661,6 +664,7 @@ export default function EditBookPage() {
           pdfFileUrl: book.pdfFileUrl,
           pdfFileName: extractedFileName,
           pdfStorageKey: extractedStorageKey,
+          pdfFileSize: book.pdfFileSize || null,
           isNsfw: book.isNsfw,
           tags: book.tags || [],
         });
@@ -680,7 +684,7 @@ export default function EditBookPage() {
     fetchBook();
   }, [bookId, router]);
 
-  const updateForm = (field: keyof BookFormData, value: string | boolean | string[]) => {
+  const updateForm = (field: keyof BookFormData, value: string | boolean | string[] | number | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -989,10 +993,11 @@ export default function EditBookPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <PDFFilePicker
-                onSelect={(url, fileName, storageKey) => {
+                onSelect={(url, fileName, storageKey, fileSize) => {
                   updateForm("pdfFileUrl", url);
                   updateForm("pdfFileName", fileName);
                   updateForm("pdfStorageKey", storageKey);
+                  setFormData(prev => ({ ...prev, pdfFileSize: fileSize || null }));
                 }}
                 currentUrl={formData.pdfFileUrl}
                 currentFileName={formData.pdfFileName}
