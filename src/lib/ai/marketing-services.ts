@@ -1,14 +1,25 @@
 import OpenAI from "openai";
 import { db } from "@/lib/db";
 
-// Lazy initialization
+// Lazy initialization to avoid build-time errors
 let openaiClient: OpenAI | null = null;
+let cachedApiKey: string | null = null;
 
-function getOpenAI(): OpenAI {
-  if (!openaiClient) {
-    openaiClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+async function getOpenAI(): Promise<OpenAI> {
+  // Try to get key from database first, fall back to env
+  const settings = await db.platformSettings.findFirst({
+    select: { openaiApiKey: true },
+  });
+  const apiKey = settings?.openaiApiKey || process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("OpenAI API key not configured. Set it in Admin Settings > AI.");
+  }
+
+  // Re-create client if key changed
+  if (!openaiClient || cachedApiKey !== apiKey) {
+    openaiClient = new OpenAI({ apiKey });
+    cachedApiKey = apiKey;
   }
   return openaiClient;
 }
@@ -92,7 +103,8 @@ Respond in JSON:
 }`;
 
   try {
-    const response = await getOpenAI().chat.completions.create({
+    const openai = await getOpenAI();
+    const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -497,7 +509,8 @@ Respond in JSON:
 }`;
 
   try {
-    const response = await getOpenAI().chat.completions.create({
+    const openai = await getOpenAI();
+    const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -683,7 +696,8 @@ Respond in JSON:
 }`;
 
   try {
-    const response = await getOpenAI().chat.completions.create({
+    const openai = await getOpenAI();
+    const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {

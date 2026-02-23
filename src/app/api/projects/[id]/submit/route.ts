@@ -172,8 +172,11 @@ export async function POST(
         creatorProjectCount,
       };
 
-      // Only run AI if API keys are configured
-      if (process.env.ANTHROPIC_API_KEY) {
+      // Only run AI if API keys are configured (check database first, then env)
+      const aiSettings = await db.platformSettings.findFirst({
+        select: { anthropicApiKey: true },
+      });
+      if (aiSettings?.anthropicApiKey || process.env.ANTHROPIC_API_KEY) {
         const aiPromises: Promise<unknown>[] = [];
 
         // Run moderation if enabled (default to true if setting doesn't exist)

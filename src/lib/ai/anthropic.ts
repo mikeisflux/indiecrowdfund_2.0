@@ -1,13 +1,25 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { db } from "@/lib/db";
 
 // Lazy initialization to avoid build-time errors
 let anthropicClient: Anthropic | null = null;
+let cachedApiKey: string | null = null;
 
-function getAnthropic(): Anthropic {
-  if (!anthropicClient) {
-    anthropicClient = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+async function getAnthropic(): Promise<Anthropic> {
+  // Try to get key from database first, fall back to env
+  const settings = await db.platformSettings.findFirst({
+    select: { anthropicApiKey: true },
+  });
+  const apiKey = settings?.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Anthropic API key not configured. Set it in Admin Settings > AI.");
+  }
+
+  // Re-create client if key changed
+  if (!anthropicClient || cachedApiKey !== apiKey) {
+    anthropicClient = new Anthropic({ apiKey });
+    cachedApiKey = apiKey;
   }
   return anthropicClient;
 }
@@ -82,7 +94,8 @@ Respond in JSON format:
 }`;
 
   try {
-    const response = await getAnthropic().messages.create({
+    const anthropic = await getAnthropic();
+    const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
@@ -168,7 +181,8 @@ Respond in JSON format:
 }`;
 
   try {
-    const response = await getAnthropic().messages.create({
+    const anthropic = await getAnthropic();
+    const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
@@ -239,7 +253,8 @@ Respond in JSON:
 }`;
 
   try {
-    const response = await getAnthropic().messages.create({
+    const anthropic = await getAnthropic();
+    const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
@@ -297,7 +312,8 @@ Respond in JSON:
 }`;
 
   try {
-    const response = await getAnthropic().messages.create({
+    const anthropic = await getAnthropic();
+    const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 256,
       messages: [{ role: "user", content: prompt }],

@@ -44,14 +44,19 @@ export {
   type ABTest,
 } from "./marketing-services";
 
-// Configuration check
-export function checkAIConfiguration(): {
+// Configuration check - reads from database first, falls back to env
+export async function checkAIConfiguration(): Promise<{
   openai: boolean;
   anthropic: boolean;
   fullyConfigured: boolean;
-} {
-  const openai = !!process.env.OPENAI_API_KEY;
-  const anthropic = !!process.env.ANTHROPIC_API_KEY;
+}> {
+  const { db } = await import("@/lib/db");
+  const settings = await db.platformSettings.findFirst({
+    select: { openaiApiKey: true, anthropicApiKey: true },
+  });
+
+  const openai = !!(settings?.openaiApiKey || process.env.OPENAI_API_KEY);
+  const anthropic = !!(settings?.anthropicApiKey || process.env.ANTHROPIC_API_KEY);
 
   return {
     openai,

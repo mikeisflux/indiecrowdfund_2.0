@@ -498,8 +498,11 @@ export async function GET() {
       );
     }
 
-    // Check if OpenAI is configured
-    const openaiConfigured = !!process.env.OPENAI_API_KEY;
+    // Check if OpenAI is configured (from database or env)
+    const settings = await db.platformSettings.findFirst({
+      select: { openaiApiKey: true },
+    });
+    const openaiConfigured = !!(settings?.openaiApiKey || process.env.OPENAI_API_KEY);
 
     return NextResponse.json({
       status: openaiConfigured ? "operational" : "not_configured",
