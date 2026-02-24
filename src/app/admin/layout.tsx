@@ -134,6 +134,7 @@ const navigation: NavSection[] = [
     items: [
       { name: "Email Center", href: "/admin/email", icon: Mail },
       { name: "Notifications", href: "/admin/notifications", icon: Bell, badgeKey: "notifications" },
+      { name: "Blocklist", href: "/admin/settings?tab=communication", icon: Shield },
     ],
   },
   {

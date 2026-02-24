@@ -3,6 +3,7 @@
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -163,7 +164,12 @@ interface PlatformSettings {
 }
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("general");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const validTabs = ["general", "payments", "email", "communication", "social", "ai", "security", "idverify", "storage", "api", "database"];
+  const initialTab = tabParam && validTabs.includes(tabParam) ? tabParam : "general";
+
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
