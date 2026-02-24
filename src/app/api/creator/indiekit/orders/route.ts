@@ -5,6 +5,70 @@ import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
+// GET - Fetch available addons for a project (used by EditOrderDialog)
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get("projectId");
+    if (!projectId) {
+      return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+    }
+
+    // Verify user has access to this project
+    const project = await db.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { creatorId: session.user.id },
+          {
+            collaborators: {
+              some: {
+                OR: [
+                  { userId: session.user.id, status: "ACCEPTED" },
+                  ...(session.user.email ? [{ email: { equals: session.user.email, mode: "insensitive" as const }, status: "ACCEPTED" as const }] : []),
+                ],
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+    }
+
+    // Get all ADDON type rewards for this project
+    const addons = await db.reward.findMany({
+      where: { projectId, type: "ADDON" },
+      select: {
+        id: true,
+        title: true,
+        amount: true,
+        isEnded: true,
+        visibility: true,
+      },
+      orderBy: { amount: "asc" },
+    });
+
+    return NextResponse.json({
+      addons: addons.map(a => ({
+        id: a.id,
+        name: a.title,
+        price: Number(a.amount),
+      })),
+    });
+  } catch (error) {
+    console.error("Fetch addons error:", error);
+    return NextResponse.json({ error: "Failed to fetch addons" }, { status: 500 });
+  }
+}
+
 const editOrderSchema = z.object({
   pledgeId: z.string(),
   projectId: z.string(),

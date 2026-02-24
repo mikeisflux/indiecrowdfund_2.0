@@ -71,13 +71,15 @@ export function EditOrderDialog({
   backerEmail,
   reward,
   currentAddons,
-  availableAddons,
+  availableAddons: availableAddonsProp,
   shippingAmount: initialShipping,
   originalPledgeAmount,
   onSaved,
   onRefundNeeded,
 }: EditOrderDialogProps) {
   const [addons, setAddons] = useState<AddonEntry[]>([]);
+  const [fetchedAddons, setFetchedAddons] = useState<AvailableAddon[]>([]);
+  const [loadingAddons, setLoadingAddons] = useState(false);
   const [shippingAmount, setShippingAmount] = useState(initialShipping);
   const [saving, setSaving] = useState(false);
   const [sendingNotification, setSendingNotification] = useState(false);
@@ -85,6 +87,25 @@ export function EditOrderDialog({
   const [showBalanceDuePrompt, setShowBalanceDuePrompt] = useState(false);
   const [refundOwed, setRefundOwed] = useState(0);
   const [balanceDueAmount, setBalanceDueAmount] = useState(0);
+
+  // Use fetched addons if available, otherwise fall back to prop
+  const availableAddons = fetchedAddons.length > 0 ? fetchedAddons : availableAddonsProp;
+
+  // Fetch available addons directly when dialog opens
+  useEffect(() => {
+    if (open && projectId) {
+      setLoadingAddons(true);
+      fetch(`/api/creator/indiekit/orders?projectId=${projectId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.addons && data.addons.length > 0) {
+            setFetchedAddons(data.addons);
+          }
+        })
+        .catch(err => console.error("Failed to fetch addons:", err))
+        .finally(() => setLoadingAddons(false));
+    }
+  }, [open, projectId]);
 
   // Reset state when dialog opens with new data
   const resetState = useCallback(() => {
@@ -311,7 +332,12 @@ export function EditOrderDialog({
                 Campaign Add-ons ({addons.length} selected)
               </Label>
 
-              {availableAddons.length === 0 ? (
+              {loadingAddons ? (
+                <div className="text-center py-6 border rounded-lg">
+                  <Loader2 className="h-8 w-8 text-muted-foreground mx-auto mb-2 animate-spin" />
+                  <p className="text-sm text-muted-foreground">Loading add-ons...</p>
+                </div>
+              ) : availableAddons.length === 0 ? (
                 <div className="text-center py-6 border rounded-lg">
                   <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">No add-ons available for this campaign</p>
