@@ -464,7 +464,41 @@ export default function AdminMarketplacePage() {
       }
 
       const result = await response.json();
-      toast.success(`Fixed ${result.fixed} of ${result.total} books`);
+
+      if (result.fixed > 0 && result.failed === 0) {
+        toast.success(`Fixed all ${result.fixed} books successfully`);
+      } else if (result.fixed > 0 && result.failed > 0) {
+        toast.success(`Fixed ${result.fixed} of ${result.total} books`);
+        // Show details of failures
+        const failedResults = (result.results || []).filter(
+          (r: { status: string }) => r.status !== "fixed"
+        );
+        if (failedResults.length > 0) {
+          const failureDetails = failedResults
+            .slice(0, 5)
+            .map((r: { title?: string; status: string }) => `${r.title || "Unknown"}: ${r.status}`)
+            .join("\n");
+          toast.error(
+            `${result.failed} books could not be fixed:\n${failureDetails}${failedResults.length > 5 ? `\n...and ${failedResults.length - 5} more` : ""}`,
+            { duration: 10000 }
+          );
+        }
+      } else if (result.fixed === 0 && result.failed > 0) {
+        const failedResults = (result.results || []).filter(
+          (r: { status: string }) => r.status !== "fixed"
+        );
+        const failureDetails = failedResults
+          .slice(0, 5)
+          .map((r: { title?: string; status: string }) => `${r.title || "Unknown"}: ${r.status}`)
+          .join("\n");
+        toast.error(
+          `Could not fix any of the ${result.total} books:\n${failureDetails}${failedResults.length > 5 ? `\n...and ${failedResults.length - 5} more` : ""}`,
+          { duration: 10000 }
+        );
+      } else {
+        toast.info(result.message || "No books needed fixing");
+      }
+
       fetchPdfBooks(pdfFilter, pdfSearch);
     } catch (error) {
       console.error("Error bulk-fixing sizes:", error);

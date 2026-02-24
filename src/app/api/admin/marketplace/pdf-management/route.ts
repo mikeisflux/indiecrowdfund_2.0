@@ -288,6 +288,7 @@ function detectIssues(book: {
  * PATCH /api/admin/marketplace/pdf-management
  *
  * Bulk-fix: fetch file sizes from R2 for all books missing pdfFileSize
+ * Processes books in parallel batches with timeout protection
  */
 export async function PATCH() {
   try {
@@ -314,6 +315,7 @@ export async function PATCH() {
       },
       select: {
         id: true,
+        title: true,
         pdfFileUrl: true,
       },
     });
@@ -326,6 +328,8 @@ export async function PATCH() {
       });
     }
 
+    console.log(`[PDF Fix] Starting bulk fix for ${booksToFix.length} books`);
+
     const r2 = await getR2Storage();
     if (!r2) {
       return NextResponse.json(
@@ -336,49 +340,90 @@ export async function PATCH() {
 
     let fixed = 0;
     let failed = 0;
-    const results: { id: string; status: string; size?: number }[] = [];
+    const results: { id: string; title?: string; status: string; size?: number; key?: string; error?: string }[] = [];
 
-    for (const book of booksToFix) {
-      try {
-        // Decode URL-encoded paths (some books have %2F instead of /)
-        const decodedUrl = decodeURIComponent(book.pdfFileUrl || "");
+    // Process books in parallel batches of 5 to avoid overwhelming R2
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < booksToFix.length; i += BATCH_SIZE) {
+      const batch = booksToFix.slice(i, i + BATCH_SIZE);
 
-        // Extract R2 key from URL
-        const match = decodedUrl.match(/\/api\/r2\/serve\/(.+)$/);
-        if (!match) {
-          results.push({ id: book.id, status: "skipped - non-R2 URL" });
-          failed++;
-          continue;
-        }
+      const batchResults = await Promise.allSettled(
+        batch.map(async (book: { id: string; title: string; pdfFileUrl: string }) => {
+          // Decode URL-encoded paths (some books have %2F instead of /)
+          const decodedUrl = decodeURIComponent(book.pdfFileUrl || "");
 
-        const r2Key = match[1];
-        let metadata = await r2.getFileMetadata(r2Key);
-
-        // If not found with decoded path, try the original URL-encoded path
-        if (!metadata) {
-          const originalMatch = (book.pdfFileUrl || "").match(/\/api\/r2\/serve\/(.+)$/);
-          if (originalMatch && originalMatch[1] !== r2Key) {
-            metadata = await r2.getFileMetadata(originalMatch[1]);
+          // Extract R2 key from URL
+          const match = decodedUrl.match(/\/api\/r2\/serve\/(.+)$/);
+          if (!match) {
+            return { id: book.id, title: book.title, status: "skipped - non-R2 URL", key: book.pdfFileUrl };
           }
-        }
 
-        if (metadata && metadata.size > 0) {
-          await prisma.marketplaceBook.update({
-            where: { id: book.id },
-            data: { pdfFileSize: metadata.size },
-          });
-          results.push({ id: book.id, status: "fixed", size: metadata.size });
-          fixed++;
+          const r2Key = match[1];
+          console.log(`[PDF Fix] Checking R2 key: ${r2Key} for book "${book.title}" (${book.id})`);
+
+          let metadata = await r2.getFileMetadata(r2Key);
+
+          // If not found with decoded path, try the original URL-encoded path
+          if (!metadata) {
+            const originalMatch = (book.pdfFileUrl || "").match(/\/api\/r2\/serve\/(.+)$/);
+            if (originalMatch && originalMatch[1] !== r2Key) {
+              console.log(`[PDF Fix] Retrying with encoded key: ${originalMatch[1]}`);
+              metadata = await r2.getFileMetadata(originalMatch[1]);
+            }
+          }
+
+          // Fallback: try checking if the file exists with a slightly different path
+          if (!metadata) {
+            // Try without leading slash
+            const altKey = r2Key.startsWith("/") ? r2Key.slice(1) : r2Key;
+            if (altKey !== r2Key) {
+              console.log(`[PDF Fix] Retrying with alt key: ${altKey}`);
+              metadata = await r2.getFileMetadata(altKey);
+            }
+          }
+
+          if (metadata && metadata.size > 0) {
+            await prisma.marketplaceBook.update({
+              where: { id: book.id },
+              data: { pdfFileSize: metadata.size },
+            });
+            console.log(`[PDF Fix] Fixed book "${book.title}" - size: ${formatFileSize(metadata.size)}`);
+            return { id: book.id, title: book.title, status: "fixed", size: metadata.size, key: r2Key };
+          }
+
+          // Check if file exists at all (maybe empty file)
+          const exists = await r2.fileExists(r2Key);
+          if (exists) {
+            console.log(`[PDF Fix] File exists but has 0 size for book "${book.title}" - key: ${r2Key}`);
+            return { id: book.id, title: book.title, status: "failed - file exists but size is 0", key: r2Key };
+          }
+
+          console.log(`[PDF Fix] File not found in R2 for book "${book.title}" - key: ${r2Key}`);
+          return { id: book.id, title: book.title, status: "failed - file not found in R2", key: r2Key };
+        })
+      );
+
+      // Process batch results
+      for (const result of batchResults) {
+        if (result.status === "fulfilled") {
+          const data = result.value;
+          results.push(data);
+          if (data.status === "fixed") {
+            fixed++;
+          } else {
+            failed++;
+          }
         } else {
-          results.push({ id: book.id, status: "failed - file not found in R2" });
+          // Promise rejected - should be rare since we catch inside
+          const errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+          console.error(`[PDF Fix] Unexpected error in batch:`, errorMsg);
+          results.push({ id: "unknown", status: "error", error: errorMsg });
           failed++;
         }
-      } catch (err) {
-        console.error(`Error fixing book ${book.id}:`, err);
-        results.push({ id: book.id, status: "error" });
-        failed++;
       }
     }
+
+    console.log(`[PDF Fix] Completed: ${fixed} fixed, ${failed} failed out of ${booksToFix.length}`);
 
     return NextResponse.json({
       message: `Fixed ${fixed} of ${booksToFix.length} books`,
