@@ -93,26 +93,40 @@ const navigation: NavSection[] = [
     items: [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "AI & Marketing",
+    items: [
       { name: "AI Control", href: "/admin/ai", icon: Brain, staticBadge: "NEW" },
       { name: "AI Marketing", href: "/admin/ai-marketing", icon: Zap, staticBadge: "AI" },
     ],
   },
   {
-    title: "Management",
+    title: "Content",
     items: [
-      { name: "Users", href: "/admin/users", icon: Users, badgeKey: "users" },
-      { name: "Retailers", href: "/admin/retailers", icon: Store, badgeKey: "retailers" },
       { name: "Projects", href: "/admin/projects", icon: FolderKanban, badgeKey: "projects" },
       { name: "Prelaunch", href: "/admin/prelaunch", icon: Rocket, badgeKey: "prelaunch" },
       { name: "Marketplace", href: "/admin/marketplace", icon: BookOpen },
       { name: "PDF File Manager", href: "/admin/marketplace?tab=pdf-management", icon: HardDrive },
+      { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "moderation" },
+    ],
+  },
+  {
+    title: "Users & Accounts",
+    items: [
+      { name: "Users", href: "/admin/users", icon: Users, badgeKey: "users" },
+      { name: "Retailers", href: "/admin/retailers", icon: Store, badgeKey: "retailers" },
+      { name: "LCS Locator", href: "/admin/lcs-locator", icon: MapPin },
+    ],
+  },
+  {
+    title: "Finance",
+    items: [
       { name: "Payouts", href: "/admin/payouts", icon: DollarSign, badgeKey: "payouts" },
       { name: "Transactions", href: "/admin/transactions", icon: ArrowLeftRight },
       { name: "DC Redemptions", href: "/admin/divinitycoin-redemptions", icon: Coins },
-      { name: "LCS Locator", href: "/admin/lcs-locator", icon: MapPin },
-      { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "moderation" },
-      { name: "Bug Reports", href: "/admin/bug-reports", icon: Bug, badgeKey: "bugReports" },
-      { name: "Changelog", href: "/admin/changelog", icon: FileEdit },
+      { name: "Stripe Reconcile", href: "/admin/reconcile", icon: RefreshCw },
     ],
   },
   {
@@ -137,9 +151,10 @@ const navigation: NavSection[] = [
     title: "System",
     items: [
       { name: "Settings", href: "/admin/settings", icon: Settings },
-      { name: "Link Sanitizer", href: "/admin/link-sanitizer", icon: Link2 },
-      { name: "Stripe Reconcile", href: "/admin/reconcile", icon: RefreshCw },
       { name: "Security", href: "/admin/security", icon: Lock },
+      { name: "Link Sanitizer", href: "/admin/link-sanitizer", icon: Link2 },
+      { name: "Bug Reports", href: "/admin/bug-reports", icon: Bug, badgeKey: "bugReports" },
+      { name: "Changelog", href: "/admin/changelog", icon: FileEdit },
     ],
   },
 ];

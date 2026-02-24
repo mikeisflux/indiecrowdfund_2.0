@@ -18,6 +18,7 @@ import {
   Share2,
   Cloud,
   MessageSquare,
+  CreditCard,
 } from "lucide-react";
 import {
   GeneralSettings,
@@ -832,8 +833,8 @@ export default function SettingsPage() {
             General
           </TabsTrigger>
           <TabsTrigger value="payments">
-            <Key className="mr-2 h-4 w-4" />
-            API Keys
+            <CreditCard className="mr-2 h-4 w-4" />
+            Payments
           </TabsTrigger>
           <TabsTrigger value="email">
             <Mail className="mr-2 h-4 w-4" />
@@ -841,7 +842,7 @@ export default function SettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="communication">
             <MessageSquare className="mr-2 h-4 w-4" />
-            Mailboxes
+            Communication
           </TabsTrigger>
           <TabsTrigger value="social">
             <Share2 className="mr-2 h-4 w-4" />
