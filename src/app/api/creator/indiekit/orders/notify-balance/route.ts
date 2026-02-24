@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       where: {
         id: projectId,
         OR: [
-          { userId: session.user.id },
+          { creatorId: session.user.id },
           { collaborators: { some: { userId: session.user.id } } },
         ],
       },

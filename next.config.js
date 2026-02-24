@@ -2,6 +2,8 @@
 const nextConfig = {
   // Allow custom build output directory for zero-downtime deployments
   distDir: process.env.NEXT_BUILD_OUTPUT || '.next',
+  // Prevent webpack from bundling these server-only packages (fixes MODULE_NOT_FOUND in production)
+  serverExternalPackages: ['jsdom', '@aws-sdk/client-s3', '@aws-sdk/s3-request-presigner'],
   // Note: Shopify iframe headers are handled by middleware.ts for proper CSP frame-ancestors support
   // Increase body size limit for server actions (default is 1MB)
   experimental: {
