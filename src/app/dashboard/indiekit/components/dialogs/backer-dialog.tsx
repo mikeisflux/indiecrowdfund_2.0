@@ -994,10 +994,12 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         pledgeId={backer.id}
         projectId={backer.projectId || ""}
         backerName={backer.name}
+        backerEmail={backer.email}
         reward={backer.reward ? { name: backer.reward, amount: backer.rewardAmount } : null}
         currentAddons={backer.addons || []}
         availableAddons={availableAddons}
         shippingAmount={backer.balance?.shippingAmount || 0}
+        originalPledgeAmount={backer.pledgeAmount}
         onSaved={onRefresh}
         onRefundNeeded={(amount) => {
           setRefundSuggestedAmount(amount);

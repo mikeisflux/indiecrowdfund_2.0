@@ -446,3 +446,114 @@ export async function sendSurveyCompletionEmail(
 
   return { ...result, subject, html };
 }
+
+/**
+ * Send balance due email to backer when order has been edited and additional payment is needed
+ */
+export async function sendBalanceDueEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  projectSlug: string,
+  balanceDue: number,
+  paymentToken: string,
+  rewardTitle: string | null,
+  addons: Array<{ title: string; quantity: number; amount: number }> = [],
+  projectUrlPath?: string,
+  currency: string = "USD",
+) {
+  const paymentUrl = `${APP_URL}/pay/balance/${paymentToken}`;
+  const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/projects/${projectSlug}`;
+
+  const formatCurrency = (value: number) => new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+  }).format(value);
+
+  const formattedBalance = formatCurrency(balanceDue);
+
+  const addonsHtml = addons.length > 0 ? `
+    <div style="margin-top: 15px;">
+      <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 14px;">Current Order Items:</p>
+      <table style="width: 100%; border-collapse: collapse;">
+        ${rewardTitle ? `
+        <tr>
+          <td style="padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px;">${rewardTitle}</td>
+          <td style="padding: 6px 0; border-bottom: 1px solid #eee; text-align: right; font-size: 14px;">Reward</td>
+        </tr>
+        ` : ""}
+        ${addons.map(a => `
+        <tr>
+          <td style="padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px;">${a.title} x${a.quantity}</td>
+          <td style="padding: 6px 0; border-bottom: 1px solid #eee; text-align: right; font-size: 14px;">${formatCurrency(a.amount * a.quantity)}</td>
+        </tr>
+        `).join("")}
+      </table>
+    </div>
+  ` : "";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Balance Due</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <div style="text-align: center; margin-bottom: 15px;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; line-height: 60px; font-size: 28px;">
+              &#36;
+            </div>
+          </div>
+          <h2 style="margin-top: 0; color: white; text-align: center;">Balance Due on Your Order</h2>
+          <p style="text-align: center; margin-bottom: 0; color: rgba(255,255,255,0.9);">
+            Hi ${backerName || "there"}, your order for <strong>${projectTitle}</strong> has been updated and there is an outstanding balance.
+          </p>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin-top: 0;">Payment Required</h3>
+          <p style="margin: 0 0 10px 0;">
+            Your order has been modified and you have an outstanding balance of:
+          </p>
+          <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 2px solid #0d9488; margin: 15px 0;">
+            <p style="font-size: 32px; font-weight: bold; color: #0d9488; margin: 0;">${formattedBalance}</p>
+            <p style="font-size: 14px; color: #666; margin: 5px 0 0 0;">Amount Due</p>
+          </div>
+          ${addonsHtml}
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+          <a href="${paymentUrl}" style="display: inline-block; background: #0d9488; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+            Pay ${formattedBalance} Now
+          </a>
+          <p style="font-size: 12px; color: #999; margin-top: 10px;">
+            This payment link expires in 30 days.
+          </p>
+        </div>
+
+        <div style="background: #f0f9ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #0d9488;">
+          <p style="margin: 0; font-size: 14px; color: #555;">
+            If you have any questions about this charge, please contact the project creator through the
+            <a href="${projectUrl}" style="color: #0d9488;">project page</a>.
+          </p>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because you backed "${projectTitle}" on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const subject = `Balance due: ${formattedBalance} for "${projectTitle}"`;
+  const result = await sendEmail({ to: email, subject, html });
+  return { ...result, subject, html };
+}

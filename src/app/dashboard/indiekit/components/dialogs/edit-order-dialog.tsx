@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -13,26 +14,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Edit,
   Package,
   Plus,
   Minus,
-  Trash2,
   ShoppingCart,
   Truck,
   Save,
   Loader2,
   AlertTriangle,
   Undo2,
+  Mail,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -57,10 +52,12 @@ interface EditOrderDialogProps {
   pledgeId: string;
   projectId: string;
   backerName: string;
+  backerEmail?: string;
   reward: { name: string; amount: number } | null;
   currentAddons: AddonEntry[];
   availableAddons: AvailableAddon[];
   shippingAmount: number;
+  originalPledgeAmount?: number;
   onSaved?: () => void;
   onRefundNeeded?: (amount: number) => void;
 }
@@ -71,27 +68,32 @@ export function EditOrderDialog({
   pledgeId,
   projectId,
   backerName,
+  backerEmail,
   reward,
   currentAddons,
   availableAddons,
   shippingAmount: initialShipping,
+  originalPledgeAmount,
   onSaved,
   onRefundNeeded,
 }: EditOrderDialogProps) {
   const [addons, setAddons] = useState<AddonEntry[]>([]);
   const [shippingAmount, setShippingAmount] = useState(initialShipping);
-  const [addonToAdd, setAddonToAdd] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sendingNotification, setSendingNotification] = useState(false);
   const [showRefundPrompt, setShowRefundPrompt] = useState(false);
+  const [showBalanceDuePrompt, setShowBalanceDuePrompt] = useState(false);
   const [refundOwed, setRefundOwed] = useState(0);
+  const [balanceDueAmount, setBalanceDueAmount] = useState(0);
 
   // Reset state when dialog opens with new data
   const resetState = useCallback(() => {
     setAddons(currentAddons.map(a => ({ ...a })));
     setShippingAmount(initialShipping);
-    setAddonToAdd("");
     setShowRefundPrompt(false);
+    setShowBalanceDuePrompt(false);
     setRefundOwed(0);
+    setBalanceDueAmount(0);
   }, [currentAddons, initialShipping]);
 
   useEffect(() => {
@@ -104,45 +106,42 @@ export function EditOrderDialog({
   const addonsTotal = addons.reduce((sum, a) => sum + (a.amount * a.quantity), 0);
   const orderTotal = rewardAmount + addonsTotal + shippingAmount;
 
-  // Addons not already in the order
-  const addableAddons = availableAddons.filter(
-    aa => !addons.some(a => a.id === aa.id)
-  );
+  // Check if an addon is currently in the order
+  const isAddonSelected = (addonId: string) => addons.some(a => a.id === addonId);
+
+  // Get addon quantity (0 if not in order)
+  const getAddonQuantity = (addonId: string) => {
+    const addon = addons.find(a => a.id === addonId);
+    return addon?.quantity || 0;
+  };
+
+  // Toggle an addon on/off
+  const toggleAddon = (addonId: string) => {
+    if (isAddonSelected(addonId)) {
+      // Remove addon
+      setAddons(prev => prev.filter(a => a.id !== addonId));
+    } else {
+      // Add addon with quantity 1
+      const available = availableAddons.find(a => a.id === addonId);
+      if (available) {
+        setAddons(prev => [...prev, {
+          id: available.id,
+          name: available.name,
+          quantity: 1,
+          amount: available.price,
+        }]);
+      }
+    }
+  };
 
   const updateAddonQuantity = (addonId: string, delta: number) => {
     setAddons(prev => prev.map(a => {
       if (a.id === addonId) {
-        const newQty = Math.max(0, a.quantity + delta);
+        const newQty = Math.max(1, a.quantity + delta);
         return { ...a, quantity: newQty };
       }
       return a;
-    }).filter(a => a.quantity > 0));
-  };
-
-  const removeAddon = (addonId: string) => {
-    setAddons(prev => prev.filter(a => a.id !== addonId));
-  };
-
-  const addAddon = () => {
-    if (!addonToAdd) return;
-
-    const addon = availableAddons.find(a => a.id === addonToAdd);
-    if (!addon) return;
-
-    const existing = addons.find(a => a.id === addon.id);
-    if (existing) {
-      updateAddonQuantity(addon.id, 1);
-    } else {
-      setAddons(prev => [...prev, {
-        id: addon.id,
-        name: addon.name,
-        quantity: 1,
-        amount: addon.price,
-      }]);
-    }
-
-    setAddonToAdd("");
-    toast.success(`Added ${addon.name} to order`);
+    }));
   };
 
   const hasChanges = () => {
@@ -199,11 +198,15 @@ export function EditOrderDialog({
       toast.success("Order updated successfully");
       onSaved?.();
 
-      // Check if items were removed resulting in a credit owed to the backer
       if (data.balanceChange < 0) {
+        // Backer is owed money (items removed)
         const creditAmount = Math.abs(data.balanceChange);
         setRefundOwed(creditAmount);
         setShowRefundPrompt(true);
+      } else if (data.balanceChange > 0) {
+        // Backer owes additional money
+        setBalanceDueAmount(data.balanceChange);
+        setShowBalanceDuePrompt(true);
       } else {
         onOpenChange(false);
       }
@@ -215,6 +218,34 @@ export function EditOrderDialog({
     }
   };
 
+  const handleSendBalanceNotification = async () => {
+    setSendingNotification(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/orders/notify-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          pledgeId,
+          projectId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to send notification");
+      }
+
+      toast.success(`Balance notification sent to ${backerEmail || backerName}`);
+      setShowBalanceDuePrompt(false);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Send notification error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to send notification");
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
   const handleIssueRefund = () => {
     setShowRefundPrompt(false);
     onOpenChange(false);
@@ -223,6 +254,11 @@ export function EditOrderDialog({
 
   const handleSkipRefund = () => {
     setShowRefundPrompt(false);
+    onOpenChange(false);
+  };
+
+  const handleSkipBalanceNotification = () => {
+    setShowBalanceDuePrompt(false);
     onOpenChange(false);
   };
 
@@ -269,93 +305,79 @@ export function EditOrderDialog({
               </div>
             )}
 
-            {/* Current Add-ons */}
+            {/* Campaign Add-ons Checklist */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">
-                Add-ons ({addons.length})
+                Campaign Add-ons ({addons.length} selected)
               </Label>
-              {addons.length === 0 ? (
+
+              {availableAddons.length === 0 ? (
                 <div className="text-center py-6 border rounded-lg">
                   <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No add-ons in this order</p>
+                  <p className="text-sm text-muted-foreground">No add-ons available for this campaign</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {addons.map((addon) => (
-                    <div key={addon.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm flex items-center gap-2">
-                          {addon.name}
-                          {addon.isModifier && (
-                            <Badge variant="secondary" className="text-xs">Modifier</Badge>
-                          )}
-                        </p>
-                        <p className="text-xs text-muted-foreground">${addon.amount.toFixed(2)} each</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => updateAddonQuantity(addon.id, -1)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-8 text-center font-medium">{addon.quantity}</span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => updateAddonQuantity(addon.id, 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="text-right w-20">
-                        <p className="font-medium">${(addon.amount * addon.quantity).toFixed(2)}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => removeAddon(addon.id)}
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {availableAddons.map((available) => {
+                    const selected = isAddonSelected(available.id);
+                    const quantity = getAddonQuantity(available.id);
+                    const currentAddon = addons.find(a => a.id === available.id);
+
+                    return (
+                      <div
+                        key={available.id}
+                        className={`flex items-center gap-3 p-3 border rounded-lg transition-colors ${
+                          selected ? "border-teal-300 bg-teal-50/50 dark:bg-teal-950/20 dark:border-teal-700" : ""
+                        }`}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={() => toggleAddon(available.id)}
+                          className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm flex items-center gap-2">
+                            {available.name}
+                            {currentAddon?.isModifier && (
+                              <Badge variant="secondary" className="text-xs">Modifier</Badge>
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground">${available.price.toFixed(2)} each</p>
+                        </div>
+
+                        {selected && (
+                          <>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => updateAddonQuantity(available.id, -1)}
+                                disabled={quantity <= 1}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-8 text-center font-medium text-sm">{quantity}</span>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => updateAddonQuantity(available.id, 1)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div className="text-right w-16">
+                              <p className="font-medium text-sm">${(available.price * quantity).toFixed(2)}</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
-
-            {/* Add Addon */}
-            {addableAddons.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Add an Add-on</Label>
-                <div className="flex gap-2">
-                  <Select value={addonToAdd} onValueChange={setAddonToAdd}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select an add-on to add" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {addableAddons.map((addon) => (
-                        <SelectItem key={addon.id} value={addon.id}>
-                          {addon.name} - ${addon.price.toFixed(2)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    onClick={addAddon}
-                    disabled={!addonToAdd}
-                    className="bg-teal-600 hover:bg-teal-700"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add
-                  </Button>
-                </div>
-              </div>
-            )}
           </TabsContent>
 
           {/* Shipping Tab */}
@@ -426,6 +448,18 @@ export function EditOrderDialog({
               <span>Total</span>
               <span className="text-teal-600">${orderTotal.toFixed(2)}</span>
             </div>
+            {originalPledgeAmount !== undefined && orderTotal !== originalPledgeAmount && (
+              <div className="flex justify-between pt-1 text-xs">
+                <span className="text-muted-foreground">Originally Charged</span>
+                <span className="text-muted-foreground">${originalPledgeAmount.toFixed(2)}</span>
+              </div>
+            )}
+            {originalPledgeAmount !== undefined && orderTotal > originalPledgeAmount && (
+              <div className="flex justify-between text-xs font-medium text-amber-600">
+                <span>Balance Due from Backer</span>
+                <span>${(orderTotal - originalPledgeAmount).toFixed(2)}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -459,8 +493,43 @@ export function EditOrderDialog({
           </div>
         )}
 
+        {/* Balance Due Prompt - shown after save when backer owes more */}
+        {showBalanceDuePrompt && (
+          <div className="rounded-lg border-2 border-teal-300 bg-teal-50 dark:bg-teal-950/30 dark:border-teal-700 p-4 mt-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <DollarSign className="h-5 w-5 text-teal-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-teal-800 dark:text-teal-200">
+                  Balance Due from Backer
+                </p>
+                <p className="text-sm text-teal-700 dark:text-teal-300 mt-1">
+                  {backerName} now owes an additional <strong>${balanceDueAmount.toFixed(2)}</strong>. Send them an email notification with a link to pay.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={handleSkipBalanceNotification}>
+                Skip for Now
+              </Button>
+              <Button
+                size="sm"
+                className="bg-teal-600 hover:bg-teal-700"
+                onClick={handleSendBalanceNotification}
+                disabled={sendingNotification}
+              >
+                {sendingNotification ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Mail className="h-3 w-3 mr-1" />
+                )}
+                {sendingNotification ? "Sending..." : `Notify Backer ($${balanceDueAmount.toFixed(2)})`}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <DialogFooter>
-          {showRefundPrompt ? null : (
+          {showRefundPrompt || showBalanceDuePrompt ? null : (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                 Cancel
