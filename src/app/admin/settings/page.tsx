@@ -165,7 +165,7 @@ interface PlatformSettings {
 
 export default function SettingsPage() {
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
+  const tabParam = searchParams?.get("tab") ?? null;
   const validTabs = ["general", "payments", "email", "communication", "social", "ai", "security", "idverify", "storage", "api", "database"];
   const initialTab = tabParam && validTabs.includes(tabParam) ? tabParam : "general";
 
