@@ -554,6 +554,6 @@ export async function sendBalanceDueEmail(
   `;
 
   const subject = `Balance due: ${formattedBalance} for "${projectTitle}"`;
-  const result = await sendEmail({ to: email, subject, html });
+  const result = await sendEmail({ to: email, subject, html, skipUnsubscribeCheck: true });
   return { ...result, subject, html };
 }

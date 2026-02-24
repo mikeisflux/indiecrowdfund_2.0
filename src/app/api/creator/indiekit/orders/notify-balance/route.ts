@@ -97,7 +97,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Backer has no email address" }, { status: 400 });
     }
 
-    await sendBalanceDueEmail(
+    // Map addons with null safety (addon could be null if deleted)
+    const addonItems = pledge.addons
+      .filter((a: { addon: { title: string; amount: unknown } | null; quantity: number }) => a.addon != null)
+      .map((a: { addon: { title: string; amount: unknown }; quantity: number }) => ({
+        title: a.addon.title,
+        quantity: a.quantity,
+        amount: Number(a.addon.amount),
+      }));
+
+    const emailResult = await sendBalanceDueEmail(
       backerEmail,
       backerName,
       project.title,
@@ -105,13 +114,17 @@ export async function POST(req: NextRequest) {
       balanceDue,
       paymentToken,
       pledge.reward?.title || null,
-      pledge.addons.map((a: { addon: { title: string; amount: unknown }; quantity: number }) => ({
-        title: a.addon.title,
-        quantity: a.quantity,
-        amount: Number(a.addon.amount),
-      })),
+      addonItems,
       project.urlPath || undefined,
     );
+
+    if (!emailResult?.success) {
+      console.error("Balance notification email failed:", emailResult?.error);
+      return NextResponse.json(
+        { error: emailResult?.error || "Email delivery failed" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -119,9 +132,10 @@ export async function POST(req: NextRequest) {
       emailSent: true,
     });
   } catch (error) {
-    console.error("Error sending balance notification:", error);
+    console.error("Error sending balance notification:", error instanceof Error ? error.stack : error);
+    const message = error instanceof Error ? error.message : "Failed to send balance notification";
     return NextResponse.json(
-      { error: "Failed to send balance notification" },
+      { error: message },
       { status: 500 }
     );
   }
